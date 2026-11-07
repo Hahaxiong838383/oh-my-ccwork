@@ -1,0 +1,283 @@
+{
+  "at": "2026-11-07T15:58:49.993761+00:00",
+  "runtime_candidate": "1f947fe4e226382615b147fd8e8bf6031c8d310d",
+  "runtime_tests_passed": 532,
+  "integration_scope": "direct run_job with real SFU and synthetic silence, no Worker registration",
+  "runs": {
+    "rtc-enforce-ordered1.json": {
+      "started": "2026-11-07T15:51:32.054418+00:00",
+      "finished": "2026-11-07T15:51:55.515027+00:00",
+      "mode": "enforce",
+      "ordered": "1",
+      "exit": 101,
+      "log_sha256": "ccc19de9078d24e88a1e8db4198dd1052b05b682f7950a87e489969abb728d43",
+      "probe_results": [],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T15:51:34.616366Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066692530 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_CbQYsvy69tQb \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T15:51:40.715191Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-530ddc3b-9fb2-4413-a0d5-dbda5f9f5f45 \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066692530 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_CbQYsvy69tQb \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_hJeNkWG6QJJs \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMUNq5CQo782nh \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m6115",
+        "\u001b[2m2026-11-07T15:51:40.716028Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066692530 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_CbQYsvy69tQb \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"fca733a5-35f6-41d0-a7f5-9d27d6ed3c37\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m6115",
+        "\u001b[2m2026-11-07T15:51:41.145516Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"fca733a5-35f6-41d0-a7f5-9d27d6ed3c37\"",
+        "\u001b[2m2026-11-07T15:51:41.148925Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"fca733a5-35f6-41d0-a7f5-9d27d6ed3c37\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m152 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m2 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T15:51:43.660213Z\u001b[0m \u001b[32m INFO\u001b[0m ordered_pcm input phase → rtc \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066692530 \u001b[3mreason\u001b[0m\u001b[2m=\u001b[0mbegin_timeout \u001b[3mcatchup_samples\u001b[0m\u001b[2m=\u001b[0m0 \u001b[3mcatchup_skipped\u001b[0m\u001b[2m=\u001b[0m\"disabled\" \u001b[3mstt2_spawned_ms_ago\u001b[0m\u001b[2m=\u001b[0m0",
+        "\u001b[2m2026-11-07T15:51:48.716475Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066692530 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_CbQYsvy69tQb \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"fca733a5-35f6-41d0-a7f5-9d27d6ed3c37\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mClose(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m14116",
+        "\u001b[2m2026-11-07T15:51:50.907080Z\u001b[0m \u001b[33m WARN\u001b[0m room cleanup readback incomplete; reconciliation required \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066692530 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_CbQYsvy69tQb \u001b[3mcleanup\u001b[0m\u001b[2m=\u001b[0mUnavailable \u001b[3mdelete_scope\u001b[0m\u001b[2m=\u001b[0m\"room_name\" \u001b[3mcas\u001b[0m\u001b[2m=\u001b[0mfalse",
+        "Error: original room still exists",
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 532 filtered out; finished in 23.36s"
+      ]
+    },
+    "rtc-enforce-ordered0.json": {
+      "started": "2026-11-07T15:50:20.670179+00:00",
+      "finished": "2026-11-07T15:50:34.327150+00:00",
+      "mode": "enforce",
+      "ordered": "0",
+      "exit": 0,
+      "log_sha256": "e267e59804c1e34afc3bfc8ee10877564d6188b59d8b1968e875eb06401ba1c5",
+      "probe_results": [
+        {
+          "elapsed_ms": 10610,
+          "events": [
+            "session.output_ready",
+            "session.input_ready"
+          ],
+          "mode": "enforce",
+          "ordered": false,
+          "phase_ms": null,
+          "ready_ms": 4128,
+          "room": "sn-BJP00326110799999901-1794066621252",
+          "sid": "RM_e8sF55JDQhdc",
+          "worker_alive_before_cleanup": false
+        }
+      ],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T15:50:23.638757Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066621252 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_e8sF55JDQhdc \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T15:50:24.966336Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-09295881-cc72-4485-b797-b3f2ebcc0af8 \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066621252 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_e8sF55JDQhdc \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_R5cRT7YWs6Pr \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMP3DAtqyVbk9W \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m1337",
+        "\u001b[2m2026-11-07T15:50:24.967976Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066621252 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_e8sF55JDQhdc \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"a47bb226-a817-4a42-9117-176622ce9825\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m1338",
+        "\u001b[2m2026-11-07T15:50:27.327121Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"a47bb226-a817-4a42-9117-176622ce9825\"",
+        "\u001b[2m2026-11-07T15:50:27.340059Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"a47bb226-a817-4a42-9117-176622ce9825\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m258 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m1 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T15:50:32.967792Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066621252 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_e8sF55JDQhdc \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"a47bb226-a817-4a42-9117-176622ce9825\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mClose(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m9338",
+        "\u001b[2m2026-11-07T15:50:33.645542Z\u001b[0m \u001b[32m INFO\u001b[0m room cleanup readback complete \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066621252 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_e8sF55JDQhdc \u001b[3mcleanup\u001b[0m\u001b[2m=\u001b[0mGone \u001b[3mdelete_scope\u001b[0m\u001b[2m=\u001b[0m\"room_name\" \u001b[3mcas\u001b[0m\u001b[2m=\u001b[0mfalse",
+        "PROBE_RESULT {\"elapsed_ms\":10610,\"events\":[\"session.output_ready\",\"session.input_ready\"],\"mode\":\"enforce\",\"ordered\":false,\"phase_ms\":null,\"ready_ms\":4128,\"room\":\"sn-BJP00326110799999901-1794066621252\",\"sid\":\"RM_e8sF55JDQhdc\",\"worker_alive_before_cleanup\":false}",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 532 filtered out; finished in 13.55s"
+      ]
+    },
+    "rtc-v3-enforce-ordered1.json": {
+      "started": "2026-11-07T15:57:02.391419+00:00",
+      "finished": "2026-11-07T15:57:16.070915+00:00",
+      "mode": "enforce",
+      "ordered": "1",
+      "exit": 0,
+      "log_sha256": "81b42d1eb2b6469dbdd5de99e3e1a41a3dfb3d9a1a4251ba3bf7b73d734181d0",
+      "probe_results": [
+        {
+          "elapsed_ms": 12298,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase"
+          ],
+          "mode": "enforce",
+          "ordered": true,
+          "phase_ms": 5583,
+          "ready_ms": 3080,
+          "room": "sn-BJP00326110799999901-1794067022862",
+          "sid": "RM_S6LX4yHQHxfm",
+          "worker_alive_before_cleanup": false
+        }
+      ],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T15:57:03.742448Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794067022862 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_S6LX4yHQHxfm \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T15:57:04.177435Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-dee4b052-51ef-4926-a6b4-22b1ad22274e \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794067022862 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_S6LX4yHQHxfm \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_Psva7LN6HqWL \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMS8zm43PuTRD5 \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m484",
+        "\u001b[2m2026-11-07T15:57:04.179425Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794067022862 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_S6LX4yHQHxfm \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"9b0dae2b-90ec-42e3-9882-460d5f6a3b33\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m486",
+        "\u001b[2m2026-11-07T15:57:06.757150Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"9b0dae2b-90ec-42e3-9882-460d5f6a3b33\"",
+        "\u001b[2m2026-11-07T15:57:06.762713Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"9b0dae2b-90ec-42e3-9882-460d5f6a3b33\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m222 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m4 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T15:57:09.262612Z\u001b[0m \u001b[32m INFO\u001b[0m ordered_pcm input phase → rtc \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794067022862 \u001b[3mreason\u001b[0m\u001b[2m=\u001b[0mbegin_timeout \u001b[3mcatchup_samples\u001b[0m\u001b[2m=\u001b[0m0 \u001b[3mcatchup_skipped\u001b[0m\u001b[2m=\u001b[0m\"disabled\" \u001b[3mstt2_spawned_ms_ago\u001b[0m\u001b[2m=\u001b[0m1",
+        "\u001b[2m2026-11-07T15:57:15.184222Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794067022862 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_S6LX4yHQHxfm \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"9b0dae2b-90ec-42e3-9882-460d5f6a3b33\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mClose(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m11491",
+        "\u001b[2m2026-11-07T15:57:15.841747Z\u001b[0m \u001b[32m INFO\u001b[0m room cleanup readback complete \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794067022862 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_S6LX4yHQHxfm \u001b[3mcleanup\u001b[0m\u001b[2m=\u001b[0mGone \u001b[3mdelete_scope\u001b[0m\u001b[2m=\u001b[0m\"room_name\" \u001b[3mcas\u001b[0m\u001b[2m=\u001b[0mfalse",
+        "PROBE_RESULT {\"elapsed_ms\":12298,\"events\":[\"session.output_ready\",\"session.input_ready\",\"session.input_phase\"],\"mode\":\"enforce\",\"ordered\":true,\"phase_ms\":5583,\"ready_ms\":3080,\"room\":\"sn-BJP00326110799999901-1794067022862\",\"sid\":\"RM_S6LX4yHQHxfm\",\"worker_alive_before_cleanup\":false}",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 532 filtered out; finished in 13.59s"
+      ]
+    },
+    "rtc-v2-observe-ordered0.json": {
+      "started": "2026-11-07T15:53:16.857021+00:00",
+      "finished": "2026-11-07T15:53:37.944867+00:00",
+      "mode": "observe",
+      "ordered": "0",
+      "exit": 0,
+      "log_sha256": "d48709c2a6cf600a5531fe27c84797fc2bcc7a0d3f5b91a5d47360d90ee1ccfa",
+      "probe_results": [
+        {
+          "elapsed_ms": 12990,
+          "events": [
+            "session.output_ready",
+            "session.input_ready"
+          ],
+          "mode": "observe",
+          "ordered": false,
+          "phase_ms": null,
+          "ready_ms": 3989,
+          "room": "sn-BJP00326110799999901-1794066797238",
+          "sid": "RM_BetCnoR9nqJL",
+          "worker_alive_before_cleanup": true
+        }
+      ],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T15:53:24.590594Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066797238 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_BetCnoR9nqJL \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T15:53:25.517919Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-63e02404-16a5-4ccf-98d4-d52fa42c1b33 \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066797238 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_BetCnoR9nqJL \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_ptqcTRLaSebD \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMaAzEJNsex3zD \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m928",
+        "\u001b[2m2026-11-07T15:53:25.533648Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066797238 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_BetCnoR9nqJL \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"13b62fbf-da4b-4eab-85d4-8d311563d4bd\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m943",
+        "\u001b[2m2026-11-07T15:53:28.477057Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"13b62fbf-da4b-4eab-85d4-8d311563d4bd\"",
+        "\u001b[2m2026-11-07T15:53:28.491228Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"13b62fbf-da4b-4eab-85d4-8d311563d4bd\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m231 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m2 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T15:53:33.547142Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066797238 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_BetCnoR9nqJL \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"13b62fbf-da4b-4eab-85d4-8d311563d4bd\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mObserve(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m8957",
+        "\u001b[2m2026-11-07T15:53:37.841952Z\u001b[0m \u001b[32m INFO\u001b[0m room cleanup readback complete \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066797238 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_BetCnoR9nqJL \u001b[3mcleanup\u001b[0m\u001b[2m=\u001b[0mGone \u001b[3mdelete_scope\u001b[0m\u001b[2m=\u001b[0m\"room_name\" \u001b[3mcas\u001b[0m\u001b[2m=\u001b[0mfalse",
+        "PROBE_RESULT {\"elapsed_ms\":12990,\"events\":[\"session.output_ready\",\"session.input_ready\"],\"mode\":\"observe\",\"ordered\":false,\"phase_ms\":null,\"ready_ms\":3989,\"room\":\"sn-BJP00326110799999901-1794066797238\",\"sid\":\"RM_BetCnoR9nqJL\",\"worker_alive_before_cleanup\":true}",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 532 filtered out; finished in 20.98s"
+      ]
+    },
+    "rtc-observe-ordered0.json": {
+      "started": "2026-11-07T15:48:43.025013+00:00",
+      "finished": "2026-11-07T15:48:57.447165+00:00",
+      "mode": "observe",
+      "ordered": "0",
+      "exit": 0,
+      "log_sha256": "1c2d11ab4daf066599b11758203477b5b1ef85d86bd386a2f37b2f3530f46dda",
+      "probe_results": [
+        {
+          "elapsed_ms": 11982,
+          "events": [
+            "session.output_ready",
+            "session.input_ready"
+          ],
+          "mode": "observe",
+          "ordered": false,
+          "phase_ms": null,
+          "ready_ms": 2952,
+          "room": "sn-BJP00326110799999901-1794066523351",
+          "sid": "RM_8giFxYAZTaxD",
+          "worker_alive_before_cleanup": true
+        }
+      ],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T15:48:44.351068Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066523351 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_8giFxYAZTaxD \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T15:48:44.706424Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-db62c268-5d9d-471e-b1e3-faad41d83f84 \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066523351 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_8giFxYAZTaxD \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_fSgrWHJqx9qH \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMQCtUFnnJqV3K \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m355",
+        "\u001b[2m2026-11-07T15:48:44.707301Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066523351 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_8giFxYAZTaxD \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"6b2a0bba-6673-4567-993a-e95cb441f4f0\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m356",
+        "\u001b[2m2026-11-07T15:48:47.287011Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"6b2a0bba-6673-4567-993a-e95cb441f4f0\"",
+        "\u001b[2m2026-11-07T15:48:47.297933Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"6b2a0bba-6673-4567-993a-e95cb441f4f0\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m413 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m2 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T15:48:52.707953Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794066523351 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_8giFxYAZTaxD \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"6b2a0bba-6673-4567-993a-e95cb441f4f0\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mObserve(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m8357",
+        "PROBE_RESULT {\"elapsed_ms\":11982,\"events\":[\"session.output_ready\",\"session.input_ready\"],\"mode\":\"observe\",\"ordered\":false,\"phase_ms\":null,\"ready_ms\":2952,\"room\":\"sn-BJP00326110799999901-1794066523351\",\"sid\":\"RM_8giFxYAZTaxD\",\"worker_alive_before_cleanup\":true}",
+        "thread 'tokio-rt-worker' (3465884) panicked at /home/hahaxiong83/local/p003-p2-full-20261102/cargo-home/registry/src/index.crates.io-1949cf8c6b5b557f/livekit-runtime-0.4.0/src/tokio.rs:39:46:",
+        "Tasks should not panic: JoinError::Cancelled(Id(107))",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 532 filtered out; finished in 14.32s"
+      ]
+    }
+  },
+  "death_probe": {
+    "at": "2026-11-07T15:54:37.998345+00:00",
+    "room": "sn-BJP00326110799999901-1794066876552",
+    "sid": "RM_nU6SyEkBDCj9",
+    "production_job_killed": false,
+    "pass": true,
+    "alive_preserved": true,
+    "alive_status": {
+      "mode": "business",
+      "at_ms": 1794066889424,
+      "counts": {
+        "active": 1
+      },
+      "remaining": 1,
+      "healthy": true
+    },
+    "cleanup_after_death_ms": 14337,
+    "final_status": {
+      "mode": "business",
+      "at_ms": 1794066903231,
+      "counts": {
+        "deleted": 1
+      },
+      "remaining": 0,
+      "healthy": true
+    }
+  },
+  "cleanup_final": {
+    "mode": "business",
+    "at_ms": 1794067045154,
+    "counts": {
+      "absent": 1
+    },
+    "remaining": 0,
+    "healthy": true
+  },
+  "pools": {
+    "at": "2026-11-07T15:57:10.130093+00:00",
+    "pools": [
+      {
+        "unit": "p003-listening-worker.service",
+        "runtime": {
+          "MainPID": "2750511",
+          "NRestarts": "0",
+          "EnvironmentFiles": "/opt/p003-listening-canary-20261030/canary.env (ignore_errors=no)"
+        },
+        "exe": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+        "sha256": "7d39184c200053db5adbc59580517110762b0c3ac31928cc246d5f9162817de0",
+        "agent": "p003-search-listening-20261030",
+        "has_control_env": {
+          "LIVEKIT_URL": true,
+          "LIVEKIT_API_KEY": true,
+          "LIVEKIT_API_SECRET": true
+        }
+      },
+      {
+        "unit": "p003-search-worker.service",
+        "runtime": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "EnvironmentFiles": "/opt/p003-search-canary-20261021/canary.env (ignore_errors=no)"
+        },
+        "exe": "/opt/p003-search-canary-20261021/voice-rust-worker",
+        "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "agent": "p003-search-canary-20261021",
+        "has_control_env": {
+          "LIVEKIT_URL": true,
+          "LIVEKIT_API_KEY": true,
+          "LIVEKIT_API_SECRET": true
+        }
+      },
+      {
+        "unit": "voice-worker-rust.service",
+        "runtime": {
+          "MainPID": "3179125",
+          "NRestarts": "0",
+          "EnvironmentFiles": "/root/rust-worker/rust-worker.env (ignore_errors=no)"
+        },
+        "exe": "/root/rust-worker/voice-rust-worker",
+        "sha256": "35f59ecde2ce892f0c865ae90880747a00f782cccbffe39abe5dc3234e464971",
+        "agent": "rust-worker",
+        "has_control_env": {
+          "LIVEKIT_URL": true,
+          "LIVEKIT_API_KEY": true,
+          "LIVEKIT_API_SECRET": true
+        }
+      }
+    ]
+  },
+  "release": {
+    "sha256": "becc21e9d81cb11bb39ce73df8467867bf038e0cc1771ead1646a9bd9279d2b3",
+    "bytes": 76127728,
+    "deployed": false
+  },
+  "probe_binaries": {
+    "initial": "a94d9db0ba17626beb6ebef302e48f754b64322a596b5514a5ce738fb2211bc4",
+    "graceful_cleanup": "06db81d6080bacbffccd8de26f5725265667fb4be3383ea83f9272a3b11a07c0",
+    "bounded_reconcile_wait": "f7ce22dae09ca2f33a3f46e40735e39d6ac51c6c3d6c7104100c6a032e0e5dc6"
+  },
+  "evidence_sha256": {
+    "RTC_FINAL_RESULT_2.json": "e3a1637631cad25a035742b2b6850a9157318d7dcd1284c474f30cf78b388422",
+    "CLEANUP_INSTALLED_FIXED.json": "08a9cb970ba2d7eeda904ad0267f669482330c0d113e276663e97908cf13e9f3",
+    "CLEANUP_INSTALL_FAILURE_RETRY.json": "92ac513830173957b711589cfb9dcc9e41a37532181002cdd4d0c6b830732c59",
+    "CLEANUP_DEATH_RESULT_2.json": "651f3553a65bdc1a88e55b2257a7528a7383245c643b7ec1dc6a63842cf5c494",
+    "POST_RTC_POOLS.json": "9856ae1d8ede1517efb42adef61d4aa4d736e5a45bf0debe1b1a644eec58e6e0",
+    "PRE_RTC_ACTIVE_ROOMS.json": "98022a4a962d6387182e28413dd83177513ff8153512e03970576ddb6284822b",
+    "worker-handoff-readback-checkpoint.log": "580f11c7c6ef5116c81a6dd529f48d85c3426a4be0c11d3bcdb4ed30dbe52afe",
+    "worker-lifecycle-release.log": "3486c0ac8ec650c7ba66c01691bdc9076d0b607c6344c8a568823e0c52098afb",
+    "source-lifecycle-release.json": "e98ed79921ae752af2b07651c5431787c39a1eed2940fbd1ea56a5c2d3bee79b",
+    "source-rtc-probe-package.json": "e98ed79921ae752af2b07651c5431787c39a1eed2940fbd1ea56a5c2d3bee79b"
+  }
+}

@@ -53,6 +53,8 @@ mod turn;
 mod vad;
 mod volc;
 mod worker;
+#[cfg(test)]
+mod rtc_business_probe;
 
 use tracing_subscriber::EnvFilter;
 

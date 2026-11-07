@@ -1,0 +1,88 @@
+{
+  "at": "2026-11-07T23:51:07+08:00",
+  "clock_source": "date +%Y-%m-%dT%H:%M:%S%z on this machine, output 2026-11-07T23:51:07+0800",
+  "reviewer": "Grok 4.7",
+  "mode": "readonly_handoff_output",
+  "business_code_edited": false,
+  "deployed": false,
+  "ssh": false,
+  "cargo_tests_rerun": false,
+  "production_passed": false,
+  "real_rtc_validated": false,
+  "candidate": {
+    "rev_parse_arg": "1f947fe4",
+    "sha": "1f947fe4e226382615b147fd8e8bf6031c8d310d",
+    "subject": "fix(voice): preserve bounded RTC handoff and output waits",
+    "base": "b12f7de2174f7353e989e0e291dee7c3b8fafdae",
+    "head_equals_candidate": true,
+    "six_sources_match_worktree": true
+  },
+  "verdict": "no_blocker",
+  "blockers": [],
+  "disagreement_for_codex": null,
+  "checks": [
+    {
+      "id": "first_turn_to_rtc_before_clear_and_ready",
+      "verdict": "holds",
+      "evidence": [
+        "pipeline.rs:1408-1417 first_turn_to_rtc before activity_until(Input)",
+        "pipeline.rs:1086-1100 take and InputPhase::Rtc on the next loop",
+        "business_watchdog.rs:49-50 ready && rtc_grace_at.is_none",
+        "business_watchdog.rs:77-78 one idle from max(last_progress, ready_at, rtc_grace_at), strict <",
+        "business_runtime.rs:68-71 input_transition_deadline adds signed idle once",
+        "business_runtime.rs:54 identical deadline returns without a new generation",
+        "ordered_pcm.rs:1133-1136 protocol > begin_to_end unchanged by this diff"
+      ]
+    },
+    {
+      "id": "pending_local_receipt_read_before_take",
+      "verdict": "holds",
+      "evidence": [
+        "pipeline.rs:3657-3667 reply_startup_deadline copies pending_local_receipt_deadline, then take()",
+        "business_runtime.rs:87-90 later of provider/output budget and absolute receipt",
+        "gate.rs:70 OUTPUT_READY_TIMEOUT = 5s shared with OutputGate::new",
+        "llm.rs:580 REQUEST_TIMEOUT = 30s",
+        "tts_xfyun.rs:63 CONNECT_TIMEOUT = 10s",
+        "business_runtime.rs pending_output_gate test closes at t+45 not t+40",
+        "business_runtime.rs receipt test keeps t+49 and closes at t+50"
+      ]
+    },
+    {
+      "id": "playback_after_task_still_on_idle_progress",
+      "verdict": "holds",
+      "evidence": [
+        "pipeline.rs:3973-3976 playout awaited inside turn.task before PlayedOut",
+        "pipeline.rs:2899 agent_turn cleared only on PlayedOut",
+        "pipeline.rs:1393-1404 progress only when captured_samples changes; reply hold dropped when task.is_finished()",
+        "business_runtime.rs:92-95 later sentence is last PCM + CONNECT_TIMEOUT, not the poll",
+        "business_watchdog.rs:32 signed idle is 5000..=300000 ms, which covers the 220ms playout drain"
+      ]
+    },
+    {
+      "id": "delete_room_by_name_not_cas",
+      "verdict": "holds_as_non_fix",
+      "evidence": [
+        "room_verify.rs:29-30 DeleteRoom JSON is room name only",
+        "room_verify.rs:93-100 race fixture expects Outcome::Gone and removed:RM_new",
+        "job.rs cas=false and readback complete, not verified"
+      ]
+    }
+  ],
+  "boundaries": [
+    "Did not re-run the claimed 532 Linux tests. HANDOFF_OUTPUT_EVIDENCE.json says final 532 pass, real_rtc_validated false, production_changed false.",
+    "Stated counterexample is covered: first PCM at turn+39s, OutputGate until +44s, old static reply deadline +40s. New reply startup deadline is +45s while captured_samples stays 0.",
+    "Not a demonstrated blocker: CONNECT_TIMEOUT wraps handshake only. A first chunk entering OutputGate after turn+40s would make the gate's 5s outlive turn+45s. No path in this diff necessarily emits that chunk.",
+    "No real RTC audio, captions, or metrics. No production binary comparison. Original input failure and 12 unmatched tickets are out of scope."
+  ],
+  "sources": [
+    "2-Projects/realtime-voice-agent/docs/business-watchdog-20261107/HANDOFF_OUTPUT_BOUNDARIES.md",
+    "2-Projects/realtime-voice-agent/docs/business-watchdog-20261107/HANDOFF_OUTPUT_EVIDENCE.json",
+    "2-Projects/realtime-voice-agent/docs/business-watchdog-20261107/JOINT_REVIEW.md",
+    "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/gate.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/job.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs"
+  ]
+}

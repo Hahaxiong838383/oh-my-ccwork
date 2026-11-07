@@ -4,6 +4,8 @@ After=network-online.target
 
 [Service]
 Type=oneshot
+EnvironmentFile=/root/realtime-voice-agent/.env
+EnvironmentFile=/root/realtime-voice-agent/poc-eou.env
 EnvironmentFile=/root/rust-worker/rust-worker.env
 ExecStart=/usr/bin/python3 /opt/p003-business-cleanup/reconcile_rooms.py --mode business --queue /var/lib/p003-business-cleanup/queue --status /var/lib/p003-business-cleanup/status.json
 StateDirectory=p003-business-cleanup
