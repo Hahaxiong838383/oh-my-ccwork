@@ -660,8 +660,18 @@ pub struct SttPre {
 // belongs to that idle episode, not to the user's upcoming first utterance.
 // Keep healthy/in-flight connections regardless of age; do not restart an
 // active recognition stream or renew its bounded connection episode.
-async fn take_stt_preconnect(pre: SttPre, rebuild: impl FnOnce() -> SttPre) -> Result<SttPre> {
-    if !pre.pcm_tx.is_closed() && !pre.ev_rx.is_closed() && pre.ev_rx.is_empty() {
+async fn take_stt_preconnect(mut pre: SttPre, rebuild: impl FnOnce() -> SttPre) -> Result<SttPre> {
+    let mut ended = pre.pcm_tx.is_closed() || pre.ev_rx.is_closed();
+    // Snapshot the bounded queue: never wait for or discard events produced
+    // after handoff. A live reconnect retains its original task/PCM channel.
+    for _ in 0..pre.ev_rx.len() {
+        match pre.ev_rx.try_recv() {
+            Ok(SttEvent::Closed) => ended = true,
+            Ok(_) => {},
+            Err(_) => break,
+        }
+    }
+    if !ended && !pre.pcm_tx.is_closed() && !pre.ev_rx.is_closed() {
         return Ok(pre);
     }
     let SttPre { pcm_tx, ev_rx, mut task } = pre;
@@ -4395,10 +4405,37 @@ mod asr_preconnect_handoff_tests {
         tokio::time::timeout(Duration::from_secs(1), async {
             while old.ev_rx.is_empty() { tokio::task::yield_now().await; }
         }).await.unwrap();
-        let (cfg, server) = healthy_provider().await;
-        let current = take_stt_preconnect(old, || spawn_stt(cfg, "synthetic-handoff-new")).await.unwrap();
-        tokio::time::timeout(Duration::from_millis(600), old_tx.closed()).await
-            .expect("the idle reconnect owner must stop before handing over");
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+            let data = ws.next().await.unwrap().unwrap().into_data();
+            let frame = crate::volc::Frame::unmarshal(&data).unwrap();
+            assert_eq!(frame.msg_type, crate::volc::MsgType::AudioOnlyClient);
+            use std::io::Read;
+            let mut pcm = Vec::new();
+            flate2::read::GzDecoder::new(frame.payload.as_slice()).read_to_end(&mut pcm).unwrap();
+            assert_eq!(pcm, [42u8, 0u8].repeat(160));
+            let response = crate::volc::Frame {
+                msg_type: crate::volc::MsgType::FullServerResponse,
+                flag: crate::volc::Flags::PositiveSeq,
+                sequence: 1,
+                serialization: crate::volc::SER_JSON,
+                compression: crate::volc::COMP_GZIP,
+                payload: crate::volc::gzip(br#"{"result":{"utterances":[{"text":"handoff test","definite":true}]}}"#),
+                ..Default::default()
+            };
+            ws.send(Message::Binary(response.marshal().into())).await.unwrap();
+        });
+        let mut current = take_stt_preconnect(old, || panic!("a live reconnect episode must retain its original PCM channel")).await.unwrap();
+        assert!(current.pcm_tx.same_channel(&old_tx));
+        // Exercise the real ordered consumer: an idle episode's interruption
+        // must not put the upcoming first turn in Terminal before its begin.
+        let mut first_turn = crate::ordered_pcm::Session::new(None, crate::ordered_pcm::Limits::default());
+        while let Ok(event) = current.ev_rx.try_recv() {
+            if matches!(event, SttEvent::Interrupted) { first_turn.on_stream_interrupted(); }
+        }
+        assert_eq!(first_turn.phase(), crate::ordered_pcm::Phase::Idle);
         first_pcm_and_final(current, server).await;
     }
 
