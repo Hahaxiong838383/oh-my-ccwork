@@ -152,6 +152,9 @@ fn is_last_frame(flag: Flags) -> bool {
 /// 一条 ASR 连接的结束方式(重连决策依据,Closed 事件由外层重连循环统一发)。
 #[derive(Debug, PartialEq, Eq)]
 pub enum AsrEnd {
+    /// Unused preconnection closed locally, without requesting recognition of
+    /// an empty recording. No provider final acknowledgement is implied.
+    Unused,
     /// 输入结束且服务端 LastNoSeq 收尾——正常终局,不重连。
     InputDone,
     /// 输入结束(已发 NegativeSeq)但服务端未回 LastNoSeq 就关闭了连接——意外 EOF:不重连,但不是正常终局。
@@ -207,6 +210,7 @@ pub async fn run_asr_stream(
     // 已发 Final 的句子游标:utterances 是全量数组,靠计数防重发
     let mut finals_emitted = 0usize;
     let mut input_done = false;
+    let mut audio_sent = false;
     // WS 应用层心跳(对齐 Python websockets ping_interval=20):跨境长连的死链检测——
     // 无心跳时黑洞连接表现为永久静默(2026-08-12 聋窗排查加装);死链 → send Err → 外层重连。
     let mut ping_tick = tokio::time::interval(Duration::from_secs(20));
@@ -220,6 +224,7 @@ pub async fn run_asr_stream(
             }
             pcm = pcm_rx.recv(), if !input_done => match pcm {
                 Some(samples) => {
+                    if samples.is_empty() { continue; }
                     seq += 1;
                     let bytes: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
                     let frame = Frame {
@@ -232,8 +237,20 @@ pub async fn run_asr_stream(
                         ..Default::default()
                     };
                     tx.send(WsMessage::Binary(frame.marshal().into())).await?;
+                    audio_sent = true;
                 }
                 None => {
+                    if !audio_sent {
+                        // First-turn timeout abandons this preconnection before
+                        // the replacement RTC stream starts receiving audio.
+                        // bigmodel_async rejects a zero-audio NegativeSeq with
+                        // 45000002. Close the unused socket instead, bounded so
+                        // a peer cannot hold an abandoned stream indefinitely.
+                        let _ = tokio::time::timeout(Duration::from_millis(500),
+                            tx.send(WsMessage::Close(None))).await;
+                        info!(%request_id, "unused asr preconnection closed without recognition");
+                        return Ok(AsrEnd::Unused);
+                    }
                     // 输入结束:空尾段 NegativeSeq 收流,之后只等服务端 LastNoSeq
                     input_done = true;
                     seq += 1;
@@ -344,6 +361,86 @@ async fn handle_result(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // The async provider rejects an empty recognition terminator with
+    // 45000002. Reproduce its wire behavior, including a positive control:
+    // real PCM that happens to contain silence still needs normal final ACK.
+    async fn empty_preconnect_case(pcm: Option<Vec<i16>>) -> (Result<AsrEnd>, usize, bool) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (initialized, ready) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init = ws.next().await.unwrap().unwrap().into_data();
+            assert_eq!(Frame::unmarshal(&init).unwrap().msg_type, MsgType::FullClientRequest);
+            initialized.send(()).unwrap();
+            let mut samples = 0;
+            let mut terminator = false;
+            while let Some(message) = ws.next().await {
+                match message.unwrap() {
+                    WsMessage::Binary(data) => {
+                        let f = Frame::unmarshal(&data).unwrap();
+                        assert_eq!(f.msg_type, MsgType::AudioOnlyClient);
+                        if f.flag == Flags::NegativeSeq {
+                            terminator = true;
+                            let response = if samples == 0 {
+                                Frame { msg_type: MsgType::Error, error_code: 45000002,
+                                    payload: b"No audio was received".to_vec(), ..Default::default() }
+                            } else {
+                                Frame { msg_type: MsgType::FullServerResponse, flag: Flags::LastNoSeq,
+                                    payload: br#"{"result":{"utterances":[]}}"#.to_vec(), ..Default::default() }
+                            };
+                            ws.send(WsMessage::Binary(response.marshal().into())).await.unwrap();
+                            break;
+                        }
+                        use std::io::Read;
+                        assert_eq!(f.compression, COMP_GZIP);
+                        let mut pcm = Vec::new();
+                        flate2::read::GzDecoder::new(f.payload.as_slice()).read_to_end(&mut pcm).unwrap();
+                        samples += pcm.len() / 2;
+                    }
+                    WsMessage::Close(_) => break,
+                    _ => {}
+                }
+            }
+            (samples, terminator)
+        });
+        let mut c = cfg(vec![]); c.url = format!("ws://{addr}");
+        let (tx, mut rx) = mpsc::channel(2);
+        let (events, _ev_rx) = mpsc::channel(2);
+        let client = tokio::spawn(async move { run_asr_stream(c, &mut rx, events).await });
+        ready.await.unwrap();
+        if let Some(pcm) = pcm { tx.send(pcm).await.unwrap(); }
+        drop(tx);
+        let result = tokio::time::timeout(Duration::from_secs(2), client).await.unwrap().unwrap();
+        let (samples, terminator) = tokio::time::timeout(Duration::from_secs(2), server).await.unwrap().unwrap();
+        (result, samples, terminator)
+    }
+
+    #[tokio::test]
+    async fn unused_preconnect_does_not_submit_empty_recognition() {
+        let (result, samples, terminator) = empty_preconnect_case(None).await;
+        assert_eq!(result.unwrap(), AsrEnd::Unused);
+        assert_eq!(samples, 0);
+        assert!(!terminator, "no audio means no recognition to finalize");
+    }
+
+    #[tokio::test]
+    async fn empty_pcm_chunk_is_not_a_recognition_session() {
+        let (result, samples, terminator) = empty_preconnect_case(Some(vec![])).await;
+        assert_eq!(result.unwrap(), AsrEnd::Unused);
+        assert_eq!(samples, 0);
+        assert!(!terminator);
+    }
+
+    #[tokio::test]
+    async fn genuine_silent_pcm_still_waits_for_provider_final_ack() {
+        let (result, samples, terminator) = empty_preconnect_case(Some(vec![0; 320])).await;
+        assert_eq!(result.unwrap(), AsrEnd::InputDone);
+        assert_eq!(samples, 320);
+        assert!(terminator);
+    }
 
     fn cfg(hotwords: Vec<String>) -> SttConfig {
         SttConfig {

@@ -683,7 +683,7 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
             if stt_ev_tx.is_closed() || (pcm_rx.is_closed() && pcm_rx.is_empty()) { break; }
             let started = Instant::now();
             match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone()).await {
-                Ok(AsrEnd::InputDone) => break,
+                Ok(AsrEnd::InputDone | AsrEnd::Unused) => break,
                 Ok(AsrEnd::InputDoneEof) => {
                     // 收流后未见 LastNoSeq 即 EOF:输入已结束不重连,但先报 Interrupted(ordered_pcm 不得提交半段 final)
                     warn!(room = %rn, "asr 收流后未见 LastNoSeq 即被关闭(意外 EOF)");
