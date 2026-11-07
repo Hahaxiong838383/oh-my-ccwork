@@ -1,23 +1,18 @@
 [
   {
-    "file": "worker-dns-cname-additional-red.log",
-    "sha256": "9e6ffdd1a7c4fead09461c9038397ec7fc3b2bcc48b516e621c0453e44d87809",
-    "bytes": 6511
+    "file": "CODEX_CNAME_TTL_FINDING.md",
+    "sha256": "7f92ac95711ece67ba341da2dd7996030c1a137cade541995d68a601dec19bd4",
+    "bytes": 1022
   },
   {
-    "file": "worker-dns-cname-additional-green.log",
-    "sha256": "bfb42cfee407408f846122fc8c46d8bafeaf6f16fefb7201ee0ea9b15fa581cb",
-    "bytes": 6513
+    "file": "DNS_CNAME_BLOCKED.json",
+    "sha256": "45bad6dc28dd363d44a5da50e5a2baae8159cca6f60bbfc62325de18057f3d4a",
+    "bytes": 262
   },
   {
-    "file": "source-dns-cname-additional-red.json",
-    "sha256": "e1d03e0342362d5a01023cacb1eed05967f5d01f038eb31d501e32211e580623",
-    "bytes": 6363
-  },
-  {
-    "file": "source-dns-cname-additional-green.json",
-    "sha256": "10c8da0ea7c6c59cc6f3f8aa64020a2bfcda6d673852bbc7332fe4acbb876e8d",
-    "bytes": 6363
+    "file": "PROBE_CLEANUP_EVIDENCE.json",
+    "sha256": "4c57ff617636fb482212737c05cb0c36527aabf30cfb4b90cc2b9b17a7d54367",
+    "bytes": 15885
   },
   {
     "file": "TTS_DNS_ISOLATED_TIMELINE.json",
@@ -33,5 +28,70 @@
     "file": "TTS_DNS_RTC_B_TIMELINE.json",
     "sha256": "aacb99c75737eff29d57dccafb6308588481c01e31ba36bd8c7f3df38bea4e55",
     "bytes": 5093
+  },
+  {
+    "file": "WORKER_DNS_CNAME_RELEASE_STAGED.json",
+    "sha256": "8611374b3cf30a352f7ab7c58f4a7a2a1588d131456c39a2008e9b22c8be3083",
+    "bytes": 188
+  },
+  {
+    "file": "dns-cname-ttl-boundary.rs",
+    "sha256": "91209201bcca1961301741ff4aba4b75003f062d0a289be7564b8bfb66a0b2b7",
+    "bytes": 10806
+  },
+  {
+    "file": "rtc-probe-clean-v2.py",
+    "sha256": "323a0887a168d6409a98a083efbd691aa8065cc01e20137310497027dfec5269",
+    "bytes": 7614
+  },
+  {
+    "file": "rtc-probe-runner-v2.py",
+    "sha256": "db72242beb83c564674b78f9645b11aa5367b95ad60b882515fd9f1d2a506055",
+    "bytes": 4039
+  },
+  {
+    "file": "source-dns-cname-additional-green.json",
+    "sha256": "10c8da0ea7c6c59cc6f3f8aa64020a2bfcda6d673852bbc7332fe4acbb876e8d",
+    "bytes": 6363
+  },
+  {
+    "file": "source-dns-cname-additional-red.json",
+    "sha256": "e1d03e0342362d5a01023cacb1eed05967f5d01f038eb31d501e32211e580623",
+    "bytes": 6363
+  },
+  {
+    "file": "source-dns-cname-release.json",
+    "sha256": "10c8da0ea7c6c59cc6f3f8aa64020a2bfcda6d673852bbc7332fe4acbb876e8d",
+    "bytes": 6363
+  },
+  {
+    "file": "source-dns-cname-ttl-boundary.json",
+    "sha256": "a800b8db5894fa084f6d66767e17bd6b4b839281814278d551673b22aada760c",
+    "bytes": 6363
+  },
+  {
+    "file": "source-dns-cname-ttl-final-v3.json",
+    "sha256": "08efb955f000650e29699da66897ea06da524d8b548f385b44252dae457e707d",
+    "bytes": 6363
+  },
+  {
+    "file": "worker-dns-cname-additional-green.log",
+    "sha256": "bfb42cfee407408f846122fc8c46d8bafeaf6f16fefb7201ee0ea9b15fa581cb",
+    "bytes": 6513
+  },
+  {
+    "file": "worker-dns-cname-additional-red.log",
+    "sha256": "9e6ffdd1a7c4fead09461c9038397ec7fc3b2bcc48b516e621c0453e44d87809",
+    "bytes": 6511
+  },
+  {
+    "file": "worker-dns-cname-ttl-boundary.log",
+    "sha256": "06a59817851ff6c8a06885baef223c720ecb8d43aa423e94faa038ea1a70d677",
+    "bytes": 6507
+  },
+  {
+    "file": "worker-dns-cname-ttl-final-v3.log",
+    "sha256": "7b60bbad27eb7b6116006ee8ecc20634cc3301a3efc958eacc0735e6a5143d5e",
+    "bytes": 6505
   }
 ]

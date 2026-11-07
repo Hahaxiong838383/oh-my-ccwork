@@ -1,0 +1,87 @@
+{"mode": "dns-cname-ttl-boundary", "rc": 101, "log": "/home/hahaxiong83/local/p003-business-watchdog-20261107/worker/dns-cname-ttl-boundary.log", "source_sha": {"src/job.rs": "471756738f09525358e1b7803f2c25f7102bdf55b6b2fa3f6700d2b1bbffc299", "src/tts_xfyun.rs": "e10cf2890cbd385fb4e88f92c6fd7ac72fdf75fc004079f96014b7c2f857c83d", "src/voice_connect.rs": "91209201bcca1961301741ff4aba4b75003f062d0a289be7564b8bfb66a0b2b7", "src/tts.rs": "19bf205eb707846480b7c3fe041dd32821500ea152207e58375866be6cbfe4d2"}}
+_spare_failure_does_not_cancel_primary_or_start_third ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_partial_close_has_delivered_pcm_and_no_replay ... ok
+test tts::tests::priority_recovery_capacity_preserves_primary_and_failed_primary_can_replace ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_zero_pcm_close_is_distinct_from_partial_output ... ok
+test tts_xfyun::tests::auth_signature_changes_with_date ... ok
+test tts_xfyun::tests::auth_url_has_three_signed_params_and_is_deterministic ... ok
+test tts_xfyun::tests::missing_keys_reports_each_absent_credential ... ok
+test tts_xfyun::tests::parse_audio_frame_and_last_flag ... ok
+test tts_xfyun::tests::parse_error_frame_carries_code_and_message ... ok
+test tts_xfyun::tests::parse_ignores_garbage_without_panicking ... ok
+test tts_xfyun::tests::r15_cancelled_handshake_releases_the_socket_without_detached_retry ... ok
+test tts_xfyun::tests::r15_connect_failure_reports_stage_without_response_headers_or_signed_url ... ok
+test tts_xfyun::tests::r15_measured_connector_preserves_websocket_payload_and_freshness ... ok
+test tts_xfyun::tests::request_audio_params_match_downlink_contract ... ok
+test tts_xfyun::tests::request_text_is_base64_not_plaintext ... ok
+test tts_xfyun::tests::rfc1123_shape_is_gmt_not_offset ... ok
+test tts_xfyun::tests::send_or_abort_bails_when_aborted_instead_of_blocking_forever ... ok
+test tts::tests::slow_preconnect_is_hedged_without_waiting_for_the_slow_socket ... ok
+test tts_xfyun::tests::stale_warm_is_rejected_fresh_one_kept ... ok
+test tts_xfyun::tests::warm_max_age_must_stay_under_protocol_idle_limit ... ok
+test tts_xfyun::transport_dns_opt_in_does_not_change_resolution_for_other_hosts ... ok
+test tts_xfyun::transport_main_can_use_independent_dns_families_for_tts_only ... ok
+test turn::tests::commit_uses_min_delay_when_eot_likely ... ok
+test turn::tests::input_ended_commits_at_next_poll_without_endpointing_delay ... ok
+test turn::tests::input_ended_is_cleared_by_speech_start ... ok
+test turn::tests::late_final_commits_immediately_after_deadline ... ok
+test turn::tests::no_vad_end_falls_back_to_final_anchor ... ok
+test turn::tests::resumed_speech_invalidates_prediction_and_blocks_commit ... ok
+test turn::tests::unlikely_prob_stretches_to_max_delay ... ok
+test vad::tests::gate_requires_min_speech_then_min_silence ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_handshake_hang_recovers_one_request_and_closes_loser ... ok
+test vad::tests::short_noise_burst_ignored ... ok
+test tts::tests::prewarm_failure_degrades_to_none_not_error ... ok
+test search_tasks::tests::real_http_submit_poll_claim_receipt_does_not_block_foreground ... ok
+test pipeline::asr_lifecycle_tests::failed_connection_episode_closes_without_resetting_budget_or_consuming_pcm ... ok
+test stt_volc::tests::delayed_handshake_preserves_auth_and_first_pcm_exactly_once ... ok
+test tts::tests::spare_failure_keeps_primary_and_capacity_limit_never_queues ... ok
+test tts_xfyun::tests::send_or_abort_delivers_normally_when_not_aborted ... ok
+test volc::tests::connection_event_omits_session ... ok
+test volc::tests::gzip_json_payload_roundtrip ... ok
+test volc::tests::marshal_matches_python_bytes ... ok
+test volc::tests::negative_seq_roundtrip ... ok
+test volc::tests::with_event_session_roundtrip ... ok
+test worker::tests::availability_response_carries_agent_attrs ... ok
+test worker::tests::backoff_table_unchanged ... ok
+test worker::tests::clean_close_resets_counter_too ... ok
+test worker::tests::full_capacity_declines ... ok
+test worker::tests::incident_20260916_reconnect_after_registration_must_not_give_up ... ok
+test worker::tests::thirteen_consecutive_failures_without_registration_gives_up ... ok
+test voice_connect::tests::cname_additional_ipv6_remains_usable ... ok
+test vad::tests::shared_weights_isolated_state ... ok
+test vad::tests::silero_silence_prob_low ... ok
+test voice_connect::tests::r16_dns_dial_cancellation_is_bounded ... ok
+test job::tests::r16_delete_room_bounds_failure_and_never_retries_auth_or_redirect ... ok
+test pipeline::asr_lifecycle_tests::abandoned_asr_owner_drops_socket_without_retries ... ok
+test pipeline::asr_lifecycle_tests::rejected_final_packet_does_not_reconnect_closed_input ... ok
+test voice_connect::tests::r16_ipv6_and_alternate_address_remain_available ... ok
+test job::tests::r16_delete_room_recovers_transient_http_failure ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_midstream_gap_is_not_channel_backpressure ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_full_channel_waits_without_reconnect_or_losing_pcm ... ok
+test voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses ... FAILED
+test voice_connect::tests::r16_a_success_does_not_wait_for_missing_aaaa_and_obeys_ttl ... ok
+test device_grammar::tests::never_panics_on_random_input ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_two_second_supply_gap_reaches_native_playout ... ok
+test job::tests::job_lifecycle_stuck_room_close_still_attempts_delete ... ok
+test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok
+test stt_volc::tests::delayed_six_second_handshake_delivers_final_before_recognition_hold_expires ... ok
+test stt_volc::tests::stalled_handshake_has_a_bounded_connection_budget ... ok
+
+failures:
+
+---- voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses stdout ----
+
+thread 'voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses' (1023858) panicked at src/voice_connect.rs:172:9:
+assertion `left == right` failed: additional address must not extend DNS TTL
+  left: 1
+ right: 2
+
+
+failures:
+    voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses
+
+test result: FAILED. 543 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 10.51s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`
+

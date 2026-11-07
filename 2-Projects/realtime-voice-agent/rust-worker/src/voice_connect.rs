@@ -1,7 +1,7 @@
 //! Candidate-only asynchronous DNS and staggered address racing.
 //! Cache lifetimes come from DNS; credentials and signed URLs never enter here.
 use anyhow::{bail, Result};
-use hickory_resolver::{TokioResolver, lookup::Lookup, proto::rr::{DNSClass, RData, RecordType}};
+use hickory_resolver::{TokioResolver, lookup::Lookup, proto::rr::{DNSClass, Name, RData, RecordType}};
 use std::{net::{IpAddr, SocketAddr}, time::{Duration, Instant}};
 use tokio::net::TcpStream;
 
@@ -38,13 +38,22 @@ async fn family(resolver: &TokioResolver, host: &str, port: u16, v6: bool) -> Re
     let start=Instant::now();
     let lookup=resolver.lookup(host,if v6 {RecordType::AAAA} else {RecordType::A}).await
         .map_err(|_| anyhow::anyhow!("resolve_failed"))?;
-    let addresses=lookup_addresses(&lookup,port,v6)?;
+    let (addresses,uncache_names)=lookup_addresses(&lookup,port,v6)?;
+    if !uncache_names.is_empty() {
+        // Hickory 0.26 caches a response by ANSWER TTL, which can outlive
+        // a target in ADDITIONAL. Do not cache this shape at application level.
+        // Invalidate only this family and the observed alias chain, never the
+        // shared resolver globally. Normal ANSWER records keep their cache.
+        let kind=if v6 {RecordType::AAAA} else {RecordType::A};
+        resolver.clear_lookup_cache(host,kind);
+        for name in uncache_names {resolver.clear_lookup_cache(name,kind);}
+    }
     let dns_ms=start.elapsed().as_millis() as u64;let tcp=Instant::now();
     let socket=addresses_connect(addresses).await?;
     Ok(Connected{socket,dns_ms,tcp_ms:tcp.elapsed().as_millis() as u64})
 }
 
-fn lookup_addresses(lookup: &Lookup, port: u16, v6: bool) -> Result<Vec<SocketAddr>> {
+fn lookup_addresses(lookup: &Lookup, port: u16, v6: bool) -> Result<(Vec<SocketAddr>,Vec<Name>)> {
     // Hickory preserves DNS sections. A successful CNAME lookup can have its
     // target address in ADDITIONAL, not ANSWER. Follow only the answer's CNAME
     // chain and select that owner; unrelated additional/glue is not a target.
@@ -57,16 +66,17 @@ fn lookup_addresses(lookup: &Lookup, port: u16, v6: bool) -> Result<Vec<SocketAd
         if !seen.insert(next.clone()){bail!("resolve_cname_cycle");}
         owner=next;
     }
-    let mut addresses=Vec::new();
-    for r in lookup.answers().iter().chain(lookup.additionals()) {
+    let mut addresses=Vec::new();let mut uses_additional=false;
+    for (r,additional) in lookup.answers().iter().map(|r|(r,false)).chain(lookup.additionals().iter().map(|r|(r,true))) {
         if r.name!=owner || r.dns_class!=DNSClass::IN{continue;}
         let address=match r.data {
             RData::A(a) if !v6=>SocketAddr::new(IpAddr::V4(a.0),port),
             RData::AAAA(a) if v6=>SocketAddr::new(IpAddr::V6(a.0),port),_=>continue,
         };
+        uses_additional|=additional;
         if !addresses.contains(&address){addresses.push(address);}
     }
-    Ok(addresses)
+    Ok((addresses,if uses_additional {seen.into_iter().collect()} else {Vec::new()}))
 }
 
 async fn dial(resolver: &TokioResolver, host: &str, port: u16) -> Result<Connected> {
@@ -111,11 +121,31 @@ mod tests {
                 let mut resp=Message::response(req.metadata.id,OpCode::Query);resp.add_query(q.clone());
                 if q.query_type()==RecordType::A {
                     count.fetch_add(1,Ordering::SeqCst);
-                    if mode=="cname_additional" {
+                    if mode=="cname_answer" {
+                        resp.add_answers(vec![
+                            Record::from_rdata(q.name().clone(),60,RData::CNAME(CNAME("target.voice.test.".parse().unwrap()))),
+                            Record::from_rdata("target.voice.test.".parse().unwrap(),1,RData::A(A::new(127,0,0,1))),
+                        ]);
+                    } else if mode=="cname_recursive" {
+                        let target=match q.name().to_string().as_str() {
+                            "voice.test."=>Some("middle.voice.test."),
+                            "middle.voice.test."=>Some("target.voice.test."),_=>None,
+                        };
+                        if let Some(target)=target {
+                            resp.add_answers(vec![Record::from_rdata(q.name().clone(),60,RData::CNAME(CNAME(target.parse().unwrap())))]);
+                        } else {
+                            resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,1)))]);
+                        }
+                    } else if mode=="cname_additional" || mode=="cname_zero" || mode=="cname_multi_additional" {
                         let target="target.voice.test.".parse().unwrap();
-                        resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::CNAME(CNAME(target)))]);
-                        resp.add_additionals(vec![Record::from_rdata("unrelated.voice.test.".parse().unwrap(),1,RData::A(A::new(127,0,0,2)))]);
-                        resp.add_additionals(vec![Record::from_rdata("target.voice.test.".parse().unwrap(),1,RData::A(A::new(127,0,0,1)))]);
+                        if mode=="cname_multi_additional" {
+                            resp.add_answers(vec![
+                                Record::from_rdata(q.name().clone(),60,RData::CNAME(CNAME("middle.voice.test.".parse().unwrap()))),
+                                Record::from_rdata("middle.voice.test.".parse().unwrap(),60,RData::CNAME(CNAME(target))),
+                            ]);
+                        } else {resp.add_answers(vec![Record::from_rdata(q.name().clone(),60,RData::CNAME(CNAME(target)))]);}
+                        resp.add_additionals(vec![Record::from_rdata("unrelated.voice.test.".parse().unwrap(),60,RData::A(A::new(127,0,0,2)))]);
+                        resp.add_additionals(vec![Record::from_rdata("target.voice.test.".parse().unwrap(),if mode=="cname_zero" {0}else{1},RData::A(A::new(127,0,0,1)))]);
                     } else if mode!="v6_only" && mode!="cname_additional_v6" {
                         if mode=="refused_first" {resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,2)))]);}
                         resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,1)))]);
@@ -166,10 +196,10 @@ mod tests {
             let c=tokio::time::timeout(Duration::from_millis(400),dial(&dns.resolver,"voice.test.",port)).await.unwrap().unwrap();
             assert_eq!(c.socket.peer_addr().unwrap().ip(),std::net::Ipv4Addr::LOCALHOST);
         }
-        assert_eq!(dns.a.load(Ordering::SeqCst),1);
+        assert_eq!(dns.a.load(Ordering::SeqCst),2,"additional response must bypass the longer alias cache");
         tokio::time::sleep(Duration::from_millis(1150)).await;
         dial(&dns.resolver,"voice.test.",port).await.unwrap();
-        assert_eq!(dns.a.load(Ordering::SeqCst),2,"additional address must not extend DNS TTL");
+        assert_eq!(dns.a.load(Ordering::SeqCst),3,"additional address must not extend DNS TTL");
     }
     #[tokio::test]
     async fn cname_additional_ipv6_remains_usable() {
@@ -177,5 +207,40 @@ mod tests {
         let server=TcpListener::bind("[::1]:0").await.unwrap();
         let c=tokio::time::timeout(Duration::from_millis(400),dial(&dns.resolver,"voice.test.",server.local_addr().unwrap().port())).await.unwrap().unwrap();
         assert_eq!(c.socket.peer_addr().unwrap().ip(),std::net::Ipv6Addr::LOCALHOST);
+    }
+    #[tokio::test]
+    async fn cname_answer_preserves_the_shortest_answer_ttl() {
+        let dns=dns_server("cname_answer").await;
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port=server.local_addr().unwrap().port();
+        for _ in 0..2 {dial(&dns.resolver,"voice.test.",port).await.unwrap();}
+        assert_eq!(dns.a.load(Ordering::SeqCst),1,"ordinary CNAME answer should remain cached");
+        tokio::time::sleep(Duration::from_millis(1150)).await;
+        dial(&dns.resolver,"voice.test.",port).await.unwrap();
+        assert_eq!(dns.a.load(Ordering::SeqCst),2);
+    }
+    #[tokio::test]
+    async fn multihop_and_zero_ttl_additional_results_are_requeried() {
+        for mode in ["cname_multi_additional","cname_zero"] {
+            let dns=dns_server(mode).await;
+            let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let port=server.local_addr().unwrap().port();
+            for _ in 0..2 {
+                let c=tokio::time::timeout(Duration::from_secs(2),dial(&dns.resolver,"voice.test.",port)).await.unwrap().unwrap();
+                assert_eq!(c.socket.peer_addr().unwrap().ip(),std::net::Ipv4Addr::LOCALHOST);
+            }
+            assert_eq!(dns.a.load(Ordering::SeqCst),2,"must invalidate every cached alias in the observed chain");
+        }
+    }
+    #[tokio::test]
+    async fn recursive_lookup_owner_and_cached_original_owner_both_work() {
+        let dns=dns_server("cname_recursive").await;
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port=server.local_addr().unwrap().port();
+        for _ in 0..2 {dial(&dns.resolver,"voice.test.",port).await.unwrap();}
+        assert_eq!(dns.a.load(Ordering::SeqCst),3);
+        tokio::time::sleep(Duration::from_millis(1150)).await;
+        dial(&dns.resolver,"voice.test.",port).await.unwrap();
+        assert_eq!(dns.a.load(Ordering::SeqCst),6);
     }
 }
