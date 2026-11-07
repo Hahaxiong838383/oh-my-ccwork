@@ -655,6 +655,25 @@ pub struct SttPre {
     pub task: crate::owned_task::OwnedTask<()>,
 }
 
+// Called only before any PCM is submitted to this preconnection, including
+// the spare prepared before the ordered-to-RTC transition. A queued interruption
+// belongs to that idle episode, not to the user's upcoming first utterance.
+// Keep healthy/in-flight connections regardless of age; do not restart an
+// active recognition stream or renew its bounded connection episode.
+async fn take_stt_preconnect(pre: SttPre, rebuild: impl FnOnce() -> SttPre) -> Result<SttPre> {
+    if !pre.pcm_tx.is_closed() && !pre.ev_rx.is_closed() && pre.ev_rx.is_empty() {
+        return Ok(pre);
+    }
+    let SttPre { pcm_tx, ev_rx, mut task } = pre;
+    task.abort();
+    anyhow::ensure!(tokio::time::timeout(Duration::from_millis(500), &mut task).await.is_ok(),
+        "failed_asr_preconnect_abort_timeout");
+    drop(pcm_tx);
+    drop(ev_rx);
+    info!("replacing failed idle ASR preconnection before PCM handoff");
+    Ok(rebuild())
+}
+
 /// 该房的 ASR 配置:env 基线 + 二遍识别 per-SN 灰度(命中即切 bigmodel_async + enable_nonstream,必须同调:
 /// 老 bigmodel 静默忽略此参数)。非命中房间零变化。
 pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
@@ -910,6 +929,7 @@ pub async fn run_pipeline(
     );
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
+    let stt = take_stt_preconnect(stt, || spawn_stt(stt_cfg_for_room(&room_name), &room_name)).await?;
     let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt;
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
     let mut stt_pcm_tx = Some(stt_pcm_tx);
@@ -1089,9 +1109,16 @@ pub async fn run_pipeline(
     loop {
         // B23 产品首句 v1:执行输入相位切换(代次终态 / begin 超时后置位,每 job 一次):换 STT、回灌追补环、发 session.input_phase。
         if let Some(reason) = orch.pending_phase_switch.take() {
-            let (pre, spawned_at) = match stt2.take() {
+            let (pre, mut spawned_at) = match stt2.take() {
                 Some(x) => x,
                 None => (spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()),
+            };
+            let pre = match take_stt_preconnect(pre, || {
+                spawned_at = Instant::now();
+                spawn_stt(stt_cfg_for_room(&room_name), &room_name)
+            }).await {
+                Ok(pre) => pre,
+                Err(error) => { exit_error = Some(error); break; }
             };
             let SttPre { pcm_tx, ev_rx, task } = pre;
             // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
@@ -4286,6 +4313,101 @@ mod publish_result_tests {
         assert_eq!(publish_fail_class("data channel closed"), "closed");
         assert_eq!(publish_fail_class("payload too large"), "payload");
         assert_eq!(publish_fail_class("某个没见过的错"), "other");
+    }
+}
+
+#[cfg(test)]
+mod asr_preconnect_handoff_tests {
+    use super::*;
+    use futures_util::{SinkExt, StreamExt};
+    use tokio_tungstenite::tungstenite::Message;
+
+    fn config(addr: std::net::SocketAddr) -> SttConfig {
+        let mut cfg = SttConfig::from_env();
+        cfg.url = format!("ws://{addr}");
+        cfg.api_key = Some("isolated-test".into());
+        cfg.canon = false;
+        cfg
+    }
+
+    // Only the provider boundary is simulated. The real ASR connector,
+    // protocol parser, task owner, channels and handoff process the first PCM.
+    async fn healthy_provider() -> (SttConfig, tokio::task::JoinHandle<()>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let cfg = config(listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init = ws.next().await.unwrap().unwrap().into_data();
+            assert_eq!(crate::volc::Frame::unmarshal(&init).unwrap().msg_type, crate::volc::MsgType::FullClientRequest);
+            let data = ws.next().await.unwrap().unwrap().into_data();
+            let frame = crate::volc::Frame::unmarshal(&data).unwrap();
+            assert_eq!(frame.msg_type, crate::volc::MsgType::AudioOnlyClient);
+            use std::io::Read;
+            let mut pcm = Vec::new();
+            flate2::read::GzDecoder::new(frame.payload.as_slice()).read_to_end(&mut pcm).unwrap();
+            assert_eq!(pcm, [42u8, 0u8].repeat(160), "the complete first PCM must reach the replacement");
+            let response = crate::volc::Frame {
+                msg_type: crate::volc::MsgType::FullServerResponse,
+                flag: crate::volc::Flags::PositiveSeq,
+                sequence: 1,
+                serialization: crate::volc::SER_JSON,
+                compression: crate::volc::COMP_GZIP,
+                payload: crate::volc::gzip(br#"{"result":{"utterances":[{"text":"handoff test","definite":true}]}}"#),
+                ..Default::default()
+            };
+            ws.send(Message::Binary(response.marshal().into())).await.unwrap();
+        });
+        (cfg, server)
+    }
+
+    async fn first_pcm_and_final(mut pre: SttPre, server: tokio::task::JoinHandle<()>) {
+        pre.pcm_tx.send(vec![42; 160]).await.expect("handoff must provide a live PCM receiver");
+        let ev = tokio::time::timeout(Duration::from_secs(2), pre.ev_rx.recv()).await.unwrap();
+        assert!(matches!(ev, Some(SttEvent::Final(ref text)) if text == "handoff test"),
+            "old preconnect events must not terminate or invalidate the new input: {ev:?}");
+        drop(pre);
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn closed_preconnect_is_replaced_before_first_pcm() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let old = spawn_stt(config(listener.local_addr().unwrap()), "synthetic-handoff-closed");
+        let (socket, _) = listener.accept().await.unwrap();
+        drop(socket); // Real TCP handshake failure ends the preconnection task.
+        tokio::time::timeout(Duration::from_secs(1), old.pcm_tx.closed()).await.unwrap();
+        let (cfg, server) = healthy_provider().await;
+        let current = take_stt_preconnect(old, || spawn_stt(cfg, "synthetic-handoff-new")).await.unwrap();
+        first_pcm_and_final(current, server).await;
+    }
+
+    #[tokio::test]
+    async fn reconnecting_preconnect_does_not_replay_idle_interruption_into_first_turn() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let old = spawn_stt(config(listener.local_addr().unwrap()), "synthetic-handoff-interrupted");
+        let old_tx = old.pcm_tx.clone();
+        let (socket, _) = listener.accept().await.unwrap();
+        let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+        ws.next().await.unwrap().unwrap(); // Provider accepted init, but no PCM has been submitted.
+        ws.close(None).await.unwrap();
+        drop(ws);
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while old.ev_rx.is_empty() { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        let (cfg, server) = healthy_provider().await;
+        let current = take_stt_preconnect(old, || spawn_stt(cfg, "synthetic-handoff-new")).await.unwrap();
+        tokio::time::timeout(Duration::from_millis(600), old_tx.closed()).await
+            .expect("the idle reconnect owner must stop before handing over");
+        first_pcm_and_final(current, server).await;
+    }
+
+    #[tokio::test]
+    async fn healthy_preconnect_keeps_its_latency_benefit() {
+        let (cfg, server) = healthy_provider().await;
+        let old = spawn_stt(cfg, "synthetic-handoff-healthy");
+        let current = take_stt_preconnect(old, || panic!("healthy pending connection must be reused")).await.unwrap();
+        first_pcm_and_final(current, server).await;
     }
 }
 
