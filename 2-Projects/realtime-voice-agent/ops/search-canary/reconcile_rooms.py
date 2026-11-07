@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Candidate-only, durable room cleanup. No user text or credentials in records."""
+"""Scoped durable room cleanup, with separate candidate and business ownership. No user text or credentials in records."""
 import argparse
 import base64
 import fcntl
@@ -24,14 +24,18 @@ def read_record(path):
             raise ValueError('invalid_record_file')
         raw = f.read(4097)
     value = json.loads(raw)
-    if (not isinstance(value, dict) or value.get('schema') != 1
+    if (not isinstance(value, dict) or value.get('schema') not in (1, 2)
             or not re.fullmatch(r'sn-BJP003\d{14}-\d{1,20}', value.get('room', ''))
             or not re.fullmatch(r'RM_[A-Za-z0-9_-]{1,100}', value.get('sid', ''))
             or value.get('state') not in ('active', 'closing')
             or not isinstance(value.get('generation'), str) or not value['generation']
             or len(value['generation']) > 128
             or any(type(value.get(k)) is not int or value[k] <= 0
-                   for k in ('deadline_ms', 'updated_at_ms', 'pid'))
+                   for k in ('updated_at_ms', 'pid'))
+            or type(value.get('deadline_ms')) is not int
+            or (value['schema'] == 1 and value['deadline_ms'] <= 0)
+            or (value['schema'] == 2 and (value['deadline_ms'] != 0
+                or not re.fullmatch(r'cfg-\d{1,20}', value['generation'])))
             or not re.fullmatch(r'\d{1,30}', value.get('process_start', ''))):
         raise ValueError('invalid_record')
     return raw, value
@@ -61,12 +65,15 @@ def listed_room(api, name):
     return room['sid']
 
 
-def reconcile(path, window, api, now_ms, owner_alive, only_subject=None):
+def reconcile(path, window, api, now_ms, owner_alive, only_subject=None, mode="candidate"):
     try:
         raw, record = read_record(path)
     except FileNotFoundError:
         return {'status': 'gone'}
     except (ValueError, TypeError, OSError):
+        return {'status': 'invalid'}
+    if (mode not in ('candidate', 'business')
+            or record['schema'] != (2 if mode == 'business' else 1)):
         return {'status': 'invalid'}
     sn = record['room'].split('-')[1]
     if only_subject is not None and sn != only_subject:
@@ -77,9 +84,9 @@ def reconcile(path, window, api, now_ms, owner_alive, only_subject=None):
                   and window.get('expires_at_ms') == record['deadline_ms']
                   and now_ms < record['deadline_ms'])
     alive = owner_alive(record['pid'], record['process_start'])
-    if record['state'] == 'active' and authorized and alive:
+    if record['state'] == 'active' and alive and (mode == 'business' or authorized):
         return {'status': 'active'}
-    # Foreground HTTP attempts finish within 7s; avoid competing with them.
+    # Foreground HTTP attempts are bounded; avoid competing for 10 seconds.
     if record['state'] == 'closing' and alive and now_ms - record['updated_at_ms'] < 10000:
         return {'status': 'foreground'}
     try:
@@ -158,12 +165,21 @@ class RoomAPI:
 def main():
     p = argparse.ArgumentParser()
     p.add_argument('--queue', type=Path, required=True)
-    p.add_argument('--window', type=Path, required=True)
+    p.add_argument('--window', type=Path)
+    p.add_argument('--mode', choices=('candidate', 'business'), default='candidate')
     p.add_argument('--status', type=Path, required=True)
     args = p.parse_args()
     agent = os.environ.get('AGENT_NAME')
     only_subject = None
-    if agent == 'p003-search-verification-20261026':
+    if args.mode == 'business':
+        root = Path('/var/lib/p003-business-cleanup')
+        if (agent != 'rust-worker' or args.window is not None
+                or (args.queue, args.status) != (root / 'queue', root / 'status.json')
+                or any(p.resolve() != p for p in (args.queue, args.status))):
+            raise ValueError('business_cleanup_scope')
+    elif args.window is None:
+        raise ValueError('candidate_window_required')
+    elif agent == 'p003-search-verification-20261026':
         root = Path('/opt/p003-search-verification-20261026')
         if ((args.queue, args.window, args.status) !=
                 (root / 'room-cleanup', root / 'window.json', root / 'cleanup-status.json')
@@ -181,7 +197,7 @@ def main():
         except BlockingIOError:
             return
         try:
-            window = json.loads(args.window.read_text())
+            window = json.loads(args.window.read_text()) if args.window else {}
             if not isinstance(window, dict):
                 window = {}
         except (ValueError, OSError):
@@ -192,7 +208,7 @@ def main():
         # One request stream, bounded records per tick. Jobs never wait on it.
         records = sorted(args.queue.glob('*.json'), key=lambda f: f.lstat().st_mtime)
         for path in records[:8]:
-            result = reconcile(path, window, api, now, process_alive, only_subject=only_subject)
+            result = reconcile(path, window, api, now, process_alive, only_subject=only_subject, mode=args.mode)
             key = result['status']
             counts[key] = counts.get(key, 0) + 1
             # Rotate unresolved and live records, so a quiet old room cannot
@@ -201,7 +217,7 @@ def main():
                 os.utime(path, None, follow_symlinks=False)
             except FileNotFoundError:
                 pass
-        summary = {'at_ms': int(time.time() * 1000), 'counts': counts,
+        summary = {'mode': args.mode, 'at_ms': int(time.time() * 1000), 'counts': counts,
                    'remaining': len(list(args.queue.glob('*.json'))),
                    'healthy': not any(counts.get(k, 0) for k in ('pending', 'invalid', 'record_changed'))}
         temp = args.status.with_suffix('.tmp')

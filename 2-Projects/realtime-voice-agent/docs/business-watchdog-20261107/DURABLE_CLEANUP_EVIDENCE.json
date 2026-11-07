@@ -1,0 +1,37 @@
+{
+  "at": "2026-11-07T22:47:57.319379+08:00",
+  "production_changed": false,
+  "runtime_tests": {
+    "passed": 526,
+    "failed": 0,
+    "scope": "isolated Linux cargo test; not RTC or production"
+  },
+  "ops_tests": {
+    "passed": 24,
+    "failed": 0
+  },
+  "systemd_verify": {
+    "rc": 0
+  },
+  "source_sha256": {
+    "rust-worker/src/business_runtime.rs": "85f00c7bc46ef871526914fa7411dd23c5235193d9ece18a77be88fbf7eca61d",
+    "rust-worker/src/business_watchdog.rs": "db300809354a077b525bb62d4f1458614781633ab559a24b3f21574fe9b13794",
+    "rust-worker/src/room_cleanup.rs": "48c2a32af355584fc2df7db94248cc03d717649ffd39b458a134c4b917a11f5b",
+    "rust-worker/src/job.rs": "093144dbfe066a13ce8743d6e84a72705a18ffa81cf2fec058f45d17cea3df64",
+    "ops/search-canary/reconcile_rooms.py": "ee71dee8f2d83a97758848087efd5e689d85e5369cbc0a7e277cfb28c3469123",
+    "ops/search-canary/test_reconcile_rooms.py": "f37666fff2aa7974d4ec20a19faf91598ad86aeeed8ac0e382a2e3f7b4c76df3",
+    "ops/business-watchdog/p003-business-room-cleanup.service": "953512b715b98ca6816e86d159f7d284dd325be59a04644a6b1c49d65ec1199e",
+    "ops/business-watchdog/p003-business-room-cleanup.timer": "dd7c08321b48da0086652898067efbb14eacaf5bea7bc1b709e4b658b3c0e085"
+  },
+  "evidence_sha256": {
+    "worker-durable-retry-red.log": "f3e4ebe298d70392235b927342b4baca9bb0d8e07d917e2752600a1a2bc0d27f",
+    "worker-durable-retry-green.log": "7ac6d550d5a5188d3c29fc50cbefb83bf8d7fd4445ead6e7f6f76457e285238c",
+    "source-durable-retry-green.json": "cc580ed24e9f8a04f7282ca8873515980a750c537b0b9822b933d5379c9de2d1",
+    "reconcile-business-red.log": "d57ed13bbfb0c7e15ac6b3a6c7aa71207f3152ab8b0ec19342fd9b1d966a5ba2",
+    "reconcile-business-green.log": "28c4c4fe52af3847b25b7a7ee8e904c9eabe0b1a21c761802a88e9b3fdf1aa88",
+    "reconcile-business-all.log": "c3380f979e53f64a30eaa27d219546266c4faf6e6ebb194d951cdd41ac50528c",
+    "SYSTEMD_VERIFY.log": "1d6fadde4b0d724c690759748064c755ec3494009ef56844ad985e829b598cf9",
+    "CLEANUP_RUNTIME_PREFLIGHT.json": "472e2610e7db4277d3b06996d0e9b98122589d838dc7fab74a954d1c782e7ad1",
+    "LIST_EMPTY_CONTRACT.json": "0946ff24cf6f9f1070ca6066ef05578ccd0b8fc8e539afed00e5e5787b09d077"
+  }
+}

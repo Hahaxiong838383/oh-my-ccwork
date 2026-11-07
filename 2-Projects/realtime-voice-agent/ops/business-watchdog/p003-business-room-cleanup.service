@@ -1,0 +1,19 @@
+[Unit]
+Description=P003 ordinary Worker durable room cleanup
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/root/rust-worker/rust-worker.env
+ExecStart=/usr/bin/python3 /opt/p003-business-cleanup/reconcile_rooms.py --mode business --queue /var/lib/p003-business-cleanup/queue --status /var/lib/p003-business-cleanup/status.json
+StateDirectory=p003-business-cleanup
+StateDirectoryMode=0700
+TimeoutStartSec=60
+MemoryMax=96M
+CPUQuota=20%
+TasksMax=16
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/p003-business-cleanup
+PrivateTmp=true

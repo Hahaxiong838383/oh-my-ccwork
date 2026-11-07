@@ -207,5 +207,55 @@ class CleanupTests(unittest.TestCase):
             thread.join()
 
 
+class BusinessCleanupTests(unittest.TestCase):
+    """Same SFU failure matrix, with ownership lifecycle instead of canary TTL."""
+    def setUp(self):
+        CleanupTests.setUp(self)
+        self.record.update(schema=2, generation='cfg-12', deadline_ms=0)
+        self.save()
+
+    save = CleanupTests.save
+    tearDown = CleanupTests.tearDown
+
+    def run_case(self, now=5000, alive=True):
+        return m.reconcile(self.path, {}, self.api, now, lambda *_: alive, mode='business')
+
+    def test_live_business_room_is_not_deleted_by_old_canary_window_or_elapsed_hours(self):
+        self.assertEqual(self.run_case(now=99_000_000)['status'], 'active')
+        self.assertEqual(self.api.calls, [])
+
+    def test_dead_business_owner_retries_durable_record_after_process_restart(self):
+        self.api.fail_delete = True
+        self.assertEqual(self.run_case(alive=False)['status'], 'pending')
+        self.assertTrue(self.path.exists())
+        self.api.fail_delete = False
+        self.assertEqual(self.run_case(alive=False)['status'], 'deleted')
+        self.assertFalse(self.path.exists())
+
+    def test_business_closing_200_with_original_sid_stays_pending(self):
+        self.record['state'] = 'closing'; self.save(); self.api.keep_room = True
+        self.assertEqual(self.run_case(now=11000)['status'], 'pending')
+        self.assertTrue(self.path.exists())
+
+    def test_business_closing_name_reuse_is_preserved(self):
+        self.record['state'] = 'closing'; self.save(); self.api.room['sid'] = 'RM_new'
+        self.assertEqual(self.run_case(now=11000)['status'], 'superseded')
+        self.assertEqual([x[0] for x in self.api.calls], ['ListRooms'])
+
+    def test_business_real_http_failure_is_retried_after_next_invocation(self):
+        self.record['state'] = 'closing'; self.save()
+        CleanupTests.test_real_http_adapter_scopes_jwt_and_keeps_failure_for_retry(self)
+
+    def test_business_changed_record_during_http_is_preserved(self):
+        self.record['state'] = 'closing'; self.save()
+        CleanupTests.test_record_replaced_during_request_is_not_removed(self)
+
+    def test_business_and_candidate_records_cannot_cross_cleanup_modes(self):
+        self.assertEqual(m.reconcile(self.path, {}, self.api, 999999,
+            lambda *_: False)['status'], 'invalid')
+        self.record.update(schema=1, generation='g1', deadline_ms=90000); self.save()
+        self.assertEqual(self.run_case(alive=False)['status'], 'invalid')
+        self.assertEqual(self.api.calls, [])
+
 if __name__ == '__main__':
     unittest.main()

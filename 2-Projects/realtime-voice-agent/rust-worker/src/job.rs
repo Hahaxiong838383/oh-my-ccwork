@@ -121,7 +121,18 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         }
     };
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
-    let business = crate::business_runtime::Runtime::from_env(&room_name, meta.voice_idle.as_ref(), t0);
+    let mut business = crate::business_runtime::Runtime::from_env(&room_name, meta.voice_idle.as_ref(), t0);
+    if let Some(w) = business.as_mut() {
+        if w.enforcing() && close_intent.is_none() {
+            match crate::room_cleanup::CloseIntent::begin_business(&config.agent_name,&room_name,sid,w.revision().unwrap_or("")) {
+                Ok(intent) => close_intent = Some(intent),
+                Err(_) => {
+                    w.observe_only();
+                    warn!(room=%room_name,room_sid=%sid,"business watchdog observe only: durable cleanup unavailable");
+                }
+            }
+        }
+    }
     let mut business_last_decision = None;
     if let Some(w) = &business { info!(room=%room_name, room_sid=%sid, revision=w.revision().unwrap_or("missing"), "business watchdog attached"); }
     let filler_policy = crate::filler::FillerPolicy::from_metadata(meta.filler_policy.as_ref(), &room_name);

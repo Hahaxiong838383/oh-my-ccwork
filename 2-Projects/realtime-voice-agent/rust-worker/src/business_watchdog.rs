@@ -30,6 +30,7 @@ impl BusinessWatchdog {
         policy.idle_ms = policy.idle_ms.filter(|ms| (5_000..=300_000).contains(ms));
         Self { policy, started: now, ready: false, last_progress: now, holds: [None; 5] }
     }
+    pub fn observe_only(&mut self) { self.policy.mode = Mode::Observe; }
     pub fn first_frame(&mut self, now: u64) {
         // Transport readiness is not evidence of speech. A late first frame
         // cannot undo the absolute startup cutoff, even before the next tick.

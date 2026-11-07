@@ -1,4 +1,4 @@
-//! Durable candidate room ownership, consumed by the independent reconciler.
+//! Durable scoped room ownership, consumed by the independent reconciler.
 //! Only identifiers/lifecycle state are stored; never credentials or dialogue.
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
@@ -40,19 +40,34 @@ fn atomic_record(path: &Path, record: &Record) -> Result<()> {
 }
 
 impl CloseIntent {
+    fn create_business(dir: &Path, room: &str, sid: &str, revision: &str,
+                       status: &str, now: u64) -> Result<Self> {
+        anyhow::ensure!(health(status,now)["healthy"] == true, "business_cleanup_unhealthy");
+        let digits=revision.strip_prefix("cfg-").context("business_cleanup_revision")?;
+        anyhow::ensure!(!digits.is_empty() && digits.len() <= 20 && digits.bytes().all(|v| v.is_ascii_digit()), "business_cleanup_revision");
+        let stat=fs::read_to_string("/proc/self/stat")?;
+        let start=stat.rsplit_once(')').and_then(|(_,rest)| rest.split_whitespace().nth(19))
+            .context("cleanup_process_identity")?.to_owned();
+        Self::create_scoped(dir,room,sid,revision,0,std::process::id(),start,now,2)
+    }
     fn create(dir: &Path, room: &str, sid: &str, generation: &str, deadline_ms: u64,
               pid: u32, process_start: String, now: u64) -> Result<Self> {
+        Self::create_scoped(dir,room,sid,generation,deadline_ms,pid,process_start,now,1)
+    }
+
+    fn create_scoped(dir: &Path, room: &str, sid: &str, generation: &str, deadline_ms: u64,
+              pid: u32, process_start: String, now: u64, schema: u8) -> Result<Self> {
         anyhow::ensure!(valid_room(room) && sid.starts_with("RM_") && sid.len() <= 103
             && sid[3..].bytes().all(|c| c.is_ascii_alphanumeric() || c == b'_' || c == b'-')
             && sid.len() > 3 && !generation.is_empty() && generation.len() <= 128
-            && deadline_ms > 0 && pid > 0 && !process_start.is_empty()
+            && ((schema == 1 && deadline_ms > 0) || (schema == 2 && deadline_ms == 0)) && pid > 0 && !process_start.is_empty()
             && process_start.bytes().all(|c| c.is_ascii_digit()), "invalid_cleanup_identity");
         anyhow::ensure!(dir.is_absolute() && fs::canonicalize(dir)? == dir, "cleanup_directory_must_be_real");
         #[cfg(unix)] anyhow::ensure!(fs::metadata(dir)?.permissions().mode() & 0o077 == 0, "cleanup_directory_must_be_private");
         let path = dir.join(format!("{:x}.json", Sha256::digest(sid.as_bytes())));
         // Never replace a different existing owner record.
         anyhow::ensure!(!path.exists(), "cleanup_intent_already_exists");
-        let record = Record {schema:1, room:room.into(), sid:sid.into(), generation:generation.into(),
+        let record = Record {schema, room:room.into(), sid:sid.into(), generation:generation.into(),
             deadline_ms, state:"active".into(), updated_at_ms:now, pid, process_start};
         atomic_record(&path, &record)?;
         Ok(Self {path, record})
@@ -70,6 +85,17 @@ impl CloseIntent {
         Self::create(&dir, room, sid, m["generation"].as_str().context("cleanup_generation")?,
             m["expires_at_ms"].as_u64().context("cleanup_deadline")?, std::process::id(), start,
             crate::search_canary::now_ms()).map(Some)
+    }
+
+    /// Separate fixed queue and status from candidate TTL cleanup. If this
+    /// cannot be registered, callers must downgrade the new guard to observe.
+    pub fn begin_business(agent: &str, room: &str, sid: &str, revision: &str) -> Result<Self> {
+        anyhow::ensure!(agent == "rust-worker", "business_cleanup_agent_scope");
+        let root=Path::new("/var/lib/p003-business-cleanup");
+        let status=fs::read_to_string(root.join("status.json"))?;
+        let value:serde_json::Value=serde_json::from_str(&status)?;
+        anyhow::ensure!(value["mode"] == "business", "business_cleanup_status_scope");
+        Self::create_business(&root.join("queue"),room,sid,revision,&status,crate::search_canary::now_ms())
     }
 
     pub fn closing(&mut self) -> Result<()> {
@@ -117,6 +143,30 @@ mod tests {
         fs::create_dir(&p).unwrap();
         #[cfg(unix)] fs::set_permissions(&p,fs::Permissions::from_mode(0o700)).unwrap();
         fs::canonicalize(p).unwrap()
+    }
+    #[test]
+    fn business_intent_requires_healthy_retry_and_survives_job_drop() {
+        let dir=directory();
+        let status=r#"{"at_ms":150000,"remaining":0,"counts":{},"healthy":true}"#;
+        let item=CloseIntent::create_business(&dir,"sn-BJP00326110799999901-123","RM_business","cfg-12",status,150001).unwrap();
+        let path=item.path.clone();
+        let value:Record=serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(value.schema,2);assert_eq!(value.deadline_ms,0);assert_eq!(value.state,"active");
+        assert_eq!(value.generation,"cfg-12");
+        assert!(CloseIntent::create_business(&dir,&value.room,&value.sid,"cfg-13",status,150002).is_err());
+        drop(item);
+        let value:Record=serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        assert_eq!(value.state,"closing");assert_eq!(value.generation,"cfg-12");
+        fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn unavailable_retry_or_unsigned_revision_never_registers_business_ownership() {
+        let dir=directory();let good=r#"{"at_ms":150000,"remaining":0,"counts":{},"healthy":true}"#;
+        for (status,now,revision) in [("{}",150000,"cfg-12"),(good,270001,"cfg-12"),(good,150000,"local"),(good,150000,"cfg-")] {
+            assert!(CloseIntent::create_business(&dir,"sn-BJP00326110799999901-123","RM_business",revision,status,now).is_err());
+            assert_eq!(fs::read_dir(&dir).unwrap().count(),0);
+        }
+        fs::remove_dir_all(dir).unwrap();
     }
     #[test]
     fn r16_cleanup_health_fails_closed_on_stale_missing_and_pending() {

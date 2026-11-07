@@ -67,6 +67,11 @@ impl Runtime {
         (self.mode == Mode::Enforce && self.idle_ms.is_some())
             .then(|| self.origin + Duration::from_millis(crate::startup_participant::STARTUP_BUDGET_MS))
     }
+    pub fn observe_only(&mut self) {
+        self.mode = Mode::Observe;
+        self.state.lock().unwrap_or_else(|e| e.into_inner()).model.observe_only();
+    }
+    pub fn enforcing(&self) -> bool { self.mode == Mode::Enforce && self.idle_ms.is_some() }
     pub fn revision(&self) -> Option<&str> { self.revision.as_deref() }
 }
 
@@ -109,6 +114,14 @@ mod tests {
         assert_eq!(within_startup(None, async { Ok(17) }).await.unwrap(), 17);
     }
     fn policy() -> serde_json::Value { json!({"timeout_ms":5000,"revision":"cfg-12"}) }
+    #[test]
+    fn missing_durable_retry_demotes_enforcement_without_resetting_progress() {
+        let t=Instant::now();let mut w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
+        w.first_frame(t);w.progress(t+Duration::from_secs(4));w.observe_only();
+        assert!(w.startup_deadline().is_none());
+        assert_eq!(w.evaluate(t+Duration::from_secs(8)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_secs(9)),Decision::Observe(Reason::IdleNoProgress));
+    }
     #[test]
     fn default_empty_scope_and_unlisted_devices_cannot_execute() {
         for mode in ["", "off", "invalid"] { assert!(Runtime::from_settings(mode,SN,ROOM,Some(&policy()),Instant::now()).is_none()); }
