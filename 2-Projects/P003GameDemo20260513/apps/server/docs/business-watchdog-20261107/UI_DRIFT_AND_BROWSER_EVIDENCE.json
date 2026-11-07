@@ -1,0 +1,34 @@
+{
+  "at": "2026-11-08T00:12:37+08:00",
+  "live_ui_sha256": "3e0977bbcc315f39cf3c2c2001006c67564c2550b0fd85dda8ba3b1d17ae1292",
+  "candidate_ui_sha256": "88c93913a380a56af9a92fd044088ce54a2f3e4b7e579e8fe40eebc792339189",
+  "change_scope": [
+    "devcfgUnit",
+    "devcfgValid",
+    "devcfgRangeMsg",
+    "devcfgFmtVal"
+  ],
+  "preserved": "all current deployed host monitoring UI changes",
+  "browser_result": {
+    "ok": true,
+    "fixture": "real local Hono+SQLite",
+    "invalid999Blocked": true,
+    "roundtrips": [
+      5000,
+      300000,
+      0
+    ],
+    "units": "毫秒",
+    "zeroOmittedDisplay": true,
+    "pageErrors": [],
+    "productionWrites": 0
+  },
+  "production_changed": false,
+  "inputs": {
+    "BRAIN_PREDEPLOY_READONLY.json": "c05a33823d4294e2982f62e37dfcdcd5b8df558f25dda48cbc863ac9fba2623e",
+    "idle-policy-ui.cjs": "dd419eda438849f23a9dce9cb8cab2878d576ebeebd587bcbc4d2b209a8cedb4",
+    "idle-policy-ui.log": "d8e9c46078e0e8fe20790e937def657fad45e98f997755d2d800f43fb84d51b4",
+    "idle-policy-ui.png": "44a970365087b2efeb7d07de98f9b3d6d7f455fac918b2574ec5a290c05aa50e",
+    "admin-idle-only.diff": "34ca2d49aff3f5208369060d897e76181b923c9234bba06f27457a6d2aea4365"
+  }
+}
