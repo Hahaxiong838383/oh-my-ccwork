@@ -40,13 +40,20 @@ struct Diagnostic {
     started:Instant, family:&'static str, stage:&'static str, outcome:&'static str,
     reason:&'static str, rcode:Option<u16>, io_kind:Option<std::io::ErrorKind>,
     count:Option<usize>, index:Option<usize>, peer:Option<SocketAddr>,
+    span:tracing::Span, dispatch:tracing::Dispatch,
 }
 impl Diagnostic {
     fn dns(v6:bool)->Self {Self{started:Instant::now(),family:if v6{"AAAA"}else{"A"},stage:"dns",
-        outcome:"cancelled",reason:"owner_dropped",rcode:None,io_kind:None,count:None,index:None,peer:None}}
+        outcome:"cancelled",reason:"owner_dropped",rcode:None,io_kind:None,count:None,index:None,peer:None,
+        span:tracing::Span::current(),dispatch:tracing::dispatcher::get_default(Clone::clone)}}
 }
 impl Drop for Diagnostic {
     fn drop(&mut self) {
+        // Tokio may abort a losing task outside the future's poll context.
+        // Keep both the subscriber and span for Drop; entering a span alone
+        // does not select its subscriber for a new event.
+        tracing::dispatcher::with_default(&self.dispatch,|| {
+        let _entered=self.span.enter();
         if self.index.is_none() {
             tracing::info!(family=self.family,outcome=self.outcome,reason=self.reason,dns_rcode=self.rcode,
                 io_kind=?self.io_kind,dns_ms=self.started.elapsed().as_millis() as u64,address_count=self.count,
@@ -56,6 +63,7 @@ impl Drop for Diagnostic {
                 io_kind=?self.io_kind,elapsed_ms=self.started.elapsed().as_millis() as u64,
                 address_index=self.index,peer=?self.peer,"voice tcp address timing");
         }
+        });
     }
 }
 
@@ -212,6 +220,19 @@ mod tests {
         assert_eq!(lines.len(),2,"both started families must be observed: {out}");
         assert!(lines.iter().all(|l|l.contains("outcome=\"cancelled\"")),"owner cancellation is not a DNS timeout: {out}");
         assert!(!out.contains("dns_timeout"));
+    }
+    #[tokio::test]
+    async fn diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber() {
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();let port=server.local_addr().unwrap().port();
+        let out=capture(async {
+            addresses_connect(vec![SocketAddr::from(([127,0,0,2],port)),server.local_addr().unwrap(),server.local_addr().unwrap()]).await.unwrap();
+            // JoinSet abort is asynchronous; give the already-started stagger
+            // loser time to drop. This wait is test-only, never in the dialer.
+            tokio::time::sleep(Duration::from_millis(20)).await;
+        }).await;
+        let cancelled:Vec<_>=out.lines().filter(|l|l.contains("voice tcp address timing") && l.contains("outcome=\"cancelled\"")).collect();
+        assert_eq!(cancelled.len(),1,"started loser must be recorded: {out}");
+        assert!(cancelled[0].contains("connect_id=701") && cancelled[0].contains("stage=\"stagger\""),"orphan cancellation: {out}");
     }
     #[tokio::test]
     async fn diagnostic_records_real_negative_dns_rcode_and_never_starts_tcp() {
