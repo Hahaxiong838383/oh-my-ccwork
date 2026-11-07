@@ -1,0 +1,263 @@
+{
+  "candidate": "e9806c7f97e98ade57204242058c02a74673f075",
+  "formal_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+  "production_before": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "cases": [
+    {
+      "label": "v2-old-normal",
+      "kind": "0",
+      "rc": 0,
+      "folder": "/root/p003-main-asr-preconnect-20261108/formal-v2-isolated-1794092131695539294",
+      "result": {
+        "at": "2026-11-07T22:55:58.502003+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+        "runtime_pid": "3604499",
+        "ordered": false,
+        "trace_id": "ops-release-probe-dd2c4e5f-eb15-4c8b-bfd4-f8a16e3a70b0",
+        "room": "sn-BJP00326110899999991-1794092133581",
+        "sid": "RM_smxuHRsmmYt6",
+        "stats": {
+          "ready_ms": 12292,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4770.0,
+          "first_audio_ms": 17024,
+          "last_audio_ms": 23074,
+          "input_sent_ms": 12297,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 204,
+          "track_publish_requested_ms": 12204,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 24921,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, actual SFU ASR TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      }
+    },
+    {
+      "label": "v2-new-normal",
+      "kind": "0",
+      "rc": 0,
+      "folder": "/root/p003-main-asr-preconnect-20261108/formal-v2-isolated-1794092158838643757",
+      "result": {
+        "at": "2026-11-07T22:56:24.401436+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+        "runtime_pid": "3604642",
+        "ordered": false,
+        "trace_id": "ops-release-probe-c5722804-85d5-4927-906e-bcc0d1dbb338",
+        "room": "sn-BJP00326110899999991-1794092160493",
+        "sid": "RM_Nw5eYnca8SGK",
+        "stats": {
+          "ready_ms": 12294,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4710.0,
+          "first_audio_ms": 17644,
+          "last_audio_ms": 23044,
+          "input_sent_ms": 12303,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 186,
+          "track_publish_requested_ms": 12188,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 23908,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, actual SFU ASR TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      }
+    },
+    {
+      "label": "v2-old-ordered",
+      "kind": "1",
+      "rc": 1,
+      "folder": "/root/p003-main-asr-preconnect-20261108/formal-v2-isolated-1794092184826961426",
+      "result": {
+        "at": "2026-11-07T22:57:39.747828+00:00",
+        "status": "FAIL",
+        "candidate_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+        "runtime_pid": "3604847",
+        "ordered": true,
+        "trace_id": "ops-release-probe-1f86869f-87bf-4d23-a059-38ae0b0ce7a7",
+        "room": "sn-BJP00326110899999991-1794092186689",
+        "sid": "RM_uNyh9Zfqwaod",
+        "stats": {
+          "ready_ms": 12300,
+          "phase_ms": null,
+          "user_finals": 0,
+          "answer_finals": 0,
+          "audible_ms": 0,
+          "first_audio_ms": null,
+          "last_audio_ms": null,
+          "input_sent_ms": null,
+          "events": [
+            "session.output_ready",
+            "session.input_phase",
+            "session.input_ready"
+          ],
+          "metrics_packets": 0,
+          "metric_kinds": [],
+          "input_samples_sent": 0,
+          "phase_reasons": [
+            "first_turn_failed:asr_unavailable"
+          ],
+          "client_connected_ms": 198,
+          "track_publish_requested_ms": 12199,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": false,
+        "fixture_cleanup": true,
+        "elapsed_ms": 73059,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, actual SFU ASR TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      }
+    },
+    {
+      "label": "v2-new-ordered",
+      "kind": "1",
+      "rc": 0,
+      "folder": "/root/p003-main-asr-preconnect-20261108/formal-v2-isolated-1794092260079028502",
+      "result": {
+        "at": "2026-11-07T22:58:09.284016+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+        "runtime_pid": "3605162",
+        "ordered": true,
+        "trace_id": "ops-release-probe-12fff871-aa5a-4563-8200-a91cb4f5990b",
+        "room": "sn-BJP00326110899999991-1794092261927",
+        "sid": "RM_o2EpJaUL8EQr",
+        "stats": {
+          "ready_ms": 12284,
+          "phase_ms": 14834,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4790.0,
+          "first_audio_ms": 19509,
+          "last_audio_ms": 25569,
+          "input_sent_ms": 14835,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [
+            "begin_timeout"
+          ],
+          "client_connected_ms": 202,
+          "track_publish_requested_ms": 12202,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 27357,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, actual SFU ASR TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      }
+    }
+  ],
+  "boundary": "isolated formal same bytes; synthetic LLM/SN; actual SFU ASR TTS; not production dispatch or Android",
+  "production_after": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "production_unchanged": true,
+  "candidate_passed": true,
+  "passed": false
+}

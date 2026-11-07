@@ -1,0 +1,53 @@
+{
+  "candidate_passed": true,
+  "production_unchanged": true,
+  "cases": [
+    {
+      "label": "v2-old-normal",
+      "result": "FUNCTIONAL_PASS",
+      "pcm_samples_sent": 60699,
+      "phase": [],
+      "audio_ms": 4770.0,
+      "asr_finals": 2,
+      "response_finals": 1,
+      "first_audio_ms": 17024
+    },
+    {
+      "label": "v2-new-normal",
+      "result": "FUNCTIONAL_PASS",
+      "pcm_samples_sent": 60699,
+      "phase": [],
+      "audio_ms": 4710.0,
+      "asr_finals": 2,
+      "response_finals": 1,
+      "first_audio_ms": 17644
+    },
+    {
+      "label": "v2-old-ordered",
+      "result": "FAIL",
+      "pcm_samples_sent": 0,
+      "phase": [
+        "first_turn_failed:asr_unavailable"
+      ],
+      "audio_ms": 0,
+      "asr_finals": 0,
+      "response_finals": 0,
+      "first_audio_ms": null
+    },
+    {
+      "label": "v2-new-ordered",
+      "result": "FUNCTIONAL_PASS",
+      "pcm_samples_sent": 60699,
+      "phase": [
+        "begin_timeout"
+      ],
+      "audio_ms": 4790.0,
+      "asr_finals": 2,
+      "response_finals": 1,
+      "first_audio_ms": 19509
+    }
+  ],
+  "interpretation": "Old ordered aborts its first turn due to a queued idle interruption, before begin-timeout; probe deliberately waits for begin-timeout and therefore sends zero PCM on this negative control. This is a state/protocol regression reproduction, not evidence that identical audio reached both ASR streams, nor an Android reproduction. Both ordinary RTC cases pass. Fixed candidate ordered waits normal 2550ms, sends complete 60699-sample fixture, then ASR/transcription/metrics/audio/room cleanup pass.",
+  "first_run_invalid_harness": "awaiting local disconnected callback and a ListRooms/DeleteRoom 404 race; kept initial logs, fixed only harness cleanup, retained all voice assertions.",
+  "formal_result_sha256": "cb9f1af3ea832126a08106afd06666b82443d29bf2dda3910f319e583526710d"
+}

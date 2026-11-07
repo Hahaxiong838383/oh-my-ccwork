@@ -1,0 +1,36 @@
+{
+  "at": "2026-11-07T22:57:35.946032+00:00",
+  "production_source_change": [
+    "pipeline.rs"
+  ],
+  "scope": "pre-PCM handoff only; never restart active recognition",
+  "baseline_sha": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+  "candidate_sha": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+  "rollback_tag": "rollback/p003-main-asr-handoff-pre-20261108",
+  "rollback_source": "e3522605e01fd799c25c4c519383620937504cdf",
+  "runtime_old_source": "b9114ac6b7274e0a67ccffc4dde4a5bd5d5a77fe",
+  "scripts": {
+    "deploy-main-handoff.py": "58e533ab4a2a122f13ce841f9acd6d4e94bca2e6505ca94f0f64ba97cfdda76f",
+    "rollback-main-handoff.py": "3ae951e2422e6b90f8ac012486ecc0b0d704017d199a6aa36f1c323e09fad01f"
+  },
+  "not_changed": [
+    "Brain",
+    "device config",
+    "allowlist",
+    "listening worker",
+    "search worker",
+    "ASR retry policy",
+    "TTS",
+    "watchdog policy"
+  ],
+  "gate": [
+    "555 tests pass; 1 existing ignored",
+    "same source formal release and ABI",
+    "Grok final review",
+    "isolated A/B candidate pass",
+    "remote current SHA/env matches",
+    "zero active rooms and jobs; healthy cleanup",
+    "snapshot actual binary/env/unit before stop"
+  ],
+  "rollback": "Use rollback-main-handoff.py only after inspecting current jobs and drift; restores actual ca41 binary while preserving env. No database rollback."
+}

@@ -1,0 +1,12 @@
+{
+  "source_commit": "e9806c7f97e98ade57204242058c02a74673f075",
+  "baseline": "e3522605e01fd799c25c4c519383620937504cdf",
+  "supersedes_not_deployed": "fefbfdc94cd9943bdf04331b49fed4f1fb563c16",
+  "production_files": [
+    "src/pipeline.rs"
+  ],
+  "source_inputs": 68,
+  "test_summary": "555 passed; 0 failed; 1 ignored",
+  "test_log_sha256": "d6f3f979dbad4aa8bda6889e8db2f974138b311355b9f1d9881cbcc8dceb2b56",
+  "deployed": false
+}

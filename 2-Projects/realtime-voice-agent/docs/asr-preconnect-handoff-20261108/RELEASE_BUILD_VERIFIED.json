@@ -1,0 +1,11 @@
+{
+  "source_commit": "e9806c7f97e98ade57204242058c02a74673f075",
+  "source_inputs": 68,
+  "test_release_inputs_equal": true,
+  "features": [],
+  "binary_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+  "bytes": 76232728,
+  "glibc_max": "2.39",
+  "glibcxx_max": "3.4.31",
+  "build_log": "/Users/fu-121/.local/state/p003-main-asr-preconnect-20261108/worker-handoff-release.log"
+}

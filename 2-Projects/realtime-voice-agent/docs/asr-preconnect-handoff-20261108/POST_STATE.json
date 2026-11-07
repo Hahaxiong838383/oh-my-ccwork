@@ -1,0 +1,59 @@
+{
+  "at": "2026-11-07T23:04:45.550126+00:00",
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "3606030",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Sat 2026-11-07 23:01:00 UTC",
+      "process_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+      "disk_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+      "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Sat 2026-11-07 21:58:30 UTC",
+      "process_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "disk_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "env_sha256": "162cbf5057ce453e7dd3cdac010643375f84de81794f403ffd817ec340b71bbc"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Tue 2026-11-03 11:03:55 UTC",
+      "process_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "disk_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "env_sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8"
+    }
+  },
+  "logs": {
+    "sha256": "6d92e393084883ec56b16162e184099c25cb0fad989c75243fe19c02cc73ece4",
+    "bytes": 189243,
+    "assignments": 2,
+    "job_exits": 2,
+    "asr_finals": 4,
+    "panic": 0,
+    "error_lines": 0,
+    "events": [
+      "2026-11-07T23:02:23.109885Z  INFO playout metrics room=sn-BJP00326110799999901-1794092526048 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+      "2026-11-07T23:02:29.420590Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=305 first_pcm_ms=305",
+      "2026-11-07T23:02:34.512788Z  INFO playout metrics room=sn-BJP00326110799999901-1794092526048 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=206 first_underrun_ms=-1 played_frames=960 exit=\"SourceDrained\"",
+      "2026-11-07T23:02:56.663136Z  INFO ordered_pcm begin timeout → rtc (端侧未走首句) room=sn-BJP00326110799999901-1794092561866 timeout_ms=2500",
+      "2026-11-07T23:02:56.663901Z  INFO ordered_pcm input phase → rtc room=sn-BJP00326110799999901-1794092561866 reason=begin_timeout catchup_samples=0 catchup_skipped=\"disabled\" stt2_spawned_ms_ago=0",
+      "2026-11-07T23:03:01.163472Z  INFO playout metrics room=sn-BJP00326110799999901-1794092561866 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+      "2026-11-07T23:03:07.323514Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=318 first_pcm_ms=318",
+      "2026-11-07T23:03:12.901770Z  INFO playout metrics room=sn-BJP00326110799999901-1794092561866 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=200 first_underrun_ms=-1 played_frames=1040 exit=\"SourceDrained\""
+    ]
+  },
+  "cleanup": {
+    "mode": "business",
+    "at_ms": 1794092686669,
+    "counts": {},
+    "remaining": 0,
+    "healthy": true
+  },
+  "sfu_room_count": 0
+}

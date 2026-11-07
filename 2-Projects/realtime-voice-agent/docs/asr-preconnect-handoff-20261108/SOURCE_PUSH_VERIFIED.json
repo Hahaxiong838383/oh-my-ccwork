@@ -1,0 +1,13 @@
+{
+  "head": "e9806c7f97e98ade57204242058c02a74673f075",
+  "refs": {
+    "refs/heads/codex/p003-voice-transport-fix-20261105": "e9806c7f97e98ade57204242058c02a74673f075",
+    "refs/tags/rollback/p003-main-asr-handoff-pre-20261108": "e3522605e01fd799c25c4c519383620937504cdf"
+  },
+  "xray_route": [
+    "2026/11/08 06:58:38.641622 from 127.0.0.1:57073 accepted //github.com:443 [socks -> cf-dmit]",
+    "2026/11/08 06:58:44.519468 from 127.0.0.1:57096 accepted //github.com:443 [socks -> cf-dmit]",
+    "2026/11/08 06:58:45.503522 from 127.0.0.1:57098 accepted //github.com:443 [socks -> cf-dmit]"
+  ],
+  "at": 1794092326.80912
+}

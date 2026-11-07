@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-07T23:01:03.728111+00:00",
+  "status": "ASR_PRECONNECT_HANDOFF_DEPLOYED",
+  "before": {
+    "MainPID": "3538554",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "after": {
+    "MainPID": "3606030",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+  "source_commit": "e9806c7f97e98ade57204242058c02a74673f075",
+  "other_pools_unchanged": true,
+  "dns_env_and_unit_unchanged": true,
+  "env_before_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+  "env_after_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+  "asr_recovery_enabled": true,
+  "scope": "main pool preconnect handoff only; business enforcement and configuration unchanged",
+  "backup": "/root/p003-main-asr-preconnect-20261108/asr-handoff-before"
+}

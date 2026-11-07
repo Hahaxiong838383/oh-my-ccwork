@@ -1,0 +1,26 @@
+{
+  "before_at": "2026-11-07T22:55:40.664172+00:00",
+  "after_at": "2026-11-07T23:03:00.622789+00:00",
+  "source_process_routing_manifest_equal": true,
+  "config_equal": true,
+  "health": {
+    "3001": {
+      "http_status": 200,
+      "status": "ok",
+      "agent": null,
+      "generation": null
+    },
+    "3008": {
+      "http_status": 200,
+      "status": "ok",
+      "agent": "p003-search-listening-20261030",
+      "generation": "v374-listening-ark-20261102-1793613511"
+    },
+    "3007": {
+      "http_status": 200,
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices"
+    }
+  }
+}
