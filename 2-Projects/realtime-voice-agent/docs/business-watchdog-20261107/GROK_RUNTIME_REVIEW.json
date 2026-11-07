@@ -1,0 +1,175 @@
+{
+  "at": "2026-11-07T23:59:00+08:00",
+  "reviewer": "Grok 4.7",
+  "commit": "87c417a3764b82c7ff62f9596136c179217a542f",
+  "parent": "5a71e7458018cc2afcbbb71da300a24ff0ca7858",
+  "rollback_tag": "c19e0964bca95d96e9816813daf76993383e399f",
+  "method": "git show of the fixed commit only; dirty worktree reconcile_rooms.py was not a candidate",
+  "production_touched": false,
+  "cargo_tests_rerun": false,
+  "simulation": "line-faithful transcription of first_frame/input_frame/activity_until/evaluate; not cargo test",
+  "report_md": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/GROK_RUNTIME_REVIEW.md",
+  "items": [
+    {
+      "id": "silence-length-disarms-startup",
+      "item": 1,
+      "verdict": "blocker",
+      "title": "len>0 frames arm ready and replace the 60s startup deadline with idle-from-assignment",
+      "premise": "enforce, timeout_ms=5000, revision=cfg-1, allowlist hit; from t=1000ms a 320-sample frame every 20ms; no VAD progress, no turn, no search",
+      "result": "Close IdleNoProgress at 5000ms; ready=true; last_progress=0. The existing test feeds sample_count 0 and still expects StartupNoInput at 60000ms.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs:42-45",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs:130-134",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs:33-38",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs:59-69",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1180-1181"
+      ]
+    },
+    {
+      "id": "ordered-and-subthreshold-do-not-progress",
+      "item": 1,
+      "verdict": "blocker",
+      "title": "ordered PCM and sub-threshold audio do not refresh progress; the input hold is one absolute begin_to_end",
+      "premise": "enforce, idle 5000; ordered first turn; RTC frames dropped after input_frame(len); Receiving starts at 1000ms with the default 7000ms budget; further packets call input_frame and the same deadline",
+      "result": "generation stays 1; Keep at 7999ms; Close IdleNoProgress at 8000ms while packets continue. Wake-only no_task sets Phase::Terminal and clears the Input hold without starting an LLM turn.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1239-1259",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1284-1285",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1295-1298",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1403-1404",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:894-898",
+        "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs:271",
+        "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs:524",
+        "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs:1107-1122",
+        "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs:1132-1136",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs:50-63"
+      ]
+    },
+    {
+      "id": "reply-40s-fixed",
+      "item": 1,
+      "verdict": "blocker",
+      "title": "reply hold does not renew, and a PCM stall after started+40s closes a live turn",
+      "premise": "enforce, idle_ms=5000, turn.started=T, task still unfinished at T+45s, captured_samples unchanged from T+40s to T+45s, no other hold",
+      "result": "same Instant, generation 1; Close IdleNoProgress at T+40s. Continuous captured_samples growth keeps the room. Real TTS gap frequency was not measured.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1391-1399",
+        "2-Projects/realtime-voice-agent/rust-worker/src/llm.rs:580",
+        "2-Projects/realtime-voice-agent/rust-worker/src/tts_xfyun.rs:63",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs:66"
+      ]
+    },
+    {
+      "id": "search-poll-does-not-renew",
+      "item": 1,
+      "verdict": "pass",
+      "title": "search polling publishes one absolute deadline",
+      "premise": "actor loop republishes the current poll_until; the 1s tick does not assign poll_until",
+      "result": "4.5s submit budget then a single now+80s poll deadline. A queued notice can hold at most its own 10s expires after polling ends. Not an infinite renewal.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs:280-286",
+        "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs:796",
+        "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs:828",
+        "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs:860",
+        "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs:932-933",
+        "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs:1601"
+      ]
+    },
+    {
+      "id": "vad-over-threshold-unbounded",
+      "item": 1,
+      "verdict": "pass_under_accepted_contract",
+      "title": "VAD at or above 0.6 refreshes progress with no duration cap",
+      "premise": "at least one 32ms window with p>=0.6 inside every idle_ms",
+      "result": "the room stays. Matches the accepted fresh-VAD rule. No corpus shows whether real singing stays above 0.6.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:894-898",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs:1284-1285"
+      ]
+    },
+    {
+      "id": "startup-60s-shared",
+      "item": 2,
+      "verdict": "pass_with_the_silence_blocker",
+      "title": "connect and publish share one 60s Instant; prebuild stays owned and off the room loop",
+      "premise": "enforce plus a valid idle policy; one startup_deadline Instant for both stages",
+      "result": "the second stage does not restart 60s. A stuck prebuild does not block the room loop and aborts with the pipeline. StartupNoInput ends once any len>0 frame sets ready.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/startup_participant.rs:4",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs:66-86",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs:97-109",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:147-186",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:557-572",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:784-797"
+      ]
+    },
+    {
+      "id": "delete-2xx-original-sid-remains",
+      "item": 3,
+      "verdict": "pass",
+      "title": "HTTP 2xx with the original SID still listed is Pending",
+      "premise": "fixture returns 200 for DeleteRoom and the following ListRooms still contains RM_original",
+      "result": "Pending. DeleteRoom is sent once. Delete status is ignored.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:29-40",
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:91-94",
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:107-109"
+      ]
+    },
+    {
+      "id": "listrooms-empty-vs-missing",
+      "item": 3,
+      "verdict": "pass_for_the_two_json_shapes_live_shape_unverified",
+      "title": "empty rooms array is Gone; missing rooms key is Unavailable",
+      "premise": "{\"rooms\":[]} versus {}. No production ListRooms call.",
+      "result": "missing key is not treated as empty. A live server that omits the field would make Gone unreachable. That fails closed and was not observed against the SFU.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:51-52",
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:80",
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:96-109",
+        "2-Projects/realtime-voice-agent/docs/business-watchdog-20261107/RUNTIME_WIRING.md:37"
+      ]
+    },
+    {
+      "id": "sid-reuse-between-list-and-delete",
+      "item": 3,
+      "verdict": "blocker",
+      "title": "a name reused after the pre-delete ListRooms is deleted by name and then reported Gone",
+      "premise": "first ListRooms returns RM_original; before DeleteRoom the same name points at RM_new; the following list is empty",
+      "result": "Outcome::Gone, logged as verified. The fixture flips a deleted boolean and cannot change SID between list and delete.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:26-40",
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs:69-81",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:537-542"
+      ]
+    },
+    {
+      "id": "nov6-tts-and-lifecycle-preserved",
+      "item": 4,
+      "verdict": "pass_source_level",
+      "title": "Nov6 TTS recovery and startup-participant lifecycle are still in the tree",
+      "premise": "diff against rollback tag c19e0964; ancestry of f0f113bf and 7fa56687",
+      "result": "tts.rs blob unchanged. tts_xfyun.rs only widens CONNECT_TIMEOUT. startup_participant.rs only names 60000. Tests were not re-run. The new Close break can still end a job around those paths.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/tts.rs:212-216",
+        "2-Projects/realtime-voice-agent/rust-worker/src/tts.rs:253-282",
+        "2-Projects/realtime-voice-agent/rust-worker/src/tts_xfyun.rs:63",
+        "2-Projects/realtime-voice-agent/rust-worker/src/startup_participant.rs:4",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:261",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:896",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs:917"
+      ]
+    }
+  ],
+  "not_new_findings": [
+    "main-pool durable cleanup retry is still absent",
+    "listening pool Activity::Listening is not wired",
+    "candidate reconciler window misuse remains a stated pre-release item"
+  ],
+  "unverified": [
+    "Linux 523/523 and log sha 375406ba4297c154c3d901cc26ce75aba3cb5febe02bdaa67a6ede8ec4b6793e were not re-executed",
+    "real RTC, real singing versus Silero 0.6, real TTS inter-sentence gaps",
+    "live ListRooms JSON when the room is absent",
+    "within_startup post-check on a success that returns on the exact deadline millisecond"
+  ]
+}

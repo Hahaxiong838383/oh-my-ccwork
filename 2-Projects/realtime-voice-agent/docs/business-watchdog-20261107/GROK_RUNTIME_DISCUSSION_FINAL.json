@@ -1,0 +1,118 @@
+{
+  "at": "2026-11-07T23:15:43+08:00",
+  "clock_source": "date +%Y-%m-%dT%H:%M:%S%z on this machine, output 2026-11-07T23:15:43+0800",
+  "reviewer": "Grok 4.7",
+  "round": 2,
+  "responds_to": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/CODEX_RUNTIME_DISCUSSION_DRAFT.md section 收到Grok正式报告后的逐项质证",
+  "original_report": {
+    "md": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/GROK_RUNTIME_REVIEW.md",
+    "json": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/GROK_RUNTIME_REVIEW.json",
+    "json_at_field": "2026-11-07T23:59:00+08:00",
+    "file_mtime_local": "2026-11-07T23:02",
+    "correction": "23:59 is ahead of both the file mtime and this date(1) reading. Original md/json were left unchanged."
+  },
+  "head_read_during_discussion": {
+    "commit": "b2dc12a70dfcffc13bb30398760696411008a70f",
+    "committed_at": "2026-11-07T23:08:17+08:00",
+    "subject": "fix(voice): allow one input idle interval before first VAD decision",
+    "ancestor": "87c417a3764b82c7ff62f9596136c179217a542f",
+    "note": "Item 1 judges this semantic. The green 527/0 log was not re-run and is not a release acceptance."
+  },
+  "production_touched": false,
+  "business_code_edited": false,
+  "cargo_tests_rerun": false,
+  "items": [
+    {
+      "id": "first-frame-ready-at",
+      "verdict": "accept",
+      "claim": "One-shot ready_at starts a single issued idle; repeated silence does not renew; a first frame at or after 60s still fails startup.",
+      "reason": "worker-startup-vad-race-red.log is a real rustc test failure: Close(IdleNoProgress) vs Keep, 526 passed, 1 failed. A 160-sample frame at 40s is classified only after a 32ms window, and the issued idle minimum 5000ms covers that window. STARTUP_BUDGET_MS is 60000 and first_frame uses a strict less-than. The watchdog unit fixture's 30000 is an injected scale. Issued idle stays the signed 5-300s value. Silence after that one interval closes on idle and does not fall back to 60s.",
+      "condition": "input_frame may call first_frame once when sample_count>0 and must not call progress for length or silence.",
+      "evidence": [
+        "/Users/fu-121/.local/state/p003-business-watchdog-20261107/worker-startup-vad-race-red.log",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs first_frame/evaluate",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs delayed_first_input_must_allow_vad_to_classify_before_idle_close",
+        "2-Projects/realtime-voice-agent/rust-worker/src/startup_participant.rs STARTUP_BUDGET_MS=60000"
+      ]
+    },
+    {
+      "id": "ordered-protocol-vs-rtc-grace",
+      "verdict": "accept",
+      "undecided": [
+        "ORDERED_LOCAL_RECEIPT_MAX_MS configured above the room's signed idle",
+        "device-side greet duration on no_task, which has no worker constant"
+      ],
+      "claim": "Packets after begin_to_end are an expired generation. The whole-job close still needs one issued-idle grace on the single FirstTurn to Rtc switch.",
+      "reason": "ordered_pcm on_tick fails Timeout when Receiving or Ended exceeds begin_to_end_timeout_ms (default 7000). That withdraws the earlier claim that packets still arriving at 8s are a legal upload. Terminal/no_task clears the Input hold. ready_at does not cover a handoff that itself lasted longer than idle. Default local receipt is ordered_end_seen_at plus 3000ms, and the signed idle minimum is 5000ms, so the default gate fits the one-shot grace. The output gate is a fixed 5s. No extra seconds are added.",
+      "minimal_change": "At the one pending_phase_switch application that sets InputPhase::Rtc, arm rtc_grace_at or one Input activity whose budget is the signed idle_ms. Do not slide it on later packets, polls, or ready restatements. Leave the ordered generation timeout in place.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs on_tick begin_to_end",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs pending_phase_switch and activity_until Input",
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs local receipt deadline default 3000",
+        "2-Projects/realtime-voice-agent/rust-worker/src/gate.rs OutputGate timeout 5s"
+      ]
+    },
+    {
+      "id": "reply-40s-false-kill",
+      "verdict": "disagree",
+      "downgrade": "pending_real_rtc_tts_gap",
+      "claim": "An unfinished task is not a reason to block. With the corrected clock there is no demonstrated close while another legal budget is still open.",
+      "timeline_idle_ms_5000": [
+        {"last_captured_samples_at": "T+40s", "close_at": "T+45s"},
+        {"last_captured_samples_at": "T+37s", "close_at": "T+42s"},
+        {"last_captured_samples_at": "T+35s or earlier", "close_at": "T+40s"}
+      ],
+      "reason": "The reply hold is the absolute Instant turn.started+30s+10s and protects only while now < until. The idle clock is last progress, not the unfinished flag. Close is the later of reply expiry and last PCM plus signed idle. The original report paired samples unchanged from T+40 to T+45 with Close at T+40, which is false when the last sample is at T+40. Output-gate 5s matches the idle floor. Default local receipt 3s sits inside the reply hold. No measured TTS gap was available, so an unverified gap is not a deterministic defect.",
+      "reopen_if": "A real RTC trace shows a close while signed idle since the last PCM is still unelapsed, after the 40s reply instant.",
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs activity_until Reply",
+        "2-Projects/realtime-voice-agent/rust-worker/src/llm.rs REQUEST_TIMEOUT=30s",
+        "2-Projects/realtime-voice-agent/rust-worker/src/tts_xfyun.rs CONNECT_TIMEOUT=10s",
+        "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs evaluate now < until"
+      ]
+    },
+    {
+      "id": "delete-room-name-toctou",
+      "verdict": "accept",
+      "guarantee": "none",
+      "claim": "Before/after SID reads detect non-CAS replacement only. Internal release can constrain scope and freeze the residual with tests. A new SID deleted inside the DeleteRoom window still surfaces as Gone.",
+      "release_constraints": [
+        "Patch only voice-worker-rust.service PID 3179125 sha256 35f59ecde2ce892f0c865ae90880747a00f782cccbffe39abe5dc3234e464971",
+        "Leave p003-listening-worker PID 2750511 and p003-search-worker PID 2446060 unchanged in that step",
+        "Demo window does not restart the issuer and does not run a second issuer of sn-<SN>-<unix second>; otherwise cleanup stays observe",
+        "Log and docs describe Gone as name-delete readback, including job.rs treating Gone and Superseded as room cleanup verified"
+      ],
+      "tests": [
+        "SID already RM_new before delete returns Superseded and sends zero DeleteRoom",
+        "2xx with RM_original still listed returns Pending and sends one DeleteRoom",
+        "DeleteRoom handler rebinds the name to RM_new and removes it; following list is empty; outcome may remain Gone and the record must say delete_by_name=true, cas=false; do not assert the new SID survived",
+        "Same process, same wall second: two nextRoomSecond values differ; a fresh process can issue that wall second again"
+      ],
+      "evidence": [
+        "2-Projects/realtime-voice-agent/rust-worker/src/room_verify.rs DeleteRoom body {room}",
+        "2-Projects/realtime-voice-agent/rust-worker/src/job.rs cleanup verified on Gone|Superseded",
+        "2-Projects/P003GameDemo20260513/apps/server/src/routes/device-session.ts nextRoomSecond",
+        "/Users/fu-121/.local/state/p003-business-watchdog-20261107/POOLS_READONLY_PREFLIGHT.json"
+      ]
+    }
+  ],
+  "side_evidence": {
+    "list_empty": {
+      "verdict": "accept_for_this_deployment_empty_array",
+      "file": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/LIST_EMPTY_CONTRACT.json",
+      "unix": 1794062766.7564435,
+      "local": "2026-11-07T22:46:06+0800",
+      "body": {"rooms": []},
+      "limit": "A missing rooms key was not observed. Later omissions are not implied safe."
+    },
+    "pools": {
+      "verdict": "accept_three_pools",
+      "file": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/POOLS_READONLY_PREFLIGHT.json"
+    },
+    "d18_durable_cleanup": {
+      "verdict": "supplement_only",
+      "not_87c_evidence": true,
+      "deployed": false
+    }
+  }
+}

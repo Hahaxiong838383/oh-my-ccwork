@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-07T23:23:17.508105+08:00",
+  "source_checkpoint": "b2dc12a70dfcffc13bb30398760696411008a70f",
+  "production_runtime_changed": false,
+  "grok_tasks": {
+    "166": "c062255d-f8f9-4e05-a12b-6210b3c853f0",
+    "167": "6c9a016b-966a-49d8-a06f-626855d4f8c8"
+  },
+  "review_sha256": {
+    "GROK_RUNTIME_REVIEW.md": "1c4bbb50e8655ccb63c2facab455064b0cf629e509bca95c3fd39fc1187eeb95",
+    "GROK_RUNTIME_REVIEW.json": "03b9ba26e40ce8bc6fde452a439c6eb82790d3921c75a689a18d0ec4ba96bcd1",
+    "CODEX_RUNTIME_DISCUSSION_DRAFT.md": "4911abdaf497cf1f9f662a298656c7a1d2caef8b5127e3d6a82c83f8296b94e5",
+    "GROK_RUNTIME_DISCUSSION_FINAL.md": "ed72b3034b7c62801b9eebdb1829494dbf194c0aac78efc1e1416b2de1318a7f",
+    "GROK_RUNTIME_DISCUSSION_FINAL.json": "e2be981d5263161b647ba6031afeaa638d8e21a23829b5b05327686cc2b2b6dc",
+    "JOINT_REVIEW.md": "8eb2cf9fc13156223573ccedb77a9e90cada5eb497cf6502e16f2e9b6328efc4"
+  },
+  "private_evidence_sha256": {
+    "LIST_EMPTY_CONTRACT.json": "0946ff24cf6f9f1070ca6066ef05578ccd0b8fc8e539afed00e5e5787b09d077",
+    "POOLS_READONLY_PREFLIGHT.json": "cfbb7321775a1c26f7edb33f8247934ecf17440f4e9f6553d47300141724d41a",
+    "POOL_RELEASE_READONLY.json": "fe06e69e4d3bf54d4f2dac4a3e66da348d7a67380bdd710e550913baa59b5f4c",
+    "OTHER_POOL_ROLLBACK_RETRY.json": "92ef76dea618122104fc8e70a543602c5a7c80a9b21d5d43569dd2f1a6f8669a",
+    "RECONCILE_LINUX_TESTS.log": "d68bf5fd4e522bf3526387ec5bc940ff8a305cb9bab41b7f0e5d6a2fa4bc04ad",
+    "SYSTEMD_VERIFY.log": "1d6fadde4b0d724c690759748064c755ec3494009ef56844ad985e829b598cf9",
+    "worker-lifecycle-release.log": "80cfa306f0bea37add7bb2493cd65824b18bde3669c0942b691efb6c3558959a"
+  }
+}
