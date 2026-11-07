@@ -1,3 +1,5 @@
+> 最新状态：ca5f95b4 已部署并完成两轮正式RTC验收。见 [部署回执](P003_DNS_CNAME_TTL_RELEASE_RECEIPT_20261108.md)。下文保留发布前记录。
+
 # DNS CNAME 修复最新候选：TTL边界已补齐，待复审部署
 
 当前候选 `voice_connect.rs` SHA256：`f49596c20a9351ef6325b5a1430d001cb8f50e48859738bcdd4127a6d234be8d`。

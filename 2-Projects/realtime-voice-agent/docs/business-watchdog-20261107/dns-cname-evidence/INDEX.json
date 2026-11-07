@@ -5,9 +5,74 @@
     "bytes": 1022
   },
   {
+    "file": "CODEX_GROK_CNAME_DISCUSSION.md",
+    "sha256": "210c711fdd9ddc68ff260db51ffd07b68c73174bf8f35b6bf94c2d7f7f4836ca",
+    "bytes": 1742
+  },
+  {
     "file": "DNS_CNAME_BLOCKED.json",
     "sha256": "45bad6dc28dd363d44a5da50e5a2baae8159cca6f60bbfc62325de18057f3d4a",
     "bytes": 262
+  },
+  {
+    "file": "DNS_CNAME_TTL_CANDIDATE.json",
+    "sha256": "8c854b6cf974fd85caecb1adf9997d8b1aea6f7cd1cad8e2c6e9f0553197c00e",
+    "bytes": 664
+  },
+  {
+    "file": "DNS_CNAME_TTL_DEPLOY_STARTED.json",
+    "sha256": "2012e5c2d5b4c2f0538b479c6cd697fb8aac8a8d96a30f4cb05a3e28d0912be5",
+    "bytes": 188
+  },
+  {
+    "file": "DNS_CNAME_TTL_DEPLOY_STATE_2.json",
+    "sha256": "f57e1cd2796ebd1625ea0f2dbdafc28660231e02db4b9af8a64120716d1e2ae7",
+    "bytes": 2003
+  },
+  {
+    "file": "DNS_CNAME_TTL_PREFLIGHT.json",
+    "sha256": "fa3755d4fbd06f8c69ab520a72c59add3717b19e4afdbb2d498dd93102f4d2f1",
+    "bytes": 1535
+  },
+  {
+    "file": "DNS_CNAME_TTL_PROBES_FINAL.json",
+    "sha256": "b47c5e8c0fd55655985dea811cbbc1fee0665157a7a7a7551aa86d3e44134a6d",
+    "bytes": 75305
+  },
+  {
+    "file": "DNS_CNAME_TTL_STABILITY_FINAL.json",
+    "sha256": "ad7a4859c68430186b98312afc4e4747fc7f6200d2e29fafa61da6ecb0e30592",
+    "bytes": 3102
+  },
+  {
+    "file": "GROK_CNAME_INCREMENTAL_REVIEW_20261108.json",
+    "sha256": "51fd8ecb14f5ae17cf14d088fa4a5d2b791669438ef31b2529af445e74fdf5eb",
+    "bytes": 7866
+  },
+  {
+    "file": "GROK_CNAME_INCREMENTAL_REVIEW_20261108.md",
+    "sha256": "049b7dd1db2342a5a74265a022d5f04cf908f1b4117716f265db5d0975fe9490",
+    "bytes": 8786
+  },
+  {
+    "file": "GROK_CNAME_TTL_FINAL_20261108.json",
+    "sha256": "3e03e656b5d699f3c12490e2758dec9653846a0cb4db752ff0a8b5163117e8d3",
+    "bytes": 4199
+  },
+  {
+    "file": "GROK_CNAME_TTL_FINAL_20261108.md",
+    "sha256": "60d9594bcab8d908d3806e884a23424e5d2da63084e2b17568d47d73ee4f838e",
+    "bytes": 3797
+  },
+  {
+    "file": "GROK_TTS_DNS_HYPOTHESES_20261108.json",
+    "sha256": "b92b132dfafc1e49011614f5e3c4ebd9bc6c23482fc865061bd838b5f6b0d4ff",
+    "bytes": 8519
+  },
+  {
+    "file": "GROK_TTS_DNS_HYPOTHESES_20261108.md",
+    "sha256": "7e38c46cbbe3ce5acbcce0c05f1dda208b9a81ef4efba8ca75f6576961027126",
+    "bytes": 10279
   },
   {
     "file": "PROBE_CLEANUP_EVIDENCE.json",
@@ -33,6 +98,11 @@
     "file": "WORKER_DNS_CNAME_RELEASE_STAGED.json",
     "sha256": "8611374b3cf30a352f7ab7c58f4a7a2a1588d131456c39a2008e9b22c8be3083",
     "bytes": 188
+  },
+  {
+    "file": "WORKER_DNS_CNAME_TTL_RELEASE_STAGED.json",
+    "sha256": "27fcc5f7784579ed97528510dd38cb6d8be4d71c9e446157c03ec0df86074060",
+    "bytes": 192
   },
   {
     "file": "dns-cname-ttl-boundary.rs",
@@ -75,6 +145,11 @@
     "bytes": 6363
   },
   {
+    "file": "source-dns-cname-ttl-release.json",
+    "sha256": "08efb955f000650e29699da66897ea06da524d8b548f385b44252dae457e707d",
+    "bytes": 6363
+  },
+  {
     "file": "worker-dns-cname-additional-green.log",
     "sha256": "bfb42cfee407408f846122fc8c46d8bafeaf6f16fefb7201ee0ea9b15fa581cb",
     "bytes": 6513
@@ -93,5 +168,10 @@
     "file": "worker-dns-cname-ttl-final-v3.log",
     "sha256": "7b60bbad27eb7b6116006ee8ecc20634cc3301a3efc958eacc0735e6a5143d5e",
     "bytes": 6505
+  },
+  {
+    "file": "worker-dns-cname-ttl-release.log",
+    "sha256": "c6b413c011f7b11aab11ebbf24ac42c04a9e1d6d8f45d2e3d2aecbb87d7533f6",
+    "bytes": 4665
   }
 ]

@@ -1,0 +1,222 @@
+{
+  "model_self_report": "Grok 4.7",
+  "self_report_is_backend_verification": false,
+  "prior_hypothesis": {
+    "md": "GROK_TTS_DNS_HYPOTHESES_20261108.md",
+    "json": "GROK_TTS_DNS_HYPOTHESES_20261108.json",
+    "session_label_from_user": 174,
+    "session_label_independently_verified": false,
+    "status": "hypotheses_only"
+  },
+  "scope": "incremental review of rust-worker/src/voice_connect.rs CNAME address selection",
+  "actions_not_taken": [
+    "source_edit",
+    "production_change",
+    "ssh",
+    "probe",
+    "install",
+    "agent_restart",
+    "test_rerun"
+  ],
+  "sha256": {
+    "requested": "85229df015d1f0caeb41f0b007aa72cf85e50c188478e7ac8e6a41bc0faee7fb",
+    "worktree_voice_connect": "85229df015d1f0caeb41f0b007aa72cf85e50c188478e7ac8e6a41bc0faee7fb",
+    "matches_requested": true,
+    "bytes": 10804,
+    "commit": "282a4167",
+    "head_file_matches": true,
+    "green_log_source_sha_matches": true,
+    "production_commit": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+    "production_voice_connect_sha256": "1b7c945a2d8f5b9827022d8d6725502d020dd939fbc0676a7766daca10dace2a",
+    "red_json_voice_connect_sha256": "ed9573084a1ebc4e91213f536ac732865dc129813f7d7b7022588691eb547063",
+    "red_blob_present_in_worktree": false
+  },
+  "verdict": {
+    "controlled_deploy_of_additional_discard_defect": "sufficient",
+    "required_source_edits": [],
+    "blocking_count": 0,
+    "explains_historical_dns_4704ms": false,
+    "explains_spare_386ms": false,
+    "functional_pass_is_process_acceptance": false
+  },
+  "implementation": {
+    "file": "2-Projects/realtime-voice-agent/rust-worker/src/voice_connect.rs",
+    "selection_lines": "47-69",
+    "cname_walk": "answer section IN CNAME only, rescan each hop, cycle becomes resolve_cname_cycle",
+    "address_filter": "final owner, DNSClass IN, matching A or AAAA, answers then additionals, dedup",
+    "ttl_owner": "resolver cache, application does not set TTL",
+    "hickory": "0.26.3",
+    "preserve_intermediates_default": true,
+    "preserve_intermediates_default_source": "published hickory-dns tag v0.26.3 crates/resolver/src/config.rs default_preserve_intermediates; not in the four local extracted files",
+    "callers": {
+      "tts": "cbm01.cn-huabei-1.xf-yun.com when P003_ASYNC_DNS_V1=1 and agent is rust-worker or search candidate",
+      "asr": "openspeech.bytedance.com when async_connect is on",
+      "system_lookup_host": "unchanged"
+    }
+  },
+  "tests": {
+    "red": {
+      "passed": 542,
+      "failed": 1,
+      "ignored": 1,
+      "failed_test": "voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses",
+      "panic": "resolve_failed",
+      "panic_location": "src/voice_connect.rs:137:149"
+    },
+    "green": {
+      "passed": 544,
+      "failed": 0,
+      "ignored": 1,
+      "rc": 0,
+      "new_ok_tests": [
+        "cname_target_in_additional_is_not_discarded_as_no_addresses",
+        "cname_additional_ipv6_remains_usable"
+      ]
+    },
+    "ignored_test_name_in_saved_log": null,
+    "rerun_this_review": false
+  },
+  "blocking": [],
+  "required_line_edits": [],
+  "non_blocking": [
+    {
+      "id": "NB1",
+      "topic": "production A shape is not locked by a unit test",
+      "lines": "114-128 and after 173",
+      "edit_required": false,
+      "detail": "Cold-batch A response has CNAME owner cbm01.cn-huabei-1.xf-yun.com and six A records owned by hb-kaicp.xf-gtm.com in the answer section. The new test places the target A only in additional."
+    },
+    {
+      "id": "NB2",
+      "topic": "equal TTLs do not isolate additional TTL",
+      "lines": "116-118 and 169-172",
+      "edit_required": false,
+      "detail": "CNAME TTL and additional A TTL are both 1. Re-query after 1150ms is shown. lookup_from_cache uses the minimum answer TTL only."
+    },
+    {
+      "id": "NB3",
+      "topic": "ipv6 test has no trap and no TTL re-query",
+      "lines": "175-180",
+      "edit_required": false
+    },
+    {
+      "id": "NB4",
+      "topic": "red panic string is not A-lookup proof",
+      "lines": "83-86",
+      "edit_required": false,
+      "detail": "dial returns the other family's error. Empty AAAA NOERROR becomes resolve_failed. Green connection to 127.0.0.1, not 127.0.0.2, is the proof."
+    },
+    {
+      "id": "NB5",
+      "topic": "cancellation unchanged and only caller-timeout is tested",
+      "lines": "21-34 and 155-158",
+      "edit_required": false
+    },
+    {
+      "id": "NB6",
+      "topic": "address cap and stagger unchanged",
+      "lines": "25-28",
+      "edit_required": false,
+      "detail": "take(8) and 250ms stagger. Observed A set has 6 addresses. Dedup is new only for repeated addresses."
+    },
+    {
+      "id": "NB7",
+      "topic": "CNAME records in additional are not followed",
+      "lines": "53-58",
+      "edit_required": false,
+      "detail": "Observed chain is one answer-section hop. In-message walk has cycle detection and no numeric depth cap."
+    },
+    {
+      "id": "NB8",
+      "topic": "shared connect also serves ASR async host",
+      "lines": "10-18",
+      "edit_required": false,
+      "detail": "openspeech.bytedance.com uses the same function when async_connect is on. No openspeech packet was reread in this pass."
+    }
+  ],
+  "historical_4704_separated": {
+    "historical_success": {
+      "dns_ms": 4704,
+      "tcp_ms": 51,
+      "tls_ws_ms": 170
+    },
+    "historical_spare_failure_ms": 386,
+    "new_capture_max_query_ms": 186.994,
+    "long_wait_reproduced": false,
+    "reason": "A discarded address fails the dial. A 4704ms success already had an address. New A replies carry six answer A records and one query each."
+  },
+  "new_dns_captures": {
+    "isolated": {
+      "replies": 9,
+      "unanswered": 0,
+      "a_query_ms": [
+        7.884,
+        9.529,
+        185.84,
+        186.994,
+        0.796
+      ],
+      "max_ms": 186.994
+    },
+    "rtc_a": {
+      "replies": 4,
+      "unanswered": 0,
+      "a_query_ms": [
+        1.767,
+        2.748
+      ],
+      "max_ms": 2.748
+    },
+    "rtc_b": {
+      "replies": 5,
+      "unanswered": 0,
+      "a_query_ms": [
+        5.859,
+        7.45
+      ],
+      "max_ms": 7.45
+    },
+    "a_shape": "answer CNAME plus six answer A records",
+    "aaaa_shape": "answer CNAME, authority SOA, additional A records, then SOA-only AAAA for hb-kaicp.xf-gtm.com",
+    "timeline_records_include_owner": false,
+    "cold_batch_a_owner": "hb-kaicp.xf-gtm.com",
+    "cold_batch_cname_owner": "cbm01.cn-huabei-1.xf-yun.com"
+  },
+  "probe_acceptance": {
+    "batch_round_index_2": {
+      "status": "PASS",
+      "rc": -6
+    },
+    "rounds_0_and_1": {
+      "status": "PASS",
+      "rc": 0
+    },
+    "runner": "AssertionError because returncode != 0",
+    "worker": {
+      "MainPID": 3512437,
+      "NRestarts": 0,
+      "ActiveState": "active"
+    },
+    "log_after_pass_json": [
+      "Event loop is closed",
+      "panic in a function that cannot unwind",
+      "aborting"
+    ],
+    "audiostream_aclose_cause": "stated by user and CONTINUATION.md; probe source not read in this review",
+    "process_acceptance": false
+  },
+  "evidence_bounds": [
+    "Local hickory-source extract does not include config.rs or Name equality.",
+    "Timeline JSON records have no owner field.",
+    "Red intermediate source blob ed957308 is not in the worktree.",
+    "Saved test logs do not name the single ignored test.",
+    "No test rerun and no new capture in this review."
+  ],
+  "discussion_items": [
+    "No blocking source edit. Lines 47-69 can be controlled-deployed for the additional-discard defect.",
+    "Deploy text covers that defect only. It does not claim the 4704ms cause.",
+    "Observed live A replies already contain answer-section A records owned by the CNAME target.",
+    "NB1 and NB2 are test gaps, not current source defects.",
+    "Functional PASS and process rc -6 stay separate."
+  ]
+}

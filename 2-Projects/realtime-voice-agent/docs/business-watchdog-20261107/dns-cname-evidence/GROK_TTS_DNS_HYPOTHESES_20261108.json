@@ -1,0 +1,175 @@
+{
+  "model": "Grok 4.7",
+  "vendor": "xAI",
+  "kind": "tts_dns_hypotheses_read_only",
+  "at": "2026-11-08",
+  "head": "b97113001b59cd30d8357dbe235a8e67a759c8db",
+  "source_files_unchanged_since": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "source_files": [
+    "2-Projects/realtime-voice-agent/rust-worker/src/voice_connect.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/tts.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/tts_xfyun.rs"
+  ],
+  "asr_not_reopened": {
+    "source": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+    "main_pool_release": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+    "rollback": false
+  },
+  "not_done": [
+    "code_change",
+    "ssh",
+    "dns_probe",
+    "cargo_fetch",
+    "main13_capture"
+  ],
+  "crate_source": {
+    "hickory-resolver": "0.26.3",
+    "hickory-proto": "0.26.3",
+    "local_source": "missing",
+    "unchecked": [
+      "attempts_semantics",
+      "timeout_is_lookup_deadline",
+      "cname_chase",
+      "search_suffix",
+      "udp_then_tcp",
+      "inflight_dedup"
+    ]
+  },
+  "journal_sha256": "8383a641ffe19d0cd1de29e51e91988ab710457666a65d069902de01d80d85e5",
+  "host": "cbm01.cn-huabei-1.xf-yun.com",
+  "call": {
+    "room": "sn-BJP00326110799999901-1794073741651",
+    "turn_id": 2,
+    "connect2": {
+      "start": "2026-11-07T17:49:07.059854Z",
+      "end": "2026-11-07T17:49:11.985854Z",
+      "dns_ms": 4704,
+      "tcp_ms": 51,
+      "tls_ws_ms": 170,
+      "elapsed_ms": 4926,
+      "dns_path": "independent_families",
+      "peer": "123.56.17.44:443",
+      "winning_family": "A"
+    },
+    "foreground": {
+      "prewarm_wait_ms": 3961,
+      "provider_ttfb_ms": 560,
+      "first_pcm_ms": 4521
+    },
+    "spare_connect3": {
+      "log": "2026-11-07T17:49:08.676867Z tts foreground slow connection: bounded spare started",
+      "start": "2026-11-07T17:49:08.677807Z",
+      "end": "2026-11-07T17:49:09.063807Z",
+      "stage": "resolve_tcp",
+      "outcome": "failed",
+      "elapsed_ms": 386,
+      "reason_logged": false,
+      "both_families_finished": true
+    },
+    "connect1": {
+      "outcome": "cancelled",
+      "elapsed_ms": 448,
+      "stage": "resolve_tcp"
+    },
+    "connect4_cache_hit": {
+      "dns_ms": 0,
+      "tcp_ms": 51,
+      "peer": "123.56.17.44:443"
+    },
+    "later_control": {
+      "connect5_dns_ms": 188,
+      "peer": "39.105.54.181:443",
+      "connect6_dns_ms": 0,
+      "connect7_dns_ms": 0
+    }
+  },
+  "resolver_facts": {
+    "mode": "systemd-resolved stub",
+    "systemd": "255.4-1ubuntu8.18",
+    "dig_server_line_only": "127.0.0.53",
+    "upstreams_behind_stub": [
+      "8.8.8.8",
+      "1.1.1.1"
+    ],
+    "stub_file_body": "not_captured",
+    "uplink_resolv_search_dot_not_the_stub_file": true,
+    "cache_yes_since": "2026-11-07T16:59:13Z",
+    "cbm01_in_1659_cache_dump": false
+  },
+  "excluded_evidence": [
+    "DNS_UPSTREAM_MATRIX timings, A, AAAA NODATA, and TTL are voice-hk.hahaxiong.cc only",
+    "openspeech.bytedance.com CNAME chain is a different name",
+    "resolved Total Timeouts 70 is a cumulative counter from 16:56, before this call",
+    "no packet capture of this lookup, so no upstream loss claim and no Android claim"
+  ],
+  "hypotheses": [
+    {
+      "id": "H1",
+      "claim": "The winning A lookup sent one query to the stub and accepted the answer at 4704ms; the configured 1s timeout and 2 attempts were not the deadline of that lookup.",
+      "support": [
+        "Outcome is connected with an IPv4 peer, so dns_ms is the A lookup, and it returned success rather than a timeout error.",
+        "connect_id=5 completed the same A path in 188ms, so a response is not padded to 1s.",
+        "4704 exceeds 2*1000 and 3*1000. Hickory's configured nameserver is the stub; upstream 8.8.8.8 and 1.1.1.1 are behind it."
+      ],
+      "counter": [
+        "voice_connect.rs sets timeout=1s and attempts=2 before build(). If that deadline applies to a single query, success at 4704ms should not happen.",
+        "hickory 0.26.3 source is missing, so whether those fields bound lookup() is unverified.",
+        "One slow sample."
+      ],
+      "experiment": "Main 13 only: one cold A query for cbm01.cn-huabei-1.xf-yun.com, timestamps of client queries to 127.0.0.53 and the response rcode. Exactly one query and one response near 4.7s confirms H1. Queries about 1s apart refute H1."
+    },
+    {
+      "id": "H2",
+      "claim": "lookup(A) performed more than one sequential query (extra retries, CNAME chase, search suffix, or UDP-then-TCP), and the successful answer arrived on a later step at a sum of 4704ms.",
+      "support": [
+        "4704 is in the band of 4*1s plus a few hundred milliseconds. A single query budget of 2s or 3s is too small.",
+        "family() drops non-A records, so an internal CNAME-only step would still be inside this dns_ms. That internal step was not readable; crate source is missing."
+      ],
+      "counter": [
+        "No CNAME, search suffix, or multi-query record exists for cbm01.cn-huabei-1.xf-yun.com.",
+        "voice-hk and openspeech DNS data are different names.",
+        "The in-repo mock test sees one A query when the mock returns A directly, and connect_id=5 shows this path can finish in 188ms."
+      ],
+      "experiment": "Same capture as H1. Record qname, qtype, UDP/TCP, and answer-section types for every query. Changing qnames indicate search or CNAME chase. Same qname at ~1s intervals indicates retry. A single query refutes H2."
+    },
+    {
+      "id": "H3",
+      "claim": "connect_id=3 failed in 386ms because both address families had already returned Err. It is not a 1s timeout and it did not await connect_id=2's still-pending A lookup.",
+      "support": [
+        "386<1000 and outcome is failed, not cancelled.",
+        "dial() returns Err only after both families fail, while connect_id=2's winning A lookup still had about 2.7s left.",
+        "The spare starts from recover_connection 650ms after the foreground wait, before the positive cache write. Err(_) drops the error string."
+      ],
+      "counter": [
+        "The log cannot separate resolve_failed from connect_failed or from an empty filtered answer.",
+        "A TCP failure of at most two addresses also fits 386ms, because the third address sleeps 500ms.",
+        "No rcode, so SERVFAIL, REFUSED, NXDOMAIN, NODATA, and CNAME-only are undistinguished."
+      ],
+      "experiment": "Main 13 aligns stub replies to 17:49:08.678Z-09.064Z. A rcode, NODATA, or NOERROR with no usable A/AAAA in that window places the failure in the DNS result. NOERROR plus A followed by TCP refusal places it in TCP. The spare's A query still outstanding at 386ms refutes H3."
+    },
+    {
+      "id": "H4",
+      "claim": "The shared process resolver's positive cache explains the following dns_ms=0 and did not cause the 4704ms wait or help the spare.",
+      "support": [
+        "One OnceLock TokioResolver per process.",
+        "connect_id=4 is dns_ms=0 to the same peer about 222ms after connect_id=2, matching the in-repo TTL test.",
+        "connect_id=3 ran before that write. connect_id=5 is a 188ms lookup to a different peer 70s later.",
+        "Different concurrent outcomes rule out connect_id=2 waiting on a lock held by connect_id=3."
+      ],
+      "counter": [
+        "A cache miss does not explain the stub's 4.7s answer.",
+        "Only the connected peer is logged, not the full RRset. The two peers may be rotation or two answers.",
+        "A transient negative written by connect_id=3 and overwritten by connect_id=2 is invisible in this log. Cache=yes is the stub cache, while dns_ms=0 is the hickory cache."
+      ],
+      "experiment": "During the same cold lookup, read A/AAAA cache key and TTL for this qname at three times: during connect_id=2, at connect_id=3 failure, and after connect_id=2 success. Absence until success confirms a miss. A negative only in the overlap confirms a transient negative. Do not add another business traffic round."
+    }
+  ],
+  "ruled_out": [
+    "4704 is connect_id=2's own dns_ms, not a subtraction across rounds.",
+    "TLS is 170ms and TCP is 51ms.",
+    "dns_ms is not A waiting for AAAA; the winning peer is IPv4 and the clock is inside family(A).",
+    "The older LiveKit/voice-hk AAAA-NODATA getaddrinfo delay is a different name and a different API.",
+    "No captured DNS packets, so this is not evidence of upstream packet loss or an Android network fault.",
+    "connect_id=1 cancelled at 448ms is an abort, not a DNS timeout."
+  ]
+}

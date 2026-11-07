@@ -1,0 +1,2293 @@
+{
+  "at": "2026-11-07T18:47:25.699914+00:00",
+  "status.json": {
+    "runner_pid": 3530243,
+    "at": 1794077237.2221062,
+    "stage": "complete",
+    "results": [
+      {
+        "round": 0,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      },
+      {
+        "round": 1,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      }
+    ]
+  },
+  "finished.json": {
+    "at": 1794077237.2225456,
+    "status": "COMPLETE",
+    "results": [
+      {
+        "round": 0,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      },
+      {
+        "round": 1,
+        "rc": 0,
+        "status": "PASS_WITH_CLEAN_PROCESS_EXIT",
+        "slow_tts_dns": []
+      }
+    ]
+  },
+  "processes": {
+    "runner_pid": false
+  },
+  "rounds": [
+    {
+      "round": 0,
+      "result.json": {
+        "at": "2026-11-07T18:46:12.220783+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d",
+        "runtime_pid": "3529878",
+        "ordered": false,
+        "trace_id": "ops-release-probe-6205f900-da58-4285-9a0c-cf23b63c2ca4",
+        "room": "sn-BJP00326110799999901-1794077148300",
+        "sid": "RM_bHtAVeMp28FH",
+        "stats": {
+          "ready_ms": 743,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 2,
+          "audible_ms": 8450.0,
+          "first_audio_ms": 6520,
+          "last_audio_ms": 17500,
+          "input_sent_ms": 751,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 5,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 199,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 23920,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      },
+      "process.json": {
+        "returncode": 0
+      },
+      "timings.json": [
+        "2026-11-07T18:45:48.992459Z  INFO asr_stream{room=sn-BJP00326110799999901-1794077148300}: asr connection timing request_id=\"4ca10566-960f-43cb-9c58-658be882f424\" stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=371 dns_ms=192 tcp_ms=3 tls_ws_ms=175",
+        "2026-11-07T18:45:53.164711Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=226 dns_ms=8 tcp_ms=51 tls_ws_ms=166 dns_path=\"independent_families\" local=Some(64.90.13.177:49636) peer=Some(101.200.158.58:443)",
+        "2026-11-07T18:45:53.535929Z  INFO playout metrics room=sn-BJP00326110799999901-1794077148300 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-07T18:45:53.732467Z  INFO tts connection timing connect_id=2 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=195 dns_ms=0 tcp_ms=51 tls_ws_ms=143 dns_path=\"independent_families\" local=Some(64.90.13.177:46852) peer=Some(101.200.158.58:443)",
+        "2026-11-07T18:45:54.440109Z  INFO tts connection assigned room=\"sn-BJP00326110799999901-1794077148300\" turn_id=2 connect_id=2 used_warm=true warm_connect_ms=195 connect_ms=0",
+        "2026-11-07T18:45:54.667783Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=227 dns_ms=0 tcp_ms=52 tls_ws_ms=174 dns_path=\"independent_families\" local=Some(64.90.13.177:46854) peer=Some(101.200.158.58:443)",
+        "2026-11-07T18:45:54.696123Z  INFO tts provider first PCM observed room=\"sn-BJP00326110799999901-1794077148300\" turn_id=2 provider_ttfb_ms=255 connect_ms=0 used_warm=true",
+        "2026-11-07T18:45:55.537697Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794077148300\" turn_id=2 connect_id=2 phase=\"close\" completed=true pcm_frames=12 elapsed_ms=1097 ws_read_wait_ms=1090 max_ws_read_wait_ms=211 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=193",
+        "2026-11-07T18:45:55.537923Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=255 first_pcm_ms=255",
+        "2026-11-07T18:45:55.537954Z  INFO body first sentence ready room=sn-BJP00326110799999901-1794077148300 turn_id=2 ttfb_ms=255 body_ready_since_turn_ms=1158",
+        "2026-11-07T18:45:55.538129Z  INFO tts connection assigned room=\"sn-BJP00326110799999901-1794077148300\" turn_id=2 connect_id=3 used_warm=true warm_connect_ms=227 connect_ms=0",
+        "2026-11-07T18:45:55.756936Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=218 dns_ms=0 tcp_ms=51 tls_ws_ms=167 dns_path=\"independent_families\" local=Some(64.90.13.177:46868) peer=Some(101.200.158.58:443)",
+        "2026-11-07T18:45:55.833690Z  INFO tts provider first PCM observed room=\"sn-BJP00326110799999901-1794077148300\" turn_id=2 provider_ttfb_ms=295 connect_ms=0 used_warm=true",
+        "2026-11-07T18:46:00.652790Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794077148300\" turn_id=2 connect_id=3 phase=\"close\" completed=true pcm_frames=56 elapsed_ms=5114 ws_read_wait_ms=4319 max_ws_read_wait_ms=351 channel_send_wait_ms=765 max_channel_send_wait_ms=239 max_observed_pcm_gap_ms=351",
+        "2026-11-07T18:46:00.653152Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=295 first_pcm_ms=295",
+        "2026-11-07T18:46:06.233612Z  INFO playout metrics room=sn-BJP00326110799999901-1794077148300 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=203 first_underrun_ms=-1 played_frames=1152 exit=\"SourceDrained\"",
+        "2026-11-07T18:46:11.910078Z  INFO room cleanup readback complete room=sn-BJP00326110799999901-1794077148300 room_sid=RM_bHtAVeMp28FH cleanup=Gone delete_scope=\"room_name\" cas=false"
+      ],
+      "capture/ready.json": {
+        "started": 1794077146.9298313,
+        "seconds": 120,
+        "pid": 3530249,
+        "metadata_only": true,
+        "limit": 4000,
+        "timestamp": "SO_TIMESTAMPNS plus received_at"
+      },
+      "capture/ended.json": {
+        "started": 1794077146.9298313,
+        "ended": 1794077173.1517508,
+        "records": 24,
+        "limit_hit": false,
+        "parse_errors": 0,
+        "capture_packets": 4591,
+        "capture_kernel_drops": 0,
+        "metadata_only": true
+      },
+      "dns_events": {
+        "sha256": "ffc146a42d4f8ddf3676c67305018ac042616d8eeed2b65493f99ea2dcbbe6a7",
+        "records": [
+          {
+            "id": 40334,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9384737,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 33266,
+            "dp": 53,
+            "received_at": 1794077152.9387174,
+            "kernel_at": 1794077152.9384737
+          },
+          {
+            "id": 40334,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9384851,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 33266,
+            "dp": 53,
+            "received_at": 1794077152.9391153,
+            "kernel_at": 1794077152.9384851
+          },
+          {
+            "id": 19060,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1472,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9394386,
+            "iface": "ens17",
+            "direction": "out",
+            "src": "64.90.13.177",
+            "dst": "1.1.1.1",
+            "sp": 60792,
+            "dp": 53,
+            "received_at": 1794077152.9395041,
+            "kernel_at": 1794077152.9394386
+          },
+          {
+            "id": 19060,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9453702,
+            "iface": "ens17",
+            "direction": "in",
+            "src": "1.1.1.1",
+            "dst": "64.90.13.177",
+            "sp": 53,
+            "dp": 60792,
+            "received_at": 1794077152.9456825,
+            "kernel_at": 1794077152.9453702
+          },
+          {
+            "id": 40334,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9459236,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 33266,
+            "received_at": 1794077152.9460394,
+            "kernel_at": 1794077152.9459236
+          },
+          {
+            "id": 40334,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9459264,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 33266,
+            "received_at": 1794077152.9462538,
+            "kernel_at": 1794077152.9459264
+          },
+          {
+            "id": 9648,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9902577,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 32382,
+            "dp": 53,
+            "received_at": 1794077152.9905334,
+            "kernel_at": 1794077152.9902577
+          },
+          {
+            "id": 9648,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9902794,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 32382,
+            "dp": 53,
+            "received_at": 1794077152.990817,
+            "kernel_at": 1794077152.9902794
+          },
+          {
+            "id": 41810,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1472,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.991961,
+            "iface": "ens17",
+            "direction": "out",
+            "src": "64.90.13.177",
+            "dst": "1.1.1.1",
+            "sp": 60325,
+            "dp": 53,
+            "received_at": 1794077152.992152,
+            "kernel_at": 1794077152.991961
+          },
+          {
+            "id": 41810,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 600,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9963734,
+            "iface": "ens17",
+            "direction": "in",
+            "src": "1.1.1.1",
+            "dst": "64.90.13.177",
+            "sp": 53,
+            "dp": 60325,
+            "received_at": 1794077152.9966083,
+            "kernel_at": 1794077152.9963734
+          },
+          {
+            "id": 9648,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 600,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.996765,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 32382,
+            "received_at": 1794077152.9968596,
+            "kernel_at": 1794077152.996765
+          },
+          {
+            "id": 9648,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 600,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9967709,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 32382,
+            "received_at": 1794077152.9970286,
+            "kernel_at": 1794077152.9967709
+          },
+          {
+            "id": 61171,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9974134,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 52623,
+            "dp": 53,
+            "received_at": 1794077152.9976926,
+            "kernel_at": 1794077152.9974134
+          },
+          {
+            "id": 61171,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9974408,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 52623,
+            "dp": 53,
+            "received_at": 1794077152.997873,
+            "kernel_at": 1794077152.9974408
+          },
+          {
+            "id": 61171,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 599,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9980214,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 52623,
+            "received_at": 1794077152.9981952,
+            "kernel_at": 1794077152.9980214
+          },
+          {
+            "id": 61171,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 599,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077152.9980326,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 52623,
+            "received_at": 1794077152.9987097,
+            "kernel_at": 1794077152.9980326
+          },
+          {
+            "id": 18776,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077153.5884378,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 42029,
+            "dp": 53,
+            "received_at": 1794077153.5886178,
+            "kernel_at": 1794077153.5884378
+          },
+          {
+            "id": 18776,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077153.5884557,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 42029,
+            "dp": 53,
+            "received_at": 1794077153.5888596,
+            "kernel_at": 1794077153.5884557
+          },
+          {
+            "id": 18776,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 599,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077153.5890088,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 42029,
+            "received_at": 1794077153.5892832,
+            "kernel_at": 1794077153.5890088
+          },
+          {
+            "id": 18776,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 599,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077153.5890222,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 42029,
+            "received_at": 1794077153.5894864,
+            "kernel_at": 1794077153.5890222
+          },
+          {
+            "id": 62229,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077154.4918866,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 22229,
+            "dp": 53,
+            "received_at": 1794077154.4920328,
+            "kernel_at": 1794077154.4918866
+          },
+          {
+            "id": 62229,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077154.4919,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 22229,
+            "dp": 53,
+            "received_at": 1794077154.4922912,
+            "kernel_at": 1794077154.4919
+          },
+          {
+            "id": 62229,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 28,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 598,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077154.4926794,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 22229,
+            "received_at": 1794077154.492864,
+            "kernel_at": 1794077154.4926794
+          },
+          {
+            "id": 62229,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 28,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 598,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 28,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077154.4926922,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 22229,
+            "received_at": 1794077154.4931216,
+            "kernel_at": 1794077154.4926922
+          }
+        ]
+      },
+      "probe_log_tail": "livekit_api::signal_client:540:livekit_api::signal_client - dropping pass-through signal — no stream available\n{\"at\": \"2026-11-07T18:46:12.220783+00:00\", \"status\": \"FUNCTIONAL_PASS\", \"candidate_sha256\": \"fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d\", \"runtime_pid\": \"3529878\", \"ordered\": false, \"trace_id\": \"ops-release-probe-6205f900-da58-4285-9a0c-cf23b63c2ca4\", \"room\": \"sn-BJP00326110799999901-1794077148300\", \"sid\": \"RM_bHtAVeMp28FH\", \"stats\": {\"ready_ms\": 743, \"phase_ms\": null, \"user_finals\": 2, \"answer_finals\": 2, \"audible_ms\": 8450.0, \"first_audio_ms\": 6520, \"last_audio_ms\": 17500, \"input_sent_ms\": 751, \"events\": [\"session.output_ready\", \"session.input_ready\", null, null, null, null, null, null, null], \"metrics_packets\": 5, \"metric_kinds\": [\"eou\", \"eou\", \"tts\", \"tts\", \"llm\"], \"input_samples_sent\": 60699, \"client_connected_ms\": 199, \"ffi_subscribers_after_cleanup\": 0}, \"natural_room_gone\": true, \"fixture_cleanup\": false, \"elapsed_ms\": 23920, \"policy_source\": \"operator-signed synthetic metadata; not device cfg-139\", \"real_android\": false}\n"
+    },
+    {
+      "round": 1,
+      "result.json": {
+        "at": "2026-11-07T18:47:16.535026+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d",
+        "runtime_pid": "3529878",
+        "ordered": true,
+        "trace_id": "ops-release-probe-b81e1ce1-052a-4b73-996e-d0672312e77f",
+        "room": "sn-BJP00326110799999901-1794077211483",
+        "sid": "RM_quTE74noaTn5",
+        "stats": {
+          "ready_ms": 668,
+          "phase_ms": 3171,
+          "user_finals": 2,
+          "answer_finals": 2,
+          "audible_ms": 8290.0,
+          "first_audio_ms": 8818,
+          "last_audio_ms": 18997,
+          "input_sent_ms": 3177,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 5,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 234,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 25052,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      },
+      "process.json": {
+        "returncode": 0
+      },
+      "timings.json": [
+        "2026-11-07T18:46:52.271313Z  INFO asr_stream{room=sn-BJP00326110799999901-1794077211483}: asr connection timing request_id=\"7a882e43-53f6-4515-99be-e1c8e7dfdc60\" stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=381 dns_ms=199 tcp_ms=2 tls_ws_ms=178",
+        "2026-11-07T18:46:54.823778Z  INFO asr_stream{room=sn-BJP00326110799999901-1794077211483}: asr connection timing request_id=\"abc80a17-1765-410f-929a-5fd6cb25a94d\" stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=176 dns_ms=0 tcp_ms=3 tls_ws_ms=172",
+        "2026-11-07T18:46:58.783555Z  INFO tts connection timing connect_id=5 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=236 dns_ms=7 tcp_ms=53 tls_ws_ms=175 dns_path=\"independent_families\" local=Some(64.90.13.177:43018) peer=Some(123.57.26.93:443)",
+        "2026-11-07T18:46:59.196270Z  INFO playout metrics room=sn-BJP00326110799999901-1794077211483 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-07T18:46:59.396514Z  INFO tts connection timing connect_id=6 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=199 dns_ms=0 tcp_ms=49 tls_ws_ms=149 dns_path=\"independent_families\" local=Some(64.90.13.177:43028) peer=Some(123.57.26.93:443)",
+        "2026-11-07T18:46:59.888503Z  INFO tts connection assigned room=\"sn-BJP00326110799999901-1794077211483\" turn_id=2 connect_id=6 used_warm=true warm_connect_ms=199 connect_ms=0",
+        "2026-11-07T18:47:00.106158Z  INFO tts connection timing connect_id=7 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=217 dns_ms=0 tcp_ms=56 tls_ws_ms=160 dns_path=\"independent_families\" local=Some(64.90.13.177:43030) peer=Some(123.57.26.93:443)",
+        "2026-11-07T18:47:00.156998Z  INFO tts provider first PCM observed room=\"sn-BJP00326110799999901-1794077211483\" turn_id=2 provider_ttfb_ms=268 connect_ms=0 used_warm=true",
+        "2026-11-07T18:47:01.150314Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794077211483\" turn_id=2 connect_id=6 phase=\"close\" completed=true pcm_frames=14 elapsed_ms=1261 ws_read_wait_ms=1251 max_ws_read_wait_ms=222 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=192",
+        "2026-11-07T18:47:01.150715Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=268 first_pcm_ms=268",
+        "2026-11-07T18:47:01.150754Z  INFO body first sentence ready room=sn-BJP00326110799999901-1794077211483 turn_id=2 ttfb_ms=268 body_ready_since_turn_ms=959",
+        "2026-11-07T18:47:01.150978Z  INFO tts connection assigned room=\"sn-BJP00326110799999901-1794077211483\" turn_id=2 connect_id=7 used_warm=true warm_connect_ms=217 connect_ms=0",
+        "2026-11-07T18:47:01.373475Z  INFO tts connection timing connect_id=8 stage=\"tls_ws\" outcome=\"connected\" elapsed_ms=222 dns_ms=0 tcp_ms=51 tls_ws_ms=170 dns_path=\"independent_families\" local=Some(64.90.13.177:43040) peer=Some(123.57.26.93:443)",
+        "2026-11-07T18:47:01.433773Z  INFO tts provider first PCM observed room=\"sn-BJP00326110799999901-1794077211483\" turn_id=2 provider_ttfb_ms=282 connect_ms=0 used_warm=true",
+        "2026-11-07T18:47:05.357050Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794077211483\" turn_id=2 connect_id=7 phase=\"close\" completed=true pcm_frames=48 elapsed_ms=4206 ws_read_wait_ms=3920 max_ws_read_wait_ms=352 channel_send_wait_ms=260 max_channel_send_wait_ms=208 max_observed_pcm_gap_ms=352",
+        "2026-11-07T18:47:05.357374Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=282 first_pcm_ms=282",
+        "2026-11-07T18:47:10.977573Z  INFO playout metrics room=sn-BJP00326110799999901-1794077211483 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=196 first_underrun_ms=-1 played_frames=1080 exit=\"SourceDrained\"",
+        "2026-11-07T18:47:16.193647Z  INFO room cleanup readback complete room=sn-BJP00326110799999901-1794077211483 room_sid=RM_quTE74noaTn5 cleanup=Gone delete_scope=\"room_name\" cas=false"
+      ],
+      "capture/ready.json": {
+        "started": 1794077209.9408054,
+        "seconds": 120,
+        "pid": 3530605,
+        "metadata_only": true,
+        "limit": 4000,
+        "timestamp": "SO_TIMESTAMPNS plus received_at"
+      },
+      "capture/ended.json": {
+        "started": 1794077209.9408054,
+        "ended": 1794077237.18993,
+        "records": 14,
+        "limit_hit": false,
+        "parse_errors": 0,
+        "capture_packets": 4746,
+        "capture_kernel_drops": 0,
+        "metadata_only": true
+      },
+      "dns_events": {
+        "sha256": "70e62f3f8689304f3481b38865368a30da52be7249529729ca7c0887db74f2a5",
+        "records": [
+          {
+            "id": 19957,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5476336,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 38353,
+            "dp": 53,
+            "received_at": 1794077218.5478773,
+            "kernel_at": 1794077218.5476336
+          },
+          {
+            "id": 19957,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5476437,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 38353,
+            "dp": 53,
+            "received_at": 1794077218.548165,
+            "kernel_at": 1794077218.5476437
+          },
+          {
+            "id": 60946,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1472,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.548698,
+            "iface": "ens17",
+            "direction": "out",
+            "src": "64.90.13.177",
+            "dst": "1.1.1.1",
+            "sp": 49790,
+            "dp": 53,
+            "received_at": 1794077218.5488343,
+            "kernel_at": 1794077218.548698
+          },
+          {
+            "id": 60946,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5539427,
+            "iface": "ens17",
+            "direction": "in",
+            "src": "1.1.1.1",
+            "dst": "64.90.13.177",
+            "sp": 53,
+            "dp": 49790,
+            "received_at": 1794077218.5543067,
+            "kernel_at": 1794077218.5539427
+          },
+          {
+            "id": 19957,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5544946,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 38353,
+            "received_at": 1794077218.5546029,
+            "kernel_at": 1794077218.5544946
+          },
+          {
+            "id": 19957,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 1,
+            "qclass": 1,
+            "bytes": 183,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 60,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "answer",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 30,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.554497,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 38353,
+            "received_at": 1794077218.5547454,
+            "kernel_at": 1794077218.554497
+          },
+          {
+            "id": 12283,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.598583,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 19161,
+            "dp": 53,
+            "received_at": 1794077218.598737,
+            "kernel_at": 1794077218.598583
+          },
+          {
+            "id": 12283,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 57,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.598598,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 19161,
+            "dp": 53,
+            "received_at": 1794077218.5988872,
+            "kernel_at": 1794077218.598598
+          },
+          {
+            "id": 12283,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 534,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5991867,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 19161,
+            "received_at": 1794077218.5993984,
+            "kernel_at": 1794077218.5991867
+          },
+          {
+            "id": 12283,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "cbm01.cn-huabei-1.xf-yun.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 250,
+            "records": [
+              {
+                "section": "answer",
+                "owner": "cbm01.cn-huabei-1.xf-yun.com",
+                "type": 5,
+                "ttl": 29,
+                "rdlength": 18,
+                "cname": "hb-kaicp.xf-gtm.com"
+              },
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 534,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "8.140.35.16"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "39.105.54.181"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.86.182"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.56.17.44"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "101.200.158.58"
+              },
+              {
+                "section": "additional",
+                "owner": "hb-kaicp.xf-gtm.com",
+                "type": 1,
+                "ttl": 29,
+                "rdlength": 4,
+                "address": "123.57.26.93"
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5991976,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 19161,
+            "received_at": 1794077218.5996718,
+            "kernel_at": 1794077218.5991976
+          },
+          {
+            "id": 2696,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5994773,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 2958,
+            "dp": 53,
+            "received_at": 1794077218.5998445,
+            "kernel_at": 1794077218.5994773
+          },
+          {
+            "id": 2696,
+            "qr": false,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": false,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 48,
+            "records": [
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 1232,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.599479,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.1",
+            "dst": "127.0.0.53",
+            "sp": 2958,
+            "dp": 53,
+            "received_at": 1794077218.5999403,
+            "kernel_at": 1794077218.599479
+          },
+          {
+            "id": 2696,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 534,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5997112,
+            "iface": "lo",
+            "direction": "out",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 2958,
+            "received_at": 1794077218.60005,
+            "kernel_at": 1794077218.5997112
+          },
+          {
+            "id": 2696,
+            "qr": true,
+            "rcode": 0,
+            "tc": false,
+            "rd": true,
+            "ra": true,
+            "qname": "hb-kaicp.xf-gtm.com",
+            "qtype": 28,
+            "qclass": 1,
+            "bytes": 115,
+            "records": [
+              {
+                "section": "authority",
+                "owner": "xf-gtm.com",
+                "type": 6,
+                "ttl": 534,
+                "rdlength": 55
+              },
+              {
+                "section": "additional",
+                "type": 41,
+                "udp_size": 65494,
+                "ext_rcode": 0,
+                "version": 0,
+                "flags": 0
+              }
+            ],
+            "at": 1794077218.5997136,
+            "iface": "lo",
+            "direction": "in",
+            "src": "127.0.0.53",
+            "dst": "127.0.0.1",
+            "sp": 53,
+            "dp": 2958,
+            "received_at": 1794077218.6001382,
+            "kernel_at": 1794077218.5997136
+          }
+        ]
+      },
+      "probe_log_tail": "livekit_api::signal_client:540:livekit_api::signal_client - dropping pass-through signal — no stream available\n{\"at\": \"2026-11-07T18:47:16.535026+00:00\", \"status\": \"FUNCTIONAL_PASS\", \"candidate_sha256\": \"fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d\", \"runtime_pid\": \"3529878\", \"ordered\": true, \"trace_id\": \"ops-release-probe-b81e1ce1-052a-4b73-996e-d0672312e77f\", \"room\": \"sn-BJP00326110799999901-1794077211483\", \"sid\": \"RM_quTE74noaTn5\", \"stats\": {\"ready_ms\": 668, \"phase_ms\": 3171, \"user_finals\": 2, \"answer_finals\": 2, \"audible_ms\": 8290.0, \"first_audio_ms\": 8818, \"last_audio_ms\": 18997, \"input_sent_ms\": 3177, \"events\": [\"session.output_ready\", \"session.input_ready\", \"session.input_phase\", null, null, null, null, null, null, null], \"metrics_packets\": 5, \"metric_kinds\": [\"eou\", \"eou\", \"tts\", \"llm\", \"tts\"], \"input_samples_sent\": 60699, \"client_connected_ms\": 234, \"ffi_subscribers_after_cleanup\": 0}, \"natural_room_gone\": true, \"fixture_cleanup\": false, \"elapsed_ms\": 25052, \"policy_source\": \"operator-signed synthetic metadata; not device cfg-139\", \"real_android\": false}\n"
+    }
+  ],
+  "runner_tail": ""
+}

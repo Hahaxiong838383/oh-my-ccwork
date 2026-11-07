@@ -1,0 +1,16 @@
+{
+  "source_commit": "ca5f95b4243cfddeaa3370e8e7ad85e7600e541d",
+  "voice_connect_sha256": "f49596c20a9351ef6325b5a1430d001cb8f50e48859738bcdd4127a6d234be8d",
+  "release_source_files_verified": 68,
+  "binary_sha256": "fc3f84e461e5f55f4b0fed09720ee19f8fd7e668d6a5ae80431a39c0f262433d",
+  "binary_bytes": 76111728,
+  "tests": {
+    "passed": 547,
+    "failed": 0,
+    "ignored": 1,
+    "log_sha256": "7b60bbad27eb7b6116006ee8ecc20634cc3301a3efc958eacc0735e6a5143d5e"
+  },
+  "production_deployed": false,
+  "blocked_previous_binary": "59e5bb2609ee97fdf6330f2019fbca0100b1bc9e9ec81ac60a99a1b943655ddb",
+  "rollback_source": "713f6f35af43d5a58aeae8360ad421fc66b72718"
+}
