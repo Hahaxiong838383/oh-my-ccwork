@@ -1,0 +1,94 @@
+{
+  "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "binary_sha256": "d7d7ff11dcc55fd7873024d17ef47e6e6d912190cda3b24dcb0a3dc55ac85de4",
+  "worker_pid": 3569889,
+  "brain_pid": 3569820,
+  "scenarios": [
+    {
+      "case": 2,
+      "started_ns": 1794084578605841788,
+      "ended_ns": 1794084607959129792,
+      "rc": 1,
+      "passed": false,
+      "result": "/root/p003-business-watchdog-20261107/listening-rtc-20261108/run-1794084567960865089/case-2-result.json",
+      "signed_binding": {
+        "room_name": "sn-BJP00326103099999938-1794084579",
+        "session_id": "8e04f506-a707-48f0-8dfa-7b3e2f411506",
+        "trace_id": "p0-39-29a21af0-be40-4084-812f-e15c661de20d",
+        "expected_agent_name": "p003-listening-p0-transport-1794084567960865089"
+      },
+      "error": "held prefix caption not restored exactly once: [{'identity': 'dev-BJP00326103099999938', 'id': 'SG_459049ff336f', 'text': '小可', 'final': True, 't_ms': 16045}, {'identity': 'dev-BJP00326103099999938', 'id': 'SG_68fe9b7e1c70', 'text': '小可', 'final': True, 't_ms': 16046}]",
+      "cleanup_error": null
+    }
+  ],
+  "production_before": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3554867",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "d627dfa91f33fd01771c87bc6ac2bbb6a3ccb937b823bf7e0bd56ec92e1ab0e0"
+    }
+  },
+  "boundary": "real SFU ASR TTS; synthetic speech/LLM; loopback test-feature binary, not formal binary; p0 agent does not activate candidate-only TTS DNS/firstPCM gates (covered by unit tests)",
+  "worker_stopped": true,
+  "brain_stopped": true,
+  "production_after": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3554867",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "d627dfa91f33fd01771c87bc6ac2bbb6a3ccb937b823bf7e0bd56ec92e1ab0e0"
+    }
+  },
+  "production_unchanged": true,
+  "finished": true,
+  "passed": false,
+  "batch_alive": false,
+  "evidence": {
+    "rtc-probe.py": {
+      "sha256": "799e599e7ae38a4fec13f400038ee7775cb39732346e58a80d60bfb32572e139",
+      "bytes": 24977
+    },
+    "run_batch.py": {
+      "sha256": "b45058a140c589685b8fe35d52bfb16e63e92bdcea7bd9f5b4bd10a104b73f43",
+      "bytes": 5000
+    },
+    "brain.log": {
+      "sha256": "5f1e094598371672aa4434e06b1562c68cbc2f0194710c23a701bccfdea72339",
+      "bytes": 941
+    },
+    "case-2-result.json": {
+      "sha256": "50fe600540ff908d62daae729feb43b058e7ffd19ee0411dd6e309177e757c27",
+      "bytes": 58172
+    },
+    "worker.log": {
+      "sha256": "6117abb4ce34e6b6cd4399fc47adeaeee4e8a428103da5a0bc724dcaf28f958e",
+      "bytes": 115296
+    }
+  },
+  "driver_tail": ""
+}

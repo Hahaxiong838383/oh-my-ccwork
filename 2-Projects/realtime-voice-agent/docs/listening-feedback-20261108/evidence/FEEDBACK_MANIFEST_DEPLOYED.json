@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "at_ms": 1794085207461,
+  "before_sha256": "7302c4eba5a15fd6c042c03a9bc30b373413d4e1c6278eb6edc703bef90cea76",
+  "after_sha256": "8a3f62056dbbd3c1c9670fe265c91cd0e21f8d208b75bc6c8ddfb928a60fc492",
+  "build_sha": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "backup": "/opt/p003/listening-canary-20261030/backups/feedback-20261108-50bac0b2",
+  "expiry_capabilities_unchanged": true
+}

@@ -1,0 +1,130 @@
+{
+  "P003_LISTENING_FEEDBACK_RELEASE_RECEIPT_20261108.md": {
+    "sha256": "1beb6dc5293af45e5160ac72be6d0cbef3ecbbdc6e3b1500dae0bc23f1bc029a",
+    "bytes": 6529
+  },
+  "GROK_SPLIT_FEEDBACK_FINAL_CODE_REVIEW_20261108.md": {
+    "sha256": "8b0fe7a46a18dd28c1cd75680429740d5cd08f5ee7cbf53d7e6d57668834ba0a",
+    "bytes": 8333
+  },
+  "RELEASE_DECISION.md": {
+    "sha256": "7270a36de1a66d9806ac4cbae27311d2a88c1c62a025e537e362eb00a3aae140",
+    "bytes": 1381
+  },
+  "GROK_SPLIT_FEEDBACK_DESIGN_20261108.md": {
+    "sha256": "15978bcee4016460552f09db44822206e25b99ef7f8bea77a4922d2482523a43",
+    "bytes": 14548
+  },
+  "FEEDBACK_FINAL_SOURCE_PROVENANCE.json": {
+    "sha256": "0c275dc591a2bcf838b574d088d82820b3d3bbfc82fb147f32fa9fa574db2dd8",
+    "bytes": 658
+  },
+  "PLAN_AND_CHECKPOINT.md": {
+    "sha256": "081b739b91115cba9119a3c13c12d3a1a6ac9b95da159e353e1184536963b2dd",
+    "bytes": 6983
+  },
+  "FEEDBACK_CASE2_ASSERTION_ANALYSIS.json": {
+    "sha256": "ebbc859b4ca70dd00751a2e2a6d7bf17cf2edaba3b50d5ea9ca5ce1aa055018b",
+    "bytes": 1142
+  },
+  "UNIT_EVIDENCE.json": {
+    "sha256": "c78cee34346b46a95f1f09e339f447d4ba84e3079aa2651c1394e1751104f729",
+    "bytes": 5196
+  },
+  "DEPLOYMENT_EVIDENCE.json": {
+    "sha256": "b30b3a88f56ce218487ce6a669e47d02d6105ffea9fbf6c53e348405d4a8a537",
+    "bytes": 1516
+  },
+  "GROK_FEEDBACK_RTC_ASSERTION_REVIEW_20261108.md": {
+    "sha256": "38d65e117e45167c8aedd727bc5f92a247f2ced070d89d7cea3cce06840aa608",
+    "bytes": 4818
+  },
+  "GROK_SPLIT_FEEDBACK_FOLLOWUP_20261108.md": {
+    "sha256": "fe9714660d7e00236bb8df134096eb136005567411dd54ee9edd05908b40b379",
+    "bytes": 8506
+  },
+  "evidence/FEEDBACK_FINAL_RTC_VERIFICATION.json": {
+    "sha256": "b647f9898fbbae123829c059f4e148c864a97b109ff8d91b125e92185f55adf8",
+    "bytes": 14134
+  },
+  "evidence/FEEDBACK_INITIAL_STABILITY.json": {
+    "sha256": "236fe8b278e94703f65fc47fc014efbe97ac565b0a0a6923987e20f12f7b8ea0",
+    "bytes": 3490
+  },
+  "evidence/deploy-listening-feedback.py": {
+    "sha256": "968717924cb66fee5e00f678490675aeac6f35c436bc90e8af9f9576470acb70",
+    "bytes": 6608
+  },
+  "evidence/FEEDBACK_RECHECK_RTC_CASE2_STATUS.json": {
+    "sha256": "151d3b628816acace0c12faaed92ac7e945220e940edf8ba95740dc9ad8a5d6a",
+    "bytes": 3138
+  },
+  "evidence/FEEDBACK_REVIEWED_RTC_CASE0_STATUS.json": {
+    "sha256": "7f2f7da651deebed9a500a1c6f1fc69fc2d74947e229bfc57c0d7c8d4b28ed0d",
+    "bytes": 3138
+  },
+  "evidence/FEEDBACK_RECEIPT_AIR_DELIVERY.json": {
+    "sha256": "ccb77fb4bbea83101def6e2805bf032b99e3649cf8349c3351142fa56c27c0a2",
+    "bytes": 213
+  },
+  "evidence/rollback-listening-feedback-worker.py": {
+    "sha256": "88cecbd20a57473b0abd40599e3b0a4e7335e33e31b76c7c12998b2708648ba2",
+    "bytes": 2746
+  },
+  "evidence/FEEDBACK_ADMIN_POST.json": {
+    "sha256": "0dcf8a4ccf1e5e30f0d27651030aa5abe4e58a2956665a9f5bf7d00a33b9434d",
+    "bytes": 5144
+  },
+  "evidence/FEEDBACK_MANIFEST_DEPLOYED.json": {
+    "sha256": "14130709e3237db668852cd775bfce9c2205e9ee7c796365d0fd9ee829ab8b39",
+    "bytes": 406
+  },
+  "evidence/FEEDBACK_POST_3MIN_FINAL.json": {
+    "sha256": "d2515fc001ae3fb1e212bcc96f34e61b9da142883e33575e286f3764bc73c270",
+    "bytes": 800
+  },
+  "evidence/rtc-probe-feedback.py": {
+    "sha256": "18470b74c68b84d6edd0a0e3ccabad984437fdb702b78ff28b7162149490657b",
+    "bytes": 26033
+  },
+  "evidence/FEEDBACK_RECHECK_RTC_CASE1_STATUS.json": {
+    "sha256": "25718b52618f5427180110d4916d4e79aa83a83b6c9d22221e32ab7752d3c154",
+    "bytes": 3138
+  },
+  "evidence/rollback-listening-feedback-manifest.py": {
+    "sha256": "1c2e92478dc9957f2440ba02204a921a17635f9662531ea3808f24e704d9556f",
+    "bytes": 600
+  },
+  "evidence/FEEDBACK_FINAL_SOURCE_PROVENANCE.json": {
+    "sha256": "0c275dc591a2bcf838b574d088d82820b3d3bbfc82fb147f32fa9fa574db2dd8",
+    "bytes": 658
+  },
+  "evidence/FEEDBACK_ROLLBACK_PRESERVED.json": {
+    "sha256": "92a582a286841e88b5a948fb7b03483cd8ec18629ac8b79ca8177a045d603968",
+    "bytes": 1930
+  },
+  "evidence/activate-listening-feedback-manifest.py": {
+    "sha256": "7a641c377c59abd28389c8f5ffe2533ed4380e850465c8c5efaac29636caf043",
+    "bytes": 1666
+  },
+  "evidence/FEEDBACK_CASE2_ASSERTION_ANALYSIS.json": {
+    "sha256": "ebbc859b4ca70dd00751a2e2a6d7bf17cf2edaba3b50d5ea9ca5ce1aa055018b",
+    "bytes": 1142
+  },
+  "evidence/FEEDBACK_DEPLOY_STATUS_FINAL.json": {
+    "sha256": "21cf1cfde7f367a2cb467570caaee60c8a5d2071b7dc668a41a0675689c0efb8",
+    "bytes": 2711
+  },
+  "evidence/FEEDBACK_RELEASE_POST.json": {
+    "sha256": "afb53f0b944f1a9a55d44d7a108b304115538a1553bb7617d9470f9dad1d27a2",
+    "bytes": 3250
+  },
+  "evidence/FEEDBACK_REVIEWED_RTC_CASE2_STATUS.json": {
+    "sha256": "55c14805a2a21c69469f0cfee81de7bb5cfb9d7213b43e8f9fbea01a4f943c86",
+    "bytes": 3434
+  },
+  "evidence/FEEDBACK_RELEASE_GATES.json": {
+    "sha256": "ad9ff45d9ceb9262f4312e39294b25fef0be06346c51da9c5cd391017184c7ee",
+    "bytes": 1136
+  }
+}

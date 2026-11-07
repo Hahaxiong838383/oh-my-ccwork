@@ -1,0 +1,117 @@
+{
+  "status": "PASS_10S_STABILITY",
+  "rows": [
+    {
+      "at_ms": 1794085230148,
+      "units": {
+        "voice-worker-rust": {
+          "MainPID": "3538554",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        },
+        "p003-listening-worker": {
+          "MainPID": "3574920",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae"
+        }
+      },
+      "health": {
+        "agent": "p003-search-listening-20261030",
+        "at_ms": 1794085225797,
+        "cleanup": {
+          "at_ms": 1794085224964,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "v374-listening-ark-20261102-1793613511",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "at_ms": 1794085236888,
+      "units": {
+        "voice-worker-rust": {
+          "MainPID": "3538554",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        },
+        "p003-listening-worker": {
+          "MainPID": "3574920",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae"
+        }
+      },
+      "health": {
+        "agent": "p003-search-listening-20261030",
+        "at_ms": 1794085235796,
+        "cleanup": {
+          "at_ms": 1794085231907,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "v374-listening-ark-20261102-1793613511",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    },
+    {
+      "at_ms": 1794085243417,
+      "units": {
+        "voice-worker-rust": {
+          "MainPID": "3538554",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        },
+        "p003-listening-worker": {
+          "MainPID": "3574920",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae"
+        }
+      },
+      "health": {
+        "agent": "p003-search-listening-20261030",
+        "at_ms": 1794085240796,
+        "cleanup": {
+          "at_ms": 1794085238852,
+          "healthy": true,
+          "pending": 0,
+          "remaining": 0
+        },
+        "generation": "v374-listening-ark-20261102-1793613511",
+        "jobs": 0,
+        "ordered_pcm_v1": true,
+        "registered": true
+      }
+    }
+  ],
+  "duration_ms": 13269
+}

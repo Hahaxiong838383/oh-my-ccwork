@@ -1,0 +1,23 @@
+{
+  "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "rows": [
+    {
+      "mode": "feedback-echo-prefix-green",
+      "files": 78,
+      "manifest_sha256": "18bfd7e033079bd715d2436f1231255a765a576d85dadfdf348218c50b3b1bcf",
+      "git_equal": true
+    },
+    {
+      "mode": "feedback-reviewed-rtc-release",
+      "files": 78,
+      "manifest_sha256": "18bfd7e033079bd715d2436f1231255a765a576d85dadfdf348218c50b3b1bcf",
+      "git_equal": true
+    },
+    {
+      "mode": "feedback-reviewed-release",
+      "files": 78,
+      "manifest_sha256": "18bfd7e033079bd715d2436f1231255a765a576d85dadfdf348218c50b3b1bcf",
+      "git_equal": true
+    }
+  ]
+}

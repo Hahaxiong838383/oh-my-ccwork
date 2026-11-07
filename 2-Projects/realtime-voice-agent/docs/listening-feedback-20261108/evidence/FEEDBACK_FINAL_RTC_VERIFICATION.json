@@ -1,0 +1,395 @@
+{
+  "status": "PASS_SCOPED_RTC_3",
+  "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "test_binary_sha256": "d7d7ff11dcc55fd7873024d17ef47e6e6d912190cda3b24dcb0a3dc55ac85de4",
+  "boundary": "Real SFU ASR TTS; synthetic speech and deterministic LLM; isolated Brain/SQLite; software device; not Android physical or formal binary end-to-end; p0 does not enable candidate-only transport gates",
+  "cases": [
+    {
+      "case": 0,
+      "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+      "trace": "p0-39-38bd16b5-ec77-4ec0-b31a-042f72ac2d34",
+      "passed": true,
+      "runtime_stopped": true,
+      "production_unchanged": true,
+      "assertions": [
+        {
+          "mono_ns": 3474947666160311,
+          "t_ms": 633,
+          "event": "assertion",
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474947787581265,
+          "t_ms": 754,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474949107241599,
+          "t_ms": 2074,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474960126152205,
+          "t_ms": 13093,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474966333547824,
+          "t_ms": 19300,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474976718953397,
+          "t_ms": 29685,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474979270223768,
+          "t_ms": 32237,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474984480411484,
+          "t_ms": 37447,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474987336376671,
+          "t_ms": 40303,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474987336683095,
+          "t_ms": 40303,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3474987337927502,
+          "t_ms": 40304,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-13",
+            "trace_id": "p0-39-38bd16b5-ec77-4ec0-b31a-042f72ac2d34",
+            "room": "sn-BJP00326103099999938-1794084336",
+            "session_id": "bd2f0007-9e69-4f86-ad74-e6986d406a15",
+            "listening_id": "p0-39-38bd16b5-ec77-4ec0-b31a-042f72ac2d34:2",
+            "mode_epoch": 2,
+            "at": 1794084354484,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 174,
+            "sha256": "f0e0086cb4e370ce9f795cc3db34e35087a3638ec36d1f42f1add0be39144232",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        }
+      ],
+      "tts_pcm_lines": [
+        "2026-11-07T20:45:55.591287Z  INFO tts provider first PCM observed room=\"sn-BJP00326103099999938-1794084336\" turn_id=1 provider_ttfb_ms=292 connect_ms=0 used_warm=true",
+        "2026-11-07T20:46:00.434044Z  INFO tts dispatch timing prewarm_wait_ms=775 provider_ttfb_ms=292 first_pcm_ms=1067",
+        "2026-11-07T20:46:13.715151Z  INFO tts provider first PCM observed room=\"sn-BJP00326103099999938-1794084336\" turn_id=2 provider_ttfb_ms=259 connect_ms=0 used_warm=true",
+        "2026-11-07T20:46:14.873388Z  INFO tts dispatch timing prewarm_wait_ms=230 provider_ttfb_ms=259 first_pcm_ms=489"
+      ],
+      "files": {
+        "worker.log": "39e5cb805e1fbb7aaa3f1764e417e3c7740a97bacbc531a95dac05fff07c1564",
+        "rtc-probe.py": "799e599e7ae38a4fec13f400038ee7775cb39732346e58a80d60bfb32572e139",
+        "case-0-result.json": "29fb523dc3ce81d5918b544639dedb6746b55f22407233c9142954a2144247e9"
+      },
+      "status_file": "FEEDBACK_REVIEWED_RTC_CASE0_STATUS.json"
+    },
+    {
+      "case": 1,
+      "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+      "trace": "p0-39-ad3fae98-4f4d-4fe5-8d68-5d26058959f4",
+      "passed": true,
+      "runtime_stopped": true,
+      "production_unchanged": true,
+      "assertions": [
+        {
+          "mono_ns": 3475335465041738,
+          "t_ms": 577,
+          "event": "assertion",
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475335707190798,
+          "t_ms": 819,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475337214726925,
+          "t_ms": 2327,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475348150584925,
+          "t_ms": 13263,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475356392663358,
+          "t_ms": 21505,
+          "event": "assertion",
+          "name": "held prefix and later finals match ASR exactly once in order",
+          "passed": true,
+          "check": "timeout",
+          "asr_finals": [
+            "小可",
+            "小"
+          ],
+          "caption_finals": [
+            "小可",
+            "小"
+          ]
+        },
+        {
+          "mono_ns": 3475361894112620,
+          "t_ms": 27006,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475372242321160,
+          "t_ms": 37354,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475375983129166,
+          "t_ms": 41095,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475381175575781,
+          "t_ms": 46288,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475384020834798,
+          "t_ms": 49133,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475384021201076,
+          "t_ms": 49133,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475384021994584,
+          "t_ms": 49134,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-16",
+            "trace_id": "p0-39-ad3fae98-4f4d-4fe5-8d68-5d26058959f4",
+            "room": "sn-BJP00326103099999938-1794084724",
+            "session_id": "3048b219-bf7a-4c64-825e-5fcd552b78ce",
+            "listening_id": "p0-39-ad3fae98-4f4d-4fe5-8d68-5d26058959f4:2",
+            "mode_epoch": 2,
+            "at": 1794084750555,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 181,
+            "sha256": "51a53785438d39861b5e09bc714e7f309251bb0d9ad1421816258921d56b836b",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        }
+      ],
+      "tts_pcm_lines": [
+        "2026-11-07T20:52:31.137249Z  INFO tts provider first PCM observed room=\"sn-BJP00326103099999938-1794084724\" turn_id=1 provider_ttfb_ms=304 connect_ms=0 used_warm=true",
+        "2026-11-07T20:52:35.979549Z  INFO tts dispatch timing prewarm_wait_ms=240 provider_ttfb_ms=304 first_pcm_ms=544",
+        "2026-11-07T20:52:50.385942Z  INFO tts provider first PCM observed room=\"sn-BJP00326103099999938-1794084724\" turn_id=2 provider_ttfb_ms=245 connect_ms=0 used_warm=true",
+        "2026-11-07T20:52:51.547200Z  INFO tts dispatch timing prewarm_wait_ms=194 provider_ttfb_ms=245 first_pcm_ms=439"
+      ],
+      "files": {
+        "worker.log": "52d815bb1572a123895103938a6bb837a54a0c8ec39d5809929fd34fe3fbf02f",
+        "rtc-probe.py": "18470b74c68b84d6edd0a0e3ccabad984437fdb702b78ff28b7162149490657b",
+        "case-1-result.json": "079b70f0ddd96f5a78bf58fa577f6edc8ce4fcb508f0fe86b1b39770d02577f3"
+      },
+      "status_file": "FEEDBACK_RECHECK_RTC_CASE1_STATUS.json"
+    },
+    {
+      "case": 2,
+      "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+      "trace": "p0-39-c9a5f95f-2214-4db7-90ea-026bf7e2219f",
+      "passed": true,
+      "runtime_stopped": true,
+      "production_unchanged": true,
+      "assertions": [
+        {
+          "mono_ns": 3475405437281084,
+          "t_ms": 570,
+          "event": "assertion",
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475405552058700,
+          "t_ms": 685,
+          "event": "assertion",
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475407025131284,
+          "t_ms": 2158,
+          "event": "assertion",
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475418093308203,
+          "t_ms": 13226,
+          "event": "assertion",
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475432057032888,
+          "t_ms": 27190,
+          "event": "assertion",
+          "name": "held prefix and later finals match ASR exactly once in order",
+          "passed": true,
+          "check": "mismatch",
+          "asr_finals": [
+            "小可",
+            "so",
+            "萧兄今天走进森林",
+            "发现一颗金色的苹果",
+            "他把苹果分给了朋友",
+            "最后一件礼物",
+            "是一只紫色风筝"
+          ],
+          "caption_finals": [
+            "小可",
+            "so",
+            "萧兄今天走进森林",
+            "发现一颗金色的苹果",
+            "他把苹果分给了朋友",
+            "最后一件礼物",
+            "是一只紫色风筝"
+          ]
+        },
+        {
+          "mono_ns": 3475437615585724,
+          "t_ms": 32749,
+          "event": "assertion",
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475447975371575,
+          "t_ms": 43108,
+          "event": "assertion",
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475451382118122,
+          "t_ms": 46515,
+          "event": "assertion",
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475456688426240,
+          "t_ms": 51821,
+          "event": "assertion",
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475459551460210,
+          "t_ms": 54684,
+          "event": "assertion",
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475459551620947,
+          "t_ms": 54685,
+          "event": "assertion",
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "mono_ns": 3475459552135535,
+          "t_ms": 54685,
+          "event": "assertion",
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true,
+          "observation": {
+            "request_id": "feedback-20",
+            "trace_id": "p0-39-c9a5f95f-2214-4db7-90ea-026bf7e2219f",
+            "room": "sn-BJP00326103099999938-1794084794",
+            "session_id": "d209b2c6-62d8-46e4-a93d-59ea776528bb",
+            "listening_id": "p0-39-c9a5f95f-2214-4db7-90ea-026bf7e2219f:2",
+            "mode_epoch": 2,
+            "at": 1794084826310,
+            "purpose": "listening_feedback",
+            "synthetic_only": true,
+            "chars": 231,
+            "sha256": "60b38d49eb86158f475bb4f73ce7ffcbeb9ef58bf1ef35feb31f8fe6f72a9029",
+            "markers": {
+              "紫色风筝": true
+            }
+          }
+        }
+      ],
+      "tts_pcm_lines": [
+        "2026-11-07T20:53:46.859682Z  INFO tts provider first PCM observed room=\"sn-BJP00326103099999938-1794084794\" turn_id=1 provider_ttfb_ms=297 connect_ms=0 used_warm=true",
+        "2026-11-07T20:53:51.707227Z  INFO tts dispatch timing prewarm_wait_ms=223 provider_ttfb_ms=297 first_pcm_ms=520",
+        "2026-11-07T20:54:05.907087Z  INFO tts provider first PCM observed room=\"sn-BJP00326103099999938-1794084794\" turn_id=2 provider_ttfb_ms=251 connect_ms=0 used_warm=true",
+        "2026-11-07T20:54:07.065784Z  INFO tts dispatch timing prewarm_wait_ms=212 provider_ttfb_ms=251 first_pcm_ms=463"
+      ],
+      "files": {
+        "worker.log": "e840aefe36938b983e66d6420606e9e5aead70bcaa37ea8aec06bc60d2b91831",
+        "rtc-probe.py": "18470b74c68b84d6edd0a0e3ccabad984437fdb702b78ff28b7162149490657b",
+        "case-2-result.json": "b3bb2060e0c7094138a2636b085f2d7ac30ff2243a52089139681d1386d60c11"
+      },
+      "status_file": "FEEDBACK_RECHECK_RTC_CASE2_STATUS.json"
+    }
+  ]
+}

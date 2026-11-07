@@ -1,0 +1,29 @@
+{
+  "status": "DEPLOYED_SINGLE_SN_SERVER_VERIFIED_ANDROID_PENDING",
+  "runtime_commit": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "formal_sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae",
+  "unit_pass": 665,
+  "scoped_RTC_pass": 3,
+  "production_PID": 3574920,
+  "device_suffix": "03800006",
+  "window_expires_at_ms": 1794391200000,
+  "environment_unchanged": true,
+  "other_pools_unchanged": true,
+  "receipt_sha256": "1beb6dc5293af45e5160ac72be6d0cbef3ecbbdc6e3b1500dae0bc23f1bc029a",
+  "evidence": {
+    "FEEDBACK_FINAL_RTC_VERIFICATION.json": "b647f9898fbbae123829c059f4e148c864a97b109ff8d91b125e92185f55adf8",
+    "FEEDBACK_FINAL_SOURCE_PROVENANCE.json": "0c275dc591a2bcf838b574d088d82820b3d3bbfc82fb147f32fa9fa574db2dd8",
+    "FEEDBACK_DEPLOY_STATUS_FINAL.json": "21cf1cfde7f367a2cb467570caaee60c8a5d2071b7dc668a41a0675689c0efb8",
+    "FEEDBACK_MANIFEST_DEPLOYED.json": "14130709e3237db668852cd775bfce9c2205e9ee7c796365d0fd9ee829ab8b39",
+    "FEEDBACK_ADMIN_POST.json": "0dcf8a4ccf1e5e30f0d27651030aa5abe4e58a2956665a9f5bf7d00a33b9434d",
+    "FEEDBACK_POST_3MIN_FINAL.json": "d2515fc001ae3fb1e212bcc96f34e61b9da142883e33575e286f3764bc73c270",
+    "FEEDBACK_RECEIPT_AIR_DELIVERY.json": "ccb77fb4bbea83101def6e2805bf032b99e3649cf8349c3351142fa56c27c0a2"
+  },
+  "not_claimed": [
+    "Android real voice acceptance",
+    "production load/long term",
+    "all historical DNS/TLS/stream stalls resolved",
+    "listening business watchdog port",
+    "independent search pool port"
+  ]
+}

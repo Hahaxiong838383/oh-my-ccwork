@@ -1,0 +1,93 @@
+{
+  "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "binary_sha256": "d7d7ff11dcc55fd7873024d17ef47e6e6d912190cda3b24dcb0a3dc55ac85de4",
+  "worker_pid": 3571716,
+  "brain_pid": 3571638,
+  "scenarios": [
+    {
+      "case": 2,
+      "started_ns": 1794084793526058832,
+      "ended_ns": 1794084849441856059,
+      "rc": 0,
+      "passed": true,
+      "result": "/root/p003-business-watchdog-20261107/listening-rtc-20261108/run-1794084783108013100/case-2-result.json",
+      "signed_binding": {
+        "room_name": "sn-BJP00326103099999938-1794084794",
+        "session_id": "d209b2c6-62d8-46e4-a93d-59ea776528bb",
+        "trace_id": "p0-39-c9a5f95f-2214-4db7-90ea-026bf7e2219f",
+        "expected_agent_name": "p003-listening-p0-transport-1794084783108013100"
+      },
+      "error": null,
+      "cleanup_error": null
+    }
+  ],
+  "production_before": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3554867",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "d627dfa91f33fd01771c87bc6ac2bbb6a3ccb937b823bf7e0bd56ec92e1ab0e0"
+    }
+  },
+  "boundary": "real SFU ASR TTS; synthetic speech/LLM; loopback test-feature binary, not formal binary; p0 agent does not activate candidate-only TTS DNS/firstPCM gates (covered by unit tests)",
+  "worker_stopped": true,
+  "brain_stopped": true,
+  "production_after": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3554867",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "d627dfa91f33fd01771c87bc6ac2bbb6a3ccb937b823bf7e0bd56ec92e1ab0e0"
+    }
+  },
+  "production_unchanged": true,
+  "finished": true,
+  "passed": true,
+  "batch_alive": false,
+  "evidence": {
+    "rtc-probe.py": {
+      "sha256": "18470b74c68b84d6edd0a0e3ccabad984437fdb702b78ff28b7162149490657b",
+      "bytes": 26033
+    },
+    "run_batch.py": {
+      "sha256": "b45058a140c589685b8fe35d52bfb16e63e92bdcea7bd9f5b4bd10a104b73f43",
+      "bytes": 5000
+    },
+    "brain.log": {
+      "sha256": "3aefec64e8a581afa6879230dbd3bbac3781639761dd46ad0734761375e8217d",
+      "bytes": 1028
+    },
+    "case-2-result.json": {
+      "sha256": "b3bb2060e0c7094138a2636b085f2d7ac30ff2243a52089139681d1386d60c11",
+      "bytes": 202108
+    },
+    "worker.log": {
+      "sha256": "e840aefe36938b983e66d6420606e9e5aead70bcaa37ea8aec06bc60d2b91831",
+      "bytes": 129189
+    }
+  }
+}

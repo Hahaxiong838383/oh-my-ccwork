@@ -1,0 +1,28 @@
+{
+  "status": "TEST_ASSERTION_ASSUMED_ONE_ASR_FINAL",
+  "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "trace": "p0-39-29a21af0-be40-4084-812f-e15c661de20d",
+  "asr_final_lines": [
+    "2026-11-07T20:49:54.719671Z  INFO asr_stream{room=sn-BJP00326103099999938-1794084579}: stt final: 小可",
+    "2026-11-07T20:49:55.608369Z  INFO asr_stream{room=sn-BJP00326103099999938-1794084579}: stt final: 小可"
+  ],
+  "captions": [
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_459049ff336f",
+      "text": "小可",
+      "final": true,
+      "t_ms": 16045
+    },
+    {
+      "identity": "dev-BJP00326103099999938",
+      "id": "SG_68fe9b7e1c70",
+      "text": "小可",
+      "final": true,
+      "t_ms": 16046
+    }
+  ],
+  "note": "Two distinct upstream finals, two distinct caption segments. Not evidence of duplicate restoration. New verification must compare final sequence to captured ASR, not assume wake WAV yields one final.",
+  "worker_log_sha256": "6117abb4ce34e6b6cd4399fc47adeaeee4e8a428103da5a0bc724dcaf28f958e",
+  "result_sha256": "50fe600540ff908d62daae729feb43b058e7ffd19ee0411dd6e309177e757c27"
+}

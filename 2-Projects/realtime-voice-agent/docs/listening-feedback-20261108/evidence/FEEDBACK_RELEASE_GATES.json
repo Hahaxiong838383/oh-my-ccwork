@@ -1,0 +1,19 @@
+{
+  "candidate": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+  "formal_binary_sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae",
+  "formal_features": [],
+  "unit_passed": 665,
+  "ignored_existing": 2,
+  "source_manifests_equal_git": true,
+  "RTC_passed_cases": 3,
+  "RTC_boundary": "synthetic WAV/software Android/deterministic model; real SFU, ASR and TTS, test-feature build",
+  "Grok_code_review": "no concrete blocker; formal and final RTC required; later recheck evidence supersedes original failed assertion without changing its record",
+  "extra_assertion_review": "completed: two upstream finals, no duplicate append; strict sequence assertion justified",
+  "deployment_executed": false,
+  "review_sha256": {
+    "GROK_SPLIT_FEEDBACK_FINAL_CODE_REVIEW_20261108.md": "8b0fe7a46a18dd28c1cd75680429740d5cd08f5ee7cbf53d7e6d57668834ba0a",
+    "GROK_FEEDBACK_RTC_ASSERTION_REVIEW_20261108.md": "38d65e117e45167c8aedd727bc5f92a247f2ced070d89d7cea3cce06840aa608"
+  },
+  "status": "READY_FOR_SINGLE_SN_DEPLOY",
+  "rollback_preserved": "/root/p003-business-watchdog-20261107/listening-feedback-before-20261108"
+}
