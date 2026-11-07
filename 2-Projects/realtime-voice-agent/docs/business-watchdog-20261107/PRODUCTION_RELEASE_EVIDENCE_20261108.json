@@ -1,0 +1,280 @@
+{
+  "status": "MAIN_SINGLE_DEVICE_RELEASE_VERIFIED_ANDROID_PENDING",
+  "as_of": "2026-11-07T16:48:51.423056+00:00",
+  "grok_conclusions_unchanged": true,
+  "cleanup": {
+    "started": "2026-11-07T16:37:19.704706+00:00",
+    "sid": "RM_D6tdPrWhteMk",
+    "job": "AJ_Yb5RdC86xGK3",
+    "before": [
+      {
+        "audio_windows": 18,
+        "integer_mean_amp_max": 0,
+        "last_sample_age_s": 9.237,
+        "other_target_lines": 0,
+        "journal_sha256": "3d9167ad855af8211f0bed27b721a3317f07e9d8454a3eb519f9755e935fba5f"
+      },
+      {
+        "audio_windows": 17,
+        "integer_mean_amp_max": 0,
+        "last_sample_age_s": 9.606,
+        "other_target_lines": 0,
+        "journal_sha256": "542b1dff773ab64bbbecd076ae50205dfed7b25e7727feebed895b9b9836d828"
+      }
+    ],
+    "participant_sids": [
+      "PA_h9dKGiG2A3b3",
+      "PA_FcySqDkL3XxC"
+    ],
+    "delete_scope": "room_name",
+    "cas": false,
+    "delete_returned": true,
+    "finished": "2026-11-07T16:37:20.868879+00:00",
+    "original_room_absent": true,
+    "job_exited": true,
+    "rooms_after": 0
+  },
+  "brain": {
+    "at": "2026-11-07T16:47:51.206403+00:00",
+    "processes": [
+      {
+        "name": "p003-voice",
+        "pid": 613211,
+        "restarts": 56,
+        "status": "online"
+      },
+      {
+        "name": "kidshub-voice",
+        "pid": 1626403,
+        "restarts": 0,
+        "status": "online"
+      },
+      {
+        "name": "p003-analytics",
+        "pid": 196818,
+        "restarts": 11,
+        "status": "online"
+      }
+    ],
+    "same_processes_since_deploy": true,
+    "files_match": {
+      "/opt/p003/server/src/config-store.ts": true,
+      "/opt/p003/server/src/routes/device-session.ts": true,
+      "/opt/p003/web/dist/admin/index.html": true
+    },
+    "health": {
+      "status": "ok"
+    },
+    "policy": {
+      "at": "2026-11-07T16:44:09.353Z",
+      "status": "SINGLE_DEVICE_POLICY_SIGNED",
+      "sn_suffix": "02000053",
+      "rev": 139,
+      "revision": "cfg-139",
+      "policy": {
+        "timeout_ms": 5000,
+        "revision": "cfg-139"
+      },
+      "expected_agent": "rust-worker",
+      "trace_id": "ops-watchdog-policy-1794069849326",
+      "global_unchanged": true,
+      "other_overrides_unchanged": true,
+      "device_connected": false,
+      "device_applied": "not_observed"
+    }
+  },
+  "worker": {
+    "at": "2026-11-07T16:48:51.423056+00:00",
+    "main": {
+      "MainPID": "3488880",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "main_same_since_deploy": true,
+    "sha256": "becc21e9d81cb11bb39ce73df8467867bf038e0cc1771ead1646a9bd9279d2b3",
+    "stable_seconds": 354.067435503006,
+    "other_pools": {
+      "p003-search-worker.service": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "p003-listening-worker.service": {
+        "MainPID": "2750511",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      }
+    },
+    "rooms_count": 0,
+    "old_sid_absent": true,
+    "assignments": 3,
+    "completed": 3,
+    "unfinished_jobs": 0,
+    "journal_sha256": "d28453a0cdcf3495ed3d9d83c87986e5f60d9a2d138c66dcfb3bb7d2cf6a79b5",
+    "panic_count": 0,
+    "asr_no_audio_count": 1,
+    "probe_results": [
+      {
+        "name": "release-dispatch-ordered0",
+        "result": {
+          "at": "2026-11-07T16:46:07.596383+00:00",
+          "status": "PASS",
+          "candidate_sha256": "becc21e9d81cb11bb39ce73df8467867bf038e0cc1771ead1646a9bd9279d2b3",
+          "runtime_pid": "3488880",
+          "ordered": false,
+          "trace_id": "ops-release-probe-6006b0b4-3419-4bbb-a978-dbc7002b842f",
+          "sid": "RM_W3gjs4bnGT7W",
+          "stats": {
+            "ready_ms": 1143,
+            "phase_ms": null,
+            "user_finals": 2,
+            "answer_finals": 2,
+            "audible_ms": 13970.0,
+            "first_audio_ms": 7022,
+            "last_audio_ms": 25591,
+            "input_sent_ms": 1151,
+            "events": [
+              "session.output_ready",
+              "session.input_ready",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "client_connected_ms": 408,
+            "unclassified_non_ready_packets": 8
+          },
+          "natural_room_gone": true,
+          "fixture_cleanup": false,
+          "elapsed_ms": 32280,
+          "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+          "real_android": false
+        },
+        "result_sha256": "4fe094394f27065d6d9b71b74a2c7c9b7eaef0dc19b630ff7ea8e62bc3955e31",
+        "log_sha256": "d776aff03e447fdb6d30fa61fa8d200011ad1d7eff642d59517562b9431d95df"
+      },
+      {
+        "name": "release-dispatch-ordered1",
+        "result": {
+          "at": "2026-11-07T16:47:00.145268+00:00",
+          "status": "PASS",
+          "candidate_sha256": "becc21e9d81cb11bb39ce73df8467867bf038e0cc1771ead1646a9bd9279d2b3",
+          "runtime_pid": "3488880",
+          "ordered": true,
+          "trace_id": "ops-release-probe-20563647-dd71-4243-a3ac-4d8097b74b89",
+          "sid": "RM_7Tx822ToaHuT",
+          "stats": {
+            "ready_ms": 937,
+            "phase_ms": 3445,
+            "user_finals": 2,
+            "answer_finals": 1,
+            "audible_ms": 6140.0,
+            "first_audio_ms": 9755,
+            "last_audio_ms": 17025,
+            "input_sent_ms": 3445,
+            "events": [
+              "session.output_ready",
+              "session.input_ready",
+              "session.input_phase",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "client_connected_ms": 487,
+            "unclassified_non_ready_packets": 7
+          },
+          "natural_room_gone": true,
+          "fixture_cleanup": false,
+          "elapsed_ms": 23125,
+          "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+          "real_android": false
+        },
+        "result_sha256": "f8204ea7e9f1899ba86281eccdd2f7918f27a066e885dc62d4f5afb0dd16a5c9",
+        "log_sha256": "47f0cc380106d871f067f9d30b47edce96f10ce4495cac8772d63e47542f61f3"
+      },
+      {
+        "name": "release-dispatch-v2-ordered0",
+        "result": {
+          "at": "2026-11-07T16:47:51.733617+00:00",
+          "status": "PASS",
+          "candidate_sha256": "becc21e9d81cb11bb39ce73df8467867bf038e0cc1771ead1646a9bd9279d2b3",
+          "runtime_pid": "3488880",
+          "ordered": false,
+          "trace_id": "ops-release-probe-2e847af1-1957-43ef-b916-56f20349041a",
+          "sid": "RM_CkL7bbZXLMCf",
+          "stats": {
+            "ready_ms": 744,
+            "phase_ms": null,
+            "user_finals": 2,
+            "answer_finals": 1,
+            "audible_ms": 6920.0,
+            "first_audio_ms": 7581,
+            "last_audio_ms": 15560,
+            "input_sent_ms": 746,
+            "events": [
+              "session.input_ready",
+              "session.output_ready",
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ],
+            "metrics_packets": 4,
+            "metric_kinds": [
+              "eou",
+              "eou",
+              "llm",
+              "tts"
+            ],
+            "client_connected_ms": 292
+          },
+          "natural_room_gone": true,
+          "fixture_cleanup": false,
+          "elapsed_ms": 22104,
+          "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+          "real_android": false
+        },
+        "result_sha256": "b91fecd3fbbde077a5865fc19b30168e43a2ed8c7fb818760344411f4af60476",
+        "log_sha256": "8087c6e7477aba9586561a414eef88805b094bf2dbab0080bdf457a96f6556d2"
+      }
+    ],
+    "cleaner": {
+      "mode": "business",
+      "at_ms": 1794070121167,
+      "counts": {},
+      "remaining": 0,
+      "healthy": true
+    }
+  },
+  "sources": {
+    "OLD_ROOM_CLEANUP_RETRY.json": "530d3e9e3373d32ca9bf6b5dc39fe16ec225f1a00025391747e198af6686f5ed",
+    "BRAIN_DEPLOY_STATE_V2.json": "38a81659f64ea060af6705df575367eb66c0bfcd4a20480091476d20fa1874d2",
+    "WORKER_DEPLOY_STATE.json": "d0f26cd9c83510e2fcf8e624ff52baa1525beecfc352242d5deb47419a766070",
+    "SINGLE_POLICY_RESULT.json": "5d7e744226582b3d6d112c345ae3442b94e91caff34b2e207c20d10ac9460c29",
+    "WORKER_RELEASE_FINAL.json": "a7394d15956774ccda2fa3b06c4a0a43adca629fd2deb5e83ef8ce7dcf71aa70",
+    "BRAIN_DEPLOY_STABILITY.json": "4ff40e2e346c3383a71288245278c82492da9e34ed7ab0866f0055321a055c1f",
+    "RELEASE_RUNTIME_2.json": "62f5558cfe7b19827cf53aec60ac3f9feb3d8ba165dd15151a83546da54de66b",
+    "release-dispatch-probe.py": "05ac1ba741f8b0a09f63fb26cac8fded3faf7aa5fb59391066024b86dd79a1ea",
+    "release-dispatch-probe-v2.py": "f669702e7e46e700311a749c323569581c62821bb95f7023c5b96219517842a2",
+    "deploy-worker.py": "0513386b5d25077bbe3b9a3c3676bb10a63c74c2b76381ba07942fe4717a8c4d",
+    "deploy-brain-ready.py": "c76d277a798f8c28461c35685894a10c26e42a18f9b05c32c51bdbbb466ebf03",
+    "GROK_SPEECH_FINAL.md": "00bbed83035d6d69115f1d2b36e5ccfc7e8831e5f2f36e6cb7bca6377ee0c659"
+  },
+  "limitations": [
+    "Only main Worker deployed; other two pools unchanged",
+    "Single device server policy verified; Android application not observed",
+    "Normal and ordered synthetic dispatch are not real Android",
+    "First two metrics_packets counters were broad; only v2 checked metrics topic/k",
+    "ASR code45000002 occurred once and later recovered",
+    "Python probe shutdown emitted Event loop is closed; production Worker remained healthy",
+    "Historical connection timeout and initial input/12 tickets remain unresolved"
+  ]
+}
