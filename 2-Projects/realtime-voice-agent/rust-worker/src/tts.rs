@@ -343,6 +343,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn candidate_one_second_first_pcm_deadline_aborts_recovery_prewarm() {
+        let (started,ready)=tokio::sync::oneshot::channel();
+        let (dropped,done)=tokio::sync::oneshot::channel();
+        struct Notify(Option<tokio::sync::oneshot::Sender<()>>);
+        impl Drop for Notify {fn drop(&mut self){if let Some(s)=self.0.take(){let _=s.send(());}}}
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _guard=Notify(Some(dropped));let _=started.send(());
+            std::future::pending::<Result<tts_xfyun::Warm>>().await
+        })));
+        ready.await.unwrap();
+        // The spare at 650ms fails locally on absent credentials. It must keep
+        // the pending primary, and the outer 1s budget must still own its task.
+        let cfg=tts_xfyun::XfyunTtsConfig{app_id:String::new(),api_key:String::new(),api_secret:String::new(),
+            vcn:tts_xfyun::DEFAULT_VCN.into(),speed:50,oral_level:"mid".into()};
+        let budget=tts_xfyun::FirstAudioBudget::new(Some(std::time::Duration::from_secs(1)));
+        let result=tokio::time::timeout(std::time::Duration::from_secs(2),
+            budget.wait("connect_recovery",warm.take_for_sentence(&cfg))).await.expect("must not wait for 10s");
+        let error=match result {Err(e)=>e,Ok(_)=>panic!("hanging primary cannot produce a connection")};
+        assert!(tts_xfyun::first_audio_timed_out(&error));
+        assert!(warm.0.is_none());
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200),done).await.unwrap().is_ok());
+    }
+
+    #[tokio::test]
     async fn priority_actual_foreground_owner_aborts_pending_prewarm_on_cancel() {
         let (started,ready)=tokio::sync::oneshot::channel();
         let (dropped,done)=tokio::sync::oneshot::channel();

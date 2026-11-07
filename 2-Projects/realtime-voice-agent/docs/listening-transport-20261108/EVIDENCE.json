@@ -1,0 +1,291 @@
+{
+  "at": "2026-11-07T19:47:45.915481+00:00",
+  "baseline": "5b3fdaac2b0e6d552a899ea7a941616cfbed2d5d",
+  "runtime_candidate": "de09010304f2a44556bd706c7b810828062b4433",
+  "changed_files": [
+    "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/stt_volc.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/tts.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/tts_xfyun.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/voice_connect.rs"
+  ],
+  "protected_runtime_files": [
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/llm.rs",
+      "sha256": "b300a739e042aff316f0caafe7331f8e7ffeef69571f9f73fd3bae6873b36fe5"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/transcript_pub.rs",
+      "sha256": "e6ca31d914a16934d020048f04f50e192a6c1e583cfa511afe7563804f94ae66"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/device_intent.rs",
+      "sha256": "b45b98b03df87370cc28e2d3febb7a931a4d308d46294509c88d9194585023dc"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/job.rs",
+      "sha256": "33ec07f793d077e7bf1fb622b76b15e0a6d0d311d6a8cadb60719c923c23c54d"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/tts_volc.rs",
+      "sha256": "6a333e155efd0757890271329bbfbb35cc810a6fae71a8ef5cceb933fd6b3600"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/control.rs",
+      "sha256": "3a97a98e2d0ebfaff82395159ddcf45fed172d97eb1fc2426db78098ad94c0e7"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs",
+      "sha256": "9e0b95ba0d6137b64497de45c5f0287664da09246cb39dae93396143964c3ee0"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/audit_capture.rs",
+      "sha256": "4b59e228dc3c4fe68efcdc902a413da6893f0bec10ca6d25d74090724acfde85"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/config.rs",
+      "sha256": "d63f7066ded037a3437575005c9eaffbc20d29168fbc19ba3523a3c29efc7218"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/token.rs",
+      "sha256": "9e5c7d3d0d5c18e6c5218c86e03e6aba8bfd3b9e186e623c1ac47d1f576b1b22"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/playout.rs",
+      "sha256": "dfd90d6914c4befb2499842f0a69f83b5d3bf500d41f15f0fe7c5f316c78dda4"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_runtime.rs",
+      "sha256": "c16ffdd090f095af6851fddab126956259d002c02fbce6c242677275b8b5648c"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/ready_confirm.rs",
+      "sha256": "a0fa66795ea21c21d40f671d2e781776647735da34cf6b70c0c59b2ddb527f70"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/say_defer.rs",
+      "sha256": "bbdafa12d8040ae4ebac8fab8bb74b2d0725e6071cd48b45e17b136dc6b4e6af"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/owned_task.rs",
+      "sha256": "ed0f54ce66a325592974befcbe8c42be161925e8a13dd1f2c596ad3b543549ba"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/speaker_id.rs",
+      "sha256": "450f01eb5f18ab33ae805562deda12e0933d9d2fdb7e4a8de19f72eacb6670d0"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_routing.rs",
+      "sha256": "759a1c786815d22e396b6bfc7b6a248feb810230479f73adb1b7d358952c5deb"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs",
+      "sha256": "1781914dad34a0981ca81b3ddc5390acdd46318243bd569b73d1192f1d41f85a"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/turn.rs",
+      "sha256": "537376f6301a2718a40d2797f67565ef7850a589704f6b03c589168232f5b977"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_adapter.rs",
+      "sha256": "f95827973811f5d4ca08febbb0e375268d903a179b6e86b98a77a31f88fa05b7"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/worker.rs",
+      "sha256": "cae64dc078ae10893c6ccf00ebcc16e2fa0f2750df81b98f53d60640136a45ea"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_receipts.rs",
+      "sha256": "03026c9f27c81c21589ba3830d4ea37b358abf6f318a550a6706138b3a596d45"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/device_grammar.rs",
+      "sha256": "beb2a6adc33e4b2f932aacd1c348c6e42b427a51576283dc382e34220a7592c8"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/device_ledger.rs",
+      "sha256": "7defc258595513afd15434f5e78f232076a9c9d4c9845d5da562636b42f94929"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/caption_gate.rs",
+      "sha256": "429c856585f43087f19c2f931efef769e24a041be6dc3e6c058eb783bf8052e9"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_enrollment.rs",
+      "sha256": "d40dd87c6ede13a2f64de37130b94eab3bf2fc449b6f01c7b4b39a76343ad543"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_progress.rs",
+      "sha256": "6bc42795174050c5a77860cf11bd4c519fb19c11a95e77bb4c574a10dcca7547"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/device_grammar_slot_matrix.rs",
+      "sha256": "3e92cfc577cd058276076f82c5a273d732157cf6d763797d6b1a43eadedccbf6"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_voice.rs",
+      "sha256": "af2c32678cbc8f4673c729af89e65322deea9ee075279697f7a0c92d029aaff1"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_mode.rs",
+      "sha256": "d61e4e37a3db6fa78725bfc98011705bbab528ca79051b88608ec5bcb6140065"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/preflight.rs",
+      "sha256": "950bb416101f68868b3bc19440affc5e2e372f80669f35155d8218e7fc2e2f63"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/eot.rs",
+      "sha256": "0c6ca211e120145d986b4d950a5accb4dde243804659d9d4ac18778ea41dfbfe"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/room_cleanup.rs",
+      "sha256": "e254500d88416cfcf5a74e384b879d50cce5329b06ea1db2dc156213935bfcbc"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_ready.rs",
+      "sha256": "a60be8fe9b99f9a15e4402332fff919af9293e632c5e68e2a1478fac2023b15e"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/device_grammar_testdata.rs",
+      "sha256": "46e3d5411d664bdaf19d63d4506218c006c3ea0e9fbc8ced5483f4f667c17be3"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/eot_snapshot.rs",
+      "sha256": "0ffdcd2b28233c2b9552b8aa02363f5860db579a7357cd721e988d19260f0259"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/candidate.rs",
+      "sha256": "4b3a3d489db169c9f8ee95e8e01ce79a9ccc577a89e8223d79a39fd584c73c8e"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/textproc.rs",
+      "sha256": "370d7413591454e69af4e049ff803f2a30a347b739058ab35b6cf36655df56e6"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/contract.rs",
+      "sha256": "fd57e2ecd11d523d9f44263d381ed94e4da6b2b82ec466fc7b879aafd9974ec4"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/vad.rs",
+      "sha256": "3cf2bca4621e5dacc7efcf7766cac88e0a2ad9d7db0a3f08348957eaf301c7ab"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/main.rs",
+      "sha256": "6bac7bf5c66c5f0d8da58fe85382cb90cd2c1c032975aa55953182f01723807b"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_http.rs",
+      "sha256": "f57209e55f72175d8429ecab01ebde4148fa2977965a79d84f919dd5179335a6"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/gate.rs",
+      "sha256": "bcfabf259a70d961cb1a777394429471defc7efabf1f7c53dd3762423a73541f"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_control_recovery.rs",
+      "sha256": "c3555a0356ef2e2d57d3fc5b653d997a4c0e6de2ba74fa83dcb63cb2e5030d47"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_policy_cases.rs",
+      "sha256": "1d50026ae40560412ed198a7dabdf654888bdc8d9c87397595c8f747d6939562"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/segmenter.rs",
+      "sha256": "a044798a0afb58f33ef272bb622bd3764442be84a3958c66af02894d30571199"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_policy.rs",
+      "sha256": "310f2c69fd5e5f63ecd48f14581c3179bfe8180d82453b0b27f0d7a6f865acbf"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/volc.rs",
+      "sha256": "c58ab6604c65f1c3107307318c7478ae6aa7edf1b489f0626ef9a601423810e3"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/backchannel.rs",
+      "sha256": "8397513faebddfee8d901ebdb01509a4f6a68f104a561ec598f7028fc11f001c"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/startup_participant.rs",
+      "sha256": "04f071337ba2ab8362124a6d09dea18671b803fad7ee92757976edff822db930"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/listening_buffer.rs",
+      "sha256": "ca78de682675730d939fe5fff22c5eba2802ce1560d54689f7970b1001a463c8"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_dialogue.rs",
+      "sha256": "e9749ef9305da869cb7edc90a92e8251931966b84302814363f5150a429cf778"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/filler.rs",
+      "sha256": "90e0816005b2b93fe46352a4703465edc9b211b2ca1fad4b74cae56717a8e112"
+    },
+    {
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_canary.rs",
+      "sha256": "68dce6c95110cbb28a86930afc4a1e21c25960ff2b358fa7563f5ec480283488"
+    }
+  ],
+  "release_binary_sha256": "d627dfa91f33fd01771c87bc6ac2bbb6a3ccb937b823bf7e0bd56ec92e1ab0e0",
+  "release_bytes": 78023792,
+  "baseline_test_pass": 613,
+  "red_cname": {
+    "passed": 570,
+    "failed": 3,
+    "ignored": 2
+  },
+  "candidate_test_pass": 648,
+  "extra_test_only_pass": 649,
+  "ignored": 2,
+  "full_log_hashes": [
+    {
+      "name": "green-listening-transport-1.log",
+      "sha256": "9dac7da8f50c9e3b8366ed390aac27f10e423b8e8634f8525cdfb10518e780bd",
+      "bytes": 7182
+    },
+    {
+      "name": "red-listening-cname.log",
+      "sha256": "003eec521c4ae72d70a1e693122b060394a60d2fcc0e2d50bdc0b752ef7aeb0b",
+      "bytes": 63107
+    },
+    {
+      "name": "green-listening-transport-2.log",
+      "sha256": "5fb21ed5b32b55cf6163af07ce3c79460d34a64cf7228bc479156ebf37b7a6b0",
+      "bytes": 68782
+    },
+    {
+      "name": "green-listening-transport-3.log",
+      "sha256": "9abe33fd7cf9153e31a1aa6efa66e5b7e92df78261f8dcf402f80062a1aaed11",
+      "bytes": 68870
+    },
+    {
+      "name": "baseline-5b3.log",
+      "sha256": "b692abe2648a8df98be379871df73b5ed4d9023030177617d72ff7fe4db9f845",
+      "bytes": 12203
+    },
+    {
+      "name": "listening-transport-release.log",
+      "sha256": "cf068f93635c34a3348971725df34f9c6142799b5d7f5ba4c27648bc14f09c9f",
+      "bytes": 870
+    },
+    {
+      "name": "baseline-5b3-complete.log",
+      "sha256": "c926fa1ca693693646b6ea99d342784651a55311c69a5851652a5d868e15ef01",
+      "bytes": 65409
+    },
+    {
+      "name": "baseline-5b3-fixtures.log",
+      "sha256": "711d5af614d4740c6996e55c167a8b71caa77471ed4bf57848b4142125b7b966",
+      "bytes": 9420
+    },
+    {
+      "name": "listening-transport-pinned-release.log",
+      "sha256": "cf3074f2f7b961c1ee6ddd1cc24f5f0ae502362b98f57c02e9d2137919a1086c",
+      "bytes": 541132
+    }
+  ],
+  "production_deployed": false,
+  "real_rtc": "NOT_RUN",
+  "real_android": "NOT_RUN"
+}
