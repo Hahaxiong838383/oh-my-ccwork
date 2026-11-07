@@ -1,3 +1,5 @@
+> 后续实现状态见 [RUNTIME_WIRING.md](RUNTIME_WIRING.md)。下文为核心模型阶段记录，不代表最新接线与发布状态。
+
 # 长房间保护实施与验收记录
 
 状态：开发中，未部署。基线 c19e0964；回滚标签 rollback/p003-business-watchdog-pre-20261107。

@@ -11,7 +11,7 @@ pub enum Reason { StartupNoInput, IdleNoProgress, UnknownPolicy }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decision { Keep, Observe(Reason), Close(Reason) }
 #[derive(Clone, Copy, Debug)]
-pub enum Activity { Reply, Search, Command, Listening }
+pub enum Activity { Reply, Search, Command, Listening, Input }
 
 #[derive(Clone, Copy, Debug)]
 struct Hold { generation: u64, until: u64, active: bool }
@@ -23,15 +23,19 @@ pub struct BusinessWatchdog {
     last_progress: u64,
     // Retain the generation after completion: a delayed duplicate cannot
     // resurrect an expired/finished task and buy another full lease.
-    holds: [Option<Hold>; 4],
+    holds: [Option<Hold>; 5],
 }
 impl BusinessWatchdog {
     pub fn new(mut policy: Policy, now: u64) -> Self {
         policy.idle_ms = policy.idle_ms.filter(|ms| (5_000..=300_000).contains(ms));
-        Self { policy, started: now, ready: false, last_progress: now, holds: [None; 4] }
+        Self { policy, started: now, ready: false, last_progress: now, holds: [None; 5] }
     }
     pub fn first_frame(&mut self, now: u64) {
-        if !self.ready { self.ready = true; self.progress(now); }
+        // Transport readiness is not evidence of speech. A late first frame
+        // cannot undo the absolute startup cutoff, even before the next tick.
+        if !self.ready && now.saturating_sub(self.started) < self.policy.startup_ms {
+            self.ready = true;
+        }
     }
     /// Only fresh evidence of actual input/output may call this. In particular
     /// keepalives, silence frames and a stale VAD/playing flag must not.
@@ -95,13 +99,36 @@ mod tests {
     use super::*;
     fn policy(idle: Option<u64>, mode: Mode) -> Policy { Policy { mode, idle_ms: idle, startup_ms: 30_000 } }
     fn ready(idle: u64) -> BusinessWatchdog {
-        let mut w=BusinessWatchdog::new(policy(Some(idle),Mode::Enforce),0);w.first_frame(1000);w
+        let mut w=BusinessWatchdog::new(policy(Some(idle),Mode::Enforce),0);w.first_frame(1000);w.progress(1000);w
     }
     #[test]
     fn silent_connected_room_expires_despite_repeated_ready_and_ticks() {
         let mut w=ready(5000);
         for now in (2000..6000).step_by(50) { w.first_frame(now);assert_eq!(w.evaluate(now),Decision::Keep); }
         assert_eq!(w.evaluate(6000),Decision::Close(Reason::IdleNoProgress));
+    }
+    #[test]
+    fn first_silent_frame_does_not_refresh_business_progress() {
+        let mut w = BusinessWatchdog::new(policy(Some(5000), Mode::Enforce), 0);
+        w.first_frame(4999);
+        assert_eq!(w.evaluate(5000), Decision::Close(Reason::IdleNoProgress));
+    }
+    #[test]
+    fn first_frame_at_or_after_startup_deadline_cannot_revive_room() {
+        for at in [30_000, 30_001, 300_000] {
+            let mut w = BusinessWatchdog::new(policy(Some(300_000), Mode::Enforce), 0);
+            w.first_frame(at);
+            w.progress(at); // even a delayed positive signal cannot undo startup expiry
+            assert_eq!(w.evaluate(at), Decision::Close(Reason::StartupNoInput));
+        }
+    }
+    #[test]
+    fn valid_first_input_before_startup_deadline_has_its_own_idle_budget() {
+        let mut w = BusinessWatchdog::new(policy(Some(5000), Mode::Enforce), 0);
+        w.first_frame(29_999);
+        w.progress(29_999);
+        assert_eq!(w.evaluate(34_998), Decision::Keep);
+        assert_eq!(w.evaluate(34_999), Decision::Close(Reason::IdleNoProgress));
     }
     #[test]
     fn startup_without_any_pcm_has_an_absolute_deadline() {

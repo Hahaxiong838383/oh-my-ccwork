@@ -38,6 +38,7 @@ use crate::tts_volc::TTS_SAMPLE_RATE;
 /// 全 None,ready 事件降级不发(fail-visible,error 日志),Android 走超时兜底。
 #[derive(serde::Deserialize, Default)]
 struct JobMeta {
+    voice_idle: Option<serde_json::Value>,
     filler_policy: Option<serde_json::Value>,
     trace_id: Option<String>,
     #[allow(dead_code)] // 回交对账用,当前事件只带 trace
@@ -104,6 +105,7 @@ async fn next_job_wake<E>(
 }
 
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
+    let t0 = Instant::now();
     let room_name = job
         .room
         .as_ref()
@@ -118,8 +120,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             anyhow::bail!("candidate room cleanup registration failed");
         }
     };
-    let t0 = Instant::now();
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
+    let business = crate::business_runtime::Runtime::from_env(&room_name, meta.voice_idle.as_ref(), t0);
+    let mut business_last_decision = None;
+    if let Some(w) = &business { info!(room=%room_name, room_sid=%sid, revision=w.revision().unwrap_or("missing"), "business watchdog attached"); }
     let filler_policy = crate::filler::FillerPolicy::from_metadata(meta.filler_policy.as_ref(), &room_name);
     if meta.filler_policy.is_some() && filler_policy.is_none() { warn!(room = %room_name, "invalid filler policy ignored; legacy fallback"); }
     let issue_ms = issue_to_assignment_ms(&room_name, meta.issue_ts_ms);
@@ -143,9 +147,20 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let mut prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
     info!(job_id = %job.id, room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "worker_room_connect_start");
 
-    let (room, mut events) = Room::connect(&url, &token, RoomOptions::default())
-        .await
-        .context("room connect")?;
+    let startup_deadline = business.as_ref().and_then(|w| w.startup_deadline());
+    let connected = crate::business_runtime::within_startup(startup_deadline,
+        async { Room::connect(&url, &token, RoomOptions::default()).await.map_err(Into::into) }).await;
+    let (room, mut events) = match connected {
+        Ok(value) => value,
+        Err(error) => {
+            if business.is_some() {
+                drop(prebuilt_task.take());
+                let cleanup = crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
+                warn!(room=%room_name,room_sid=%sid,?cleanup,"startup connect failed; cleanup readback");
+            }
+            return Err(error.context("room connect"));
+        }
+    };
     let connect_ms = t0.elapsed().as_millis() as u64;
     info!(
         room = %room_name,
@@ -158,7 +173,18 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 队列 200ms 对齐 Python room_io(queue_size_ms=200):pause 时排队尾音 ≤200ms
     // 自然放完(框架不 clear),硬打断才 clear_buffer。
     let source = NativeAudioSource::new(AudioSourceOptions::default(), TTS_SAMPLE_RATE, 1, 200);
-    let mut agent_pub = publish_output_track(&room, &source).await.context("publish audio track")?;
+    let mut agent_pub = match crate::business_runtime::within_startup(startup_deadline, publish_output_track(&room, &source)).await {
+        Ok(value) => value,
+        Err(error) => {
+            if business.is_some() {
+                drop(prebuilt_task.take());
+                let _=tokio::time::timeout(std::time::Duration::from_secs(2),room.close()).await;
+                let cleanup=crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
+                warn!(room=%room_name,room_sid=%sid,?cleanup,"startup publish failed; cleanup readback");
+            }
+            return Err(error.context("publish audio track"));
+        }
+    };
     info!(job_id = %job.id, room = %room_name, room_sid = %sid,
         trace = meta.trace_id.as_deref().unwrap_or("-"), agent_track_sid = %agent_pub.sid(),
         elapsed_ms = t0.elapsed().as_millis() as u64, "agent_track_published");
@@ -205,7 +231,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         info!(room = %room_name, expected_device = expected_device.as_deref().unwrap_or("-"), local_receipt = ordered_local_receipt,
               first_turn_rtc = ordered_first_turn, "input_mode=ordered_pcm(受信 metadata):RTC 音频不进识别");
     }
-    // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 epoch ms。
+    // pipeline 主循环心跳(watchdog):0=未启动;主循环每 50ms tick 写 assignment 起单调毫秒。
     // 卡死实证(2026-08-16 voice-test-rust):主循环等 llm 锁僵死,job 层事件循环仍活
     // ——所以看门狗放这里,5s 无心跳即 break 走统一收尾(abort+关房删房),用户重连即新房。
     let beat = std::sync::Arc::new(std::sync::atomic::AtomicU64::new(0));
@@ -225,6 +251,15 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 break;
             }
             JobWake::Watchdog => {
+                if let Some(w) = &business {
+                    let decision = w.evaluate(Instant::now());
+                    if business_last_decision != Some(decision) {
+                        info!(room=%room_name, room_sid=%sid, trace=meta.trace_id.as_deref().unwrap_or("-"), ?decision,
+                            elapsed_ms=t0.elapsed().as_millis() as u64, "business watchdog decision");
+                        business_last_decision = Some(decision);
+                    }
+                    if matches!(decision, crate::business_watchdog::Decision::Close(_)) { break; }
+                }
                 if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) {
                     info!(room=%room_name, "startup participant recovery expired → closing job");
                     break;
@@ -237,10 +272,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     && !t.is_finished()
                 {
                     let last = beat.load(std::sync::atomic::Ordering::Relaxed);
-                    let now_ms = std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis() as u64;
+                    let now_ms = t0.elapsed().as_millis() as u64;
                     if last > 0 && now_ms.saturating_sub(last) > 5_000 {
                         tracing::error!(
                             room = %room_name,
@@ -473,6 +505,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             let hrx = hist_rx.take().expect("pipeline 只启动一次");
             let beat2 = beat.clone();
             let ready = pipeline::ReadyCtx {
+                business: business.clone(),
                 trace_id: meta.trace_id.clone(),
                 out_rx: out_rx.take().expect("pipeline 只启动一次"),
                 t_assign: t0,
@@ -501,9 +534,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     }
     // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
     // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
-    let _ = close_room_and_delete(&room_name,
-        async { room.close().await.map_err(Into::into) },
-        delete_room(&config, &url, &room_name)).await;
+    if business.is_some() {
+        let _=tokio::time::timeout(std::time::Duration::from_secs(2),room.close()).await;
+        let cleanup=crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
+        if matches!(cleanup,crate::room_verify::Outcome::Gone|crate::room_verify::Outcome::Superseded) {
+            info!(room=%room_name,room_sid=%sid,?cleanup,"room cleanup verified");
+        } else { warn!(room=%room_name,room_sid=%sid,?cleanup,"room cleanup unverified; reconciliation required"); }
+    } else {
+        let _ = close_room_and_delete(&room_name,
+            async { room.close().await.map_err(Into::into) },
+            delete_room(&config, &url, &room_name)).await;
+    }
     // A 2xx is not the device's disconnect receipt. Keep the durable intent
     // until the independent reconciler verifies that this exact SID is gone.
     info!(job_id = %job.id, room = %room_name, room_sid = %sid,
@@ -730,6 +771,15 @@ mod tests {
         super::close_pipeline(task,Some(tx)).await;assert!(at.elapsed()<std::time::Duration::from_secs(1));
     }
 
+    #[test]
+    fn malformed_idle_policy_does_not_erase_other_trusted_metadata() {
+        for policy in [serde_json::json!("invalid"),serde_json::json!({"timeout_ms":"bad"}),serde_json::json!(null)] {
+            let raw=serde_json::json!({"trace_id":"synthetic-trace","voice_idle":policy,"oneshot_first_turn":"v1"}).to_string();
+            let meta:super::JobMeta=serde_json::from_str(&raw).unwrap();
+            assert_eq!(meta.trace_id.as_deref(),Some("synthetic-trace"));
+            assert_eq!(meta.oneshot_first_turn.as_deref(),Some("v1"));
+        }
+    }
     #[tokio::test]
     async fn business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort() {
         let (held, dropped) = tokio::sync::oneshot::channel::<()>();

@@ -826,6 +826,7 @@ pub struct OrderedCtx {
 }
 
 pub struct ReadyCtx {
+    pub business: Option<crate::business_runtime::Runtime>,
     /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
     pub trace_id: Option<String>,
     /// 输出方向就绪信号(job 层 LocalTrackSubscribed 时置 true)
@@ -1071,6 +1072,8 @@ pub async fn run_pipeline(
     let mut in_frames: u64 = 0;
     let mut in_amp_acc: u64 = 0;
     let mut input_stats = crate::business_watchdog::AudioStats::default();
+    let mut business_last_played: Option<(u64, u64)> = None;
+    let mut business_ordered_until: Option<Instant> = None;
     let mut in_report = Instant::now();
     // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
     // 生产实证 2026-08-18 06:20 同 job 每 10s 重发一次 input_ready——Android 幂等兜住但脏)
@@ -1175,6 +1178,7 @@ pub async fn run_pipeline(
                 }
                 in_frames += 1;
                 input_stats.push(&samples);
+                if let Some(w) = &ready.business { w.input_frame(Instant::now(), samples.len()); }
                 if !input_ready_fired {
                     input_ready_fired = true;
                     // input_ready 发射点(合同硬性要求 3):输入消费循环真实收到首帧,
@@ -1278,6 +1282,7 @@ pub async fn run_pipeline(
                     let chunk: Vec<i16> = vad_buf.drain(..WINDOW).collect();
                     if let Ok(p) = vad.predict(&chunk) {
                         let active = p >= gate.activation_threshold;
+                        if active { if let Some(w) = &ready.business { w.progress(Instant::now()); } }
                         let ev = gate.feed(p);
                         orch.on_vad_frame(&gate, ev, active, &eot_ring).await;
                     }
@@ -1285,7 +1290,14 @@ pub async fn run_pipeline(
             }
             // One-shot v0.3:有序 PCM 包(现役房通道永远空,分支不触发)
             Some(pkt) = hist_rx.recv() => {
-                orch.on_ordered_packet(&pkt, &stt_pcm_tx);
+                let was_idle = orch.ordered.as_ref().is_some_and(|o| o.phase() == crate::ordered_pcm::Phase::Idle);
+                let submitted = orch.on_ordered_packet(&pkt, &stt_pcm_tx);
+                if let Some(w) = &ready.business {
+                    w.input_frame(Instant::now(), submitted);
+                    if was_idle && orch.ordered.as_ref().is_some_and(|o| o.phase() == crate::ordered_pcm::Phase::Receiving) {
+                        business_ordered_until = orch.ordered.as_ref().map(|o| Instant::now() + Duration::from_millis(o.business_input_budget_ms()));
+                    }
+                }
                 if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
                     orch.ordered_end_stream_pending = false; // B23:已切 RTC,首句流早已关,忽略
                 }
@@ -1354,12 +1366,9 @@ pub async fn run_pipeline(
             }
             Some(te) = turn_ev_rx.recv() => orch.on_turn_event(te),
             _ = commit_tick.tick() => {
-                // watchdog 心跳(epoch ms):主循环卡死(如等锁)时停跳,job 层 5s 无跳即惊闸关房
+                // watchdog 心跳(assignment 起单调毫秒):主循环卡死(如等锁)时停跳,job 层 5s 无跳即惊闸关房
                 beat.store(
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis() as u64,
+                    ready.t_assign.elapsed().as_millis().max(1) as u64,
                     std::sync::atomic::Ordering::Relaxed,
                 );
                 if in_report.elapsed() >= Duration::from_secs(10) {
@@ -1376,6 +1385,24 @@ pub async fn run_pipeline(
                 orch.poll_device_timeout(Instant::now());
                 orch.poll_ledger(Instant::now());
                 orch.on_tick().await;
+                if let Some(w) = &ready.business {
+                    use crate::business_watchdog::Activity;
+                    let now = Instant::now();
+                    if let Some(turn) = &orch.agent_turn {
+                        let samples = turn.ctl.captured_samples();
+                        if samples > 0 && business_last_played != Some((turn.id, samples)) { w.progress(now); }
+                        business_last_played = Some((turn.id, samples));
+                    } else { business_last_played = None; }
+                    // Existing HTTP generation budget + foreground TTS handshake.
+                    // Once this expires, actual ongoing PCM still protects long answers.
+                    w.activity_until(Activity::Reply, orch.agent_turn.as_ref().filter(|t| !t.task.is_finished())
+                        .map(|t| t.started + crate::llm::REQUEST_TIMEOUT + crate::tts_xfyun::CONNECT_TIMEOUT));
+                    w.activity_until(Activity::Command, orch.pending_cmd.as_ref()
+                        .map(|p| p.sent_at + if p.accepted_acked { DEVICE_RESULT_DEADLINE * 3 } else { DEVICE_RESULT_DEADLINE }));
+                    w.activity_until(Activity::Search, orch.search.as_ref().and_then(|s| s.business_deadline()));
+                    let receiving = orch.ordered.as_ref().is_some_and(|o| matches!(o.phase(), crate::ordered_pcm::Phase::Receiving | crate::ordered_pcm::Phase::Ended));
+                    w.activity_until(Activity::Input, if receiving { business_ordered_until } else { None });
+                }
                 if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
                     orch.ordered_end_stream_pending = false; // B23:已切 RTC,忽略
                 }
@@ -1468,7 +1495,8 @@ impl Orchestrator {
 
     /// publish_data 到 room(web 延迟面板/租户状态机消费;失败只记不抛)。
     /// One-shot v0.3:有序 PCM 包 → 代次状态机 → 按 3200 块写 ASR 队列(try_send 失败=计数+整代失败)→ 执行动作。
-    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) {
+    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) -> usize {
+        let mut submitted = 0;
         let now_ms = unix_ms_now();
         let was_idle = self.ordered.as_ref().map(|o| o.phase() == crate::ordered_pcm::Phase::Idle).unwrap_or(false);
         let mut acts = self.ordered.as_mut().map(|o| o.on_packet(pkt, now_ms)).unwrap_or_default();
@@ -1484,7 +1512,7 @@ impl Orchestrator {
         }
         if let Some(o) = self.ordered.as_mut() {
             let more = o.drain_submits(|block| match stt_tx {
-                Some(tx) => tx.try_send(block).is_ok(),
+                Some(tx) => { let n = block.len(); let ok = tx.try_send(block).is_ok(); if ok { submitted += n; } ok },
                 None => false,
             });
             acts.extend(more);
@@ -1494,6 +1522,7 @@ impl Orchestrator {
             }
         }
         self.apply_ordered_actions(acts);
+        submitted
     }
 
     /// 代次动作:result 记日志(无 PCM/无文本)+ 出站(同 topic、OPCM 线格式、空 PCM);收流交主循环执行。

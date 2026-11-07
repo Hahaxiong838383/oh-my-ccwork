@@ -577,11 +577,13 @@ pub struct Llm {
     speaker_slot: Option<crate::speaker_id::StickySlot>,
 }
 
+pub const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
 fn build_client() -> reqwest::Client {
     reqwest::Client::builder()
         .redirect(if std::env::var("AGENT_NAME").is_ok_and(|v|crate::search_canary::is_candidate(&v)) { reqwest::redirect::Policy::none() } else { reqwest::redirect::Policy::default() })
         .connect_timeout(std::time::Duration::from_secs(10))
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(REQUEST_TIMEOUT)
         .build()
         .expect("reqwest client")
 }

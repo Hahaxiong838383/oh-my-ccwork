@@ -1,0 +1,33 @@
+{
+  "at": "2026-11-07T22:36:50+08:00",
+  "status": "IMPLEMENTED_MAIN_RUNTIME_NOT_RELEASE_READY",
+  "tests": {
+    "command": "cargo test --offline --locked",
+    "environment": "Linux existing offline toolchain; no dependency installation",
+    "passed": 523,
+    "failed": 0,
+    "log_sha256": "375406ba4297c154c3d901cc26ce75aba3cb5febe02bdaa67a6ede8ec4b6793e",
+    "source_manifest_sha256": "8d86c07250ac9e79e9768bed0748d3af49dd55fcfb6203725c583b3fdfae9502"
+  },
+  "source_sha256": {
+    "src/business_watchdog.rs": "d9256d615d2ba91551845db5cff623b710c391c5a961e1fce32f10cb53603649",
+    "src/business_runtime.rs": "9f86b31825e87223fb7941ce2cfa59d6b01a4d35b1088822c298c9055817d255",
+    "src/job.rs": "a4cfadf178f0351eac2eea2ea6ffacf9befe72a5e3afd49e2b4bd33883cb4aa4",
+    "src/llm.rs": "a341cf054745219a61d079bfd21cfba5110aa3a89c8e36eadc196abf6256de4e",
+    "src/main.rs": "5b1a12d3ffe2b0b61e930b57ab68e1423daf9b3fbd649979e2f282ae5fd6d0e1",
+    "src/ordered_pcm.rs": "342f3138834ed83482efdf003149f882cdd1f59d49a918ded73c3b99990d72d3",
+    "src/pipeline.rs": "b18a6c05db08162707fa95ca6bc1175b2bc8a855043662a13fca599b568de711",
+    "src/search_tasks.rs": "fb3de60ff557336e82aee96d2db76aa48c1740e27cf9100890d9483d1a905827",
+    "src/startup_participant.rs": "ebebde5e18647c3e56620f391876c024f0dd5afd65fa309755d073e9ba7e7961",
+    "src/token.rs": "4585edb102d0ac1a54296d443b1a2515843e1984653921c1d84419224000fd28",
+    "src/tts_xfyun.rs": "e10cf2890cbd385fb4e88f92c6fd7ac72fdf75fc004079f96014b7c2f857c83d",
+    "src/room_verify.rs": "d2d6b2a6fcb3cdddec79db25e4f801ce90292558c599849b5cee3e3974aa0cc3"
+  },
+  "production_changed": false,
+  "release_build": false,
+  "real_rtc_verified": false,
+  "listening_pool_ported": false,
+  "durable_main_cleanup_retry": false,
+  "rollback_source": "rollback/p003-business-watchdog-pre-20261107",
+  "runtime_before_sha256": "35f59ecde2ce892f0c865ae90880747a00f782cccbffe39abe5dc3234e464971"
+}

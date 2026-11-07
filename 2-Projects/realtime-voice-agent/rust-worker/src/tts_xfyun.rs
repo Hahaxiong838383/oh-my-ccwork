@@ -60,7 +60,7 @@ pub const TTS_SAMPLE_RATE: u32 = 24_000;
 /// 超拟人 endpoint(path 含产品固定路由段,勿改)
 const TTS_URL: &str = "wss://cbm01.cn-huabei-1.xf-yun.com/v1/private/mcd9m97e6";
 pub const DEFAULT_VCN: &str = "x6_lingxiaoxuan_pro";
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const RECV_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Clone)]
