@@ -54,13 +54,13 @@ use tokio::sync::mpsc::error::SendTimeoutError;
 use crate::playout::PlayoutControl;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
-use tracing::info;
+use tracing::{info, Instrument};
 
 pub const TTS_SAMPLE_RATE: u32 = 24_000;
 /// 超拟人 endpoint(path 含产品固定路由段,勿改)
 const TTS_URL: &str = "wss://cbm01.cn-huabei-1.xf-yun.com/v1/private/mcd9m97e6";
 pub const DEFAULT_VCN: &str = "x6_lingxiaoxuan_pro";
-const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+pub(crate) const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const RECV_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// One absolute deadline, starting when speakable text is ready. Once PCM has
@@ -265,7 +265,7 @@ pub struct Warm {
 }
 
 impl Warm {
-    fn fresh(&self) -> bool {
+    pub(crate) fn fresh(&self) -> bool {
         warm_is_fresh(self.opened.elapsed())
     }
 }
@@ -306,11 +306,13 @@ async fn connect_observed(url: String) -> Result<Warm> {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     let mut trace = ConnectTiming {
         id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
-        stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled", dns_path: None,
+        stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled",
+        dns_path: Some("system_os"), local: None, peer: None,reason:"owner_dropped",
     };
-    // Keep the OS connector by default. The explicit async-DNS flag may also
-    // promote the verified connector to the main worker for this provider only.
-    // Both retain TCP defaults, TLS/SNI/certificate validation and a 10s budget.
+    // Explicitly opt in for the known TTS host only. Independent A/AAAA lookups
+    // let an available address connect without waiting for the other family.
+    // System DNS remains the default. Both retain
+    // TCP defaults, TLS/SNI/certificate validation and one overall 10s budget.
     // TLS and WebSocket stay one measured stage; do not invent separate timings.
     let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
         let request = url.into_client_request().map_err(|_| anyhow::anyhow!("invalid_request"))?;
@@ -322,7 +324,8 @@ async fn connect_observed(url: String) -> Result<Warm> {
             &host,
         ) {
             trace.stage="resolve_tcp";
-            let connected=crate::voice_connect::connect(&host,port).await?;
+            let connected=crate::voice_connect::connect(&host,port)
+                .instrument(tracing::info_span!("voice_connection",provider="tts",connect_id=trace.id)).await?;
             trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
             trace.dns_path=Some(connected.dns_path);
             connected.socket
@@ -338,6 +341,8 @@ async fn connect_observed(url: String) -> Result<Warm> {
             trace.tcp_ms = Some(t.elapsed().as_millis() as u64);
             socket
         };
+        trace.local = socket.local_addr().ok();
+        trace.peer = socket.peer_addr().ok();
         trace.stage = "tls_ws"; let t = std::time::Instant::now();
         let (ws, _) = tokio_tungstenite::client_async_tls_with_config(request, socket, None, None).await
             .map_err(|e| {
@@ -355,11 +360,15 @@ async fn connect_observed(url: String) -> Result<Warm> {
     match result {
         Ok(Ok(ws)) => {
             trace.outcome = "connected";
+            trace.reason = "none";
             Ok(Warm { ws, opened: trace.start, connect_ms: trace.start.elapsed().as_millis() as u64, connect_id: trace.id })
         }
         other => {
             trace.outcome = if other.is_err() {"timeout"} else {"failed"};
-            let reason = match other {Ok(Err(e)) => e.to_string(), _ => "timeout".into()};
+            let reason = match other {
+                Ok(Err(e)) => {trace.reason=crate::voice_connect::safe_failure_reason(&e);e.to_string()},
+                _ => {trace.reason="connect_budget";"timeout".into()},
+            };
             bail!("xfyun connect stage={} reason={}", trace.stage, reason)
         }
     }
@@ -369,13 +378,40 @@ struct ConnectTiming {
     id: u64, start: std::time::Instant, stage: &'static str,
     dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>, outcome: &'static str,
     dns_path: Option<&'static str>,
+    reason: &'static str,
+    local: Option<std::net::SocketAddr>, peer: Option<std::net::SocketAddr>,
 }
 impl Drop for ConnectTiming {
     fn drop(&mut self) {
-        info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,
+        info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,reason=self.reason,
             elapsed_ms=self.start.elapsed().as_millis() as u64,
-            dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms, dns_path=self.dns_path,
+            dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms,
+            dns_path=self.dns_path, local=?self.local, peer=?self.peer,
             "tts connection timing");
+    }
+}
+
+/// One bounded record per synthesis, including cancellation/error exits.
+/// Read waits include scheduler delay; observed PCM gaps can include downstream
+/// backpressure. Keep these separate instead of calling either a network RTT.
+struct StreamTiming<'a> {
+    room: &'a str, turn_id: u64, connect_id: u64,
+    started: std::time::Instant, phase: &'static str,
+    pending_since: Option<std::time::Instant>, last_pcm: Option<std::time::Instant>,
+    read_wait_ms: u64, max_read_wait_ms: u64,
+    send_wait_ms: u64, max_send_wait_ms: u64, max_pcm_gap_ms: u64,
+    pcm_frames: u64, completed: bool,
+}
+impl Drop for StreamTiming<'_> {
+    fn drop(&mut self) {
+        info!(room=self.room, turn_id=self.turn_id, connect_id=self.connect_id,
+            phase=self.phase, completed=self.completed, pcm_frames=self.pcm_frames,
+            elapsed_ms=self.started.elapsed().as_millis() as u64,
+            ws_read_wait_ms=self.read_wait_ms, max_ws_read_wait_ms=self.max_read_wait_ms,
+            channel_send_wait_ms=self.send_wait_ms, max_channel_send_wait_ms=self.max_send_wait_ms,
+            max_observed_pcm_gap_ms=self.max_pcm_gap_ms,
+            pending_wait_ms=self.pending_since.map(|t|t.elapsed().as_millis() as u64),
+            "tts stream timing");
     }
 }
 
@@ -428,7 +464,31 @@ async fn send_or_abort(
 /// 从发文本起算、`tts_connect_ms=0`,日志里 `warm=true` 标明,别把两种口径混着比。
 pub(crate) async fn synthesize_budgeted(
     cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
-    ctl: &PlayoutControl, warm: Option<Warm>, mut budget: FirstAudioBudget,
+    ctl: &PlayoutControl, warm: Option<Warm>, budget: FirstAudioBudget,
+) -> Result<(u64, usize)> {
+    synthesize_inner(cfg, text, audio_tx, ctl, warm, true, budget).await
+}
+
+/// Foreground recovery already acquired a socket under a shared deadline.
+/// Never reset that deadline by silently creating another cold connection.
+#[cfg(test)]
+pub async fn synthesize_connected(
+    cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl, warm: Warm,
+) -> Result<(u64, usize)> {
+    synthesize_connected_budgeted(cfg, text, audio_tx, ctl, warm, FirstAudioBudget::new(None)).await
+}
+
+pub(crate) async fn synthesize_connected_budgeted(
+    cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl, warm: Warm, budget: FirstAudioBudget,
+) -> Result<(u64, usize)> {
+    synthesize_inner(cfg, text, audio_tx, ctl, Some(warm), false, budget).await
+}
+
+async fn synthesize_inner(
+    cfg: &XfyunTtsConfig, text: &str, audio_tx: &mpsc::Sender<Vec<u8>>,
+    ctl: &PlayoutControl, warm: Option<Warm>, allow_cold_connect: bool, mut budget: FirstAudioBudget,
 ) -> Result<(u64, usize)> {
     // 证据日志:只落前 24 字+字数,不落全文(S2B1 canary 合同:完整文本不得进 journal;
     // 生产回复同策——排障按开头辨认句子,运维仍按 "tts synth" 关键词捞两条线)
@@ -447,6 +507,7 @@ pub(crate) async fn synthesize_budgeted(
     let t0 = std::time::Instant::now();
     let (mut ws, connect_ms, connect_id) = match usable {
         Some(w) => (w.ws, 0, w.connect_id),
+        None if !allow_cold_connect => bail!("tts_acquired_connection_expired"),
         None => {
             let url = build_auth_url(&cfg.api_key, &cfg.api_secret, TTS_URL, &rfc1123_now())?;
             let w = budget.wait("connect",connect_observed(url)).await??;
@@ -456,17 +517,29 @@ pub(crate) async fn synthesize_budgeted(
     let (room,turn_id)=ctl.trace_identity();
     info!(room,turn_id,connect_id,used_warm,warm_connect_ms,connect_ms,"tts connection assigned");
     let send_start=std::time::Instant::now();
+    let mut stream = StreamTiming {
+        room, turn_id, connect_id, started: send_start, phase: "request_send",
+        pending_since: Some(send_start), last_pcm: None, read_wait_ms: 0, max_read_wait_ms: 0,
+        send_wait_ms: 0, max_send_wait_ms: 0, max_pcm_gap_ms: 0, pcm_frames: 0, completed: false,
+    };
+
     budget.wait("send",ws.send(WsMessage::Text(build_request(cfg, text).to_string().into()))).await??;
     info!(room,turn_id,connect_id,send_ms=send_start.elapsed().as_millis() as u64,"tts request sent");
-
+    stream.pending_since = None;
     let mut ttfb_ms: Option<u64> = None;
     let mut total = 0usize;
     let mut frames = 0usize;
     let mut cancelled = false;
     loop {
-        let msg = budget.wait("receive",tokio::time::timeout(RECV_TIMEOUT, ws.next()))
-            .await?
-            .context("xfyun tts recv timeout")?;
+        stream.phase = "receive";
+        let waiting = std::time::Instant::now();
+        stream.pending_since = Some(waiting);
+        let result = budget.wait("receive",tokio::time::timeout(RECV_TIMEOUT, ws.next())).await?;
+        let waited = waiting.elapsed().as_millis() as u64;
+        stream.pending_since = None;
+        stream.read_wait_ms += waited;
+        stream.max_read_wait_ms = stream.max_read_wait_ms.max(waited);
+        let msg = result.context("xfyun tts recv timeout")?;
         let raw = match msg {
             Some(Ok(WsMessage::Text(t))) => t,
             Some(Ok(WsMessage::Close(f))) => bail!("xfyun tts ws closed: {f:?}"),
@@ -478,6 +551,12 @@ pub(crate) async fn synthesize_budgeted(
             Downlink::Error(e) => bail!("xfyun tts 错误帧 {e}"),
             Downlink::Audio { pcm, last } => {
                 if !pcm.is_empty() {budget.received_pcm();}
+                let observed = std::time::Instant::now();
+                if let Some(previous) = stream.last_pcm {
+                    stream.max_pcm_gap_ms = stream.max_pcm_gap_ms.max(observed.duration_since(previous).as_millis() as u64);
+                }
+                stream.last_pcm = Some(observed);
+                stream.pcm_frames += 1;
                 if ttfb_ms.is_none() {
                     ttfb_ms = Some(t0.elapsed().as_millis() as u64);
                     let (room,turn_id)=ctl.trace_identity();
@@ -485,7 +564,15 @@ pub(crate) async fn synthesize_budgeted(
                 }
                 total += pcm.len();
                 frames += 1;
-                if let Err(why) = send_or_abort(audio_tx, pcm, ctl).await {
+                stream.phase = "channel_send";
+                let waiting = std::time::Instant::now();
+                stream.pending_since = Some(waiting);
+                let result = send_or_abort(audio_tx, pcm, ctl).await;
+                let waited = waiting.elapsed().as_millis() as u64;
+                stream.pending_since = None;
+                stream.send_wait_ms += waited;
+                stream.max_send_wait_ms = stream.max_send_wait_ms.max(waited);
+                if let Err(why) = result {
                     // 打断/下游消失:主动收摊,不陪服务端把剩下的吐完(它停不了)
                     info!(reason = why, sent_bytes = total, "xfyun tts 中止本句,丢弃剩余音频");
                     cancelled = true;
@@ -505,6 +592,8 @@ pub(crate) async fn synthesize_budgeted(
             }
         }
     }
+    stream.completed = true;
+    stream.phase = "close";
     let _ = ws.close(None).await;
     emit_metrics(M { connect_ms, warm_connect_ms, used_warm, ttfb: ttfb_ms,
                      frames, bytes: total, cancelled });
@@ -800,4 +889,176 @@ mod tests {
         c.app_id.clear();
         assert_eq!(c.missing_keys(), vec!["XFYUN_TTS_APP_ID", "XFYUN_TTS_API_SECRET"]);
     }
+}
+
+// Characterization fixtures for the unresolved production transport incident.
+// These exercise the real WebSocket synthesis path, but do NOT prove the
+// historical supplier/network fault or count as a production fix.
+#[cfg(test)]
+mod priority_transport_diagnostics {
+    use super::*;
+    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+
+    #[tokio::test]
+    async fn priority_real_handshake_hang_recovers_one_request_and_closes_loser() {
+        use tokio::io::AsyncReadExt;
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url=format!("ws://{}/synthetic",listener.local_addr().unwrap());
+        let requests=Arc::new(AtomicUsize::new(0));let count=requests.clone();
+        let server=tokio::spawn(async move {
+            let (mut hung,_) = listener.accept().await.unwrap();
+            let loser=tokio::spawn(async move {
+                let mut buf=[0;4096];assert!(hung.read(&mut buf).await.unwrap()>0);
+                assert_eq!(hung.read(&mut buf).await.unwrap(),0,"losing handshake must close");
+            });
+            let (socket,_) = listener.accept().await.unwrap();
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            assert!(ws.next().await.unwrap().unwrap().is_text());count.fetch_add(1,Ordering::SeqCst);
+            ws.send(WsMessage::Text(json!({"header":{"code":0},"payload":{"audio":{"audio":B64.encode(vec![1;4800]),"status":2}}}).to_string().into())).await.unwrap();
+            let _=ws.next().await;
+            loser.await.unwrap();
+        });
+        let limit=tokio::sync::Semaphore::new(1);let start=std::time::Instant::now();
+        let warm=crate::tts::recover_connection(connect_observed(url.clone()),||connect_observed(url),
+            Duration::from_millis(30),Duration::from_secs(2),&limit).await.unwrap();
+        assert!(start.elapsed()<Duration::from_secs(1));
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        let (_,bytes)=synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await.unwrap();
+        assert_eq!(bytes,4800);assert_eq!(rx.try_recv().unwrap().len(),4800);assert!(rx.try_recv().is_err());
+        tokio::time::timeout(Duration::from_secs(2),server).await.unwrap().unwrap();
+        assert_eq!(requests.load(Ordering::SeqCst),1);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn priority_connected_expired_socket_fails_without_hidden_cold_connection() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url=format!("ws://{}/",listener.local_addr().unwrap());
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            assert!(!matches!(ws.next().await,Some(Ok(WsMessage::Text(_)))),"expired socket must receive no text");
+        });
+        let mut warm=connect_observed(url).await.unwrap();
+        warm.opened=std::time::Instant::now()-Duration::from_secs(13);
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        let result=tokio::time::timeout(Duration::from_millis(100),synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm)).await.unwrap();
+        assert!(result.unwrap_err().to_string().contains("tts_acquired_connection_expired"));
+        assert!(rx.try_recv().is_err());server.await.unwrap();
+    }
+
+    async fn fixture(mode: &'static str) -> (Warm, tokio::task::JoinHandle<()>, Arc<AtomicUsize>) {
+        let server = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = server.local_addr().unwrap();
+        let requests = Arc::new(AtomicUsize::new(0));
+        let count = requests.clone();
+        let task = tokio::spawn(async move {
+            let (socket, _) = server.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let request = ws.next().await.unwrap().unwrap();
+            assert!(request.is_text());
+            count.fetch_add(1, Ordering::SeqCst);
+            let pcm = vec![1_u8; 4800]; // 100 ms at 24 kHz PCM16; synthetic bytes.
+            let frame = |last| WsMessage::Text(json!({"header":{"code":0},"payload":{"audio":{"audio":B64.encode(&pcm),"status":if last {2}else{1}}}}).to_string().into());
+            if mode != "zero_pcm_close" { ws.send(frame(false)).await.unwrap(); }
+            if mode == "midstream_stall" || mode == "two_second_stall" {
+                tokio::time::sleep(Duration::from_millis(if mode == "two_second_stall" {2000}else{500})).await;
+                ws.send(frame(true)).await.unwrap();
+                let _ = tokio::time::timeout(Duration::from_secs(1),ws.next()).await;
+            } else { let _ = ws.close(None).await; }
+        });
+        let socket = tokio::net::TcpStream::connect(address).await.unwrap();
+        let (ws, _) = tokio_tungstenite::client_async(
+            format!("ws://{address}/synthetic"), tokio_tungstenite::MaybeTlsStream::Plain(socket)
+        ).await.unwrap();
+        (Warm {ws,opened:std::time::Instant::now(),connect_ms:0,connect_id:990001},task,requests)
+    }
+    fn config() -> XfyunTtsConfig {
+        XfyunTtsConfig {app_id:"fixture".into(),api_key:"fixture".into(),api_secret:"fixture".into(),vcn:DEFAULT_VCN.into(),speed:50,oral_level:"mid".into()}
+    }
+    #[tokio::test]
+    async fn priority_real_ws_midstream_gap_is_not_channel_backpressure() {
+        let (warm, server, count) = fixture("midstream_stall").await;
+        let (_guard, ctl) = crate::playout::test_control();
+        let (tx,mut rx) = mpsc::channel(32);
+        let task=tokio::spawn(async move { synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await });
+        let first=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();
+        let start=std::time::Instant::now();
+        assert_eq!(first.len(),4800);assert_eq!(rx.capacity(),32);
+        let second=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap().unwrap();
+        assert_eq!(second.len(),4800);assert!(start.elapsed()>=Duration::from_millis(400));
+        let (_, bytes)=task.await.unwrap().unwrap();assert_eq!(bytes,9600);
+        server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+    #[tokio::test]
+    async fn priority_real_ws_partial_close_has_delivered_pcm_and_no_replay() {
+        let (warm,server,count)=fixture("partial_close").await;
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        let result=synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await;
+        assert!(result.is_err());assert_eq!(rx.try_recv().unwrap().len(),4800);
+        assert!(rx.try_recv().is_err());server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+    #[tokio::test]
+    async fn priority_real_ws_zero_pcm_close_is_distinct_from_partial_output() {
+        let (warm,server,count)=fixture("zero_pcm_close").await;
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(32);
+        assert!(synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await.is_err());
+        assert!(rx.try_recv().is_err());server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn priority_real_ws_two_second_supply_gap_reaches_native_playout() {
+        use livekit::webrtc::audio_source::native::NativeAudioSource;
+        let (warm,server,count)=fixture("two_second_stall").await;
+        let source=NativeAudioSource::new(Default::default(),24000,1,200);
+        let (tx,rx)=mpsc::channel(32);
+        let (playout,ctl)=crate::playout::spawn_playout(source,rx,"isolated-supply-gap".into(),1,None);
+        let (_,bytes)=synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await.unwrap();
+        assert_eq!(bytes,9600);drop(tx);
+        tokio::time::timeout(Duration::from_secs(3),playout).await.unwrap().unwrap();
+        let stats=ctl.final_stats_handle().lock().unwrap().clone().unwrap();
+        assert!(stats.completed);assert_eq!(stats.played_frames,20);
+        assert!(stats.underrun_count>=1);assert!(stats.underrun_ms>=1700);
+        server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn priority_real_ws_full_channel_waits_without_reconnect_or_losing_pcm() {
+        let (warm,server,count)=fixture("midstream_stall").await;
+        let (_guard,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(1);
+        let task=tokio::spawn(async move{synthesize_connected(&config(),"隔离测试。",&tx,&ctl,warm).await});
+        tokio::time::sleep(Duration::from_millis(800)).await;
+        assert!(!task.is_finished(),"second PCM should be waiting for channel capacity");
+        let mut bytes=0;
+        while let Some(pcm)=tokio::time::timeout(Duration::from_secs(2),rx.recv()).await.unwrap(){bytes+=pcm.len();}
+        assert_eq!(bytes,9600);assert_eq!(task.await.unwrap().unwrap().1,bytes);
+        server.await.unwrap();assert_eq!(count.load(Ordering::SeqCst),1);
+    }
+    #[tokio::test]
+    async fn candidate_recovery_keeps_first_pcm_deadline_and_never_replays_text() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            let request=ws.next().await.unwrap().unwrap();
+            assert!(request.is_text());
+            // The remaining first-PCM budget expires here. No second request.
+            assert!(!matches!(ws.next().await,Some(Ok(WsMessage::Text(_)))));
+        });
+        let warm=connect_observed(format!("ws://{addr}/")).await.unwrap();
+        let budget=FirstAudioBudget::new(Some(Duration::from_millis(160)));
+        let limit=tokio::sync::Semaphore::new(1);
+        let connection=budget.wait("connect_recovery",crate::tts::recover_connection(
+            async {tokio::time::sleep(Duration::from_millis(90)).await;Ok(warm)},
+            ||async {panic!("healthy primary must not open a spare")},
+            Duration::from_millis(650),Duration::from_secs(10),&limit)).await.unwrap().unwrap();
+        let (_rx,ctl)=crate::playout::test_control();let (tx,mut rx)=mpsc::channel(4);
+        let start=std::time::Instant::now();
+        let error=synthesize_connected_budgeted(&config(),"合成测试",&tx,&ctl,connection,budget).await.unwrap_err();
+        assert!(first_audio_timed_out(&error),"pipeline must retain the typed first-audio failure");
+        assert!(start.elapsed()<Duration::from_millis(140),"acquisition cannot reset the first-PCM budget");
+        assert!(rx.try_recv().is_err());assert_eq!(limit.available_permits(),1);
+        tokio::time::timeout(Duration::from_secs(1),server).await.unwrap().unwrap();
+    }
+
 }
