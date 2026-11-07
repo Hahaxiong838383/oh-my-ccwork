@@ -1,0 +1,37 @@
+[
+  {
+    "file": "worker-dns-cname-additional-red.log",
+    "sha256": "9e6ffdd1a7c4fead09461c9038397ec7fc3b2bcc48b516e621c0453e44d87809",
+    "bytes": 6511
+  },
+  {
+    "file": "worker-dns-cname-additional-green.log",
+    "sha256": "bfb42cfee407408f846122fc8c46d8bafeaf6f16fefb7201ee0ea9b15fa581cb",
+    "bytes": 6513
+  },
+  {
+    "file": "source-dns-cname-additional-red.json",
+    "sha256": "e1d03e0342362d5a01023cacb1eed05967f5d01f038eb31d501e32211e580623",
+    "bytes": 6363
+  },
+  {
+    "file": "source-dns-cname-additional-green.json",
+    "sha256": "10c8da0ea7c6c59cc6f3f8aa64020a2bfcda6d673852bbc7332fe4acbb876e8d",
+    "bytes": 6363
+  },
+  {
+    "file": "TTS_DNS_ISOLATED_TIMELINE.json",
+    "sha256": "6a3e1ed87240702e4f7c56d7956127f1699ffce43b246e2364c2da5e37227bd5",
+    "bytes": 10189
+  },
+  {
+    "file": "TTS_DNS_RTC_A_TIMELINE.json",
+    "sha256": "c8af97195d2382c8389c55bc6b31761eae0b5ebd16cba0f61b872c3664afe451",
+    "bytes": 4662
+  },
+  {
+    "file": "TTS_DNS_RTC_B_TIMELINE.json",
+    "sha256": "aacb99c75737eff29d57dccafb6308588481c01e31ba36bd8c7f3df38bea4e55",
+    "bytes": 5093
+  }
+]

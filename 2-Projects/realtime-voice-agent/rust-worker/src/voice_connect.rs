@@ -1,7 +1,7 @@
 //! Candidate-only asynchronous DNS and staggered address racing.
 //! Cache lifetimes come from DNS; credentials and signed URLs never enter here.
 use anyhow::{bail, Result};
-use hickory_resolver::{TokioResolver, proto::rr::{RData, RecordType}};
+use hickory_resolver::{TokioResolver, lookup::Lookup, proto::rr::{DNSClass, RData, RecordType}};
 use std::{net::{IpAddr, SocketAddr}, time::{Duration, Instant}};
 use tokio::net::TcpStream;
 
@@ -38,13 +38,35 @@ async fn family(resolver: &TokioResolver, host: &str, port: u16, v6: bool) -> Re
     let start=Instant::now();
     let lookup=resolver.lookup(host,if v6 {RecordType::AAAA} else {RecordType::A}).await
         .map_err(|_| anyhow::anyhow!("resolve_failed"))?;
-    let addresses=lookup.answers().iter().filter_map(|r|match r.data {
-        RData::A(a) if !v6 => Some(SocketAddr::new(IpAddr::V4(a.0),port)),
-        RData::AAAA(a) if v6 => Some(SocketAddr::new(IpAddr::V6(a.0),port)),_=>None,
-    }).collect();
+    let addresses=lookup_addresses(&lookup,port,v6)?;
     let dns_ms=start.elapsed().as_millis() as u64;let tcp=Instant::now();
     let socket=addresses_connect(addresses).await?;
     Ok(Connected{socket,dns_ms,tcp_ms:tcp.elapsed().as_millis() as u64})
+}
+
+fn lookup_addresses(lookup: &Lookup, port: u16, v6: bool) -> Result<Vec<SocketAddr>> {
+    // Hickory preserves DNS sections. A successful CNAME lookup can have its
+    // target address in ADDITIONAL, not ANSWER. Follow only the answer's CNAME
+    // chain and select that owner; unrelated additional/glue is not a target.
+    let mut owner=lookup.query().name().clone();
+    let mut seen=std::collections::HashSet::new();seen.insert(owner.clone());
+    while let Some(next)=lookup.answers().iter().find_map(|r| {
+        if r.name!=owner || r.dns_class!=DNSClass::IN{return None;}
+        match &r.data {RData::CNAME(name)=>Some(name.0.clone()),_=>None}
+    }) {
+        if !seen.insert(next.clone()){bail!("resolve_cname_cycle");}
+        owner=next;
+    }
+    let mut addresses=Vec::new();
+    for r in lookup.answers().iter().chain(lookup.additionals()) {
+        if r.name!=owner || r.dns_class!=DNSClass::IN{continue;}
+        let address=match r.data {
+            RData::A(a) if !v6=>SocketAddr::new(IpAddr::V4(a.0),port),
+            RData::AAAA(a) if v6=>SocketAddr::new(IpAddr::V6(a.0),port),_=>continue,
+        };
+        if !addresses.contains(&address){addresses.push(address);}
+    }
+    Ok(addresses)
 }
 
 async fn dial(resolver: &TokioResolver, host: &str, port: u16) -> Result<Connected> {
@@ -68,7 +90,7 @@ async fn dial(resolver: &TokioResolver, host: &str, port: u16) -> Result<Connect
 mod tests {
     use super::*;
     use hickory_resolver::{config::{ResolverConfig, NameServerConfig}, net::runtime::TokioRuntimeProvider,
-        proto::{op::{Message, OpCode}, rr::{Record, rdata::{A, AAAA}}}};
+        proto::{op::{Message, OpCode}, rr::{Record, rdata::{A, AAAA, CNAME}}}};
     use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
     use tokio::net::{UdpSocket,TcpListener};
     struct Dns { resolver: TokioResolver, a: Arc<AtomicUsize>, task: tokio::task::JoinHandle<()> }
@@ -89,12 +111,20 @@ mod tests {
                 let mut resp=Message::response(req.metadata.id,OpCode::Query);resp.add_query(q.clone());
                 if q.query_type()==RecordType::A {
                     count.fetch_add(1,Ordering::SeqCst);
-                    if mode!="v6_only" {
+                    if mode=="cname_additional" {
+                        let target="target.voice.test.".parse().unwrap();
+                        resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::CNAME(CNAME(target)))]);
+                        resp.add_additionals(vec![Record::from_rdata("unrelated.voice.test.".parse().unwrap(),1,RData::A(A::new(127,0,0,2)))]);
+                        resp.add_additionals(vec![Record::from_rdata("target.voice.test.".parse().unwrap(),1,RData::A(A::new(127,0,0,1)))]);
+                    } else if mode!="v6_only" && mode!="cname_additional_v6" {
                         if mode=="refused_first" {resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,2)))]);}
                         resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,1)))]);
                     }
                 } else if q.query_type()==RecordType::AAAA && mode=="v6_only" {
                     resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::AAAA(AAAA(std::net::Ipv6Addr::LOCALHOST)))]);
+                } else if q.query_type()==RecordType::AAAA && mode=="cname_additional_v6" {
+                    resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::CNAME(CNAME("target.voice.test.".parse().unwrap())))]);
+                    resp.add_additionals(vec![Record::from_rdata("target.voice.test.".parse().unwrap(),1,RData::AAAA(AAAA(std::net::Ipv6Addr::LOCALHOST)))]);
                 }
                 socket.send_to(&resp.to_vec().unwrap(),peer).await.unwrap();
             }
@@ -125,5 +155,27 @@ mod tests {
     async fn r16_dns_dial_cancellation_is_bounded() {
         let dns=dns_server("silent").await;
         assert!(tokio::time::timeout(Duration::from_millis(100),dial(&dns.resolver,"voice.test.",443)).await.is_err());
+    }
+    #[tokio::test]
+    async fn cname_target_in_additional_is_not_discarded_as_no_addresses() {
+        let dns=dns_server("cname_additional").await;
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port=server.local_addr().unwrap().port();
+        let _unrelated=TcpListener::bind((std::net::Ipv4Addr::new(127,0,0,2),port)).await.unwrap();
+        for _ in 0..2 {
+            let c=tokio::time::timeout(Duration::from_millis(400),dial(&dns.resolver,"voice.test.",port)).await.unwrap().unwrap();
+            assert_eq!(c.socket.peer_addr().unwrap().ip(),std::net::Ipv4Addr::LOCALHOST);
+        }
+        assert_eq!(dns.a.load(Ordering::SeqCst),1);
+        tokio::time::sleep(Duration::from_millis(1150)).await;
+        dial(&dns.resolver,"voice.test.",port).await.unwrap();
+        assert_eq!(dns.a.load(Ordering::SeqCst),2,"additional address must not extend DNS TTL");
+    }
+    #[tokio::test]
+    async fn cname_additional_ipv6_remains_usable() {
+        let dns=dns_server("cname_additional_v6").await;
+        let server=TcpListener::bind("[::1]:0").await.unwrap();
+        let c=tokio::time::timeout(Duration::from_millis(400),dial(&dns.resolver,"voice.test.",server.local_addr().unwrap().port())).await.unwrap().unwrap();
+        assert_eq!(c.socket.peer_addr().unwrap().ip(),std::net::Ipv6Addr::LOCALHOST);
     }
 }

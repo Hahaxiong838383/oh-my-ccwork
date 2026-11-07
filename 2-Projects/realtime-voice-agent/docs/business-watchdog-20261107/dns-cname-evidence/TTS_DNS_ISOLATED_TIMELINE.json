@@ -1,0 +1,475 @@
+{
+  "source_sha256": "f45fcd517ea0d805bd5eac9b9b4abf36ba548509dcb8ef967055e826d4acc994",
+  "reply_count": 9,
+  "replies": [
+    {
+      "id": 19676,
+      "iface": "ens17",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074450.0919073,
+      "query_times_ms": [
+        7.884
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 60,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.26.93"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 25938,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074450.0924892,
+      "query_times_ms": [
+        9.529
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 60,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.26.93"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 59118,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 28,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074450.1350067,
+      "query_times_ms": [
+        0.779
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 29,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "authority",
+          "type": 6,
+          "ttl": 166
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 29,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 29,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 29,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 29,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 29,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 29,
+          "address": "123.57.26.93"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 55650,
+      "iface": "lo",
+      "qname": "hb-kaicp.xf-gtm.com",
+      "qtype": 28,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074450.1369886,
+      "query_times_ms": [
+        0.386
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "authority",
+          "type": 6,
+          "ttl": 166
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 40313,
+      "iface": "ens17",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074485.1119995,
+      "query_times_ms": [
+        185.84
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 60,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.86.182"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 23100,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074485.1127436,
+      "query_times_ms": [
+        186.994
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 60,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 30,
+          "address": "123.57.86.182"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 53064,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074494.367914,
+      "query_times_ms": [
+        0.796
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 20,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 20,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 20,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 20,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 20,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 20,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 20,
+          "address": "123.56.17.44"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 27867,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 28,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074494.3716743,
+      "query_times_ms": [
+        0.821
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 20,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "authority",
+          "type": 6,
+          "ttl": 122
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 20,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 20,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 20,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 20,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 20,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 20,
+          "address": "8.140.35.16"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 58759,
+      "iface": "lo",
+      "qname": "hb-kaicp.xf-gtm.com",
+      "qtype": 28,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074494.3735173,
+      "query_times_ms": [
+        0.402
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "authority",
+          "type": 6,
+          "ttl": 122
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    }
+  ],
+  "unanswered": [],
+  "capture_end": {
+    "started": 1794074449.98303,
+    "ended": 1794074510.4697757,
+    "records": 32,
+    "limit_hit": false,
+    "parse_errors": 0,
+    "capture_packets": 1441,
+    "capture_kernel_drops": 0,
+    "metadata_only": true
+  }
+}

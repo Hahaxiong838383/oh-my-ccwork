@@ -1,0 +1,217 @@
+{
+  "source_sha256": "94626cb606fbba9226f48f14dfd0919e4c2f1160c3cd5d8d47223cbfd4a38874",
+  "reply_count": 4,
+  "replies": [
+    {
+      "id": 65201,
+      "iface": "ens17",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074576.5306056,
+      "query_times_ms": [
+        1.767
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 46,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "123.56.17.44"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 8223,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 1,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074576.5308924,
+      "query_times_ms": [
+        2.748
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 46,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "8.140.35.16"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "answer",
+          "type": 1,
+          "ttl": 16,
+          "address": "123.56.17.44"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 29274,
+      "iface": "lo",
+      "qname": "cbm01.cn-huabei-1.xf-yun.com",
+      "qtype": 28,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074576.5800414,
+      "query_times_ms": [
+        0.5
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "answer",
+          "type": 5,
+          "ttl": 15,
+          "cname": "hb-kaicp.xf-gtm.com"
+        },
+        {
+          "section": "authority",
+          "type": 6,
+          "ttl": 40
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 15,
+          "address": "123.57.26.93"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 15,
+          "address": "39.105.54.181"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 15,
+          "address": "123.56.17.44"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 15,
+          "address": "123.57.86.182"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 15,
+          "address": "101.200.158.58"
+        },
+        {
+          "section": "additional",
+          "type": 1,
+          "ttl": 15,
+          "address": "8.140.35.16"
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    },
+    {
+      "id": 63291,
+      "iface": "lo",
+      "qname": "hb-kaicp.xf-gtm.com",
+      "qtype": 28,
+      "rcode": 0,
+      "tc": false,
+      "at": 1794074576.5807278,
+      "query_times_ms": [
+        0.387
+      ],
+      "query_count": 1,
+      "response_records": [
+        {
+          "section": "authority",
+          "type": 6,
+          "ttl": 40
+        }
+      ],
+      "kernel_to_read_ms": 0.0
+    }
+  ],
+  "unanswered": [],
+  "capture_end": {
+    "started": 1794074570.1918404,
+    "ended": 1794074592.424779,
+    "records": 14,
+    "limit_hit": false,
+    "parse_errors": 0,
+    "capture_packets": 3932,
+    "capture_kernel_drops": 0,
+    "metadata_only": true
+  }
+}
