@@ -1,0 +1,19 @@
+{
+  "at": "2026-11-07T22:04:44.020220+00:00",
+  "trace": "ops-release-probe-96bea879-bd25-4aa2-8b79-b4911079941b",
+  "test_sn_suffix": "99999938",
+  "logs": [
+    {
+      "time_us": "1794088918368193",
+      "message": "2026-11-07T22:01:58.367910Z  WARN at full capacity, declining job job_id=AJ_gqtkkMfaJ2KG room=sn-BJP00326110899999938-1794088918065 active=0"
+    }
+  ],
+  "window_allowlist_suffixes": [
+    "03800006"
+  ],
+  "window_sha256": "1bf79805eee4d3f00f6503c41e8d9f2fcde3f2c2c97907f8b325bb81509aa249",
+  "test_initial_expectation": "positive normal voice smoke",
+  "test_result": "FAILED_BEFORE_ASSIGNMENT",
+  "interpretation": "synthetic SN has no canary metadata and is outside frozen allowlist; not a response-latency measurement",
+  "production_scope_widened": false
+}

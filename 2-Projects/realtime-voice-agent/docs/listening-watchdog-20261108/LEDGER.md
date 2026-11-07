@@ -15,3 +15,11 @@
 - Grok188设计评审已完成，见原报告与GROK_ADOPTED.md。采纳租约-only及清理最小化，替代前文proposal/pending hold裁决；新反例在旧527上失败。527观察RTC真实三通道/20s倾听静音/退出/idle observe/RoomGone通过，但该候选已被替代，不部署。
 
 - watchdog-green3完整707通过（654单元+30核心+13运行时+10语音）、2既有ignored；80个编译输入逐项SHA核同。较712少5项因删除不采用的room_verify模块及其测试，并非忽略失败。新候选只保留权威租约保护和原schema1清理；正式产物与强制回收RTC尚待验。完整红测日志已归档，未以截断输出替代反例。
+
+- 最终业务候选85de8fb077a8d455c0ba9e2f4b29e08913820ef5已commit/push/ls-remote核同。707完整回归、6隔离真实RTC通过；正式636b1c3d、测试f657bc2d均核80输入。Grok190独立读证据/源码给出范围内PASS，189偏离只读任务而取消，未用其进展代替终审。
+- 05:58:27–05:58:38 CST仅倾听池发布，正式PID3593294/NRestarts0/cleanup健康；其余两池保护文件/状态不变。05:59:04 Brain manifest更新85de，仅build/evidence_ref；名单/expiry/source_generation/倾听rev6保持。
+- 标准API仅038新增idle5000，实际cfg140；初验脚本误把voice_control合同对象当bool导致断言失败。未重写配置，按真实version/capability合同修正只读核验后签名/响应/配置均核同。端侧应用未观测，未连接真实设备。
+- 上线正式进程的合成SN探针失败：无canary元数据且SN不在既有名单，active=0时被job_allowed拒绝，尚未assignment；原FAIL/清理记录保留。这不是线上音频性能证据；范围未扩。另用同正式二进制的隔离进程补测正常语音，待结果。
+
+- 正式产物两轮隔离补测2/2通过：相同636b运行字节，普通/ordered输入就绪534/495ms，可听音频4710/4720ms、字幕及三项metrics齐全；测试客户端断开后服务端删房，FFI订阅0。不是生产单038实听。最终06:09同PID3593294连续665.64秒无重启/ERROR/Panic，health jobs0、清理0，Brain ready/名单/期限/源码/PID均核同。
+- 单机发布回执已送Air Downloads并核SHA；详情见RELEASE_EVIDENCE.json与回执。后续仅真实038复测、灰度观察；独立Search池本轮未发布。未声称整个历史DNS/TTS故障全局收口。

@@ -1,0 +1,157 @@
+{
+  "at_start": "2026-11-07T22:09:35.441925+00:00",
+  "health": {
+    "3001": {
+      "http_status": 200,
+      "status": "ok",
+      "agent": null,
+      "generation": null
+    },
+    "3008": {
+      "http_status": 200,
+      "status": "ok",
+      "agent": "p003-search-listening-20261030",
+      "generation": "v374-listening-ark-20261102-1793613511"
+    },
+    "3007": {
+      "http_status": 200,
+      "status": "ok",
+      "agent": "p003-search-canary-20261021",
+      "generation": "R4-20261022-two-devices"
+    }
+  },
+  "source_sha256": {
+    "/opt/p003/server/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+    "/opt/p003/server/src/routes/custom-llm.ts": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d",
+    "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+    "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477",
+    "/opt/p003/search-canary-20261021/brain/src/ark/answer.ts": null,
+    "/opt/p003/search-canary-20261021/brain/src/routes/custom-llm.ts": "c668eccd98b2c9cde188caad447f87f3420d29b9f9b1dcd21ce33f66e7352750"
+  },
+  "samples": [
+    {
+      "at_ms": 1794089375613,
+      "http_status": 200,
+      "ok": true,
+      "runtime": {
+        "status": "evidence_ready",
+        "ready": true,
+        "effective_enabled": true,
+        "applied_revision": 6,
+        "active_sessions": 0,
+        "last_ack_at": 1794089372401,
+        "message": "已核准构建及配置应用确认；授权会话数不代表设备实听验收。",
+        "parameter_effect": "新进入使用参数快照；关闸、移出名单或禁用场景经短租约撤权。"
+      },
+      "config": {
+        "enabled": true,
+        "revision": 6,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "allowlist": [
+          "****03800006"
+        ]
+      }
+    },
+    {
+      "at_ms": 1794089381615,
+      "http_status": 200,
+      "ok": true,
+      "runtime": {
+        "status": "evidence_ready",
+        "ready": true,
+        "effective_enabled": true,
+        "applied_revision": 6,
+        "active_sessions": 0,
+        "last_ack_at": 1794089377407,
+        "message": "已核准构建及配置应用确认；授权会话数不代表设备实听验收。",
+        "parameter_effect": "新进入使用参数快照；关闸、移出名单或禁用场景经短租约撤权。"
+      },
+      "config": {
+        "enabled": true,
+        "revision": 6,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "allowlist": [
+          "****03800006"
+        ]
+      }
+    }
+  ],
+  "pm2": {
+    "p003-voice": {
+      "pid": 613211,
+      "status": "online",
+      "restarts": 56,
+      "uptime": 1794069733878
+    },
+    "p003-analytics": {
+      "pid": 196818,
+      "status": "online",
+      "restarts": 11,
+      "uptime": 1793870436043
+    }
+  },
+  "p003-listening-brain": "MainPID=4186369\nNRestarts=0\nActiveState=active\nSubState=running\nActiveEnterTimestamp=Wed 2026-11-04 17:58:31 CST\n",
+  "p003-search-brain": "MainPID=3839441\nNRestarts=0\nActiveState=active\nSubState=running\nActiveEnterTimestamp=Mon 2026-11-02 13:02:13 CST\n",
+  "login": {
+    "http_status": 200,
+    "ok": true,
+    "role": "admin"
+  },
+  "flags": {
+    "p003.search.canary.agent": "p003-search-listening-20261030",
+    "p003.search.canary.allowlist": "[\"****03800006\"]",
+    "p003.search.canary.enabled": "1",
+    "p003.search.canary.expires_at_ms": "1794391200000",
+    "p003.search.canary.generation": "v374-listening-ark-20261102-1793613511"
+  },
+  "source_generation": 1,
+  "release_manifest": {
+    "sha256": "72cc26728024757001d0b0850406d567fba847c941a01731f122f3aeccf56bdc",
+    "data": {
+      "version": 1,
+      "expires_at_ms": 1794391200000,
+      "evidence_ref": "watchdog-20261108:85de8fb0;707-rust;RTC-evidence-private;existing-single-SN",
+      "agents": [
+        {
+          "agent": "p003-search-listening-20261030",
+          "build_sha": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+          "capabilities": [
+            "listening_mode_v1",
+            "listening_http_v1",
+            "per_frame_output_permit_v1",
+            "capture_drain_v1",
+            "local_ready_ack_v1",
+            "listening_voice_control_v1"
+          ]
+        }
+      ]
+    }
+  },
+  "at_end": "2026-11-07T22:09:41.616523+00:00"
+}

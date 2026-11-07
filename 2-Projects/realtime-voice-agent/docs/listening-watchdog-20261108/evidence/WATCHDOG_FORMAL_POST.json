@@ -1,0 +1,43 @@
+{
+  "finished": true,
+  "rows": [
+    {
+      "kind": "0",
+      "rc": 1
+    }
+  ],
+  "passed": false,
+  "results": [
+    {
+      "at": "2026-11-07T22:02:59.139997+00:00",
+      "status": "FAIL",
+      "candidate_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "runtime_pid": "3593294",
+      "ordered": false,
+      "trace_id": "ops-release-probe-96bea879-bd25-4aa2-8b79-b4911079941b",
+      "room": "sn-BJP00326110899999938-1794088918065",
+      "sid": "RM_RCsA3bqUN4wY",
+      "stats": {
+        "ready_ms": null,
+        "phase_ms": null,
+        "user_finals": 0,
+        "answer_finals": 0,
+        "audible_ms": 0,
+        "first_audio_ms": null,
+        "last_audio_ms": null,
+        "input_sent_ms": null,
+        "events": [],
+        "metrics_packets": 0,
+        "metric_kinds": [],
+        "input_samples_sent": 0,
+        "client_connected_ms": 226,
+        "ffi_subscribers_after_cleanup": 0
+      },
+      "natural_room_gone": false,
+      "fixture_cleanup": true,
+      "elapsed_ms": 61075,
+      "policy_source": "synthetic SN excluded from watchdog allowlist; validates deployed formal normal voice path and client-close cleanup, not device or enforced idle",
+      "real_android": false
+    }
+  ]
+}

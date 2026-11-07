@@ -1,0 +1,138 @@
+{"mode": "watchdog-final-release", "rc": 0, "log": "/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/watchdog-final-release.log", "source_sha": {"src/job.rs": "a52131c52e9193dec7b87e2f5fbab37b58d4e5907007b8525bb9e906fe98bcfa", "src/tts_xfyun.rs": "c3d0c6db57d22f4d60b8c84a8835e0499a97c17b1c384c53475d725d0ce667b3", "src/voice_connect.rs": "07349dae25c9ab687306f40dd38edb57902410bb7abf0f2ed6a6f0920ed33426", "src/tts.rs": "b4f9f61a0fddb80ecf9d81406473862dc898fdc359084a1796c0f9cbbab3c381"}}
+^^^^
+
+warning: variant `Device` is never constructed
+  --> src/listening_runtime.rs:19:5
+   |
+15 | pub enum OutputPurpose {
+   |          ------------- variant in this enum
+...
+19 |     Device,
+   |     ^^^^^^
+   |
+   = note: `OutputPurpose` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `voice_text` is never used
+   --> src/listening_adapter.rs:325:12
+    |
+111 | impl Adapter {
+    | ------------ method in this implementation
+...
+325 |     pub fn voice_text(&mut self, text: &str) -> Option<Effects> {
+    |            ^^^^^^^^^^
+
+warning: method `clear` is never used
+   --> src/listening_voice.rs:217:12
+    |
+213 | impl FeedbackFragments {
+    | ---------------------- method in this implementation
+...
+217 |     pub fn clear(&mut self) { self.pending = None; }
+    |            ^^^^^
+
+warning: method `is_some` is never used
+  --> src/say_defer.rs:30:12
+   |
+ 9 | impl DeferredSay {
+   | ---------------- method in this implementation
+...
+30 |     pub fn is_some(&self) -> bool {
+   |            ^^^^^^^
+
+warning: function `valid_base` is never used
+  --> src/search_canary.rs:23:8
+   |
+23 | pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
+   |        ^^^^^^^^^^
+
+warning: function `enabled` is never used
+   --> src/search_tasks.rs:264:8
+    |
+264 | pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
+    |        ^^^^^^^
+
+warning: method `remaining` is never used
+  --> src/search_progress.rs:14:8
+   |
+10 | impl SearchProgress {
+   | ------------------- method in this implementation
+...
+14 | pub fn remaining(&self,complete:usize)->String{self.sentences.iter().skip(complete).cloned().collect()}
+   |        ^^^^^^^^^
+
+warning: method `pick` is never used
+  --> src/search_receipts.rs:63:12
+   |
+28 | impl Bank {
+   | --------- method in this implementation
+...
+63 |     pub fn pick(&mut self,kind:Kind)->Clip {
+   |            ^^^^
+
+warning: method `observe_only` is never used
+  --> src/business_watchdog.rs:35:12
+   |
+30 | impl BusinessWatchdog {
+   | --------------------- method in this implementation
+...
+35 |     pub fn observe_only(&mut self) { self.policy.mode = Mode::Observe; }
+   |            ^^^^^^^^^^^^
+
+warning: methods `observe_only` and `enforcing` are never used
+   --> src/business_runtime.rs:99:12
+    |
+ 19 | impl Runtime {
+    | ------------ methods in this implementation
+...
+ 99 |     pub fn observe_only(&mut self) {
+    |            ^^^^^^^^^^^^
+...
+103 |     pub fn enforcing(&self) -> bool { self.mode == Mode::Enforce && self.idle_ms.is_some() }
+    |            ^^^^^^^^^
+
+warning: method `chat` is never used
+   --> src/llm.rs:680:18
+    |
+626 | impl Llm {
+    | -------- method in this implementation
+...
+680 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: method `is_on` is never used
+  --> src/backchannel.rs:84:12
+   |
+53 | impl BackchannelCfg {
+   | ------------------- method in this implementation
+...
+84 |     pub fn is_on(&self) -> bool {
+   |            ^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> src/textproc.rs:151:8
+    |
+151 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+{"reason":"compiler-artifact","package_id":"path+file:///home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker#voice-rust-worker@0.1.0","manifest_path":"/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/Cargo.toml","target":{"kind":["bin"],"crate_types":["bin"],"name":"voice-rust-worker","src_path":"/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/src/main.rs","edition":"2024","doc":true,"doctest":false,"test":true},"profile":{"opt_level":"3","debuginfo":0,"debug_assertions":false,"overflow_checks":false,"test":false},"features":[],"filenames":["/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/target/release/voice-rust-worker"],"executable":"/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/target/release/voice-rust-worker","fresh":false}
+warning: `voice-rust-worker` (bin "voice-rust-worker") generated 15 warnings
+    Finished `release` profile [optimized] target(s) in 49.91s
+{"reason":"build-finished","success":true}
+   [32m✓[0m build source: 85de8fb077a8d455c0ba9e2f4b29e08913820ef5
+   [32m✓[0m Cargo artifact: /home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/target/release/voice-rust-worker
+
+[1;36m== 4/4 符号天花板（glibc + libstdc++）[0m
+   glibc 需求: GLIBC_2.2 GLIBC_2.3 GLIBC_2.4 GLIBC_2.6 GLIBC_2.7 GLIBC_2.9 GLIBC_2.14 GLIBC_2.15 GLIBC_2.16 GLIBC_2.17 GLIBC_2.18 GLIBC_2.25 GLIBC_2.27 GLIBC_2.28 GLIBC_2.29 GLIBC_2.30 GLIBC_2.32 GLIBC_2.33 GLIBC_2.34 GLIBC_2.35 GLIBC_2.38 GLIBC_2.39
+   [32m✓[0m glibc 全部 ≤ 2.39
+   libstdc++ 需求最高: GLIBCXX_3.4.31
+   [32m✓[0m libstdc++ 全部 ≤ GLIBCXX_3.4.33
+
+[1;36m== 产物[0m
+   -rwxrwxr-x 2 hahaxiong83 hahaxiong83 75M Nov  8 05:39 /home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/target/release/voice-rust-worker
+   sha256: 636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2
+
+   下一步（部署到 64.90，需要 SSH 凭据）：
+     scp /home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/target/release/voice-rust-worker root@64.90.13.177:/root/rust-worker/voice-rust-worker.new   # 2026-09-23 起生产池在 hk2
+     然后在目标机跑 deploy-worker-bin.sh（自动备份 + 纪律重启 + md5 锚点核对）
+
+{"binary": "/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-final-release/2-Projects/realtime-voice-agent/rust-worker/voice-rust-worker.lifecycle", "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2", "bytes": 78217888}

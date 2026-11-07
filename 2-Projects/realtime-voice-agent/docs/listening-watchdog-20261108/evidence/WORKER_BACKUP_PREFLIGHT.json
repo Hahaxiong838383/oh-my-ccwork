@@ -1,0 +1,39 @@
+{
+  "status": "BACKUP_PREFLIGHT_ONLY",
+  "backup": "/root/p003-business-watchdog-20261107/listening-watchdog-before-20261108",
+  "baseline": {
+    "unit": {
+      "MainPID": "3574920",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "protected": {
+      "voice-worker-rust": {
+        "MainPID": "3538554",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "p003-search-worker": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      }
+    },
+    "files": {
+      "/opt/p003-listening-canary-20261030/window.json": "1bf79805eee4d3f00f6503c41e8d9f2fcde3f2c2c97907f8b325bb81509aa249",
+      "/opt/p003-listening-canary-20261030/v374-window.json": "2cf153649675f237de85f50a42c9da2981343de5805b13f67a95d525f4bcbcb9",
+      "/etc/systemd/system/p003-listening-worker.service": "761ba3e3ad252fa2c19aa6cdcb2479e580db62b7fb7d81a9b9931e36051047d0",
+      "/root/rust-worker/voice-rust-worker": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+      "/root/rust-worker/rust-worker.env": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "/opt/p003-search-canary-20261021/voice-rust-worker": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "/opt/p003-search-canary-20261021/canary.env": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+      "/opt/p003-search-canary-20261021/window.json": "a9eaca2cb62f16d726cfc410a4c987c5b93411e56a62d6f0a607f7648a44c292"
+    },
+    "env_sha256": "effe57e0e200bd7aad67ae06329939a394a1b586d6699c4c7ad6b9e6836e787b",
+    "release_sha256": "4ca965007f501c3c227d53dd367fc7cde96af36819eb4b0dca9e6ef308f08fc0",
+    "old_sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae",
+    "candidate_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+  },
+  "no_restart": true,
+  "no_runtime_write": true
+}

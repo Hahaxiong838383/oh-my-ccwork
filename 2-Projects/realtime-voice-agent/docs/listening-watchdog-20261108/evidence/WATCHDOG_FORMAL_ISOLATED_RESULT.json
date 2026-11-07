@@ -1,0 +1,147 @@
+{
+  "finished": true,
+  "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+  "formal_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+  "production_before": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "cases": [
+    {
+      "kind": "0",
+      "rc": 0,
+      "folder": "/root/p003-business-watchdog-20261107/formal-isolated-1794089226532586915",
+      "result": {
+        "at": "2026-11-07T22:07:20.329264+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+        "runtime_pid": "3594985",
+        "ordered": false,
+        "trace_id": "ops-release-probe-8d3959ad-a116-4ac6-b98c-18540d8676d1",
+        "room": "sn-BJP00326110899999938-1794089228680",
+        "sid": "RM_4sv43CAoB3Ka",
+        "stats": {
+          "ready_ms": 534,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4710.0,
+          "first_audio_ms": 5429,
+          "last_audio_ms": 10829,
+          "input_sent_ms": 540,
+          "events": [
+            "session.input_ready",
+            "session.output_ready",
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 3,
+          "metric_kinds": [
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 217,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 11649,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, actual SFU ASR TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      }
+    },
+    {
+      "kind": "1",
+      "rc": 0,
+      "folder": "/root/p003-business-watchdog-20261107/formal-isolated-1794089240722624555",
+      "result": {
+        "at": "2026-11-07T22:07:36.437745+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+        "runtime_pid": "3595103",
+        "ordered": true,
+        "trace_id": "ops-release-probe-2a78569a-8b37-4c06-a30b-ee1ae1b646a9",
+        "room": "sn-BJP00326110899999938-1794089242475",
+        "sid": "RM_3XFMZLkGHQo2",
+        "stats": {
+          "ready_ms": 495,
+          "phase_ms": 3044,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4720.0,
+          "first_audio_ms": 7757,
+          "last_audio_ms": 13147,
+          "input_sent_ms": 3052,
+          "events": [
+            "session.input_ready",
+            "session.output_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 3,
+          "metric_kinds": [
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 210,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 13963,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, actual SFU ASR TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      }
+    }
+  ],
+  "boundary": "isolated formal same bytes; synthetic LLM/SN; actual SFU ASR TTS; not production dispatch or Android",
+  "production_after": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "production_unchanged": true,
+  "passed": true
+}

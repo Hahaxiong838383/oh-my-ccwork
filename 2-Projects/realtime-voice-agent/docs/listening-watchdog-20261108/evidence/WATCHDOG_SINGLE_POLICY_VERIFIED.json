@@ -1,0 +1,27 @@
+{
+  "status": "SINGLE_DEVICE_POLICY_SIGNED",
+  "at": "2026-11-07T22:01:26.972119+00:00",
+  "sn_suffix": "03800006",
+  "revision": "cfg-140",
+  "policy": {
+    "timeout_ms": 5000,
+    "revision": "cfg-140"
+  },
+  "expected_agent": "p003-search-listening-20261030",
+  "voice_control": {
+    "version": 1,
+    "capability": "listening_voice_control_v1"
+  },
+  "trace_id": "ops-listening-watchdog-readonly-1794088886956",
+  "global_unchanged": true,
+  "other_overrides_unchanged": true,
+  "device_connected": false,
+  "device_applied": "not_observed",
+  "credential": "short-lived operations credential used only to verify signed issuance; no real device connection",
+  "backup": "/root/p003-business-watchdog-20261107/brain-listening-watchdog-before-20261108",
+  "initial_verification_failure": "operations checker expected boolean voice_control; real API contract is version/capability object; corrected verification only, config not rewritten",
+  "rollback": {
+    "method": "DELETE",
+    "path": "/api/admin/device-config/sn/****03800006?key=voice.session_idle_timeout_ms"
+  }
+}

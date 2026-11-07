@@ -1,0 +1,51 @@
+{
+  "at_ms": 1794088833274,
+  "signature_valid": true,
+  "expiry_valid": true,
+  "cfg_revision": "cfg-140",
+  "cfg_after_revision": "cfg-140",
+  "signed_voice_idle": {
+    "timeout_ms": 5000,
+    "revision": "cfg-140"
+  },
+  "response_voice_idle": {
+    "timeout_ms": 5000,
+    "revision": "cfg-140"
+  },
+  "expected_agent": "p003-search-listening-20261030",
+  "response_expected_agent": "p003-search-listening-20261030",
+  "listening_contract": {
+    "version": 1,
+    "capability": "listening_mode_v1",
+    "policy_revision": 6,
+    "scenes": [
+      "story",
+      "sharing",
+      "singing"
+    ],
+    "tuning": {
+      "max_session_sec": 1800,
+      "feedback_max_chars": 80,
+      "feedback_max_duration_sec": 12,
+      "feedback_cooldown_sec": 5,
+      "summary_interval_sec": 180,
+      "summary_trigger_chars": 6000,
+      "voice_invitation_enabled": true
+    },
+    "expires_at_ms": 1794088953000,
+    "voice_control": {
+      "version": 1,
+      "capability": "listening_voice_control_v1"
+    }
+  },
+  "trace_id": "ops-listening-watchdog-readonly-1794088833258",
+  "new_policy": [
+    {
+      "sn": "****03800006",
+      "key": "voice.session_idle_timeout_ms",
+      "value": 5000,
+      "updated_at": 1794088780007
+    }
+  ],
+  "global_and_other_policies_unchanged": true
+}

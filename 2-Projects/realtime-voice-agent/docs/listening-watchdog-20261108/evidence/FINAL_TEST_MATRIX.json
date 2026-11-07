@@ -1,0 +1,488 @@
+{
+  "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+  "status": "PASS_ISOLATED_6_SCENARIOS",
+  "tests": [
+    {
+      "case": 0,
+      "exit_phrase": "恢复聊天",
+      "passed": true,
+      "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "binary_sha256": "f657bc2d1daacf5e201d44bbbe6151a30b1a289c47b5bd12f4fe2a649442798a",
+      "trace": "p0-39-0286e81b-db4c-4397-9f6a-4dfb6d63ed9e",
+      "assertions": [
+        {
+          "t_ms": 604,
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "t_ms": 850,
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "t_ms": 2222,
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "t_ms": 13229,
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "t_ms": 33235,
+          "name": "watchdog keeps valid silent listening past ordinary idle and recognition budgets",
+          "passed": true,
+          "seconds": 20
+        },
+        {
+          "t_ms": 38983,
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "t_ms": 49316,
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "t_ms": 51846,
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "t_ms": 57094,
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "t_ms": 59936,
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "t_ms": 59936,
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "t_ms": 59937,
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true
+        },
+        {
+          "t_ms": 59937,
+          "name": "ordinary output completed",
+          "passed": true
+        },
+        {
+          "t_ms": 65577,
+          "name": "enforced watchdog closes ordinary idle",
+          "passed": true
+        },
+        {
+          "t_ms": 65629,
+          "name": "device consumes enforced server close",
+          "passed": true
+        },
+        {
+          "t_ms": 65630,
+          "name": "ordinary silence produces bounded idle decision after listening exit",
+          "passed": true
+        }
+      ],
+      "nonzero_audio_frames": 1156,
+      "caption_events": 46,
+      "room_gone": true,
+      "production_unchanged": true,
+      "evidence": [
+        {
+          "file": "watchdog-enforce-rtc-case0/case-0-result.json",
+          "sha256": "4fa847e18e5e08f4b8ce66162cdd068b48ac1cfc41cf92bcb37be9fcd5d73fb7"
+        },
+        {
+          "file": "watchdog-enforce-rtc-case0/worker.log",
+          "sha256": "673999972adbd30313f56c2ef2adcd9243f8352064f3af7f42bf5052f8eaa2b0"
+        }
+      ]
+    },
+    {
+      "case": 1,
+      "exit_phrase": "结束倾听恢复聊天",
+      "passed": true,
+      "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "binary_sha256": "f657bc2d1daacf5e201d44bbbe6151a30b1a289c47b5bd12f4fe2a649442798a",
+      "trace": "p0-39-73707489-d0f0-4657-a8af-ad0db5b7af5d",
+      "assertions": [
+        {
+          "t_ms": 662,
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "t_ms": 817,
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "t_ms": 2322,
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "t_ms": 13338,
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "t_ms": 33344,
+          "name": "watchdog keeps valid silent listening past ordinary idle and recognition budgets",
+          "passed": true,
+          "seconds": 20
+        },
+        {
+          "t_ms": 41575,
+          "name": "held prefix and later finals match ASR exactly once in order",
+          "passed": true
+        },
+        {
+          "t_ms": 47107,
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "t_ms": 57483,
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "t_ms": 61224,
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "t_ms": 66479,
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "t_ms": 69335,
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "t_ms": 69335,
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "t_ms": 69335,
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true
+        },
+        {
+          "t_ms": 69336,
+          "name": "ordinary output completed",
+          "passed": true
+        },
+        {
+          "t_ms": 74611,
+          "name": "enforced watchdog closes ordinary idle",
+          "passed": true
+        },
+        {
+          "t_ms": 74664,
+          "name": "device consumes enforced server close",
+          "passed": true
+        },
+        {
+          "t_ms": 74664,
+          "name": "ordinary silence produces bounded idle decision after listening exit",
+          "passed": true
+        }
+      ],
+      "nonzero_audio_frames": 1154,
+      "caption_events": 49,
+      "room_gone": true,
+      "production_unchanged": true,
+      "evidence": [
+        {
+          "file": "watchdog-enforce-rtc-case1/case-1-result.json",
+          "sha256": "31e988232507e43dff915711d9a5bc33d6b13f8287b12316162afdf70e9aed6a"
+        },
+        {
+          "file": "watchdog-enforce-rtc-case1/worker.log",
+          "sha256": "e160e1712899d5db644b078d3f459ed4c6c298cea514a59a15e80bbf9084253e"
+        }
+      ]
+    },
+    {
+      "case": 2,
+      "exit_phrase": "小可结束倾听",
+      "passed": true,
+      "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "binary_sha256": "f657bc2d1daacf5e201d44bbbe6151a30b1a289c47b5bd12f4fe2a649442798a",
+      "trace": "p0-39-cd047167-dada-4a0d-9e2f-859478aeddc4",
+      "assertions": [
+        {
+          "t_ms": 613,
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "t_ms": 763,
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "t_ms": 2242,
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "t_ms": 13128,
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "t_ms": 33136,
+          "name": "watchdog keeps valid silent listening past ordinary idle and recognition budgets",
+          "passed": true,
+          "seconds": 20
+        },
+        {
+          "t_ms": 47169,
+          "name": "held prefix and later finals match ASR exactly once in order",
+          "passed": true
+        },
+        {
+          "t_ms": 52652,
+          "name": "real feedback audio received",
+          "passed": true
+        },
+        {
+          "t_ms": 63030,
+          "name": "uninterrupted feedback finished",
+          "passed": true
+        },
+        {
+          "t_ms": 66399,
+          "name": "voice exit normal",
+          "passed": true
+        },
+        {
+          "t_ms": 71563,
+          "name": "ordinary chat audible after voice exit",
+          "passed": true
+        },
+        {
+          "t_ms": 74413,
+          "name": "ordinary final subtitle",
+          "passed": true
+        },
+        {
+          "t_ms": 74413,
+          "name": "ordinary chat audio/subtitles/metrics positive anchor",
+          "passed": true
+        },
+        {
+          "t_ms": 74414,
+          "name": "one feedback includes immediate synthetic tail marker",
+          "passed": true
+        },
+        {
+          "t_ms": 74414,
+          "name": "ordinary output completed",
+          "passed": true
+        },
+        {
+          "t_ms": 79555,
+          "name": "enforced watchdog closes ordinary idle",
+          "passed": true
+        },
+        {
+          "t_ms": 79633,
+          "name": "device consumes enforced server close",
+          "passed": true
+        },
+        {
+          "t_ms": 79633,
+          "name": "ordinary silence produces bounded idle decision after listening exit",
+          "passed": true
+        }
+      ],
+      "nonzero_audio_frames": 1155,
+      "caption_events": 73,
+      "room_gone": true,
+      "production_unchanged": true,
+      "evidence": [
+        {
+          "file": "watchdog-enforce-rtc-case2/case-2-result.json",
+          "sha256": "4508ab642b3091ba02b9d81c42d85047d2a181d7a0fc7527986d94aa24c255c2"
+        },
+        {
+          "file": "watchdog-enforce-rtc-case2/worker.log",
+          "sha256": "ac70d59c2d7ae698d036fa9d2abd3b7eeba086f5a958b1be7f804fa19fc72d64"
+        }
+      ]
+    },
+    {
+      "scenario": "revoke",
+      "passed": true,
+      "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "binary_sha256": "f657bc2d1daacf5e201d44bbbe6151a30b1a289c47b5bd12f4fe2a649442798a",
+      "trace": "p0-39-0989ed51-5d73-4573-bc80-c851cc8ba45b",
+      "assertions": [
+        {
+          "t_ms": 651,
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "t_ms": 837,
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "t_ms": 2352,
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "t_ms": 13272,
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "t_ms": 33283,
+          "name": "watchdog keeps valid silent listening past ordinary idle and recognition budgets",
+          "passed": true,
+          "seconds": 20
+        },
+        {
+          "t_ms": 45625,
+          "name": "client observes lease/revocation disconnect",
+          "passed": true
+        },
+        {
+          "t_ms": 45625,
+          "name": "no output under failed authorization",
+          "passed": true
+        }
+      ],
+      "room_gone": true,
+      "production_unchanged": true,
+      "evidence": [
+        {
+          "file": "watchdog-enforce-revoke-case0/case-0-result.json",
+          "sha256": "e2d57bd0afd468833a378f74fbc974d0ce1b27c3c5f1f3bb89cd10abea0c66aa"
+        },
+        {
+          "file": "watchdog-enforce-revoke-case0/worker.log",
+          "sha256": "d8e3f2bfbe1e3027664106f73b6f1f8fc5c64320ff779cd17eb893f8c742f6fc"
+        }
+      ]
+    },
+    {
+      "scenario": "startup_no_input",
+      "passed": true,
+      "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "binary_sha256": "f657bc2d1daacf5e201d44bbbe6151a30b1a289c47b5bd12f4fe2a649442798a",
+      "trace": "p0-39-d98eb2f3-5c95-4751-b943-cad3c2a069e7",
+      "assertions": [
+        {
+          "t_ms": 60672,
+          "name": "assignment startup deadline closes a room without microphone",
+          "passed": true
+        },
+        {
+          "t_ms": 60672,
+          "name": "real no-input room closed by startup deadline",
+          "passed": true
+        }
+      ],
+      "room_gone": true,
+      "production_unchanged": true,
+      "evidence": [
+        {
+          "file": "watchdog-enforce-startup_no_input-case0/case-0-result.json",
+          "sha256": "0581666ee0a4c90a45e9c7c69f82cd7735653117cb326ef01e5c0c15b70bd8af"
+        },
+        {
+          "file": "watchdog-enforce-startup_no_input-case0/worker.log",
+          "sha256": "17e3f0e4860a149b3486a10fa05c2243ca867bc61b883018829dd92d08d2c80e"
+        }
+      ]
+    },
+    {
+      "scenario": "lease_timeout",
+      "passed": true,
+      "candidate": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "binary_sha256": "f657bc2d1daacf5e201d44bbbe6151a30b1a289c47b5bd12f4fe2a649442798a",
+      "trace": "p0-39-50b530ab-1ef3-4f2d-adcb-2c3defa7634b",
+      "assertions": [
+        {
+          "t_ms": 628,
+          "name": "trusted agent attributes before microphone publication",
+          "passed": true
+        },
+        {
+          "t_ms": 750,
+          "name": "real input_ready",
+          "passed": true
+        },
+        {
+          "t_ms": 2604,
+          "name": "enter double-confirm completed",
+          "passed": true
+        },
+        {
+          "t_ms": 13249,
+          "name": "narration silent, State nonconflicting, duplicate accepted",
+          "passed": true
+        },
+        {
+          "t_ms": 33261,
+          "name": "watchdog keeps valid silent listening past ordinary idle and recognition budgets",
+          "passed": true,
+          "seconds": 20
+        },
+        {
+          "t_ms": 45561,
+          "name": "client observes lease/revocation disconnect",
+          "passed": true
+        },
+        {
+          "t_ms": 45561,
+          "name": "no output under failed authorization",
+          "passed": true
+        }
+      ],
+      "room_gone": true,
+      "production_unchanged": true,
+      "evidence": [
+        {
+          "file": "watchdog-enforce-lease_timeout-case0/case-0-result.json",
+          "sha256": "8e13765632687c2e32739d5f534cad3be4796e68d7da2b620410d893e1d9fb70"
+        },
+        {
+          "file": "watchdog-enforce-lease_timeout-case0/worker.log",
+          "sha256": "43b42114dc78d898458ee236e5e084f4528e24f422245bef06205ab78ca5ab14"
+        }
+      ]
+    }
+  ],
+  "boundary": "real SFU/ASR/TTS; isolated Brain signed policy and synthetic speech/LLM; not Android nor formal production runtime",
+  "unit_tests": {
+    "passed": 707,
+    "ignored_existing": 2,
+    "input_files_sha_matched": 80
+  },
+  "formal_binary": {
+    "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+    "bytes": 78217888,
+    "features": [],
+    "ABI": "glibc<=2.39; GLIBCXX<=3.4.33 PASS"
+  }
+}

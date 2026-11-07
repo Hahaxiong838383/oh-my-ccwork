@@ -1,0 +1,48 @@
+{
+  "finished": true,
+  "backup": "/root/p003-business-watchdog-20261107/listening-watchdog-before-20261108",
+  "started_ms": 1794088707564,
+  "build": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+  "candidate_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+  "runtime": {
+    "unit": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "health": {
+      "agent": "p003-search-listening-20261030",
+      "at_ms": 1794088716534,
+      "cleanup": {
+        "at_ms": 1794088711740,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "generation": "v374-listening-ark-20261102-1793613511",
+      "jobs": 0,
+      "ordered_pcm_v1": true,
+      "registered": true
+    },
+    "binary_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+  },
+  "success": true,
+  "flags": {
+    "P003_TTS_CONNECT_RECOVERY_V1": "1",
+    "P003_ASR_CONNECT_RECOVERY_V1": "1",
+    "P003_ASYNC_DNS_V1": "1",
+    "P003_TTS_DNS_HEDGE_V1": "1",
+    "P003_TTS_LATENCY_V1": "1",
+    "P003_TTS_FIRST_PCM_BUDGET_MS": "10000"
+  },
+  "env_before_sha256": "effe57e0e200bd7aad67ae06329939a394a1b586d6699c4c7ad6b9e6836e787b",
+  "env_after_sha256": "162cbf5057ce453e7dd3cdac010643375f84de81794f403ffd817ec340b71bbc",
+  "other_pools_unchanged": true,
+  "watchdog_mode": "enforce",
+  "watchdog_allowlist_suffixes": [
+    "03800006"
+  ],
+  "ended_ms": 1794088718132,
+  "deployment_pid": "3593250",
+  "process_present": false
+}

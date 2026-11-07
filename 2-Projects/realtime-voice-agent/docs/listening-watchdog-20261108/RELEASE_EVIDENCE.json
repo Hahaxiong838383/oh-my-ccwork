@@ -1,0 +1,221 @@
+{
+  "status": "SINGLE_DEVICE_DEPLOYED_SERVER_VALIDATED_ANDROID_PENDING",
+  "source_commit": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+  "formal_binary_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+  "runtime_pid": "3593294",
+  "cfg": "cfg-140",
+  "watchdog_scope": [
+    "03800006"
+  ],
+  "unit_tests_passed": 707,
+  "isolated_listening_rtc_passed": 6,
+  "isolated_formal_voice_passed": 2,
+  "production_positive_voice_probe": "not_verified: synthetic SN rejected before assignment; original failure retained",
+  "real_device_applied": "not_observed",
+  "process_age_seconds": 665.64,
+  "no_unplanned_restarts": true,
+  "cleanup_healthy": true,
+  "other_pools_and_brain_runtime_unchanged": true,
+  "evidence": [
+    {
+      "file": "evidence/BRAIN_IDLE_BEFORE.json",
+      "sha256": "586bb71b57c44ed7d1f342e5bd066e9c66284fda1ff57fedf8f6d6e92cf481b2",
+      "bytes": 9304
+    },
+    {
+      "file": "evidence/BRAIN_PREDEPLOY_READONLY.json",
+      "sha256": "e65ee26a92f80d83382a7a7ede0d4c173b302b473394842afb0f862a58a76094",
+      "bytes": 5144
+    },
+    {
+      "file": "evidence/FINAL_TEST_MATRIX.json",
+      "sha256": "772d879fac6b12c37256ed3cb13ef9d38418c0028b8ac5ee6b15e597349144e7",
+      "bytes": 14382
+    },
+    {
+      "file": "evidence/PORT_HUNKS.json",
+      "sha256": "d8513d262141f7ba236559d187f3cade6fc295da97e1e4c6f7ceae074c9bc13c",
+      "bytes": 3379
+    },
+    {
+      "file": "evidence/PORT_JOB_HUNKS.json",
+      "sha256": "8c0f814b63353cfe10d31c35c79a5f8fb1b5e2d22f30c2b59fb3bb4a1864935e",
+      "bytes": 611
+    },
+    {
+      "file": "evidence/PRODUCTION_BEFORE.json",
+      "sha256": "439cac13a1dab45dc0b455ce2947bd32d55bc41b3f431b5034b2f6bb6fe0f43f",
+      "bytes": 3250
+    },
+    {
+      "file": "evidence/WATCHDOG_ADMIN_FINAL.json",
+      "sha256": "39b7cf6266a07702a3b8f9943af6b2dfe3e853d8288dc826b0bd402b25a21662",
+      "bytes": 5150
+    },
+    {
+      "file": "evidence/WATCHDOG_DEPLOY_RESULT.json",
+      "sha256": "6f923b1795418a70e692d4a019b8a9d269af349e9b5d82d1e7ccdfdf4ce48f47",
+      "bytes": 1510
+    },
+    {
+      "file": "evidence/WATCHDOG_FORMAL_ISOLATED_RESULT.json",
+      "sha256": "4514dcf40fb1360cbdcf77c24747ae6dcff8ae36cf78f3df5e794c31bc0d897d",
+      "bytes": 4940
+    },
+    {
+      "file": "evidence/WATCHDOG_FORMAL_POST.json",
+      "sha256": "b133115ff75283dedc6a254639dd4e6247a23a2a18ce80cbc4468011365c74c2",
+      "bytes": 1255
+    },
+    {
+      "file": "evidence/WATCHDOG_FORMAL_REJECTION_DIAGNOSIS.json",
+      "sha256": "1c2ca632c38303886a74b4b173f1db0087c59f13a2275b3890609c5b030973a0",
+      "bytes": 784
+    },
+    {
+      "file": "evidence/WATCHDOG_MANIFEST_DEPLOYED.json",
+      "sha256": "6a0a918061ac80e9edcc7ec55d8f3e2bcd42e843b9bae6dc34d5bf9365b42156",
+      "bytes": 407
+    },
+    {
+      "file": "evidence/WATCHDOG_POLICY_DIAGNOSIS.json",
+      "sha256": "7650908adefbabd21cc5195ada7f8ac9020a2a213d67b410715fe3edb2032409",
+      "bytes": 1286
+    },
+    {
+      "file": "evidence/WATCHDOG_POST_STABILITY_FINAL.json",
+      "sha256": "2368d74ddb1838507f8258a4cfead1df6b8de8b82f2651bbf9f221fd0c19689a",
+      "bytes": 800
+    },
+    {
+      "file": "evidence/WATCHDOG_SINGLE_POLICY.json.transport.json",
+      "sha256": "b506c3ea0cac3e0e6670d93b07fcfa9ba99c8c36f671425d19114b5a7e64939c",
+      "bytes": 168
+    },
+    {
+      "file": "evidence/WATCHDOG_SINGLE_POLICY_VERIFIED.json",
+      "sha256": "b3e7e359e0325342e7305724644e5a06f2de86b5e75d125a3c6fd35a56cdb482",
+      "bytes": 1079
+    },
+    {
+      "file": "evidence/WORKER_BACKUP_PREFLIGHT.json",
+      "sha256": "8722778519d4ac62acf519d445492d03ade02582f9fbf080927f75ef85e88ec4",
+      "bytes": 1930
+    },
+    {
+      "file": "evidence/source-watchdog-exit-red.json",
+      "sha256": "56a92d6d970d1da55f84a57d8c2e58a3ae6c75b6faaec8eee70c700cb772001b",
+      "bytes": 7722
+    },
+    {
+      "file": "evidence/source-watchdog-final-release.json",
+      "sha256": "76a409a3ff59ef89f7f2a946f0e0fe47c98cc4d3c6cfc480a5b6c883e7c9d15c",
+      "bytes": 7630
+    },
+    {
+      "file": "evidence/source-watchdog-final-rtc-release.json",
+      "sha256": "76a409a3ff59ef89f7f2a946f0e0fe47c98cc4d3c6cfc480a5b6c883e7c9d15c",
+      "bytes": 7630
+    },
+    {
+      "file": "evidence/source-watchdog-green2.json",
+      "sha256": "a640eb77f62c21596e7bba41c011cc42f02445b5488eba1799106318a97a6063",
+      "bytes": 7722
+    },
+    {
+      "file": "evidence/source-watchdog-green3.json",
+      "sha256": "76a409a3ff59ef89f7f2a946f0e0fe47c98cc4d3c6cfc480a5b6c883e7c9d15c",
+      "bytes": 7630
+    },
+    {
+      "file": "evidence/source-watchdog-lease-red.json",
+      "sha256": "a1178f75f8aa9d6c204766e71fd6b2b80fe7e1c82ec16b01cc2778cc0e4feb43",
+      "bytes": 7722
+    },
+    {
+      "file": "evidence/source-watchdog-prebuild-red2.json",
+      "sha256": "df820397319dfd06881f7b64bef9994221488460240281127705298e8b879ac8",
+      "bytes": 7435
+    },
+    {
+      "file": "evidence/watchdog-contract-red-full.log",
+      "sha256": "f63756fa3143ca6c76af0a6588ff1a6569ca4fa5ec4eb937f47d10842ed680b4",
+      "bytes": 16400
+    },
+    {
+      "file": "evidence/watchdog-exit-red-full.log",
+      "sha256": "61b0a26c76d8d61bf8ea8e85faf2fed1101763d77955f2fc8a6253e5d0c85c54",
+      "bytes": 9782
+    },
+    {
+      "file": "evidence/watchdog-green1-full.log",
+      "sha256": "0a29c23b03761a5876ad80b4786b280cfc80a4563524337771ad992f17123bbd",
+      "bytes": 75593
+    },
+    {
+      "file": "evidence/watchdog-green2-full.log",
+      "sha256": "94eaab6018d60fc074c9dffc4bdc6aac374a12a0829a6e7a72d7532509916057",
+      "bytes": 75435
+    },
+    {
+      "file": "evidence/watchdog-green3-full.log",
+      "sha256": "0c99a67a4a3cbe5bea1e29910d7eb33eeda67b504296cf82937607dd72315299",
+      "bytes": 75962
+    },
+    {
+      "file": "evidence/watchdog-lease-red-full.log",
+      "sha256": "7ebd5115efbbcbce1581aa8385acde5ca74c1fedd5891bd84bfb8822f023e86b",
+      "bytes": 75962
+    },
+    {
+      "file": "evidence/watchdog-prebuild-red-full.log",
+      "sha256": "1b3c0f1a11ce094ab33996ee61ec5d121f4a38f6094537f054abe8dab2a1bc8d",
+      "bytes": 71187
+    },
+    {
+      "file": "evidence/watchdog-prebuild-red2-full.log",
+      "sha256": "35cd668b655df70a2004c308cc3a26ab19771385541d686181ccc06a0c7f7848",
+      "bytes": 67681
+    },
+    {
+      "file": "evidence/worker-watchdog-exit-red.log",
+      "sha256": "a9a56b8b507ce4c278c317002898845c9a7d4cdaa48c67fe2c440e31eeb60726",
+      "bytes": 6559
+    },
+    {
+      "file": "evidence/worker-watchdog-final-release.log",
+      "sha256": "0d5d6f78fee6ebe11e017049e663fac9b6c064f582a52f1097b187995dc4df23",
+      "bytes": 6971
+    },
+    {
+      "file": "evidence/worker-watchdog-green1.log",
+      "sha256": "c79cdfbd85bf5cdab23e9e8af1938243f6c603287bb18ae66e5a349db33632aa",
+      "bytes": 6551
+    },
+    {
+      "file": "evidence/worker-watchdog-green2.log",
+      "sha256": "95068614d4d922cca00437ff51fe09bda3351b70e30673668724f984dc5006e4",
+      "bytes": 6551
+    },
+    {
+      "file": "evidence/worker-watchdog-green3.log",
+      "sha256": "3a041ba1e5bbdd263e9f1dcd35092d6dd905a1ad78b8afaaf9acecb31dc423cd",
+      "bytes": 6551
+    },
+    {
+      "file": "evidence/worker-watchdog-lease-red.log",
+      "sha256": "6b9f7e056f96be420cb4f06532cdb1ffdf55399c6834515af90b2233a0a3ea56",
+      "bytes": 6562
+    },
+    {
+      "file": "evidence/worker-watchdog-prebuild-red.log",
+      "sha256": "106e5259ed312898013614dceae67ab04ceb096a47fad07529d8807bb826d079",
+      "bytes": 6569
+    },
+    {
+      "file": "evidence/worker-watchdog-prebuild-red2.log",
+      "sha256": "1cc61c96c65188a9a5dc64910eb42ff409e3ba79e5322a92402470bfad5bd9ec",
+      "bytes": 6574
+    }
+  ]
+}

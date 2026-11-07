@@ -1,0 +1,9 @@
+{
+  "success": true,
+  "at_ms": 1794088744183,
+  "before_sha256": "8a3f62056dbbd3c1c9670fe265c91cd0e21f8d208b75bc6c8ddfb928a60fc492",
+  "after_sha256": "72cc26728024757001d0b0850406d567fba847c941a01731f122f3aeccf56bdc",
+  "build_sha": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+  "backup": "/opt/p003/listening-canary-20261030/backups/watchdog-20261108-85de8fb0",
+  "expiry_capabilities_unchanged": true
+}

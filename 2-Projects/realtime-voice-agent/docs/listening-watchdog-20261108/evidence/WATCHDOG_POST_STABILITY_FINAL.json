@@ -1,0 +1,32 @@
+{
+  "status": "PASS_POST_3MIN",
+  "at_ms": 1794089376734,
+  "unit": {
+    "MainPID": "3593294",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "binary_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+  "process_age_seconds": 665.64,
+  "health": {
+    "agent": "p003-search-listening-20261030",
+    "at_ms": 1794089376534,
+    "cleanup": {
+      "at_ms": 1794089374918,
+      "healthy": true,
+      "pending": 0,
+      "remaining": 0
+    },
+    "generation": "v374-listening-ark-20261102-1793613511",
+    "jobs": 0,
+    "ordered_pcm_v1": true,
+    "registered": true
+  },
+  "journal_counts": {
+    "registered": 1,
+    "error": 0,
+    "panic": 0,
+    "job_requests": 0
+  },
+  "boundary": "process/config health, not production voice traffic or long-term proof"
+}

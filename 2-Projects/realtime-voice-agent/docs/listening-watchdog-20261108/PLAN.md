@@ -24,7 +24,7 @@
 - [x] 任务1：job预构建所有权。先抽出原有等待逻辑，添加卡住预构建测试观察失败；将等待移入受控pipeline任务，取消测试转绿。
 - [x] 任务2：移植 business_watchdog.rs/business_runtime.rs；job可信metadata、共用启动期限、原候选清理；pipeline真实输入/PCM/识别及有序输入hold；search_tasks按actor绝对期限快照。仅必要小补丁，不复制整份pipeline。
 - [x] 任务3：listening_mode暴露有效lease/session边界；runtime转为anchor绝对Instant；adapter只转发权威lease与Entering截止，proposal/pending不保房；pipeline添加Listening活动保护。覆盖五类反例并保留红测证据。
-- [ ] 任务4：离线完整测试，固定候选与产物溯源；真实隔离RTC验证普通静音回收、长讲述、租约失效、退出恢复与延迟ASR。与Grok核对反例。
-- [ ] 任务5：备份实际二进制/env/release及Brain manifest；仅空闲时发布单池，核ready/清理健康/正式探针/其他池不变；回执、commit+push。
+- [x] 任务4：离线完整测试，固定候选与产物溯源；真实隔离RTC验证普通静音回收、长讲述、租约失效、退出恢复与延迟ASR。与Grok核对反例。
+- [x] 任务5：备份实际二进制/env/release及Brain manifest；仅空闲时发布单池，核ready/清理健康/正式探针/其他池不变；回执、commit+push。
 
 未完成项不得标部署通过；真人Android验收独立记录。

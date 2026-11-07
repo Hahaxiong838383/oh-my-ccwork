@@ -5,6 +5,16 @@
     "bytes": 9304
   },
   {
+    "file": "BRAIN_PREDEPLOY_READONLY.json",
+    "sha256": "e65ee26a92f80d83382a7a7ede0d4c173b302b473394842afb0f862a58a76094",
+    "bytes": 5144
+  },
+  {
+    "file": "FINAL_TEST_MATRIX.json",
+    "sha256": "772d879fac6b12c37256ed3cb13ef9d38418c0028b8ac5ee6b15e597349144e7",
+    "bytes": 14382
+  },
+  {
     "file": "PORT_HUNKS.json",
     "sha256": "d8513d262141f7ba236559d187f3cade6fc295da97e1e4c6f7ceae074c9bc13c",
     "bytes": 3379
@@ -20,9 +30,79 @@
     "bytes": 3250
   },
   {
+    "file": "RECEIPT_AIR_DELIVERY.json",
+    "sha256": "99fefabb50c4b657578ea5f417ca128fbebc4222c272209a99f9c5f43529030d",
+    "bytes": 235
+  },
+  {
+    "file": "WATCHDOG_ADMIN_FINAL.json",
+    "sha256": "39b7cf6266a07702a3b8f9943af6b2dfe3e853d8288dc826b0bd402b25a21662",
+    "bytes": 5150
+  },
+  {
+    "file": "WATCHDOG_DEPLOY_RESULT.json",
+    "sha256": "6f923b1795418a70e692d4a019b8a9d269af349e9b5d82d1e7ccdfdf4ce48f47",
+    "bytes": 1510
+  },
+  {
+    "file": "WATCHDOG_FORMAL_ISOLATED_RESULT.json",
+    "sha256": "4514dcf40fb1360cbdcf77c24747ae6dcff8ae36cf78f3df5e794c31bc0d897d",
+    "bytes": 4940
+  },
+  {
+    "file": "WATCHDOG_FORMAL_POST.json",
+    "sha256": "b133115ff75283dedc6a254639dd4e6247a23a2a18ce80cbc4468011365c74c2",
+    "bytes": 1255
+  },
+  {
+    "file": "WATCHDOG_FORMAL_REJECTION_DIAGNOSIS.json",
+    "sha256": "1c2ca632c38303886a74b4b173f1db0087c59f13a2275b3890609c5b030973a0",
+    "bytes": 784
+  },
+  {
+    "file": "WATCHDOG_MANIFEST_DEPLOYED.json",
+    "sha256": "6a0a918061ac80e9edcc7ec55d8f3e2bcd42e843b9bae6dc34d5bf9365b42156",
+    "bytes": 407
+  },
+  {
+    "file": "WATCHDOG_POLICY_DIAGNOSIS.json",
+    "sha256": "7650908adefbabd21cc5195ada7f8ac9020a2a213d67b410715fe3edb2032409",
+    "bytes": 1286
+  },
+  {
+    "file": "WATCHDOG_POST_STABILITY_FINAL.json",
+    "sha256": "2368d74ddb1838507f8258a4cfead1df6b8de8b82f2651bbf9f221fd0c19689a",
+    "bytes": 800
+  },
+  {
+    "file": "WATCHDOG_SINGLE_POLICY.json.transport.json",
+    "sha256": "b506c3ea0cac3e0e6670d93b07fcfa9ba99c8c36f671425d19114b5a7e64939c",
+    "bytes": 168
+  },
+  {
+    "file": "WATCHDOG_SINGLE_POLICY_VERIFIED.json",
+    "sha256": "b3e7e359e0325342e7305724644e5a06f2de86b5e75d125a3c6fd35a56cdb482",
+    "bytes": 1079
+  },
+  {
+    "file": "WORKER_BACKUP_PREFLIGHT.json",
+    "sha256": "8722778519d4ac62acf519d445492d03ade02582f9fbf080927f75ef85e88ec4",
+    "bytes": 1930
+  },
+  {
     "file": "source-watchdog-exit-red.json",
     "sha256": "56a92d6d970d1da55f84a57d8c2e58a3ae6c75b6faaec8eee70c700cb772001b",
     "bytes": 7722
+  },
+  {
+    "file": "source-watchdog-final-release.json",
+    "sha256": "76a409a3ff59ef89f7f2a946f0e0fe47c98cc4d3c6cfc480a5b6c883e7c9d15c",
+    "bytes": 7630
+  },
+  {
+    "file": "source-watchdog-final-rtc-release.json",
+    "sha256": "76a409a3ff59ef89f7f2a946f0e0fe47c98cc4d3c6cfc480a5b6c883e7c9d15c",
+    "bytes": 7630
   },
   {
     "file": "source-watchdog-green2.json",
@@ -65,6 +145,11 @@
     "bytes": 75435
   },
   {
+    "file": "watchdog-green3-full.log",
+    "sha256": "0c99a67a4a3cbe5bea1e29910d7eb33eeda67b504296cf82937607dd72315299",
+    "bytes": 75962
+  },
+  {
     "file": "watchdog-lease-red-full.log",
     "sha256": "7ebd5115efbbcbce1581aa8385acde5ca74c1fedd5891bd84bfb8822f023e86b",
     "bytes": 75962
@@ -83,6 +168,11 @@
     "file": "worker-watchdog-exit-red.log",
     "sha256": "a9a56b8b507ce4c278c317002898845c9a7d4cdaa48c67fe2c440e31eeb60726",
     "bytes": 6559
+  },
+  {
+    "file": "worker-watchdog-final-release.log",
+    "sha256": "0d5d6f78fee6ebe11e017049e663fac9b6c064f582a52f1097b187995dc4df23",
+    "bytes": 6971
   },
   {
     "file": "worker-watchdog-green1.log",
