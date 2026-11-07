@@ -1,0 +1,117 @@
+{
+  "at": "2026-11-07T16:21:31.667040+00:00",
+  "runtime_source": "1f947fe4e226382615b147fd8e8bf6031c8d310d",
+  "probe_binary_sha256": "ef75442d592ec7d838aa2dcb19bd20136289b3954a08c363980f6c112e7d424b",
+  "grant_negative_binary_sha256": "de8457f1646c1c399529896817e36203f050face54bae1679867f07bb86e6864",
+  "runtime_sources_unchanged": true,
+  "only_source_changed": [
+    "src/rtc_business_probe.rs"
+  ],
+  "results": {
+    "rtc-speech-agent-grant-enforce-ordered1.json": {
+      "started": "2026-11-07T16:18:53.029403+00:00",
+      "finished": "2026-11-07T16:19:20.563805+00:00",
+      "mode": "enforce",
+      "ordered": "1",
+      "exit": 0,
+      "log_sha256": "0fce40c768ef64a05707d6cc92ebfc43f092495aa11cb22dddb5bf9b97130e19",
+      "probe_results": [
+        {
+          "answers": [
+            "因为阳光里蓝色光最容易被空气里的小颗粒撞散，洒满整个天空，所以抬头看天就是蓝的啦！"
+          ],
+          "audible_ms": 6370,
+          "elapsed_ms": 25920,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase"
+          ],
+          "first_audio_ms": 12150,
+          "input_sent_ms": 5610,
+          "mode": "enforce",
+          "ordered": true,
+          "phase_ms": 5610,
+          "ready_ms": 3107,
+          "room": "sn-BJP00326110799999901-1794068333538",
+          "sid": "RM_U5hgUqC5ZvPP",
+          "speech": true,
+          "user_finals": 2,
+          "worker_alive_before_cleanup": false
+        }
+      ],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T16:18:54.538944Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068333538 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_U5hgUqC5ZvPP \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T16:18:54.881939Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-73e5542a-f8cc-4a50-92fd-545bdc696d6d \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068333538 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_U5hgUqC5ZvPP \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_xbsyisexVC2n \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMz3mUw4R5VtHE \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m370",
+        "\u001b[2m2026-11-07T16:18:54.882753Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068333538 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_U5hgUqC5ZvPP \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"5df7628d-52e0-4dd1-951c-90cc5156ada6\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m371",
+        "\u001b[2m2026-11-07T16:18:57.571714Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"5df7628d-52e0-4dd1-951c-90cc5156ada6\"",
+        "\u001b[2m2026-11-07T16:18:57.574424Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"5df7628d-52e0-4dd1-951c-90cc5156ada6\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m173 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m1 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T16:19:00.076364Z\u001b[0m \u001b[32m INFO\u001b[0m ordered_pcm input phase → rtc \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068333538 \u001b[3mreason\u001b[0m\u001b[2m=\u001b[0mbegin_timeout \u001b[3mcatchup_samples\u001b[0m\u001b[2m=\u001b[0m0 \u001b[3mcatchup_skipped\u001b[0m\u001b[2m=\u001b[0m\"disabled\" \u001b[3mstt2_spawned_ms_ago\u001b[0m\u001b[2m=\u001b[0m0",
+        "\u001b[2m2026-11-07T16:19:19.931229Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068333538 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_U5hgUqC5ZvPP \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"5df7628d-52e0-4dd1-951c-90cc5156ada6\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mClose(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m25419",
+        "\u001b[2m2026-11-07T16:19:20.267213Z\u001b[0m \u001b[32m INFO\u001b[0m room cleanup readback complete \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068333538 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_U5hgUqC5ZvPP \u001b[3mcleanup\u001b[0m\u001b[2m=\u001b[0mGone \u001b[3mdelete_scope\u001b[0m\u001b[2m=\u001b[0m\"room_name\" \u001b[3mcas\u001b[0m\u001b[2m=\u001b[0mfalse",
+        "PROBE_OBSERVATION {\"answers\":[\"因为阳光里蓝色光最容易被空气里的小颗粒撞散，洒满整个天空，所以抬头看天就是蓝的啦！\"],\"audible_ms\":6370,\"first_audio_ms\":12150,\"user_finals\":2}",
+        "PROBE_RESULT {\"answers\":[\"因为阳光里蓝色光最容易被空气里的小颗粒撞散，洒满整个天空，所以抬头看天就是蓝的啦！\"],\"audible_ms\":6370,\"elapsed_ms\":25920,\"events\":[\"session.output_ready\",\"session.input_ready\",\"session.input_phase\"],\"first_audio_ms\":12150,\"input_sent_ms\":5610,\"mode\":\"enforce\",\"ordered\":true,\"phase_ms\":5610,\"ready_ms\":3107,\"room\":\"sn-BJP00326110799999901-1794068333538\",\"sid\":\"RM_U5hgUqC5ZvPP\",\"speech\":true,\"user_finals\":2,\"worker_alive_before_cleanup\":false}",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 532 filtered out; finished in 27.36s"
+      ]
+    },
+    "rtc-speech-agent-grant-enforce-ordered0.json": {
+      "started": "2026-11-07T16:17:55.549333+00:00",
+      "finished": "2026-11-07T16:18:27.927407+00:00",
+      "mode": "enforce",
+      "ordered": "0",
+      "exit": 0,
+      "log_sha256": "0f7811636aeab8f86e3687a335ebee56e0cd3ac1a957aeb52bb63b3b52836e9e",
+      "probe_results": [
+        {
+          "answers": [
+            "我们抬头看到的天空蓝色，是因为太阳光里的蓝光更容易被大气里的小颗粒散射，所以天空看起来就是蓝色的啦。"
+          ],
+          "audible_ms": 8110,
+          "elapsed_ms": 30783,
+          "events": [
+            "session.output_ready",
+            "session.input_ready"
+          ],
+          "first_audio_ms": 13638,
+          "input_sent_ms": 6741,
+          "mode": "enforce",
+          "ordered": false,
+          "phase_ms": null,
+          "ready_ms": 6741,
+          "room": "sn-BJP00326110799999901-1794068275951",
+          "sid": "RM_YAcKnkT9zsf8",
+          "speech": true,
+          "user_finals": 2,
+          "worker_alive_before_cleanup": false
+        }
+      ],
+      "diagnostics": [
+        "\u001b[2m2026-11-07T16:17:57.104982Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog attached \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068275951 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_YAcKnkT9zsf8 \u001b[3mrevision\u001b[0m\u001b[2m=\u001b[0m\"cfg-900001\"",
+        "\u001b[2m2026-11-07T16:18:03.199744Z\u001b[0m \u001b[32m INFO\u001b[0m user_track_subscribed \u001b[3mjob_id\u001b[0m\u001b[2m=\u001b[0mprobe-9097cc1a-25ca-4ba3-af00-af585d2f673e \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068275951 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_YAcKnkT9zsf8 \u001b[3mparticipant_sid\u001b[0m\u001b[2m=\u001b[0mPA_8kKtp29Ykn4A \u001b[3muser_track_sid\u001b[0m\u001b[2m=\u001b[0mTR_AMdLRxzKJmMBqf \u001b[3midentity\u001b[0m\u001b[2m=\u001b[0mdev-BJP00326110799999901 \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m6129",
+        "\u001b[2m2026-11-07T16:18:03.200628Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068275951 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_YAcKnkT9zsf8 \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"49ffc228-ebdf-422b-a54c-0acfc9401ab8\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mKeep \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m6130",
+        "\u001b[2m2026-11-07T16:18:03.791765Z\u001b[0m \u001b[32m INFO\u001b[0m session.input_ready published(scheduled) \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"49ffc228-ebdf-422b-a54c-0acfc9401ab8\"",
+        "\u001b[2m2026-11-07T16:18:03.803682Z\u001b[0m \u001b[32m INFO\u001b[0m control publish result \u001b[3mevent\u001b[0m\u001b[2m=\u001b[0m\"session.input_ready\" \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"49ffc228-ebdf-422b-a54c-0acfc9401ab8\" \u001b[3msince_pipeline_ms\u001b[0m\u001b[2m=\u001b[0m254 \u001b[3msend_ms\u001b[0m\u001b[2m=\u001b[0m2 \u001b[3mpublish_ok\u001b[0m\u001b[2m=\u001b[0mtrue",
+        "\u001b[2m2026-11-07T16:18:26.207383Z\u001b[0m \u001b[32m INFO\u001b[0m business watchdog decision \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068275951 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_YAcKnkT9zsf8 \u001b[3mtrace\u001b[0m\u001b[2m=\u001b[0m\"49ffc228-ebdf-422b-a54c-0acfc9401ab8\" \u001b[3mdecision\u001b[0m\u001b[2m=\u001b[0mClose(IdleNoProgress) \u001b[3melapsed_ms\u001b[0m\u001b[2m=\u001b[0m29137",
+        "\u001b[2m2026-11-07T16:18:27.668881Z\u001b[0m \u001b[32m INFO\u001b[0m room cleanup readback complete \u001b[3mroom\u001b[0m\u001b[2m=\u001b[0msn-BJP00326110799999901-1794068275951 \u001b[3mroom_sid\u001b[0m\u001b[2m=\u001b[0mRM_YAcKnkT9zsf8 \u001b[3mcleanup\u001b[0m\u001b[2m=\u001b[0mGone \u001b[3mdelete_scope\u001b[0m\u001b[2m=\u001b[0m\"room_name\" \u001b[3mcas\u001b[0m\u001b[2m=\u001b[0mfalse",
+        "PROBE_OBSERVATION {\"answers\":[\"我们抬头看到的天空蓝色，是因为太阳光里的蓝光更容易被大气里的小颗粒散射，所以天空看起来就是蓝色的啦。\"],\"audible_ms\":8110,\"first_audio_ms\":13638,\"user_finals\":2}",
+        "PROBE_RESULT {\"answers\":[\"我们抬头看到的天空蓝色，是因为太阳光里的蓝光更容易被大气里的小颗粒散射，所以天空看起来就是蓝色的啦。\"],\"audible_ms\":8110,\"elapsed_ms\":30783,\"events\":[\"session.output_ready\",\"session.input_ready\"],\"first_audio_ms\":13638,\"input_sent_ms\":6741,\"mode\":\"enforce\",\"ordered\":false,\"phase_ms\":null,\"ready_ms\":6741,\"room\":\"sn-BJP00326110799999901-1794068275951\",\"sid\":\"RM_YAcKnkT9zsf8\",\"speech\":true,\"user_finals\":2,\"worker_alive_before_cleanup\":false}",
+        "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 532 filtered out; finished in 32.30s"
+      ]
+    }
+  },
+  "evidence": {
+    "RTC_SPEECH_RESULT_1.json": "f8302fa2acd72f8bce86a992f6a1ba18eea74e4dde7675ebea5df1c7afe68c50",
+    "RTC_SPEECH_EVIDENCE_RESULT_2.json": "0e5a1106d99c9f26f09961f566b019786f71a85a5ca4e6b9d27bd2ddeb0332c8",
+    "RTC_SPEECH_EVIDENCE_FAILURE_LOG.json": "6973dd7e8713d977fc832a0415783c3c45a0ff39ea7d498b83f892a1fe9a9070",
+    "RTC_AGENT_GRANT_RESULT_2.json": "fd0b05d1716ae3ea4430d01a584a6cb031a0820b2fd3193ae287422f4e5fd0f1",
+    "RTC_AGENT_GRANT_SERVER_LOG.json": "d578a262ea3700905438a1d0b6f4388828d0f42327ed2e628b4f99c0198d9e5e",
+    "RTC_AGENT_GRANT_ORDERED_SERVER_LOG.json": "be2f1ae5eae79ba62cf363ec1fa799f8dff110e138c0974ef8550db8f0cf3e13",
+    "SDK_TRANSCRIPTION_ACTUAL.json": "d325e74eb55143dc64151761122854e3f8593b2469e7d8fa4f38d25efe5a489f",
+    "source-rtc-probe-package-speech-evidence.json": "725fbcb9cdc7dc52c898da0096fd60cdfb9b4c895c85175df6b66efcb07cbd73",
+    "source-rtc-probe-package-agent-grant.json": "cb776a5430c33dc52d80432794b6dc2f9bb9b37191685fa4ff8b9217c2979ecc",
+    "TARGET_FRESH_20261108.json": "ef753cf79cd3fbd43f6b855ae8cc7ea35f89d0e26365ddbad0cac52b40b062d0",
+    "ACTIVE_ROOMS_20261108.json": "404d43acb61c2a59f0f26c872a3ff8f1329f97ffd5584b5d011f54d2b9c76431"
+  },
+  "production_worker_deployed": false,
+  "physical_device_tested": false
+}
