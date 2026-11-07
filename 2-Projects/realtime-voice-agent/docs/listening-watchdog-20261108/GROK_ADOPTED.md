@@ -1,0 +1,6 @@
+# Codex对Grok188意见的处理
+
+采纳其权威边界与最小化建议。旧候选52775a6c不可作为发布候选：proposal/pending没有独立保房权，其本地deadline不再与租约max；有效ASR Recognition继续保护真实语音指令的处理期。已获权威的Entering仍严格min(lease,session,5s entry)。
+显式退出固定时刻/重复幂等方案双方一致，已实现并红绿验证。
+清理继续沿倾听池原close_room_and_delete/delete_room(含listening两次重试)及schema1独立reconciler，不引主池room_verify/roomList/schema2；启动失败只用同既有delete路径并交持久Drop兜底。生产候选启动校验要求cleanup=1/既定私有目录，begin失败按原逻辑拒绝job；不因P0试验没有候选intent而虚构schema2或自动改变Enforce语义。
+712单测及527的观察RTC只是旧候选证据，最终固定新SHA须重新验证。新增反例 watchdog-contract-red 实测proposal alone is not authority失败，原始日志保留。

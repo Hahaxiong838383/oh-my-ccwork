@@ -1,10 +1,5 @@
 [
   {
-    "file": "PRODUCTION_BEFORE.json",
-    "sha256": "439cac13a1dab45dc0b455ce2947bd32d55bc41b3f431b5034b2f6bb6fe0f43f",
-    "bytes": 3250
-  },
-  {
     "file": "BRAIN_IDLE_BEFORE.json",
     "sha256": "586bb71b57c44ed7d1f342e5bd066e9c66284fda1ff57fedf8f6d6e92cf481b2",
     "bytes": 9304
@@ -20,6 +15,96 @@
     "bytes": 611
   },
   {
+    "file": "PRODUCTION_BEFORE.json",
+    "sha256": "439cac13a1dab45dc0b455ce2947bd32d55bc41b3f431b5034b2f6bb6fe0f43f",
+    "bytes": 3250
+  },
+  {
+    "file": "source-watchdog-exit-red.json",
+    "sha256": "56a92d6d970d1da55f84a57d8c2e58a3ae6c75b6faaec8eee70c700cb772001b",
+    "bytes": 7722
+  },
+  {
+    "file": "source-watchdog-green2.json",
+    "sha256": "a640eb77f62c21596e7bba41c011cc42f02445b5488eba1799106318a97a6063",
+    "bytes": 7722
+  },
+  {
+    "file": "source-watchdog-green3.json",
+    "sha256": "76a409a3ff59ef89f7f2a946f0e0fe47c98cc4d3c6cfc480a5b6c883e7c9d15c",
+    "bytes": 7630
+  },
+  {
+    "file": "source-watchdog-lease-red.json",
+    "sha256": "a1178f75f8aa9d6c204766e71fd6b2b80fe7e1c82ec16b01cc2778cc0e4feb43",
+    "bytes": 7722
+  },
+  {
+    "file": "source-watchdog-prebuild-red2.json",
+    "sha256": "df820397319dfd06881f7b64bef9994221488460240281127705298e8b879ac8",
+    "bytes": 7435
+  },
+  {
+    "file": "watchdog-contract-red-full.log",
+    "sha256": "f63756fa3143ca6c76af0a6588ff1a6569ca4fa5ec4eb937f47d10842ed680b4",
+    "bytes": 16400
+  },
+  {
+    "file": "watchdog-exit-red-full.log",
+    "sha256": "61b0a26c76d8d61bf8ea8e85faf2fed1101763d77955f2fc8a6253e5d0c85c54",
+    "bytes": 9782
+  },
+  {
+    "file": "watchdog-green1-full.log",
+    "sha256": "0a29c23b03761a5876ad80b4786b280cfc80a4563524337771ad992f17123bbd",
+    "bytes": 75593
+  },
+  {
+    "file": "watchdog-green2-full.log",
+    "sha256": "94eaab6018d60fc074c9dffc4bdc6aac374a12a0829a6e7a72d7532509916057",
+    "bytes": 75435
+  },
+  {
+    "file": "watchdog-lease-red-full.log",
+    "sha256": "7ebd5115efbbcbce1581aa8385acde5ca74c1fedd5891bd84bfb8822f023e86b",
+    "bytes": 75962
+  },
+  {
+    "file": "watchdog-prebuild-red-full.log",
+    "sha256": "1b3c0f1a11ce094ab33996ee61ec5d121f4a38f6094537f054abe8dab2a1bc8d",
+    "bytes": 71187
+  },
+  {
+    "file": "watchdog-prebuild-red2-full.log",
+    "sha256": "35cd668b655df70a2004c308cc3a26ab19771385541d686181ccc06a0c7f7848",
+    "bytes": 67681
+  },
+  {
+    "file": "worker-watchdog-exit-red.log",
+    "sha256": "a9a56b8b507ce4c278c317002898845c9a7d4cdaa48c67fe2c440e31eeb60726",
+    "bytes": 6559
+  },
+  {
+    "file": "worker-watchdog-green1.log",
+    "sha256": "c79cdfbd85bf5cdab23e9e8af1938243f6c603287bb18ae66e5a349db33632aa",
+    "bytes": 6551
+  },
+  {
+    "file": "worker-watchdog-green2.log",
+    "sha256": "95068614d4d922cca00437ff51fe09bda3351b70e30673668724f984dc5006e4",
+    "bytes": 6551
+  },
+  {
+    "file": "worker-watchdog-green3.log",
+    "sha256": "3a041ba1e5bbdd263e9f1dcd35092d6dd905a1ad78b8afaaf9acecb31dc423cd",
+    "bytes": 6551
+  },
+  {
+    "file": "worker-watchdog-lease-red.log",
+    "sha256": "6b9f7e056f96be420cb4f06532cdb1ffdf55399c6834515af90b2233a0a3ea56",
+    "bytes": 6562
+  },
+  {
     "file": "worker-watchdog-prebuild-red.log",
     "sha256": "106e5259ed312898013614dceae67ab04ceb096a47fad07529d8807bb826d079",
     "bytes": 6569
@@ -28,20 +113,5 @@
     "file": "worker-watchdog-prebuild-red2.log",
     "sha256": "1cc61c96c65188a9a5dc64910eb42ff409e3ba79e5322a92402470bfad5bd9ec",
     "bytes": 6574
-  },
-  {
-    "file": "worker-watchdog-lease-red.log",
-    "sha256": "6b9f7e056f96be420cb4f06532cdb1ffdf55399c6834515af90b2233a0a3ea56",
-    "bytes": 6562
-  },
-  {
-    "file": "worker-watchdog-green1.log",
-    "sha256": "c79cdfbd85bf5cdab23e9e8af1938243f6c603287bb18ae66e5a349db33632aa",
-    "bytes": 6551
-  },
-  {
-    "file": "worker-watchdog-exit-red.log",
-    "sha256": "a9a56b8b507ce4c278c317002898845c9a7d4cdaa48c67fe2c440e31eeb60726",
-    "bytes": 6559
   }
 ]

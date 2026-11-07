@@ -122,13 +122,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         }
     };
     let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
-    let mut business = crate::business_runtime::Runtime::from_env(&room_name, meta.voice_idle.as_ref(), t0);
-    if let Some(w) = business.as_mut() {
-        if w.enforcing() && (close_intent.is_none() || !crate::room_cleanup::reconciler_healthy()) {
-            w.observe_only();
-            warn!(room=%room_name,room_sid=%sid,"business watchdog observe only: durable candidate cleanup unavailable");
-        }
-    }
+    let business = crate::business_runtime::Runtime::from_env(&room_name, meta.voice_idle.as_ref(), t0);
     let mut business_last_decision = None;
     if let Some(w) = &business { info!(room=%room_name, room_sid=%sid, revision=w.revision().unwrap_or("missing"), "business watchdog attached"); }
     let filler_policy = crate::filler::FillerPolicy::from_metadata(meta.filler_policy.as_ref(), &room_name);
@@ -160,8 +154,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         Err(error) => {
             if business.is_some() {
                 drop(prebuilt_task.take());
-                let cleanup = crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
-                warn!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"startup connect failed; cleanup readback");
+                let delete_accepted = delete_room(&config,&url,&room_name,meta.listening.is_some()).await;
+                warn!(room=%room_name,room_sid=%sid,delete_accepted,"startup connect failed; existing candidate cleanup attempted");
             }
             return Err(error.context("room connect"));
         }
@@ -184,8 +178,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             if business.is_some() {
                 drop(prebuilt_task.take());
                 let _=tokio::time::timeout(std::time::Duration::from_secs(2),room.close()).await;
-                let cleanup=crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
-                warn!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"startup publish failed; cleanup readback");
+                let delete_accepted=delete_room(&config,&url,&room_name,meta.listening.is_some()).await;
+                warn!(room=%room_name,room_sid=%sid,delete_accepted,"startup publish failed; existing candidate cleanup attempted");
             }
             return Err(error.context("publish audio track"));
         }
@@ -518,17 +512,9 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     }
     // 删房(对齐 Python delete_room_on_close=True):房间不删,空房存活 300s,
     // 用户重连会进"无 agent 的旧房"(dispatch 只在建房时发生)。删房=再连必新房必新 agent。
-    if business.is_some() {
-        let _=tokio::time::timeout(std::time::Duration::from_secs(2),room.close()).await;
-        let cleanup=crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
-        if matches!(cleanup,crate::room_verify::Outcome::Gone|crate::room_verify::Outcome::Superseded) {
-            info!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"room cleanup readback complete");
-        } else { warn!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"room cleanup readback incomplete; reconciliation required"); }
-    } else {
-        let _ = close_room_and_delete(&room_name,
-            async { room.close().await.map_err(Into::into) },
-            delete_room(&config, &url, &room_name, meta.listening.is_some())).await;
-    }
+    let _ = close_room_and_delete(&room_name,
+        async { room.close().await.map_err(anyhow::Error::from) },
+        delete_room(&config, &url, &room_name, meta.listening.is_some())).await;
     // A 2xx is not the device's disconnect receipt. Keep the durable intent
     // until the independent reconciler verifies that this exact SID is gone.
     info!(room = %room_name, uptime_s = t0.elapsed().as_secs(), "job closed");

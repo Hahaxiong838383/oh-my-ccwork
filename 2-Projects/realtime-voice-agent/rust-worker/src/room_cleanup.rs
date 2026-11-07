@@ -97,14 +97,6 @@ impl Drop for CloseIntent {
     }
 }
 
-/// Admission checks the existing schema-1 reconciler, without creating a
-/// second main-pool queue or changing this pool's authority/generation.
-pub fn reconciler_healthy() -> bool {
-    std::env::var("P003_ROOM_CLEANUP_STATUS_FILE").ok()
-        .and_then(|path| fs::read_to_string(path).ok())
-        .is_some_and(|raw| health(&raw, crate::search_canary::now_ms())["healthy"] == true)
-}
-
 /// A stale/missing reconciler cannot grant a fresh dispatch lease.
 pub fn health(raw: &str, now: u64) -> serde_json::Value {
     let value: serde_json::Value=serde_json::from_str(raw).unwrap_or_default();

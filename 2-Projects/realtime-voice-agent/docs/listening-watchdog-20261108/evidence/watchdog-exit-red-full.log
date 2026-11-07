@@ -1,0 +1,300 @@
+   Compiling voice-rust-worker v0.1.0 (/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-exit-red/2-Projects/realtime-voice-agent/rust-worker)
+warning: struct `SummaryTicket` is never constructed
+  --> tests/../src/listening_buffer.rs:20:12
+   |
+20 | pub struct SummaryTicket {
+   |            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `base_version`, `coverage`, `segments`, and `text` are never used
+  --> tests/../src/listening_buffer.rs:28:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ methods in this implementation
+27 |     /// Private summarizer input. Never log this text.
+28 |     pub fn base_version(&self) -> u64 {
+   |            ^^^^^^^^^^^^
+...
+31 |     pub fn coverage(&self) -> Vec<(u64, u64)> {
+   |            ^^^^^^^^
+...
+37 |     pub fn segments(&self) -> Vec<(u64, u64, String)> {
+   |            ^^^^^^^^
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: fields `summary` and `has_gap` are never read
+  --> tests/../src/listening_buffer.rs:52:9
+   |
+51 | pub struct Context {
+   |            ------- fields in this struct
+52 |     pub summary: Option<String>,
+   |         ^^^^^^^
+53 |     pub recent: String,
+54 |     pub has_gap: bool,
+   |         ^^^^^^^
+
+warning: fields `buffer_id` and `summary_limit` are never read
+  --> tests/../src/listening_buffer.rs:68:5
+   |
+66 | pub struct ListeningBuffer {
+   |            --------------- fields in this struct
+67 |     // Instance identity also rejects a late reply when a caller reuses a session label.
+68 |     buffer_id: u64,
+   |     ^^^^^^^^^
+...
+73 |     summary_limit: usize,
+   |     ^^^^^^^^^^^^^
+
+warning: methods `summary_ticket` and `apply_summary` are never used
+   --> tests/../src/listening_buffer.rs:199:12
+    |
+103 | impl ListeningBuffer {
+    | -------------------- methods in this implementation
+...
+199 |     pub fn summary_ticket(&self) -> Option<SummaryTicket> {
+    |            ^^^^^^^^^^^^^^
+...
+219 |     pub fn apply_summary(&mut self, ticket: SummaryTicket, text: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: variants `Sharing` and `Singing` are never constructed
+  --> tests/../src/listening_mode.rs:13:5
+   |
+11 | pub enum Scene {
+   |          ----- variants in this enum
+12 |     Story,
+13 |     Sharing,
+   |     ^^^^^^^
+14 |     Singing,
+   |     ^^^^^^^
+   |
+   = note: `Scene` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: methods `revoke`, `input_active`, `reserve_voice_feedback`, and `cancel_feedback` are never used
+   --> tests/../src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ methods in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: method `as_str` is never used
+   --> tests/../src/listening_mode.rs:387:12
+    |
+386 | impl Scene {
+    | ---------- method in this implementation
+387 |     pub fn as_str(self) -> &'static str {
+    |            ^^^^^^
+
+warning: field `anchor` is never read
+  --> tests/../src/listening_runtime.rs:33:5
+   |
+28 | pub struct AudioPermit {
+   |            ----------- field in this struct
+...
+33 |     anchor: Instant,
+   |     ^^^^^^
+   |
+   = note: `AudioPermit` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: methods `allowed` and `begin_capture` are never used
+  --> tests/../src/listening_runtime.rs:60:12
+   |
+59 | impl AudioPermit {
+   | ---------------- methods in this implementation
+60 |     pub fn allowed(&self) -> bool {
+   |            ^^^^^^^
+...
+63 |     pub fn begin_capture(&self) -> Option<CaptureTicket> {
+   |            ^^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> tests/../src/listening_runtime.rs:141:12
+    |
+100 | impl ListeningSession {
+    | --------------------- methods in this implementation
+...
+141 |     pub fn advance_clock(&mut self, ms: u64) {
+    |            ^^^^^^^^^^^^^
+...
+144 |     pub fn now_ms(&self) -> u64 {
+    |            ^^^^^^
+...
+154 |     pub fn precheck(&self, c: &Command) -> Result<Option<Snapshot>, Reject> {
+    |            ^^^^^^^^
+...
+161 |     pub fn authenticated(&self, participant: Option<&str>, trace: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+...
+169 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+176 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+...
+181 |     pub fn summary_ticket(&self) -> Option<crate::listening_buffer::SummaryTicket> {
+    |            ^^^^^^^^^^^^^^
+...
+184 |     pub fn apply_summary(&mut self, t: crate::listening_buffer::SummaryTicket, text: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+...
+187 |     pub fn raw_chars(&self) -> usize {
+    |            ^^^^^^^^^
+...
+313 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (test "listening_runtime") generated 11 warnings
+warning: method `revoke` is never used
+   --> src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ method in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `text` is never used
+  --> src/listening_buffer.rs:43:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ method in this implementation
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: variant `Device` is never constructed
+  --> src/listening_runtime.rs:19:5
+   |
+15 | pub enum OutputPurpose {
+   |          ------------- variant in this enum
+...
+19 |     Device,
+   |     ^^^^^^
+   |
+   = note: `OutputPurpose` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `business_exit_at` is never used
+   --> src/listening_runtime.rs:245:12
+    |
+100 | impl ListeningSession {
+    | --------------------- method in this implementation
+...
+245 |     pub fn business_exit_at(&self) -> Option<Instant> { None }
+    |            ^^^^^^^^^^^^^^^^
+
+warning: method `voice_text` is never used
+   --> src/listening_adapter.rs:325:12
+    |
+111 | impl Adapter {
+    | ------------ method in this implementation
+...
+325 |     pub fn voice_text(&mut self, text: &str) -> Option<Effects> {
+    |            ^^^^^^^^^^
+
+warning: method `clear` is never used
+   --> src/listening_voice.rs:217:12
+    |
+213 | impl FeedbackFragments {
+    | ---------------------- method in this implementation
+...
+217 |     pub fn clear(&mut self) { self.pending = None; }
+    |            ^^^^^
+
+warning: method `is_some` is never used
+  --> src/say_defer.rs:30:12
+   |
+ 9 | impl DeferredSay {
+   | ---------------- method in this implementation
+...
+30 |     pub fn is_some(&self) -> bool {
+   |            ^^^^^^^
+
+warning: function `valid_base` is never used
+  --> src/search_canary.rs:23:8
+   |
+23 | pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
+   |        ^^^^^^^^^^
+
+warning: function `enabled` is never used
+   --> src/search_tasks.rs:264:8
+    |
+264 | pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
+    |        ^^^^^^^
+
+warning: method `remaining` is never used
+  --> src/search_progress.rs:14:8
+   |
+10 | impl SearchProgress {
+   | ------------------- method in this implementation
+...
+14 | pub fn remaining(&self,complete:usize)->String{self.sentences.iter().skip(complete).cloned().collect()}
+   |        ^^^^^^^^^
+
+warning: method `pick` is never used
+  --> src/search_receipts.rs:63:12
+   |
+28 | impl Bank {
+   | --------- method in this implementation
+...
+63 |     pub fn pick(&mut self,kind:Kind)->Clip {
+   |            ^^^^
+
+warning: method `chat` is never used
+   --> src/llm.rs:680:18
+    |
+626 | impl Llm {
+    | -------- method in this implementation
+...
+680 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: method `is_on` is never used
+  --> src/backchannel.rs:84:12
+   |
+53 | impl BackchannelCfg {
+   | ------------------- method in this implementation
+...
+84 |     pub fn is_on(&self) -> bool {
+   |            ^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> src/textproc.rs:151:8
+    |
+151 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker") generated 14 warnings
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.03s
+     Running tests/listening_runtime.rs (target/debug/deps/listening_runtime-06a0b67f676810a9)
+
+running 1 test
+
+thread 'accepted_exit_is_real_input_but_duplicate_queries_cannot_extend_idle' (1197016) panicked at tests/listening_runtime.rs:330:33:
+accepted exit grants one ordinary idle interval
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test accepted_exit_is_real_input_but_duplicate_queries_cannot_extend_idle ... FAILED
+
+failures:
+
+failures:
+    accepted_exit_is_real_input_but_duplicate_queries_cannot_extend_idle
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--test listening_runtime`

@@ -37,7 +37,6 @@ mod owned_task;
 mod room_cleanup;
 mod business_watchdog;
 mod business_runtime;
-mod room_verify;
 mod voice_connect;
 mod llm;
 mod ordered_pcm;

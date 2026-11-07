@@ -11,3 +11,7 @@
 - 未验：真实RTC组合路径、正式构建/ABI、Grok最终固定候选复核、单038配置与发布、真实Android。当前不可发布新watchdog候选。
 
 - watchdog-green2完整712通过/2既有ignored；81个编译输入与当前工作树逐项SHA核同。显式退出原时间锚已补齐，并在每个pipeline事件结束更新倾听活动，重传/查询不会续期。尚未执行新候选真实RTC和正式构建，不部署。
+
+- Grok188设计评审已完成，见原报告与GROK_ADOPTED.md。采纳租约-only及清理最小化，替代前文proposal/pending hold裁决；新反例在旧527上失败。527观察RTC真实三通道/20s倾听静音/退出/idle observe/RoomGone通过，但该候选已被替代，不部署。
+
+- watchdog-green3完整707通过（654单元+30核心+13运行时+10语音）、2既有ignored；80个编译输入逐项SHA核同。较712少5项因删除不采用的room_verify模块及其测试，并非忽略失败。新候选只保留权威租约保护和原schema1清理；正式产物与强制回收RTC尚待验。完整红测日志已归档，未以截断输出替代反例。

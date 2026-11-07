@@ -1,0 +1,83 @@
+{"mode": "watchdog-prebuild-red2", "rc": 101, "log": "/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-prebuild-red2/2-Projects/realtime-voice-agent/rust-worker/watchdog-prebuild-red2.log", "source_sha": {"src/job.rs": "fc72ea19bab88eb3f33c2bad6149e7adfe28ec0df08a74e6e511dff2a8c29482", "src/tts_xfyun.rs": "c3d0c6db57d22f4d60b8c84a8835e0499a97c17b1c384c53475d725d0ce667b3", "src/voice_connect.rs": "07349dae25c9ab687306f40dd38edb57902410bb7abf0f2ed6a6f0920ed33426", "src/tts.rs": "b4f9f61a0fddb80ecf9d81406473862dc898fdc359084a1796c0f9cbbab3c381"}}
+::warm_max_age_must_stay_under_protocol_idle_limit ... ok
+test turn::tests::commit_uses_min_delay_when_eot_likely ... ok
+test turn::tests::input_ended_commits_at_next_poll_without_endpointing_delay ... ok
+test turn::tests::input_ended_is_cleared_by_speech_start ... ok
+test turn::tests::late_final_commits_immediately_after_deadline ... ok
+test turn::tests::no_vad_end_falls_back_to_final_anchor ... ok
+test turn::tests::resumed_speech_invalidates_prediction_and_blocks_commit ... ok
+test turn::tests::unlikely_prob_stretches_to_max_delay ... ok
+test vad::tests::gate_requires_min_speech_then_min_silence ... ok
+test stt_volc::tests::delayed_handshake_preserves_auth_and_first_pcm_exactly_once ... ok
+test vad::tests::short_noise_burst_ignored ... ok
+test tts::tests::spare_failure_keeps_primary_and_capacity_limit_never_queues ... ok
+test tts_xfyun::tests::send_or_abort_delivers_normally_when_not_aborted ... ok
+test vad::tests::shared_weights_isolated_state ... ok
+test vad::tests::silero_silence_prob_low ... ok
+test search_tasks::tests::r25_ambiguous_cancel_is_bounded_to_active_search ... ok
+test tts_xfyun::tests::r22_first_pcm_deadline_is_shared_by_prewarm_connect_and_receive ... ok
+test voice_connect::tests::diagnostic_error_classification_cannot_echo_untrusted_error_text ... ok
+test voice_connect::tests::cname_additional_ipv6_remains_usable ... ok
+test voice_connect::tests::diagnostic_records_real_negative_dns_rcode_and_never_starts_tcp ... ok
+test tts_xfyun::priority_transport_diagnostics::candidate_recovery_keeps_first_pcm_deadline_and_never_replays_text ... ok
+test voice_connect::tests::multihop_and_zero_ttl_additional_results_are_requeried ... ok
+test job::tests::r16_delete_room_recovers_transient_http_failure ... ok
+test pipeline::asr_lifecycle_tests::abandoned_asr_owner_drops_socket_without_retries ... ok
+test voice_connect::tests::diagnostic_records_dns_cancellation_without_claiming_resolver_timeout ... ok
+test pipeline::asr_lifecycle_tests::rejected_final_packet_does_not_reconnect_closed_input ... ok
+test voice_connect::tests::r16_dns_dial_cancellation_is_bounded ... ok
+test voice_connect::tests::r26_cancellation_releases_hedge_capacity ... ok
+test voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection ... ok
+test voice_connect::tests::r26_only_known_tts_opt_in_and_managed_upstream_config_are_allowed ... ok
+test voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber ... ok
+test voice_connect::tests::r26_slow_stub_uses_independent_upstream_before_dns_timeout ... ok
+test volc::tests::connection_event_omits_session ... ok
+test volc::tests::gzip_json_payload_roundtrip ... ok
+test volc::tests::marshal_matches_python_bytes ... ok
+test volc::tests::negative_seq_roundtrip ... ok
+test volc::tests::with_event_session_roundtrip ... ok
+test worker::tests::availability_response_carries_agent_attrs ... ok
+test worker::tests::backoff_table_unchanged ... ok
+test worker::tests::clean_close_resets_counter_too ... ok
+test worker::tests::full_capacity_declines ... ok
+test worker::tests::incident_20260916_reconnect_after_registration_must_not_give_up ... ok
+test tts_xfyun::tests::r22_status_frames_cannot_extend_first_pcm_but_long_audio_continues ... ok
+test voice_connect::tests::candidate_fallback_cname_ttl_and_diagnostics_stay_on_own_resolver ... ok
+test worker::tests::r22_capacity_coalescing_reads_latest_count_and_respects_multi_job_limit ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_midstream_gap_is_not_channel_backpressure ... ok
+test worker::tests::thirteen_consecutive_failures_without_registration_gives_up ... ok
+test worker::tests::r22_capacity_start_finish_reaches_livekit_before_periodic_tick ... ok
+test device_grammar::tests::never_panics_on_random_input ... ok
+test worker::tests::r22_capacity_failed_assignment_publishes_released_capacity ... ok
+test voice_connect::tests::r16_ipv6_and_alternate_address_remain_available ... ok
+test voice_connect::tests::r26_fallback_connects_ipv6_when_primary_dns_is_silent ... ok
+test worker::tests::r22_capacity_non_candidate_keeps_periodic_reporting ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_full_channel_waits_without_reconnect_or_losing_pcm ... ok
+test tts::tests::candidate_one_second_first_pcm_deadline_aborts_recovery_prewarm ... ok
+test voice_connect::tests::cname_answer_preserves_the_shortest_answer_ttl ... ok
+test voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses ... ok
+test voice_connect::tests::r16_a_success_does_not_wait_for_missing_aaaa_and_obeys_ttl ... ok
+test voice_connect::tests::r26_failed_upstream_preserves_primary_and_full_limit_never_queues ... ok
+test voice_connect::tests::r26_fast_primary_does_not_query_upstream_and_cache_obeys_ttl ... ok
+test voice_connect::tests::recursive_lookup_owner_and_cached_original_owner_both_work ... ok
+test job::tests::listening_job_stuck_room_close_still_attempts_delete ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_two_second_supply_gap_reaches_native_playout ... ok
+test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok
+test job::tests::listening_delete_room_timeout_retries_within_original_budget ... ok
+test stt_volc::tests::stalled_handshake_has_a_bounded_connection_budget ... ok
+
+failures:
+
+---- job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort stdout ----
+
+thread 'job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort' (1188307) panicked at src/job.rs:984:9:
+a stuck prebuild must not block job watchdog/disconnect handling
+
+
+failures:
+    job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort
+
+test result: FAILED. 617 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.75s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`
+

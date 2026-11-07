@@ -1,0 +1,90 @@
+{"mode": "watchdog-green1", "rc": 0, "log": "/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-green1/2-Projects/realtime-voice-agent/rust-worker/watchdog-green1.log", "source_sha": {"src/job.rs": "f881acb4cc412e643d3cd4ac57e345688ef1724ed92b0356b4645483ed4ea5db", "src/tts_xfyun.rs": "c3d0c6db57d22f4d60b8c84a8835e0499a97c17b1c384c53475d725d0ce667b3", "src/voice_connect.rs": "07349dae25c9ab687306f40dd38edb57902410bb7abf0f2ed6a6f0920ed33426", "src/tts.rs": "b4f9f61a0fddb80ecf9d81406473862dc898fdc359084a1796c0f9cbbab3c381"}}
+:tests::r22_capacity_non_candidate_keeps_periodic_reporting ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_full_channel_waits_without_reconnect_or_losing_pcm ... ok
+test tts::tests::candidate_one_second_first_pcm_deadline_aborts_recovery_prewarm ... ok
+test voice_connect::tests::cname_answer_preserves_the_shortest_answer_ttl ... ok
+test voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses ... ok
+test voice_connect::tests::r16_a_success_does_not_wait_for_missing_aaaa_and_obeys_ttl ... ok
+test voice_connect::tests::r26_failed_upstream_preserves_primary_and_full_limit_never_queues ... ok
+test voice_connect::tests::r26_fast_primary_does_not_query_upstream_and_cache_obeys_ttl ... ok
+test voice_connect::tests::recursive_lookup_owner_and_cached_original_owner_both_work ... ok
+test job::tests::listening_job_stuck_room_close_still_attempts_delete ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_two_second_supply_gap_reaches_native_playout ... ok
+test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok
+test job::tests::listening_delete_room_timeout_retries_within_original_budget ... ok
+test stt_volc::tests::delayed_six_second_handshake_delivers_final_before_recognition_hold_expires ... ok
+test stt_volc::tests::stalled_handshake_has_a_bounded_connection_budget ... ok
+
+test result: ok. 658 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.77s
+
+     Running tests/listening_core.rs (target/debug/deps/listening_core-c91ea7413b2d31d5)
+
+running 30 tests
+test bad_lease_deadlines_and_old_epoch_ready_are_rejected ... ok
+test buffer_bounds_unicode_by_chars_and_marks_content_loss ... ok
+test buffer_revisions_replace_instead_of_append_and_duplicates_are_ignored ... ok
+test business_lease_covers_singing_and_feedback_but_not_revocation ... ok
+test clipped_source_retransmission_is_still_a_duplicate ... ok
+test disabled_has_no_entry_or_automatic_speech_policy_change ... ok
+test duplicates_do_not_grant_another_feedback_and_changed_payload_is_rejected ... ok
+test empty_and_invalid_limits_do_not_create_fake_story_content ... ok
+test enter_needs_both_capture_drain_and_android_ready_in_either_order ... ok
+test evicted_old_sequence_cannot_execute_again ... ok
+test expired_lease_closes_output_even_before_tick_and_never_returns_to_chat ... ok
+test explicit_exit_clears_scene_and_invalidates_prior_audio_epoch ... ok
+test feedback_permit_is_consumed_once_and_frames_require_the_active_turn ... ok
+test late_completion_cannot_acknowledge_listening_after_expiry ... ok
+test late_feedback_from_a_previous_epoch_cannot_start_another_reply ... ok
+test new_feedback_requires_speech_end_and_old_entry_cannot_reenter ... ok
+test maximum_session_deadline_pauses_even_if_lease_was_refreshed ... ok
+test new_speech_cancels_reserved_or_playing_feedback_and_never_resumes_it ... ok
+test retransmitted_compacted_source_preserves_valid_summary ... ok
+test renewal_after_expiry_cannot_hide_the_expired_interval ... ok
+test revoked_and_old_lease_versions_cannot_reenable_the_room ... ok
+test summary_cannot_cross_buffer_instances ... ok
+test summary_cannot_delete_revised_source_or_replace_a_newer_summary ... ok
+test summary_commits_only_the_frozen_prefix_and_keeps_new_tail ... ok
+test speech_started_before_request_prevents_feedback ... ok
+test too_late_revision_invalidates_summary_instead_of_claiming_complete_memory ... ok
+test oversized_summary_is_rejected_without_losing_source ... ok
+test segment_gaps_and_same_revision_conflicts_are_visible ... ok
+test state_queries_cannot_reopen_expired_modes_and_new_entry_cannot_erase_active_story ... ok
+test unsummarized_context_omission_is_visible ... ok
+
+test result: ok. 30 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/listening_runtime.rs (target/debug/deps/listening_runtime-06a0b67f676810a9)
+
+running 12 tests
+test business_hold_respects_session_cap_revocation_and_paused_state ... ok
+test business_hold_tracks_real_lease_without_polling_renewal_or_normal_state_hold ... ok
+test entered_completion_waits_for_actual_inflight_capture_and_local_ready ... ok
+test feedback_is_one_turn_and_speechstart_revokes_every_later_frame ... ok
+test newer_normal_turn_revokes_old_turn_before_any_late_frame ... ok
+test ordinary_story_collection_preserves_buffer_and_never_creates_output_permission ... ok
+test real_participant_and_job_trace_are_required_before_mode_mutation ... ok
+test renewal_failure_and_entry_timeout_pause_without_chat_fallback ... ok
+test restored_previously_accepted_story_is_bound_to_entry_and_grants_no_permission ... ok
+test snapshot_tuning_changes_duration_cooldown_and_session_deadline ... ok
+test voice_transition_holds_normal_outputs_without_spending_android_epoch ... ok
+test voice_transition_timeout_cannot_resume_normal_chat ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/listening_voice.rs (target/debug/deps/listening_voice-c258dfe00343a744)
+
+running 10 tests
+test feedback_and_exit_are_explicit_complete_phrases ... ok
+test explicit_first_utterance_selects_scene_and_preserves_immediate_story ... ok
+test interim_command_prefix_is_held_before_ordinary_speculation ... ok
+test feedback_fragments_quotes_negation_wrong_scene_epoch_and_echo_clear_cannot_complete ... ok
+test recent_wake_partials_never_refresh_and_only_one_explicit_refresh_is_allowed ... ok
+test lyrics_quotes_partial_requests_and_ordinary_questions_do_not_command ... ok
+test recent_wake_accepts_finite_enter_at_ten_seconds_but_not_fifteen ... ok
+test singing_fragment_permission_is_bound_to_start_not_a_later_breath ... ok
+test recent_wake_rejects_ordinary_quotes_negation_questions_and_cannot_authorize_feedback ... ok
+test feedback_fragments_match_every_real_split_without_sliding_or_growing_unbounded ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+

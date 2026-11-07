@@ -1,0 +1,1136 @@
+   Compiling voice-rust-worker v0.1.0 (/home/hahaxiong83/local/p003-pool-transport-20261108/listening-watchdog-prebuild-red2/2-Projects/realtime-voice-agent/rust-worker)
+warning: method `revoke` is never used
+   --> src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ method in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `text` is never used
+  --> src/listening_buffer.rs:43:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ method in this implementation
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: variant `Device` is never constructed
+  --> src/listening_runtime.rs:19:5
+   |
+15 | pub enum OutputPurpose {
+   |          ------------- variant in this enum
+...
+19 |     Device,
+   |     ^^^^^^
+   |
+   = note: `OutputPurpose` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: method `voice_text` is never used
+   --> src/listening_adapter.rs:325:12
+    |
+111 | impl Adapter {
+    | ------------ method in this implementation
+...
+325 |     pub fn voice_text(&mut self, text: &str) -> Option<Effects> {
+    |            ^^^^^^^^^^
+
+warning: method `clear` is never used
+   --> src/listening_voice.rs:217:12
+    |
+213 | impl FeedbackFragments {
+    | ---------------------- method in this implementation
+...
+217 |     pub fn clear(&mut self) { self.pending = None; }
+    |            ^^^^^
+
+warning: method `is_some` is never used
+  --> src/say_defer.rs:30:12
+   |
+ 9 | impl DeferredSay {
+   | ---------------- method in this implementation
+...
+30 |     pub fn is_some(&self) -> bool {
+   |            ^^^^^^^
+
+warning: function `valid_base` is never used
+  --> src/search_canary.rs:23:8
+   |
+23 | pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
+   |        ^^^^^^^^^^
+
+warning: function `enabled` is never used
+   --> src/search_tasks.rs:261:8
+    |
+261 | pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
+    |        ^^^^^^^
+
+warning: method `remaining` is never used
+  --> src/search_progress.rs:14:8
+   |
+10 | impl SearchProgress {
+   | ------------------- method in this implementation
+...
+14 | pub fn remaining(&self,complete:usize)->String{self.sentences.iter().skip(complete).cloned().collect()}
+   |        ^^^^^^^^^
+
+warning: method `pick` is never used
+  --> src/search_receipts.rs:63:12
+   |
+28 | impl Bank {
+   | --------- method in this implementation
+...
+63 |     pub fn pick(&mut self,kind:Kind)->Clip {
+   |            ^^^^
+
+warning: method `chat` is never used
+   --> src/llm.rs:678:18
+    |
+624 | impl Llm {
+    | -------- method in this implementation
+...
+678 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: method `is_on` is never used
+  --> src/backchannel.rs:84:12
+   |
+53 | impl BackchannelCfg {
+   | ------------------- method in this implementation
+...
+84 |     pub fn is_on(&self) -> bool {
+   |            ^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> src/textproc.rs:151:8
+    |
+151 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker") generated 13 warnings
+warning: methods `base_version`, `coverage`, and `segments` are never used
+  --> tests/../src/listening_buffer.rs:28:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ methods in this implementation
+27 |     /// Private summarizer input. Never log this text.
+28 |     pub fn base_version(&self) -> u64 {
+   |            ^^^^^^^^^^^^
+...
+31 |     pub fn coverage(&self) -> Vec<(u64, u64)> {
+   |            ^^^^^^^^
+...
+37 |     pub fn segments(&self) -> Vec<(u64, u64, String)> {
+   |            ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `input_active`, `pause_pending_entry`, `pause_unavailable`, `configure`, `reserve_voice_feedback`, and `cancel_feedback` are never used
+   --> tests/../src/listening_mode.rs:304:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ methods in this implementation
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+318 |     pub fn pause_pending_entry(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+321 |     pub fn pause_unavailable(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+326 |     pub fn configure(&mut self, session_ms: u64, duration_ms: u64, cooldown_ms: u64) {
+    |            ^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: method `as_str` is never used
+   --> tests/../src/listening_mode.rs:379:12
+    |
+378 | impl Scene {
+    | ---------- method in this implementation
+379 |     pub fn as_str(self) -> &'static str {
+    |            ^^^^^^
+
+warning: `voice-rust-worker` (test "listening_core") generated 3 warnings
+warning: struct `SummaryTicket` is never constructed
+  --> tests/../src/listening_buffer.rs:20:12
+   |
+20 | pub struct SummaryTicket {
+   |            ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: methods `base_version`, `coverage`, `segments`, and `text` are never used
+  --> tests/../src/listening_buffer.rs:28:12
+   |
+26 | impl SummaryTicket {
+   | ------------------ methods in this implementation
+27 |     /// Private summarizer input. Never log this text.
+28 |     pub fn base_version(&self) -> u64 {
+   |            ^^^^^^^^^^^^
+...
+31 |     pub fn coverage(&self) -> Vec<(u64, u64)> {
+   |            ^^^^^^^^
+...
+37 |     pub fn segments(&self) -> Vec<(u64, u64, String)> {
+   |            ^^^^^^^^
+...
+43 |     pub fn text(&self) -> String {
+   |            ^^^^
+
+warning: fields `summary` and `has_gap` are never read
+  --> tests/../src/listening_buffer.rs:52:9
+   |
+51 | pub struct Context {
+   |            ------- fields in this struct
+52 |     pub summary: Option<String>,
+   |         ^^^^^^^
+53 |     pub recent: String,
+54 |     pub has_gap: bool,
+   |         ^^^^^^^
+
+warning: fields `buffer_id` and `summary_limit` are never read
+  --> tests/../src/listening_buffer.rs:68:5
+   |
+66 | pub struct ListeningBuffer {
+   |            --------------- fields in this struct
+67 |     // Instance identity also rejects a late reply when a caller reuses a session label.
+68 |     buffer_id: u64,
+   |     ^^^^^^^^^
+...
+73 |     summary_limit: usize,
+   |     ^^^^^^^^^^^^^
+
+warning: methods `summary_ticket` and `apply_summary` are never used
+   --> tests/../src/listening_buffer.rs:199:12
+    |
+103 | impl ListeningBuffer {
+    | -------------------- methods in this implementation
+...
+199 |     pub fn summary_ticket(&self) -> Option<SummaryTicket> {
+    |            ^^^^^^^^^^^^^^
+...
+219 |     pub fn apply_summary(&mut self, ticket: SummaryTicket, text: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: variants `Sharing` and `Singing` are never constructed
+  --> tests/../src/listening_mode.rs:13:5
+   |
+11 | pub enum Scene {
+   |          ----- variants in this enum
+12 |     Story,
+13 |     Sharing,
+   |     ^^^^^^^
+14 |     Singing,
+   |     ^^^^^^^
+   |
+   = note: `Scene` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: variant `State` is never constructed
+  --> tests/../src/listening_mode.rs:31:5
+   |
+26 | pub enum Action {
+   |          ------ variant in this enum
+...
+31 |     State,
+   |     ^^^^^
+   |
+   = note: `Action` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: methods `revoke`, `input_active`, `reserve_voice_feedback`, and `cancel_feedback` are never used
+   --> tests/../src/listening_mode.rs:142:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ methods in this implementation
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+
+warning: field `anchor` is never read
+  --> tests/../src/listening_runtime.rs:33:5
+   |
+28 | pub struct AudioPermit {
+   |            ----------- field in this struct
+...
+33 |     anchor: Instant,
+   |     ^^^^^^
+   |
+   = note: `AudioPermit` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: methods `allowed` and `begin_capture` are never used
+  --> tests/../src/listening_runtime.rs:60:12
+   |
+59 | impl AudioPermit {
+   | ---------------- methods in this implementation
+60 |     pub fn allowed(&self) -> bool {
+   |            ^^^^^^^
+...
+63 |     pub fn begin_capture(&self) -> Option<CaptureTicket> {
+   |            ^^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> tests/../src/listening_runtime.rs:141:12
+    |
+100 | impl ListeningSession {
+    | --------------------- methods in this implementation
+...
+141 |     pub fn advance_clock(&mut self, ms: u64) {
+    |            ^^^^^^^^^^^^^
+...
+144 |     pub fn now_ms(&self) -> u64 {
+    |            ^^^^^^
+...
+154 |     pub fn precheck(&self, c: &Command) -> Result<Option<Snapshot>, Reject> {
+    |            ^^^^^^^^
+...
+161 |     pub fn authenticated(&self, participant: Option<&str>, trace: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+...
+169 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+176 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+...
+181 |     pub fn summary_ticket(&self) -> Option<crate::listening_buffer::SummaryTicket> {
+    |            ^^^^^^^^^^^^^^
+...
+184 |     pub fn apply_summary(&mut self, t: crate::listening_buffer::SummaryTicket, text: &str) -> bool {
+    |            ^^^^^^^^^^^^^
+...
+187 |     pub fn raw_chars(&self) -> usize {
+    |            ^^^^^^^^^
+...
+299 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (test "listening_runtime") generated 12 warnings (1 duplicate)
+warning: constant `LEASE_TTL_MS` is never used
+ --> tests/../src/listening_mode.rs:6:11
+  |
+6 | pub const LEASE_TTL_MS: u64 = 15_000;
+  |           ^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `MAX_SESSION_MS` is never used
+ --> tests/../src/listening_mode.rs:7:11
+  |
+7 | pub const MAX_SESSION_MS: u64 = 1_800_000;
+  |           ^^^^^^^^^^^^^^
+
+warning: constant `MAX_SEQUENCE` is never used
+ --> tests/../src/listening_mode.rs:8:7
+  |
+8 | const MAX_SEQUENCE: u64 = 9_007_199_254_740_991;
+  |       ^^^^^^^^^^^^
+
+warning: constant `RECENT_COMMANDS` is never used
+ --> tests/../src/listening_mode.rs:9:7
+  |
+9 | const RECENT_COMMANDS: usize = 32;
+  |       ^^^^^^^^^^^^^^^
+
+warning: enum `Phase` is never used
+  --> tests/../src/listening_mode.rs:17:10
+   |
+17 | pub enum Phase {
+   |          ^^^^^
+
+warning: enum `Action` is never used
+  --> tests/../src/listening_mode.rs:26:10
+   |
+26 | pub enum Action {
+   |          ^^^^^^
+
+warning: struct `Command` is never constructed
+  --> tests/../src/listening_mode.rs:34:12
+   |
+34 | pub struct Command {
+   |            ^^^^^^^
+
+warning: struct `Snapshot` is never constructed
+  --> tests/../src/listening_mode.rs:41:12
+   |
+41 | pub struct Snapshot {
+   |            ^^^^^^^^
+
+warning: enum `Reject` is never used
+  --> tests/../src/listening_mode.rs:49:10
+   |
+49 | pub enum Reject {
+   |          ^^^^^^
+
+warning: struct `ListeningMode` is never constructed
+  --> tests/../src/listening_mode.rs:62:12
+   |
+62 | pub struct ListeningMode {
+   |            ^^^^^^^^^^^^^
+
+warning: multiple associated items are never used
+   --> tests/../src/listening_mode.rs:85:12
+    |
+ 84 | impl ListeningMode {
+    | ------------------ associated items in this implementation
+ 85 |     pub fn new(trace: &str) -> Result<Self, Reject> {
+    |            ^^^
+...
+117 |     pub fn snapshot(&self) -> Snapshot {
+    |            ^^^^^^^^
+...
+126 |     pub fn renew_lease(&mut self, version: u64, until: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^
+...
+142 |     pub fn revoke(&mut self, version: u64) {
+    |            ^^^^^^
+...
+153 |     fn authorized(&self, now: u64) -> bool {
+    |        ^^^^^^^^^^
+...
+156 |     fn change_phase(&mut self, phase: Phase) {
+    |        ^^^^^^^^^^^^
+...
+161 |     fn pause(&mut self) {
+    |        ^^^^^
+...
+166 |     fn finish_entry(&mut self) {
+    |        ^^^^^^^^^^^^
+...
+172 |     pub fn precheck(&self, cmd: &Command) -> Result<Option<Snapshot>, Reject> {
+    |            ^^^^^^^^
+...
+192 |     pub fn handle(&mut self, cmd: Command, now: u64) -> Result<Snapshot, Reject> {
+    |            ^^^^^^
+...
+268 |     pub fn capture_drained(&mut self, epoch: u64, now: u64) -> Result<Snapshot, Reject> {
+    |            ^^^^^^^^^^^^^^^
+...
+280 |     pub fn begin_feedback(&mut self, epoch: u64, turn: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^
+...
+296 |     pub fn feedback_done(&mut self, turn: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^
+...
+304 |     pub fn input_active(&self) -> bool {
+    |            ^^^^^^^^^^^^
+...
+307 |     pub fn user_speech(&mut self, now: u64) {
+    |            ^^^^^^^^^^^
+...
+314 |     pub fn user_speech_ended(&mut self, now: u64) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+318 |     pub fn pause_pending_entry(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^^^
+...
+321 |     pub fn pause_unavailable(&mut self) {
+    |            ^^^^^^^^^^^^^^^^^
+...
+326 |     pub fn configure(&mut self, session_ms: u64, duration_ms: u64, cooldown_ms: u64) {
+    |            ^^^^^^^^^
+...
+331 |     pub fn reserve_voice_feedback(&mut self, epoch: u64, now: u64) -> Result<(), Reject> {
+    |            ^^^^^^^^^^^^^^^^^^^^^^
+...
+346 |     pub fn cancel_feedback(&mut self) {
+    |            ^^^^^^^^^^^^^^^
+...
+351 |     pub fn tick(&mut self, now: u64) {
+    |            ^^^^
+...
+362 |     pub fn permits_audio(&self, epoch: u64, turn: u64, now: u64) -> bool {
+    |            ^^^^^^^^^^^^^
+
+warning: constant `ACTIVE_EXITS` is never used
+  --> tests/../src/listening_voice.rs:66:7
+   |
+66 | const ACTIVE_EXITS: &[&str] = &[
+   |       ^^^^^^^^^^^^
+
+warning: function `active_exit_text` is never used
+  --> tests/../src/listening_voice.rs:70:4
+   |
+70 | fn active_exit_text(text: &str) -> String {
+   |    ^^^^^^^^^^^^^^^^
+
+warning: function `parse_active_exit` is never used
+  --> tests/../src/listening_voice.rs:75:8
+   |
+75 | pub fn parse_active_exit(text: &str) -> Option<Utterance> {
+   |        ^^^^^^^^^^^^^^^^^
+
+warning: function `possible_active_exit_prefix` is never used
+  --> tests/../src/listening_voice.rs:80:8
+   |
+80 | pub fn possible_active_exit_prefix(text: &str) -> bool {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `complete_text` is never used
+   --> tests/../src/listening_voice.rs:229:12
+    |
+213 | impl FeedbackFragments {
+    | ---------------------- method in this implementation
+...
+229 |     pub fn complete_text(&self, text: &str, now: u64, epoch: u64, scene: Scene) -> Option<String> {
+    |            ^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (test "listening_voice") generated 17 warnings (1 duplicate)
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 5 warnings (5 duplicates)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 34.69s
+     Running unittests src/main.rs (target/debug/deps/voice_rust_worker-76ffdee0e0b914c4)
+
+running 620 tests
+test audit_capture::tests::arm_from_env_is_fail_closed_without_env ... ok
+test audit_capture::tests::should_arm_matrix ... ok
+test audit_capture::tests::claim_is_one_shot ... ok
+test backchannel::tests::min_reply_env_parse_and_fallback ... ok
+test backchannel::tests::decide_matrix_observe_vs_enforce_vs_short_reply ... ok
+test backchannel::tests::empty_words_means_off_even_if_enforce_requested ... ok
+test audit_capture::tests::drop_writes_exactly_one_wav_0600 ... ok
+test backchannel::tests::parse_drops_blacklist_and_long_words_and_defaults_to_observe ... ok
+test audit_capture::tests::zero_samples_writes_no_file ... ok
+test candidate::tests::m5_candidate_conflict_is_silent_others_are_not ... ok
+test backchannel::tests::substring_and_control_words_never_swallowed ... ok
+test caption_gate::tests::commit_decided_without_echo_mark_defaults_to_publish ... ok
+test caption_gate::tests::commit_with_empty_buffer_is_hold ... ok
+test audit_capture::tests::wall_clock_also_stops_the_window ... ok
+test caption_gate::tests::drop_carries_segments_for_retraction ... ok
+test caption_gate::tests::disabled_never_buffers ... ok
+test caption_gate::tests::drop_does_not_leak_into_next_utterance ... ok
+test caption_gate::tests::echo_drop_discards_whole_batch ... ok
+test caption_gate::tests::empty_final_is_not_buffered ... ok
+test caption_gate::tests::hold_without_commit_keeps_buffer ... ok
+test caption_gate::tests::listening_transition_retracts_pending_captions_before_next_normal_speech ... ok
+test caption_gate::tests::mark_echo_drop_refuses_to_drop_control_outlets ... ok
+test caption_gate::tests::multi_final_one_commit_publishes_all_in_order ... ok
+test caption_gate::tests::verdict_resets_after_take ... ok
+test contract::tests::turn_id_single_slot_cleared_on_commit ... ok
+test audit_capture::tests::full_window_does_not_rotate ... ok
+test caption_gate::tests::unresolved_buffer_is_never_published ... ok
+test control::tests::ack_shape_matches_android_contract ... ok
+test config::tests::missing_env_fails_fast ... ok
+test control::tests::bypass_events_do_not_map_to_cancel ... ok
+test control::tests::canary_say_parses_and_worker_src_rejected ... ok
+test control::tests::command_word_parse_variants ... ok
+test control::tests::command_word_carries_candidate_id ... ok
+test control::tests::dedup_is_per_trace_and_seq ... ok
+test control::listening_tests::listening_control_commands_reach_the_authenticated_pipeline_adapter ... ok
+test control::tests::dedup_seen_is_readonly ... ok
+test control::tests::accepts_android_cancel ... ok
+test control::tests::device_command_proposed_shape ... ok
+test control::tests::command_word_v31_local_action_passthrough ... ok
+test control::tests::contract_fixture_locks_protocol ... ok
+test control::tests::device_result_lane_defaults_to_l1 ... ok
+test control::tests::input_ready_shape_matches_frozen_contract ... ok
+test control::tests::device_result_parse_and_reject ... ok
+test control::tests::device_result_extra_passthrough_for_v217_fields ... ok
+test control::listening_tests::listening_voice_proposal_echo_is_strict_and_never_an_android_seq ... ok
+test control::tests::device_result_v31_fields_and_l0_lane ... ok
+test control::tests::input_ready_request_parses_and_restated_keeps_shape ... ok
+test control::tests::proposed_l2_carries_lane_and_candidate ... ok
+test control::listening_tests::listening_control_strict_payload_and_safe_sequence_matrix ... ok
+test control::tests::own_ready_events_rejected_by_inbound_parse ... ok
+test control::tests::rejects_own_ack_on_same_topic ... ok
+test control::tests::session_exit_ack_parses ... ok
+test control::tests::session_exit_signal_contract ... ok
+test control::tests::unknown_type_and_garbage_are_dropped_not_panicking ... ok
+test control::tests::wake_with_contract_version_maps_capability ... ok
+test device_grammar::tests::mode_parsing_and_executable_gate ... ok
+test device_intent::overlap_skip_tests::skip_list_matches_hash_or_lowercase_sn_only ... ok
+test caption_gate::tests::stop_swallowed_as_echo_still_publishes_caption ... ok
+test caption_gate::tests::exit_tail_respects_switch ... ok
+test caption_gate::tests::buffered_texts_exposes_individual_finals ... ok
+test caption_gate::tests::control_outlet_matrix ... ok
+test caption_gate::tests::b55_bc_misrecognitions_are_not_control_outlets ... ok
+test device_intent::chip_echo_tests::phrases_for_label_reflect_alias_table ... ok
+test device_intent::chip_echo_tests::spoken_text_containing_alias_is_echo_suspect ... ok
+test device_intent::tests::chip_decision_matrix ... ok
+test device_intent::tests::asr_mistranscription_aliases ... ok
+test device_intent::tests::command_by_label_catalog ... ok
+test device_intent::tests::canary_gating ... ok
+test device_intent::tests::l2_fallback_hint_only_for_unknown_label_on_device_room ... ok
+test device_intent::tests::daily_aliases_hit ... ok
+test device_intent::tests::l2_gate_order_and_reasons ... ok
+test device_intent::tests::label_46_rejected_even_in_table_data ... ok
+test device_intent::tests::l2_fallback_hint_contains_no_device_alias ... ok
+test device_intent::tests::motor_label_range_is_25_to_36 ... ok
+test device_intent::tests::normalize_params_default_count_equals_one ... ok
+test device_intent::tests::normalize_rules ... ok
+test device_intent::tests::l2_device_text_gate_d2 ... ok
+test device_intent::tests::all_63_protocol_phrases_map_correctly ... ok
+test device_intent::tests::negative_matrix_never_matches ... ok
+test device_intent::tests::polite_affix_stripping ... ok
+test device_intent::tests::volume_out_of_range ... ok
+test device_intent::tests::l2_batch_allows_all_table_labels_only ... ok
+test device_intent::tests::volume_percent_phrases ... ok
+test device_intent::tests::particle_affix_stripping_d1 ... ok
+test device_intent::tests::revised_spectrum_and_bare_direction_words ... ok
+test device_ledger::tests::claimed_same_utterance_suppresses_asr_and_l2 ... ok
+test device_ledger::tests::command_owner_of_matrix ... ok
+test device_ledger::tests::deferred_motor_confirmed_by_same_utterance_asr_carries_candidate ... ok
+test device_ledger::tests::deferred_motor_without_asr_becomes_orphan ... ok
+test device_ledger::tests::eot_pending_text_must_not_lose_chip_ownership ... ok
+test device_ledger::tests::exact_key_includes_params ... ok
+test device_ledger::tests::held_chip_in_playback_confirmed_by_same_utterance_asr ... ok
+test device_ledger::tests::held_chip_without_asr_never_proposes ... ok
+test device_ledger::tests::l0_gate_order_and_dedupe ... ok
+test device_ledger::tests::late_chip_hint_after_commit_is_duplicate ... ok
+test device_ledger::tests::no_speech_start_falls_back_to_window_before_end ... ok
+test device_ledger::tests::orchestration_contract2_two_utterances ... ok
+test device_ledger::tests::orphaned_candidate_must_not_reappear ... ok
+test device_ledger::tests::queued_l2_must_not_escape_original_claimed_turn ... ok
+test device_ledger::tests::r1_claimed_without_asr_does_not_suppress_next_utterance ... ok
+test device_ledger::tests::r1_second_utterance_asr_only_not_swallowed ... ok
+test device_ledger::tests::short_pause_within_utterance_keeps_association ... ok
+test device_ledger::tests::unknown_l0_action_must_not_speak_or_consume_key ... ok
+test device_ledger::tests::unknown_or_ignored_ownership_blocks_same_utterance_proposals ... ok
+test eot_snapshot::interrupt_snap_tests::ctx_survives_abort_before_registration ... ok
+test eot_snapshot::interrupt_snap_tests::disabled_by_default_yields_none ... ok
+test eot_snapshot::interrupt_snap_tests::empty_latch_is_unknown ... ok
+test eot_snapshot::interrupt_snap_tests::live_ctx_wins_over_stale_latch ... ok
+test eot_snapshot::interrupt_snap_tests::never_exceeds_cap_whatever_the_pattern ... ok
+test eot_snapshot::interrupt_snap_tests::stale_latch_degrades_to_unknown_not_a_guess ... ok
+test eot_snapshot::tests::disabled_without_env_dir ... ok
+test eot_snapshot::tests::json_escape_covers_quotes_and_control ... ok
+test eot_snapshot::tests::ring_keep_switches_on_flag ... ok
+test device_grammar::tests::e7_discussion_sentences_blocked ... ok
+test device_grammar::tests::e6_llm_replay_12 ... ok
+test filler::tests::boost_falls_back_when_no_short_clip ... ok
+test filler::tests::bucket_priority_matches_python ... ok
+test eot_snapshot::tests::wav_roundtrip_via_hound ... ok
+test device_grammar::tests::e9_slot_probe_34 ... ok
+test device_grammar::tests::worked_examples ... ok
+test audit_capture::tests::smaller_max_is_honored ... ok
+test filler::tests::device_bucket_hints_and_gate ... ok
+test filler::tests::boost_barge_bucket_still_filters_overlong ... ok
+test filler::tests::boost_prefers_short_clips_only ... ok
+test filler::tests::boost_uses_barge_bucket_when_present ... ok
+test device_grammar::tests::e4_negatives_never_fire ... ok
+test filler::tests::normal_turn_never_picks_barge ... ok
+test filler::tests::style_ark_legacy_and_probabilities_are_preserved ... ok
+test filler::tests::style_ark_metadata_validation_and_room_boundary ... ok
+test gate::tests::duplicate_track_subscribed_is_idempotent ... ok
+test gate::tests::is_open_latches_after_ready ... ok
+test filler::tests::style_ark_zero_blocks_boost_and_all_buckets ... ok
+test filler::tests::style_ark_shortest_avoids_consecutive_repeat ... ok
+test gate::tests::output_first_never_starts_input ... ok
+test gate::tests::user_track_first_starts_input_without_output ... ok
+test gate::tests::dead_watch_sender_also_fails_closed ... ok
+test gate::tests::local_receipt_gate_dead_sender_releases ... ok
+test gate::tests::local_receipt_gate_prereleased_passthrough ... ok
+test job::style_ark_metadata_tests::style_ark_invalid_policy_keeps_other_metadata ... ok
+test job::startup_queue_tests::replacement_discards_old_begin_and_cancel_without_closing_channel ... ok
+test job::tests::issue_clock_precedence_and_fallback ... ok
+test job::business_prebuild_tests::business_startup_failed_prebuild_preserves_single_inline_fallback ... ok
+test job::tests::listening_job_abort_waits_for_owned_resources_to_drop ... ok
+test filler::tests::style_ark_two_clips_alternate_after_recent_window_fills ... ok
+test job::tests::listening_job_close_error_still_deletes_and_keeps_failure_visible ... ok
+test job::tests::listening_job_pipeline_completion_wakes_without_room_events ... ok
+test job::tests::listening_job_paused_session_closes_double_and_reconnects_without_replay ... ok
+test job::tests::listening_job_wait_preserves_room_events_and_watchdog ... ok
+test filler::tests::normal_turn_uses_full_pool ... ok
+test device_grammar::tests::e2_natural_positives_35 ... ok
+test device_grammar::tests::e8_slot_matrix_by_domain ... ok
+test filler::tests::shortest_policy_uses_semantic_bucket_then_gen ... ok
+test device_grammar::tests::e3_corpus_hits_64_stable ... ok
+test audit_capture::tests::max_is_hard_capped_at_30s ... ok
+test eot_snapshot::tests::snapshot_writes_wav_and_respects_per_job_cap ... ok
+test gate::tests::late_output_ready_keeps_first_pcm ... ok
+test device_grammar::tests::e1_alias_table_never_contradicted ... ok
+test job::tests::r16_ordinary_worker_keeps_single_attempt ... ok
+test listening_adapter::adapter_tests::listening_authority_timeout_during_entry_pauses_instead_of_chat ... ok
+test listening_adapter::adapter_tests::listening_duplicate_enter_never_completes_before_both_confirmations ... ok
+test listening_adapter::adapter_tests::listening_control_tick_cannot_hide_pause_cleanup ... ok
+test gate::tests::output_gate_timeout_is_fail_closed ... ok
+test listening_adapter::adapter_tests::listening_enter_replay_is_rejected_before_any_http_side_effect ... ok
+test gate::tests::local_receipt_gate_holds_until_release_in_order ... ok
+test listening_adapter::adapter_tests::listening_pending_enter_state_query_preserves_entry_sequence ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_does_not_make_normal_chat_wait ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_echo_tail_does_not_erase_prior_user_fragments ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_expired_lease_retains_prior_authorized_story_only ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_holds_prefix_until_mismatch_then_preserves_original_story ... ok
+test gate::tests::local_receipt_gate_deadline_fail_open ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_real_three_finals_route_once_without_recording_command ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_releases_captions_in_order_once_on_mismatch_and_timer ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_tail_is_echo_candidate_before_any_mutation ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_timeout_preserves_prefix_without_waiting_for_another_final ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_partial_is_not_an_echo_command ... ok
+test listening_adapter::adapter_tests::listening_feedback_character_tuning_and_reply_binding_are_consumed ... ok
+test listening_adapter::adapter_tests::listening_voice_finite_rules_match_the_three_frozen_contracts ... ok
+test listening_adapter::adapter_tests::listening_summary_failure_cannot_retry_on_every_audio_tick ... ok
+test listening_adapter::adapter_tests::listening_stale_content_does_not_clear_new_inflight_request ... ok
+test listening_adapter::adapter_tests::listening_voice_exit_returns_only_next_chat_and_never_resurrects_old_output ... ok
+test listening_adapter::adapter_tests::listening_voice_first_ordered_commit_preserves_tail_without_spending_android_seq ... ok
+test listening_adapter::adapter_tests::listening_voice_entry_retains_tail_and_transition_story_until_double_confirmation ... ok
+test listening_adapter::adapter_tests::listening_voice_final_before_vad_end_is_not_lost ... ok
+test listening_adapter::adapter_tests::listening_split_singing_feedback_retains_first_pause_across_vad_fragments ... ok
+test listening_adapter::adapter_tests::listening_active_exit_aliases_complete_normal_transition ... ok
+test listening_adapter::adapter_tests::listening_voice_invitation_preempts_inflight_summary ... ok
+test listening_adapter::adapter_tests::listening_voice_proposal_timeout_pauses_and_cannot_voice_exit ... ok
+test listening_adapter::adapter_tests::listening_voice_legacy_client_never_proposes_or_speaks_a_fake_entry ... ok
+test job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort ... FAILED
+test listening_adapter::adapter_tests::listening_summary_threshold_and_interval_are_consumed ... ok
+test listening_adapter::http_joint_tests::listening_joint_real_brain_http_entry_feedback_and_revocation ... ignored, requires bundled Brain HTTP fixture; run the joint harness
+test listening_adapter::http_joint_tests::listening_joint_real_brain_http_voice_singing_uses_negotiated_trigger_and_exit ... ignored, requires current committed Brain HTTP fixture; not RTC/Android
+test listening_adapter::tests::listening_voice_invitation_excludes_quotes_lyrics_and_ordinary_questions ... ok
+test listening_http::tests::listening_frozen_snapshot_hash_and_every_tuning_bound ... ok
+test listening_http::tests::listening_lease_subtracts_elapsed_and_rejects_replay_or_expired ... ok
+test listening_adapter::adapter_tests::listening_voice_recent_wake_ordinary_final_consumes_and_full_command_still_works ... ok
+test listening_adapter::adapter_tests::listening_voice_flag_off_denies_entry_but_preserves_safe_exit ... ok
+test listening_http::transport_tests::transport_rejects_remote_unapproved_or_credential_urls ... ok
+test listening_ready::tests::listening_worker_ready_requires_valid_complete_applied_snapshot ... ok
+test llm::dev_inband_tests::inband_roundtrip_and_text_untouched ... ok
+test llm::dev_inband_tests::malformed_or_unclosed_passes_through ... ok
+test llm::tests::chat_url_appends_query_only_when_set ... ok
+test llm::tests::chat_url_merges_room_and_filters_unsafe_chars ... ok
+test llm::tests::cross_chunk_word_and_punct ... ok
+test llm::tests::dev_mark_strip_table ... ok
+test llm::tests::fallback_cfg_requires_all_three_and_inherits ... ok
+test llm::tests::fallback_never_inherits_url_query ... ok
+test listening_adapter::adapter_tests::listening_voice_recent_wake_proposes_at_ten_seconds_without_forging_transcript ... ok
+test llm::tests::keeps_word_without_punct ... ok
+test llm::tests::non_filler_first_char_passthrough_immediately ... ok
+test listening_adapter::adapter_tests::listening_split_feedback_authority_changes_and_echo_clear_never_authorize_tail ... ok
+test listening_adapter::adapter_tests::listening_voice_singing_requires_pause_before_command_and_never_records_command ... ok
+test llm::tests::r22_http2_requires_candidate_and_explicit_opt_in ... ok
+test listening_adapter::adapter_tests::listening_voice_proposal_binds_sender_trace_epoch_and_payload_replay ... ok
+test llm::tests::strips_leading_filler_word_with_punct ... ok
+test llm::tests::whole_reply_is_filler_kept_via_flush ... ok
+test ordered_pcm::tests::b23_budget_env_overrides ... ok
+test ordered_pcm::tests::b23_no_final_is_no_task_under_v1_failed_legacy ... ok
+test ordered_pcm::tests::b23_session_mismatch_rejects_begin_message_only ... ok
+test ordered_pcm::tests::b23_task_and_failed_results_carry_outcome_and_next ... ok
+test listening_adapter::adapter_tests::listening_voice_state_query_does_not_conflict_with_inflight_proposal ... ok
+test ordered_pcm::tests::b25_late_begin_after_timeout_is_message_level_rejected ... ok
+test ordered_pcm::tests::b25_no_task_reason_distinguishes_wake_only_from_no_final ... ok
+test ordered_pcm::tests::b23_wake_only_is_no_task_under_v1_but_commit_legacy ... ok
+test ordered_pcm::tests::cancel_discards_held_finals_and_is_terminal ... ok
+test listening_adapter::adapter_tests::listening_voice_flag_and_singing_exclude_automatic_feedback ... ok
+test ordered_pcm::tests::device_identity_is_derived_from_sn_room_only ... ok
+test ordered_pcm::tests::conflicting_begin_is_rejected_without_cancelling_active ... ok
+test ordered_pcm::tests::b25_rejected_messages_are_rate_limited ... ok
+test ordered_pcm::tests::duplicate_chunk_is_idempotent_and_overlap_conflict_fails ... ok
+test listening_adapter::adapter_tests::listening_voice_missing_local_ready_overflow_and_expired_lease_stay_silent ... ok
+test listening_http::transport_tests::release_transport_only_approved_https_origin ... ok
+test ordered_pcm::tests::end_candidate_fires_on_noisy_floor_with_adaptive_gate ... ok
+test ordered_pcm::tests::end_candidate_requires_more_than_wake_word ... ok
+test ordered_pcm::tests::evidence_carries_device_clocks_and_first_submit ... ok
+test listening_http::transport_tests::listening_candidate_transport_requires_exact_reviewed_https_path ... ok
+test ordered_pcm::tests::evidence_records_timeline_relative_to_begin ... ok
+test ordered_pcm::tests::input_mode_default_is_rtc ... ok
+test ordered_pcm::tests::end_candidate_fires_once_after_final_and_trailing_quiet ... ok
+test llm::tests::r22_http2_opt_in_keeps_http1_server_compatibility ... ok
+test ordered_pcm::tests::keep_from_crops_only_prefix ... ok
+test ordered_pcm::tests::local_receipt_ack_echoes_accepted_when_enabled ... ok
+test ordered_pcm::tests::kotlin_fixtures_parse_and_run_through_session ... ok
+test ordered_pcm::tests::local_receipt_ack_echoes_ignored_when_disabled_and_absent_when_undeclared ... ok
+test ordered_pcm::tests::missing_seq_is_single_terminal_failure ... ok
+test ordered_pcm::tests::over_cap_and_timeout_fail_whole_generation ... ok
+test ordered_pcm::tests::interrupted_stream_never_commits_held_finals ... ok
+test ordered_pcm::tests::packet_total_size_limit ... ok
+test ordered_pcm::tests::receipt_done_before_end_is_remembered ... ok
+test ordered_pcm::tests::receipt_done_played_zero_marks_declined_but_still_releases ... ok
+test ordered_pcm::tests::receipt_done_wrong_identity_or_after_cancel_is_ignored ... ok
+test ordered_pcm::tests::fake_vendor_finals_before_and_after_end_commit_once_at_stream_end ... ok
+test ordered_pcm::tests::queue_full_counts_and_fails_generation ... ok
+test ordered_pcm::tests::stream_end_without_drain_or_finals_fails ... ok
+test ordered_pcm::tests::wire_roundtrip_and_errors ... ok
+test ordered_pcm::tests::wrong_trace_and_missing_boundary_and_playback_overlap ... ok
+test owned_task::tests::awaited_owner_transfers_result ... ok
+test owned_task::tests::completed_prebuild_result_drops_its_asr_owner ... ok
+test owned_task::tests::dropping_running_owner_releases_nested_resources ... ok
+test ordered_pcm::tests::receipt_done_after_commit_releases_once ... ok
+test llm::tests::history_settle_paths ... ok
+test ordered_pcm::tests::end_candidate_negative_anchors ... ok
+test pipeline::device_turn_tests::device_reply_table ... ok
+test pipeline::device_turn_tests::echo_no_false_hit_on_unrelated_text ... ok
+test pipeline::device_turn_tests::echo_normalize_strips_punct_and_lowercases ... ok
+test pipeline::device_turn_tests::echo_substring_hits_real_case ... ok
+test pipeline::device_turn_tests::relative_action_table ... ok
+test pipeline::greeting_gate_tests::disabled_and_empty_does_not_greet ... ok
+test pipeline::greeting_gate_tests::disabled_with_nonempty_text_does_not_greet ... ok
+test pipeline::greeting_gate_tests::enabled_with_empty_text_does_not_greet ... ok
+test pipeline::greeting_gate_tests::enabled_with_text_greets ... ok
+test pipeline::greeting_gate_tests::enabled_with_whitespace_only_text_does_not_greet ... ok
+test pipeline::greeting_gate_tests::falsy_values_disable ... ok
+test pipeline::greeting_gate_tests::invalid_value_falls_back_to_default_without_panic ... ok
+test pipeline::greeting_gate_tests::truthy_values_enable ... ok
+test pipeline::greeting_gate_tests::unset_defaults_to_enabled ... ok
+test pipeline::listening_lifecycle_tests::listening_stt_owned_tasks_cancel_on_error_or_panic ... ok
+test pipeline::listening_voice_pipeline_tests::listening_fragment_echo_uses_completed_command_not_common_short_parts ... ok
+test pipeline::listening_voice_pipeline_tests::listening_voice_in_playback_or_just_ended_echo_cannot_propose_mode ... ok
+test pipeline::publish_result_tests::emitted_log_carries_no_room_sn_token_or_url ... ok
+test pipeline::publish_result_tests::emitted_log_marks_ok_and_failure_with_defined_fields ... ok
+test pipeline::publish_result_tests::fail_class_discriminates_between_shapes ... ok
+test pipeline::stt_preconnect_tests::delayed_rtc_replaces_idle_preconnect_and_preserves_first_pcm ... ok
+test llm::tests::r22_http2_cancel_resets_only_one_stream_and_keeps_connection ... ok
+test pipeline::stt_preconnect_tests::fresh_preconnect_is_reused_but_closed_young_preconnect_is_not ... ok
+test pipeline::tests::truncate_spoken_by_sentence_and_fraction ... ok
+test pipeline::stt_preconnect_tests::interrupted_reconnecting_preconnect_is_not_reused_when_young ... ok
+test pipeline::tests::truncate_spoken_empty_progress_is_empty ... ok
+test playout::listening_audio_tests::listening_revocation_stops_retry_and_short_tail_admission ... ok
+test playout::listening_audio_tests::listening_enter_waits_for_real_capture_completion_then_clears ... ok
+test playout::tests::deadline_restarts_after_gap_instead_of_accumulating ... ok
+test playout::tests::final_stats_written_on_drop_and_completed_only_when_drained ... ok
+test playout::tests::first_underrun_position_is_measured_from_audio_start ... ok
+test playout::tests::gap_below_noise_floor_is_ignored ... ok
+test playout::tests::never_started_reports_minus_one_not_zero ... ok
+test playout::tests::no_underrun_reports_minus_one_not_zero_position ... ok
+test playout::tests::pause_does_not_reset_the_audio_start_anchor ... ok
+test playout::tests::resume_after_pause_is_not_an_underrun ... ok
+test playout::tests::unprimed_skips_watermark_but_still_counts_underrun ... ok
+test playout::tests::wait_beyond_buffer_counts_underrun_with_gap_ms ... ok
+test playout::tests::wait_within_buffer_lowers_watermark_only ... ok
+test preflight::tests::fires_after_silence_and_text_quiet ... ok
+test preflight::tests::speech_resets_silence_clock ... ok
+test preflight::tests::stale_interim_before_silence_never_fires ... ok
+test ready_confirm::tests::apply_routes_stop_and_exit_differently ... ok
+test ready_confirm::tests::cancel_lifecycle_matrix ... ok
+test ready_confirm::tests::closed_takes_precedence_over_budget_exhausted ... ok
+test ready_confirm::tests::disabled_never_restates_or_pends ... ok
+test ready_confirm::tests::interrupt_after_ready_still_restates ... ok
+test ready_confirm::tests::interrupt_before_anything_still_pends ... ok
+test ready_confirm::tests::interrupt_keeps_pending_and_ready_fulfils_it ... ok
+test ready_confirm::tests::pending_then_session_exit_then_ready_does_not_reply ... ok
+test ready_confirm::tests::ready_first_then_request_restates_once ... ok
+test ready_confirm::tests::repeated_interrupts_do_not_touch_budget ... ok
+test ready_confirm::tests::request_first_then_ready_fulfils_pending_with_seq ... ok
+test ready_confirm::tests::session_exit_after_ready_closes_late_request ... ok
+test ready_confirm::tests::session_exit_before_ready_never_pends_nor_replies ... ok
+test ready_confirm::tests::session_exit_is_idempotent_and_irreversible ... ok
+test ready_confirm::tests::snapshot_is_the_original_timings ... ok
+test ready_confirm::tests::swallow_lifecycle_matrix ... ok
+test room_cleanup::tests::r16_cleanup_health_fails_closed_on_stale_missing_and_pending ... ok
+test ordered_pcm::tests::end_candidate_survives_digital_zero_preroll ... ok
+test ordered_pcm::tests::six_seconds_backlog_is_retained ... ok
+test say_defer::tests::idle_says_now_busy_defers_until_played_out ... ok
+test say_defer::tests::newer_overrides_and_abort_drops ... ok
+test say_defer::tests::success_silent_only_for_l2_with_reply_in_flight ... ok
+test search_canary::tests::bounded_two_device_scope_and_expiry ... ok
+test search_canary::tests::exact_https_prefix_only ... ok
+test ordered_pcm::tests::evidence_dump_positive_path ... ok
+test search_canary::tests::legacy_window_and_conflicting_lists ... ok
+test search_canary::tests::listening_candidate_is_bounded_isolated_search_profile ... ok
+test search_canary::tests::r16_explicitly_bounded_week_window ... ok
+test search_canary::tests::r17_unknown_reserved_agent_is_not_an_ordinary_worker ... ok
+test search_canary::tests::r17_verifier_cannot_bypass_device_and_window_guards ... ok
+test search_canary::tests::r17_verification_keeps_candidate_features_with_separate_identity_and_paths ... ok
+test search_canary::tests::trusted_metadata_deadline_and_exact_sn ... ok
+test search_control_recovery::tests::r25_only_voiced_search_without_transcript_retries_with_a_bound ... ok
+test search_control_recovery::tests::listening_candidate_cancels_old_recovery_without_suppressing_story_text ... ok
+test search_control_recovery::tests::r25_primary_or_new_speech_cancels_recovery_and_late_control_cannot_publish ... ok
+test search_dialogue::tests::r14_short_ack_continues_real_result_after_pcm_only ... ok
+test search_dialogue::tests::recognized_en_en_is_search_ack_only_inside_active_result ... ok
+test search_enrollment::tests::existing_allowlist_is_closed_when_empty_or_not_targeted ... ok
+test search_enrollment::tests::explicit_p1_mode_includes_existing_and_future_device_rooms ... ok
+test search_enrollment::tests::p2_and_verification_cannot_inherit_all_registered ... ok
+test search_policy::robustness_cases::asr_missing_delimiters_keeps_suffix_cancel_and_replace_intents ... ok
+test search_policy::robustness_cases::asr_split_topic_first_binds_only_an_immediate_public_question ... ok
+test search_policy::robustness_cases::contextual_suffix_and_politeness_do_not_become_part_of_query ... ok
+test search_policy::robustness_cases::clarified_followups_cover_nonweather_topics_and_are_one_turn_only ... ok
+test search_policy::robustness_cases::explicit_result_resume_accepts_politeness_and_bounded_asr_stutters ... ok
+test search_policy::robustness_cases::held_out_requests_and_contradictions_do_not_depend_on_weather_words ... ok
+test search_policy::robustness_cases::natural_cancel_resume_and_replace_are_explicit_and_disjoint ... ok
+test search_policy::robustness_cases::negation_quotes_personal_chat_and_device_actions_do_not_search ... ok
+test search_policy::robustness_cases::resume_tolerance_never_rewrites_negation_quotation_or_unrelated_chat ... ok
+test search_policy::robustness_cases::vague_or_missing_search_topic_requires_clarification_not_model_promise ... ok
+test search_policy::tests::explicit_search_only_and_cancel_are_separate_from_barge_in ... ok
+test search_policy::tests::natural_search_and_cancel_phrases_route_without_claiming_quotes_or_negations ... ok
+test search_policy::tests::no_claim_until_full_idle_interval_and_never_redeliver ... ok
+test search_policy::tests::r18_cancel_compound_survives_asr_space_between_clauses ... ok
+test search_policy::tests::r20_observed_resume_and_suffix_fragments_keep_the_search_route ... ok
+test search_policy::tests::r21_search_word_questions_are_chat_even_after_a_clarification ... ok
+test search_policy::tests::search_handoff_is_only_immediate_suffix_binding ... ok
+test search_policy::tests::speech_resets_idle_cancel_drops_ready_and_old_results_expire ... ok
+test search_policy::tests::split_intent_only_accepts_prompt_public_topic_and_expires ... ok
+test search_progress::tests::r14_pause_does_not_advance_by_wall_clock_and_short_tail_merges ... ok
+test search_progress::tests::r14_sentence_cursor_never_skips_an_unfinished_sentence ... ok
+test search_policy::robustness_cases::explicit_request_variants_preserve_topics_across_domains ... ok
+test search_receipts::tests::r13_receipt_rotates_only_within_requested_module ... ok
+test search_receipts::tests::r22_failure_clip_is_optional_and_does_not_invalidate_existing_receipts ... ok
+test search_receipts::tests::r13_receipt_assets_require_hash_format_voice_and_complete_catalog ... ok
+test ordered_pcm::tests::tail_samples_are_flushed_exactly ... ok
+test room_cleanup::tests::r16_close_intent_survives_owner_drop_until_confirmed ... ok
+test search_routing::style_ark_tests::style_ark_resource_usage_never_starts_web_search ... ok
+test room_cleanup::tests::r16_invalid_room_and_changed_record_are_not_overwritten ... ok
+test search_routing::tests::config_is_bounded_and_new_rule_really_changes_decision ... ok
+test llm::tests::search_handoff_removes_only_the_exact_trailing_question_and_reply ... ok
+test search_routing::tests::no_config_keeps_old_contract_and_does_not_enable_natural_route ... ok
+test listening_adapter::adapter_tests::listening_active_exit_does_not_capture_normal_chat_quotes_or_questions ... ok
+test listening_adapter::adapter_tests::listening_voice_recent_wake_fails_closed_on_capability_policy_grant_epoch_and_pause ... ok
+test search_routing::tests::r20_configured_router_keeps_adjacent_resume_tail ... ok
+test search_routing::tests::r21_word_explanations_override_editable_search_keywords ... ok
+test job::tests::listening_job_uncooperative_abort_cannot_block_room_cleanup ... ok
+test job::tests::r14_job_close_notifies_cleanup_and_still_bounds_a_stuck_pipeline ... ok
+test search_routing::tests::r17_result_resume_survives_reconnect_config_and_pending_clarification ... ok
+test search_routing::tests::hard_controls_and_negatives_survive_editable_rules ... ok
+test search_routing::tests::r23_weather_asr_replace_is_scoped_to_verified_weather_place ... ok
+test search_routing::tests::clarification_preserves_day_but_does_not_capture_chat_or_expired_reply ... ok
+test search_routing::p1_weather_hotfix_tests::p1_weather_forecast_without_city_uses_location ... ok
+test search_routing::tests::r27_explicit_page_reading_routes_without_changing_chat ... ok
+test search_routing::tests::r26_continued_weather_imperative_keeps_verified_place ... ok
+test search_routing::p1_weather_hotfix_tests::p1_weather_never_replaces_unknown_or_multiple_places_with_local_weather ... ok
+test search_routing::tests::r10_expanded_weather_preserves_places_and_control_without_stealing_chat ... ok
+test search_routing::tests::r8_implicit_city_uses_background_device_location_and_explicit_city_wins ... ok
+test search_routing::tests::r7_natural_weather_must_create_task_without_explicit_search_verb ... ok
+test search_tasks::tests::gates_are_closed_for_empty_list_and_other_devices ... ok
+test search_routing::p1_weather_hotfix_tests::p1_weather_spoken_requests_extract_only_the_place ... ok
+test search_routing::tests::r23_weather_question_and_activity_tail_do_not_become_places ... ok
+test search_routing::tests::unsupported_places_dates_and_metrics_never_borrow_supported_city_weather ... ok
+test search_tasks::tests::complete_clarification_question_is_submitted_without_tail_wait ... ok
+test search_tasks::tests::clarified_topic_split_by_asr_is_one_complete_search_not_foreground_chat ... ok
+test search_tasks::tests::empty_ledger_must_not_abort_the_unconfirmed_submit_notice ... ok
+test search_tasks::tests::hot_configured_weather_supersedes_unsent_clarification_topic ... ok
+test search_tasks::tests::listening_search_stays_explicit_across_mode_exit_and_late_result ... ok
+test search_tasks::tests::noisy_or_missing_tail_cannot_hold_search_indefinitely ... ok
+test playout::listening_rtc_tests::listening_native_rtc_source_obeys_permit_and_entry_drain ... ok
+test search_tasks::tests::r13_receipt_disabled_preserves_legacy_acceptance_and_idle_gate ... ok
+test search_tasks::tests::ordinary_turns_keep_results_but_revocation_and_cancel_destroy_replay ... ok
+test search_tasks::tests::r13_receipt_is_ready_after_queue_acceptance_without_http_or_idle_wait ... ok
+test search_tasks::tests::r13_receipt_ready_answer_skips_unspoken_receipt_and_keeps_result_gate ... ok
+test search_tasks::tests::clarification_topic_never_waits_unrelated_chat_or_survives_cancel ... ok
+test search_tasks::tests::r13_receipt_success_ack_is_not_spoken_twice ... ok
+test search_tasks::tests::listening_candidate_task_client_uses_the_real_background_path ... ok
+test search_tasks::tests::r13_receipt_does_not_claim_queue_rejection_or_unfinished_topic ... ok
+test search_tasks::tests::r14_ack_and_sentence_cursor_are_scoped_to_real_active_result ... ok
+test search_tasks::tests::r14_complete_explicit_question_has_no_new_tail_wait ... ok
+test search_tasks::tests::bare_topic_times_out_into_one_search_and_same_words_without_clarify_stay_chat ... ok
+test search_tasks::tests::ongoing_asr_tail_survives_soft_deadline_but_never_holds_normal_chat ... ok
+test search_tasks::tests::r14_preparation_cue_does_not_change_running_query_to_interrupted ... ok
+test search_tasks::tests::r14_reconnect_is_silent_until_explicit_resume_and_late_grants_cannot_restart_audio ... ok
+test search_tasks::tests::r14_incomplete_explicit_question_waits_for_adjacent_predicate_only ... ok
+test search_tasks::tests::r14_missing_predicate_expires_into_clarification_never_search ... ok
+test search_tasks::tests::r14_incomplete_replace_cancels_old_and_submits_complete_replacement_while_busy ... ok
+test search_tasks::tests::r14_slow_progress_http_does_not_queue_a_cancel_behind_sentence_reports ... ok
+test search_tasks::tests::r20_asr_replace_is_scoped_and_split_resume_is_idempotent ... ok
+test search_tasks::tests::r21_word_explanation_does_not_submit_or_mutate_running_search ... ok
+test search_tasks::tests::r22_tts_failure_notice_is_local_cancellable_and_never_submits_or_completes_search ... ok
+test search_tasks::tests::r25_recovery_never_promotes_echo_or_chat_into_a_command ... ok
+test search_tasks::tests::r25_active_search_cancel_is_not_session_exit_and_rejects_late_results ... ok
+test search_tasks::tests::r20_incomplete_public_title_waits_only_in_search_lane ... ok
+test search_tasks::tests::r27_finished_hold_does_not_revive_on_resume_and_close_is_terminal ... ok
+test search_tasks::tests::r13_receipt_user_speech_cancel_replace_and_deadline_remove_stale_cues ... ok
+test search_tasks::tests::r27_cancel_close_and_replacement_publish_monotonic_search_state ... ok
+test search_tasks::tests::r27_auto_weather_accepts_explicit_replacement_and_drops_old_ready ... ok
+test search_tasks::tests::early_interruption_returns_once_after_idle_but_stop_and_expiry_suppress_it ... ok
+test search_tasks::tests::r17_verification_task_client_uses_the_real_background_path ... ok
+test search_tasks::tests::shared_v1_contract_deserializes_into_playable_result ... ok
+test search_tasks::tests::r14_sentence_progress_keeps_the_existing_bounded_early_replay_contract ... ok
+test search_tasks::tests::tool_or_url_text_never_becomes_a_voice_result ... ok
+test segmenter::tests::b17_ascii_comma_and_enumeration_comma_do_not_split ... ok
+test segmenter::tests::b17_default_off_comma_never_splits ... ok
+test segmenter::tests::b17_first_clause_splits_once_then_sentence_only ... ok
+test segmenter::tests::b17_sentence_end_first_unchanged ... ok
+test segmenter::tests::b17_short_clause_below_threshold_waits_for_sentence_end ... ok
+test segmenter::tests::flush_empty_returns_none ... ok
+test segmenter::tests::multi_sentence_delta_splits ... ok
+test segmenter::tests::short_first_sentence_flushes_at_min_len ... ok
+test speaker_id::tests::cosine_and_note_format ... ok
+test speaker_id::tests::ring_filters_silence_and_caps ... ok
+test startup_participant::tests::active_pipeline_keeps_terminal_close_contract ... ok
+test startup_participant::tests::connected_before_old_departure_is_safe ... ok
+test startup_participant::tests::duplicate_before_mic_preserves_replacement ... ok
+test startup_participant::tests::foreign_participant_neither_closes_nor_extends ... ok
+test startup_participant::tests::legacy_room_departure_closes ... ok
+test startup_participant::tests::real_departure_has_bounded_grace ... ok
+test startup_participant::tests::replacement_storm_cannot_extend_total_startup_budget ... ok
+test startup_participant::tests::replacement_without_microphone_is_bounded ... ok
+test stt_volc::tests::abandoned_event_consumer_cancels_pending_handshake ... ok
+test search_tasks::tests::r27_search_idle_hold_survives_receipt_and_chat_but_never_renews_forever ... ok
+test stt_volc::tests::empty_pcm_chunk_is_not_a_recognition_session ... ok
+test search_tasks::tests::search_handoff_queue_acceptance_and_busy_rejection ... ok
+test stt_volc::tests::hotwords_env_parsing_trims_and_drops_empty ... ok
+test stt_volc::tests::init_payload_boosting_table_id_shapes ... ok
+test stt_volc::tests::init_payload_hotwords_shape_matches_experiment ... ok
+test stt_volc::tests::init_payload_nonstream_flag ... ok
+test stt_volc::tests::init_payload_without_hotwords_has_no_corpus ... ok
+test stt_volc::tests::last_frame_flag_is_bitwise_like_python ... ok
+test stt_volc::tests::r16_search_ack_preservation_keeps_ordinary_asr_configuration ... ok
+test search_tasks::tests::r14_incomplete_question_cannot_swallow_new_topic_or_control ... ok
+test stt_volc::tests::unused_preconnect_does_not_submit_empty_recognition ... ok
+test textproc::opening_echo_verdict_tests::control_outlet_is_never_swallowed_over_default_tables ... ok
+test textproc::opening_echo_verdict_tests::exit_words_and_tails_never_swallowed_even_if_bank_would_hit ... ok
+test search_tasks::tests::routing_applies_on_audio_tick_and_snapshots_actual_applied_version ... ok
+test textproc::opening_echo_verdict_tests::goodbye_in_farewell_bank_reaches_exit_outlet ... ok
+test textproc::opening_echo_verdict_tests::non_control_bank_hits_still_swallowed ... ok
+test textproc::opening_echo_verdict_tests::non_control_single_char_still_swallowed ... ok
+test textproc::opening_echo_verdict_tests::overlap_gate_would_swallow_exact_exit_word_without_outlet ... ok
+test textproc::opening_echo_verdict_tests::question_about_reentry_is_not_control_and_still_echo_checked ... ok
+test textproc::opening_echo_verdict_tests::stop_single_char_reaches_stop_outlet ... ok
+test textproc::overlap_tests::deadline_arith ... ok
+test textproc::overlap_tests::overlap_hits_0006_ghost_fragments ... ok
+test textproc::overlap_tests::overlap_passes_real_early_commits ... ok
+test textproc::overlap_tests::overlap_single_char_and_empty_bank_none ... ok
+test textproc::overlap_tests::room_secs_parse ... ok
+test textproc::opening_echo_verdict_tests::r15_search_result_ack_survives_opening_single_char_echo_gate ... ok
+test textproc::overlap_tests::vadless_predicate_from_real_samples ... ok
+test textproc::overlap_tests::v237_first_sentence_after_ready_not_swallowed_when_skipped ... ok
+test textproc::tests::b23_wake_only_variants ... ok
+test textproc::tests::b23_wake_plus_content_is_task ... ok
+test search_tasks::tests::rejected_replacement_must_not_resume_the_previous_query ... ok
+test textproc::tests::canon_strips_punct_keeps_decimal ... ok
+test textproc::tests::exit_signal_path_and_reply_kind ... ok
+test textproc::tests::exit_tail_does_not_fire_on_question_about_reentry ... ok
+test textproc::tests::hotword_normalize_and_match ... ok
+test textproc::tests::exit_words_swallow_pure_and_keep_mixed ... ok
+test textproc::tests::lcs_local_audio_echo_anchors ... ok
+test textproc::tests::local_audio_echo_hit_layers ... ok
+test textproc::tests::session_exit_tail_exemptions_hold ... ok
+test textproc::tests::stage_directions_conservative ... ok
+test textproc::tests::stage_directions_stripped ... ok
+test textproc::tests::session_exit_tail_hits_natural_compound ... ok
+test textproc::tests::stop_only_keeps_mixed_and_normal ... ok
+test textproc::tests::stop_only_swallows_pure_hotword ... ok
+test transcript_pub::tests::seg_id_shape ... ok
+test transcript_pub::tests::spans_basic_two_sentences ... ok
+test transcript_pub::tests::spans_empty_inputs ... ok
+test transcript_pub::tests::spans_skip_filler_offset_entry ... ok
+test token::tests::jwt_carries_agent_grant ... ok
+test tts::tests::cancelled_warm_wait_drops_the_underlying_connection_task ... ok
+test tts::tests::healthy_preconnect_uses_one_socket_and_zero_extra_wait ... ok
+test tts::tests::preconnect_defaults_on_and_only_literal_zero_turns_it_off ... ok
+test search_tasks::tests::repeated_interruption_retains_progress_without_extending_expiry ... ok
+test tts::tests::priority_actual_foreground_owner_aborts_pending_prewarm_on_cancel ... ok
+test tts::tests::cancelling_hedged_connect_drops_both_attempts_and_releases_permit ... ok
+test stt_volc::tests::genuine_silent_pcm_still_waits_for_provider_final_ack ... ok
+test tts::tests::priority_recovery_cancels_losers_and_releases_spare_permit ... ok
+test job::tests::r16_delete_room_bounds_failure_and_never_retries_auth_or_redirect ... ok
+test tts::tests::priority_recovery_failed_primary_starts_spare_immediately ... ok
+test tts::tests::priority_recovery_healthy_primary_never_opens_spare ... ok
+test job::tests::listening_delete_room_retries_transient_but_keeps_auth_fail_closed ... ok
+test tts::tests::priority_recovery_pending_primary_uses_spare_without_waiting_for_failure ... ok
+test tts::tests::provider_name_and_voice_are_reported_for_log_reconciliation ... ok
+test tts::tests::r22_budget_requires_explicit_candidate_opt_in_and_supports_zero_rollback ... ok
+test tts::tests::priority_recovery_both_hung_share_one_deadline ... ok
+test tts::tests::sample_rate_is_uniform_across_providers ... ok
+test tts::tests::prewarm_failure_degrades_to_none_not_error ... ok
+test search_tasks::tests::r27_new_explicit_weather_target_replaces_busy_weather_only ... ok
+test tts::tests::unknown_provider_is_rejected_not_silently_defaulted ... ok
+test tts::tests::volc_never_arms_a_prewarm_xfyun_does ... ok
+test tts::tests::xfyun_without_credentials_fails_at_startup ... ok
+test tts::tests::priority_pending_prewarm_blocks_until_its_own_failure ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_connected_expired_socket_fails_without_hidden_cold_connection ... ok
+test tts::tests::priority_recovery_capacity_preserves_primary_and_failed_primary_can_replace ... ok
+test tts::tests::priority_recovery_spare_failure_does_not_cancel_primary_or_start_third ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_handshake_hang_recovers_one_request_and_closes_loser ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_partial_close_has_delivered_pcm_and_no_replay ... ok
+test tts::tests::r22_expired_prewarm_budget_aborts_in_flight_handshake ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_zero_pcm_close_is_distinct_from_partial_output ... ok
+test tts_xfyun::r28_main_dns_requires_explicit_flag_and_expected_provider ... ok
+test tts_xfyun::tests::auth_signature_changes_with_date ... ok
+test tts_xfyun::tests::auth_url_has_three_signed_params_and_is_deterministic ... ok
+test tts_xfyun::tests::missing_keys_reports_each_absent_credential ... ok
+test tts_xfyun::tests::parse_audio_frame_and_last_flag ... ok
+test tts_xfyun::tests::parse_error_frame_carries_code_and_message ... ok
+test tts_xfyun::tests::parse_ignores_garbage_without_panicking ... ok
+test tts_xfyun::tests::r15_cancelled_handshake_releases_the_socket_without_detached_retry ... ok
+test tts_xfyun::tests::r15_connect_failure_reports_stage_without_response_headers_or_signed_url ... ok
+test tts_xfyun::tests::r15_measured_connector_preserves_websocket_payload_and_freshness ... ok
+test tts::tests::slow_preconnect_is_hedged_without_waiting_for_the_slow_socket ... ok
+test pipeline::asr_lifecycle_tests::failed_connection_episode_closes_without_resetting_budget_or_consuming_pcm ... ok
+test tts_xfyun::tests::request_audio_params_match_downlink_contract ... ok
+test tts_xfyun::tests::request_text_is_base64_not_plaintext ... ok
+test tts_xfyun::tests::rfc1123_shape_is_gmt_not_offset ... ok
+test tts_xfyun::tests::send_or_abort_bails_when_aborted_instead_of_blocking_forever ... ok
+test search_tasks::tests::real_http_submit_poll_claim_receipt_does_not_block_foreground ... ok
+test tts_xfyun::tests::stale_warm_is_rejected_fresh_one_kept ... ok
+test tts_xfyun::tests::warm_max_age_must_stay_under_protocol_idle_limit ... ok
+test turn::tests::commit_uses_min_delay_when_eot_likely ... ok
+test turn::tests::input_ended_commits_at_next_poll_without_endpointing_delay ... ok
+test turn::tests::input_ended_is_cleared_by_speech_start ... ok
+test turn::tests::late_final_commits_immediately_after_deadline ... ok
+test turn::tests::no_vad_end_falls_back_to_final_anchor ... ok
+test turn::tests::resumed_speech_invalidates_prediction_and_blocks_commit ... ok
+test turn::tests::unlikely_prob_stretches_to_max_delay ... ok
+test vad::tests::gate_requires_min_speech_then_min_silence ... ok
+test stt_volc::tests::delayed_handshake_preserves_auth_and_first_pcm_exactly_once ... ok
+test vad::tests::short_noise_burst_ignored ... ok
+test tts::tests::spare_failure_keeps_primary_and_capacity_limit_never_queues ... ok
+test tts_xfyun::tests::send_or_abort_delivers_normally_when_not_aborted ... ok
+test vad::tests::shared_weights_isolated_state ... ok
+test vad::tests::silero_silence_prob_low ... ok
+test search_tasks::tests::r25_ambiguous_cancel_is_bounded_to_active_search ... ok
+test tts_xfyun::tests::r22_first_pcm_deadline_is_shared_by_prewarm_connect_and_receive ... ok
+test voice_connect::tests::diagnostic_error_classification_cannot_echo_untrusted_error_text ... ok
+test voice_connect::tests::cname_additional_ipv6_remains_usable ... ok
+test voice_connect::tests::diagnostic_records_real_negative_dns_rcode_and_never_starts_tcp ... ok
+test tts_xfyun::priority_transport_diagnostics::candidate_recovery_keeps_first_pcm_deadline_and_never_replays_text ... ok
+test voice_connect::tests::multihop_and_zero_ttl_additional_results_are_requeried ... ok
+test job::tests::r16_delete_room_recovers_transient_http_failure ... ok
+test pipeline::asr_lifecycle_tests::abandoned_asr_owner_drops_socket_without_retries ... ok
+test voice_connect::tests::diagnostic_records_dns_cancellation_without_claiming_resolver_timeout ... ok
+test pipeline::asr_lifecycle_tests::rejected_final_packet_does_not_reconnect_closed_input ... ok
+test voice_connect::tests::r16_dns_dial_cancellation_is_bounded ... ok
+test voice_connect::tests::r26_cancellation_releases_hedge_capacity ... ok
+test voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection ... ok
+test voice_connect::tests::r26_only_known_tts_opt_in_and_managed_upstream_config_are_allowed ... ok
+test voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber ... ok
+test voice_connect::tests::r26_slow_stub_uses_independent_upstream_before_dns_timeout ... ok
+test volc::tests::connection_event_omits_session ... ok
+test volc::tests::gzip_json_payload_roundtrip ... ok
+test volc::tests::marshal_matches_python_bytes ... ok
+test volc::tests::negative_seq_roundtrip ... ok
+test volc::tests::with_event_session_roundtrip ... ok
+test worker::tests::availability_response_carries_agent_attrs ... ok
+test worker::tests::backoff_table_unchanged ... ok
+test worker::tests::clean_close_resets_counter_too ... ok
+test worker::tests::full_capacity_declines ... ok
+test worker::tests::incident_20260916_reconnect_after_registration_must_not_give_up ... ok
+test tts_xfyun::tests::r22_status_frames_cannot_extend_first_pcm_but_long_audio_continues ... ok
+test voice_connect::tests::candidate_fallback_cname_ttl_and_diagnostics_stay_on_own_resolver ... ok
+test worker::tests::r22_capacity_coalescing_reads_latest_count_and_respects_multi_job_limit ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_midstream_gap_is_not_channel_backpressure ... ok
+test worker::tests::thirteen_consecutive_failures_without_registration_gives_up ... ok
+test worker::tests::r22_capacity_start_finish_reaches_livekit_before_periodic_tick ... ok
+test device_grammar::tests::never_panics_on_random_input ... ok
+test worker::tests::r22_capacity_failed_assignment_publishes_released_capacity ... ok
+test voice_connect::tests::r16_ipv6_and_alternate_address_remain_available ... ok
+test voice_connect::tests::r26_fallback_connects_ipv6_when_primary_dns_is_silent ... ok
+test worker::tests::r22_capacity_non_candidate_keeps_periodic_reporting ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_full_channel_waits_without_reconnect_or_losing_pcm ... ok
+test tts::tests::candidate_one_second_first_pcm_deadline_aborts_recovery_prewarm ... ok
+test voice_connect::tests::cname_answer_preserves_the_shortest_answer_ttl ... ok
+test voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses ... ok
+test voice_connect::tests::r16_a_success_does_not_wait_for_missing_aaaa_and_obeys_ttl ... ok
+test voice_connect::tests::r26_failed_upstream_preserves_primary_and_full_limit_never_queues ... ok
+test voice_connect::tests::r26_fast_primary_does_not_query_upstream_and_cache_obeys_ttl ... ok
+test voice_connect::tests::recursive_lookup_owner_and_cached_original_owner_both_work ... ok
+test job::tests::listening_job_stuck_room_close_still_attempts_delete ... ok
+test tts_xfyun::priority_transport_diagnostics::priority_real_ws_two_second_supply_gap_reaches_native_playout ... ok
+test search_tasks::tests::slow_ack_retry_keeps_same_turn_and_does_not_starve_foreground ... ok
+test job::tests::listening_delete_room_timeout_retries_within_original_budget ... ok
+test stt_volc::tests::stalled_handshake_has_a_bounded_connection_budget ... ok
+
+failures:
+
+---- job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort stdout ----
+
+thread 'job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort' (1188307) panicked at src/job.rs:984:9:
+a stuck prebuild must not block job watchdog/disconnect handling
+
+
+failures:
+    job::business_prebuild_tests::business_startup_prebuild_cannot_block_room_loop_or_escape_pipeline_abort
+
+test result: FAILED. 617 passed; 1 failed; 2 ignored; 0 measured; 0 filtered out; finished in 10.75s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`

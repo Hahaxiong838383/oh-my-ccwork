@@ -10,7 +10,7 @@
 ## 全局约束
 - 基线HEAD22ab1c31；本地回滚标签 rollback/p003-listening-watchdog-pre-20261108 已建立，正式发布前核远端标签。
 - 仅03800006既有倾听灰度；其他池、设备范围、窗口、DB均保持。
-- 无有效签名voice_idle、无持久回收记录时只观察；不靠active/busy或静音续期。
+- 无有效签名voice_idle时只观察；候选沿原schema1登记，失败拒绝job；不靠active/busy或静音续期。
 - 本次部署需先完整单测、隔离真实RTC/ASR/TTS、正式产物SHA/ABI、Grok复核与实际线上漂移检查。
 
 ## 重点反例
@@ -22,8 +22,8 @@
 
 ## 任务与验收
 - [x] 任务1：job预构建所有权。先抽出原有等待逻辑，添加卡住预构建测试观察失败；将等待移入受控pipeline任务，取消测试转绿。
-- [x] 任务2：移植 business_watchdog.rs/business_runtime.rs/room_verify.rs；job可信metadata、共用启动期限、回读清理；pipeline真实输入/PCM/识别及有序输入hold；search_tasks按actor绝对期限快照。仅必要小补丁，不复制整份pipeline。
-- [x] 任务3：listening_mode暴露有效lease/session边界；runtime转为anchor绝对Instant；adapter合并proposal/pending/entering有界转换；pipeline添加Listening活动保护。覆盖五类反例并保留红测证据。
+- [x] 任务2：移植 business_watchdog.rs/business_runtime.rs；job可信metadata、共用启动期限、原候选清理；pipeline真实输入/PCM/识别及有序输入hold；search_tasks按actor绝对期限快照。仅必要小补丁，不复制整份pipeline。
+- [x] 任务3：listening_mode暴露有效lease/session边界；runtime转为anchor绝对Instant；adapter只转发权威lease与Entering截止，proposal/pending不保房；pipeline添加Listening活动保护。覆盖五类反例并保留红测证据。
 - [ ] 任务4：离线完整测试，固定候选与产物溯源；真实隔离RTC验证普通静音回收、长讲述、租约失效、退出恢复与延迟ASR。与Grok核对反例。
 - [ ] 任务5：备份实际二进制/env/release及Brain manifest；仅空闲时发布单池，核ready/清理健康/正式探针/其他池不变；回执、commit+push。
 

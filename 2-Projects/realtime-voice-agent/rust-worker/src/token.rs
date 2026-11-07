@@ -14,8 +14,6 @@ struct VideoGrants {
     agent: bool,
     #[serde(rename = "roomCreate", skip_serializing_if = "std::ops::Not::not")]
     room_create: bool,
-    #[serde(rename = "roomList", skip_serializing_if = "std::ops::Not::not")]
-    room_list: bool,
     #[serde(skip_serializing_if = "String::is_empty")]
     room: String,
 }
@@ -41,10 +39,6 @@ pub fn server_api_jwt(api_key: &str, api_secret: &str, room: &str) -> Result<Str
         api_secret,
         VideoGrants { room_create: true, room: room.to_string(), ..Default::default() },
     )
-}
-
-pub fn room_list_jwt(api_key: &str, api_secret: &str) -> Result<String> {
-    sign(api_key, api_secret, VideoGrants { room_list: true, ..Default::default() })
 }
 
 fn sign(api_key: &str, api_secret: &str, video: VideoGrants) -> Result<String> {

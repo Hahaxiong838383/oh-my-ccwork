@@ -429,19 +429,14 @@ impl Adapter {
         Some(out)
     }
     /// Used only for ordered first-turn admission; control() still authenticates every return packet.
-    /// Mode leases and in-flight protocol handshakes retain their accepted
-    /// absolute deadlines. No active flag or periodic poll creates a lease.
+    /// Only an acknowledged mode lease can protect silent listening. Pending
+    /// proposals/RPCs keep their protocol timeout but do not extend authority.
     pub fn business_deadline(&self) -> Option<std::time::Instant> {
         self.business_deadline_at(self.runtime.now_ms())
     }
     fn business_deadline_at(&self, now: u64) -> Option<std::time::Instant> {
-        if self.closing || self.runtime.snapshot().phase == Phase::Paused { return None; }
-        let proposal = self.proposal.as_ref().map(|p| p.deadline);
-        let pending = self.pending.as_ref().and(self.pending_deadline);
-        self.runtime.business_deadline(now).into_iter()
-            .chain(proposal.into_iter().chain(pending).filter(|at| *at > now)
-                .filter_map(|at| self.runtime.deadline_instant(at)))
-            .max()
+        if self.closing { return None; }
+        self.runtime.business_deadline(now)
     }
 
     pub fn matches_voice_proposal(&self, command: &Command) -> bool {
@@ -1531,10 +1526,13 @@ mod adapter_tests {
         let mut a=voice_adapter();assert!(a.business_deadline_at(0).is_none());
         a.runtime.hold_voice_transition();assert!(a.business_deadline_at(0).is_none(),"a bool alone never protects an idle room");
         a.proposal=Some(Proposal{id:"synthetic-proposal".into(),action:Action::Enter{scene:Scene::Story,epoch:0},deadline:3000});
-        let until=a.business_deadline_at(0).expect("accepted proposal handshake budget");
-        for now in [0,1000,2999] {assert_eq!(a.business_deadline_at(now),Some(until));}
+        for now in [0,1000,2999] {assert!(a.business_deadline_at(now).is_none(),"proposal alone is not authority");}
         assert!(a.business_deadline_at(3000).is_none());
         a.closing=true;assert!(a.business_deadline_at(0).is_none());
+        let mut a=active_voice_adapter();let now=a.runtime.now_ms();
+        let authority=a.business_deadline_at(now).unwrap();
+        a.proposal=Some(Proposal{id:"late-exit".into(),action:Action::Exit{epoch:a.runtime.snapshot().epoch},deadline:now+12000});
+        assert_eq!(a.business_deadline_at(now+9000),Some(authority),"proposal must never extend a shorter authority lease");
     }
     fn rtc_final(a: &mut Adapter, text: &str) {
         if a.voice_final(text).is_none() { a.final_text(text); }
