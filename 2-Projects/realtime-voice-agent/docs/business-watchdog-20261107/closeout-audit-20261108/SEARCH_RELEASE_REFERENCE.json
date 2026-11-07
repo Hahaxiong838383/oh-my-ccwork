@@ -1,0 +1,13 @@
+{
+  "source_private_path": "/Users/fu-121/.local/state/p003-v384-followup-20261104/evidence-38/release-sources/search/release-status.json",
+  "source_sha256": "68e94052e1235e9ca69dd50ad8cfca3242ec857fd0793c4cc3783a2d204e01f6",
+  "selected_fields": {
+    "revision": "R27-daily-search-20261102",
+    "verified_at_ms": 1793595735322,
+    "worker_commit": "f57625906c66b49a4511cffd2106216a970b5ac5",
+    "worker_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+    "real_device_acceptance": "pending_android_integration",
+    "all_release_gates_passed": false
+  },
+  "meaning": "历史发布回执将源码f576与56f二进制对应；06:16实时proc/disk哈希核同，不是本轮重新构建验证。"
+}

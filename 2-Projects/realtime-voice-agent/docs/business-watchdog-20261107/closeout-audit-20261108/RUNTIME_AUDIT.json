@@ -1,0 +1,1319 @@
+{
+  "since_epoch_ms": 1794075405538,
+  "at": "2026-11-07T22:16:45.538701+00:00",
+  "hostname": "voice-worker-hk2",
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Sat 2026-11-07 19:14:41 UTC",
+      "proc_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+      "disk_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+      "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "flags": {
+        "P003_BUSINESS_WATCHDOG_MODE": "enforce",
+        "P003_TTS_CONNECT_RECOVERY_V1": "1",
+        "P003_ASR_CONNECT_RECOVERY_V1": "1",
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_TTS_DNS_HEDGE_V1": null,
+        "P003_TTS_LATENCY_V1": null,
+        "P003_TTS_FIRST_PCM_BUDGET_MS": null,
+        "WORKER_MAX_JOBS": "20"
+      },
+      "watchdog_scope": [
+        "02000053",
+        "99999901"
+      ],
+      "journal_sha256": "68a91a395344b8694124f9ff2fd77af14c7881f81625c47683e8d80a1820ea1f",
+      "counts": {
+        "accept_job": 2,
+        "assigned": 2,
+        "asr_final": 4,
+        "playout": 4,
+        "business_close": 2,
+        "job_closed": 2
+      },
+      "room_sn_suffixes": [
+        "99999901"
+      ],
+      "last_journal_ms": 1794089803167,
+      "timing_sample_count": 94,
+      "timing_samples": [
+        {
+          "at_ms": 1794078950918,
+          "numbers": {
+            "dns_ms": 181,
+            "address_count": 8
+          },
+          "labels": {
+            "provider": "asr",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078950921,
+          "numbers": {
+            "elapsed_ms": 1
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "elapsed_ms": 3
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "elapsed_ms": 3
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "elapsed_ms": 3
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "dns_ms": 133
+          },
+          "labels": {
+            "provider": "asr",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "elapsed_ms": 3
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950922,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078950943,
+          "numbers": {
+            "elapsed_ms": 23
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078951112,
+          "numbers": {
+            "elapsed_ms": 375,
+            "dns_ms": 181,
+            "tcp_ms": 2,
+            "tls_ws_ms": 189
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078955116,
+          "numbers": {
+            "connect_id": 1,
+            "dns_ms": 9,
+            "address_count": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078955164,
+          "numbers": {
+            "connect_id": 1,
+            "dns_ms": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "failed",
+            "reason": "nodata"
+          }
+        },
+        {
+          "at_ms": 1794078955170,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078955171,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955171,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955171,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955171,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955187,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 70
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955351,
+          "numbers": {
+            "connect_id": 1,
+            "elapsed_ms": 244,
+            "dns_ms": 9,
+            "tcp_ms": 54,
+            "tls_ws_ms": 180
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078955605,
+          "numbers": {
+            "turn_id": 1,
+            "underrun_count": 0,
+            "underrun_ms": 0,
+            "played_frames": 0
+          },
+          "labels": {}
+        },
+        {
+          "at_ms": 1794078955607,
+          "numbers": {
+            "connect_id": 2,
+            "dns_ms": 0,
+            "address_count": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078955658,
+          "numbers": {
+            "connect_id": 2,
+            "dns_ms": 0
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "failed",
+            "reason": "nodata"
+          }
+        },
+        {
+          "at_ms": 1794078955661,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078955661,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 53
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955661,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 53
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955661,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 53
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955661,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 53
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955676,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 69
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078955806,
+          "numbers": {
+            "connect_id": 2,
+            "elapsed_ms": 199,
+            "dns_ms": 0,
+            "tcp_ms": 53,
+            "tls_ws_ms": 145
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078956427,
+          "numbers": {
+            "connect_id": 3,
+            "dns_ms": 0,
+            "address_count": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078956479,
+          "numbers": {
+            "connect_id": 3,
+            "dns_ms": 0
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "failed",
+            "reason": "nodata"
+          }
+        },
+        {
+          "at_ms": 1794078956482,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078956482,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078956482,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078956482,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078956482,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078956495,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 67
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794078956657,
+          "numbers": {
+            "connect_id": 3,
+            "elapsed_ms": 230,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 175
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794078959824,
+          "numbers": {
+            "turn_id": 2,
+            "connect_id": 2,
+            "pcm_frames": 40,
+            "elapsed_ms": 3397,
+            "ws_read_wait_ms": 3376,
+            "max_ws_read_wait_ms": 351,
+            "channel_send_wait_ms": 0,
+            "max_channel_send_wait_ms": 0,
+            "max_observed_pcm_gap_ms": 351
+          },
+          "labels": {
+            "phase": "close"
+          }
+        },
+        {
+          "at_ms": 1794078959825,
+          "numbers": {
+            "prewarm_wait_ms": 0,
+            "provider_ttfb_ms": 274,
+            "first_pcm_ms": 274
+          },
+          "labels": {}
+        },
+        {
+          "at_ms": 1794078963599,
+          "numbers": {
+            "turn_id": 2,
+            "underrun_count": 0,
+            "underrun_ms": 0,
+            "buffered_audio_ms": 197,
+            "played_frames": 688
+          },
+          "labels": {}
+        },
+        {
+          "at_ms": 1794079008971,
+          "numbers": {
+            "dns_ms": 2,
+            "address_count": 8
+          },
+          "labels": {
+            "provider": "asr",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079008973,
+          "numbers": {
+            "elapsed_ms": 1
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079008974,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079008974,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079008974,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079008974,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079008974,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079008974,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079008989,
+          "numbers": {
+            "elapsed_ms": 18
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079009139,
+          "numbers": {
+            "elapsed_ms": 170,
+            "dns_ms": 2,
+            "tcp_ms": 2,
+            "tls_ws_ms": 165
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079011828,
+          "numbers": {
+            "dns_ms": 172,
+            "address_count": 8
+          },
+          "labels": {
+            "provider": "asr",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079011831,
+          "numbers": {
+            "elapsed_ms": 1
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079011831,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011831,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011831,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011832,
+          "numbers": {
+            "dns_ms": 123
+          },
+          "labels": {
+            "provider": "asr",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011832,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011832,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011832,
+          "numbers": {
+            "elapsed_ms": 2
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079011843,
+          "numbers": {
+            "elapsed_ms": 14
+          },
+          "labels": {
+            "provider": "asr",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079012017,
+          "numbers": {
+            "elapsed_ms": 361,
+            "dns_ms": 172,
+            "tcp_ms": 2,
+            "tls_ws_ms": 186
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079015563,
+          "numbers": {
+            "connect_id": 4,
+            "dns_ms": 8,
+            "address_count": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079015607,
+          "numbers": {
+            "connect_id": 4,
+            "dns_ms": 0
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "failed",
+            "reason": "nodata"
+          }
+        },
+        {
+          "at_ms": 1794079015614,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 49
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079015614,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 50
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079015614,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 50
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079015614,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 50
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079015614,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 50
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079015632,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 68
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079015761,
+          "numbers": {
+            "connect_id": 4,
+            "elapsed_ms": 206,
+            "dns_ms": 8,
+            "tcp_ms": 50,
+            "tls_ws_ms": 147
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079016154,
+          "numbers": {
+            "turn_id": 1,
+            "underrun_count": 0,
+            "underrun_ms": 0,
+            "played_frames": 0
+          },
+          "labels": {}
+        },
+        {
+          "at_ms": 1794079016156,
+          "numbers": {
+            "connect_id": 5,
+            "dns_ms": 0,
+            "address_count": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079016207,
+          "numbers": {
+            "connect_id": 5,
+            "dns_ms": 0
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "failed",
+            "reason": "nodata"
+          }
+        },
+        {
+          "at_ms": 1794079016210,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 53
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079016210,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079016210,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079016210,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079016210,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 54
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079016228,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 72
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079016362,
+          "numbers": {
+            "connect_id": 5,
+            "elapsed_ms": 206,
+            "dns_ms": 0,
+            "tcp_ms": 54,
+            "tls_ws_ms": 152
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079017401,
+          "numbers": {
+            "connect_id": 6,
+            "dns_ms": 0,
+            "address_count": 6
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "resolved",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079017452,
+          "numbers": {
+            "connect_id": 6,
+            "dns_ms": 0
+          },
+          "labels": {
+            "provider": "tts",
+            "outcome": "failed",
+            "reason": "nodata"
+          }
+        },
+        {
+          "at_ms": 1794079017452,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 50
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "tcp",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079017452,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079017452,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079017452,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079017453,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 52
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079017464,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 63
+          },
+          "labels": {
+            "provider": "tts",
+            "stage": "stagger",
+            "outcome": "cancelled",
+            "reason": "owner_dropped"
+          }
+        },
+        {
+          "at_ms": 1794079017621,
+          "numbers": {
+            "connect_id": 6,
+            "elapsed_ms": 221,
+            "dns_ms": 0,
+            "tcp_ms": 52,
+            "tls_ws_ms": 169
+          },
+          "labels": {
+            "stage": "tls_ws",
+            "outcome": "connected",
+            "reason": "none"
+          }
+        },
+        {
+          "at_ms": 1794079025258,
+          "numbers": {
+            "turn_id": 2,
+            "connect_id": 5,
+            "pcm_frames": 80,
+            "elapsed_ms": 7858,
+            "ws_read_wait_ms": 5572,
+            "max_ws_read_wait_ms": 355,
+            "channel_send_wait_ms": 2233,
+            "max_channel_send_wait_ms": 240,
+            "max_observed_pcm_gap_ms": 355
+          },
+          "labels": {
+            "phase": "close"
+          }
+        },
+        {
+          "at_ms": 1794079025259,
+          "numbers": {
+            "prewarm_wait_ms": 0,
+            "provider_ttfb_ms": 303,
+            "first_pcm_ms": 303
+          },
+          "labels": {}
+        },
+        {
+          "at_ms": 1794079030919,
+          "numbers": {
+            "turn_id": 2,
+            "underrun_count": 0,
+            "underrun_ms": 0,
+            "buffered_audio_ms": 201,
+            "played_frames": 1320
+          },
+          "labels": {}
+        }
+      ]
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Sat 2026-11-07 21:58:30 UTC",
+      "proc_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "disk_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "env_sha256": "162cbf5057ce453e7dd3cdac010643375f84de81794f403ffd817ec340b71bbc",
+      "release": {
+        "build_sha": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+        "binary_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+        "bytes": 78217888
+      },
+      "flags": {
+        "P003_BUSINESS_WATCHDOG_MODE": "enforce",
+        "P003_TTS_CONNECT_RECOVERY_V1": "1",
+        "P003_ASR_CONNECT_RECOVERY_V1": "1",
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_TTS_DNS_HEDGE_V1": "1",
+        "P003_TTS_LATENCY_V1": "1",
+        "P003_TTS_FIRST_PCM_BUDGET_MS": "10000",
+        "WORKER_MAX_JOBS": "2"
+      },
+      "watchdog_scope": [
+        "03800006"
+      ],
+      "journal_sha256": "094abcf6a53e726d0f91b84d4b06fdc3299590c8397237bec97e76236410dad9",
+      "counts": {
+        "decline_job": 1
+      },
+      "room_sn_suffixes": [
+        "99999938"
+      ],
+      "last_journal_ms": 1794089791590,
+      "timing_sample_count": 0,
+      "timing_samples": []
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Tue 2026-11-03 11:03:55 UTC",
+      "proc_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "disk_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "env_sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+      "flags": {
+        "P003_BUSINESS_WATCHDOG_MODE": null,
+        "P003_TTS_CONNECT_RECOVERY_V1": null,
+        "P003_ASR_CONNECT_RECOVERY_V1": null,
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_TTS_DNS_HEDGE_V1": "1",
+        "P003_TTS_LATENCY_V1": "1",
+        "P003_TTS_FIRST_PCM_BUDGET_MS": "10000",
+        "WORKER_MAX_JOBS": "2"
+      },
+      "watchdog_scope": [],
+      "journal_sha256": "fcc0993370da7a6717a5d3343f418932fed2bb419b4b629ef0e6baf23269ac66",
+      "counts": {},
+      "room_sn_suffixes": [],
+      "last_journal_ms": 1794089786144,
+      "timing_sample_count": 0,
+      "timing_samples": []
+    }
+  },
+  "sfu_rooms": [],
+  "main_cleanup": {
+    "mode": "business",
+    "at_ms": 1794089806896,
+    "counts": {},
+    "remaining": 0,
+    "healthy": true
+  },
+  "listening_cleanup": {
+    "at_ms": 1794089805759,
+    "counts": {},
+    "remaining": 0,
+    "healthy": true
+  },
+  "search_cleanup": {
+    "at_ms": 1794089805715,
+    "counts": {},
+    "remaining": 0,
+    "healthy": true
+  }
+}
