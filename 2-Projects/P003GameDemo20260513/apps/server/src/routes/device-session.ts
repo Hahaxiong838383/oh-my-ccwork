@@ -245,6 +245,7 @@ export function assertTokenMatchesResponse(
     expires_at_ms: number;
     trace_id?: string;
     expected_agent_name?: string;
+    voice_idle?: { timeout_ms: number; revision: string } | null;
     contract?: { input_mode: string; oneshot_first_turn: string; local_receipt: string } | null;
   },
 ): void {
@@ -284,6 +285,17 @@ export function assertTokenMatchesResponse(
     } else {
       for (const k of keys) if (k in meta) throw new Error(`自检失败: 旧路径 metadata 不得含 ${k}`);
     }
+  }
+  const idleMeta = JSON.parse(agent.metadata ?? '{}').voice_idle;
+  if (resp.voice_idle) {
+    const idle = resp.voice_idle;
+    if (!Number.isInteger(idle.timeout_ms) || idle.timeout_ms < 5000 || idle.timeout_ms > 300000
+      || typeof idle.revision !== 'string' || !/^cfg-\d+$/.test(idle.revision)
+      || idleMeta?.timeout_ms !== idle.timeout_ms || idleMeta?.revision !== idle.revision) {
+      throw new Error('自检失败: voice_idle 与配置快照/响应不一致');
+    }
+  } else if (idleMeta !== undefined) {
+    throw new Error('自检失败: 未配置的响应不得携带 voice_idle');
   }
   if (c.exp * 1000 !== resp.expires_at_ms) throw new Error('自检失败: exp 与 expires_at_ms 不一致');
   if (c.exp * 1000 - Date.now() < 5_000) throw new Error('自检失败: 剩余 TTL 不足 5 秒');
@@ -355,6 +367,14 @@ deviceSessionRoute.post('/session', async (c) => {
     agent:agentName,supports,source:canary.canary?'search_canary':'normal',expires_at_ms:expSec*1000,
     source_cutoff_ms:canary.canary?canary.expiresAtMs:expSec*1000,credential:c.req.header('authorization')??''});
 
+  // ConfigStore's zero sentinel is omitted from snapshots. Only an explicit
+  // global/SN policy can therefore reach the signed worker metadata. Never
+  // accept this authority from body.voice_idle or a client control packet.
+  const runtimeConfig = configStore.effectiveSnapshot(sn as string);
+  const idleMs = (runtimeConfig.voice as { session_idle_timeout_ms?: unknown } | undefined)?.session_idle_timeout_ms;
+  const voiceIdle = typeof idleMs === 'number' && Number.isInteger(idleMs) && idleMs >= 5000 && idleMs <= 300000
+    ? { timeout_ms: idleMs, revision: String(runtimeConfig.revision) } : null;
+
   const token = await new SignJWT({
     video: {
       room: roomName,
@@ -377,6 +397,7 @@ deviceSessionRoute.post('/session', async (c) => {
             session_id: sessionId,
             issue_ts_ms: Date.now(),
             filler_policy: fillerPolicyFor(sn),
+            ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
             ...(listening ? { listening } : {}),
             ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),
             // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
@@ -405,6 +426,7 @@ deviceSessionRoute.post('/session', async (c) => {
     session_id: sessionId,
     expires_at_ms: expSec * 1000,
     expected_agent_name: agentName,
+    ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,
     ...(listening ? {listening_contract:{version:1,capability:'listening_mode_v1',policy_revision:listening.snapshot.revision,

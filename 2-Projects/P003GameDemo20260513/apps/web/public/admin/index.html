@@ -5594,13 +5594,13 @@
           var d = (deviceData.devices || []).find(function (x) { return x.sn === sn; });
           return d && d.note ? d.note + ' · ' + sn : sn;
         }
-        function devcfgUnit(k) { return k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : ''); }
+        function devcfgUnit(k) { return k && k.unit === 'ms' ? '毫秒' : (k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : '')); }
         function devcfgSpec(key) { for (var i = 0; i < devcfg.keys.length; i++) if (devcfg.keys[i].key === key) return devcfg.keys[i]; return null; }
         function devcfgOverridesFor(k) { return devcfg.overrides.filter(function (o) { return o.key === k.key; }); }
-        function devcfgValid(k, v) { if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
-        function devcfgRangeMsg(k) { if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
+        function devcfgValid(k, v) { if (k.key === 'voice.session_idle_timeout_ms') return Number.isInteger(v) && (v === 0 || (v >= 5000 && v <= 300000)); if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
+        function devcfgRangeMsg(k) { if (k.key === 'voice.session_idle_timeout_ms') return '取值须为0（不下发）或5000至300000之间的整数毫秒'; if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
         // bool 键（2026-09-19 diagnostics.log_upload_enabled 起）：值是 true/false，展示为 开/关，编辑走开关/下拉不走数字框
-        function devcfgFmtVal(k, v) { return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
+        function devcfgFmtVal(k, v) { if (k && k.key === 'voice.session_idle_timeout_ms' && v === 0) return '不下发（保留设备现有策略）'; return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
         function devcfgFmtMin(sec) {
           var n = Number(sec);
           if (!isFinite(n) || n <= 0) return '—';

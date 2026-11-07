@@ -1,0 +1,55 @@
+{
+  "at": "2026-11-07T13:37:31.377935+00:00",
+  "tests": [
+    {
+      "suite": "device-config",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-device-config.log",
+      "sha256": "138e8bba1e36003a99877dafc6accf98097ca0d71e70cb6bb1a0caa665b2a53a"
+    },
+    {
+      "suite": "voice-idle-policy",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-voice-idle-policy.log",
+      "sha256": "85c357ae9612293c03ef178571a6f07ae5dc8512c32105a227846ca1af5774b6"
+    },
+    {
+      "suite": "voice-idle-session",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-voice-idle-session.log",
+      "sha256": "477b0e71060b7e78b0a859f6d4c7e0352dffa8e2c9d35b70a483c5e0755ce733"
+    },
+    {
+      "suite": "device-session",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-device-session.log",
+      "sha256": "7fdbb51d790b239848f97796bc9873264e3c8eef3fb88346b3aeaf0fa9503599"
+    },
+    {
+      "suite": "listening-integration",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-listening-integration.log",
+      "sha256": "ca4ad0a6056547eb02e2c9564f51f793c7e55a755603f004907b580101af7df2"
+    },
+    {
+      "suite": "analytics-tier-settings",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-analytics-tier-settings.log",
+      "sha256": "ddd91c791908c9be2eb2a27f43607a054c405255f170aad7f810e4b6cbbc7f7d"
+    },
+    {
+      "suite": "analytics-auth-config",
+      "rc": 0,
+      "log": "/Users/fu-121/.local/state/p003-business-watchdog-20261107/brain-final-analytics-auth-config.log",
+      "sha256": "86bc5dab3ba110f23803c14a7bffb862e3ef897c6cdc996428734e4506701aa2"
+    }
+  ],
+  "status": "CONFIG_AND_SIGNING_TESTED_NOT_DEPLOYED",
+  "source_sha256": {
+    "src/config-store.ts": "058d0370467e85f621339770fcdf469dbbbad0c4cadecf545247398ba0583c68",
+    "src/routes/device-session.ts": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b",
+    "scripts/voice-idle-policy.test.ts": "96113a1b237c53d4e24191abd9e47952d61cd32726465c3e553c6abed2695b5f",
+    "scripts/voice-idle-session.test.ts": "f803ccadb7ad7887af5b49f30e8550bd9601267d5bcb6019865e8b044cc640af",
+    "../web/public/admin/index.html": "e999753c1f9732920bc8ddcee76e77cba5ffa805446ec0dac0459768a0054bce"
+  }
+}
