@@ -11,7 +11,7 @@ use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 
 use crate::volc::{gzip, Flags, Frame, MsgType, ASR_URL, COMP_GZIP, SER_JSON};
 
@@ -180,10 +180,11 @@ impl std::error::Error for ConnectFailure {}
 struct ConnectTiming<'a> {
     request_id: &'a str, started: std::time::Instant, stage: &'static str,
     outcome: &'static str, dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>,
+    reason: &'static str,
 }
 impl Drop for ConnectTiming<'_> {
     fn drop(&mut self) {
-        info!(request_id=self.request_id, stage=self.stage, outcome=self.outcome,
+        info!(request_id=self.request_id, stage=self.stage, outcome=self.outcome,reason=self.reason,
             elapsed_ms=self.started.elapsed().as_millis() as u64, dns_ms=self.dns_ms,
             tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms, "asr connection timing");
     }
@@ -192,13 +193,14 @@ impl Drop for ConnectTiming<'_> {
 async fn connect_observed(request: tokio_tungstenite::tungstenite::handshake::client::Request,
                           request_id: &str, async_connect: bool) -> Result<AsrWs> {
     let mut timing = ConnectTiming { request_id, started: std::time::Instant::now(), stage:"request",
-        outcome:"cancelled", dns_ms:None, tcp_ms:None, tls_ws_ms:None };
+        outcome:"cancelled", reason:"owner_dropped", dns_ms:None, tcp_ms:None, tls_ws_ms:None };
     let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
         let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
         let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str()==Some("wss") {443} else {80});
         let socket = if async_connect && host == "openspeech.bytedance.com" {
             timing.stage="resolve_tcp";
-            let c=crate::voice_connect::connect(&host,port).await?;
+            let c=crate::voice_connect::connect(&host,port)
+                .instrument(tracing::info_span!("voice_connection",provider="asr",request_id)).await?;
             timing.dns_ms=Some(c.dns_ms);timing.tcp_ms=Some(c.tcp_ms);c.socket
         } else {
             timing.stage="dns";let at=std::time::Instant::now();
@@ -219,8 +221,9 @@ async fn connect_observed(request: tokio_tungstenite::tungstenite::handshake::cl
         Ok::<_,anyhow::Error>(ws)
     }).await;
     match result {
-        Ok(Ok(ws)) => {timing.outcome="connected";Ok(ws)},
-        other => {timing.outcome=if other.is_err(){"timeout"}else{"failed"};Err(ConnectFailure.into())}
+        Ok(Ok(ws)) => {timing.outcome="connected";timing.reason="none";Ok(ws)},
+        Ok(Err(error)) => {timing.outcome="failed";timing.reason=crate::voice_connect::safe_failure_reason(&error);Err(ConnectFailure.into())},
+        Err(_) => {timing.outcome="timeout";timing.reason="connect_budget";Err(ConnectFailure.into())},
     }
 }
 

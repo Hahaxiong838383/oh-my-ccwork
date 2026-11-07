@@ -4,6 +4,60 @@ use anyhow::{bail, Result};
 use hickory_resolver::{TokioResolver, lookup::Lookup, proto::rr::{DNSClass, Name, RData, RecordType}};
 use std::{net::{IpAddr, SocketAddr}, time::{Duration, Instant}};
 use tokio::net::TcpStream;
+use tracing::{Instrument, instrument::WithSubscriber};
+
+// Only bounded classifications leave this module; resolver errors can carry
+// query names and arbitrary messages. Never log their Display/Debug output.
+fn dns_failure(error: &hickory_resolver::net::NetError) -> (&'static str,Option<u16>,Option<std::io::ErrorKind>) {
+    use hickory_resolver::{net::{NetError,DnsError},proto::op::ResponseCode};
+    match error {
+        NetError::Timeout => ("dns_timeout",None,None),
+        NetError::NoConnections => ("dns_no_connections",None,None),
+        NetError::Busy => ("dns_busy",None,None),
+        NetError::Io(e) => ("dns_io",None,Some(e.kind())),
+        NetError::Dns(DnsError::NoRecordsFound(r)) => (match r.response_code {
+            ResponseCode::NXDomain=>"nxdomain",ResponseCode::NoError=>"nodata",_=>"dns_response",
+        },Some(r.response_code.into()),None),
+        NetError::Dns(DnsError::ResponseCode(code)) => ("dns_response",Some((*code).into()),None),
+        NetError::Dns(DnsError::DnssecBogus) => ("dnssec_bogus",None,None),
+        _ => ("dns_other",None,None),
+    }
+}
+
+pub(crate) fn safe_failure_reason(error: &anyhow::Error) -> &'static str {
+    let text=error.to_string();
+    match text.as_str() {
+        "invalid_request"=>"invalid_request", "invalid_host"=>"invalid_host",
+        "resolver_init"=>"resolver_init", "resolve_failed"=>"resolve_failed",
+        "resolve_cname_cycle"=>"resolve_cname_cycle", "connect_failed"=>"connect_failed",
+        "tls_failed"=>"tls_failed", "io_failed"=>"io_failed", "handshake_failed"=>"handshake_failed",
+        _ if text.strip_prefix("http_").and_then(|s|s.parse::<u16>().ok()).is_some_and(|s|(100..600).contains(&s))=>"http_rejected",
+        _=>"other_failure",
+    }
+}
+
+struct Diagnostic {
+    started:Instant, family:&'static str, stage:&'static str, outcome:&'static str,
+    reason:&'static str, rcode:Option<u16>, io_kind:Option<std::io::ErrorKind>,
+    count:Option<usize>, index:Option<usize>, peer:Option<SocketAddr>,
+}
+impl Diagnostic {
+    fn dns(v6:bool)->Self {Self{started:Instant::now(),family:if v6{"AAAA"}else{"A"},stage:"dns",
+        outcome:"cancelled",reason:"owner_dropped",rcode:None,io_kind:None,count:None,index:None,peer:None}}
+}
+impl Drop for Diagnostic {
+    fn drop(&mut self) {
+        if self.index.is_none() {
+            tracing::info!(family=self.family,outcome=self.outcome,reason=self.reason,dns_rcode=self.rcode,
+                io_kind=?self.io_kind,dns_ms=self.started.elapsed().as_millis() as u64,address_count=self.count,
+                "voice dns family timing");
+        } else {
+            tracing::info!(family=self.family,stage=self.stage,outcome=self.outcome,reason=self.reason,
+                io_kind=?self.io_kind,elapsed_ms=self.started.elapsed().as_millis() as u64,
+                address_index=self.index,peer=?self.peer,"voice tcp address timing");
+        }
+    }
+}
 
 pub struct Connected { pub socket: TcpStream, pub dns_ms: u64, pub tcp_ms: u64 }
 
@@ -24,9 +78,17 @@ async fn addresses_connect(addresses: Vec<SocketAddr>) -> Result<TcpStream> {
     // the losing sockets/futures. Limit the fan-out even for large DNS replies.
     for (index, address) in addresses.into_iter().take(8).enumerate() {
         attempts.spawn(async move {
+            let mut trace=Diagnostic::dns(address.is_ipv6());
+            trace.stage="stagger";trace.index=Some(index);trace.peer=Some(address);
             tokio::time::sleep(Duration::from_millis(index as u64 * 250)).await;
-            TcpStream::connect(address).await
-        });
+            trace.stage="tcp";trace.started=Instant::now();
+            let result=TcpStream::connect(address).await;
+            match &result {
+                Ok(_)=>{trace.outcome="connected";trace.reason="none";},
+                Err(e)=>{trace.outcome="failed";trace.reason="tcp_io";trace.io_kind=Some(e.kind());},
+            }
+            result
+        }.in_current_span().with_current_subscriber());
     }
     while let Some(result) = attempts.join_next().await {
         if let Ok(Ok(socket)) = result { return Ok(socket); }
@@ -36,9 +98,12 @@ async fn addresses_connect(addresses: Vec<SocketAddr>) -> Result<TcpStream> {
 
 async fn family(resolver: &TokioResolver, host: &str, port: u16, v6: bool) -> Result<Connected> {
     let start=Instant::now();
+    let mut trace=Diagnostic::dns(v6);
     let lookup=resolver.lookup(host,if v6 {RecordType::AAAA} else {RecordType::A}).await
-        .map_err(|_| anyhow::anyhow!("resolve_failed"))?;
-    let (addresses,uncache_names)=lookup_addresses(&lookup,port,v6)?;
+        .map_err(|error| {trace.outcome="failed";(trace.reason,trace.rcode,trace.io_kind)=dns_failure(&error);anyhow::anyhow!("resolve_failed")})?;
+    let (addresses,uncache_names)=lookup_addresses(&lookup,port,v6).map_err(|error| {
+        trace.outcome="failed";trace.reason=safe_failure_reason(&error);error
+    })?;
     if !uncache_names.is_empty() {
         // Hickory 0.26 caches a response by ANSWER TTL, which can outlive
         // a target in ADDITIONAL. Do not cache this shape at application level.
@@ -48,7 +113,10 @@ async fn family(resolver: &TokioResolver, host: &str, port: u16, v6: bool) -> Re
         resolver.clear_lookup_cache(host,kind);
         for name in uncache_names {resolver.clear_lookup_cache(name,kind);}
     }
-    let dns_ms=start.elapsed().as_millis() as u64;let tcp=Instant::now();
+    let dns_ms=start.elapsed().as_millis() as u64;
+    trace.count=Some(addresses.len());trace.outcome=if addresses.is_empty(){"empty"}else{"resolved"};
+    trace.reason=if addresses.is_empty(){"no_addresses"}else{"none"};drop(trace);
+    let tcp=Instant::now();
     let socket=addresses_connect(addresses).await?;
     Ok(Connected{socket,dns_ms,tcp_ms:tcp.elapsed().as_millis() as u64})
 }
@@ -99,12 +167,75 @@ async fn dial(resolver: &TokioResolver, host: &str, port: u16) -> Result<Connect
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tracing::{Instrument, instrument::WithSubscriber};
     use hickory_resolver::{config::{ResolverConfig, NameServerConfig}, net::runtime::TokioRuntimeProvider,
         proto::{op::{Message, OpCode}, rr::{Record, rdata::{A, AAAA, CNAME}}}};
     use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
     use tokio::net::{UdpSocket,TcpListener};
     struct Dns { resolver: TokioResolver, a: Arc<AtomicUsize>, task: tokio::task::JoinHandle<()> }
     impl Drop for Dns {fn drop(&mut self){self.task.abort();}}
+    #[derive(Clone,Default)]
+    struct Capture(Arc<std::sync::Mutex<Vec<u8>>>);
+    impl std::io::Write for Capture {
+        fn write(&mut self,bytes:&[u8])->std::io::Result<usize>{self.0.lock().unwrap().extend_from_slice(bytes);Ok(bytes.len())}
+        fn flush(&mut self)->std::io::Result<()>{Ok(())}
+    }
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for Capture {
+        type Writer=Self;
+        fn make_writer(&'a self)->Self{self.clone()}
+    }
+    async fn capture(f:impl std::future::Future<Output=()>) -> String {
+        let output=Capture::default();
+        let subscriber=tracing_subscriber::fmt().with_ansi(false).with_writer(output.clone()).finish();
+        async {f.instrument(tracing::info_span!("voice_connection",provider="diagnostic_test",connect_id=701u64)).await}
+            .with_subscriber(subscriber).await;
+        let bytes=output.0.lock().unwrap().clone();String::from_utf8(bytes).unwrap()
+    }
+    #[tokio::test]
+    async fn diagnostic_records_refused_address_then_success_with_same_connection() {
+        let dns=dns_server("refused_first").await;
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let out=capture(async {dial(&dns.resolver,"voice.test.",server.local_addr().unwrap().port()).await.unwrap();}).await;
+        assert!(out.contains("voice dns family timing"),"missing real DNS diagnostic: {out}");
+        assert!(out.contains("ConnectionRefused"),"failed address reason was lost: {out}");
+        assert!(out.contains("address_index=1") && out.contains("outcome=\"connected\""),"alternate success missing: {out}");
+        for line in out.lines().filter(|l|l.contains("voice dns family timing") || l.contains("voice tcp address timing")) {
+            assert!(line.contains("connect_id=701") && line.contains("diagnostic_test"),"orphan record: {line}");
+        }
+        assert!(!out.contains("voice.test") && !out.contains("wss://"),"no query or signed URL in diagnostics");
+    }
+    #[tokio::test]
+    async fn diagnostic_records_dns_cancellation_without_claiming_resolver_timeout() {
+        let dns=dns_server("silent").await;
+        let out=capture(async {assert!(tokio::time::timeout(Duration::from_millis(100),dial(&dns.resolver,"voice.test.",443)).await.is_err());}).await;
+        let lines:Vec<_>=out.lines().filter(|l|l.contains("voice dns family timing")).collect();
+        assert_eq!(lines.len(),2,"both started families must be observed: {out}");
+        assert!(lines.iter().all(|l|l.contains("outcome=\"cancelled\"")),"owner cancellation is not a DNS timeout: {out}");
+        assert!(!out.contains("dns_timeout"));
+    }
+    #[tokio::test]
+    async fn diagnostic_records_real_negative_dns_rcode_and_never_starts_tcp() {
+        for (mode,reason,rcode) in [("nxdomain","nxdomain",3),("empty","nodata",0)] {
+            let dns=dns_server(mode).await;
+            let out=capture(async {assert!(family(&dns.resolver,"voice.test.",443,false).await.is_err());}).await;
+            assert!(out.contains("outcome=\"failed\"") && out.contains(&format!("reason=\"{reason}\"")),"{out}");
+            assert!(out.contains(&format!("dns_rcode={rcode}")),"{out}");
+            assert!(!out.contains("voice tcp address timing") && !out.contains("voice.test"),"{out}");
+        }
+    }
+    #[test]
+    fn diagnostic_error_classification_cannot_echo_untrusted_error_text() {
+        use hickory_resolver::net::{NetError,DnsError};
+        use hickory_resolver::proto::op::ResponseCode;
+        assert_eq!(dns_failure(&NetError::Timeout),("dns_timeout",None,None));
+        assert_eq!(dns_failure(&NetError::Dns(DnsError::ResponseCode(ResponseCode::ServFail))),("dns_response",Some(2),None));
+        let dirty="wss://voice.invalid?authorization=SECRET user speech";
+        assert_eq!(dns_failure(&NetError::Msg(dirty.into())),("dns_other",None,None));
+        assert_eq!(safe_failure_reason(&anyhow::anyhow!(dirty)),"other_failure");
+        assert_eq!(safe_failure_reason(&anyhow::anyhow!("http_403")),"http_rejected");
+        assert_eq!(safe_failure_reason(&anyhow::anyhow!("http_403 body=SECRET")),"other_failure");
+        assert_eq!(safe_failure_reason(&anyhow::anyhow!("tls_failed")),"tls_failed");
+    }
     async fn dns_server(mode: &'static str) -> Dns {
         let socket=UdpSocket::bind("127.0.0.1:0").await.unwrap();
         let mut server=NameServerConfig::udp("127.0.0.1".parse().unwrap());
@@ -119,6 +250,10 @@ mod tests {
                 let req=Message::from_vec(&buf[..n]).unwrap();let q=req.queries[0].clone();
                 if mode=="silent" || (mode=="a_only" && q.query_type()==RecordType::AAAA) {continue;}
                 let mut resp=Message::response(req.metadata.id,OpCode::Query);resp.add_query(q.clone());
+                if mode=="nxdomain" || mode=="empty" {
+                    if mode=="nxdomain" {resp.metadata.response_code=hickory_resolver::proto::op::ResponseCode::NXDomain;}
+                    socket.send_to(&resp.to_vec().unwrap(),peer).await.unwrap();continue;
+                }
                 if q.query_type()==RecordType::A {
                     count.fetch_add(1,Ordering::SeqCst);
                     if mode=="cname_answer" {

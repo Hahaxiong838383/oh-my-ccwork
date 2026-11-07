@@ -54,7 +54,7 @@ use tokio::sync::mpsc::error::SendTimeoutError;
 use crate::playout::PlayoutControl;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
-use tracing::info;
+use tracing::{info, Instrument};
 
 pub const TTS_SAMPLE_RATE: u32 = 24_000;
 /// 超拟人 endpoint(path 含产品固定路由段,勿改)
@@ -284,7 +284,7 @@ async fn connect_observed(url: String) -> Result<Warm> {
     let mut trace = ConnectTiming {
         id: NEXT.fetch_add(1, Ordering::Relaxed), start: std::time::Instant::now(),
         stage: "request", dns_ms: None, tcp_ms: None, tls_ws_ms: None, outcome: "cancelled",
-        dns_path: "system", local: None, peer: None,
+        dns_path: "system", local: None, peer: None,reason:"owner_dropped",
     };
     // Explicitly opt in for the known TTS host only. Independent A/AAAA lookups
     // let an available address connect without waiting for the other family.
@@ -302,7 +302,8 @@ async fn connect_observed(url: String) -> Result<Warm> {
         ) {
             trace.dns_path="independent_families";
             trace.stage="resolve_tcp";
-            let connected=crate::voice_connect::connect(&host,port).await?;
+            let connected=crate::voice_connect::connect(&host,port)
+                .instrument(tracing::info_span!("voice_connection",provider="tts",connect_id=trace.id)).await?;
             trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
             connected.socket
         } else {
@@ -335,11 +336,15 @@ async fn connect_observed(url: String) -> Result<Warm> {
     match result {
         Ok(Ok(ws)) => {
             trace.outcome = "connected";
+            trace.reason = "none";
             Ok(Warm { ws, opened: trace.start, connect_ms: trace.start.elapsed().as_millis() as u64, connect_id: trace.id })
         }
         other => {
             trace.outcome = if other.is_err() {"timeout"} else {"failed"};
-            let reason = match other {Ok(Err(e)) => e.to_string(), _ => "timeout".into()};
+            let reason = match other {
+                Ok(Err(e)) => {trace.reason=crate::voice_connect::safe_failure_reason(&e);e.to_string()},
+                _ => {trace.reason="connect_budget";"timeout".into()},
+            };
             bail!("xfyun connect stage={} reason={}", trace.stage, reason)
         }
     }
@@ -349,11 +354,12 @@ struct ConnectTiming {
     id: u64, start: std::time::Instant, stage: &'static str,
     dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>, outcome: &'static str,
     dns_path: &'static str,
+    reason: &'static str,
     local: Option<std::net::SocketAddr>, peer: Option<std::net::SocketAddr>,
 }
 impl Drop for ConnectTiming {
     fn drop(&mut self) {
-        info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,
+        info!(connect_id=self.id, stage=self.stage, outcome=self.outcome,reason=self.reason,
             elapsed_ms=self.start.elapsed().as_millis() as u64,
             dns_ms=self.dns_ms, tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms,
             dns_path=self.dns_path, local=?self.local, peer=?self.peer,
