@@ -13,8 +13,8 @@ pub struct Runtime {
 }
 struct State {
     model: BusinessWatchdog,
-    deadlines: [Option<u64>; 5],
-    generations: [u64; 5],
+    deadlines: [Option<u64>; 6],
+    generations: [u64; 6],
 }
 impl Runtime {
     pub fn from_settings(mode: &str, allow: &str, room: &str,
@@ -32,7 +32,7 @@ impl Runtime {
         let revision = signed.map(|v| v.1);
         let policy = Policy { mode, idle_ms, startup_ms: crate::startup_participant::STARTUP_BUDGET_MS };
         Some(Self { origin, mode, idle_ms, revision,
-            state: Arc::new(Mutex::new(State { model: BusinessWatchdog::new(policy, 0), deadlines: [None; 5], generations: [0; 5] })) })
+            state: Arc::new(Mutex::new(State { model: BusinessWatchdog::new(policy, 0), deadlines: [None; 6], generations: [0; 6] })) })
     }
     pub fn from_env(room: &str, metadata: Option<&serde_json::Value>, origin: Instant) -> Option<Self> {
         Self::from_settings(&std::env::var("P003_BUSINESS_WATCHDOG_MODE").unwrap_or_default(),
@@ -44,6 +44,27 @@ impl Runtime {
     }
     fn first_frame(&self, now: Instant) { self.state.lock().unwrap_or_else(|e| e.into_inner()).model.first_frame(self.ms(now)); }
     pub fn progress(&self, now: Instant) { self.state.lock().unwrap_or_else(|e| e.into_inner()).model.progress(self.ms(now)); }
+    /// Only newly classified RTC speech calls this, never a polling tick or
+    /// interim text. The connection budget plus 5s result grace is a bounded
+    /// local policy, not a provider SLA or a change to the signed idle timeout.
+    pub fn asr_speech(&self, now: Instant) {
+        let at=self.ms(now);let slot=Activity::Recognition as usize;
+        let until=at.saturating_add((crate::stt_volc::CONNECT_TIMEOUT+Duration::from_secs(5)).as_millis() as u64);
+        let mut s=self.state.lock().unwrap_or_else(|e|e.into_inner());
+        s.model.progress(at);
+        s.deadlines[slot]=Some(until);s.generations[slot]=s.generations[slot].saturating_add(1);
+        let generation=s.generations[slot];s.model.begin_activity(Activity::Recognition,generation,until,0);
+    }
+    pub fn asr_final(&self, now: Instant) {
+        let at=self.ms(now);let slot=Activity::Recognition as usize;
+        let mut s=self.state.lock().unwrap_or_else(|e|e.into_inner());
+        if let Some(until)=s.deadlines[slot].take() {
+            let generation=s.generations[slot];s.model.end_activity(Activity::Recognition,generation);
+            // One actual result may bridge to the normal turn task. Unsolicited,
+            // duplicate or already overdue results cannot keep a room alive.
+            if at<until {s.model.progress(at);}
+        }
+    }
     /// The pipeline is the sole producer of holds. Pass the task's original
     /// absolute deadline, never `now + budget` on every tick. A changed deadline
     /// represents a new task/authorized phase (e.g. command accepted, resume grant).
@@ -134,6 +155,23 @@ mod tests {
         assert_eq!(within_startup(None, async { Ok(17) }).await.unwrap(), 17);
     }
     fn policy() -> serde_json::Value { json!({"timeout_ms":5000,"revision":"cfg-12"}) }
+    #[test]
+    fn recognition_wait_after_real_speech_outlives_idle_but_not_its_fixed_budget() {
+        let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
+        w.input_frame(t,160);w.asr_speech(t+Duration::from_secs(1));
+        for sec in [6,8,10,15] {assert_eq!(w.evaluate(t+Duration::from_secs(sec)),Decision::Keep);}
+        assert_eq!(w.evaluate(t+Duration::from_secs(16)),Decision::Close(Reason::IdleNoProgress));
+    }
+    #[test]
+    fn recognition_final_returns_to_signed_idle_and_cannot_revive_without_speech() {
+        let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
+        w.input_frame(t,160);w.asr_speech(t+Duration::from_secs(1));
+        w.asr_final(t+Duration::from_secs(9));
+        assert_eq!(w.evaluate(t+Duration::from_secs(9)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_secs(14)),Decision::Close(Reason::IdleNoProgress));
+        w.asr_final(t+Duration::from_secs(15));
+        assert_eq!(w.evaluate(t+Duration::from_secs(15)),Decision::Close(Reason::IdleNoProgress));
+    }
     #[test]
     fn expired_ordered_generation_allows_one_rtc_handoff_without_renewing_upload() {
         let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();

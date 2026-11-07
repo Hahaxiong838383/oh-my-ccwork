@@ -28,7 +28,7 @@ use livekit::webrtc::audio_stream::native::NativeAudioStream;
 use serde_json::{Value, json};
 use tokio::sync::{Mutex, mpsc};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 
 use crate::contract::Contract;
 use crate::candidate::is_silent_result;
@@ -676,6 +676,7 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
     let (stt_ev_tx, stt_ev_rx) = mpsc::channel::<SttEvent>(64);
     info!(room = %room_name, nonstream = stt_cfg.nonstream, "asr stream task spawned (preconnect)");
     let rn = room_name.to_string();
+    let span = tracing::info_span!("asr_stream", room = %room_name);
     let task = tokio::spawn(async move {
         let mut pcm_rx = stt_pcm_rx;
         let mut fails = 0u32;
@@ -696,6 +697,10 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
                 Err(e) => {
                     warn!(room = %rn, error = %e, "火山 ASR 流异常");
                     let _ = stt_ev_tx.send(SttEvent::Interrupted).await;
+                    // DNS/address attempts already share the connection budget.
+                    // Do not renew it six times while the 25s audio queue fills
+                    // and silently discards the user's first utterance.
+                    if e.is::<stt_volc::ConnectFailure>() { break; }
                 }
             }
             // A closed input is terminal, including provider rejection of its
@@ -714,7 +719,7 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
             tokio::time::sleep(backoff).await;
         }
         let _ = stt_ev_tx.send(SttEvent::Closed).await;
-    });
+    }.instrument(span));
     SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task: crate::owned_task::OwnedTask::new(task) }
 }
 
@@ -1284,7 +1289,7 @@ pub async fn run_pipeline(
                     let chunk: Vec<i16> = vad_buf.drain(..WINDOW).collect();
                     if let Ok(p) = vad.predict(&chunk) {
                         let active = p >= gate.activation_threshold;
-                        if active { if let Some(w) = &ready.business { w.progress(Instant::now()); } }
+                        if active { if let Some(w) = &ready.business { w.asr_speech(Instant::now()); } }
                         let ev = gate.feed(p);
                         orch.on_vad_frame(&gate, ev, active, &eot_ring).await;
                     }
@@ -1328,6 +1333,7 @@ pub async fn run_pipeline(
                         orch.apply_ordered_actions(acts);
                         orch.on_ordered_final_held().await;
                     } else {
+                        if let Some(w) = &ready.business { w.asr_final(Instant::now()); }
                         orch.on_final(t)
                     }
                 }
@@ -4286,6 +4292,19 @@ mod publish_result_tests {
 #[cfg(test)]
 mod asr_lifecycle_tests {
     use super::*;
+    #[tokio::test]
+    async fn failed_connection_episode_closes_without_resetting_budget_or_consuming_pcm() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
+        let SttPre{pcm_tx,mut ev_rx,task}=spawn_stt(cfg,"synthetic-asr-connect-failure");
+        pcm_tx.send(vec![5;3200]).await.unwrap();
+        let (socket,_)=listener.accept().await.unwrap();drop(socket);
+        tokio::time::timeout(Duration::from_secs(1),task).await.expect("connect failure must be terminal inside its episode").unwrap();
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Interrupted)));
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Closed)));
+        assert!(tokio::time::timeout(Duration::from_millis(600),listener.accept()).await.is_err());
+    }
     #[tokio::test]
     async fn rejected_final_packet_does_not_reconnect_closed_input() {
         let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

@@ -11,7 +11,7 @@ pub enum Reason { StartupNoInput, IdleNoProgress, UnknownPolicy }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decision { Keep, Observe(Reason), Close(Reason) }
 #[derive(Clone, Copy, Debug)]
-pub enum Activity { Reply, Search, Command, Listening, Input }
+pub enum Activity { Reply, Search, Command, Listening, Input, Recognition }
 
 #[derive(Clone, Copy, Debug)]
 struct Hold { generation: u64, until: u64, active: bool }
@@ -25,12 +25,12 @@ pub struct BusinessWatchdog {
     last_progress: u64,
     // Retain the generation after completion: a delayed duplicate cannot
     // resurrect an expired/finished task and buy another full lease.
-    holds: [Option<Hold>; 5],
+    holds: [Option<Hold>; 6],
 }
 impl BusinessWatchdog {
     pub fn new(mut policy: Policy, now: u64) -> Self {
         policy.idle_ms = policy.idle_ms.filter(|ms| (5_000..=300_000).contains(ms));
-        Self { policy, started: now, ready: false, ready_at: now, rtc_grace_at: None, last_progress: now, holds: [None; 5] }
+        Self { policy, started: now, ready: false, ready_at: now, rtc_grace_at: None, last_progress: now, holds: [None; 6] }
     }
     pub fn observe_only(&mut self) { self.policy.mode = Mode::Observe; }
     pub fn first_frame(&mut self, now: u64) {

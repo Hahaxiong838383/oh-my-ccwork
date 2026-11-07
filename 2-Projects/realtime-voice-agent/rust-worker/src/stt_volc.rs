@@ -27,6 +27,9 @@ pub enum SttEvent {
 
 #[derive(Clone)]
 pub struct SttConfig {
+    /// Independent DNS families/address racing; bounded connect applies to
+    /// both paths. Opt-in is separate from TTS and restricted to the ASR host.
+    pub async_connect: bool,
     pub app_id: String,
     pub access_token: String,
     pub api_key: Option<String>,
@@ -68,6 +71,7 @@ impl SttConfig {
     }
     pub fn from_env() -> Self {
         Self {
+            async_connect: std::env::var("P003_ASR_CONNECT_RECOVERY_V1").is_ok_and(|v| v == "1"),
             app_id: std::env::var("VOLC_APP_ID").unwrap_or_default(),
             access_token: std::env::var("VOLC_ACCESS_TOKEN").unwrap_or_default(),
             api_key: std::env::var("VOLC_ASR_API_KEY").ok().filter(|s| !s.is_empty()),
@@ -163,6 +167,63 @@ pub enum AsrEnd {
     ServerClosed,
 }
 
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+type AsrWs = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+#[derive(Debug)]
+pub struct ConnectFailure;
+impl std::fmt::Display for ConnectFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("asr connection failed within bounded episode") }
+}
+impl std::error::Error for ConnectFailure {}
+
+struct ConnectTiming<'a> {
+    request_id: &'a str, started: std::time::Instant, stage: &'static str,
+    outcome: &'static str, dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>,
+}
+impl Drop for ConnectTiming<'_> {
+    fn drop(&mut self) {
+        info!(request_id=self.request_id, stage=self.stage, outcome=self.outcome,
+            elapsed_ms=self.started.elapsed().as_millis() as u64, dns_ms=self.dns_ms,
+            tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms, "asr connection timing");
+    }
+}
+
+async fn connect_observed(request: tokio_tungstenite::tungstenite::handshake::client::Request,
+                          request_id: &str, async_connect: bool) -> Result<AsrWs> {
+    let mut timing = ConnectTiming { request_id, started: std::time::Instant::now(), stage:"request",
+        outcome:"cancelled", dns_ms:None, tcp_ms:None, tls_ws_ms:None };
+    let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
+        let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
+        let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str()==Some("wss") {443} else {80});
+        let socket = if async_connect && host == "openspeech.bytedance.com" {
+            timing.stage="resolve_tcp";
+            let c=crate::voice_connect::connect(&host,port).await?;
+            timing.dns_ms=Some(c.dns_ms);timing.tcp_ms=Some(c.tcp_ms);c.socket
+        } else {
+            timing.stage="dns";let at=std::time::Instant::now();
+            let addresses:Vec<_>=tokio::net::lookup_host((host.as_str(),port)).await
+                .map_err(|_|anyhow::anyhow!("resolve_failed"))?.collect();
+            timing.dns_ms=Some(at.elapsed().as_millis() as u64);
+            timing.stage="tcp";let at=std::time::Instant::now();
+            let socket=tokio::net::TcpStream::connect(addresses.as_slice()).await
+                .map_err(|_|anyhow::anyhow!("connect_failed"))?;
+            timing.tcp_ms=Some(at.elapsed().as_millis() as u64);socket
+        };
+        timing.stage="tls_ws";let at=std::time::Instant::now();
+        // Pass the original request unchanged: Host, auth headers, path and
+        // TLS hostname/certificate verification retain their existing contract.
+        let (ws,_) = tokio_tungstenite::client_async_tls_with_config(request,socket,None,None).await
+            .map_err(|_|anyhow::anyhow!("handshake_failed"))?;
+        timing.tls_ws_ms=Some(at.elapsed().as_millis() as u64);
+        Ok::<_,anyhow::Error>(ws)
+    }).await;
+    match result {
+        Ok(Ok(ws)) => {timing.outcome="connected";Ok(ws)},
+        other => {timing.outcome=if other.is_err(){"timeout"}else{"failed"};Err(ConnectFailure.into())}
+    }
+}
+
 /// 起一条 ASR 长连:`pcm_rx` 收 16k i16 PCM 段,事件从 `event_tx` 发出。
 /// pcm_rx 关闭 → 发尾段(NegativeSeq)收流。借用 receiver 以支持外层断线重连复用。
 pub async fn run_asr_stream(
@@ -186,9 +247,13 @@ pub async fn run_asr_stream(
         h.insert("X-Api-Request-Id", request_id.parse()?);
         h.insert("X-Api-Connect-Id", uuid::Uuid::new_v4().to_string().parse()?);
     }
-    let (ws, _) = tokio_tungstenite::connect_async(req).await.context("asr connect")?;
+    let ws = tokio::select! {
+        result = connect_observed(req, &request_id, cfg.async_connect) => result?,
+        _ = event_tx.closed() => return Ok(AsrEnd::Unused),
+    };
     let (mut tx, mut rx) = ws.split();
     info!(
+        %request_id,
         end_window_ms = cfg.end_window_ms,
         hotwords = cfg.hotwords.len(),
         "asr: connected (seedasr bigmodel)"
@@ -362,6 +427,76 @@ async fn handle_result(
 mod tests {
     use super::*;
 
+    // A TCP peer that never finishes the WS handshake must not keep the
+    // recognition task alive indefinitely (the 01:08 production failure).
+    #[tokio::test]
+    async fn stalled_handshake_has_a_bounded_connection_budget() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut c = cfg(vec![]); c.url = format!("ws://{}", listener.local_addr().unwrap());
+        let (tx, mut rx) = mpsc::channel(128);
+        tx.send(vec![7; 3200]).await.unwrap();
+        let (events, _ev_rx) = mpsc::channel(2);
+        let mut client = tokio::spawn(async move { run_asr_stream(c, &mut rx, events).await });
+        let (_socket, _) = listener.accept().await.unwrap();
+        let result = tokio::time::timeout(Duration::from_secs(11), &mut client).await;
+        client.abort();
+        assert!(result.is_ok(), "ASR connect remained pending beyond its 10s budget");
+        assert!(result.unwrap().unwrap().is_err());
+    }
+
+    #[tokio::test]
+    async fn abandoned_event_consumer_cancels_pending_handshake() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut c = cfg(vec![]); c.url = format!("ws://{}", listener.local_addr().unwrap());
+        let (_tx, mut rx) = mpsc::channel(2);
+        let (events, ev_rx) = mpsc::channel(2);
+        let mut client = tokio::spawn(async move { run_asr_stream(c, &mut rx, events).await });
+        let (_socket, _) = listener.accept().await.unwrap();
+        drop(ev_rx);
+        let result = tokio::time::timeout(Duration::from_millis(500), &mut client).await;
+        client.abort();
+        assert!(result.is_ok(), "orphan ASR handshake survived its event owner");
+        assert_eq!(result.unwrap().unwrap().unwrap(), AsrEnd::Unused);
+    }
+
+    #[tokio::test]
+    async fn delayed_handshake_preserves_auth_and_first_pcm_exactly_once() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let expected:Vec<i16>=(0..3200).map(|i|(i%601-300) as i16).collect();
+        let pcm=expected.clone();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let mut ws=tokio_tungstenite::accept_hdr_async(socket,|req:&tokio_tungstenite::tungstenite::handshake::server::Request,response| {
+                assert_eq!(req.uri().path(),"/asr-test");
+                assert_eq!(req.headers()["X-Api-Key"],"test-key");
+                assert_eq!(req.headers()["X-Api-Resource-Id"],"r");
+                assert!(req.headers().contains_key("X-Api-Request-Id"));
+                Ok(response)
+            }).await.unwrap();
+            let mut got=Vec::new();let mut init_count=0;
+            while let Some(msg)=ws.next().await {
+                let frame=Frame::unmarshal(&msg.unwrap().into_data()).unwrap();
+                if frame.msg_type==MsgType::FullClientRequest {init_count+=1;continue;}
+                if frame.flag==Flags::NegativeSeq {
+                    let response=Frame{msg_type:MsgType::FullServerResponse,flag:Flags::LastNoSeq,
+                        payload:br#"{"result":{"utterances":[]}}"#.to_vec(),..Default::default()};
+                    ws.send(WsMessage::Binary(response.marshal().into())).await.unwrap();break;
+                }
+                use std::io::Read;let mut bytes=Vec::new();
+                flate2::read::GzDecoder::new(frame.payload.as_slice()).read_to_end(&mut bytes).unwrap();
+                got.extend(bytes.chunks_exact(2).map(|b|i16::from_le_bytes([b[0],b[1]])));
+            }
+            assert_eq!(init_count,1);assert_eq!(got,expected);
+        });
+        let mut c=cfg(vec![]);c.url=format!("ws://{addr}/asr-test");c.api_key=Some("test-key".into());
+        let (tx,mut rx)=mpsc::channel(128);let (events,_ev_rx)=mpsc::channel(2);
+        tx.send(pcm).await.unwrap();drop(tx);
+        assert_eq!(tokio::time::timeout(Duration::from_secs(2),run_asr_stream(c,&mut rx,events)).await.unwrap().unwrap(),AsrEnd::InputDone);
+        server.await.unwrap();
+    }
+
     // The async provider rejects an empty recognition terminator with
     // 45000002. Reproduce its wire behavior, including a positive control:
     // real PCM that happens to contain silence still needs normal final ACK.
@@ -444,6 +579,7 @@ mod tests {
 
     fn cfg(hotwords: Vec<String>) -> SttConfig {
         SttConfig {
+            async_connect: false,
             app_id: "a".into(),
             access_token: "t".into(),
             api_key: None,

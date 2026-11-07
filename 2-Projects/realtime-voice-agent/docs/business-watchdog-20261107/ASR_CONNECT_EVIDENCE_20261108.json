@@ -1,0 +1,58 @@
+{
+  "at": "2026-11-07T17:23:14.751347+00:00",
+  "status": "ISOLATED_TESTS_PASS_NOT_DEPLOYED",
+  "runtime_source": "b373b355d20dcd47802012e1b33db72d7acc32fa",
+  "runtime_sha256": "50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0",
+  "tests": {
+    "passed": 541,
+    "failed": 0,
+    "ignored": 1
+  },
+  "source_manifest_matches": true,
+  "files": {
+    "ASR_NORMAL_FAILURE_TIMELINE.json": {
+      "sha256": "235c1133d40f9d54e822e688e509798292a028ba2f0c7925707cd8777ecac15f",
+      "bytes": 6934
+    },
+    "ASR_NETWORK_PHASES.json": {
+      "sha256": "23d1049cf5775f0b3b2786610a76b8eaa203b54e15439f8245bbf7fce3cbec16",
+      "bytes": 3494
+    },
+    "ASR_CURRENT_FAILURE_PRESERVED.json": {
+      "sha256": "7611f8af71fb69d814ca62db19e623e4c5540cbdf10de1c272f48a91743a080c",
+      "bytes": 3935
+    },
+    "worker-asr-connect-red.log": {
+      "sha256": "60e2ff470a2fb85e1d2a1682dc0c720260538451c659648b1c1110ee6bb27554",
+      "bytes": 6493
+    },
+    "worker-asr-connect-green.log": {
+      "sha256": "7ffd9c65eb205d99749b88d14ffe29d50e1078a2eb58340dae624c57e7667c59",
+      "bytes": 6495
+    },
+    "worker-asr-recognition-red.log": {
+      "sha256": "ba5519b07a76197cf1cfc4c3e3f4cffb18ac62e25cb827599cac3bce5355e06d",
+      "bytes": 6501
+    },
+    "worker-asr-recognition-green.log": {
+      "sha256": "cd0ba030ab24f23d467855aa72f3237980c981c7f41c397ea971a913f682b777",
+      "bytes": 6503
+    },
+    "worker-asr-connect-matrix.log": {
+      "sha256": "6fbbb0f8d5cea88d6c71eb326f7f3f938109523b41413398d72a4e8a8d2dc001",
+      "bytes": 6497
+    },
+    "source-asr-connect-matrix.json": {
+      "sha256": "066b0ccc4678b128d321179660ebeb1082f0ed8cdafa9df8e1aa9cda40d15018",
+      "bytes": 6363
+    }
+  },
+  "unverified": [
+    "release RTC on patched candidate",
+    "provider ASR independent DNS enabled",
+    "Android",
+    "other worker pools",
+    "historical first input and twelve tickets",
+    "TTS historical streaming gaps"
+  ]
+}
