@@ -1,0 +1,58 @@
+{
+  "reviewer": "xAI Grok 4.7",
+  "role": "independent_read_only_round2",
+  "subject_sha": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "parent_sha": "b373b355d20dcd47802012e1b33db72d7acc32fa",
+  "runtime_files": [
+    "rust-worker/src/business_runtime.rs",
+    "rust-worker/src/business_watchdog.rs",
+    "rust-worker/src/pipeline.rs",
+    "rust-worker/src/stt_volc.rs"
+  ],
+  "worktree_note": "stt_volc.rs has 42 uncommitted test lines after 713f6f35; excluded",
+  "production_binary_sha256": "50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0",
+  "reported_undeployed_release_binary_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+  "deploy_recommendation": "do_not_deploy",
+  "not_claimed": ["full_rollout", "android_pass", "historical_root_cause_closed", "metrics_contract_pass", "ordered_candidate_pass"],
+  "revised": [
+    {
+      "id": "vad_tail_forever",
+      "verdict": "withdraw_for_this_round",
+      "evidence": "Both probes keep sending 160-sample zero PCM after the wav. pipeline extends every non-empty frame and sends at 3200. At most about 200ms of chunk wait. A true end-of-track short tail is a separate unproven boundary."
+    },
+    {
+      "id": "subtract_6_7s_from_9_7s",
+      "verdict": "withdraw",
+      "evidence": "9.7s is the failed episode with no asr:connected. 6.7s is a later independent getaddrinfo. The difference is not a same-call phase remainder."
+    },
+    {
+      "id": "corpus_wording",
+      "verdict": "revise",
+      "evidence": "Fixed self-made normal-short.wav over real RTC into VAD. Not a live human field recording and not an Android microphone."
+    }
+  ],
+  "agreed_no_exact_blocker": [
+    {
+      "id": "connect_budget_10s",
+      "code": "CONNECT_TIMEOUT wraps both lookup_host and voice_connect. Flag off does not restore unbounded connect_async. PCM recv starts only after the handshake."
+    },
+    {
+      "id": "recognition_15s_fresh_vad_only",
+      "code": "asr_speech runs only when VAD is active. Deadline is absolute at+15s. Interim, heartbeat, ready and the 1s poll do not refresh Recognition. Signed idle stays 5s."
+    },
+    {
+      "id": "final_clears_and_does_not_revive",
+      "code": "asr_final takes the slot and end_activity. Progress only if the final is before the deadline. No prior speech makes it a no-op."
+    },
+    {
+      "id": "typed_connect_failure_does_not_retry_six_times",
+      "code": "ConnectFailure breaks before the elapsed>10s fail-count reset. Unused from a closed event consumer also breaks. Retry does not call asr_speech. Post-connect ServerClosed remains the disclosed old path."
+    }
+  ],
+  "not_a_rewrite_item": "Default-path sequential connect can spend the same 10s on a blackhole first address. That does not remove the cap. Blackhole end-to-end remains unverified.",
+  "unverified_by_this_reviewer": [
+    "Did not re-run the reported 541 passed / 1 ignored suite. ASR_CONNECT_RTC_READ_1.json line '541 filtered out' is a single-test filter.",
+    "Candidate debug ordinary job: ordered 0, exit 0, user_finals 2, audible_ms 8390, cleanup Gone, connect 822ms = DNS 566 + TCP 4 + TLS/WS 249. Direct job. Metrics not strictly counted. ordered result is null. Main process remained 50017a89 PID 3496776.",
+    "Did not re-hash release binary 3dd0430a or re-test Android, same-trace phase splits, or blackhole addresses."
+  ]
+}

@@ -101,6 +101,7 @@ async fn actual_job_silence_and_first_turn_handoff() -> Result<()> {
         let mut phase=None;
         let mut events_seen=Vec::new();
         let mut answers=Vec::new();
+        let mut metric_kinds=Vec::new();
         let mut user_finals=0;
         let mut input_sent=None;
         loop {
@@ -108,8 +109,11 @@ async fn actual_job_silence_and_first_turn_handoff() -> Result<()> {
             tokio::select! {
                 event=events.recv()=>{
                     match event {
-                        Some(RoomEvent::DataReceived{payload,..})=>{
+                        Some(RoomEvent::DataReceived{payload,topic,..})=>{
                             if let Ok(v)=serde_json::from_slice::<Value>(&payload) {
+                                if topic.as_deref()==Some("metrics") {
+                                    if let Some(kind)=v["k"].as_str(){metric_kinds.push(kind.to_owned());}
+                                }
                                 if v["trace_id"]==trace {
                                     let kind=v["type"].as_str().unwrap_or("").to_owned();
                                     if kind=="session.input_ready" && ready.is_none(){
@@ -182,12 +186,13 @@ async fn actual_job_silence_and_first_turn_handoff() -> Result<()> {
             println!("PROBE_OBSERVATION {}",json!({"user_finals":user_finals,"answers":answers,"audible_ms":stats.0/24,
                 "first_audio_ms":stats.1.map(|p|p.duration_since(started).as_millis())}));
             ensure!(user_finals>0 && !answers.is_empty() && stats.0>=12_000,"normal question missing evidence: user_finals={} answers={} audible_ms={}",user_finals,answers.len(),stats.0/24);
+            ensure!(!metric_kinds.is_empty(),"no actual metrics topic packets");
         }
         Ok(json!({"mode":mode,"ordered":ordered,"speech":speech,"room":name,"sid":sid,"ready_ms":ready.duration_since(started).as_millis(),
             "input_sent_ms":input_sent.map(|p|p.duration_since(started).as_millis()),"audible_ms":stats.0/24,
             "first_audio_ms":stats.1.map(|p|p.duration_since(started).as_millis()),"user_finals":user_finals,"answers":answers,
             "elapsed_ms":started.elapsed().as_millis(),"phase_ms":phase.map(|p|p.duration_since(started).as_millis()),
-            "worker_alive_before_cleanup":alive,"events":events_seen}))
+            "worker_alive_before_cleanup":alive,"events":events_seen,"metric_kinds":metric_kinds}))
     }.await;
     if let Some(handle)=sender {handle.abort();let _=handle.await;}
     if let Some(room)=client {let _=room.close().await;}

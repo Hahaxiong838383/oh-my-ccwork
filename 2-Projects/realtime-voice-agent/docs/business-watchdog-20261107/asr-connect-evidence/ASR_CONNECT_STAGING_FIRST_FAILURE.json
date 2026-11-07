@@ -1,0 +1,8 @@
+{
+  "at": "2026-11-07T17:38:37.661784+00:00",
+  "status": "STAGING_REFUSED_NO_DEPLOY",
+  "reason": "temporary transfer directory reused from previous 27-part payload; new payload 26 parts, assembly count check rejected",
+  "live_binary_changed": false,
+  "rollback_binary_changed": false,
+  "resolution": "copy only SHA-matching new chunks to release-parts-3dd0430a then reverify compressed and binary SHA"
+}

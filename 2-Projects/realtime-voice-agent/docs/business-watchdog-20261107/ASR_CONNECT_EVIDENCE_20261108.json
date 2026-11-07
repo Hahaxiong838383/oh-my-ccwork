@@ -1,10 +1,10 @@
 {
-  "at": "2026-11-07T17:23:14.751347+00:00",
-  "status": "ISOLATED_TESTS_PASS_NOT_DEPLOYED",
+  "at": "2026-11-07T17:43:27.528430+00:00",
+  "status": "STRICT_ISOLATED_RTC_PASS_NOT_DEPLOYED",
   "runtime_source": "b373b355d20dcd47802012e1b33db72d7acc32fa",
   "runtime_sha256": "50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0",
   "tests": {
-    "passed": 541,
+    "passed": 542,
     "failed": 0,
     "ignored": 1
   },
@@ -48,11 +48,14 @@
     }
   },
   "unverified": [
-    "release RTC on patched candidate",
-    "provider ASR independent DNS enabled",
+    "formal release dispatch after controlled deployment",
     "Android",
     "other worker pools",
     "historical first input and twelve tickets",
     "TTS historical streaming gaps"
-  ]
+  ],
+  "candidate_source": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "candidate_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb",
+  "strict_rtc": "asr-connect-evidence/ASR_CANDIDATE_FINAL_RUNTIME.json",
+  "review": "Grok172 no concrete code blocker; deployment hold pending latest evidence amendment"
 }

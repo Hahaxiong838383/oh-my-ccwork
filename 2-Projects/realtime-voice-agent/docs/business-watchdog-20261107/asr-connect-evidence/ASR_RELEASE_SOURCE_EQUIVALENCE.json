@@ -1,0 +1,11 @@
+{
+  "at": "2026-11-07T17:43:27.528430+00:00",
+  "release_source": "713f6f35af43d5a58aeae8360ad421fc66b72718",
+  "manifest_entries": 68,
+  "runtime_equivalent": true,
+  "test_only_changed": [
+    "src/stt_volc.rs cfg(test)",
+    "src/rtc_business_probe.rs cfg(test)"
+  ],
+  "candidate_sha256": "3dd0430aaf97d3ef5d056d871f3d87a64c66508c0b9b8cf9702bc9f0e73e70cb"
+}

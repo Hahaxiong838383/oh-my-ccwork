@@ -497,6 +497,48 @@ mod tests {
         server.await.unwrap();
     }
 
+    #[tokio::test]
+    async fn delayed_six_second_handshake_delivers_final_before_recognition_hold_expires() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_millis(6500)).await;
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();
+            assert_eq!(init.msg_type,MsgType::FullClientRequest);
+            let audio=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();
+            assert_eq!(audio.msg_type,MsgType::AudioOnlyClient);
+            let response=Frame{msg_type:MsgType::FullServerResponse,flag:Flags::LastNoSeq,
+                payload:serde_json::to_vec(&json!({"result":{"utterances":[{"text":"合成验证","definite":true}]}})).unwrap(),..Default::default()};
+            ws.send(WsMessage::Binary(response.marshal().into())).await.unwrap();
+        });
+        let t=std::time::Instant::now();
+        let w=crate::business_runtime::Runtime::from_settings("enforce","BJP00326110799999901",
+            "sn-BJP00326110799999901-123",Some(&json!({"timeout_ms":5000,"revision":"cfg-1"})),t).unwrap();
+        w.input_frame(t,160);w.asr_speech(t);
+        let mut c=cfg(vec![]);c.url=format!("ws://{addr}");
+        let (tx,mut rx)=mpsc::channel(128);let (events,mut ev_rx)=mpsc::channel(2);
+        tx.send(vec![31;3200]).await.unwrap();
+        let client=tokio::spawn(async move {run_asr_stream(c,&mut rx,events).await});
+        let mut tick=tokio::time::interval(Duration::from_millis(25));
+        loop {
+            tokio::select! {
+                event=ev_rx.recv()=>{
+                    assert!(matches!(event,Some(SttEvent::Final(ref s)) if s=="合成验证"));
+                    w.asr_final(std::time::Instant::now());break;
+                },
+                _=tick.tick()=>{
+                    assert!(t.elapsed()<Duration::from_secs(9),"bounded final not delivered");
+                    assert_eq!(w.evaluate(std::time::Instant::now()),crate::business_watchdog::Decision::Keep,
+                        "ordinary 5s idle must not overtake a live recognition episode");
+                }
+            }
+        }
+        assert!(t.elapsed()>=Duration::from_secs(6));
+        assert_eq!(client.await.unwrap().unwrap(),AsrEnd::InputDone);server.await.unwrap();
+    }
+
     // The async provider rejects an empty recognition terminator with
     // 45000002. Reproduce its wire behavior, including a positive control:
     // real PCM that happens to contain silence still needs normal final ACK.

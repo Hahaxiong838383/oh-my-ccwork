@@ -1,0 +1,246 @@
+{
+  "reviewer": {
+    "identity": "xAI Grok 4.7",
+    "role": "independent-read-only",
+    "at": "2026-11-07T17:22:50Z",
+    "actions_not_taken": [
+      "no source edit",
+      "no deploy",
+      "no device change",
+      "no probe rerun",
+      "no credential output",
+      "no raw user speech"
+    ]
+  },
+  "verdict": "FAIL_STANDS",
+  "system_or_android_pass": false,
+  "running": {
+    "source_commit": "b373b355d20dcd47802012e1b33db72d7acc32fa",
+    "commit_time_cst": "2026-11-08 01:04:06 +0800",
+    "commit_subject": "fix(voice): close unused ASR preconnections without empty recognition",
+    "binary_sha256": "50017a8998197d84fcc58957e0979ea13f56aabe0758ba9ea2ab2aff468de4d0",
+    "deployed_at": "2026-11-07T17:06:29.039834Z",
+    "pid_after": "3496776",
+    "deploy_status": "ASR_EMPTY_CLOSE_DEPLOYED",
+    "env_and_dns_config_unchanged": true,
+    "blobs": {
+      "stt_volc.rs": "f30099fa49c09a7a6a4c4791a421c729f7cb3ed4",
+      "pipeline.rs": "ff53f9dedf2109aef0c83f959bc0c0880ffc4618",
+      "job.rs": "0a09bb00f579455c827fb627338e8df681676b34",
+      "business_watchdog.rs": "edb11ba879e7fd38779260c03617299d0c757433",
+      "business_runtime.rs": "510bb1a9f22dbaa64bbabca19136c8d2100e68b7",
+      "voice_connect.rs": "aa106f2116210c3760940febef9954286971f374",
+      "tts_xfyun.rs": "94f6e4982ad2f67b2512b0eea925a3bc20b6a89a"
+    }
+  },
+  "worktree_warning": {
+    "dirty_during_review": [
+      "2-Projects/realtime-voice-agent/rust-worker/src/stt_volc.rs",
+      "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+      "2-Projects/realtime-voice-agent/rust-worker/src/business_watchdog.rs",
+      "2-Projects/realtime-voice-agent/rust-worker/src/business_runtime.rs"
+    ],
+    "diff_stat_observed": "+203/-10 approximately",
+    "used_as_running_code": false,
+    "accepted_as_fix": false,
+    "note": "Line numbers in the markdown are from commit b373b355 blobs, not the moving worktree."
+  },
+  "failure": {
+    "trace_id": "ops-release-probe-7bccf169-0d98-44e6-aef9-b300e36e09dd",
+    "room": "sn-BJP00326110799999901-1794071328679",
+    "room_sid": "RM_Y245vKzEVDK5",
+    "job_id": "AJ_iGTLQv963XbR",
+    "ordered": false,
+    "status": "FAIL",
+    "client_at": "2026-11-07T17:08:59.161343Z",
+    "ready_ms": 741,
+    "user_finals": 0,
+    "answer_finals": 0,
+    "audible_ms": 0,
+    "events": [
+      "session.input_ready",
+      "session.output_ready"
+    ],
+    "natural_room_gone": true,
+    "policy": {
+      "timeout_ms": 5000,
+      "revision": "cfg-900001",
+      "source": "operator-signed synthetic metadata"
+    },
+    "asr_spawned": "2026-11-07T17:08:49.145205Z",
+    "user_speech_started": "2026-11-07T17:08:50.002858Z",
+    "eot_at": "2026-11-07T17:08:53.407806Z",
+    "eot_probability": 0.5305777192115784,
+    "close_at": "2026-11-07T17:08:58.287928Z",
+    "close_decision": "Close(IdleNoProgress)",
+    "close_elapsed_ms": 9239,
+    "process_exit": "2026-11-07T17:08:58.848024Z",
+    "seconds_spawn_to_close": 9.143,
+    "seconds_spawn_to_exit": 9.703,
+    "asr_connected_log_present": false,
+    "provider_error_45000002_present": false,
+    "last_progress_wall_window": [
+      "2026-11-07T17:08:52.297Z",
+      "2026-11-07T17:08:53.297Z"
+    ],
+    "native_overflow_after_close": "2026-11-07T17:08:58.390389Z dropped 1 frame",
+    "audio_source": "synthetic fixture wav over real RTC, not an Android microphone"
+  },
+  "same_binary_ordered_pass_does_not_clear_failure": {
+    "trace_id": "ops-release-probe-46f2382c-eda5-492c-af71-d013fa7965cc",
+    "at": "2026-11-07T17:07:49.300483Z",
+    "status": "PASS",
+    "ordered": true,
+    "pid": "3496776",
+    "user_finals": 2,
+    "answer_finals": 1,
+    "audible_ms": 7090.0,
+    "later_idle_close_elapsed_ms": 24309,
+    "meaning": "ASR and TTS completed on this binary in ordered mode; the later normal RTC failure remains"
+  },
+  "proven": [
+    {
+      "id": "normal-rtc-fail",
+      "statement": "Normal synthetic RTC probe failed with zero finals and zero audible audio after business IdleNoProgress.",
+      "evidence": [
+        "ASR_RTC_READ_3.json release-dispatch-asr-ordered0 sha256 fcdccf611f7b80468401d2b552c27ee40233149b81ca7beae3793b91a21aea44",
+        "ASR_NORMAL_FAILURE_TIMELINE.json"
+      ]
+    },
+    {
+      "id": "handshake-not-complete",
+      "statement": "ASR task spawned and asr: connected never appeared before process exit. Deployed stt_volc.rs:189-195 logs that only after unbounded connect_async.",
+      "evidence": [
+        "blob f30099fa49c09a7a6a4c4791a421c729f7cb3ed4",
+        "read-asr-normal-failure.py lines 2-4 do not filter asr: connected"
+      ]
+    },
+    {
+      "id": "vad-reached-worker",
+      "statement": "UserSpeechStarted and EOT show pipeline VAD saw energy. The one-frame native overflow is 102ms after the close decision.",
+      "evidence": [
+        "pipeline.rs:1050,1267-1289 blob ff53f9dedf2109aef0c83f959bc0c0880ffc4618"
+      ]
+    },
+    {
+      "id": "idle-policy-executed",
+      "statement": "Signed 5000ms idle fired on the 1s job tick after the last VAD progress bin. Normal RTC has no Input hold. Arithmetic matches; protection for pending ASR is absent.",
+      "evidence": [
+        "release-dispatch-probe-asr.py:17-18",
+        "business_watchdog.rs:32,68-81",
+        "business_runtime.rs:50-59",
+        "pipeline.rs:1287,1411-1417",
+        "job.rs:249,264-272"
+      ]
+    },
+    {
+      "id": "empty-negative-seq-is-a-different-fix",
+      "statement": "b373b355 closes unused zero-PCM preconnections instead of sending NegativeSeq. This failure log has neither 45000002 nor unused-close.",
+      "evidence": [
+        "ASR_EMPTY_FINAL_ASYNC_AB.json sha256 93e75be3192dc676e431113b290b0ef47129431c8006e167d51035cd6baa4d65"
+      ]
+    },
+    {
+      "id": "dns-cache-partial",
+      "statement": "Cache=yes at 16:59:13Z stored voice-hk A and empty AAAA. openspeech cold getaddrinfo was still 6723.72ms afterward.",
+      "evidence": [
+        "DNS_CACHE_APPLY.json",
+        "ASR_NETWORK_PHASES.json"
+      ]
+    },
+    {
+      "id": "queue-did-not-drop-this-utterance",
+      "statement": "128x200ms is 25.6s. This utterance is about 3s and was not read before process exit.",
+      "evidence": [
+        "pipeline.rs:675,1050,1268-1271",
+        "stt_volc.rs:189"
+      ]
+    }
+  ],
+  "hypothesis": [
+    {
+      "id": "dns-is-the-large-variable-part",
+      "statement": "Later independent getaddrinfo was 6723.72/198.29/4.18ms with TCP 1-8ms and TLS 9-12ms. Largest measured variable delay, not this trace, and shorter than the 9.7s pending handshake.",
+      "evidence": [
+        "ASR_NETWORK_PHASES.json sha256 23d1049cf5775f0b3b2786610a76b8eaa203b54e15439f8245bbf7fce3cbec16",
+        "asr-network-phases.py scope is HTTP /rtc/v1 404"
+      ]
+    },
+    {
+      "id": "ordered-hold-explains-pass-fail-split",
+      "statement": "Ordered mode has an Input hold; normal mode speaks at input_ready and then only has 5s after VAD stops. Ordered connect phases were not captured.",
+      "evidence": [
+        "pipeline.rs:1411-1417",
+        "release-dispatch-probe-asr.py:35-36"
+      ]
+    }
+  ],
+  "refuted": [
+    "b373b355 fixed ASR connect",
+    "this failure is provider 45000002",
+    "DNS negative cache cured all cold lookups",
+    "the 6723.72ms sample is the failure trace phase split and the full root cause",
+    "this binary or the provider could not connect at all",
+    "the first sentence was dropped by the 128-slot channel or by the post-close native overflow",
+    "the watchdog mis-counted 5s or the liveness heartbeat killed the room",
+    "raising every idle timeout is the fix",
+    "Android or the whole system passed"
+  ],
+  "attribution": {
+    "confirmed_layer": "ASR WebSocket handshake did not finish before IdleNoProgress closed a room whose probe PCM had already tripped VAD",
+    "not_confirmed_sublayer": [
+      "dns milliseconds on this trace",
+      "tcp",
+      "tls",
+      "websocket upgrade",
+      "provider recognition"
+    ],
+    "best_side_evidence_layer": "system getaddrinfo can be multi-second for openspeech.bytedance.com while TCP and TLS samples are tens of milliseconds",
+    "unexplained_remainder": "handshake still pending at 9.703s versus a later independent DNS sample of 6.724s"
+  },
+  "minimal_fix": {
+    "connect": "Reuse voice_connect for openspeech.bytedance.com inside one shared deadline covering DNS, TCP, TLS and WebSocket. voice_connect.rs:10-64 has no total deadline. Do not open a second cold connect that resets it. tts_xfyun.rs:63,294,445-446 is the existing shape, host-gated to the TTS host only.",
+    "idle": "One absolute hold only after real user VAD or queued non-empty PCM, until the ASR result or that same connect deadline. Do not increase signed 5000ms. Do not refresh on poll, silence, ready, or retry. business_runtime.rs:54 already no-ops an unchanged deadline.",
+    "preserve": "Unused zero-PCM preconnection still closes without NegativeSeq. Ordered Input hold stays the ordered-path lease.",
+    "explicitly_not": "Do not widen all idle timeouts. A 10s connect timeout alone still loses to the observed close at 9.143s after spawn."
+  },
+  "must_red_tests": [
+    "01:08 shape: speech then silence, handshake completes at 6-8s with one final, room stays until that final; if handshake never completes, one failure then idle close and zero finals",
+    "deadline expiry is one attempt, does not reset the >10s fail counter at pipeline.rs:704-710, leaves no socket",
+    "dropped event consumer cancels a pending handshake within 500ms and does not retry",
+    "zero-PCM unused path still sends no NegativeSeq; 320 silent samples still count as audio",
+    "3s queued during a blocked connect is delivered in order; sub-200ms tail flushes on VAD end; full channel drops the newest segment",
+    "missing AAAA does not block A; a blackhole first address still loses inside the shared deadline",
+    "speech longer than 5s stays alive by VAD progress alone; silence, repeated ready, and the same activity deadline do not extend life",
+    "ordered first turn does not gain a second unbounded recognition lease",
+    "rerun the normal synthetic RTC and the ordered synthetic RTC; neither result is an Android pass"
+  ],
+  "old_room_relation": {
+    "prior_conclusion_file": "P003_02000053_GROK_JOINT_RECONFIRM_20261107.md",
+    "reinvestigated": false,
+    "old": "Connected room with loop heartbeat and no business progress was not reaped for hours",
+    "new": "Business idle now reaps, and it reaped a real VAD utterance while ASR connect was still pending",
+    "dns_cache": "Separate partial mitigation for voice-hk negative AAAA, not a proven full cause of either incident",
+    "still_unknown": [
+      "phase split inside the 01:08 connect_async",
+      "A versus AAAA share of the later 6723.72ms getaddrinfo",
+      "whether queued PCM would have transcribed if the room had waited",
+      "ordered pass connect phase timings",
+      "old room initial input anomaly and the 12 tickets that did not become observable rooms",
+      "real Android APK, ticket, microphone and disconnect evidence",
+      "whether the dirty worktree meets the minimal fix"
+    ]
+  },
+  "evidence_sha256": {
+    "ASR_NORMAL_FAILURE_TIMELINE.json": "235c1133d40f9d54e822e688e509798292a028ba2f0c7925707cd8777ecac15f",
+    "ASR_NORMAL_FAILURE_TIMELINE.journal_sha256": "8ac47dfb0ed92fa27223856050fa90eb64f43713e34ba4af756b47feed594511",
+    "ASR_RTC_READ_3.json": "fcdccf611f7b80468401d2b552c27ee40233149b81ca7beae3793b91a21aea44",
+    "ASR_NETWORK_PHASES.json": "23d1049cf5775f0b3b2786610a76b8eaa203b54e15439f8245bbf7fce3cbec16",
+    "ASR_EMPTY_FINAL_ASYNC_AB.json": "93e75be3192dc676e431113b290b0ef47129431c8006e167d51035cd6baa4d65",
+    "ASR_DEPLOY_STATE.json": "db894eacae02380a7bad917b1b63ee269f65abf51e5cf35d9fc79e512e2e5f62",
+    "ASR_RELEASE_RUNTIME_1.json": "5d25d76a37c5df702d9c9c37b2e39da0d6ff830529662a59e6fdf4ef17f17512",
+    "DNS_CACHE_APPLY.json": "49ef5d7c720c2acbe1d674813b5287e978ac749f3c6de282f7e932d0f8fd0c5e",
+    "dns_dropin": "b8ca5c4b6eef8bc28d0e4e0b5eb04c4b340d02ecef461a557102b82eb0d504be"
+  },
+  "markdown": "GROK_ASR_CONNECT_REVIEW.md"
+}
