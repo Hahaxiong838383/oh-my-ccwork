@@ -15,6 +15,8 @@ use std::time::{Duration, Instant};
 use tokio::sync::mpsc;
 use tokio::task::JoinHandle;
 
+const API_REQUEST_TIMEOUT: Duration = Duration::from_secs(3);
+
 #[derive(Clone)]
 struct Api {
     client: reqwest::Client,
@@ -52,7 +54,7 @@ impl Api {
         Some(Self {
             client: reqwest::Client::builder()
                 .http1_only()
-                .timeout(Duration::from_secs(3))
+                .timeout(API_REQUEST_TIMEOUT)
                 .redirect(reqwest::redirect::Policy::none())
                 .build()
                 .ok()?,
@@ -218,6 +220,7 @@ fn explicit_weather_target(d:&Decision)->Option<(String,u8,String)> {
 #[derive(PartialEq)]
 enum WeatherTarget { Auto, Explicit((String,u8,String)) }
 pub struct SearchSession {
+    business_deadline: tokio::sync::watch::Receiver<(u64, Option<Instant>)>,
     resume_v1: bool,
     context_v1: bool,
     ack_v1: bool,
@@ -270,8 +273,10 @@ impl SearchSession {
         let (tx, commands) = mpsc::channel(16);
         let (events, rx) = mpsc::channel(16);
         let routing_task=Some(tokio::spawn(pull_routing(api.clone(),events.clone())));
-        let task = tokio::spawn(run(api.clone(), commands, events));
+        let (business_tx, business_deadline) = tokio::sync::watch::channel((0, None));
+        let task = tokio::spawn(run_with_deadline(api.clone(), commands, events, business_tx));
         Some(Self {
+            business_deadline,
             resume_v1: flag("P003_SEARCH_RESUME_V1"),context_v1:flag("P003_SEARCH_CONTEXT_V1"),ack_v1:flag("P003_SEARCH_ACK_V1"),
             closing:false,dialogue:None,dialogue_changed:Instant::now(),
             receipts: ReceiptBank::from_env(provider, voice), receipt_epoch: None,
@@ -298,6 +303,15 @@ impl SearchSession {
             wait_deadline_ms:None,wait_sequence:0,wait_terminal_repeats:0,wait_last:None,
             clarified_at:None,pending_topic:None,last_resume_at:None,fragment_since:None,
         })
+    }
+    /// Snapshot only: no network/await. Context retention and stale `busy`
+    /// never acquire a lease. Actor deadlines retain their original Instant.
+    pub fn business_deadline(&self) -> Option<Instant> {
+        let now = Instant::now();
+        let (epoch, until) = *self.business_deadline.borrow();
+        let polling = if epoch == self.epoch && !self.task.is_finished() { until } else { None };
+        polling.into_iter().chain(self.speech.iter().chain(self.active.iter()).map(|s| s.expires))
+            .filter(|t| *t > now).max()
     }
     pub fn interpret(&mut self, text: &str) -> Option<Intent> {
         if self.cancel_before_exit(text) { return Some(Intent::Cancel); }
@@ -878,7 +892,13 @@ async fn pull_routing(api:Api,events:mpsc::Sender<Event>) {
         if events.send(Event::Routing{snapshot}).await.is_err(){break;}
     }
 }
-async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>) {
+#[cfg(test)]
+async fn run(api: Api, commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>) {
+    let (deadline, _rx) = tokio::sync::watch::channel((0, None));
+    run_with_deadline(api, commands, events, deadline).await;
+}
+async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>,
+    business: tokio::sync::watch::Sender<(u64, Option<Instant>)>) {
     let mut current: Option<String> = None;
     let mut current_grant:Option<String>=None;
     let mut current_delivery:Option<String>=None;
@@ -889,6 +909,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
     let mut poll_until = Instant::now();
     let mut tick = tokio::time::interval(Duration::from_secs(1));
     loop {
+        business.send_replace((epoch, polling.then_some(poll_until)));
         tokio::select! {
             Some(_) = progress_jobs.join_next(), if !progress_jobs.is_empty()=>{},
             command = commands.recv() => {
@@ -905,6 +926,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                         }
                         if final_outcome.is_some()&&current==speech.task&&current_grant==speech.grant&&current_delivery.as_deref()==Some(speech.delivery.as_str()){polling=false;}},
                     Command::ResumeLatest{epoch:e,generation,request}=>{
+                        business.send_replace((e, Some(Instant::now() + Duration::from_secs(2))));
                         epoch=e;
                         let response=tokio::time::timeout(Duration::from_secs(2),async {
                             let body=json!({"protocol":1,"request_id":request});
@@ -919,6 +941,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                     Command::RoutingAck {version}=>{let ack_api=api.clone();tokio::spawn(async move {let _=ack_api.request("/routing/ack",Some(json!({"version":version}))).await;});},
                     Command::Submit { routing, query, turn, replace, epoch: e, generation } => {
                         epoch = e; replaying = false;
+                        business.send_replace((epoch, Some(Instant::now() + Duration::from_millis(1500 + 3000))));
                         let resumed=current_grant.take().is_some();
                         if !replace || resumed { current = None; }
                         let mut body = json!({"protocol":1,"phase":"committed","query":query,"turn":turn});
@@ -958,6 +981,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                     }
                     Command::Cancel { epoch: e, generation } => {
                         epoch = e; replaying = false;
+                        business.send_replace((epoch, Some(Instant::now() + API_REQUEST_TIMEOUT * 2)));
                         if current_grant.take().is_some(){
                             let ok=api.request("/resume/cancel",Some(json!({}))).await.is_ok();current=None;polling=false;
                             let _=events.send(Event::Ack{text:if ok{"好，已取消这次搜索。"}else{"暂时没能确认取消，请稍后再试。"},epoch,generation}).await;let _=events.send(Event::Finished{epoch}).await;continue;
@@ -981,6 +1005,7 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
                     }
                     Command::Resume { mut speech, epoch: e, generation, automatic } => {
                         epoch = e;
+                        business.send_replace((epoch, Some(Instant::now() + API_REQUEST_TIMEOUT * 2)));
                         let Some(id) = speech.task.clone() else { continue; };
                         if speech.grant.is_some(){
                             if let Ok(v)=api.request("/resume/latest",Some(json!({"protocol":1,"request_id":uuid::Uuid::new_v4().to_string()}))).await {if let Some(s)=resumed_speech(&v["resume"]){current=s.task.clone();current_grant=s.grant.clone();current_delivery=Some(s.delivery.clone());polling=true;replaying=true;poll_until=s.expires;let _=events.send(Event::Claimed{speech:s,epoch}).await;continue;}}
@@ -1047,6 +1072,25 @@ async fn run(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Send
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn business_hold_uses_current_epoch_absolute_deadlines_not_busy_or_context() {
+        let (mut s, _events, _commands) = test_session();
+        s.busy = true; s.auto_pending = true;
+        s.dialogue = Some(json!({"phase":"running"}));s.dialogue_changed=Instant::now();
+        assert!(s.business_deadline().is_none());
+        let until=Instant::now()+Duration::from_secs(80);
+        let (tx,rx)=tokio::sync::watch::channel((s.epoch,Some(until)));s.business_deadline=rx;
+        for _ in 0..100 {assert_eq!(s.business_deadline(),Some(until));}
+        tx.send_replace((s.epoch+1,Some(until)));assert!(s.business_deadline().is_none());
+        tx.send_replace((s.epoch,Some(Instant::now()-Duration::from_millis(1))));assert!(s.business_deadline().is_none());
+        let mut speech=claimed_speech(&json!({"id":"task","valid_for_ms":180000,"automatic_for_ms":60000,"result":{"text":"合成测试结果"}}),"task".into(),"delivery".into()).unwrap();
+        // A result retained for replay does not grant an active room lease.
+        speech.expires=Instant::now()+Duration::from_secs(120);let grant_until=speech.expires;
+        s.remainder=Some(speech.clone());assert!(s.business_deadline().is_none());
+        s.active=Some(speech);assert_eq!(s.business_deadline(),Some(grant_until));
+        s.active=None;assert!(s.business_deadline().is_none());
+    }
+
     use super::*;
     #[tokio::test]
     async fn r27_search_idle_hold_survives_receipt_and_chat_but_never_renews_forever() {
@@ -1275,6 +1319,7 @@ mod tests {
         let task = tokio::spawn(std::future::pending());
         (
             SearchSession {
+                business_deadline: tokio::sync::watch::channel((0, None)).1,
                 resume_v1:false,context_v1:false,ack_v1:false,closing:false,dialogue:None,dialogue_changed:Instant::now(),
                 receipts: None, receipt_epoch: None,
                 api,
@@ -1827,7 +1872,8 @@ mod tests {
         };
         let (tx, commands) = mpsc::channel(16);
         let (events, mut rx) = mpsc::channel(16);
-        let actor = tokio::spawn(run(api, commands, events));
+        let (business_tx, mut business_rx)=tokio::sync::watch::channel((0,None));
+        let actor = tokio::spawn(run_with_deadline(api, commands, events,business_tx));
         tx.send(Command::Submit {
             routing:None,
             query: "科技馆开放时间".into(),
@@ -1845,7 +1891,17 @@ mod tests {
                 "foreground progressed before delayed HTTP acknowledgement"
             );
         }
+        let submit_until=business_rx.borrow().1.expect("pending HTTP submit has its own finite budget");
+        assert!(submit_until > Instant::now());
+        assert!(submit_until <= Instant::now()+Duration::from_millis(4500));
         release.notify_one();
+        let original_deadline = tokio::time::timeout(Duration::from_millis(500), async {
+            loop {
+                let (epoch,until)=*business_rx.borrow();
+                if let Some(until)=until.filter(|t| *t > Instant::now()+Duration::from_secs(70)) { assert_eq!(epoch,0); break until; }
+                business_rx.changed().await.unwrap();
+            }
+        }).await.expect("actor must publish its actual 80s polling deadline");
         let mut ready = false;
         for _ in 0..3 {
             if matches!(
@@ -1859,6 +1915,7 @@ mod tests {
             }
         }
         assert!(ready);
+        assert_eq!(business_rx.borrow().1,Some(original_deadline),"successful polls must not renew the deadline");
         tx.send(Command::Claim {
             id: "task-1".into(),
             delivery: "d1".into(),

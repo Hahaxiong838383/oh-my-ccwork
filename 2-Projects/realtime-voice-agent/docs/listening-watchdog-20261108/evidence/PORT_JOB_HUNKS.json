@@ -1,0 +1,54 @@
+[
+  {
+    "hunk": 0,
+    "state": "applied"
+  },
+  {
+    "hunk": 1,
+    "state": "manual"
+  },
+  {
+    "hunk": 2,
+    "state": "applied"
+  },
+  {
+    "hunk": 3,
+    "state": "applied"
+  },
+  {
+    "hunk": 4,
+    "state": "applied"
+  },
+  {
+    "hunk": 5,
+    "state": "manual"
+  },
+  {
+    "hunk": 6,
+    "state": "applied"
+  },
+  {
+    "hunk": 7,
+    "state": "applied"
+  },
+  {
+    "hunk": 8,
+    "state": "applied"
+  },
+  {
+    "hunk": 9,
+    "state": "applied"
+  },
+  {
+    "hunk": 10,
+    "state": "manual"
+  },
+  {
+    "hunk": 11,
+    "state": "manual"
+  },
+  {
+    "hunk": 12,
+    "state": "manual"
+  }
+]

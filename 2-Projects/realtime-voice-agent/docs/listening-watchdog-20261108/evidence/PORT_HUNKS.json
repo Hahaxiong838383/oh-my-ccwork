@@ -1,0 +1,227 @@
+[
+  {
+    "file": "gate",
+    "hunk": 0,
+    "state": "applied"
+  },
+  {
+    "file": "llm",
+    "hunk": 0,
+    "state": "manual-needed"
+  },
+  {
+    "file": "ordered_pcm",
+    "hunk": 0,
+    "state": "applied"
+  },
+  {
+    "file": "startup_participant",
+    "hunk": 0,
+    "state": "applied"
+  },
+  {
+    "file": "startup_participant",
+    "hunk": 1,
+    "state": "applied"
+  },
+  {
+    "file": "startup_participant",
+    "hunk": 2,
+    "state": "applied"
+  },
+  {
+    "file": "token",
+    "hunk": 0,
+    "state": "applied"
+  },
+  {
+    "file": "token",
+    "hunk": 1,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 0,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 1,
+    "state": "manual-needed"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 2,
+    "state": "manual-needed"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 3,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 4,
+    "state": "manual-needed"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 5,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 6,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 7,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 8,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 9,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 10,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 11,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 12,
+    "state": "manual-needed"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 13,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 14,
+    "state": "applied"
+  },
+  {
+    "file": "search_tasks",
+    "hunk": 15,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 0,
+    "state": "already-present"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 1,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 2,
+    "state": "already-present"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 3,
+    "state": "already-present"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 4,
+    "state": "manual-needed"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 5,
+    "state": "already-present"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 6,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 7,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 8,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 9,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 10,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 11,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 12,
+    "state": "manual-needed"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 13,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 14,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 15,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 16,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 17,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 18,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 19,
+    "state": "applied"
+  },
+  {
+    "file": "pipeline",
+    "hunk": 20,
+    "state": "manual-needed"
+  }
+]

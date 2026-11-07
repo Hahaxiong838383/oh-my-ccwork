@@ -521,6 +521,8 @@ impl Session {
 
     /// 测试/证据用访问器（生产路径只经 evidence() 读字段）。
     #[allow(dead_code)]
+    pub fn business_input_budget_ms(&self) -> u64 { self.limits.begin_to_end_timeout_ms.max(0) as u64 }
+
     pub fn phase(&self) -> Phase {
         self.phase
     }

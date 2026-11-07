@@ -348,6 +348,14 @@ impl ListeningMode {
             self.change_phase(Phase::Listening);
         }
     }
+    /// Snapshot the acknowledged authority lease. Reading it never renews it.
+    pub fn business_deadline(&self, now: u64) -> Option<u64> {
+        if matches!(self.phase, Phase::Normal | Phase::Paused) || !self.authorized(now) {
+            return None;
+        }
+        let until = self.lease_until.min(self.session_deadline);
+        (now < until).then_some(until)
+    }
     pub fn tick(&mut self, now: u64) {
         if self.phase == Phase::FeedbackActive && now >= self.feedback_deadline {
             self.change_phase(Phase::Listening);

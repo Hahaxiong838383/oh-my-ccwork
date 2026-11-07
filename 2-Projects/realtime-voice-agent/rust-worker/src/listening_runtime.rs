@@ -94,6 +94,7 @@ pub struct ListeningSession {
     anchor: Instant,
     entry: Option<Command>,
     entry_deadline: Option<u64>,
+    last_exit_at: Option<u64>,
     buffer: ListeningBuffer,
     segment: u64,
 }
@@ -133,6 +134,7 @@ impl ListeningSession {
             anchor: Instant::now(),
             entry: None,
             entry_deadline: None,
+            last_exit_at: None,
             buffer: ListeningBuffer::new(12000, 4000, 1200).unwrap(),
             segment: 0,
         })
@@ -199,6 +201,11 @@ impl ListeningSession {
         }
         let mut shared = self.shared.lock().map_err(|_| Reject::NotAuthorized)?;
         let snapshot = shared.mode.handle(command.clone(), now)?;
+        if matches!(command.action, Action::Exit { .. }) && !snapshot.duplicate {
+            // A validated explicit exit is fresh user input, even through the
+            // optional button path. Store its original time, never the poll time.
+            self.last_exit_at = Some(now);
+        }
         if matches!(command.action, Action::Enter { .. }) && !snapshot.duplicate {
             self.entry = Some(command);
             self.entry_deadline = Some(now.saturating_add(5000));
@@ -234,6 +241,22 @@ impl ListeningSession {
             shared.output = None;
         }
     }
+    pub fn business_deadline(&self, now: u64) -> Option<Instant> {
+        let shared = self.shared.lock().ok()?;
+        let mut until = shared.mode.business_deadline(now)?;
+        if shared.mode.snapshot().phase == Phase::Entering {
+            until = until.min(self.entry_deadline?);
+        }
+        (now < until).then(|| self.deadline_instant(until)).flatten()
+    }
+    pub fn business_exit_at(&self) -> Option<Instant> {
+        self.last_exit_at.and_then(|at| self.deadline_instant(at))
+    }
+
+    pub fn deadline_instant(&self, deadline_ms: u64) -> Option<Instant> {
+        self.anchor.checked_add(std::time::Duration::from_millis(deadline_ms))
+    }
+
     pub fn active(&self) -> bool {
         self.shared
             .lock()

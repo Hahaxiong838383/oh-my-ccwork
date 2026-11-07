@@ -1,6 +1,8 @@
 //! Recovery is restricted to startup: no SearchSession/ordered turn exists yet.
 //! An established pipeline must close normally; rebuilding it in the same room
 //! would race the durable search session close and reuse first-turn state.
+pub const STARTUP_BUDGET_MS: u64 = 60_000;
+
 #[derive(Debug, PartialEq)]
 pub enum Departure { Ignore, AwaitReplacement, Close }
 
@@ -13,7 +15,7 @@ pub struct StartupParticipant {
 }
 impl StartupParticipant {
     pub fn new(identity: Option<String>) -> Self {
-        Self { identity, sid: None, started: false, deadline_ms: 60_000, departed: false }
+        Self { identity, sid: None, started: false, deadline_ms: STARTUP_BUDGET_MS, departed: false }
     }
     pub fn accepts(&self, identity: &str, sid: &str) -> bool {
         self.identity.as_deref().is_none_or(|i| i == identity)
@@ -25,7 +27,7 @@ impl StartupParticipant {
     pub fn connected(&mut self, identity: &str, sid: &str, now_ms: u64) -> bool {
         if self.identity.as_deref() != Some(identity) || self.started { return false; }
         let replaced = self.departed || self.sid.as_deref().is_some_and(|s| s != sid);
-        if replaced { self.deadline_ms = (now_ms + 10_000).min(60_000); }
+        if replaced { self.deadline_ms = (now_ms + 10_000).min(STARTUP_BUDGET_MS); }
         self.sid = Some(sid.into());
         self.departed = false;
         replaced

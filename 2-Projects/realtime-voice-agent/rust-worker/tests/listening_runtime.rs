@@ -282,3 +282,54 @@ fn restored_previously_accepted_story_is_bound_to_entry_and_grants_no_permission
     assert!(s.output_permit(OutputPurpose::Feedback, 9, 15001).is_none());
     assert_eq!(s.snapshot().phase, Phase::Paused);
 }
+
+#[test]
+fn business_hold_tracks_real_lease_without_polling_renewal_or_normal_state_hold() {
+    let mut s=session();
+    s.renew_lease(1,15000,0).unwrap();
+    assert!(s.business_deadline(0).is_none(), "metadata alone is not active listening");
+    let entering=enter(&mut s);
+    let entry_end=s.business_deadline(0).expect("entry has its fixed handshake deadline");
+    assert_eq!(s.business_deadline(4000),Some(entry_end));
+    assert!(s.business_deadline(5000).is_none());
+    s.capture_drained(entering.epoch,1).unwrap();
+    s.control(Some("dev-BJP00326070803800006"),"trace-1",cmd(2,Action::LocalReady{epoch:entering.epoch}),1).unwrap();
+    let first=s.business_deadline(1).expect("active lease protects story silence");
+    for now in [100,5000,10000,14999] {assert_eq!(s.business_deadline(now),Some(first));}
+    assert!(s.business_deadline(15000).is_none(), "expiry is enforced even before tick");
+    s.renew_lease(1,20000,5000).unwrap();
+    assert_eq!(s.business_deadline(5000).unwrap().duration_since(first),std::time::Duration::from_millis(5000));
+    let epoch=s.snapshot().epoch;
+    s.control(Some("dev-BJP00326070803800006"),"trace-1",cmd(3,Action::Exit{epoch}),6000).unwrap();
+    assert!(s.business_deadline(6000).is_none(), "exit removes the old lease");
+}
+#[test]
+fn business_hold_respects_session_cap_revocation_and_paused_state() {
+    let mut s=session();s.configure(60000,12000,5000);let entering=enter(&mut s);
+    s.capture_drained(entering.epoch,1).unwrap();
+    s.control(Some("dev-BJP00326070803800006"),"trace-1",cmd(2,Action::LocalReady{epoch:entering.epoch}),1).unwrap();
+    for now in (10000..=50000).step_by(10000) {s.renew_lease(1,now+15000,now).unwrap();}
+    let cap=s.business_deadline(50000).expect("still within lease and session cap");
+    s.renew_lease(1,70000,55000).unwrap();assert_eq!(s.business_deadline(55000),Some(cap));
+    assert!(s.business_deadline(60000).is_none());
+    s.tick(60000);assert_eq!(s.snapshot().phase,Phase::Paused);
+    assert!(s.business_deadline(60000).is_none());
+    let mut other=session();enter(&mut other);other.pause_pending_entry();
+    assert!(other.business_deadline(1000).is_none());
+}
+
+#[test]
+fn accepted_exit_is_real_input_but_duplicate_queries_cannot_extend_idle() {
+    let mut s=session();let e=enter(&mut s);s.capture_drained(e.epoch,1).unwrap();
+    s.control(Some("dev-BJP00326070803800006"),"trace-1",cmd(2,Action::LocalReady{epoch:e.epoch}),1).unwrap();
+    assert!(s.business_exit_at().is_none());
+    let exit=cmd(3,Action::Exit{epoch:s.snapshot().epoch});
+    assert!(s.control(Some("untrusted"),"trace-1",exit.clone(),6000).is_err());
+    assert!(s.business_exit_at().is_none());
+    s.control(Some("dev-BJP00326070803800006"),"trace-1",exit.clone(),6000).unwrap();
+    let at=s.business_exit_at().expect("accepted exit grants one ordinary idle interval");
+    assert_eq!(at,s.deadline_instant(6000).unwrap());
+    assert!(s.control(Some("dev-BJP00326070803800006"),"trace-1",exit,10000).unwrap().duplicate);
+    s.control(Some("dev-BJP00326070803800006"),"trace-1",cmd(4,Action::State),11000).unwrap();
+    assert_eq!(s.business_exit_at(),Some(at));
+}

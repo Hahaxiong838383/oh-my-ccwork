@@ -585,3 +585,14 @@ fn new_feedback_requires_speech_end_and_old_entry_cannot_reenter() {
         Err(Reject::StaleEpoch)
     );
 }
+
+#[test]
+fn business_lease_covers_singing_and_feedback_but_not_revocation() {
+    let mut m=listening(Scene::Singing);
+    assert_eq!(m.business_deadline(5000),Some(15000));
+    let e=m.snapshot().epoch;m.reserve_voice_feedback(e,5000).unwrap();
+    assert_eq!(m.business_deadline(5001),Some(15000));
+    let e=m.snapshot().epoch;m.begin_feedback(e,1,5001).unwrap();
+    assert_eq!(m.business_deadline(5002),Some(15000));
+    m.revoke(2);assert!(m.business_deadline(5002).is_none());
+}

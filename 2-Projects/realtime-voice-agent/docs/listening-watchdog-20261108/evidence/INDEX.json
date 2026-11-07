@@ -1,0 +1,47 @@
+[
+  {
+    "file": "PRODUCTION_BEFORE.json",
+    "sha256": "439cac13a1dab45dc0b455ce2947bd32d55bc41b3f431b5034b2f6bb6fe0f43f",
+    "bytes": 3250
+  },
+  {
+    "file": "BRAIN_IDLE_BEFORE.json",
+    "sha256": "586bb71b57c44ed7d1f342e5bd066e9c66284fda1ff57fedf8f6d6e92cf481b2",
+    "bytes": 9304
+  },
+  {
+    "file": "PORT_HUNKS.json",
+    "sha256": "d8513d262141f7ba236559d187f3cade6fc295da97e1e4c6f7ceae074c9bc13c",
+    "bytes": 3379
+  },
+  {
+    "file": "PORT_JOB_HUNKS.json",
+    "sha256": "8c0f814b63353cfe10d31c35c79a5f8fb1b5e2d22f30c2b59fb3bb4a1864935e",
+    "bytes": 611
+  },
+  {
+    "file": "worker-watchdog-prebuild-red.log",
+    "sha256": "106e5259ed312898013614dceae67ab04ceb096a47fad07529d8807bb826d079",
+    "bytes": 6569
+  },
+  {
+    "file": "worker-watchdog-prebuild-red2.log",
+    "sha256": "1cc61c96c65188a9a5dc64910eb42ff409e3ba79e5322a92402470bfad5bd9ec",
+    "bytes": 6574
+  },
+  {
+    "file": "worker-watchdog-lease-red.log",
+    "sha256": "6b9f7e056f96be420cb4f06532cdb1ffdf55399c6834515af90b2233a0a3ea56",
+    "bytes": 6562
+  },
+  {
+    "file": "worker-watchdog-green1.log",
+    "sha256": "c79cdfbd85bf5cdab23e9e8af1938243f6c603287bb18ae66e5a349db33632aa",
+    "bytes": 6551
+  },
+  {
+    "file": "worker-watchdog-exit-red.log",
+    "sha256": "a9a56b8b507ce4c278c317002898845c9a7d4cdaa48c67fe2c440e31eeb60726",
+    "bytes": 6559
+  }
+]

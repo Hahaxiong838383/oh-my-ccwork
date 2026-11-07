@@ -1,0 +1,323 @@
+{
+  "at": "2026-11-07T21:19:36.448952+00:00",
+  "source": {
+    "src/config-store.ts": {
+      "sha256": "058d0370467e85f621339770fcdf469dbbbad0c4cadecf545247398ba0583c68",
+      "lines": [
+        {
+          "n": 45,
+          "text": "  },"
+        },
+        {
+          "n": 46,
+          "text": "  // Zero means no cloud idle override. Omit it from the device snapshot so"
+        },
+        {
+          "n": 47,
+          "text": "  // registering this key cannot silently replace another device's cached policy."
+        },
+        {
+          "n": 48,
+          "text": "  'voice.session_idle_timeout_ms': {"
+        },
+        {
+          "n": 49,
+          "text": "    builtinDefault: 0,"
+        },
+        {
+          "n": 50,
+          "text": "    validate: (v) => typeof v === 'number' && Number.isInteger(v)"
+        },
+        {
+          "n": 51,
+          "text": "      && (v === 0 || (v >= 5000 && v <= 300000)),"
+        },
+        {
+          "n": 52,
+          "text": "    label: '语音会话空闲时间', unit: 'ms',"
+        },
+        {
+          "n": 91,
+          "text": ""
+        },
+        {
+          "n": 92,
+          "text": "/** 校验失败的统一提示文案（route 复用，随键表走，别再手写范围） */"
+        },
+        {
+          "n": 93,
+          "text": "export function invalidValueMessage(key: string): string {"
+        },
+        {
+          "n": 94,
+          "text": "  if (key === 'voice.session_idle_timeout_ms') return '取值须为0（不下发）或5000至300000之间的整数毫秒';"
+        },
+        {
+          "n": 95,
+          "text": "  const s = CONFIG_KEYS[key];"
+        },
+        {
+          "n": 96,
+          "text": "  if (!s) return '取值不合法';"
+        },
+        {
+          "n": 97,
+          "text": "  if (s.unit === 'bool') return '取值须为 true/false';"
+        },
+        {
+          "n": 98,
+          "text": "  return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : s.unit === 'hour' ? '小时' : '天'}`;"
+        },
+        {
+          "n": 415,
+          "text": "        const parsed = JSON.parse(s.value_json);"
+        },
+        {
+          "n": 416,
+          "text": "        if (parsed !== null) value = parsed;"
+        },
+        {
+          "n": 417,
+          "text": "      }"
+        },
+        {
+          "n": 418,
+          "text": "      if (key === 'voice.session_idle_timeout_ms' && value === 0) continue;"
+        },
+        {
+          "n": 419,
+          "text": "      // 点分路径 → 嵌套对象（posture.reminder_cooldown_sec → {posture:{reminder_cooldown_sec}}）"
+        },
+        {
+          "n": 420,
+          "text": "      const parts = key.split('.');"
+        },
+        {
+          "n": 421,
+          "text": "      let node = snapshot;"
+        },
+        {
+          "n": 422,
+          "text": "      for (const p of parts.slice(0, -1)) {"
+        }
+      ]
+    },
+    "src/routes/device-session.ts": {
+      "sha256": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b",
+      "lines": [
+        {
+          "n": 245,
+          "text": "    expires_at_ms: number;"
+        },
+        {
+          "n": 246,
+          "text": "    trace_id?: string;"
+        },
+        {
+          "n": 247,
+          "text": "    expected_agent_name?: string;"
+        },
+        {
+          "n": 248,
+          "text": "    voice_idle?: { timeout_ms: number; revision: string } | null;"
+        },
+        {
+          "n": 249,
+          "text": "    contract?: { input_mode: string; oneshot_first_turn: string; local_receipt: string } | null;"
+        },
+        {
+          "n": 250,
+          "text": "  },"
+        },
+        {
+          "n": 251,
+          "text": "): void {"
+        },
+        {
+          "n": 252,
+          "text": "  const c = decodeJwt(token) as Record<string, any>;"
+        },
+        {
+          "n": 286,
+          "text": "      for (const k of keys) if (k in meta) throw new Error(`自检失败: 旧路径 metadata 不得含 ${k}`);"
+        },
+        {
+          "n": 287,
+          "text": "    }"
+        },
+        {
+          "n": 288,
+          "text": "  }"
+        },
+        {
+          "n": 289,
+          "text": "  const idleMeta = JSON.parse(agent.metadata ?? '{}').voice_idle;"
+        },
+        {
+          "n": 290,
+          "text": "  if (resp.voice_idle) {"
+        },
+        {
+          "n": 291,
+          "text": "    const idle = resp.voice_idle;"
+        },
+        {
+          "n": 292,
+          "text": "    if (!Number.isInteger(idle.timeout_ms) || idle.timeout_ms < 5000 || idle.timeout_ms > 300000"
+        },
+        {
+          "n": 293,
+          "text": "      || typeof idle.revision !== 'string' || !/^cfg-\\d+$/.test(idle.revision)"
+        },
+        {
+          "n": 294,
+          "text": "      || idleMeta?.timeout_ms !== idle.timeout_ms || idleMeta?.revision !== idle.revision) {"
+        },
+        {
+          "n": 295,
+          "text": "      throw new Error('自检失败: voice_idle 与配置快照/响应不一致');"
+        },
+        {
+          "n": 296,
+          "text": "    }"
+        },
+        {
+          "n": 297,
+          "text": "  } else if (idleMeta !== undefined) {"
+        },
+        {
+          "n": 298,
+          "text": "    throw new Error('自检失败: 未配置的响应不得携带 voice_idle');"
+        },
+        {
+          "n": 299,
+          "text": "  }"
+        },
+        {
+          "n": 300,
+          "text": "  if (c.exp * 1000 !== resp.expires_at_ms) throw new Error('自检失败: exp 与 expires_at_ms 不一致');"
+        },
+        {
+          "n": 301,
+          "text": "  if (c.exp * 1000 - Date.now() < 5_000) throw new Error('自检失败: 剩余 TTL 不足 5 秒');"
+        },
+        {
+          "n": 302,
+          "text": "}"
+        },
+        {
+          "n": 369,
+          "text": ""
+        },
+        {
+          "n": 370,
+          "text": "  // ConfigStore's zero sentinel is omitted from snapshots. Only an explicit"
+        },
+        {
+          "n": 371,
+          "text": "  // global/SN policy can therefore reach the signed worker metadata. Never"
+        },
+        {
+          "n": 372,
+          "text": "  // accept this authority from body.voice_idle or a client control packet."
+        },
+        {
+          "n": 373,
+          "text": "  const runtimeConfig = configStore.effectiveSnapshot(sn as string);"
+        },
+        {
+          "n": 374,
+          "text": "  const idleMs = (runtimeConfig.voice as { session_idle_timeout_ms?: unknown } | undefined)?.session_idle_timeout_ms;"
+        },
+        {
+          "n": 375,
+          "text": "  const voiceIdle = typeof idleMs === 'number' && Number.isInteger(idleMs) && idleMs >= 5000 && idleMs <= 300000"
+        },
+        {
+          "n": 376,
+          "text": "    ? { timeout_ms: idleMs, revision: String(runtimeConfig.revision) } : null;"
+        },
+        {
+          "n": 377,
+          "text": ""
+        },
+        {
+          "n": 378,
+          "text": "  const token = await new SignJWT({"
+        },
+        {
+          "n": 397,
+          "text": "            session_id: sessionId,"
+        },
+        {
+          "n": 398,
+          "text": "            issue_ts_ms: Date.now(),"
+        },
+        {
+          "n": 399,
+          "text": "            filler_policy: fillerPolicyFor(sn),"
+        },
+        {
+          "n": 400,
+          "text": "            ...(voiceIdle ? { voice_idle: voiceIdle } : {}),"
+        },
+        {
+          "n": 401,
+          "text": "            ...(listening ? { listening } : {}),"
+        },
+        {
+          "n": 402,
+          "text": "            ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),"
+        },
+        {
+          "n": 403,
+          "text": "            // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）"
+        },
+        {
+          "n": 404,
+          "text": "            ...(contract"
+        },
+        {
+          "n": 426,
+          "text": "    session_id: sessionId,"
+        },
+        {
+          "n": 427,
+          "text": "    expires_at_ms: expSec * 1000,"
+        },
+        {
+          "n": 428,
+          "text": "    expected_agent_name: agentName,"
+        },
+        {
+          "n": 429,
+          "text": "    ...(voiceIdle ? { voice_idle: voiceIdle } : {}),"
+        },
+        {
+          "n": 430,
+          "text": "    // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）"
+        },
+        {
+          "n": 431,
+          "text": "    contract,"
+        },
+        {
+          "n": 432,
+          "text": "    ...(listening ? {listening_contract:{version:1,capability:'listening_mode_v1',policy_revision:listening.snapshot.revision,"
+        },
+        {
+          "n": 433,
+          "text": "      scenes:listening.snapshot.scenes,tuning:listening.snapshot.tuning,expires_at_ms:listening.grant_expires_at_ms,"
+        }
+      ]
+    }
+  },
+  "idle_config": [
+    {
+      "scope": "****02000053",
+      "key": "voice.session_idle_timeout_ms",
+      "value": 5000,
+      "rev": 139
+    }
+  ]
+}

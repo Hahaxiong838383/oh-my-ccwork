@@ -1,0 +1,69 @@
+{
+  "at": "2026-11-07T21:13:03.788367+00:00",
+  "rows": [
+    {
+      "unit": "voice-worker-rust",
+      "MainPID": "3538554",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "FragmentPath": "/etc/systemd/system/voice-worker-rust.service",
+      "binary_sha256": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+      "files": {
+        "/root/rust-worker/voice-rust-worker": "ca41b5358ccbe5293221e6aa1b5f395870366ff3e25a99976c5c099ce0678da9",
+        "/root/rust-worker/rust-worker.env": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+        "/etc/systemd/system/voice-worker-rust.service": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0"
+      },
+      "release": null
+    },
+    {
+      "unit": "p003-search-worker",
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "FragmentPath": "/etc/systemd/system/p003-search-worker.service",
+      "binary_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "files": {
+        "/opt/p003-search-canary-20261021/voice-rust-worker": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "/opt/p003-search-canary-20261021/canary.env": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+        "/opt/p003-search-canary-20261021/window.json": "a9eaca2cb62f16d726cfc410a4c987c5b93411e56a62d6f0a607f7648a44c292",
+        "/etc/systemd/system/p003-search-worker.service": "d576a1fd7d0b0bf1c60c7b3e9f222237b7bd520c857a04f4d7e6eaae5e764835"
+      },
+      "release": null
+    },
+    {
+      "unit": "p003-listening-worker",
+      "MainPID": "3574920",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "FragmentPath": "/etc/systemd/system/p003-listening-worker.service",
+      "binary_sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae",
+      "files": {
+        "/opt/p003-listening-canary-20261030/voice-rust-worker": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae",
+        "/opt/p003-listening-canary-20261030/canary.env": "effe57e0e200bd7aad67ae06329939a394a1b586d6699c4c7ad6b9e6836e787b",
+        "/opt/p003-listening-canary-20261030/release.json": "4ca965007f501c3c227d53dd367fc7cde96af36819eb4b0dca9e6ef308f08fc0",
+        "/opt/p003-listening-canary-20261030/window.json": "1bf79805eee4d3f00f6503c41e8d9f2fcde3f2c2c97907f8b325bb81509aa249",
+        "/opt/p003-listening-canary-20261030/v374-window.json": "2cf153649675f237de85f50a42c9da2981343de5805b13f67a95d525f4bcbcb9",
+        "/etc/systemd/system/p003-listening-worker.service": "761ba3e3ad252fa2c19aa6cdcb2479e580db62b7fb7d81a9b9931e36051047d0"
+      },
+      "release": {
+        "build_sha": "50bac0b28c4f44e169ad574c08682fe509a72a46",
+        "binary_sha256": "1e9ec83ad10ff94c29601645d89fa39a0ca2fed43bae9d71017c1f2631c40aae",
+        "bytes": 77996640
+      }
+    }
+  ],
+  "health": {
+    "agent": "p003-search-listening-20261030",
+    "at_ms": 1794085980796,
+    "cleanup": {
+      "at_ms": 1794085978896,
+      "healthy": true,
+      "pending": 0,
+      "remaining": 0
+    },
+    "generation": "v374-listening-ark-20261102-1793613511",
+    "jobs": 0,
+    "ordered_pcm_v1": true,
+    "registered": true
+  }
+}

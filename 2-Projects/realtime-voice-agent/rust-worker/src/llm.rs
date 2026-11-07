@@ -597,6 +597,8 @@ pub struct Llm {
     speaker_slot: Option<crate::speaker_id::StickySlot>,
 }
 
+pub const REQUEST_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(30);
+
 fn build_client() -> reqwest::Client {
     let agent = std::env::var("AGENT_NAME").unwrap_or_default();
     let candidate = crate::search_canary::is_candidate(&agent);
@@ -613,7 +615,7 @@ fn client_builder(candidate: bool, http2: bool) -> reqwest::ClientBuilder {
     let builder = reqwest::Client::builder()
         .redirect(if candidate { reqwest::redirect::Policy::none() } else { reqwest::redirect::Policy::default() })
         .connect_timeout(std::time::Duration::from_secs(10))
-        .timeout(std::time::Duration::from_secs(30));
+        .timeout(REQUEST_TIMEOUT);
     // ALPN negotiates h2 only for an explicit candidate opt-in. Dropping an
     // interrupted SSE stream then resets that stream, preserving the shared
     // connection. HTTP/1-only servers remain supported through negotiation.
