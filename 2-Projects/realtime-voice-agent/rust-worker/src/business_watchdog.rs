@@ -21,6 +21,7 @@ pub struct BusinessWatchdog {
     started: u64,
     ready: bool,
     ready_at: u64,
+    rtc_grace_at: Option<u64>,
     last_progress: u64,
     // Retain the generation after completion: a delayed duplicate cannot
     // resurrect an expired/finished task and buy another full lease.
@@ -29,7 +30,7 @@ pub struct BusinessWatchdog {
 impl BusinessWatchdog {
     pub fn new(mut policy: Policy, now: u64) -> Self {
         policy.idle_ms = policy.idle_ms.filter(|ms| (5_000..=300_000).contains(ms));
-        Self { policy, started: now, ready: false, ready_at: now, last_progress: now, holds: [None; 5] }
+        Self { policy, started: now, ready: false, ready_at: now, rtc_grace_at: None, last_progress: now, holds: [None; 5] }
     }
     pub fn observe_only(&mut self) { self.policy.mode = Mode::Observe; }
     pub fn first_frame(&mut self, now: u64) {
@@ -42,6 +43,11 @@ impl BusinessWatchdog {
             // This is not business progress; later silent frames never renew it.
             self.ready_at = now;
         }
+    }
+    /// The validated first-turn protocol switches to RTC only once per job.
+    /// This handoff is not speech and cannot revive an unready startup.
+    pub fn first_turn_to_rtc(&mut self, now: u64) {
+        if self.ready && self.rtc_grace_at.is_none() { self.rtc_grace_at = Some(now); }
     }
     /// Only fresh evidence of actual input/output may call this. In particular
     /// keepalives, silence frames and a stale VAD/playing flag must not.
@@ -68,7 +74,7 @@ impl BusinessWatchdog {
             if now.saturating_sub(self.started) < self.policy.startup_ms { return Decision::Keep; }
             Reason::StartupNoInput
         } else {
-            if now.saturating_sub(self.last_progress.max(self.ready_at)) < idle_ms
+            if now.saturating_sub(self.last_progress.max(self.ready_at).max(self.rtc_grace_at.unwrap_or(self.started))) < idle_ms
                 || self.holds.iter().flatten().any(|h| h.active && now < h.until) {
                 return Decision::Keep;
             }

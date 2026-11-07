@@ -1,4 +1,4 @@
-//! Exact-SID readback for foreground cleanup. A successful delete response is
+//! SID checks around foreground name-based cleanup (not compare-and-delete). A successful delete response is
 //! not sufficient evidence that either participant left the original room.
 use crate::config::Config;
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -66,7 +66,7 @@ mod tests {
         let methods=Arc::new(Mutex::new(Vec::new()));let seen=methods.clone();
         let before=before.to_string();let after=after.to_string();
         let server=tokio::spawn(async move {
-            let mut deleted=false;
+            let mut current_sid=if before=="race" {"RM_original".to_string()} else {before.clone()};
             loop {
                 let (mut socket,_)=listener.accept().await.unwrap();let mut request=Vec::new();
                 loop {let mut buf=[0;2048];let n=socket.read(&mut buf).await.unwrap();assert!(n>0 && request.len()+n<8192);request.extend_from_slice(&buf[..n]);
@@ -75,8 +75,11 @@ mod tests {
                 }
                 let request=String::from_utf8_lossy(&request);let path=request.lines().next().unwrap().split_whitespace().nth(1).unwrap();
                 let method=path.rsplit('/').next().unwrap();seen.lock().unwrap().push(method.to_string());
-                let (body,code)=if method=="DeleteRoom" {deleted=true;("{}".to_string(),status)} else {
-                    assert_eq!(method,"ListRooms");let sid=if deleted {&after}else{&before};
+                let (body,code)=if method=="DeleteRoom" {
+                    if before=="race" {current_sid="RM_new".into();seen.lock().unwrap().push(format!("removed:{current_sid}"));}
+                    current_sid=after.clone();("{}".to_string(),status)
+                } else {
+                    assert_eq!(method,"ListRooms");let sid=&current_sid;
                     (if sid=="invalid" {"{}".to_string()} else if sid.is_empty(){"{\"rooms\":[]}".to_string()}
                         else {serde_json::json!({"rooms":[{"name":"sn-BJP00326110799999901-123","sid":sid}]}).to_string()},200)
                 };
@@ -86,6 +89,15 @@ mod tests {
         let cfg=Config {ws_url:url.clone(),api_key:"test".into(),api_secret:"synthetic".into(),agent_name:"rust-worker".into(),max_jobs:1};
         let outcome=delete_exact(&cfg,&url,"sn-BJP00326110799999901-123","RM_original").await;
         server.abort();let _=server.await;let recorded=methods.lock().unwrap().clone();(outcome,recorded)
+    }
+    #[tokio::test]
+    async fn absent_readback_does_not_prove_a_racing_replacement_survived_name_delete() {
+        // Real localhost HTTP: the server changes the binding only inside the
+        // DeleteRoom handler, after our preflight ListRooms. The API carries
+        // no expected SID. Gone is an observation, never CAS evidence.
+        let (outcome,methods)=scenario("race","",200).await;
+        assert_eq!(outcome,Outcome::Gone);
+        assert_eq!(methods,vec!["ListRooms","DeleteRoom","removed:RM_new","ListRooms"]);
     }
     #[tokio::test]
     async fn delete_200_with_original_sid_present_is_not_success() {

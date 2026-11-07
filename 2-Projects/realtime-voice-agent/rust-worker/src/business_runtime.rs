@@ -62,6 +62,14 @@ impl Runtime {
             s.model.end_activity(kind, generation);
         }
     }
+    pub fn first_turn_to_rtc(&self, now: Instant) {
+        self.state.lock().unwrap_or_else(|e| e.into_inner()).model.first_turn_to_rtc(self.ms(now));
+    }
+    pub fn input_transition_deadline(&self, until: Instant) -> Instant {
+        // The protocol itself still expires at `until`. Only the job gets an
+        // idle interval to process that terminal state and hand input to RTC.
+        until.checked_add(Duration::from_millis(self.idle_ms.unwrap_or(0))).unwrap_or(until)
+    }
     pub fn evaluate(&self, now: Instant) -> Decision { self.state.lock().unwrap_or_else(|e| e.into_inner()).model.evaluate(self.ms(now)) }
     pub fn startup_deadline(&self) -> Option<Instant> {
         (self.mode == Mode::Enforce && self.idle_ms.is_some())
@@ -73,6 +81,18 @@ impl Runtime {
     }
     pub fn enforcing(&self) -> bool { self.mode == Mode::Enforce && self.idle_ms.is_some() }
     pub fn revision(&self) -> Option<&str> { self.revision.as_deref() }
+}
+
+/// Existing provider/output budgets composed at their actual anchors.
+pub fn reply_startup_deadline(started: Instant, wait_output: bool, receipt: Option<Instant>) -> Instant {
+    let generated = started + crate::llm::REQUEST_TIMEOUT + crate::tts_xfyun::CONNECT_TIMEOUT;
+    let output = if wait_output { generated + crate::gate::OUTPUT_READY_TIMEOUT } else { generated };
+    receipt.map_or(output, |deadline| deadline.max(output))
+}
+pub fn reply_deadline(initial: Instant, last_pcm: Option<Instant>) -> Instant {
+    // Each later sentence can legitimately acquire a connection. Bound that
+    // allowance to actual last PCM, so stalled synthesis cannot renew it.
+    last_pcm.map_or(initial, |at| initial.max(at + crate::tts_xfyun::CONNECT_TIMEOUT))
 }
 
 /// Both connect and publish consume the same assignment-relative budget.
@@ -114,6 +134,63 @@ mod tests {
         assert_eq!(within_startup(None, async { Ok(17) }).await.unwrap(), 17);
     }
     fn policy() -> serde_json::Value { json!({"timeout_ms":5000,"revision":"cfg-12"}) }
+    #[test]
+    fn expired_ordered_generation_allows_one_rtc_handoff_without_renewing_upload() {
+        let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
+        w.input_frame(t,160);
+        let protocol_end=t+Duration::from_secs(7);
+        w.activity_until(Activity::Input,Some(w.input_transition_deadline(protocol_end)));
+        // The protocol uses strict >, and its next tick must get to complete
+        // the transition instead of racing a whole-job close at exactly 7s.
+        assert_eq!(w.evaluate(protocol_end),Decision::Keep);
+        w.first_turn_to_rtc(t+Duration::from_millis(7001));
+        w.activity_until(Activity::Input,None);
+        for ms in [7002,9000,12000] {
+            w.first_turn_to_rtc(t+Duration::from_millis(ms));
+            assert_eq!(w.evaluate(t+Duration::from_millis(ms)),Decision::Keep);
+        }
+        assert_eq!(w.evaluate(t+Duration::from_millis(12001)),Decision::Close(Reason::IdleNoProgress));
+    }
+    #[test]
+    fn missing_handoff_and_unknown_policy_cannot_be_extended_forever() {
+        let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();
+        w.input_frame(t,160);let until=w.input_transition_deadline(t+Duration::from_secs(7));
+        for _ in 0..100 {w.activity_until(Activity::Input,Some(until));}
+        assert_eq!(w.evaluate(t+Duration::from_secs(12)),Decision::Close(Reason::IdleNoProgress));
+        let no=Runtime::from_settings("enforce",SN,ROOM,None,t).unwrap();no.first_turn_to_rtc(t+Duration::from_secs(70));
+        assert_eq!(no.evaluate(t+Duration::from_secs(1000)),Decision::Observe(Reason::UnknownPolicy));
+        let empty=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();empty.first_turn_to_rtc(t+Duration::from_secs(59));
+        assert_eq!(empty.evaluate(t+Duration::from_secs(60)),Decision::Close(Reason::StartupNoInput));
+    }
+    #[tokio::test]
+    async fn pending_output_gate_keeps_its_existing_budget_after_late_first_pcm() {
+        let t=Instant::now()-Duration::from_secs(40);
+        let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();w.input_frame(t,160);
+        let (ready_tx,ready_rx)=tokio::sync::watch::channel(false);
+        let gate=crate::gate::OutputGate::new(ready_rx);
+        let (tx,rx)=tokio::sync::mpsc::channel(2);let (fatal_tx,mut fatal_rx)=tokio::sync::mpsc::channel(2);
+        let mut output=gate.wrap(rx,fatal_tx);tx.send(vec![1,2,3,4]).await.unwrap();
+        assert!(tokio::time::timeout(Duration::from_millis(20),output.recv()).await.is_err());
+        w.activity_until(Activity::Reply,Some(reply_startup_deadline(t,true,None)));
+        assert_eq!(w.evaluate(Instant::now()),Decision::Keep);
+        ready_tx.send(true).unwrap();assert_eq!(output.recv().await,Some(vec![1,2,3,4]));
+        assert!(fatal_rx.try_recv().is_err());
+        assert_eq!(w.evaluate(t+Duration::from_secs(45)),Decision::Close(Reason::IdleNoProgress));
+    }
+    #[test]
+    fn receipt_deadline_and_late_sentence_connection_are_bounded_without_poll_renewal() {
+        let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();w.input_frame(t,160);
+        let initial=reply_startup_deadline(t,false,Some(t+Duration::from_secs(50)));
+        w.activity_until(Activity::Reply,Some(initial));
+        assert_eq!(w.evaluate(t+Duration::from_secs(49)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_secs(50)),Decision::Close(Reason::IdleNoProgress));
+        // A later sentence may use the existing 10s connection budget after
+        // the initial response hold. Anchor it to actual last output, not polls.
+        let pcm_at=t+Duration::from_secs(100);w.progress(pcm_at);
+        for _ in 0..100 {w.activity_until(Activity::Reply,Some(reply_deadline(initial,Some(pcm_at))));}
+        assert_eq!(w.evaluate(t+Duration::from_secs(109)),Decision::Keep);
+        assert_eq!(w.evaluate(t+Duration::from_secs(110)),Decision::Close(Reason::IdleNoProgress));
+    }
     #[test]
     fn delayed_first_input_must_allow_vad_to_classify_before_idle_close() {
         let t=Instant::now();let w=Runtime::from_settings("enforce",SN,ROOM,Some(&policy()),t).unwrap();

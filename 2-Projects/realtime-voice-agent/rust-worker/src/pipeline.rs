@@ -396,6 +396,7 @@ struct AgentTurn {
     /// B 观测:本轮 filler 的 24k 样本数(0=无 filler);turn 起始时刻;分段日志阶段(0/1/2)。
     filler_samples: u64,
     started: Instant,
+    business_until: Instant,
     seg_stage: u8,
 }
 
@@ -1072,7 +1073,7 @@ pub async fn run_pipeline(
     let mut in_frames: u64 = 0;
     let mut in_amp_acc: u64 = 0;
     let mut input_stats = crate::business_watchdog::AudioStats::default();
-    let mut business_last_played: Option<(u64, u64)> = None;
+    let mut business_last_played: Option<(u64, u64, Instant)> = None;
     let mut business_ordered_until: Option<Instant> = None;
     let mut in_report = Instant::now();
     // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
@@ -1095,6 +1096,7 @@ pub async fn run_pipeline(
             stt_ev_rx = ev_rx;
             stt_closed = false;
             stt_tasks_done.push(std::mem::replace(&mut stt_task, task));
+            if let Some(w) = &ready.business { w.first_turn_to_rtc(Instant::now()); }
             orch.input_phase = InputPhase::Rtc;
             // 未终态就切(begin 超时):先把代次关成 timeout 终态,迟到的 begin 之后一律 input_conflict 拒绝
             let mut acts = Vec::new();
@@ -1390,18 +1392,29 @@ pub async fn run_pipeline(
                     let now = Instant::now();
                     if let Some(turn) = &orch.agent_turn {
                         let samples = turn.ctl.captured_samples();
-                        if samples > 0 && business_last_played != Some((turn.id, samples)) { w.progress(now); }
-                        business_last_played = Some((turn.id, samples));
+                        if samples > 0 && business_last_played.map(|(id,count,_)| (id,count)) != Some((turn.id,samples)) {
+                            w.progress(now); business_last_played = Some((turn.id,samples,now));
+                        }
                     } else { business_last_played = None; }
-                    // Existing HTTP generation budget + foreground TTS handshake.
-                    // Once this expires, actual ongoing PCM still protects long answers.
+                    // Initial provider/output gates have fixed deadlines. Later
+                    // sentence connection allowance is anchored to actual PCM,
+                    // never to this polling tick or an unfinished-task flag.
                     w.activity_until(Activity::Reply, orch.agent_turn.as_ref().filter(|t| !t.task.is_finished())
-                        .map(|t| t.started + crate::llm::REQUEST_TIMEOUT + crate::tts_xfyun::CONNECT_TIMEOUT));
+                        .map(|t| crate::business_runtime::reply_deadline(t.business_until,
+                            business_last_played.filter(|(id,_,_)| *id == t.id).map(|(_,_,at)| at))));
                     w.activity_until(Activity::Command, orch.pending_cmd.as_ref()
                         .map(|p| p.sent_at + if p.accepted_acked { DEVICE_RESULT_DEADLINE * 3 } else { DEVICE_RESULT_DEADLINE }));
                     w.activity_until(Activity::Search, orch.search.as_ref().and_then(|s| s.business_deadline()));
-                    let receiving = orch.ordered.as_ref().is_some_and(|o| matches!(o.phase(), crate::ordered_pcm::Phase::Receiving | crate::ordered_pcm::Phase::Ended));
-                    w.activity_until(Activity::Input, if receiving { business_ordered_until } else { None });
+                    // Record the accepted terminal handoff before clearing the
+                    // old input hold; the actual switch is applied next loop.
+                    if orch.pending_phase_switch.is_some() { w.first_turn_to_rtc(now); }
+                    let input_until = orch.ordered.as_ref().and_then(|o| match o.phase() {
+                        crate::ordered_pcm::Phase::Idle if o.first_turn_rtc() && orch.input_phase == InputPhase::FirstTurn =>
+                            orch.input_loop_started_at.and_then(|t| t.checked_add(Duration::from_millis(orch.cfg.ordered_begin_timeout_ms))),
+                        crate::ordered_pcm::Phase::Receiving | crate::ordered_pcm::Phase::Ended => business_ordered_until,
+                        _ => None,
+                    });
+                    w.activity_until(Activity::Input,input_until.map(|at| w.input_transition_deadline(at)));
                 }
                 if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
                     orch.ordered_end_stream_pending = false; // B23:已切 RTC,忽略
@@ -3641,7 +3654,10 @@ impl Orchestrator {
         // 输出门(冻结 2026-08-18):Android 未订 agent 轨前,PCM 管道过包装层——
         // 首段到达起 5s 未就绪即 fatal fail-closed。门开过(绝大多数轮次)零包装零开销。
         // spawn_playout 是全部可听 PCM(TTS+filler)的唯一入口,包在它前面=全覆盖。
-        let pcm_rx = if self.output_gate.is_open() {
+        let output_open = self.output_gate.is_open();
+        let business_until = crate::business_runtime::reply_startup_deadline(turn_started,
+            !output_open, self.pending_local_receipt_deadline);
+        let pcm_rx = if output_open {
             pcm_rx
         } else {
             self.output_gate.wrap(pcm_rx, self.fatal_tx.clone())
@@ -3971,6 +3987,7 @@ impl Orchestrator {
             llm_chars,
             filler_samples,
             started: turn_started,
+            business_until,
             seg_stage: 0,
         });
     }

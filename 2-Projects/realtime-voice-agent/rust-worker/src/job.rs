@@ -167,7 +167,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             if business.is_some() {
                 drop(prebuilt_task.take());
                 let cleanup = crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
-                warn!(room=%room_name,room_sid=%sid,?cleanup,"startup connect failed; cleanup readback");
+                warn!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"startup connect failed; cleanup readback");
             }
             return Err(error.context("room connect"));
         }
@@ -191,7 +191,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 drop(prebuilt_task.take());
                 let _=tokio::time::timeout(std::time::Duration::from_secs(2),room.close()).await;
                 let cleanup=crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
-                warn!(room=%room_name,room_sid=%sid,?cleanup,"startup publish failed; cleanup readback");
+                warn!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"startup publish failed; cleanup readback");
             }
             return Err(error.context("publish audio track"));
         }
@@ -549,15 +549,16 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         let _=tokio::time::timeout(std::time::Duration::from_secs(2),room.close()).await;
         let cleanup=crate::room_verify::delete_exact(&config,&url,&room_name,sid).await;
         if matches!(cleanup,crate::room_verify::Outcome::Gone|crate::room_verify::Outcome::Superseded) {
-            info!(room=%room_name,room_sid=%sid,?cleanup,"room cleanup verified");
-        } else { warn!(room=%room_name,room_sid=%sid,?cleanup,"room cleanup unverified; reconciliation required"); }
+            info!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"room cleanup readback complete");
+        } else { warn!(room=%room_name,room_sid=%sid,?cleanup,delete_scope="room_name",cas=false,"room cleanup readback incomplete; reconciliation required"); }
     } else {
         let _ = close_room_and_delete(&room_name,
             async { room.close().await.map_err(Into::into) },
             delete_room(&config, &url, &room_name)).await;
     }
     // A 2xx is not the device's disconnect receipt. Keep the durable intent
-    // until the independent reconciler verifies that this exact SID is gone.
+    // until independent name readback observes the original SID absent.
+    // The control API is by name, not an atomic compare-and-delete by SID.
     info!(job_id = %job.id, room = %room_name, room_sid = %sid,
         agent_track_sid = %agent_track_sid, uptime_s = t0.elapsed().as_secs(), "job closed");
     Ok(())
