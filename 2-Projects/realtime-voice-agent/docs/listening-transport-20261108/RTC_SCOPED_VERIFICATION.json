@@ -1,0 +1,116 @@
+{
+  "status": "PASS_SCOPED_3_RTC",
+  "candidate": "de09010304f2a44556bd706c7b810828062b4433",
+  "binary_sha256": "ac84733404dd3e7d7ec9521e2a7192504ca1856a75f5fa911a2f3a83de927063",
+  "boundary": "test-feature loopback Brain; real SFU/ASR/TTS; synthetic LLM and speech; feedback uses explicit authorized control; not voice-feedback/Android/formal-production-runtime PASS",
+  "cases": [
+    {
+      "case": 0,
+      "exit_phrase": "恢复聊天",
+      "passed": true,
+      "result_sha256": "44c5a1ff03a0b08ea9584dfcb81367fa46a3d177658212eb8220c82ecf186c96",
+      "worker_log_sha256": "9c15a49f07a825387a4504205597bb978fc330ae9b41e1d1b64a969afc777194",
+      "trace": "p0-39-318d4c34-257d-4048-95f0-ff2b6eb0dcb1",
+      "audible_frames": 1157,
+      "first_audio_ms": 14032,
+      "input_ready_ms": 795,
+      "assertions": [
+        "trusted agent attributes before microphone publication",
+        "real input_ready",
+        "enter double-confirm completed",
+        "narration silent, State nonconflicting, duplicate accepted",
+        "real feedback audio received",
+        "uninterrupted feedback finished",
+        "voice exit normal",
+        "ordinary chat audible after voice exit",
+        "ordinary final subtitle",
+        "ordinary chat audio/subtitles/metrics positive anchor",
+        "one feedback includes immediate synthetic tail marker"
+      ],
+      "metrics": [
+        "2026-11-07T19:56:12.272461Z  INFO asr_stream{room=sn-BJP00326103099999938-1794081371}: asr connection timing request_id=\"045bc051-d036-406d-82c9-da308848f6c1\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=349 dns_ms=179 tcp_ms=2 tls_ws_ms=165",
+        "2026-11-07T19:56:13.106488Z  INFO asr_stream{room=sn-BJP00326103099999938-1794081371}: asr connection timing request_id=\"2e82bfe6-9a61-4741-945d-77481ac54d52\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=185 dns_ms=0 tcp_ms=2 tls_ws_ms=182",
+        "2026-11-07T19:56:25.077627Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=259 dns_ms=46 tcp_ms=49 tls_ws_ms=163 dns_path=\"system_os\" local=Some(64.90.13.177:57068) peer=Some(114.118.65.17:443)",
+        "2026-11-07T19:56:25.326720Z  INFO tts connection timing connect_id=2 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=248 dns_ms=1 tcp_ms=48 tls_ws_ms=198 dns_path=\"system_os\" local=Some(64.90.13.177:57076) peer=Some(114.118.65.17:443)",
+        "2026-11-07T19:56:30.215206Z  INFO tts stream timing room=\"sn-BJP00326103099999938-1794081371\" turn_id=1 connect_id=1 phase=\"close\" completed=true pcm_frames=63 elapsed_ms=5137 ws_read_wait_ms=5098 max_ws_read_wait_ms=351 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=351",
+        "2026-11-07T19:56:30.215514Z  INFO tts dispatch timing prewarm_wait_ms=260 provider_ttfb_ms=290 first_pcm_ms=550",
+        "2026-11-07T19:56:43.127535Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=209 dns_ms=1 tcp_ms=48 tls_ws_ms=159 dns_path=\"system_os\" local=Some(64.90.13.177:45270) peer=Some(114.118.65.17:443)",
+        "2026-11-07T19:56:43.336136Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=208 dns_ms=1 tcp_ms=48 tls_ws_ms=158 dns_path=\"system_os\" local=Some(64.90.13.177:45276) peer=Some(114.118.65.17:443)",
+        "2026-11-07T19:56:44.540518Z  INFO tts stream timing room=\"sn-BJP00326103099999938-1794081371\" turn_id=2 connect_id=3 phase=\"close\" completed=true pcm_frames=16 elapsed_ms=1412 ws_read_wait_ms=1402 max_ws_read_wait_ms=216 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=216",
+        "2026-11-07T19:56:44.541020Z  INFO tts dispatch timing prewarm_wait_ms=207 provider_ttfb_ms=249 first_pcm_ms=456"
+      ]
+    },
+    {
+      "case": 1,
+      "exit_phrase": "结束倾听恢复聊天",
+      "passed": true,
+      "result_sha256": "683a5b4e042910f0ea10854a8131c3bdd92ca9a68a7aecd5af25d907ae00fe2b",
+      "worker_log_sha256": "f9a6a6de048adf953b084fefa0bb7af8aa82ddab031b31afaaf8c631e1f3abf9",
+      "trace": "p0-39-76e88172-270d-4180-a706-de4303b7f433",
+      "audible_frames": 1157,
+      "first_audio_ms": 13854,
+      "input_ready_ms": 712,
+      "assertions": [
+        "trusted agent attributes before microphone publication",
+        "real input_ready",
+        "enter double-confirm completed",
+        "narration silent, State nonconflicting, duplicate accepted",
+        "real feedback audio received",
+        "uninterrupted feedback finished",
+        "voice exit normal",
+        "ordinary chat audible after voice exit",
+        "ordinary final subtitle",
+        "ordinary chat audio/subtitles/metrics positive anchor",
+        "one feedback includes immediate synthetic tail marker"
+      ],
+      "metrics": [
+        "2026-11-07T19:59:16.097665Z  INFO asr_stream{room=sn-BJP00326103099999938-1794081555}: asr connection timing request_id=\"2a130765-0b30-4aa5-be68-4c9d57d8cfca\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=181 dns_ms=5 tcp_ms=2 tls_ws_ms=173",
+        "2026-11-07T19:59:17.071063Z  INFO asr_stream{room=sn-BJP00326103099999938-1794081555}: asr connection timing request_id=\"7708a9c5-5873-4ab8-bde4-26990eee5e91\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=180 dns_ms=0 tcp_ms=3 tls_ws_ms=176",
+        "2026-11-07T19:59:28.921293Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=197 dns_ms=9 tcp_ms=48 tls_ws_ms=138 dns_path=\"system_os\" local=Some(64.90.13.177:47804) peer=Some(39.105.54.181:443)",
+        "2026-11-07T19:59:29.161219Z  INFO tts connection timing connect_id=2 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=238 dns_ms=1 tcp_ms=55 tls_ws_ms=181 dns_path=\"system_os\" local=Some(64.90.13.177:39570) peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:59:34.051505Z  INFO tts stream timing room=\"sn-BJP00326103099999938-1794081555\" turn_id=1 connect_id=1 phase=\"close\" completed=true pcm_frames=63 elapsed_ms=5129 ws_read_wait_ms=5088 max_ws_read_wait_ms=352 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=352",
+        "2026-11-07T19:59:34.051784Z  INFO tts dispatch timing prewarm_wait_ms=197 provider_ttfb_ms=283 first_pcm_ms=480",
+        "2026-11-07T19:59:48.202951Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=228 dns_ms=2 tcp_ms=54 tls_ws_ms=170 dns_path=\"system_os\" local=Some(64.90.13.177:38854) peer=Some(123.57.26.93:443)",
+        "2026-11-07T19:59:48.422927Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=219 dns_ms=1 tcp_ms=50 tls_ws_ms=166 dns_path=\"system_os\" local=Some(64.90.13.177:56596) peer=Some(123.57.86.182:443)",
+        "2026-11-07T19:59:49.618730Z  INFO tts stream timing room=\"sn-BJP00326103099999938-1794081555\" turn_id=2 connect_id=3 phase=\"close\" completed=true pcm_frames=16 elapsed_ms=1415 ws_read_wait_ms=1407 max_ws_read_wait_ms=217 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=217",
+        "2026-11-07T19:59:49.618948Z  INFO tts dispatch timing prewarm_wait_ms=227 provider_ttfb_ms=258 first_pcm_ms=485"
+      ]
+    },
+    {
+      "case": 2,
+      "exit_phrase": "小可结束倾听",
+      "passed": true,
+      "result_sha256": "f705102af31fd91decdfc037c25a652ea78f20f8e604c0bd20638d4a110dec62",
+      "worker_log_sha256": "019a506999371c57432abe571a045c240ef937962302119db0a20ff6c6ea0036",
+      "trace": "p0-39-e20bac67-69a6-490d-b3dd-3c9db644455f",
+      "audible_frames": 1157,
+      "first_audio_ms": 14189,
+      "input_ready_ms": 789,
+      "assertions": [
+        "trusted agent attributes before microphone publication",
+        "real input_ready",
+        "enter double-confirm completed",
+        "narration silent, State nonconflicting, duplicate accepted",
+        "real feedback audio received",
+        "uninterrupted feedback finished",
+        "voice exit normal",
+        "ordinary chat audible after voice exit",
+        "ordinary final subtitle",
+        "ordinary chat audio/subtitles/metrics positive anchor",
+        "one feedback includes immediate synthetic tail marker"
+      ],
+      "metrics": [
+        "2026-11-07T20:07:13.077317Z  INFO asr_stream{room=sn-BJP00326103099999938-1794082032}: asr connection timing request_id=\"e06ead7a-4f02-42e2-8fde-7fa3f4e783c6\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=391 dns_ms=219 tcp_ms=3 tls_ws_ms=166",
+        "2026-11-07T20:07:13.844683Z  INFO asr_stream{room=sn-BJP00326103099999938-1794082032}: asr connection timing request_id=\"0787f6b0-c76a-4d5a-b9d8-2f1aec912989\" stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=161 dns_ms=0 tcp_ms=2 tls_ws_ms=158",
+        "2026-11-07T20:07:25.963091Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=429 dns_ms=212 tcp_ms=50 tls_ws_ms=166 dns_path=\"system_os\" local=Some(64.90.13.177:54450) peer=Some(114.118.65.16:443)",
+        "2026-11-07T20:07:26.192989Z  INFO tts connection timing connect_id=2 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=229 dns_ms=1 tcp_ms=56 tls_ws_ms=171 dns_path=\"system_os\" local=Some(64.90.13.177:54458) peer=Some(114.118.65.16:443)",
+        "2026-11-07T20:07:31.100938Z  INFO tts stream timing room=\"sn-BJP00326103099999938-1794082032\" turn_id=1 connect_id=1 phase=\"close\" completed=true pcm_frames=63 elapsed_ms=5137 ws_read_wait_ms=5098 max_ws_read_wait_ms=351 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=351",
+        "2026-11-07T20:07:31.101154Z  INFO tts dispatch timing prewarm_wait_ms=430 provider_ttfb_ms=293 first_pcm_ms=723",
+        "2026-11-07T20:07:44.997072Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=212 dns_ms=1 tcp_ms=49 tls_ws_ms=161 dns_path=\"system_os\" local=Some(64.90.13.177:44354) peer=Some(114.118.65.16:443)",
+        "2026-11-07T20:07:45.216662Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=219 dns_ms=1 tcp_ms=50 tls_ws_ms=166 dns_path=\"system_os\" local=Some(64.90.13.177:44362) peer=Some(114.118.65.16:443)",
+        "2026-11-07T20:07:46.408385Z  INFO tts stream timing room=\"sn-BJP00326103099999938-1794082032\" turn_id=2 connect_id=3 phase=\"close\" completed=true pcm_frames=16 elapsed_ms=1411 ws_read_wait_ms=1402 max_ws_read_wait_ms=217 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=217",
+        "2026-11-07T20:07:46.408808Z  INFO tts dispatch timing prewarm_wait_ms=211 provider_ttfb_ms=249 first_pcm_ms=460"
+      ]
+    }
+  ]
+}

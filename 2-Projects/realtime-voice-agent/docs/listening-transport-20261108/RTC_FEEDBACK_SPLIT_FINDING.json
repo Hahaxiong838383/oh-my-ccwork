@@ -1,0 +1,38 @@
+{
+  "at": "2026-11-07T19:57:34.626932+00:00",
+  "result": "PRE_EXISTING_REPRODUCED_BOTH_BASELINE_AND_CANDIDATE",
+  "observations": [
+    {
+      "label": "candidate",
+      "result_sha256": "44d9c2e2732cdd25c71caaacdc66c08c91bba9065af63a9a9973de0f65d45b72",
+      "worker_log_sha256": "fe658905921f3ddc81dbc9701452e6b7ca25f84ea2d7db68a0140445bb2a4b59",
+      "trace": "p0-39-42554d86-7ebd-4b34-8707-dc5b656ef328",
+      "feedback_finals": [
+        "小可",
+        "我讲完了",
+        "请说说你的看法"
+      ],
+      "error": "timeout: real feedback audio received",
+      "tts_connection_rows": 0,
+      "same_wav_sha256": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+      "room_cleanup_error": null
+    },
+    {
+      "label": "baseline",
+      "result_sha256": "d1ea4250aee6a1ec2bc9588af99507a9bafb4c423ec436a4dde52f70b13eb6ca",
+      "worker_log_sha256": "4cea5ab6c391c4757a3452d6fc1f39638f99d51513627da0c357a591faa022ca",
+      "trace": "p0-39-4e602f3c-e8e5-4dc2-9b24-d4746d8ab5ab",
+      "feedback_finals": [
+        "小可",
+        "我讲完了",
+        "请说说你的看法"
+      ],
+      "error": "timeout: real feedback audio received",
+      "tts_connection_rows": 0,
+      "same_wav_sha256": "c34be346dbcbe74c803e9098b2e76be0b424c9cdb3591a49f7f58198975ea362",
+      "room_cleanup_error": null
+    }
+  ],
+  "parser_adapter_unchanged": true,
+  "android_reproduced": false
+}
