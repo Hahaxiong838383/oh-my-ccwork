@@ -1,0 +1,123 @@
+{
+  "at": "2026-11-08T00:18:00+08:00",
+  "kind": "incremental-readonly-speech-probe-review",
+  "model_independently_verified": "未知",
+  "system_prompt_claim": "Grok 4.7",
+  "not_claimed_as": ["Grok168", "grok-4.7/high"],
+  "actions_not_taken": ["business_code_edit", "deploy", "production_mutation", "delegate", "rerun_root_cause", "rerun_probe"],
+  "head": "f09884ee818437f54bd38b33d15caa6d35100223",
+  "business_code": "1f947fe4e226382615b147fd8e8bf6031c8d310d",
+  "business_ancestor_of_head": true,
+  "dirty_worktree": ["2-Projects/realtime-voice-agent/rust-worker/src/rtc_business_probe.rs"],
+  "probe_source_sha256_worktree": "cf3d48a15ab08b67fd698d45dbd081146956904b021557f56067daee62572f38",
+  "opinion": "run2_client_heard_6390ms_but_observed_zero_final_transcripts; silence_claim_rejected; transcript_drop_hypothesis_is_sender_IsAgent_on_livekit_master_eb9ea3d_not_yet_the_deployed_sfu; assertion_stays_red; not_a_new_reason_to_revert_1f947fe4",
+  "codex_points": [
+    "Accept RESULT_2 PROBE_OBSERVATION user_finals=0 answers=0 audible_ms=6390 first_audio_ms=11192 on RM_UWTNQqRLtTQX. Threshold is 12000 samples = 500ms at 24kHz. Audible clause passed.",
+    "Do not read run1 error string as silence and do not copy 0/0/6390 onto RM_TZwmiobxXEKi.",
+    "livekit master eb9ea3d participant.go:2618-2624 drops Transcription when the sender is not IsAgent. Probe join_token lacks video.agent for both identities. The grant belongs on publisher business-probe-agent. Granting it only to the dev subscriber does not match this check.",
+    "Deployed SFU version is unknown. Master is not the deployment. Token-only A/B is the next falsifier. This review does not pre-approve it.",
+    "caption final published is logged before publish_transcription await. It is not peer delivery.",
+    "Close is 5.572s and 5.316s after SourceDrained, matching signed 5000ms plus the 1s job sample. Playback of 804 and 876 frames was not cut off."
+  ],
+  "runs": {
+    "speech_enforce_ordered0": {
+      "room": "sn-BJP00326110799999901-1794067472695",
+      "sid": "RM_TZwmiobxXEKi",
+      "trace": "f6f1ce71-6008-4331-a368-6688a3625cdc",
+      "started": "2026-11-07T16:04:32.319473Z",
+      "finished": "2026-11-07T16:05:00.018094Z",
+      "exit": 101,
+      "log_sha256": "da87452c38a4e38f043aa4c3a56268ba8de8449a3149d2f72c5163f436296736",
+      "binary_sha256_claimed": "ace13b397b6b278eff953f7abff2aa1881fc7e99b43cfd85cdac73a343490bf0",
+      "probe_source_sha256_in_package": "6522832ddd947b57d756c0b05f386be71919c1e906e6bf195b80bb240614f897",
+      "error": "normal question did not produce final answer plus audible PCM",
+      "counts": "未知",
+      "stt_finals": ["2026-11-07T16:04:39.866716Z 请用一句话告诉我", "2026-11-07T16:04:42.251186Z 为什么天空是蓝色的"],
+      "tts_first_pcm": "2026-11-07T16:04:44.662952Z provider_ttfb_ms=561 turn_id=2",
+      "playout": "2026-11-07T16:04:52.725298Z played_frames=804 underrun_count=0 exit=SourceDrained buffered_audio_ms=191",
+      "turn1": "2026-11-07T16:04:42.666635Z played_frames=0 exit=Aborted",
+      "close": "2026-11-07T16:04:58.297062Z Close(IdleNoProgress) elapsed_ms=23617",
+      "close_minus_source_drained_s": 5.572,
+      "close_minus_exact_5s_s": 0.572,
+      "readback": "2026-11-07T16:04:59.355018Z Gone delete_scope=room_name cas=false"
+    },
+    "speech_evidence_enforce_ordered0": {
+      "room": "sn-BJP00326110799999901-1794067955649",
+      "sid": "RM_UWTNQqRLtTQX",
+      "trace": "3cc83833-340c-47dc-9ca6-c15815ec5f18",
+      "started": "2026-11-07T16:12:35.228876Z",
+      "finished": "2026-11-07T16:13:03.858214Z",
+      "exit": 101,
+      "log_sha256": "d8def71b517d3329082a35ff469b5ea822ebdabf45cbed0d8452622b5ff4ce42",
+      "binary_sha256_claimed_by_codex_uncompressed": "de8457f1646c1c399529896817e36203f050face54bae1679867f07bb86e6864",
+      "local_gzip_sha256": "76fa7762e7a8e5809e4a48ea46b9c0e7c948d3c1b16f56ff68d5107a1aa0f3ba",
+      "gzip_is_not_binary_hash": true,
+      "observation": {"user_finals": 0, "answers": [], "audible_ms": 6390, "first_audio_ms": 11192},
+      "error": "normal question missing evidence: user_finals=0 answers=0 audible_ms=6390",
+      "stt_finals": ["2026-11-07T16:12:43.271516Z 请用一句话告诉我", "2026-11-07T16:12:45.570021Z 为什么天空是蓝色的"],
+      "caption_local_log": ["2026-11-07T16:12:45.247202Z published_total=1", "2026-11-07T16:12:45.988260Z published_total=2 dropped_total=0"],
+      "tts_first_pcm": "2026-11-07T16:12:48.763898Z provider_ttfb_ms=600 turn_id=2",
+      "playout": "2026-11-07T16:12:57.540465Z played_frames=876 underrun_count=0 exit=SourceDrained buffered_audio_ms=198",
+      "turn1": "2026-11-07T16:12:45.986596Z played_frames=0 exit=Aborted",
+      "close": "2026-11-07T16:13:02.856467Z Close(IdleNoProgress) elapsed_ms=25148",
+      "close_minus_source_drained_s": 5.316,
+      "close_minus_exact_5s_s": 0.316,
+      "readback": "2026-11-07T16:13:03.507229Z Gone delete_scope=room_name cas=false"
+    }
+  },
+  "livekit_master": {
+    "commit": "eb9ea3d3634d9fbad02b0516a9f4ddb1f510b9ef",
+    "commit_time": "2026-11-07T09:04:01Z",
+    "file": "pkg/rtc/participant.go",
+    "sender_not_agent_drops_transcription": "lines 2618-2624 as fetched 2026-11-08",
+    "codex_cited_lines": "2454-2460",
+    "line_numbers_moved": true,
+    "is_deployed_sfu": "未知"
+  },
+  "production_pin_unchanged": {
+    "exe_sha256": "35f59ecde2ce892f0c865ae90880747a00f782cccbffe39abe5dc3234e464971",
+    "main_pid": 3179125,
+    "n_restarts": 0,
+    "source": "RTC_SPEECH_RESULT_1.json main field and probe-speech-runner-body.py assertion"
+  },
+  "claims": {
+    "confirmed": [
+      "Both synthetic enforce ordered=0 runs exited 101 after two ASR finals, turn-2 TTS PCM, SourceDrained, underrun 0.",
+      "Run 2 client counted 6390ms above mean-abs 200 on the business-probe-agent track and zero final transcription segments.",
+      "Both closes are after SourceDrained by about 5.3-5.6s, consistent with metadata timeout_ms 5000 and job.rs 1s evaluate.",
+      "Probe join_token has no video.agent. Master eb9ea3d drops transcription packets from a non-agent sender.",
+      "caption final published is pre-await. Readback Gone is name delete with cas=false.",
+      "1f947fe4 business files hashed this round match HEAD. Only the probe test file is dirty."
+    ],
+    "inferred": [
+      "Run 2 zero transcripts are the sender-token drop, if the deployed SFU matches eb9ea3d. Audio tracks are outside that branch.",
+      "Run 1 was not silent on the server. Client audible_ms for run 1 was not recorded.",
+      "804 and 876 played_frames line up with about 10ms frames.",
+      "Turn 1 aborted with 0 frames because turn 2 of the same wav interrupted it."
+    ],
+    "unknown": [
+      "Deployed SFU version and whether it contains the IsAgent transcription check.",
+      "Run 1 user_finals, answers, audible_ms, and whether its raw log contains caption final published.",
+      "Run 2 answer text and the SDK result of publish_transcription.",
+      "Whether production room RM_D6tdPrWhteMk or the Android APK is silent or missing captions.",
+      "Serving model id of this review session."
+    ]
+  },
+  "deployment_blockers": {
+    "removed_by_this_evidence": ["this synthetic probe proves the room or production was silent"],
+    "still_blocking": [
+      "normal-short assertion is still red until an A/B shows non-empty user_finals and answers",
+      "candidate 1f947fe4 is not live binary 35f59ecd PID 3179125",
+      "probe 5000ms idle is not a deployed product idle value",
+      "Brain issuance, Android device path, and old-room cleanup discipline have no new evidence in this round"
+    ],
+    "revert_1f947fe4": false
+  },
+  "input_sha256": {
+    "RTC_SPEECH_FAILURE_EVIDENCE.json": "f64285a143fe0f975a1f9654833f30b01bb8ab0a016a6aea93ee3704427273a1",
+    "RTC_SPEECH_RESULT_1.json": "f8302fa2acd72f8bce86a992f6a1ba18eea74e4dde7675ebea5df1c7afe68c50",
+    "RTC_SPEECH_EVIDENCE_RESULT_2.json": "0e5a1106d99c9f26f09961f566b019786f71a85a5ca4e6b9d27bd2ddeb0332c8",
+    "RTC_SPEECH_EVIDENCE_FAILURE_LOG.json": "6973dd7e8713d977fc832a0415783c3c45a0ff39ea7d498b83f892a1fe9a9070",
+    "CODEX_SPEECH_DISCUSSION_UPDATE.md": "2fee522e122a19d36acd808a3776dedfda25bbcafc698263369b581f946d035b"
+  }
+}

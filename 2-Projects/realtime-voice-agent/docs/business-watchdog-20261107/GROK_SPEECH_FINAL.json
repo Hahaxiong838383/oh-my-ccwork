@@ -1,0 +1,156 @@
+{
+  "at": "2026-11-08T00:29:02+08:00",
+  "kind": "speech-probe-token-final",
+  "model_independently_verified": "未知",
+  "system_prompt_claim": "Grok 4.7",
+  "prior_report_preserved": "GROK_SPEECH_EVIDENCE_REVIEW.md",
+  "actions_not_taken": [
+    "business_code_edit",
+    "deploy",
+    "production_mutation",
+    "rerun_probe",
+    "rereview_532",
+    "overwrite_prior_speech_review"
+  ],
+  "fixed_commit": "0ef4e4be7d4f9e9037842d0b4bd68142eed16268",
+  "parent": "f09884ee818437f54bd38b33d15caa6d35100223",
+  "business_code": "1f947fe4e226382615b147fd8e8bf6031c8d310d",
+  "business_ancestor_of_fixed_commit": true,
+  "opinion": "publisher_test_token_fixed_on_synthetic_probe; normal_qa_and_begin_timeout_rtc_isolation_pass; whole_fault_not_cured; remaining_items_are_not_a_new_code_block_and_do_not_reopen_532",
+  "isolation_pass": {
+    "normal_question": true,
+    "begin_timeout_to_rtc": true,
+    "scope": "synthetic SN BJP00326110799999901, enforce, probe client"
+  },
+  "whole_fault_cured": false,
+  "revert_1f947fe4": false,
+  "rereview_532": false,
+  "codex_points": [
+    "Agree. 6390ms stays on RM_UWTNQqRLtTQX. Run1 counts on RM_TZwmiobxXEKi stay unknown.",
+    "Agree. Isolation pass requires client user_finals, one answer final, and audible PCM together. Both new rounds have them and exit 0.",
+    "Agree the grant is publisher-only: agent is true only when identity==business-probe-agent. Deployed SFU version remains unknown. Master line numbers are not deployment evidence.",
+    "Agree the missing-caption red for this probe is cleared by the new A/B. Package manifests differ only in rtc_business_probe.rs. Positive blob matches 0ef4e4be. Local gunzip matches de8457f1 and ef75442d.",
+    "Agree audible_ms counts only frames with mean absolute amplitude >200. ready 6741ms and 3107ms stay slow. The normal run logged a signal transport timeout and one retry.",
+    "Agree both closes are after SourceDrained, 5.376s and 5.285s. Five seconds remains probe metadata. Main PID 3179125 was not restarted. Prior helper install and unswitched pools stay a deployment boundary."
+  ],
+  "runs": {
+    "negative_speech_evidence_ordered0": {
+      "sid": "RM_UWTNQqRLtTQX",
+      "exit": 101,
+      "user_finals": 0,
+      "answers": 0,
+      "audible_ms": 6390,
+      "binary_sha256_uncompressed": "de8457f1646c1c399529896817e36203f050face54bae1679867f07bb86e6864",
+      "uncompressed_bytes": 136341912
+    },
+    "agent_grant_enforce_ordered0": {
+      "room": "sn-BJP00326110799999901-1794068275951",
+      "sid": "RM_YAcKnkT9zsf8",
+      "trace": "49ffc228-ebdf-422b-a54c-0acfc9401ab8",
+      "started": "2026-11-07T16:17:55.549333+00:00",
+      "finished": "2026-11-07T16:18:27.927407+00:00",
+      "exit": 0,
+      "user_finals": 2,
+      "answers": 1,
+      "audible_ms": 8110,
+      "first_audio_ms": 13638,
+      "ready_ms": 6741,
+      "input_sent_ms": 6741,
+      "log_sha256": "0f7811636aeab8f86e3687a335ebee56e0cd3ac1a957aeb52bb63b3b52836e9e",
+      "playout_turn2": "2026-11-07T16:18:20.830868Z played_frames=1028 underrun_count=0 exit=SourceDrained",
+      "playout_turn1": "2026-11-07T16:18:09.701034Z played_frames=25 exit=Aborted",
+      "close": "2026-11-07T16:18:26.207383Z Close(IdleNoProgress)",
+      "close_minus_source_drained_s": 5.376515,
+      "readback": "2026-11-07T16:18:27.668881Z Gone delete_scope=room_name cas=false",
+      "signal_timeout_before_subscribe": true
+    },
+    "agent_grant_enforce_ordered1": {
+      "room": "sn-BJP00326110799999901-1794068333538",
+      "sid": "RM_U5hgUqC5ZvPP",
+      "trace": "5df7628d-52e0-4dd1-951c-90cc5156ada6",
+      "started": "2026-11-07T16:18:53.029403+00:00",
+      "finished": "2026-11-07T16:19:20.563805+00:00",
+      "exit": 0,
+      "user_finals": 2,
+      "answers": 1,
+      "audible_ms": 6370,
+      "first_audio_ms": 12150,
+      "ready_ms": 3107,
+      "phase_ms": 5610,
+      "input_sent_ms": 5610,
+      "reason": "begin_timeout",
+      "log_sha256": "0fce40c768ef64a05707d6cc92ebfc43f092495aa11cb22dddb5bf9b97130e19",
+      "playout_turn2": "2026-11-07T16:19:14.645844Z played_frames=816 underrun_count=0 exit=SourceDrained",
+      "playout_turn1": "2026-11-07T16:19:05.231038Z played_frames=1 exit=Aborted",
+      "close": "2026-11-07T16:19:19.931229Z Close(IdleNoProgress)",
+      "close_minus_source_drained_s": 5.285385,
+      "readback": "2026-11-07T16:19:20.267213Z Gone delete_scope=room_name cas=false",
+      "asr_no_audio_before_finals": "2026-11-07T16:19:00.150183Z code=45000002"
+    }
+  },
+  "hashes": {
+    "positive_probe_source_sha256": "ebf0ad84c1994f2d682431a395e8581ef694290558acc2297d1847e5253be02d",
+    "negative_probe_source_sha256": "cf3d48a15ab08b67fd698d45dbd081146956904b021557f56067daee62572f38",
+    "parent_probe_source_sha256": "c445fd3f77ab4828a992281333aaec006b4f5ef08f422592f85f19c81da6c8d6",
+    "package_keys": 68,
+    "package_value_diffs": [
+      "src/rtc_business_probe.rs"
+    ],
+    "line_diff_cf3d48a1_to_ebf0ad84": "未取回负向正文，未做逐行 diff",
+    "positive_binary_sha256": "ef75442d592ec7d838aa2dcb19bd20136289b3954a08c363980f6c112e7d424b",
+    "positive_binary_bytes": 136342424,
+    "positive_gzip_sha256": "e1e302425690d8f87b6f60ea19a2fc0ef4a765a4dff2a0ce94b046341c23478a",
+    "negative_binary_sha256": "de8457f1646c1c399529896817e36203f050face54bae1679867f07bb86e6864",
+    "negative_binary_bytes": 136341912,
+    "negative_gzip_sha256": "76fa7762e7a8e5809e4a48ea46b9c0e7c948d3c1b16f56ff68d5107a1aa0f3ba",
+    "business_blobs_match_package": [
+      "src/job.rs",
+      "src/pipeline.rs",
+      "src/token.rs",
+      "src/worker.rs",
+      "src/business_watchdog.rs",
+      "src/transcript_pub.rs",
+      "src/caption_gate.rs",
+      "src/business_runtime.rs",
+      "src/main.rs",
+      "src/ordered_pcm.rs",
+      "src/room_cleanup.rs"
+    ],
+    "main_rs_delta_vs_1f947fe4": "#[cfg(test)] mod rtc_business_probe;"
+  },
+  "production_pin_unchanged_this_run": {
+    "exe_sha256": "35f59ecde2ce892f0c865ae90880747a00f782cccbffe39abe5dc3234e464971",
+    "main_pid": 3179125,
+    "n_restarts": 0
+  },
+  "still_open": [
+    "production issuance",
+    "single real SN publish",
+    "real Android",
+    "ready 3107ms and 6741ms",
+    "historical room RM_D6tdPrWhteMk original input",
+    "12 unmatched tickets"
+  ],
+  "historical_room": {
+    "active_rooms_at": "2026-11-07T16:15:59.917336+00:00",
+    "sid": "RM_D6tdPrWhteMk",
+    "participants": 2,
+    "target_fresh_at": "2026-11-07T16:16:02.393879+00:00",
+    "windows": 18,
+    "mean_amp": 0,
+    "turn_committed": 0,
+    "playout": 0,
+    "stt_final": 0
+  },
+  "deployed_sfu_version": "未知",
+  "input_sha256": {
+    "RTC_AGENT_GRANT_RESULT_2.json": "fd0b05d1716ae3ea4430d01a584a6cb031a0820b2fd3193ae287422f4e5fd0f1",
+    "RTC_AGENT_GRANT_SERVER_LOG.json": "d578a262ea3700905438a1d0b6f4388828d0f42327ed2e628b4f99c0198d9e5e",
+    "RTC_AGENT_GRANT_ORDERED_SERVER_LOG.json": "be2f1ae5eae79ba62cf363ec1fa799f8dff110e138c0974ef8550db8f0cf3e13",
+    "source-rtc-probe-package-speech-evidence.json": "725fbcb9cdc7dc52c898da0096fd60cdfb9b4c895c85175df6b66efcb07cbd73",
+    "source-rtc-probe-package-agent-grant.json": "cb776a5430c33dc52d80432794b6dc2f9bb9b37191685fa4ff8b9217c2979ecc",
+    "CODEX_SPEECH_EVIDENCE_REPLY.md": "5ce391fb9994725d3040d9c4e108dde462e4904775f81643abb1130df7448833",
+    "CODEX_SPEECH_DISCUSSION_UPDATE.md": "51c9b5ad20cb08200fc43f82a1530d5f860e7a095b1738f91baf933c399c81f6",
+    "GROK_SPEECH_EVIDENCE_REVIEW.md": "606efa3809cdfc2b087f739c3d5efe5e8c9fc6c9b1a67a9f5ea246dfeb10444b"
+  }
+}
