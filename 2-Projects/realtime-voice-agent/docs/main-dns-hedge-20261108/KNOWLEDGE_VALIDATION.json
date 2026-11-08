@@ -1,0 +1,29 @@
+{
+  "status": "PASS_KNOWLEDGE_ONLY",
+  "shared_file_count": 7,
+  "shared_status_lines": 47,
+  "shared_recent_lines": 79,
+  "reference_retrieval": {
+    "gate_is_exact": true,
+    "isolation_and_success": true,
+    "harness_failure": true,
+    "capacity_limits": true,
+    "cached_initialization": true,
+    "runtime_rollback": true
+  },
+  "grok_application_scenarios": 3,
+  "application_judgment": "3 answers matched expected boundaries; Grok used draft before added OnceLock paragraph, that addition checked by root against source",
+  "baseline_kind": "missing reference retrieval slots plus prior actual runner failures; not a five-run behavior benchmark",
+  "other_shared_content_preserved": true,
+  "shared_branch_reference_equal": true,
+  "production_operations": false,
+  "business_tests_rerun": false,
+  "shared_memory_in_git": false,
+  "project_memory_mirror_in_git": true,
+  "backup_directory": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files",
+  "review_tasks": [
+    "b1cc554f-dc5d-42bc-909f-d4150537c053",
+    "afac43ba-9f24-487c-968c-708fa2215433"
+  ],
+  "checked_at": "2026-11-08T13:38:34.527173+00:00"
+}

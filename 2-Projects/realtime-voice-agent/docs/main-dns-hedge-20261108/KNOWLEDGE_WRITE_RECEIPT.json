@@ -1,0 +1,76 @@
+{
+  "files": [
+    {
+      "label": "shared-skill",
+      "logical_path": "/Users/fu-121/mycc/.claude/skills/voice-agent-ops/SKILL.md",
+      "before_sha256": "a9a7ae40f76cc0fb25a6e0e42397bdd49104ff0317a719bc3c8071244b344f1b",
+      "candidate_sha256": "d204e16ce33070f14215af1f80065edf332c252e8111d59a1b34181c558ecdab",
+      "written_sha256": "d204e16ce33070f14215af1f80065edf332c252e8111d59a1b34181c558ecdab",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/shared-skill/before",
+      "verified_at": "2026-11-08T13:37:26.651023+00:00"
+    },
+    {
+      "label": "shared-reference",
+      "logical_path": "/Users/fu-121/mycc/.claude/skills/voice-agent-ops/references/tts-transport-recovery.md",
+      "before_sha256": "57527963a5d6a1b7156eba6e92ec286fa1ab73c7b1e1a10a93d95baa8da5b933",
+      "candidate_sha256": "93b9a8fca8c60324312eec97143313434c11cc2556dfb765e5c260361695f0ec",
+      "written_sha256": "93b9a8fca8c60324312eec97143313434c11cc2556dfb765e5c260361695f0ec",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/shared-reference/before",
+      "verified_at": "2026-11-08T13:37:26.658785+00:00"
+    },
+    {
+      "label": "branch-skill",
+      "logical_path": "/Users/fu-121/.codex/worktrees/p003-voice-transport-fix-20261105/.claude/skills/voice-agent-ops/SKILL.md",
+      "before_sha256": "eff879db7f21e11055a810b47af93473d6aca3d6df8911f3559a1c3b283bbbd3",
+      "candidate_sha256": "9d08b1c84341a336e75b84f5ca3fef8005cb93b234fb6c3e7221d2973ae4b472",
+      "written_sha256": "9d08b1c84341a336e75b84f5ca3fef8005cb93b234fb6c3e7221d2973ae4b472",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/branch-skill/before",
+      "verified_at": "2026-11-08T13:37:26.666587+00:00"
+    },
+    {
+      "label": "branch-reference",
+      "logical_path": "/Users/fu-121/.codex/worktrees/p003-voice-transport-fix-20261105/.claude/skills/voice-agent-ops/references/tts-transport-recovery.md",
+      "before_sha256": "57527963a5d6a1b7156eba6e92ec286fa1ab73c7b1e1a10a93d95baa8da5b933",
+      "candidate_sha256": "93b9a8fca8c60324312eec97143313434c11cc2556dfb765e5c260361695f0ec",
+      "written_sha256": "93b9a8fca8c60324312eec97143313434c11cc2556dfb765e5c260361695f0ec",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/branch-reference/before",
+      "verified_at": "2026-11-08T13:37:26.676993+00:00"
+    },
+    {
+      "label": "status",
+      "logical_path": "/Users/fu-121/mycc/0-System/status.md",
+      "before_sha256": "b40026407700958bc46740431f6cde0c78af29c20a2a5b2ef2193404c56f51fd",
+      "candidate_sha256": "c653ef372f4a859b6cc6856cbd48e2fd234e6dd7a6b013c8e32d1922e5af9520",
+      "written_sha256": "c653ef372f4a859b6cc6856cbd48e2fd234e6dd7a6b013c8e32d1922e5af9520",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/status/before",
+      "verified_at": "2026-11-08T13:37:26.682488+00:00"
+    },
+    {
+      "label": "recent",
+      "logical_path": "/Users/fu-121/mycc/0-System/RECENT_EVENTS.md",
+      "before_sha256": "899a15e1865ec096949ee89c1b196fd594429cf022b66ca1f5569647b2d55d77",
+      "candidate_sha256": "333b82fa22f3e6a3b6b9d5a28e05f7eabacf0aa50bd6557428ad83787e4ac373",
+      "written_sha256": "333b82fa22f3e6a3b6b9d5a28e05f7eabacf0aa50bd6557428ad83787e4ac373",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/recent/before",
+      "verified_at": "2026-11-08T13:37:26.701327+00:00"
+    },
+    {
+      "label": "items",
+      "logical_path": "/Users/fu-121/mycc/0-System/memory-items.md",
+      "before_sha256": "57f2ec6fcc051aa276d39c61403d5938c4d546177204e28021fa76b1b677b270",
+      "candidate_sha256": "a9dadc34bd4b50c9ebec66ff355c3ba3ac01c4e0dc7d29a42c1279e4f5807fee",
+      "written_sha256": "a9dadc34bd4b50c9ebec66ff355c3ba3ac01c4e0dc7d29a42c1279e4f5807fee",
+      "status": "WRITTEN",
+      "backup": "/Users/fu-121/.local/state/p003-dns-retro-20261108/files/items/before",
+      "verified_at": "2026-11-08T13:37:26.710853+00:00"
+    }
+  ],
+  "partial_write_recovery": "only restore/reconcile this task deltas after reading latest files; never roll all backups over concurrent work",
+  "private_manifest": "/Users/fu-121/.local/state/p003-dns-retro-20261108/WRITE_MANIFEST.json"
+}
