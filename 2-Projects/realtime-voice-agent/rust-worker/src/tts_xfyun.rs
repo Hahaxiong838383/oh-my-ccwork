@@ -607,6 +607,35 @@ mod tests {
     use super::*;
 
     #[tokio::test]
+    async fn r27_production_connector_rejects_untrusted_tls_and_keeps_sni() {
+        use std::io::Read;
+        use base64::Engine;
+        // Ephemeral self-signed TEST fixture, never a service credential.
+        // Deliberately untrusted/invalid for localhost; it must fail forever.
+        let cert=base64::engine::general_purpose::STANDARD.decode("MIIBejCCASCgAwIBAgIUXLD2e5T2vKErZp388Rf72Ig8cbIwCgYIKoZIzj0EAwIwIzEhMB8GA1UEAwwYaW52YWxpZC1kbnMtdGVzdC5pbnZhbGlkMB4XDTI2MTEwODEwNTA0M1oXDTI2MTExMDEwNTA0M1owIzEhMB8GA1UEAwwYaW52YWxpZC1kbnMtdGVzdC5pbnZhbGlkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAED+04AmCAu8v37ee/RJVykFeIIDMR/VUvuCyUTkRoLMpUewQiEA0geQS0kwI/y21LUUYqbMPQlISrkKcLYcLHr6MyMDAwHQYDVR0OBBYEFHDXTvISdPgFwpOStUHyFpT2nO38MA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgHP6hpiXIYKAW1rhPQz5V9vmCd5ILtE7VstW4R6l+FgsCIQDF/i2pbFFLuMXBs5mu9ogfm/VwLtcGtIzNsEInggbeqQ==").unwrap();
+        let key=base64::engine::general_purpose::STANDARD.decode("MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgbxfqSAbLwG3aU7R5l47/6MbKCB1TbkLNtjfOgqOtUW6hRANCAAQP7TgCYIC7y/ft579ElXKQV4ggMxH9VS+4LJRORGgsylR7BCIQDSB5BLSTAj/LbUtRRipsw9CUhKuQpwthwsev").unwrap();
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let config=rustls::ServerConfig::builder().with_no_client_auth().with_single_cert(
+            vec![rustls::pki_types::CertificateDer::from(cert)],
+            rustls::pki_types::PrivatePkcs8KeyDer::from(key).into()).unwrap();
+        let listener=std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port=listener.local_addr().unwrap().port();
+        let server=tokio::task::spawn_blocking(move || {
+            let (socket,_)=listener.accept().unwrap();socket.set_read_timeout(Some(Duration::from_secs(2))).unwrap();
+            let connection=rustls::ServerConnection::new(std::sync::Arc::new(config)).unwrap();
+            let mut tls=rustls::StreamOwned::new(connection,socket);let mut input=[0;1];
+            let error=tls.read(&mut input).expect_err("untrusted handshake must not deliver HTTP/text");
+            assert!(error.to_string().contains("Certificate") || error.to_string().contains("UnknownCA"),"{error}");
+            assert_eq!(tls.conn.server_name(),Some("localhost"),"keep hostname for SNI, not the selected IP");
+        });
+        let result=tokio::time::timeout(Duration::from_secs(3),connect_observed(format!("wss://localhost:{port}/"))).await.unwrap();
+        assert!(result.is_err());
+        let error=result.err().unwrap().to_string();
+        server.await.unwrap();
+        assert!(error.contains("stage=tls_ws") && (error.contains("tls_failed") || error.contains("io_failed")),"{error}");
+    }
+
+    #[tokio::test]
     async fn r15_connect_failure_reports_stage_without_response_headers_or_signed_url() {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

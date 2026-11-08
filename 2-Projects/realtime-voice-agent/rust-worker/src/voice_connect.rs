@@ -618,4 +618,20 @@ mod tests {
             &primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(200),&limit)).await;
         assert!(result.is_err());assert_eq!(limit.available_permits(),2);
     }
+
+    #[tokio::test]
+    async fn r27_fast_transport_failure_is_explicit_and_does_not_expand_retries() {
+        let endpoint=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port=endpoint.local_addr().unwrap().port();drop(endpoint);
+        let mut server=NameServerConfig::tcp("127.0.0.1".parse().unwrap());
+        server.connections[0].port=port;
+        let mut builder=TokioResolver::builder_with_config(ResolverConfig::from_name_servers(vec![server]),TokioRuntimeProvider::default());
+        builder.options_mut().attempts=0;builder.options_mut().timeout=Duration::from_millis(800);
+        let primary=builder.build().unwrap();let fallback=dns_server("a_only").await;
+        let limit=tokio::sync::Semaphore::new(2);
+        let result=tokio::time::timeout(Duration::from_millis(150),lookup_with_fallback(
+            &primary,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(200),&limit)).await;
+        assert!(result.is_ok_and(|r|r.is_err()),"fast refusal remains an explicit error; this feature hedges pending lookups");
+        assert_eq!(fallback.a.load(Ordering::SeqCst),0);assert_eq!(limit.available_permits(),2);
+    }
 }
