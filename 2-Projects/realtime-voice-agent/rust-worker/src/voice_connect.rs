@@ -1,7 +1,8 @@
 //! Candidate-only asynchronous DNS and staggered address racing.
 //! Cache lifetimes come from DNS; credentials and signed URLs never enter here.
 use anyhow::{bail, Result};
-use hickory_resolver::{TokioResolver, lookup::Lookup, proto::rr::{DNSClass, Name, RData, RecordType}};
+use hickory_resolver::{TokioResolver, lookup::Lookup, config::{NameServerConfig, ResolverConfig},
+    net::runtime::TokioRuntimeProvider, proto::rr::{DNSClass, Name, RData, RecordType}};
 use std::{net::{IpAddr, SocketAddr}, time::{Duration, Instant}};
 use tokio::net::TcpStream;
 use tracing::{Instrument, instrument::WithSubscriber};
@@ -40,12 +41,12 @@ struct Diagnostic {
     started:Instant, family:&'static str, stage:&'static str, outcome:&'static str,
     reason:&'static str, rcode:Option<u16>, io_kind:Option<std::io::ErrorKind>,
     count:Option<usize>, index:Option<usize>, peer:Option<SocketAddr>,
-    span:tracing::Span, dispatch:tracing::Dispatch,
+    span:tracing::Span, dispatch:tracing::Dispatch, resolver_path: &'static str,
 }
 impl Diagnostic {
     fn dns(v6:bool)->Self {Self{started:Instant::now(),family:if v6{"AAAA"}else{"A"},stage:"dns",
         outcome:"cancelled",reason:"owner_dropped",rcode:None,io_kind:None,count:None,index:None,peer:None,
-        span:tracing::Span::current(),dispatch:tracing::dispatcher::get_default(Clone::clone)}}
+        span:tracing::Span::current(),dispatch:tracing::dispatcher::get_default(Clone::clone),resolver_path:"not_applicable"}}
 }
 impl Drop for Diagnostic {
     fn drop(&mut self) {
@@ -55,7 +56,7 @@ impl Drop for Diagnostic {
         tracing::dispatcher::with_default(&self.dispatch,|| {
         let _entered=self.span.enter();
         if self.index.is_none() {
-            tracing::info!(family=self.family,outcome=self.outcome,reason=self.reason,dns_rcode=self.rcode,
+            tracing::info!(resolver_path=self.resolver_path,family=self.family,outcome=self.outcome,reason=self.reason,dns_rcode=self.rcode,
                 io_kind=?self.io_kind,dns_ms=self.started.elapsed().as_millis() as u64,address_count=self.count,
                 "voice dns family timing");
         } else {
@@ -67,7 +68,7 @@ impl Drop for Diagnostic {
     }
 }
 
-pub struct Connected { pub socket: TcpStream, pub dns_ms: u64, pub tcp_ms: u64 }
+pub struct Connected { pub socket: TcpStream, pub dns_ms: u64, pub tcp_ms: u64, pub dns_path: &'static str }
 
 pub async fn connect(host: &str, port: u16) -> Result<Connected> {
     static RESOLVER: std::sync::OnceLock<std::result::Result<TokioResolver, String>> = std::sync::OnceLock::new();
@@ -77,7 +78,48 @@ pub async fn connect(host: &str, port: u16) -> Result<Connected> {
         builder.options_mut().attempts = 2;
         builder.build().map_err(|_| "resolver_init".to_owned())
     }).as_ref().map_err(|_| anyhow::anyhow!("resolver_init"))?;
-    dial(resolver, host, port).await
+    let fallback=if hedge_enabled(host,std::env::var("P003_TTS_DNS_HEDGE_V1").ok().as_deref()) {
+        static UPSTREAM: std::sync::OnceLock<Option<TokioResolver>> = std::sync::OnceLock::new();
+        UPSTREAM.get_or_init(||{
+            let resolver=configured_upstream();
+            tracing::info!(available=resolver.is_some(),"tts DNS independent fallback initialized");
+            resolver
+        }).as_ref()
+    } else {None};
+    dial_resolvers(resolver,fallback,host,port).await
+}
+
+fn hedge_enabled(host: &str, flag: Option<&str>) -> bool {
+    // This connector is called only by the candidate async-DNS path. Never
+    // bypass local/split-horizon policies for arbitrary names or new callers.
+    flag==Some("1") && host.eq_ignore_ascii_case("cbm01.cn-huabei-1.xf-yun.com")
+}
+
+fn upstream_servers(managed_stub: bool, config: &str) -> Vec<IpAddr> {
+    if !managed_stub {return vec![];}
+    let mut ips=Vec::new();
+    for line in config.lines() {
+        let mut words=line.split_whitespace();
+        if words.next()!=Some("nameserver"){continue;}
+        if let Some(ip)=words.next().and_then(|v|v.parse::<IpAddr>().ok()) {
+            if !ip.is_loopback()&&!ip.is_unspecified()&&!ip.is_multicast()&&!ips.contains(&ip){ips.push(ip);}
+        }
+        if ips.len()==2 {break;}
+    }
+    ips
+}
+
+fn configured_upstream() -> Option<TokioResolver> {
+    let stub=std::path::Path::new("/run/systemd/resolve/stub-resolv.conf").canonicalize().ok()?;
+    let managed=std::path::Path::new("/etc/resolv.conf").canonicalize().ok()?==stub;
+    let config=std::fs::read_to_string("/run/systemd/resolve/resolv.conf").ok()?;
+    let ips=upstream_servers(managed,&config);
+    if ips.is_empty(){return None;}
+    let config=ResolverConfig::from_name_servers(ips.into_iter().map(NameServerConfig::udp_and_tcp).collect());
+    let mut builder=TokioResolver::builder_with_config(config,TokioRuntimeProvider::default());
+    builder.options_mut().timeout=Duration::from_secs(1);
+    builder.options_mut().attempts=1;
+    builder.build().ok()
 }
 
 async fn addresses_connect(addresses: Vec<SocketAddr>) -> Result<TcpStream> {
@@ -104,29 +146,61 @@ async fn addresses_connect(addresses: Vec<SocketAddr>) -> Result<TcpStream> {
     bail!("connect_failed")
 }
 
-async fn family(resolver: &TokioResolver, host: &str, port: u16, v6: bool) -> Result<Connected> {
+async fn family(resolver: &TokioResolver, fallback: Option<&TokioResolver>, host: &str, port: u16, v6: bool) -> Result<Connected> {
     let start=Instant::now();
-    let mut trace=Diagnostic::dns(v6);
-    let lookup=resolver.lookup(host,if v6 {RecordType::AAAA} else {RecordType::A}).await
-        .map_err(|error| {trace.outcome="failed";(trace.reason,trace.rcode,trace.io_kind)=dns_failure(&error);anyhow::anyhow!("resolve_failed")})?;
-    let (addresses,uncache_names)=lookup_addresses(&lookup,port,v6).map_err(|error| {
+    let kind=if v6 {RecordType::AAAA} else {RecordType::A};
+    static HEDGES: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+    let (lookup,dns_path)=match fallback {
+        Some(upstream)=>lookup_with_fallback(resolver,upstream,host,kind,Duration::from_millis(200),&HEDGES).await?,
+        None=>(observed_lookup(resolver,host,kind,"system_resolver").await?,"system_resolver"),
+    };
+    let (addresses,_)=lookup_addresses(&lookup,port,v6)?;
+    let dns_ms=start.elapsed().as_millis() as u64;let tcp=Instant::now();
+    let socket=addresses_connect(addresses).await?;
+    Ok(Connected{socket,dns_ms,tcp_ms:tcp.elapsed().as_millis() as u64,dns_path})
+}
+
+// Hedge only a pending DNS lookup, never a healthy lookup or a slow TCP/TLS
+// connection. No queue, blocking OS lookup, new public DNS, or detached task.
+async fn lookup_with_fallback(
+    resolver: &TokioResolver, fallback: &TokioResolver, host: &str, kind: RecordType,
+    delay: Duration, limit: &tokio::sync::Semaphore,
+) -> Result<(hickory_resolver::lookup::Lookup,&'static str)> {
+    let primary=observed_lookup(resolver,host,kind,"system_resolver");tokio::pin!(primary);
+    tokio::select! {
+        result=&mut primary=>return Ok((result?,"system_resolver")),
+        _=tokio::time::sleep(delay)=>{}
+    }
+    let Ok(_permit)=limit.try_acquire()else{return Ok((primary.await?,"system_resolver"));};
+    tracing::info!(record_type=?kind,"tts slow DNS: bounded configured-upstream lookup started");
+    // An absolute name avoids search-domain suffixes on the public fallback.
+    let absolute=format!("{}.",host.trim_end_matches('.'));
+    let secondary=observed_lookup(fallback,absolute.as_str(),kind,"configured_upstream");tokio::pin!(secondary);
+    tokio::select! {
+        result=&mut primary=>match result {Ok(l)=>Ok((l,"system_resolver")),Err(_)=>Ok((secondary.await?,"configured_upstream"))},
+        result=&mut secondary=>match result {Ok(l)=>Ok((l,"configured_upstream")),Err(_)=>Ok((primary.await?,"system_resolver"))},
+    }
+}
+
+// Validate and evict ADDITIONAL-shaped answers inside each resolver path,
+// before a race winner is chosen. Otherwise a losing resolver can retain a
+// target address for the longer CNAME TTL and win the next lookup from cache.
+async fn observed_lookup(resolver:&TokioResolver, host:&str, kind:RecordType, path:&'static str)->Result<Lookup> {
+    let mut trace=Diagnostic::dns(kind==RecordType::AAAA);trace.resolver_path=path;
+    let lookup=resolver.lookup(host,kind).await.map_err(|error| {
+        trace.outcome="failed";(trace.reason,trace.rcode,trace.io_kind)=dns_failure(&error);
+        anyhow::anyhow!("resolve_failed")
+    })?;
+    let (addresses,uncache_names)=lookup_addresses(&lookup,0,kind==RecordType::AAAA).map_err(|error| {
         trace.outcome="failed";trace.reason=safe_failure_reason(&error);error
     })?;
     if !uncache_names.is_empty() {
-        // Hickory 0.26 caches a response by ANSWER TTL, which can outlive
-        // a target in ADDITIONAL. Do not cache this shape at application level.
-        // Invalidate only this family and the observed alias chain, never the
-        // shared resolver globally. Normal ANSWER records keep their cache.
-        let kind=if v6 {RecordType::AAAA} else {RecordType::A};
         resolver.clear_lookup_cache(host,kind);
         for name in uncache_names {resolver.clear_lookup_cache(name,kind);}
     }
-    let dns_ms=start.elapsed().as_millis() as u64;
     trace.count=Some(addresses.len());trace.outcome=if addresses.is_empty(){"empty"}else{"resolved"};
-    trace.reason=if addresses.is_empty(){"no_addresses"}else{"none"};drop(trace);
-    let tcp=Instant::now();
-    let socket=addresses_connect(addresses).await?;
-    Ok(Connected{socket,dns_ms,tcp_ms:tcp.elapsed().as_millis() as u64})
+    trace.reason=if addresses.is_empty(){"no_addresses"}else{"none"};
+    Ok(lookup)
 }
 
 fn lookup_addresses(lookup: &Lookup, port: u16, v6: bool) -> Result<(Vec<SocketAddr>,Vec<Name>)> {
@@ -155,16 +229,21 @@ fn lookup_addresses(lookup: &Lookup, port: u16, v6: bool) -> Result<(Vec<SocketA
     Ok((addresses,if uses_additional {seen.into_iter().collect()} else {Vec::new()}))
 }
 
+#[cfg(test)]
 async fn dial(resolver: &TokioResolver, host: &str, port: u16) -> Result<Connected> {
+    dial_resolvers(resolver,None,host,port).await
+}
+
+async fn dial_resolvers(resolver: &TokioResolver, fallback: Option<&TokioResolver>, host: &str, port: u16) -> Result<Connected> {
     if let Ok(ip)=host.parse::<IpAddr>() {
         let start=Instant::now();let socket=TcpStream::connect(SocketAddr::new(ip,port)).await?;
-        return Ok(Connected{socket,dns_ms:0,tcp_ms:start.elapsed().as_millis() as u64});
+        return Ok(Connected{socket,dns_ms:0,tcp_ms:start.elapsed().as_millis() as u64,dns_path:"literal_ip"});
     }
     // Independent families: a missing AAAA response cannot delay working A,
     // and a stalled IPv4 TCP connect cannot prevent IPv6 success. This applies
     // the racing principle of RFC8305; it does not claim full RFC conformance.
-    let v4=family(resolver,host,port,false);
-    let v6=async {tokio::time::sleep(Duration::from_millis(50)).await;family(resolver,host,port,true).await};
+    let v4=family(resolver,fallback,host,port,false);
+    let v6=async {tokio::time::sleep(Duration::from_millis(50)).await;family(resolver,fallback,host,port,true).await};
     tokio::pin!(v4,v6);
     tokio::select! {
         result=&mut v4 => match result {Ok(c)=>Ok(c),Err(_)=>v6.await},
@@ -238,7 +317,7 @@ mod tests {
     async fn diagnostic_records_real_negative_dns_rcode_and_never_starts_tcp() {
         for (mode,reason,rcode) in [("nxdomain","nxdomain",3),("empty","nodata",0)] {
             let dns=dns_server(mode).await;
-            let out=capture(async {assert!(family(&dns.resolver,"voice.test.",443,false).await.is_err());}).await;
+            let out=capture(async {assert!(family(&dns.resolver,None,"voice.test.",443,false).await.is_err());}).await;
             assert!(out.contains("outcome=\"failed\"") && out.contains(&format!("reason=\"{reason}\"")),"{out}");
             assert!(out.contains(&format!("dns_rcode={rcode}")),"{out}");
             assert!(!out.contains("voice tcp address timing") && !out.contains("voice.test"),"{out}");
@@ -303,6 +382,7 @@ mod tests {
                         resp.add_additionals(vec![Record::from_rdata("unrelated.voice.test.".parse().unwrap(),60,RData::A(A::new(127,0,0,2)))]);
                         resp.add_additionals(vec![Record::from_rdata("target.voice.test.".parse().unwrap(),if mode=="cname_zero" {0}else{1},RData::A(A::new(127,0,0,1)))]);
                     } else if mode!="v6_only" && mode!="cname_additional_v6" {
+                        if mode=="slow_a" {tokio::time::sleep(Duration::from_millis(600)).await;}
                         if mode=="refused_first" {resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,2)))]);}
                         resp.add_answers(vec![Record::from_rdata(q.name().clone(),1,RData::A(A::new(127,0,0,1)))]);
                     }
@@ -342,6 +422,81 @@ mod tests {
         let dns=dns_server("silent").await;
         assert!(tokio::time::timeout(Duration::from_millis(100),dial(&dns.resolver,"voice.test.",443)).await.is_err());
     }
+
+    #[tokio::test]
+    async fn r26_slow_stub_uses_independent_upstream_before_dns_timeout() {
+        let primary=dns_server("slow_a").await;
+        let fallback=dns_server("a_only").await;
+        let limit=tokio::sync::Semaphore::new(2);
+        let result=tokio::time::timeout(Duration::from_millis(300),lookup_with_fallback(
+            &primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,
+            Duration::from_millis(40),&limit)).await;
+        assert!(result.is_ok_and(|r|r.is_ok()),"a slow stub must not hold a healthy independent upstream");
+        assert_eq!(fallback.a.load(Ordering::SeqCst),1);
+        assert_eq!(limit.available_permits(),2);
+    }
+
+    #[tokio::test]
+    async fn r26_fast_primary_does_not_query_upstream_and_cache_obeys_ttl() {
+        let primary=dns_server("a_only").await;let fallback=dns_server("a_only").await;
+        let limit=tokio::sync::Semaphore::new(2);
+        for _ in 0..2 {
+            let (_,path)=lookup_with_fallback(&primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(40),&limit).await.unwrap();
+            assert_eq!(path,"system_resolver");
+        }
+        assert_eq!(primary.a.load(Ordering::SeqCst),1);assert_eq!(fallback.a.load(Ordering::SeqCst),0);
+        tokio::time::sleep(Duration::from_millis(1150)).await;
+        lookup_with_fallback(&primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(40),&limit).await.unwrap();
+        assert_eq!(primary.a.load(Ordering::SeqCst),2);assert_eq!(fallback.a.load(Ordering::SeqCst),0);
+    }
+
+    #[tokio::test]
+    async fn r26_failed_upstream_preserves_primary_and_full_limit_never_queues() {
+        let primary=dns_server("slow_a").await;let fallback=dns_server("v6_only").await;
+        let limit=tokio::sync::Semaphore::new(1);
+        // These assertions cover liveness and ownership, not the latency gate.
+        // Allow the resolver's UDP retry budget when the CI scheduler is busy.
+        let (_,path)=tokio::time::timeout(Duration::from_secs(2),lookup_with_fallback(
+            &primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(40),&limit)).await.unwrap().unwrap();
+        assert_eq!(path,"system_resolver");assert_eq!(limit.available_permits(),1);
+        let permit=limit.acquire().await.unwrap();let queries=fallback.a.load(Ordering::SeqCst);
+        // A fresh fixture keeps queued UDP retries from the previous slow query
+        // out of this separate capacity-limit case.
+        let primary=dns_server("slow_a").await;
+        tokio::time::timeout(Duration::from_secs(2),lookup_with_fallback(
+            &primary.resolver,&fallback.resolver,"other.test.",RecordType::A,Duration::from_millis(40),&limit)).await.unwrap().unwrap();
+        assert_eq!(fallback.a.load(Ordering::SeqCst),queries);drop(permit);
+    }
+
+    #[tokio::test]
+    async fn r26_cancellation_releases_hedge_capacity() {
+        let primary=dns_server("silent").await;let fallback=dns_server("silent").await;
+        let limit=tokio::sync::Semaphore::new(1);
+        assert!(tokio::time::timeout(Duration::from_millis(100),lookup_with_fallback(
+            &primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(20),&limit)).await.is_err());
+        assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn r26_fallback_connects_ipv6_when_primary_dns_is_silent() {
+        let primary=dns_server("silent").await;let fallback=dns_server("v6_only").await;
+        let server=TcpListener::bind("[::1]:0").await.unwrap();
+        let connected=tokio::time::timeout(Duration::from_millis(500),dial_resolvers(
+            &primary.resolver,Some(&fallback.resolver),"voice.test.",server.local_addr().unwrap().port())).await.unwrap().unwrap();
+        assert!(connected.socket.peer_addr().unwrap().is_ipv6());
+        assert_eq!(connected.dns_path,"configured_upstream");
+    }
+
+    #[test]
+    fn r26_only_known_tts_opt_in_and_managed_upstream_config_are_allowed() {
+        assert!(hedge_enabled("cbm01.cn-huabei-1.xf-yun.com",Some("1")));
+        for raw in [None,Some("0"),Some("true")]{assert!(!hedge_enabled("cbm01.cn-huabei-1.xf-yun.com",raw));}
+        for host in ["localhost","internal.local","example.com","cbm01.cn-huabei-1.xf-yun.com.evil"]{assert!(!hedge_enabled(host,Some("1")));}
+        let text="nameserver 127.0.0.53\nnameserver ::1\nnameserver invalid\nnameserver 0.0.0.0\nnameserver 224.0.0.1\nnameserver 192.0.2.1\nnameserver 192.0.2.1\nnameserver 192.0.2.2 # configured\nnameserver 192.0.2.3\n";
+        assert!(upstream_servers(false,text).is_empty());
+        assert_eq!(upstream_servers(true,text),["192.0.2.1".parse::<IpAddr>().unwrap(),"192.0.2.2".parse().unwrap()]);
+    }
+
     #[tokio::test]
     async fn cname_target_in_additional_is_not_discarded_as_no_addresses() {
         let dns=dns_server("cname_additional").await;
@@ -398,5 +553,69 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(1150)).await;
         dial(&dns.resolver,"voice.test.",port).await.unwrap();
         assert_eq!(dns.a.load(Ordering::SeqCst),6);
+    }
+    #[tokio::test]
+    async fn candidate_fallback_cname_ttl_and_diagnostics_stay_on_own_resolver() {
+        let primary=dns_server("silent").await;
+        let fallback=dns_server("cname_multi_additional").await;
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port=server.local_addr().unwrap().port();
+        let out=capture(async {
+            for _ in 0..2 {
+                let c=tokio::time::timeout(Duration::from_secs(2),dial_resolvers(
+                    &primary.resolver,Some(&fallback.resolver),"voice.test.",port)).await.unwrap().unwrap();
+                assert_eq!(c.dns_path,"configured_upstream");
+                assert_eq!(c.socket.peer_addr().unwrap().ip(),std::net::Ipv4Addr::LOCALHOST);
+            }
+        }).await;
+        assert_eq!(fallback.a.load(Ordering::SeqCst),2,"evict the fallback's alias chain, not just primary cache");
+        assert!(out.lines().any(|l|l.contains("voice dns family timing") && l.contains("configured_upstream") && l.contains("resolved")));
+        assert!(out.lines().any(|l|l.contains("voice dns family timing") && l.contains("system_resolver") && l.contains("cancelled")));
+        for l in out.lines().filter(|l|l.contains("voice dns family timing")) {assert!(l.contains("connect_id=701"));}
+    }
+
+    #[tokio::test]
+    async fn r27_silent_system_dns_uses_healthy_fallback_to_reach_tcp() {
+        let primary=dns_server("silent").await;
+        let fallback=dns_server("a_only").await;
+        let server=TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let result=tokio::time::timeout(Duration::from_millis(750),dial_resolvers(
+            &primary.resolver,Some(&fallback.resolver),"voice.test.",server.local_addr().unwrap().port())).await;
+        assert!(result.is_ok(),"silent system DNS must not hold a healthy independent resolver for 750ms");
+        let connected=result.unwrap().unwrap();
+        assert!(connected.socket.peer_addr().unwrap().is_ipv4());
+        assert_eq!(connected.dns_path,"configured_upstream");
+        assert_eq!(fallback.a.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn r27_fast_negative_answer_does_not_trigger_positive_fallback() {
+        for mode in ["nxdomain","empty"] {
+            let primary=dns_server(mode).await;let fallback=dns_server("a_only").await;
+            let limit=tokio::sync::Semaphore::new(2);
+            let result=lookup_with_fallback(&primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(200),&limit).await;
+            assert!(result.is_err());assert_eq!(fallback.a.load(Ordering::SeqCst),0);
+            assert_eq!(limit.available_permits(),2);
+        }
+    }
+    #[tokio::test]
+    async fn r27_cname_fallback_evicts_additional_cache_and_preserves_path() {
+        let primary=dns_server("silent").await;let fallback=dns_server("cname_zero").await;
+        let limit=tokio::sync::Semaphore::new(2);
+        for _ in 0..2 {
+            let (value,path)=lookup_with_fallback(&primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(20),&limit).await.unwrap();
+            assert_eq!(path,"configured_upstream");
+            let (addresses,_)=lookup_addresses(&value,443,false).unwrap();
+            assert_eq!(addresses[0].ip(),std::net::Ipv4Addr::LOCALHOST);
+        }
+        assert_eq!(fallback.a.load(Ordering::SeqCst),2);assert_eq!(limit.available_permits(),2);
+    }
+    #[tokio::test]
+    async fn r27_both_resolvers_silent_cancelled_by_shared_deadline() {
+        let primary=dns_server("silent").await;let fallback=dns_server("silent").await;
+        let limit=tokio::sync::Semaphore::new(2);
+        let result=tokio::time::timeout(Duration::from_millis(300),lookup_with_fallback(
+            &primary.resolver,&fallback.resolver,"voice.test.",RecordType::A,Duration::from_millis(200),&limit)).await;
+        assert!(result.is_err());assert_eq!(limit.available_permits(),2);
     }
 }

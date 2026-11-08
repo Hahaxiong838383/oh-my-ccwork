@@ -304,7 +304,7 @@ async fn connect_observed(url: String) -> Result<Warm> {
             trace.stage="resolve_tcp";
             let connected=crate::voice_connect::connect(&host,port)
                 .instrument(tracing::info_span!("voice_connection",provider="tts",connect_id=trace.id)).await?;
-            trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);
+            trace.dns_ms=Some(connected.dns_ms);trace.tcp_ms=Some(connected.tcp_ms);trace.dns_path=connected.dns_path;
             connected.socket
         } else {
             trace.stage = "dns"; let t = std::time::Instant::now();
