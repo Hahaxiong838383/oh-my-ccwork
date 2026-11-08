@@ -1,0 +1,97 @@
+{
+  "at": "2026-11-08T03:26:27.708919+00:00",
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "3606030",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "proc_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+      "disk_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+      "env_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+      "dns_flags": {
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_TTS_CONNECT_RECOVERY_V1": "1"
+      },
+      "room_sn_suffixes": [
+        "02000026",
+        "02000053"
+      ]
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "proc_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "disk_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "env_sha256": "162cbf5057ce453e7dd3cdac010643375f84de81794f403ffd817ec340b71bbc",
+      "dns_flags": {
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_TTS_DNS_HEDGE_V1": "1",
+        "P003_TTS_FIRST_PCM_BUDGET_MS": "10000",
+        "P003_TTS_LATENCY_V1": "1",
+        "P003_TTS_CONNECT_RECOVERY_V1": "1"
+      },
+      "room_sn_suffixes": []
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "proc_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "disk_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "env_sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+      "dns_flags": {
+        "P003_TTS_LATENCY_V1": "1",
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_TTS_FIRST_PCM_BUDGET_MS": "10000",
+        "P003_TTS_DNS_HEDGE_V1": "1"
+      },
+      "room_sn_suffixes": []
+    }
+  },
+  "dns": {
+    "status": {
+      "rc": 0,
+      "stdout": "Global\n         Protocols: -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported\n  resolv.conf mode: stub\n\nLink 2 (ens17)\n    Current Scopes: DNS\n         Protocols: +DefaultRoute -LLMNR -mDNS -DNSOverTLS DNSSEC=no/unsupported\nCurrent DNS Server: 1.1.1.1\n       DNS Servers: 8.8.8.8 1.1.1.1\n",
+      "stderr": ""
+    },
+    "statistics": {
+      "rc": 0,
+      "stdout": "Transactions                                 \n                       Current Transactions:    0\n                         Total Transactions: 1774\n                                             \nCache                                        \n                         Current Cache Size:    2\n                                 Cache Hits: 1388\n                               Cache Misses:  390\n                                             \nFailure Transactions                         \n                             Total Timeouts:    4\n         Total Timeouts (Stale Data Served):    0\n                    Total Failure Responses:    0\nTotal Failure Responses (Stale Data Served):    0\n                                             \nDNSSEC Verdicts                              \n                                     Secure:    0\n                                   Insecure:    0\n                                      Bogus:    0\n                              Indeterminate:    0\n",
+      "stderr": ""
+    },
+    "effective_config": {
+      "rc": 0,
+      "stdout": "# /etc/systemd/resolved.conf\n#  This file is part of systemd.\n#\n#  systemd is free software; you can redistribute it and/or modify it under the\n#  terms of the GNU Lesser General Public License as published by the Free\n#  Software Foundation; either version 2.1 of the License, or (at your option)\n#  any later version.\n#\n# Entries in this file show the compile time defaults. Local configuration\n# should be created by either modifying this file (or a copy of it placed in\n# /etc/ if the original file is shipped in /usr/), or by creating \"drop-ins\" in\n# the /etc/systemd/resolved.conf.d/ directory. The latter is generally\n# recommended. Defaults can be restored by simply deleting the main\n# configuration file and all drop-ins located in /etc/.\n#\n# Use 'systemd-analyze cat-config systemd/resolved.conf' to display the full config.\n#\n# See resolved.conf(5) for details.\n\n[Resolve]\n# Some examples of DNS servers which may be used for DNS= and FallbackDNS=:\n# Cloudflare: 1.1.1.1#cloudflare-dns.com 1.0.0.1#cloudflare-dns.com 2606:4700:4700::1111#cloudflare-dns.com 2606:4700:4700::1001#cloudflare-dns.com\n# Google:     8.8.8.8#dns.google 8.8.4.4#dns.google 2001:4860:4860::8888#dns.google 2001:4860:4860::8844#dns.google\n# Quad9:      9.9.9.9#dns.quad9.net 149.112.112.112#dns.quad9.net 2620:fe::fe#dns.quad9.net 2620:fe::9#dns.quad9.net\n#DNS=\n#FallbackDNS=\n#Domains=\n#DNSSEC=no\n#DNSOverTLS=no\n#MulticastDNS=no\n#LLMNR=no\n#Cache=no-negative\n#CacheFromLocalhost=no\n#DNSStubListener=yes\n#DNSStubListenerExtra=\n#ReadEtcHosts=yes\n#ResolveUnicastSingleLabel=no\n#StaleRetentionSec=0\n\n# /etc/systemd/resolved.conf.d/60-p003-negative-cache.conf\n# P003: cache authoritative NODATA/NXDOMAIN only within DNS TTL.\n[Resolve]\nCache=yes\n",
+      "stderr": ""
+    },
+    "resolv_conf": {
+      "resolved_path": "/run/systemd/resolve/stub-resolv.conf",
+      "content": "# This is /run/systemd/resolve/stub-resolv.conf managed by man:systemd-resolved(8).\n# Do not edit.\n#\n# This file might be symlinked as /etc/resolv.conf. If you're looking at\n# /etc/resolv.conf and seeing this text, you have followed the symlink.\n#\n# This is a dynamic resolv.conf file for connecting local clients to the\n# internal DNS stub resolver of systemd-resolved. This file lists all\n# configured search domains.\n#\n# Run \"resolvectl status\" to see details about the uplink DNS servers\n# currently in use.\n#\n# Third party programs should typically not access this file directly, but only\n# through the symlink at /etc/resolv.conf. To manage man:resolv.conf(5) in a\n# different way, replace this symlink by a static file or a different symlink.\n#\n# See man:systemd-resolved.service(8) for details about the supported modes of\n# operation for /etc/resolv.conf.\n\nnameserver 127.0.0.53\noptions edns0 trust-ad\nsearch .\n"
+    },
+    "nsswitch_hosts": [
+      "hosts:          files dns"
+    ]
+  },
+  "sfu_room_count": 0,
+  "private_baseline_sha256": "d2cbfb2544ddf4836bdda2225bb3095eb2e0f8dbe90d6e0c195d0d37ec65a566",
+  "source_anchors": {
+    "main": {
+      "source_commit": "e9806c7f97e98ade57204242058c02a74673f075",
+      "files": {
+        "voice_connect.rs": "86da9cc9eb4ebaa85714a9e4bd7c943e9098700972b18e6978e31a6822a70c66",
+        "tts_xfyun.rs": "5973b27763afded7b679494af0e3f3c49897cf668a4677c042c0903606b994c6",
+        "tts.rs": "19bf205eb707846480b7c3fe041dd32821500ea152207e58375866be6cbfe4d2"
+      }
+    },
+    "listening": {
+      "source_commit": "85de8fb077a8d455c0ba9e2f4b29e08913820ef5",
+      "files": {
+        "voice_connect.rs": "07349dae25c9ab687306f40dd38edb57902410bb7abf0f2ed6a6f0920ed33426",
+        "tts_xfyun.rs": "c3d0c6db57d22f4d60b8c84a8835e0499a97c17b1c384c53475d725d0ce667b3",
+        "tts.rs": "b4f9f61a0fddb80ecf9d81406473862dc898fdc359084a1796c0f9cbbab3c381"
+      }
+    }
+  },
+  "no_production_change_this_round": true
+}

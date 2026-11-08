@@ -1,0 +1,1053 @@
+{
+  "at": "2026-11-08T03:30:32.750659+00:00",
+  "pid": "3606030",
+  "journal_sha256": "73b8ce1495c6a15935433b4f7f69a52014c254623432175f597808a7979faa3c",
+  "assignments": [
+    {
+      "at_us": 1794092526350850,
+      "sn_tail": null
+    },
+    {
+      "at_us": 1794092562144922,
+      "sn_tail": null
+    },
+    {
+      "at_us": 1794094898084215,
+      "sn_tail": null
+    },
+    {
+      "at_us": 1794099274631323,
+      "sn_tail": null
+    },
+    {
+      "at_us": 1794106015938780,
+      "sn_tail": null
+    }
+  ],
+  "job_closes": [
+    {
+      "at_us": 1794092560070148,
+      "sn_tail": "99999901"
+    },
+    {
+      "at_us": 1794092598430017,
+      "sn_tail": "99999901"
+    },
+    {
+      "at_us": 1794094952792128,
+      "sn_tail": "02000053"
+    },
+    {
+      "at_us": 1794099364389242,
+      "sn_tail": "02000026"
+    },
+    {
+      "at_us": 1794106040479522,
+      "sn_tail": "02000026"
+    }
+  ],
+  "summary": {
+    "all": {
+      "records": 58,
+      "outcomes": {
+        "connected": 56,
+        "cancelled": 2
+      },
+      "dns_count": 56,
+      "dns_min": 0,
+      "dns_median": 0.0,
+      "dns_max": 186
+    },
+    "real_bound": {
+      "records": 0,
+      "outcomes": {},
+      "dns_count": 0,
+      "dns_min": null,
+      "dns_median": null,
+      "dns_max": null
+    }
+  },
+  "connection_records": [
+    {
+      "at_us": 1794092542795008,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 1,
+        "elapsed_ms": 234,
+        "dns_ms": 8,
+        "tcp_ms": 52,
+        "tls_ws_ms": 172
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794092543325794,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 2,
+        "elapsed_ms": 215,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 164
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794092544811485,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 3,
+        "elapsed_ms": 216,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 165
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794092580794488,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 4,
+        "elapsed_ms": 230,
+        "dns_ms": 8,
+        "tcp_ms": 51,
+        "tls_ws_ms": 170
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794092581394395,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 5,
+        "elapsed_ms": 230,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 176
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794092582397120,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 6,
+        "elapsed_ms": 233,
+        "dns_ms": 0,
+        "tcp_ms": 55,
+        "tls_ws_ms": 177
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094899260835,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 7,
+        "elapsed_ms": 233,
+        "dns_ms": 18,
+        "tcp_ms": 49,
+        "tls_ws_ms": 164
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094902348309,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 8,
+        "elapsed_ms": 207,
+        "dns_ms": 0,
+        "tcp_ms": 49,
+        "tls_ws_ms": 157
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094904318958,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 9,
+        "elapsed_ms": 267,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 214
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094906175492,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 10,
+        "elapsed_ms": 242,
+        "dns_ms": 0,
+        "tcp_ms": 55,
+        "tls_ws_ms": 186
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094907352598,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 11,
+        "elapsed_ms": 227,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 173
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094909141387,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 12,
+        "elapsed_ms": 224,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 172
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094927950501,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 13,
+        "elapsed_ms": 216,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 163
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094929034197,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 14,
+        "elapsed_ms": 36
+      },
+      "labels": {
+        "stage": "resolve_tcp",
+        "outcome": "cancelled",
+        "reason": "owner_dropped",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094929235652,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 15,
+        "elapsed_ms": 201,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 149
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094930184133,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 16,
+        "elapsed_ms": 27
+      },
+      "labels": {
+        "stage": "resolve_tcp",
+        "outcome": "cancelled",
+        "reason": "owner_dropped",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094930406457,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 17,
+        "elapsed_ms": 221,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 168
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094931077775,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 18,
+        "elapsed_ms": 217,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 165
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094932059975,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 19,
+        "elapsed_ms": 253,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 202
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094932836691,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 20,
+        "elapsed_ms": 217,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 164
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094935702543,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 21,
+        "elapsed_ms": 211,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 160
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094936399724,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 22,
+        "elapsed_ms": 215,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 164
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094937141126,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 23,
+        "elapsed_ms": 207,
+        "dns_ms": 0,
+        "tcp_ms": 49,
+        "tls_ws_ms": 157
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094938412497,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 24,
+        "elapsed_ms": 223,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 170
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794094941117990,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 25,
+        "elapsed_ms": 217,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 166
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099276510945,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 26,
+        "elapsed_ms": 224,
+        "dns_ms": 7,
+        "tcp_ms": 51,
+        "tls_ws_ms": 165
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099277051932,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 27,
+        "elapsed_ms": 220,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 168
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099278130069,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 28,
+        "elapsed_ms": 226,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 174
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099287585255,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 29,
+        "elapsed_ms": 217,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 165
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099288846178,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 30,
+        "elapsed_ms": 252,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 201
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099289842237,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 31,
+        "elapsed_ms": 258,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 206
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099298435940,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 32,
+        "elapsed_ms": 218,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 167
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099299029774,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 33,
+        "elapsed_ms": 211,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 161
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099300190900,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 34,
+        "elapsed_ms": 218,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 166
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099302146893,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 35,
+        "elapsed_ms": 215,
+        "dns_ms": 0,
+        "tcp_ms": 49,
+        "tls_ws_ms": 165
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099307333737,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 36,
+        "elapsed_ms": 415,
+        "dns_ms": 186,
+        "tcp_ms": 58,
+        "tls_ws_ms": 170
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099308152764,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 37,
+        "elapsed_ms": 194,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 142
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099310081653,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 38,
+        "elapsed_ms": 224,
+        "dns_ms": 0,
+        "tcp_ms": 55,
+        "tls_ws_ms": 168
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099318945592,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 39,
+        "elapsed_ms": 227,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 173
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099319702713,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 40,
+        "elapsed_ms": 216,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 164
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099321203748,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 41,
+        "elapsed_ms": 234,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 179
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099328232928,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 42,
+        "elapsed_ms": 214,
+        "dns_ms": 0,
+        "tcp_ms": 56,
+        "tls_ws_ms": 156
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099329430279,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 43,
+        "elapsed_ms": 220,
+        "dns_ms": 0,
+        "tcp_ms": 55,
+        "tls_ws_ms": 165
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099331064262,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 44,
+        "elapsed_ms": 211,
+        "dns_ms": 0,
+        "tcp_ms": 55,
+        "tls_ws_ms": 154
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099339790410,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 45,
+        "elapsed_ms": 222,
+        "dns_ms": 8,
+        "tcp_ms": 55,
+        "tls_ws_ms": 158
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099341131775,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 46,
+        "elapsed_ms": 232,
+        "dns_ms": 0,
+        "tcp_ms": 54,
+        "tls_ws_ms": 176
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099342102333,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 47,
+        "elapsed_ms": 235,
+        "dns_ms": 0,
+        "tcp_ms": 54,
+        "tls_ws_ms": 180
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099343434307,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 48,
+        "elapsed_ms": 215,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 161
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099344661673,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 49,
+        "elapsed_ms": 239,
+        "dns_ms": 0,
+        "tcp_ms": 55,
+        "tls_ws_ms": 183
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099352047488,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 50,
+        "elapsed_ms": 229,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 177
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099353330111,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 51,
+        "elapsed_ms": 221,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 168
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794099354950038,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 52,
+        "elapsed_ms": 229,
+        "dns_ms": 0,
+        "tcp_ms": 54,
+        "tls_ws_ms": 175
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794106017971770,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 53,
+        "elapsed_ms": 216,
+        "dns_ms": 9,
+        "tcp_ms": 55,
+        "tls_ws_ms": 150
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794106018934422,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 54,
+        "elapsed_ms": 221,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 170
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794106020654694,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 55,
+        "elapsed_ms": 218,
+        "dns_ms": 0,
+        "tcp_ms": 51,
+        "tls_ws_ms": 167
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794106021306971,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 56,
+        "elapsed_ms": 221,
+        "dns_ms": 0,
+        "tcp_ms": 50,
+        "tls_ws_ms": 170
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794106021539683,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 57,
+        "elapsed_ms": 231,
+        "dns_ms": 0,
+        "tcp_ms": 53,
+        "tls_ws_ms": 177
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    },
+    {
+      "at_us": 1794106023642922,
+      "sn_tail": null,
+      "numbers": {
+        "connect_id": 58,
+        "elapsed_ms": 225,
+        "dns_ms": 0,
+        "tcp_ms": 52,
+        "tls_ws_ms": 172
+      },
+      "labels": {
+        "stage": "tls_ws",
+        "outcome": "connected",
+        "reason": "none",
+        "dns_path": "independent_families"
+      }
+    }
+  ],
+  "scope": "TTS connect timings, not user-to-audible latency; only explicit room-bound SN can classify real/synthetic; no transcripts exported"
+}

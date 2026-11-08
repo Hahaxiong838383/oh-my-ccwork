@@ -1,0 +1,119 @@
+{
+  "at": "2026-11-08T03:30:32.618346+00:00",
+  "host": "cbm01.cn-huabei-1.xf-yun.com",
+  "queries": [
+    {
+      "server": "127.0.0.53",
+      "rc": 0,
+      "ips": [
+        "8.140.35.16",
+        "101.200.158.58",
+        "39.105.54.181",
+        "123.56.17.44",
+        "123.57.86.182",
+        "123.57.26.93"
+      ],
+      "output_sha256": "309b5595f74a5f9d90e134d1469893b848704ca576f44cf8846abc82085223d6"
+    },
+    {
+      "server": "1.1.1.1",
+      "rc": 0,
+      "ips": [
+        "123.56.17.44",
+        "123.57.86.182",
+        "123.57.26.93",
+        "8.140.35.16",
+        "101.200.158.58",
+        "39.105.54.181"
+      ],
+      "output_sha256": "15f7ef517cd8ce0c841fbf3523cf90d59dd9e185ae89009b8f955391d130350a"
+    },
+    {
+      "server": "8.8.8.8",
+      "rc": 0,
+      "ips": [
+        "101.200.158.58",
+        "39.105.54.181",
+        "8.140.35.16",
+        "123.56.17.44",
+        "123.57.26.93",
+        "123.57.86.182"
+      ],
+      "output_sha256": "ed56c04b3fc7bd0b264a4e0d465c1b7c466f0c0cca29e859b3c5010fd5f09d52"
+    },
+    {
+      "server": "223.5.5.5",
+      "rc": 0,
+      "ips": [
+        "101.200.158.58",
+        "8.140.35.16",
+        "123.57.26.93",
+        "123.57.86.182",
+        "123.56.17.44",
+        "39.105.54.181"
+      ],
+      "output_sha256": "feabbf1f6a63a3a1b20587cceda908eea51ac9a28ea3512b3cb944499765d61d"
+    }
+  ],
+  "tls": [
+    {
+      "ip": "8.140.35.16",
+      "resolvers": [
+        "127.0.0.53",
+        "223.5.5.5"
+      ],
+      "status": "verified",
+      "tcp_ms": 57.829,
+      "tls_ms": 134.204,
+      "tls_version": "TLSv1.3",
+      "certificate_sha256": "ffdadbc4ab2bacf1a07587ccf048de5fbc7bed6348ec2c515c0ffa9691225ce0"
+    },
+    {
+      "ip": "101.200.158.58",
+      "resolvers": [
+        "127.0.0.53",
+        "8.8.8.8",
+        "223.5.5.5"
+      ],
+      "status": "verified",
+      "tcp_ms": 54.922,
+      "tls_ms": 131.124,
+      "tls_version": "TLSv1.3",
+      "certificate_sha256": "ffdadbc4ab2bacf1a07587ccf048de5fbc7bed6348ec2c515c0ffa9691225ce0"
+    },
+    {
+      "ip": "123.56.17.44",
+      "resolvers": [
+        "1.1.1.1"
+      ],
+      "status": "verified",
+      "tcp_ms": 54.288,
+      "tls_ms": 140.273,
+      "tls_version": "TLSv1.3",
+      "certificate_sha256": "ffdadbc4ab2bacf1a07587ccf048de5fbc7bed6348ec2c515c0ffa9691225ce0"
+    },
+    {
+      "ip": "123.57.86.182",
+      "resolvers": [
+        "1.1.1.1"
+      ],
+      "status": "verified",
+      "tcp_ms": 50.532,
+      "tls_ms": 112.889,
+      "tls_version": "TLSv1.3",
+      "certificate_sha256": "ffdadbc4ab2bacf1a07587ccf048de5fbc7bed6348ec2c515c0ffa9691225ce0"
+    },
+    {
+      "ip": "39.105.54.181",
+      "resolvers": [
+        "8.8.8.8"
+      ],
+      "status": "verified",
+      "tcp_ms": 55.538,
+      "tls_ms": 93.079,
+      "tls_version": "TLSv1.3",
+      "certificate_sha256": "ffdadbc4ab2bacf1a07587ccf048de5fbc7bed6348ec2c515c0ffa9691225ce0"
+    }
+  ],
+  "scope": "DNS+TCP+TLS only, no WebSocket authentication, no text or PCM, no changes to production resolution; TLS verifies original hostname, never certificate bypass"
+}

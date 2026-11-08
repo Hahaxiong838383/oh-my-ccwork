@@ -1,0 +1,316 @@
+{
+  "window": [
+    "2026-11-08T03:28:07.204485+00:00",
+    "2026-11-08T03:29:05.719001+00:00"
+  ],
+  "source_sha256": "cef1c9e0a6836263e160ba7f2121c5a9f0daf9a79def3c490f96813fd24050c9",
+  "groups": [
+    {
+      "server": "119.29.29.29",
+      "kind": "A",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 0,
+      "valid_family_address_count": 0,
+      "timeout_count": 18,
+      "min_ms": null,
+      "median_ms": null,
+      "max_ms": null,
+      "response_codes": {
+        "NO_RESPONSE": 18
+      }
+    },
+    {
+      "server": "1.1.1.1",
+      "kind": "A",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 18,
+      "timeout_count": 0,
+      "min_ms": 1,
+      "median_ms": 3.5,
+      "max_ms": 188,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "127.0.0.53",
+      "kind": "A",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 18,
+      "timeout_count": 0,
+      "min_ms": 0,
+      "median_ms": 0.0,
+      "max_ms": 7,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "223.5.5.5",
+      "kind": "A",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 18,
+      "timeout_count": 0,
+      "min_ms": 16,
+      "median_ms": 61.5,
+      "max_ms": 423,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "8.8.8.8",
+      "kind": "A",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 18,
+      "timeout_count": 0,
+      "min_ms": 1,
+      "median_ms": 3.5,
+      "max_ms": 40,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "119.29.29.29",
+      "kind": "AAAA",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 0,
+      "valid_family_address_count": 0,
+      "timeout_count": 18,
+      "min_ms": null,
+      "median_ms": null,
+      "max_ms": null,
+      "response_codes": {
+        "NO_RESPONSE": 18
+      }
+    },
+    {
+      "server": "1.1.1.1",
+      "kind": "AAAA",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 0,
+      "timeout_count": 0,
+      "min_ms": 1,
+      "median_ms": 5.0,
+      "max_ms": 588,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "8.8.8.8",
+      "kind": "AAAA",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 0,
+      "timeout_count": 0,
+      "min_ms": 1,
+      "median_ms": 3.0,
+      "max_ms": 34,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "127.0.0.53",
+      "kind": "AAAA",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 18,
+      "valid_family_address_count": 0,
+      "timeout_count": 0,
+      "min_ms": 0,
+      "median_ms": 0.0,
+      "max_ms": 4,
+      "response_codes": {
+        "NOERROR": 18
+      }
+    },
+    {
+      "server": "223.5.5.5",
+      "kind": "AAAA",
+      "protocol": "udp",
+      "n": 18,
+      "response_count": 17,
+      "valid_family_address_count": 0,
+      "timeout_count": 1,
+      "min_ms": 1,
+      "median_ms": 24,
+      "max_ms": 128,
+      "response_codes": {
+        "NO_RESPONSE": 1,
+        "NOERROR": 17
+      }
+    },
+    {
+      "server": "127.0.0.53",
+      "kind": "A",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 1,
+      "timeout_count": 0,
+      "min_ms": 0,
+      "median_ms": 0,
+      "max_ms": 0,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "1.1.1.1",
+      "kind": "A",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 1,
+      "timeout_count": 0,
+      "min_ms": 3,
+      "median_ms": 3,
+      "max_ms": 3,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "8.8.8.8",
+      "kind": "A",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 1,
+      "timeout_count": 0,
+      "min_ms": 3,
+      "median_ms": 3,
+      "max_ms": 3,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "223.5.5.5",
+      "kind": "A",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 1,
+      "timeout_count": 0,
+      "min_ms": 1,
+      "median_ms": 1,
+      "max_ms": 1,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "119.29.29.29",
+      "kind": "A",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 0,
+      "valid_family_address_count": 0,
+      "timeout_count": 1,
+      "min_ms": null,
+      "median_ms": null,
+      "max_ms": null,
+      "response_codes": {
+        "NO_RESPONSE": 1
+      }
+    },
+    {
+      "server": "127.0.0.53",
+      "kind": "AAAA",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 0,
+      "timeout_count": 0,
+      "min_ms": 0,
+      "median_ms": 0,
+      "max_ms": 0,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "1.1.1.1",
+      "kind": "AAAA",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 0,
+      "timeout_count": 0,
+      "min_ms": 1,
+      "median_ms": 1,
+      "max_ms": 1,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "8.8.8.8",
+      "kind": "AAAA",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 1,
+      "valid_family_address_count": 0,
+      "timeout_count": 0,
+      "min_ms": 0,
+      "median_ms": 0,
+      "max_ms": 0,
+      "response_codes": {
+        "NOERROR": 1
+      }
+    },
+    {
+      "server": "223.5.5.5",
+      "kind": "AAAA",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 0,
+      "valid_family_address_count": 0,
+      "timeout_count": 1,
+      "min_ms": null,
+      "median_ms": null,
+      "max_ms": null,
+      "response_codes": {
+        "NO_RESPONSE": 1
+      }
+    },
+    {
+      "server": "119.29.29.29",
+      "kind": "AAAA",
+      "protocol": "tcp",
+      "n": 1,
+      "response_count": 0,
+      "valid_family_address_count": 0,
+      "timeout_count": 1,
+      "min_ms": null,
+      "median_ms": null,
+      "max_ms": null,
+      "response_codes": {
+        "NO_RESPONSE": 1
+      }
+    }
+  ],
+  "interpretation_limits": [
+    "18 observations per UDP family, one per TCP family; not long-term percentiles.",
+    "No cache flush; first observation is not guaranteed cold upstream.",
+    "AAAA replies can contain A additionals; count only requested family. NODATA is not overall connection failure.",
+    "DNS transaction includes network and recursive/authoritative work; cannot split provider CPU vs network from dig alone."
+  ]
+}

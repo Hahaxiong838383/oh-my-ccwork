@@ -1,0 +1,46 @@
+{
+  "P003_TTS_DNS_ANALYSIS_AND_BACKUP_PLAN_20261108.md": {
+    "sha256": "cea5f27a6f1daa78a64f69865c99f3c0694fdf185cf8f6a17e1418e9a47fc2ba",
+    "bytes": 11675
+  },
+  "DNS_ARCHITECTURE_REVIEW.md": {
+    "sha256": "74abd7044d1d79480ac3c31160ef520b47b31155f02a29222eb4cd31de6bcd09",
+    "bytes": 3422
+  },
+  "DEPLOYMENT_AND_DNS_STATE.json": {
+    "sha256": "7fb5ec05b1590bdaa3078b7f864e2a031f2f961e01d31c5fcabab2fe1a22420c",
+    "bytes": 7279
+  },
+  "DNS_MATRIX.json": {
+    "sha256": "cef1c9e0a6836263e160ba7f2121c5a9f0daf9a79def3c490f96813fd24050c9",
+    "bytes": 202241
+  },
+  "DNS_MATRIX_SUMMARY.json": {
+    "sha256": "e072efb9d07da02684f79bf955ea52a2501cf01fec4f3b29918a2d8bed3018d3",
+    "bytes": 6966
+  },
+  "TLS_CHECK.json": {
+    "sha256": "e196b969b6281272d6e740f7568adc45c1633aa9c5a79465f9a3d11894f5e603",
+    "bytes": 3092
+  },
+  "CURRENT_TTS_DNS.json": {
+    "sha256": "7569f3ca410b2e0c6e5b9f3cc96ae3a965a6774825c784a91e89f5a7e8f34287",
+    "bytes": 22930
+  },
+  "VERIFICATION.json": {
+    "sha256": "df01fe72a62cc21c6b752460ac668656297dc43aec20972704e7f0d7a8cefcc9",
+    "bytes": 956
+  },
+  "dns-matrix.py": {
+    "sha256": "7560e9fdc408c11c55e88444c21f42fa5672c04dfe6348be55404b76702c398d",
+    "bytes": 2703
+  },
+  "tls-check.py": {
+    "sha256": "4c9e6ca78154aebe4a5d7cac3aafa17294720cdbd07968048dae8e5bd83d379c",
+    "bytes": 1977
+  },
+  "read-runtime-dns.py": {
+    "sha256": "ca887b669115d0015be59609796f7cc8c5f5e723213f738d41aebeb286e7272d",
+    "bytes": 1979
+  }
+}
