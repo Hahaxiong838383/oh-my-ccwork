@@ -1,0 +1,28 @@
+{
+  "status": "PRECHECK_PASS",
+  "current_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+  "target_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+  "env_before_sha256": "f53df56ce9eca7abdf132b3d4c8bafe6da5171eabacf0834bfffcbe47fc68fba",
+  "env_after_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+  "other_pools": {
+    "p003-search-worker.service": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "p003-listening-worker.service": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    }
+  },
+  "idle": true,
+  "backup_sha256": {
+    "voice-rust-worker": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+    "rust-worker.env": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+    "voice-worker-rust.service": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0"
+  },
+  "rollback_script_sha256": "2ec3eda3f4309a6a234aa1000a26e7495338d76add5d7b7f12152c54ed963d70"
+}

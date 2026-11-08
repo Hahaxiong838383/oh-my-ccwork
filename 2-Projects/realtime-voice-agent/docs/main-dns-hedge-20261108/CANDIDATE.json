@@ -1,0 +1,9 @@
+{
+  "source_commit": "5453c80ffed18c76c93c79be2fb3b52f64e0c043",
+  "binary_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+  "binary_bytes": 76201920,
+  "source_files_verified": 69,
+  "baseline_head": "014e4fe6083a4e6c5c12942b5f7a91c8a3bde3c4",
+  "test_full": "566 passed; 1 existing ignored",
+  "dns_tests": 24
+}

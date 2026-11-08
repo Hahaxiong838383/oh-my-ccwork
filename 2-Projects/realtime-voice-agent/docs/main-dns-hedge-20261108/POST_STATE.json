@@ -1,0 +1,90 @@
+{
+  "at": "2026-11-08T11:10:05.720538+00:00",
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "3719988",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Sun 2026-11-08 11:06:54 UTC",
+      "process_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+      "disk_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+      "env_sha256": "f53df56ce9eca7abdf132b3d4c8bafe6da5171eabacf0834bfffcbe47fc68fba"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Sat 2026-11-07 21:58:30 UTC",
+      "process_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "disk_sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2",
+      "env_sha256": "162cbf5057ce453e7dd3cdac010643375f84de81794f403ffd817ec340b71bbc"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "ActiveEnterTimestamp": "Tue 2026-11-03 11:03:55 UTC",
+      "process_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "disk_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "env_sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8"
+    }
+  },
+  "logs": {
+    "sha256": "c6ceb0c884018da34e7a903c9bd1eaf871b9323f9ddf5e76d4877d8826e0bf1f",
+    "bytes": 191219,
+    "assignments": 2,
+    "job_exits": 2,
+    "asr_finals": 4,
+    "panic": 0,
+    "error_lines": 0,
+    "events": [
+      "2026-11-08T11:07:19.601879Z  INFO asr_stream{room=sn-BJP00326110799999901-1794136039066}:voice_connection{provider=\"asr\" request_id=\"3d0fe947-365a-4a3a-88d9-b86ae2f7067d\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=185 address_count=8",
+      "2026-11-08T11:07:19.605087Z  INFO asr_stream{room=sn-BJP00326110799999901-1794136039066}:voice_connection{provider=\"asr\" request_id=\"3d0fe947-365a-4a3a-88d9-b86ae2f7067d\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=136",
+      "2026-11-08T11:07:28.355542Z  INFO asr_stream{room=sn-BJP00326110799999901-1794136039066}:voice_connection{provider=\"asr\" request_id=\"ee254c48-d23d-4fa2-bd9a-df63ce061763\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+      "2026-11-08T11:07:35.623019Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=6",
+      "2026-11-08T11:07:35.771433Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=205 address_count=6",
+      "2026-11-08T11:07:35.771621Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=4",
+      "2026-11-08T11:07:36.038706Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=472 dns_ms=205 tcp_ms=53 tls_ws_ms=213 dns_path=\"system_resolver\" local=Some(64.90.13.177:38042) peer=Some(123.56.17.44:443)",
+      "2026-11-08T11:07:36.264312Z  INFO playout metrics room=sn-BJP00326110799999901-1794136039066 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+      "2026-11-08T11:07:36.265852Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+      "2026-11-08T11:07:36.481789Z  INFO tts connection timing connect_id=2 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=216 dns_ms=0 tcp_ms=50 tls_ws_ms=165 dns_path=\"system_resolver\" local=Some(64.90.13.177:38046) peer=Some(123.56.17.44:443)",
+      "2026-11-08T11:07:38.019855Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+      "2026-11-08T11:07:38.238337Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=218 dns_ms=0 tcp_ms=50 tls_ws_ms=167 dns_path=\"system_resolver\" local=Some(64.90.13.177:38062) peer=Some(123.56.17.44:443)",
+      "2026-11-08T11:07:43.319988Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794136039066\" turn_id=2 connect_id=2 phase=\"close\" completed=true pcm_frames=64 elapsed_ms=5300 ws_read_wait_ms=5227 max_ws_read_wait_ms=387 channel_send_wait_ms=34 max_channel_send_wait_ms=34 max_observed_pcm_gap_ms=388",
+      "2026-11-08T11:07:43.320466Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=306 first_pcm_ms=306",
+      "2026-11-08T11:07:49.020294Z  INFO playout metrics room=sn-BJP00326110799999901-1794136039066 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=203 first_underrun_ms=-1 played_frames=1068 exit=\"SourceDrained\"",
+      "2026-11-08T11:07:57.190601Z  INFO asr_stream{room=sn-BJP00326110799999901-1794136076851}:voice_connection{provider=\"asr\" request_id=\"52a097c6-9b36-4c01-ad47-af5e0fb0a226\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+      "2026-11-08T11:08:05.943465Z  INFO asr_stream{room=sn-BJP00326110799999901-1794136076851}:voice_connection{provider=\"asr\" request_id=\"fff05abd-d7cc-4152-8f0f-0ef7d18303ad\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+      "2026-11-08T11:08:11.676057Z  INFO ordered_pcm begin timeout → rtc (端侧未走首句) room=sn-BJP00326110799999901-1794136076851 timeout_ms=2500",
+      "2026-11-08T11:08:11.676708Z  INFO ordered_pcm input phase → rtc room=sn-BJP00326110799999901-1794136076851 reason=begin_timeout catchup_samples=0 catchup_skipped=\"disabled\" stt2_spawned_ms_ago=0",
+      "2026-11-08T11:08:11.677379Z  INFO asr_stream{room=sn-BJP00326110799999901-1794136076851}:voice_connection{provider=\"asr\" request_id=\"27e10cfa-17ce-48a2-9535-934d0ad80850\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+      "2026-11-08T11:08:15.584480Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=7 address_count=6",
+      "2026-11-08T11:08:15.628248Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+      "2026-11-08T11:08:15.789038Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=211 dns_ms=7 tcp_ms=53 tls_ws_ms=150 dns_path=\"system_resolver\" local=Some(64.90.13.177:56842) peer=Some(39.105.54.181:443)",
+      "2026-11-08T11:08:16.476473Z  INFO playout metrics room=sn-BJP00326110799999901-1794136076851 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+      "2026-11-08T11:08:16.477619Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+      "2026-11-08T11:08:16.528529Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+      "2026-11-08T11:08:16.672304Z  INFO tts connection timing connect_id=5 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=195 dns_ms=0 tcp_ms=51 tls_ws_ms=143 dns_path=\"system_resolver\" local=Some(64.90.13.177:56854) peer=Some(39.105.54.181:443)",
+      "2026-11-08T11:08:17.490326Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+      "2026-11-08T11:08:17.540958Z  INFO voice_connection{provider=\"tts\" connect_id=6}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+      "2026-11-08T11:08:17.681513Z  INFO tts connection timing connect_id=6 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=191 dns_ms=0 tcp_ms=52 tls_ws_ms=138 dns_path=\"system_resolver\" local=Some(64.90.13.177:56862) peer=Some(39.105.54.181:443)",
+      "2026-11-08T11:08:21.588145Z  INFO tts stream timing room=\"sn-BJP00326110799999901-1794136076851\" turn_id=2 connect_id=5 phase=\"close\" completed=true pcm_frames=46 elapsed_ms=4098 ws_read_wait_ms=4068 max_ws_read_wait_ms=346 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=346",
+      "2026-11-08T11:08:21.588469Z  INFO tts dispatch timing prewarm_wait_ms=0 provider_ttfb_ms=535 first_pcm_ms=535",
+      "2026-11-08T11:08:25.725431Z  INFO playout metrics room=sn-BJP00326110799999901-1794136076851 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=200 first_underrun_ms=-1 played_frames=768 exit=\"SourceDrained\""
+    ]
+  },
+  "cleanup": {
+    "mode": "business",
+    "at_ms": 1794136200766,
+    "counts": {},
+    "remaining": 0,
+    "healthy": true
+  },
+  "sfu_room_count": 0,
+  "dns_hedge_enabled": true,
+  "dns_files": {
+    "/run/systemd/resolve/stub-resolv.conf": "ebdf560272a77357195c39e98340b77e18c8a8ce2025ee950e9e0c7b01467ab8",
+    "/run/systemd/resolve/resolv.conf": "5bc964bc8cdc65de633b68eb223bc43c97eb21030d2200c068145f053793b6f1",
+    "/etc/systemd/resolved.conf.d/60-p003-negative-cache.conf": "b8ca5c4b6eef8bc28d0e4e0b5eb04c4b340d02ecef461a557102b82eb0d504be"
+  }
+}

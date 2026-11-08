@@ -1,0 +1,70 @@
+{
+  "FORMAL_DNS_RESULT.json": {
+    "sha256": "3ca06d8becf998a2fca536d4e3c2f177cfcfd4ca726aead6c9252313bb44143a",
+    "bytes": 32023
+  },
+  "formal.log": {
+    "sha256": "b7e01827f73704f99d304620f4e2fb675b28c102d3156183beadca7f2dfd7622",
+    "bytes": 763
+  },
+  "formal.exit": {
+    "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+    "bytes": 1
+  },
+  "isolated-sfu.log": {
+    "sha256": "29c922c6d33bbe49833ad55a2efad7aabf12e7de38fcecea9e461d291c9bf6a3",
+    "bytes": 13671
+  },
+  "isolated-sfu-process.json": {
+    "sha256": "5a14a3ea9cc5714544ead44513551220bd4eac174b01a7219d62850a9d3640c6",
+    "bytes": 94
+  },
+  "dns-new-normal.json": {
+    "sha256": "2f2da57a1e585a87a165856d86943129be86c2b105527599576807a73d352612",
+    "bytes": 1353
+  },
+  "dns-new-normal/worker.log": {
+    "sha256": "f9f2e8f75df745822311a9a1c42780510fd85305549bb43972c1b30857aebe8c",
+    "bytes": 127718
+  },
+  "dns-new-normal/probe.log": {
+    "sha256": "e05c2bf6641c114ee3765051fe582f14f6dd4b8b93f923d9dc8e55255a4ae629",
+    "bytes": 1172
+  },
+  "dns-old-silent.json": {
+    "sha256": "30cfec16634830a749d5e6657b42defcd57335809af016888084df07d38bc1ac",
+    "bytes": 1287
+  },
+  "dns-old-silent/worker.log": {
+    "sha256": "649cef57c49e09b30b959001189825c6ef3994295707edb9c48809e9fc048892",
+    "bytes": 120795
+  },
+  "dns-old-silent/probe.log": {
+    "sha256": "16955c053ad5f539b04a905e8df63e4d7fe4f2948c2af01fc1210fb4e247af7e",
+    "bytes": 2060
+  },
+  "dns-new-silent.json": {
+    "sha256": "70e495e256b1ff09a22e30243407c0cb20e68af73b4f7f95d7721285557529f4",
+    "bytes": 1353
+  },
+  "dns-new-silent/worker.log": {
+    "sha256": "46ce22bff0009c5ee4d2162cdec079133622bc5e919666c8b9fe2db3e47d95b8",
+    "bytes": 141288
+  },
+  "dns-new-silent/probe.log": {
+    "sha256": "77d5ce08ffcc297613b9a39d43c8bbf4015585c9e534cce3337c24b965792b25",
+    "bytes": 1172
+  },
+  "dns-new-ordered-silent.json": {
+    "sha256": "8109c377e9b1054805af8827d28380735e0ade4df3cdc997d122d20df7a212d7",
+    "bytes": 1409
+  },
+  "dns-new-ordered-silent/worker.log": {
+    "sha256": "1199f7deec4b8de8f806342258cb629be691986f4f589b8bf95a82cb964e749f",
+    "bytes": 139094
+  },
+  "dns-new-ordered-silent/probe.log": {
+    "sha256": "391c457d972ca73007545695792a799ec1489851148708bd65867543c6003674",
+    "bytes": 1210
+  }
+}

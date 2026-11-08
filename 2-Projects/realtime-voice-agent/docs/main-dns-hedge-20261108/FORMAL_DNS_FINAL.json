@@ -1,0 +1,400 @@
+{
+  "candidate": "5453c80ffed18c76c93c79be2fb3b52f64e0c043",
+  "formal_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+  "production_before": {
+    "voice-worker-rust": {
+      "MainPID": "3606030",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "stub_sha256": "ebdf560272a77357195c39e98340b77e18c8a8ce2025ee950e9e0c7b01467ab8",
+    "upstream_sha256": "5bc964bc8cdc65de633b68eb223bc43c97eb21030d2200c068145f053793b6f1",
+    "host_mnt_namespace": "mnt:[4026531841]"
+  },
+  "cases": [
+    {
+      "label": "dns-new-normal",
+      "fault": false,
+      "rc": 0,
+      "want_pass": true,
+      "folder": "/root/p003-main-dns-hedge-20261108/formal-v3/dns-new-normal",
+      "result": {
+        "at": "2026-11-08T11:03:18.977328+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+        "runtime_pid": "3718698",
+        "ordered": false,
+        "trace_id": "ops-release-probe-8084a955-21cf-4a12-aa6c-bb5470c93c49",
+        "room": "sn-BJP00326110899999992-1794135773498",
+        "sid": "RM_JtpQbhk5oTQC",
+        "stats": {
+          "ready_ms": 12256,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4730.0,
+          "first_audio_ms": 18328,
+          "last_audio_ms": 23658,
+          "input_sent_ms": 12263,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 180,
+          "track_publish_requested_ms": 12181,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 25479,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, isolated same-version SFU + actual ASR/TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      },
+      "worker_namespace": "mnt:[4026531841]",
+      "dns_packet_delta": {
+        "tts_dropped": 0,
+        "forwarded": 0,
+        "forward_errors": 0
+      },
+      "fallback_started": 0,
+      "fallback_path_observed": false,
+      "timing_lines": [
+        "2026-11-08T11:02:54.006980Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135773498}:voice_connection{provider=\"asr\" request_id=\"80d533f5-d07a-4feb-ae93-3f5396d35cfc\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=199 address_count=8",
+        "2026-11-08T11:02:54.010805Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135773498}:voice_connection{provider=\"asr\" request_id=\"80d533f5-d07a-4feb-ae93-3f5396d35cfc\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=151",
+        "2026-11-08T11:03:02.972977Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135773498}:voice_connection{provider=\"asr\" request_id=\"2c2e4521-2489-443f-acad-dfd81377b967\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+        "2026-11-08T11:03:09.810352Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=10 address_count=1",
+        "2026-11-08T11:03:09.856674Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=5",
+        "2026-11-08T11:03:10.454642Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:03:10.498954Z  INFO tts connection timing connect_id=2 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=44 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:03:10.498057Z  INFO playout metrics room=sn-BJP00326110899999992-1794135773498 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-08T11:03:10.499071Z  INFO tts connection timing connect_id=1 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=699 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:03:10.499358Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:03:10.550171Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-08T11:03:11.153688Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:03:11.205399Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-08T11:03:11.381284Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=227 dns_ms=0 tcp_ms=53 tls_ws_ms=174 dns_path=\"system_resolver\" local=Some(64.90.13.177:44142) peer=Some(114.118.65.16:443)",
+        "2026-11-08T11:03:11.381619Z  INFO tts connection timing connect_id=3 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=882 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:03:11.382268Z  INFO voice_connection{provider=\"tts\" connect_id=5}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:03:11.642228Z  INFO tts connection timing connect_id=5 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=260 dns_ms=0 tcp_ms=52 tls_ws_ms=207 dns_path=\"system_resolver\" local=Some(64.90.13.177:44148) peer=Some(114.118.65.16:443)",
+        "2026-11-08T11:03:14.259432Z  INFO tts stream timing room=\"sn-BJP00326110899999992-1794135773498\" turn_id=2 connect_id=4 phase=\"close\" completed=true pcm_frames=34 elapsed_ms=2877 ws_read_wait_ms=2855 max_ws_read_wait_ms=352 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=353",
+        "2026-11-08T11:03:17.631542Z  INFO playout metrics room=sn-BJP00326110899999992-1794135773498 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=207 first_underrun_ms=-1 played_frames=596 exit=\"SourceDrained\""
+      ],
+      "passed": true
+    },
+    {
+      "label": "dns-old-silent",
+      "fault": true,
+      "rc": 1,
+      "want_pass": false,
+      "folder": "/root/p003-main-dns-hedge-20261108/formal-v3/dns-old-silent",
+      "result": {
+        "at": "2026-11-08T11:03:47.082029+00:00",
+        "status": "FAIL",
+        "candidate_sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d",
+        "runtime_pid": "3718845",
+        "ordered": false,
+        "trace_id": "ops-release-probe-7e810a87-b64a-4e62-8130-9832b2c4c4db",
+        "room": "sn-BJP00326110899999992-1794135803339",
+        "sid": "RM_Y82hMeurmo8n",
+        "stats": {
+          "ready_ms": 12251,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 0,
+          "audible_ms": 0,
+          "first_audio_ms": null,
+          "last_audio_ms": null,
+          "input_sent_ms": 12259,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 3,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 163,
+          "track_publish_requested_ms": 12164,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": false,
+        "fixture_cleanup": false,
+        "elapsed_ms": 23742,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, isolated same-version SFU + actual ASR/TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      },
+      "worker_namespace": "mnt:[4026532391]",
+      "dns_packet_delta": {
+        "tts_dropped": 29,
+        "forwarded": 4,
+        "forward_errors": 0
+      },
+      "fallback_started": 0,
+      "fallback_path_observed": false,
+      "timing_lines": [
+        "2026-11-08T11:03:23.641008Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135803339}:voice_connection{provider=\"asr\" request_id=\"9b20a722-d6a6-4ab1-aca1-3c84483c1474\"}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=14 address_count=8",
+        "2026-11-08T11:03:32.365467Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135803339}:voice_connection{provider=\"asr\" request_id=\"036ef661-c0bb-43b9-b9a0-69d124509d6e\"}: voice dns family timing family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+        "2026-11-08T11:03:40.285113Z  INFO playout metrics room=sn-BJP00326110899999992-1794135803339 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-08T11:03:40.285892Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=597",
+        "2026-11-08T11:03:40.286013Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=648",
+        "2026-11-08T11:03:40.286045Z  INFO tts connection timing connect_id=1 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=649 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:03:42.291661Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing family=\"A\" outcome=\"failed\" reason=\"dns_timeout\" io_kind=None dns_ms=1348",
+        "2026-11-08T11:03:42.341855Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"dns_timeout\" io_kind=None dns_ms=1347",
+        "2026-11-08T11:03:42.341968Z  INFO tts connection timing connect_id=3 stage=\"resolve_tcp\" outcome=\"failed\" reason=\"resolve_failed\" elapsed_ms=1398 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:03:46.300088Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing family=\"A\" outcome=\"failed\" reason=\"dns_timeout\" io_kind=None dns_ms=6012",
+        "2026-11-08T11:03:46.347402Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing family=\"AAAA\" outcome=\"failed\" reason=\"dns_timeout\" io_kind=None dns_ms=6008",
+        "2026-11-08T11:03:46.347607Z  INFO tts connection timing connect_id=2 stage=\"resolve_tcp\" outcome=\"failed\" reason=\"resolve_failed\" elapsed_ms=6059 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:03:46.569446Z  INFO playout metrics room=sn-BJP00326110899999992-1794135803339 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"SourceDrained\"",
+        "2026-11-08T11:03:46.569997Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=170",
+        "2026-11-08T11:03:46.570099Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=222",
+        "2026-11-08T11:03:46.570162Z  INFO tts connection timing connect_id=4 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=222 dns_path=\"independent_families\" local=None peer=None"
+      ],
+      "passed": true
+    },
+    {
+      "label": "dns-new-silent",
+      "fault": true,
+      "rc": 0,
+      "want_pass": true,
+      "folder": "/root/p003-main-dns-hedge-20261108/formal-v3/dns-new-silent",
+      "result": {
+        "at": "2026-11-08T11:04:17.033967+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+        "runtime_pid": "3719101",
+        "ordered": false,
+        "trace_id": "ops-release-probe-3cdeb539-e37e-4119-bf56-6f0b57be38a0",
+        "room": "sn-BJP00326110899999992-1794135832035",
+        "sid": "RM_rjCdLP4FGQmB",
+        "stats": {
+          "ready_ms": 12266,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4700.0,
+          "first_audio_ms": 17839,
+          "last_audio_ms": 23238,
+          "input_sent_ms": 12271,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 178,
+          "track_publish_requested_ms": 12179,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 24998,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, isolated same-version SFU + actual ASR/TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      },
+      "worker_namespace": "mnt:[4026532391]",
+      "dns_packet_delta": {
+        "tts_dropped": 8,
+        "forwarded": 10,
+        "forward_errors": 0
+      },
+      "fallback_started": 6,
+      "fallback_path_observed": true,
+      "timing_lines": [
+        "2026-11-08T11:03:52.375243Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135832035}:voice_connection{provider=\"asr\" request_id=\"e6f32521-8f61-4eeb-8fc3-9373c8633286\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=20 address_count=8",
+        "2026-11-08T11:04:01.541030Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135832035}:voice_connection{provider=\"asr\" request_id=\"c71d4962-5ca8-4e3e-be27-198c9e2bba38\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=365",
+        "2026-11-08T11:04:01.814230Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135832035}:voice_connection{provider=\"asr\" request_id=\"c71d4962-5ca8-4e3e-be27-198c9e2bba38\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=691 address_count=8",
+        "2026-11-08T11:04:08.553813Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=8 address_count=6",
+        "2026-11-08T11:04:08.554050Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=209",
+        "2026-11-08T11:04:08.608948Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"configured_upstream\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=10",
+        "2026-11-08T11:04:08.609302Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=212",
+        "2026-11-08T11:04:08.769469Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=426 dns_ms=209 tcp_ms=55 tls_ws_ms=160 dns_path=\"configured_upstream\" local=Some(64.90.13.177:53498) peer=Some(123.57.26.93:443)",
+        "2026-11-08T11:04:08.971144Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-08T11:04:08.971312Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=201",
+        "2026-11-08T11:04:08.991642Z  INFO playout metrics room=sn-BJP00326110899999992-1794135832035 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-08T11:04:08.991897Z  INFO tts stream timing room=\"sn-BJP00326110899999992-1794135832035\" turn_id=1 connect_id=1 phase=\"receive\" completed=false pcm_frames=0 elapsed_ms=222 ws_read_wait_ms=47 max_ws_read_wait_ms=47 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=0 pending_wait_ms=174",
+        "2026-11-08T11:04:08.992388Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=171",
+        "2026-11-08T11:04:08.992425Z  INFO tts connection timing connect_id=2 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=222 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:04:09.193826Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-08T11:04:09.193936Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=201",
+        "2026-11-08T11:04:09.243716Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=199",
+        "2026-11-08T11:04:09.402118Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=409 dns_ms=201 tcp_ms=49 tls_ws_ms=158 dns_path=\"configured_upstream\" local=Some(64.90.13.177:53516) peer=Some(123.57.26.93:443)",
+        "2026-11-08T11:04:09.604569Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=6",
+        "2026-11-08T11:04:09.604788Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=201",
+        "2026-11-08T11:04:09.655654Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"configured_upstream\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-08T11:04:09.661820Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=208",
+        "2026-11-08T11:04:09.827298Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=424 dns_ms=201 tcp_ms=56 tls_ws_ms=165 dns_path=\"configured_upstream\" local=Some(64.90.13.177:53524) peer=Some(123.57.26.93:443)",
+        "2026-11-08T11:04:13.221590Z  INFO tts stream timing room=\"sn-BJP00326110899999992-1794135832035\" turn_id=2 connect_id=3 phase=\"close\" completed=true pcm_frames=35 elapsed_ms=3819 ws_read_wait_ms=3797 max_ws_read_wait_ms=361 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=361",
+        "2026-11-08T11:04:15.720644Z  INFO playout metrics room=sn-BJP00326110899999992-1794135832035 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=209 first_underrun_ms=-1 played_frames=600 exit=\"SourceDrained\""
+      ],
+      "passed": true
+    },
+    {
+      "label": "dns-new-ordered-silent",
+      "fault": true,
+      "rc": 0,
+      "want_pass": true,
+      "folder": "/root/p003-main-dns-hedge-20261108/formal-v3/dns-new-ordered-silent",
+      "result": {
+        "at": "2026-11-08T11:04:49.177341+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+        "runtime_pid": "3719278",
+        "ordered": true,
+        "trace_id": "ops-release-probe-e1058150-75a1-4e93-a4b0-0ad5543653dd",
+        "room": "sn-BJP00326110899999992-1794135861572",
+        "sid": "RM_CsB4jkyEH3vE",
+        "stats": {
+          "ready_ms": 12292,
+          "phase_ms": 14835,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4730.0,
+          "first_audio_ms": 20439,
+          "last_audio_ms": 25829,
+          "input_sent_ms": 14836,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [
+            "begin_timeout"
+          ],
+          "client_connected_ms": 181,
+          "track_publish_requested_ms": 12182,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 27605,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, isolated same-version SFU + actual ASR/TTS; verifies normal pipeline and client-close cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      },
+      "worker_namespace": "mnt:[4026532391]",
+      "dns_packet_delta": {
+        "tts_dropped": 8,
+        "forwarded": 4,
+        "forward_errors": 0
+      },
+      "fallback_started": 6,
+      "fallback_path_observed": true,
+      "timing_lines": [
+        "2026-11-08T11:04:21.935435Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135861572}:voice_connection{provider=\"asr\" request_id=\"02774971-bde7-4b11-9630-8dce4b04c869\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=3 address_count=8",
+        "2026-11-08T11:04:30.712198Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135861572}:voice_connection{provider=\"asr\" request_id=\"9a85b1b4-b38e-48ec-8810-4cc7407a38b8\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+        "2026-11-08T11:04:36.402144Z  INFO asr_stream{room=sn-BJP00326110899999992-1794135861572}:voice_connection{provider=\"asr\" request_id=\"3915a99f-40b4-4f82-ad7a-2a1385ca22c6\"}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=8",
+        "2026-11-08T11:04:40.663724Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=8 address_count=1",
+        "2026-11-08T11:04:40.663898Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=209",
+        "2026-11-08T11:04:40.712646Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"configured_upstream\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=6",
+        "2026-11-08T11:04:40.715238Z  INFO voice_connection{provider=\"tts\" connect_id=1}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=209",
+        "2026-11-08T11:04:40.879400Z  INFO tts connection timing connect_id=1 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=426 dns_ms=209 tcp_ms=51 tls_ws_ms=164 dns_path=\"configured_upstream\" local=Some(64.90.13.177:37350) peer=Some(114.118.75.251:443)",
+        "2026-11-08T11:04:41.081815Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:04:41.081970Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=201",
+        "2026-11-08T11:04:41.100282Z  INFO playout metrics room=sn-BJP00326110899999992-1794135861572 turn_id=1 underrun_count=0 underrun_ms=0 buffered_audio_ms=-1 first_underrun_ms=-1 played_frames=0 exit=\"Aborted\"",
+        "2026-11-08T11:04:41.100630Z  INFO tts stream timing room=\"sn-BJP00326110899999992-1794135861572\" turn_id=1 connect_id=1 phase=\"receive\" completed=false pcm_frames=0 elapsed_ms=220 ws_read_wait_ms=52 max_ws_read_wait_ms=52 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=0 pending_wait_ms=168",
+        "2026-11-08T11:04:41.101191Z  INFO voice_connection{provider=\"tts\" connect_id=2}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=170",
+        "2026-11-08T11:04:41.101255Z  INFO tts connection timing connect_id=2 stage=\"resolve_tcp\" outcome=\"cancelled\" reason=\"owner_dropped\" elapsed_ms=221 dns_path=\"independent_families\" local=None peer=None",
+        "2026-11-08T11:04:41.302687Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:04:41.302851Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=201",
+        "2026-11-08T11:04:41.354171Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"configured_upstream\" family=\"AAAA\" outcome=\"failed\" reason=\"nodata\" dns_rcode=0 io_kind=None dns_ms=0",
+        "2026-11-08T11:04:41.355313Z  INFO voice_connection{provider=\"tts\" connect_id=3}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=202",
+        "2026-11-08T11:04:41.521668Z  INFO tts connection timing connect_id=3 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=420 dns_ms=201 tcp_ms=52 tls_ws_ms=166 dns_path=\"configured_upstream\" local=Some(64.90.13.177:37366) peer=Some(114.118.75.251:443)",
+        "2026-11-08T11:04:41.723606Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"configured_upstream\" family=\"A\" outcome=\"resolved\" reason=\"none\" io_kind=None dns_ms=0 address_count=1",
+        "2026-11-08T11:04:41.723709Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"A\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=201",
+        "2026-11-08T11:04:41.772733Z  INFO voice_connection{provider=\"tts\" connect_id=4}: voice dns family timing resolver_path=\"system_resolver\" family=\"AAAA\" outcome=\"cancelled\" reason=\"owner_dropped\" io_kind=None dns_ms=199",
+        "2026-11-08T11:04:41.931171Z  INFO tts connection timing connect_id=4 stage=\"tls_ws\" outcome=\"connected\" reason=\"none\" elapsed_ms=409 dns_ms=201 tcp_ms=48 tls_ws_ms=158 dns_path=\"configured_upstream\" local=Some(64.90.13.177:37380) peer=Some(114.118.75.251:443)",
+        "2026-11-08T11:04:44.370666Z  INFO tts stream timing room=\"sn-BJP00326110899999992-1794135861572\" turn_id=2 connect_id=3 phase=\"close\" completed=true pcm_frames=35 elapsed_ms=2848 ws_read_wait_ms=2827 max_ws_read_wait_ms=320 channel_send_wait_ms=0 max_channel_send_wait_ms=0 max_observed_pcm_gap_ms=320",
+        "2026-11-08T11:04:47.847763Z  INFO playout metrics room=sn-BJP00326110899999992-1794135861572 turn_id=2 underrun_count=0 underrun_ms=0 buffered_audio_ms=199 first_underrun_ms=-1 played_frames=600 exit=\"SourceDrained\""
+      ],
+      "passed": true
+    }
+  ],
+  "boundary": "isolated same-version SFU on loopback + mount namespace; synthetic LLM/SN; actual ASR/TTS; no production dispatch/DNS changes",
+  "isolated_sfu_exited": true,
+  "production_after": {
+    "voice-worker-rust": {
+      "MainPID": "3606030",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "057f19722de3c2711a50ebb88d2768b8ab36111927495eb8efeda2ee286c426d"
+    },
+    "p003-listening-worker": {
+      "MainPID": "3593294",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "636b1c3d03388b963d0e1827af1b66db58f7ac399996401c0d6b376e8f2143c2"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    },
+    "stub_sha256": "ebdf560272a77357195c39e98340b77e18c8a8ce2025ee950e9e0c7b01467ab8",
+    "upstream_sha256": "5bc964bc8cdc65de633b68eb223bc43c97eb21030d2200c068145f053793b6f1",
+    "host_mnt_namespace": "mnt:[4026531841]"
+  },
+  "production_unchanged": true,
+  "passed": true
+}

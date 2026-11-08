@@ -28,3 +28,7 @@
 署名：codex（OpenAI）| 2026-11-08
 
 - RED：旧主池路径在真实本地UDP静默故障下，750ms仍未利用健康备用，r27用例按预期失败（非编译错误）；保留source/log。随后移植倾听核心，仅改voice_connect和TTS路径回传，新增NODATA/NXDOMAIN/TTL0/双故障取消测试。
+
+## 最终状态
+
+2026-11-08 19:06:57 CST主池发布；568项回归通过，正式二进制四项隔离矩阵及两项线上合成派单通过，188.4秒同PID/异常重启0。回滚前置检查及Air同SHA交付完成。详见 [最终回执](P003_MAIN_TTS_DNS_REPAIR_RECEIPT_20261108.md)、[运维记忆](OPERATIONS_MEMORY.md)、[Grok复审](GROK_CODE_REVIEW.md) 和 [主13复核](REVIEW_RESOLUTION.md)。本次仅收口主池DNS备用缺口，历史其他语音问题维持对应证据边界。

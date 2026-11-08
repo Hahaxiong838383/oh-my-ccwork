@@ -1,0 +1,102 @@
+{
+  "POST_VERIFICATION.json": {
+    "sha256": "a1d6935e809934b776718036b36c3495028766f95a4b292caeb45d7aef3fb419",
+    "bytes": 695
+  },
+  "dns-boundary-verified.log": {
+    "sha256": "8a743db355417b9a845091b078eb0a4ac367871bbd42b59c186edb328ea89be2",
+    "bytes": 46525
+  },
+  "rollback-main-dns.py": {
+    "sha256": "2ec3eda3f4309a6a234aa1000a26e7495338d76add5d7b7f12152c54ed963d70",
+    "bytes": 6650
+  },
+  "REVIEW_RESOLUTION.md": {
+    "sha256": "bc443f8bba697675330897635f59bde657dc0f639d7e2001f91cbc49f1f9fcac",
+    "bytes": 1803
+  },
+  "TEST_ONLY_EQUIVALENCE.json": {
+    "sha256": "531b969fe1a0ef6e6837e7e5ac6de80c3ce0ea857109a585febff58ed145e153",
+    "bytes": 366
+  },
+  "GROK_CODE_REVIEW.md": {
+    "sha256": "414d26e2f7ca6557256ac9021a083ba0e1c34782d9dab06048ba272dda2ab34d",
+    "bytes": 7479
+  },
+  "FORMAL_V2_PARSER_DIAGNOSIS.json": {
+    "sha256": "a1db8119d6921c681f0082f2d6dddfaec1889a620bcf31fe67658e9d67b30ae7",
+    "bytes": 161
+  },
+  "CANDIDATE.json": {
+    "sha256": "593c8359dca9ceec2e834c160f21f7b0ac10503bdc641fecc0d3333ffc499702",
+    "bytes": 342
+  },
+  "PRODUCTION_PROBES.json": {
+    "sha256": "5894cdcf0e59b97bd7a49fb545071f700ef7b0e2533321001dea18f29f8482df",
+    "bytes": 3084
+  },
+  "P003_MAIN_TTS_DNS_REPAIR_RECEIPT_20261108.md": {
+    "sha256": "85638155a0c37803e1a7339b80ef7e0697e9b5d530552e3e2e4025ec7dbe655b",
+    "bytes": 5852
+  },
+  "formal-dns-runner-v3.py": {
+    "sha256": "6abe5b78dbf221493ad657c545d23464f609f218e1c3279346088adab47b1f65",
+    "bytes": 9765
+  },
+  "POST_STATE.json": {
+    "sha256": "3b7a1078c4a8338fbf5205210e126ad95c809b3880c27fc269bd59a415f019b7",
+    "bytes": 10557
+  },
+  "production-release-probe.py": {
+    "sha256": "037a2293d377e6a8b50e24571e20a0e94cabde17c7b01eeac18072090510ba0e",
+    "bytes": 7993
+  },
+  "deploy-main-dns.py": {
+    "sha256": "5c109f1defa8d8472bee8d4ad0900878547c79013be98a5e46fec6f6302ab5d9",
+    "bytes": 7014
+  },
+  "ROLLBACK_CHECK.json": {
+    "sha256": "40b1389c9390d61c8a22d479b6fcdd853ce417658e9a89d29103948675b70615",
+    "bytes": 1253
+  },
+  "FORMAL_V3_EVIDENCE_INDEX.json": {
+    "sha256": "da4d2d7a62225b08d6605cad6cf44cc259a7d46dc1198827138f5acd18d9310c",
+    "bytes": 2307
+  },
+  "DEPLOYED.json": {
+    "sha256": "4e2f7a2ed5ab11439c507ea3a4fa9e8214cd5766d52d509f2f87eceef65e6209",
+    "bytes": 902
+  },
+  "formal-dns-probe-v3.py": {
+    "sha256": "4e473e61d73e6fd6a4ef26ffeb9d22325e7e8aaebe70e7cac7c9444e5d5d8583",
+    "bytes": 8612
+  },
+  "RECEIPT_AIR_DELIVERY.json": {
+    "sha256": "1e6b4e6bb60273fd2fe2a74fbe076cfaf266b6e6cf247ced1d973a3fc04d2acc",
+    "bytes": 266
+  },
+  "PLAN.md": {
+    "sha256": "0100e88673081b7d85ccae6c62485c73d76a5e1b6a667fa6adb2497f5317907f",
+    "bytes": 3179
+  },
+  "SOURCE_RELEASE_MANIFEST.json": {
+    "sha256": "0cd76a77f4b30b7b5195fee7f54c1d57355443a0c3f13cf9fecdd956936db13c",
+    "bytes": 6458
+  },
+  "OPERATIONS_MEMORY.md": {
+    "sha256": "39345cac1444c43371ffe96156ab99e5ef983d0f2e194a085ab5230dea6896a5",
+    "bytes": 1925
+  },
+  "FORMAL_DNS_FINAL.json": {
+    "sha256": "3ca06d8becf998a2fca536d4e3c2f177cfcfd4ca726aead6c9252313bb44143a",
+    "bytes": 32023
+  },
+  "isolated-worker-launch-v3.py": {
+    "sha256": "cc17486ec08389f11789c654c3f103e356d538c19007035d05a671a6bd92235a",
+    "bytes": 651
+  },
+  "RESOURCE_AFTER.json": {
+    "sha256": "a38f7e6546f930727f8a5cf2b9e9ba1fd7f0952063ff632f58945b460a916822",
+    "bytes": 20139
+  }
+}

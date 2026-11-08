@@ -1,0 +1,1 @@
+{"raw_match": false, "ansi_stripped_match": true, "cause": "ANSI color escape separates field name and value; test parser bug", "production_code_changed": false}

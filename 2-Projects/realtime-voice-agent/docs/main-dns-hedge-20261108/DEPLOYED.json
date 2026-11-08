@@ -1,0 +1,24 @@
+{
+  "at": "2026-11-08T11:06:57.337809+00:00",
+  "status": "TTS_DNS_HEDGE_DEPLOYED",
+  "before": {
+    "MainPID": "3606030",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "after": {
+    "MainPID": "3719988",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+  "source_commit": "5453c80ffed18c76c93c79be2fb3b52f64e0c043",
+  "other_pools_unchanged": true,
+  "system_dns_and_unit_unchanged": true,
+  "dns_hedge_enabled": true,
+  "env_before_sha256": "5c15e762c6e9194bb2424d154d5d8a90f60960e00372c3ebdda72519599d65d6",
+  "env_after_sha256": "f53df56ce9eca7abdf132b3d4c8bafe6da5171eabacf0834bfffcbe47fc68fba",
+  "asr_recovery_enabled": true,
+  "scope": "main pool TTS DNS fallback only; business enforcement and other configuration unchanged",
+  "backup": "/root/p003-main-dns-hedge-20261108/dns-hedge-before"
+}

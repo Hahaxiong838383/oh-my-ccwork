@@ -1,0 +1,106 @@
+{
+  "cases": [
+    {
+      "kind": "0",
+      "rc": 0,
+      "result": {
+        "at": "2026-11-08T11:07:55.056405+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+        "runtime_pid": "3719988",
+        "ordered": false,
+        "trace_id": "ops-release-probe-fc64b5b0-425c-490d-8f3a-f7692d2c07c2",
+        "room": "sn-BJP00326110799999901-1794136039066",
+        "sid": "RM_oP9B3zDo9knh",
+        "stats": {
+          "ready_ms": 12558,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 8040.0,
+          "first_audio_ms": 19377,
+          "last_audio_ms": 29487,
+          "input_sent_ms": 12565,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 231,
+          "track_publish_requested_ms": 12233,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 35990,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      }
+    },
+    {
+      "kind": "1",
+      "rc": 0,
+      "result": {
+        "at": "2026-11-08T11:08:31.765670+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+        "runtime_pid": "3719988",
+        "ordered": true,
+        "trace_id": "ops-release-probe-d29128d7-d341-493f-90e5-c846fb9d080b",
+        "room": "sn-BJP00326110799999901-1794136076851",
+        "sid": "RM_4NrmgqRUGruq",
+        "stats": {
+          "ready_ms": 12330,
+          "phase_ms": 14833,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 5840.0,
+          "first_audio_ms": 21323,
+          "last_audio_ms": 28384,
+          "input_sent_ms": 14839,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "client_connected_ms": 215,
+          "track_publish_requested_ms": 12216,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 34914,
+        "policy_source": "operator-signed synthetic metadata; not device cfg-139",
+        "real_android": false
+      }
+    }
+  ],
+  "passed": true
+}

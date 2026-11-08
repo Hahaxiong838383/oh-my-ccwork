@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "observed_seconds": 188.382729,
+  "minimum_stability_seconds": 180,
+  "stability_reached": true,
+  "production_probes_passed": true,
+  "other_pools_unchanged": true,
+  "system_dns_unchanged": true,
+  "runtime": {
+    "MainPID": "3719988",
+    "NRestarts": "0",
+    "ActiveState": "active",
+    "ActiveEnterTimestamp": "Sun 2026-11-08 11:06:54 UTC",
+    "process_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+    "disk_sha256": "553629a0adeb31fa77d89fb751705c25d906895e98d006bb9471820430f10705",
+    "env_sha256": "f53df56ce9eca7abdf132b3d4c8bafe6da5171eabacf0834bfffcbe47fc68fba"
+  },
+  "panic": 0,
+  "error_lines": 0,
+  "sfu_room_count": 0
+}

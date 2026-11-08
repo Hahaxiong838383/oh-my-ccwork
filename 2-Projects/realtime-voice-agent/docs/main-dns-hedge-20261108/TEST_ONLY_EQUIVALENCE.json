@@ -1,0 +1,12 @@
+{
+  "voice_connect.rs": {
+    "runtime_prefix_sha256": "bb71f5fcd92c5dae6abf4e8e4e5c23ade7dfaa7ab0ad2e9527cc829d0699ef34",
+    "same_runtime": true,
+    "test_only_additions": true
+  },
+  "tts_xfyun.rs": {
+    "runtime_prefix_sha256": "0c98f206646efda77e4f6c92b02f05ab52ea2dd170b15eaf32a8449ef31642ce",
+    "same_runtime": true,
+    "test_only_additions": true
+  }
+}
