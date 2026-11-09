@@ -151,3 +151,21 @@ Studio 侧 DERP 真实延迟（`curl --noproxy '*'`）：
 - 接自建 HK derper 进 tailnet：region 901 / `DERPPort: 8888`（443 被 EasyTier 占），保留官方兜底。接入后冷态中继从 nue 392ms 降到 ~100–150ms。
 - 给 Studio 关 MagicDNS（`accept-dns=false`）：避免 tailnet 抖动变成整机 DNS 断网；代价是失去 `<host>.<tailnet>.ts.net` 解析，SSH 改用 100.x IP。
 - 直连不必再修：对称 NAT + 多出口环境下的冷态慢是结构性的，靠 peer relay 优于靠调参。
+
+## 2026-11-09 DERP region 901 接入与效果验证
+
+川哥在 Tailscale 控制台 policy 里加了 `derpMap`（region 901 → `derp.hahaxiong.cc:8888`），已生效并实测：
+
+| 视角 | 901 yecao | 官方次优 | 改善 |
+|---|---|---|---|
+| home-studio 测速 | **48.6ms** | tok 57.1 / hkg 76.3 / nue 138.5 | 成为最快区域 |
+| Studio 测速 | **50.1ms** | nue 189.4 / hkg 223 / tok 探测失败 | 从 189ms 降到 50ms |
+
+中继路径实测评测（`tailscale ping`）：
+
+- 两台公司 Mac 的 `Relay` 已从 `nue`/`sfo` 切到 `yecao`。
+- mini 冷态：前三包 `via DERP(yecao) 93–94ms`，第四包打洞转直连 10ms —— 接入前是 `885ms/374ms` 才转直连，**中继延迟降 4–9 倍**。
+- Studio：直连 10ms（未走中继）。
+- 野草云 derper 侧同时看到来自 `111.194.62.218`（Studio 出口，两条）与 `120.244.92.131`（家）的保持连接。
+
+遗留：本机 `Self.Relay` 仍是 `tok`（它自己连 yecao 但未切换 home），不影响使用；derper 的 STUN 3478 仍被野草云面板挡，netcheck 里该区域 STUN 不可用但 TCP 中继正常。
