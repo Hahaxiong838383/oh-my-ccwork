@@ -149,7 +149,7 @@ Studio 侧 DERP 真实延迟（`curl --noproxy '*'`）：
 **处置**
 
 - 接自建 HK derper 进 tailnet：region 901 / `DERPPort: 8888`（443 被 EasyTier 占），保留官方兜底。接入后冷态中继从 nue 392ms 降到 ~100–150ms。
-- 给 Studio 关 MagicDNS（`accept-dns=false`）：避免 tailnet 抖动变成整机 DNS 断网；代价是失去 `<host>.<tailnet>.ts.net` 解析，SSH 改用 100.x IP。
+- **Studio 的 MagicDNS 已关闭（2026-11-09 执行）**：`tailscale set --accept-dns=false`，无需 sudo；`CorpDNS` 由 true → false，系统 DNS 从 `100.100.100.100` 恢复为 `223.5.5.5 / 223.6.6.6`。代价是失去 `<host>.<tailnet>.ts.net` 解析，SSH 用 100.x IP。**雷电网桥 `TD to mini`（192.168.100.2/24）与网络服务顺序（Ethernet / USB LAN / Wi-Fi / TD to air / EXO Thunderbolt 2 / TD to mini）改前改后逐项一致，未被触碰。**
 - 直连不必再修：对称 NAT + 多出口环境下的冷态慢是结构性的，靠 peer relay 优于靠调参。
 
 ## 2026-11-09 DERP region 901 接入与效果验证
