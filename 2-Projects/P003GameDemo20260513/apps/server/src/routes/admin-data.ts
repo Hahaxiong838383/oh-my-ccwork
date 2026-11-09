@@ -42,6 +42,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { readBleCredentialStatuses } from '../admin-device-credential-status.js';
 import { requiresBleProof } from '../ble-binding-policy.js';
 import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
@@ -174,9 +175,12 @@ adminDataRoute.get('/devices', (c) => {
     // 绑定家长可视化（2026-08-23）：join 家长账号手机号（admin 内部台，显示全号便于核对；
     // 手机号只出现在 admin 鉴权接口，不进 worker 日志/普通用户接口）
     const now = Date.now();
-    const devices = deviceRegistryStore.list().map((d) => ({
+    const rows = deviceRegistryStore.list();
+    const bleStatuses = readBleCredentialStatuses(rows, now);
+    const devices = rows.map((d) => ({
       ...d,
       ...credentialView(d),
+      ble_status: bleStatuses.get(d.sn) ?? null,
       parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
       preauth: preauthView(pairingStore.getPreauth(d.sn), now),
     }));

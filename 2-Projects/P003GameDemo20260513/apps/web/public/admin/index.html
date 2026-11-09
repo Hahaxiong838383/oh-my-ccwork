@@ -2461,11 +2461,34 @@
                       <el-table-column label="状态" width="90">
                         <template #default="{row}"><el-switch :model-value="row.status" active-value="active" inactive-value="disabled" @change="toggleDeviceStatus(row, $event)"></el-switch></template>
                       </el-table-column>
-                      <el-table-column label="凭据有效期至" width="170">
+                      <el-table-column label="设备凭据" width="215">
                         <template #default="{row}">
-                          <span v-if="!row.credential_expires_at" style="color:#909399">未签发</span>
-                          <span v-else :style="{color: row.credential_expires_at < Date.now() ? '#E8503A' : '#1F2933', fontWeight:600}">{{ fmtTs(row.credential_expires_at) }}</span>
-                          <small v-if="row.credential_source==='pairing_claim'" title="配网 claim 签发（台账列由最近一次 claim 会话推导，误差≤1s）" style="color:#909399;margin-left:4px">配网</small>
+                          <template v-if="row.binding_policy === 'ble-key-v1'">
+                            <span v-if="!row.ble_status || row.ble_status.state !== 'available'" style="color:#E8833A">领证状态暂不可查</span>
+                            <template v-else>
+                              <div :style="{color: row.ble_status.issued_at_ms ? '#1F2933' : '#909399', fontWeight:600}" title="当前家长、当前绑定代际的历史记录；不代表凭据当前有效">{{ row.ble_status.issued_at_ms ? '已有自动领证记录' : '暂无自动领证记录' }}</div>
+                              <div v-if="row.ble_status.issued_at_ms" style="font-size:12px;color:#6B7785">领证 {{ fmtTs(row.ble_status.issued_at_ms) }}</div>
+                              <div v-if="row.ble_status.issued_at_ms" style="font-size:12px;color:#909399">到期时间未记录</div>
+                              <div v-if="row.ble_status.authenticated_at_ms" style="font-size:12px;color:#6B7785" title="历史领证会话实际认证成功的时间，不代表设备当前在线">认证 {{ fmtTs(row.ble_status.authenticated_at_ms) }}</div>
+                            </template>
+                          </template>
+                          <template v-else>
+                            <span v-if="!row.credential_expires_at" style="color:#909399">未签发</span>
+                            <span v-else :style="{color: row.credential_expires_at < Date.now() ? '#E8503A' : '#1F2933', fontWeight:600}">至 {{ fmtTs(row.credential_expires_at) }}</span>
+                            <small v-if="row.credential_source==='pairing_claim'" title="配网 claim 签发（台账列由最近一次 claim 会话推导，误差≤1s）" style="color:#909399;margin-left:4px">配网</small>
+                          </template>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="本轮配对" width="205">
+                        <template #default="{row}">
+                          <span v-if="row.binding_policy !== 'ble-key-v1'" style="color:#C0C4CC">—</span>
+                          <span v-else-if="!row.ble_status || row.ble_status.state !== 'available' || !row.ble_status.pairing" style="color:#E8833A">配对状态暂不可查</span>
+                          <template v-else>
+                            <div :style="{color: row.ble_status.pairing.state === 'authenticated' ? '#1F2933' : '#E8833A', fontWeight:600}">{{ ({none:'暂无配对记录',waiting_claim:'已绑定 · 待设备领证',claim_expired:'领证窗口已过期',waiting_auth:'已领证 · 待设备认证',authenticated:'本轮已认证',revoked:'本轮已撤销'})[row.ble_status.pairing.state] || '状态暂不可查' }}</div>
+                            <div v-if="row.ble_status.pairing.bound_at_ms" style="font-size:12px;color:#6B7785">绑定 {{ fmtTs(row.ble_status.pairing.bound_at_ms) }}</div>
+                            <div v-if="row.ble_status.pairing.state === 'waiting_claim' || row.ble_status.pairing.state === 'claim_expired'" style="font-size:12px;color:#909399" title="仅为本次领取凭据的窗口，不是设备凭据有效期">领证截至 {{ fmtTs(row.ble_status.pairing.claim_deadline_ms) }}</div>
+                            <div v-if="row.ble_status.issued_at_ms && (row.ble_status.pairing.state === 'waiting_claim' || row.ble_status.pairing.state === 'claim_expired')" style="font-size:12px;color:#909399">历史领证与本轮进度分别记录</div>
+                          </template>
                         </template>
                       </el-table-column>
                       <el-table-column label="最近活跃" width="150">
