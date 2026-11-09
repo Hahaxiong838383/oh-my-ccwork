@@ -56,4 +56,8 @@ metadata:
 - 内存里的主机 IP/别名不可信，装机前用 `hostname` + `ip addr` 取真值。
 - `apt-get update` 全量较慢属正常，别用管道截断输出导致看不到失败。
 
-Tailscale 具体配方（源 URL、operator、参数选择、装后自检）见 [references/tailscale-headless.md](references/tailscale-headless.md)。
+Tailscale 具体配方（源 URL、operator、参数选择、装后自检）见 [references/tailscale-headless.md](references/tailscale-headless.md)；多机 tailnet 的既有边界（不改他人自启、DERP 保持官方、NAT 节点走跳转）见该文件末节。
+
+## 本技能的维护位置
+
+真身在 `~/mycc/.claude/skills/headless-linux-privileged-install/`，`~/.hermes/skills/agent-infra/` 下是软链（mycc 已列入 `skills.trusted_project_dirs`）。**改本技能要用文件编辑工具（patch/write_file）直接改仓内文件**：`skill_manage` 只编辑 profile 目录内的实体技能，对软链技能会报 `not found in active profile 'default'`，不要误以为技能丢了。

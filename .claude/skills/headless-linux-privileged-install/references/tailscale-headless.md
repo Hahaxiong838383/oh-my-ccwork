@@ -57,3 +57,12 @@ tailscale netcheck           # 出口类型/NAT/延迟，排查直连不通
 ## 装了 xray/HTTP 代理的主机
 
 `NO_PROXY` 常写成 `10.0.0.0/8,172.16.0.0/12,192.168.0.0/16`，**不含 `100.64.0.0/10`**：`curl http://100.x.x.x:<port>` 会被代理劫持失败。tailscaled 自身是 UDP 直连不受影响（`tailscale ping` 正常），SSH 也不读 `http_proxy`。只有要访问 tailnet 内 HTTP 服务时，才把 `100.64.0.0/10` 补进 `.bashrc` 与 `/etc/profile.d/*.sh` 两处 `NO_PROXY`（两处 `${VAR:-}` 谁先设谁赢，必须同步改）。
+
+## 多机 tailnet 的既有边界（本机已在 4+ 台设备的 tailnet 里）
+
+- IP 全表与 EasyTier 并行网段以 A 库 `user_hardware.md` 的「Tailscale tailnet 真值」节为准，**不要把 IP 抄进技能**（会漂移）。
+- **不碰已经由用户手配好开机自启的节点**（公司两台 Mac 是他本人配的），也不要批量改别人节点的配置。
+- 重新登录由 agent 用密码库账号操作，**遇验证码/设备确认才找人**，不猜凭据。
+- DERP 保持**官方**，不要把自建 DERP 改回去（历史上自建已退回官方）。
+- 已知不可达节点（如公司网内 dev198 因 NAT 直连不通）走「TS → 公司 Mac → 公司网」跳转，不要反复调本机参数硬直连。
+- box 类云机重启后先跑它自己的 `ensure-up.sh`（`sudo -n`，免密）拉起 overlay，再判断连通性。
