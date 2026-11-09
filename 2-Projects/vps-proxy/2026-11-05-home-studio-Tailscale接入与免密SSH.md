@@ -113,3 +113,41 @@ tailscale netcheck                   # UDP: true / Nearest DERP
 合并进长期记忆的位置：A 库 `user_hardware.md` 的「Tailscale tailnet 真值」节（设备表 + EasyTier 旁路 + DERP 策略 + 自启/保活授权边界 + 连通边界）；技能 `headless-linux-privileged-install` 的 references 记 6 条操作边界（不含 IP 清单，避免漂移）。
 
 实测确认仍然成立的点：Tailscale 段与 EasyTier 不冲突；`accept-dns=false` 未改动本机 DNS；公司两台 Mac 的 Tailscale 自启仍按川哥手配（勿改）；DERP 走官方（自建已退回）；dev198 在公司网 NAT 直连不通，仍是「TS → 公司 Mac → 公司网 10.10.10.13」。
+
+## 2026-11-09 Mac Studio 直连不稳的根因诊断
+
+症状：早上 Mac 弹 `Relay Server Unavailable / no-derp-connection`（Nuremberg），体感像断网。
+
+**结论：不是故障，是「对称 NAT + 公司多出口」导致冷态打洞慢，期间只能靠远端 DERP 兜底；而 Studio 开着 MagicDNS，tailnet 一抖连 DNS 一起断。**
+
+实测定量（SSH 进 `fu-121@100.111.199.5`，本机公钥已授权）：
+
+| 项 | Mac Studio | Mac mini |
+|---|---|---|
+| 公网出口 | `111.194.62.218` | `222.128.47.46`（**同 192.168.61.x 网段，出口不同**） |
+| `MappingVariesByDestIP` | true（对称 NAT） | true（对称 NAT） |
+| PortMapping（UPnP/PMP/PCP） | 空 | 空 |
+| 系统代理 | 全开 → `127.0.0.1:10808` | 全关 |
+| MagicDNS (`CorpDNS`) | **true**（DNS 指向 100.100.100.100） | 未查 |
+
+直连表现：打通后 Studio↔家 **9–10ms**、mini↔家 **7–8ms**，稳定；但冷态要几十秒，期间 nue 中继 391–398ms（mini 头两包 885ms/374ms 才转直连）。
+
+Studio 侧 DERP 真实延迟（`curl --noproxy '*'`）：
+
+| 目标 | connect | TLS |
+|---|---|---|
+| 野草云自建 derper `:8888` | **58–86ms** | 126–147ms |
+| 官方 nue `derp26d` | 143ms | 286ms |
+| 官方 hkg `derp20d/b/c` | 234ms | 480ms |
+| 官方 tok `derp7e` | 265ms | 527ms |
+
+**两处误判已纠正**
+
+1. 早前说「官方香港 DERP 不可达」是错的：我用了不存在的主机名 `derp20e`（该节点已下线，DNS 无解析），`curl` 返回 code 000 被当成封锁。真实 hkg 节点 `derp20d/b/c` 可达，234ms。
+2. 早前怀疑「系统代理导致连不上」也是错的：`lsof -nP -iTCP:10808` 的客户端里没有 Tailscale——macOS 的 tailscaled 走 Network Extension，不读系统 HTTP 代理。给 DERP 域名加 xray direct 规则**对 tailscaled 无效**，只影响 shell 的 curl/git（同一目标走代理 1.26s vs 直连 0.12s）。
+
+**处置**
+
+- 接自建 HK derper 进 tailnet：region 901 / `DERPPort: 8888`（443 被 EasyTier 占），保留官方兜底。接入后冷态中继从 nue 392ms 降到 ~100–150ms。
+- 给 Studio 关 MagicDNS（`accept-dns=false`）：避免 tailnet 抖动变成整机 DNS 断网；代价是失去 `<host>.<tailnet>.ts.net` 解析，SSH 改用 100.x IP。
+- 直连不必再修：对称 NAT + 多出口环境下的冷态慢是结构性的，靠 peer relay 优于靠调参。
