@@ -107,7 +107,7 @@ tailscale netcheck                   # UDP: true / Nearest DERP
 | 导出件说法 | 实测 | 处理 |
 |---|---|---|
 | 四机组网（box / Mac Studio / Mac mini / home-studio） | `tailscale status` 共 **9 台**（本机 + 8 peer），在线 4 台：Mac Studio `100.111.199.5`、Mac mini `100.79.113.66`、MacBook Air `100.127.123.50`、maxtkf-server `100.115.63.120`；离线：box `100.96.198.7`、`100.116.67.54`、muse `100.68.172.102`、CC S24 Ultra `100.94.37.118` | 记 9 台清单 |
-| box 已纳入 ensure-up / ensure-watchdog 保活 | box（`grok-bot-vm-478370779`）离线 2 天，`:3080` 无响应——保活只能拉进程，救不了云机停机 | 单独列为待排查 |
+| box 已纳入 ensure-up / ensure-watchdog 保活 | box（`grok-bot-vm-478370779`）离线 2 天，`:3080` 无响应 | 川哥 11-09 告知：**云机额度用尽，过几天恢复**，属预期停机，不排查保活/网络 |
 | 家用 Mac Studio EasyTier `10.10.10.23` | 该 IP 是本机 home-studio 的 `easytier0` 实测值 | 归属纠正为 home-studio |
 
 合并进长期记忆的位置：A 库 `user_hardware.md` 的「Tailscale tailnet 真值」节（设备表 + EasyTier 旁路 + DERP 策略 + 自启/保活授权边界 + 连通边界）；技能 `headless-linux-privileged-install` 的 references 记 6 条操作边界（不含 IP 清单，避免漂移）。
