@@ -1812,7 +1812,7 @@ adminDataRoute.post('/memory/:accountId', async (c) => {
 // 接入容量：LiveKit ListRooms（twirp，jose 手签 admin token）数 sn- 前缀设备房。
 // 两路各自 try-catch 降级为 null，绝不因监控拖垮管理页。
 // 30s 共享缓存(2026-08-27):admin 资源卡改 60s 自动轮询后,多标签页各自轮询会成倍打 ssh——
-// 缓存让并发消费方共享一次采集;至少一台采到才缓存(全失败下个请求重试)。
+// hosts-status.ts 统一管理成功/失败缓存与并发合并，两个页面共享同一轮采集。
 // 2026-09-22 迁 hk2：worker 可多台（WORKER_STATS_SSH_TARGETS，解析在 hosts-status.ts），逐台 try/catch 降级，
 // 老机/新机并存期两台同屏；容量 = 各台 max_jobs 求和。
 type WorkerMachine = {
@@ -1823,11 +1823,7 @@ type WorkerMachine = {
   error: string | null;
   data: Record<string, unknown> | null;
 };
-let workerStatsCache: { data: WorkerMachine[]; ts: number } | null = null;
-const WORKER_STATS_TTL_MS = 30_000;
-
 async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
-  if (workerStatsCache && Date.now() - workerStatsCache.ts < WORKER_STATS_TTL_MS) return workerStatsCache.data;
   const machines = await Promise.all(
     workerTargets().map(async (w): Promise<WorkerMachine> => {
       try {
@@ -1838,7 +1834,6 @@ async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
       }
     }),
   );
-  if (machines.some((m) => m.ok)) workerStatsCache = { data: machines, ts: Date.now() };
   return machines;
 }
 

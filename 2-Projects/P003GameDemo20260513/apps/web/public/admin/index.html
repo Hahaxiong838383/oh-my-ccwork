@@ -2263,7 +2263,7 @@
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
                       <div class="kh-h1">服务器状态</div>
-                      <div class="kh-sub">三台机资源 · systemd / pm2 服务 · worker ↔ KidsHubAI-VoiceKit 连接 —— 同一份只读脚本采集，server 30 秒缓存，本页每分钟自动刷新</div>
+                      <div class="kh-sub">主机资源 · systemd / pm2 服务 · worker ↔ KidsHubAI-VoiceKit 连接 —— 状态与采集结果分别展示，本页每分钟自动刷新</div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center">
                       <span style="font-size:12px;color:#909399">数据采集于 {{ hostsStatus.ts ? hsAgo(hostsStatus.ts) : '—' }}{{ hostsStatus.fetchedAt ? ('，页面 ' + hostsStatus.fetchedAt + ' 拉取') : '' }}</span>
@@ -2271,13 +2271,14 @@
                     </div>
                   </div>
                   <el-alert v-if="hostsStatus.error" :title="hostsStatus.error" type="error" :closable="false" style="margin-bottom:12px"></el-alert>
-                  <div v-for="h in hostsStatus.hosts" :key="h.id" class="kh-card" style="padding:14px;margin-bottom:14px">
+                  <div v-for="h in hostsStatus.hosts" :key="h.id" class="kh-card" style="padding:14px;margin-bottom:14px;min-width:0;overflow-wrap:anywhere">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-                      <div style="font-size:14px;font-weight:700">{{ h.label }} <el-tag size="small" :type="h.ok ? 'success' : 'danger'" style="margin-left:6px">{{ h.ok ? '可达' : '不可达' }}</el-tag></div>
-                      <div style="font-size:12px;color:#909399">采集 {{ hsAgo(h.fetched_at_ms) }}{{ h.latency_ms != null ? ('，耗时 ' + h.latency_ms + ' ms') : '' }}{{ h.data && h.data.hostname ? ('，主机 ' + h.data.hostname) : '' }}</div>
+                      <div style="font-size:14px;font-weight:700">{{ h.label }} <el-tag size="small" :type="hsCollectionType(h)" style="margin-left:6px">{{ hsCollectionLabel(h) }}</el-tag></div>
+                      <div style="font-size:12px;color:#909399">采集 {{ hsAgo(h.fetched_at_ms) }}{{ h.latency_ms != null ? ('，往返 ' + h.latency_ms + ' ms') : '' }}{{ h.data && h.data.collect_ms != null ? ('，脚本 ' + h.data.collect_ms + ' ms') : '' }}{{ h.data && h.data.hostname ? ('，主机 ' + h.data.hostname) : '' }}</div>
                     </div>
-                    <div v-if="!h.ok" style="color:#E8503A;font-size:13px">采集失败：{{ h.error || '未知' }}</div>
+                    <div v-if="!h.ok" style="color:#E8503A;font-size:13px;overflow-wrap:anywhere">采集失败：{{ h.error || '未知' }}</div>
                     <template v-else-if="h.data">
+                      <div v-if="h.data.journal_cache" style="font-size:12px;margin-bottom:8px;overflow-wrap:anywhere" :style="{color: h.data.journal_cache.state === 'fresh' ? '#909399' : '#E8833A'}">{{ hsJournalCacheLabel(h.data.journal_cache) }}</div>
                       <div style="font-size:13px;line-height:1.9;margin-bottom:8px">
                         开机 <b>{{ hsDur(h.data.host && h.data.host.uptime_s) }}</b> · 负载 <b>{{ hsNum(h.data.host && h.data.host.load1) }}</b> / {{ hsNum(h.data.host && h.data.host.load5) }} / {{ hsNum(h.data.host && h.data.host.load15) }}（{{ hsNum(h.data.host && h.data.host.nproc) }} 核）· 内存可用 <b>{{ hsGb(h.data.host && h.data.host.mem_avail_mb) }}</b> / {{ hsGb(h.data.host && h.data.host.mem_total_mb) }} · 系统盘已用 <b :style="{color: h.data.host && h.data.host.disk_root_used_pct > 85 ? '#E8503A' : '#1F2933'}">{{ h.data.host && h.data.host.disk_root_used_pct != null ? h.data.host.disk_root_used_pct + '%' : '—' }}</b>（剩 {{ h.data.host && h.data.host.disk_root_avail_gb != null ? h.data.host.disk_root_avail_gb + 'G' : '—' }}）
                       </div>
@@ -2301,15 +2302,15 @@
                         <el-table-column label="连接" width="100"><template #default="{row}"><el-tag size="small" :type="hsLinkType(row)">{{ hsLinkLabel(row) }}</el-tag></template></el-table-column>
                         <el-table-column label="注册于" width="230"><template #default="{row}">{{ row.registered_at_ms ? (fmtTs(row.registered_at_ms) + '（' + hsAgo(row.registered_at_ms) + '）') : '—' }}</template></el-table-column>
                         <el-table-column label="最近断线" width="230"><template #default="{row}">{{ row.last_failure_at_ms ? (fmtTs(row.last_failure_at_ms) + '（' + hsAgo(row.last_failure_at_ms) + '）') : '—' }}</template></el-table-column>
-                        <el-table-column label="断线 24h / 本代" width="120"><template #default="{row}">{{ row.failures_24h }} / {{ row.failures_window }}</template></el-table-column>
-                        <el-table-column label="注册后连续失败" width="120"><template #default="{row}"><span :style="{color: row.consecutive_failures_since_register > 0 ? '#E8503A' : '#1F2933'}">{{ row.consecutive_failures_since_register }}</span></template></el-table-column>
-                        <el-table-column label="放弃退出(本代)" width="120"><template #default="{row}"><span :style="{color: row.give_ups_window > 0 ? '#E8503A' : '#1F2933', fontWeight: row.give_ups_window > 0 ? 700 : 400}">{{ row.give_ups_window }}</span></template></el-table-column>
-                        <el-table-column label="24h 接房" width="90"><template #default="{row}">{{ row.job_accepts_24h }}</template></el-table-column>
+                        <el-table-column label="断线 24h / 本代" width="120"><template #default="{row}">{{ hsNum(row.failures_24h) }} / {{ hsNum(row.failures_window) }}</template></el-table-column>
+                        <el-table-column label="注册后连续失败" width="120"><template #default="{row}"><span :style="{color: row.consecutive_failures_since_register > 0 ? '#E8503A' : '#1F2933'}">{{ hsNum(row.consecutive_failures_since_register) }}</span></template></el-table-column>
+                        <el-table-column label="放弃退出(本代)" width="120"><template #default="{row}"><span :style="{color: row.give_ups_window > 0 ? '#E8503A' : '#1F2933', fontWeight: row.give_ups_window > 0 ? 700 : 400}">{{ hsNum(row.give_ups_window) }}</span></template></el-table-column>
+                        <el-table-column label="24h 接房" width="90"><template #default="{row}">{{ hsNum(row.job_accepts_24h) }}</template></el-table-column>
                         <el-table-column label="最近错误" min-width="220"><template #default="{row}"><span style="font-size:12px;color:#909399">{{ row.last_failure_error || '—' }}</span></template></el-table-column>
                       </el-table>
                       <el-table v-if="h.data.sidecars && h.data.sidecars.length" :data="h.data.sidecars" size="small" style="width:100%;margin-bottom:8px">
                         <el-table-column label="判停 / 声纹边车（EOT sidecar）" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.unit }}</span></template></el-table-column>
-                        <el-table-column label="状态" width="110"><template #default="{row}"><el-tag size="small" :type="row.state === 'ok' ? 'success' : (row.state === 'degraded' ? 'warning' : (row.state === 'unit_inactive' ? 'info' : 'danger'))">{{ row.state === 'ok' ? '正常' : (row.state === 'degraded' ? '有告警' : (row.state === 'unit_inactive' ? 'worker 未运行' : '缺失')) }}</el-tag></template></el-table-column>
+                        <el-table-column label="状态" width="160"><template #default="{row}"><el-tag size="small" :type="hsSidecarType(row)">{{ hsSidecarLabel(row) }}</el-tag></template></el-table-column>
                         <el-table-column label="socket" min-width="230"><template #default="{row}"><span style="font-family:monospace;font-size:12px">{{ row.sock || '—' }}</span><span v-if="row.sock" :style="{color: row.listening ? '#3DBE78' : '#E8503A', marginLeft: '6px'}">{{ row.listening ? '在听' : '无监听' }}</span><span v-if="row.shared_with && row.shared_with.length" style="color:#E8833A;font-size:12px;margin-left:6px">共用：{{ row.shared_with.join('、') }}</span></template></el-table-column>
                         <el-table-column label="进程" width="200"><template #default="{row}">{{ row.pid ? ('pid ' + row.pid + ' · ' + hsMb(row.rss_bytes) + ' · 存活 ' + hsDur(row.age_s)) : '—' }}</template></el-table-column>
                         <el-table-column label="归属" width="150"><template #default="{row}">{{ row.pid ? (row.spawned_by_this_worker ? '本 worker 拉起' : ('由 ' + (row.owner_unit || '其它进程') + ' 拉起')) : '—' }}</template></el-table-column>
@@ -2330,13 +2331,13 @@
                       <el-table-column label="最近一句" min-width="200"><template #default="{row}"><span style="font-size:12px">{{ row.last_text || '—' }}</span><span style="font-size:12px;color:#909399;margin-left:6px">{{ row.last_ms ? hsAgo(row.last_ms) : '' }}</span></template></el-table-column>
                       </el-table>
                       <el-table v-if="d.misfire_suspects.length" :data="d.misfire_suspects" size="small" style="width:100%;margin-bottom:6px">
-                      <el-table-column label="误触发嫌疑（慢路提案但原话无设备词根）" min-width="260"><template #default="{row}"><span style="font-size:12px">{{ row.text }}</span></template></el-table-column>
+                      <el-table-column label="误触发嫌疑（慢路提案但原话无设备词根）" min-width="260"><template #default="{row}"><span style="font-size:12px">{{ row.text || '原话不保存在监控缓存' }}</span></template></el-table-column>
                       <el-table-column label="设备" width="120"><template #default="{row}"><span style="font-family:monospace">{{ row.sn }}</span></template></el-table-column>
                       <el-table-column label="标签" width="70"><template #default="{row}">{{ row.label }}</template></el-table-column>
                       <el-table-column label="结果" width="130"><template #default="{row}">{{ row.status }}</template></el-table-column>
                       <el-table-column label="时间" width="170"><template #default="{row}">{{ fmtTs(row.ts_ms) }}</template></el-table-column>
                       </el-table>
-                      <div v-if="d.recent.length" style="font-size:12px;color:#6B7785">最近提案：<span v-for="(r,i) in d.recent" :key="i" style="margin-right:10px">{{ fmtTs(r.ts_ms) }} {{ r.sn }} 「{{ r.text }}」→{{ r.label }} {{ r.lane }} {{ r.status }}</span></div>
+                      <div v-if="d.recent.length" style="font-size:12px;color:#6B7785">最近提案：<span v-for="(r,i) in d.recent" :key="i" style="margin-right:10px">{{ fmtTs(r.ts_ms) }} {{ r.sn }} {{ r.text ? ('「' + r.text + '」') : '（原话不保存在监控缓存）' }} →{{ r.label }} {{ r.lane }} {{ r.status }}</span></div>
                       <div v-else style="font-size:12px;color:#909399">24h 内无设备命令提案</div>
                       </div>
                       </template>
@@ -2346,7 +2347,7 @@
                         <div style="font-size:12px;color:#6B7785">最近事件：<span v-for="(e,i) in h.data.connections.livekit.last_events" :key="i" style="margin-right:10px">{{ fmtTs(e.ts_ms) }} {{ e.type === 'registered' ? '注册' : '注销' }} {{ e.agent || '' }}</span><span v-if="!h.data.connections.livekit.last_events.length">7 天内无</span></div>
                       </template>
                       <div v-if="h.data.connections && h.data.connections.health" style="font-size:13px">/health <b :style="{color: h.data.connections.health.status === 200 ? '#3DBE78' : '#E8503A'}">{{ h.data.connections.health.status || '失败' }}</b>{{ h.data.connections.health.ms != null ? ('（' + h.data.connections.health.ms + ' ms）') : '' }} · 监听 <span v-for="(v,k) in h.data.connections.listen" :key="k" style="margin-right:6px"><el-tag size="small" :type="v ? 'success' : 'danger'">:{{ k }}</el-tag></span></div>
-                      <div v-if="h.data.errors && h.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:6px">采集告警：{{ h.data.errors.join('；') }}</div>
+                      <div v-if="h.data.errors && h.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:6px;overflow-wrap:anywhere">部分采集失败：{{ h.data.errors.join('；') }}</div>
                     </template>
                   </div>
                   <div v-if="!hostsStatus.hosts.length && !hostsStatus.loading && !hostsStatus.error" style="color:#999;font-size:13px">暂无数据</div>
@@ -2359,25 +2360,28 @@
                     </div>
                     <el-button size="small" :loading="deviceData.loading || workerStats.loading" @click="loadDevices(); loadDeviceSessions(); loadWorkerStats()">刷新</el-button>
                   </div>
+                  <el-alert v-if="workerStats.error" :title="'本次采集请求失败，容量暂不可用；资源卡保留上次采集结果：' + workerStats.error" type="warning" :closable="false" style="margin-bottom:12px;overflow-wrap:anywhere"></el-alert>
                   <div class="stat-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px">
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">台账设备（env 兜底另计 {{ deviceData.envAllow.length }}）</div><div style="font-size:26px;font-weight:800;color:#3B7A99">{{ deviceData.devices.length }}</div></div>
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日 Session</div><div style="font-size:26px;font-weight:800;color:#3DBE78">{{ deviceData.stats.today_ok }}</div></div>
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日拒绝（403/429）</div><div style="font-size:26px;font-weight:800;color:#E8833A">{{ deviceData.stats.today_rejected }}</div></div>
                     <div class="kh-card" style="padding:14px">
-                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity ? workerStats.capacity.max_jobs : '—' }}{{ workerStats.breakdown }}）</div>
-                      <div v-if="workerStats.capacity" style="font-size:26px;font-weight:800" :style="{color: workerStats.capacity.remaining > 1 ? '#3DBE78' : (workerStats.capacity.remaining === 1 ? '#E8833A' : '#E8503A')}">{{ workerStats.capacity.remaining }}<span style="font-size:13px;color:#909399;font-weight:400"> / 在线 {{ workerStats.capacity.active_total }} 房</span></div>
+                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity && !workerStats.error ? workerStats.capacity.max_jobs : '—' }}{{ workerStats.error ? '' : workerStats.breakdown }}）</div>
+                      <div v-if="workerStats.capacity && !workerStats.error" style="font-size:26px;font-weight:800" :style="{color: workerStats.capacity.remaining > 1 ? '#3DBE78' : (workerStats.capacity.remaining === 1 ? '#E8833A' : '#E8503A')}">{{ workerStats.capacity.remaining }}<span style="font-size:13px;color:#909399;font-weight:400"> / 在线 {{ workerStats.capacity.active_total }} 房</span></div>
                       <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
-                    <div class="kh-card" style="padding:14px" v-for="m in workerStats.machines" :key="m.id">
+                    <div class="kh-card" style="padding:14px;min-width:0;overflow-wrap:anywhere" v-for="m in workerStats.machines" :key="m.id">
                       <div style="font-size:12px;color:#6B7785">Worker 实时资源 · {{ m.label }}</div>
                       <template v-if="m.ok && m.data">
                         <div style="font-size:13px;margin-top:4px;line-height:1.9">
-                          内存可用 <b>{{ (m.data.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (m.data.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ m.data.load1 }}</b>/{{ m.data.nproc }}核 · 并发上限 <b>{{ m.data.max_jobs == null ? '—' : m.data.max_jobs }}</b><br/>
-                          rust <b>{{ Math.round(m.data.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(m.data.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="m.data.rust_active==='active' ? 'success' : 'danger'">{{ m.data.rust_active }}</el-tag>
+                          内存可用 <b>{{ hsGb(m.data.mem_avail_mb) }}</b> / {{ hsGb(m.data.mem_total_mb) }} · 负载 <b>{{ hsNum(m.data.load1) }}</b>/{{ hsNum(m.data.nproc) }}核 · 并发上限 <b>{{ m.data.max_jobs == null ? '—' : m.data.max_jobs }}</b><br/>
+                          rust <b>{{ hsMb(m.data.rust_mem_bytes) }}</b>/{{ hsMb(m.data.rust_mem_high_bytes) }} 上限 · <el-tag size="small" :type="hsSvcType({active_state:m.data.rust_active})">{{ m.data.rust_active || '未确认' }}</el-tag>
                         </div>
-                        <div style="font-size:11px;color:#B0B8C4;margin-top:2px">更新于 {{ workerStats.fetchedAt || '—' }} · 每分钟自动刷新</div>
+                        <div v-if="m.data.journal_cache" style="font-size:12px;margin-top:4px;overflow-wrap:anywhere;max-height:8em;overflow:auto" :style="{color: m.data.journal_cache.state === 'fresh' ? '#909399' : '#E8833A'}">{{ hsJournalCacheLabel(m.data.journal_cache) }}</div>
+                        <div v-if="m.data.errors && m.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:4px;overflow-wrap:anywhere;max-height:8em;overflow:auto">部分采集失败：{{ m.data.errors.join('；') }}</div>
+                        <div style="font-size:11px;color:#909399;margin-top:2px">采集 {{ hsAgo(m.data.collected_at_ms || (m.data.ts ? m.data.ts * 1000 : 0)) }}{{ m.data.collect_ms != null ? (' · 脚本 ' + m.data.collect_ms + ' ms') : '' }} · 页面 {{ workerStats.fetchedAt || '—' }} 拉取</div>
                       </template>
-                      <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : ('暂不可用' + (m.error ? '：' + m.error : '')) }}</div>
+                      <div v-else style="font-size:14px;color:#E8503A;padding-top:6px;overflow-wrap:anywhere;max-height:8em;overflow:auto">{{ workerStats.loading ? '加载中…' : ('采集失败' + (m.error ? '：' + m.error : '')) }}</div>
                     </div>
                     <div class="kh-card" style="padding:14px" v-if="!workerStats.machines.length">
                       <div style="font-size:12px;color:#6B7785">Worker 服务器实时资源</div>
@@ -5594,13 +5598,13 @@
           var d = (deviceData.devices || []).find(function (x) { return x.sn === sn; });
           return d && d.note ? d.note + ' · ' + sn : sn;
         }
-        function devcfgUnit(k) { return k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : ''); }
+        function devcfgUnit(k) { return k && k.unit === 'ms' ? '毫秒' : (k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : '')); }
         function devcfgSpec(key) { for (var i = 0; i < devcfg.keys.length; i++) if (devcfg.keys[i].key === key) return devcfg.keys[i]; return null; }
         function devcfgOverridesFor(k) { return devcfg.overrides.filter(function (o) { return o.key === k.key; }); }
-        function devcfgValid(k, v) { if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
-        function devcfgRangeMsg(k) { if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
+        function devcfgValid(k, v) { if (k.key === 'voice.session_idle_timeout_ms') return Number.isInteger(v) && (v === 0 || (v >= 5000 && v <= 300000)); if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
+        function devcfgRangeMsg(k) { if (k.key === 'voice.session_idle_timeout_ms') return '取值须为0（不下发）或5000至300000之间的整数毫秒'; if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
         // bool 键（2026-09-19 diagnostics.log_upload_enabled 起）：值是 true/false，展示为 开/关，编辑走开关/下拉不走数字框
-        function devcfgFmtVal(k, v) { return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
+        function devcfgFmtVal(k, v) { if (k && k.key === 'voice.session_idle_timeout_ms' && v === 0) return '不下发（保留设备现有策略）'; return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
         function devcfgFmtMin(sec) {
           var n = Number(sec);
           if (!isFinite(n) || n <= 0) return '—';
@@ -5954,21 +5958,21 @@
         });
         // worker 运行态（容量 = VoiceKit 活跃房 vs 各 worker 机 WORKER_MAX_JOBS 之和；机器资源 = 各台只读 stats）
         // 2026-09-22 迁 hk2：worker 可多台（machines[]），容量卡按各台 max_jobs 求和并给明细（breakdown）
-        var workerStats = reactive({ machine: null, machines: [], breakdown: '', capacity: null, loading: false, fetchedAt: '' });
+        var workerStats = reactive({ machine: null, machines: [], breakdown: '', capacity: null, loading: false, fetchedAt: '', error: '' });
         function loadWorkerStats() {
           if (!canManageInvites.value) return;
           workerStats.loading = true;
           deviceApi('/api/admin/worker-stats', { method: 'GET' })
             .then(function (data) {
               if (data && data.ok) {
-                workerStats.machine = data.machine; workerStats.capacity = data.capacity;
-                workerStats.machines = data.machines || (data.machine ? [{ id: '64.90', label: '64.90', host: '64.90.13.117', ok: true, error: null, data: data.machine }] : []);
+                workerStats.machine = data.machine; workerStats.capacity = data.capacity; workerStats.error = '';
+                workerStats.machines = data.machines || (data.machine ? [{ id: '64.90', label: 'voice-worker-hk2', host: '64.90.13.177', ok: true, error: null, data: data.machine }] : []);
                 var pm = (data.capacity && data.capacity.per_machine) || [];
                 workerStats.breakdown = pm.length > 1 ? ' = ' + pm.map(function (m) { return m.max_jobs == null ? '?' : m.max_jobs; }).join(' + ') : '';
                 workerStats.fetchedAt = new Date().toTimeString().slice(0, 8);
-              }
+              } else { workerStats.error = (data && data.error) || '服务响应异常'; }
             })
-            .catch(function () { /* 监控拉不到不打扰管理操作 */ })
+            .catch(function () { workerStats.error = '网络或登录态异常'; })
             .finally(function () { workerStats.loading = false; });
         }
         // 资源卡自动轮询(2026-08-27:此前只在进页时拉一次,标签页挂一晚显示的还是打开时刻的
@@ -5978,8 +5982,8 @@
           if (document.visibilityState === 'visible' && canManageInvites.value) loadWorkerStats();
         }, 60000);
         // ── 服务器状态 tab（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）──
-        // 数据链：/api/admin/hosts-status（server 30s 共享缓存）← 三台机同一份只读脚本 ops/host-stats.py
-        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 voicekit-stats 只读通道）。单台失败只标该台不可达。
+        // 数据链：/api/admin/hosts-status（server 30s 共享缓存）← 各主机同一份只读脚本 ops/host-stats.py
+        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 voicekit-stats 只读通道）。采集失败与服务运行状态分开显示。
         var hostsStatus = reactive({ hosts: [], loading: false, fetchedAt: '', ts: 0, error: '' });
         function loadHostsStatus(fresh) {
           if (!canManageInvites.value) return;
@@ -6013,9 +6017,18 @@
         function hsNum(v) { return (v == null || v === '') ? '—' : v; }
         function hsMb(b) { return b == null ? '—' : Math.round(b / 1048576) + 'M'; }
         function hsGb(mb) { return mb == null ? '—' : (mb / 1024).toFixed(1) + 'G'; }
-        function hsSvcType(s) { return s.active_state === 'active' ? 'success' : (s.active_state === 'failed' ? 'danger' : 'warning'); }
+        function hsJournalCacheLabel(c) {
+          if (c.state === 'fresh') return '日志统计更新于 ' + hsAgo(c.collected_at_ms) + ' · 每分钟更新';
+          var label = c.state === 'stale' ? '日志统计已过期' : (c.state === 'error' ? '日志统计更新失败' : (c.state === 'generation_mismatch' ? '日志统计暂不可用（worker 已换代）' : '日志统计暂不可用'));
+          return label + (c.collected_at_ms ? (' · 上次更新 ' + hsAgo(c.collected_at_ms)) : '') + (c.error ? (' · ' + c.error) : '');
+        }
+        function hsCollectionType(h) { return !h.ok || !h.data ? 'danger' : (h.data.errors && h.data.errors.length ? 'warning' : 'success'); }
+        function hsCollectionLabel(h) { return !h.ok || !h.data ? '采集失败' : (h.data.errors && h.data.errors.length ? '部分采集失败' : '采集成功'); }
+        function hsSidecarType(s) { return s.state === 'ok' ? (s.journal_ok === false ? 'warning' : 'success') : (s.state === 'degraded' ? 'warning' : (s.state === 'missing' ? 'danger' : 'info')); }
+        function hsSidecarLabel(s) { return s.state === 'ok' ? (s.journal_ok === false ? '进程在线，日志未知' : '正常') : (s.state === 'degraded' ? '有告警' : (s.state === 'unit_inactive' ? 'worker 未运行' : (s.state === 'missing' ? '缺失' : '未确认'))); }
+        function hsSvcType(s) { return s.active_state === 'active' ? 'success' : (s.active_state === 'failed' ? 'danger' : (!s.active_state || s.active_state === 'unknown' ? 'info' : 'warning')); }
         function hsLinkType(l) { return l.state === 'registered' ? 'success' : (l.state === 'reconnecting' ? 'danger' : 'info'); }
-        function hsLinkLabel(l) { return l.state === 'registered' ? '已注册' : (l.state === 'reconnecting' ? '重连中' : '无事件'); }
+        function hsLinkLabel(l) { return l.state === 'registered' ? '已注册' : (l.state === 'reconnecting' ? '重连中' : '未确认'); }
         var deviceAdd = reactive({ sn: '', note: '', phone: '' });
         // ── 后台预授权自动认领 v1（2026-09-06）：待认领列表 + 一键确认 + 预授权；API 见 admin-data.ts /devices/pairing/pending、/devices/:sn/preauth、/devices/:sn/pairing/confirm ──
         var pairingPending = reactive({ items: [], loading: false, enabled: true, phone: {} });
@@ -8260,7 +8273,7 @@
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
-          workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS, hostsStatus: hostsStatus, loadHostsStatus: loadHostsStatus, hsAgo: hsAgo, hsDur: hsDur, hsMb: hsMb, hsGb: hsGb, hsNum: hsNum, hsSvcType: hsSvcType, hsLinkType: hsLinkType, hsLinkLabel: hsLinkLabel,
+          workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS, hostsStatus: hostsStatus, loadHostsStatus: loadHostsStatus, hsAgo: hsAgo, hsDur: hsDur, hsMb: hsMb, hsGb: hsGb, hsNum: hsNum, hsSvcType: hsSvcType, hsLinkType: hsLinkType, hsLinkLabel: hsLinkLabel, hsCollectionType: hsCollectionType, hsCollectionLabel: hsCollectionLabel, hsJournalCacheLabel: hsJournalCacheLabel, hsSidecarType: hsSidecarType, hsSidecarLabel: hsSidecarLabel,
           release: release, loadRelease: loadRelease, applyPolicy: applyPolicy, clearPolicyOverride: clearPolicyOverride, todoOpen: todoOpen, todoClosed: todoClosed, addTodo: addTodo, setTodoStatus: setTodoStatus, policySourceLabel: policySourceLabel,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaEditNotes: otaEditNotes, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
           devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, devcfgFmtVal: devcfgFmtVal, diaglog: diaglog, loadDiaglog: loadDiaglog, loadDiaglogEvents: loadDiaglogEvents, setDiaglogSwitch: setDiaglogSwitch, clearDiaglogOverride: clearDiaglogOverride, dlLevelType: dlLevelType, dlAgo: dlAgo, dlSkew: dlSkew, dlJson: dlJson, dlAllowlistLabel: dlAllowlistLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
