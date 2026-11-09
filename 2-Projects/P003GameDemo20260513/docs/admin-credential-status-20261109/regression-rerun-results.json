@@ -1,0 +1,54 @@
+[
+  {
+    "test": "device-registry.test.ts",
+    "exit": 0,
+    "seconds": 5.13,
+    "tail": [
+      "  ok  G3 \u91cd\u65b0\u6dfb\u52a0 = \u65b0\u8bbe\u5907\uff1a\u65e7\u51ed\u636e\u4ecd 401\uff0c\u91cd\u65b0\u7b7e\u53d1\u7684\u65b0\u51ed\u636e 200",
+      "  ok  G4 \u8d1f\u951a\uff1a\u4ece\u672a\u5220\u9664\u8fc7\u7684\u8bbe\u5907\uff0c\u65e0 iat token \u7167\u5e38\u653e\u884c\uff08\u5b58\u91cf\u771f\u673a\u4e0d\u53d7\u5f71\u54cd\uff09",
+      "  ok  G5 \u5220\u9664\u5ba1\u8ba1\u65e5\u5fd7\u547d\u4e2d\u4e14\u4e0d\u542b JWT",
+      "  ok  F1 \u8def\u7531\u65e5\u5fd7\u65e0 JWT + \u7b7e\u53d1\u5ba1\u8ba1\u6b63\u951a\u547d\u4e2d",
+      "",
+      "28 passed / 0 failed"
+    ]
+  },
+  {
+    "test": "pairing.test.ts",
+    "exit": 0,
+    "seconds": 5.81,
+    "tail": [
+      "[pairing] announce sn=BJP00326060100000901 outcome=replaced auto=no_preauth state=pending ttl=600 v=3",
+      "[pairing] confirm rejected sn=BJP00326060100000901 reason=sn_bound_by_other",
+      "[pairing] parent request_id=346162ce-b47e-4370-b50f-b6419a6dbda5 path=/api/parent/pairing/confirm status=409",
+      "[pairing] claim request_id=e302fc18-c259-40b9-89cb-e02f426d213c status=404",
+      "",
+      "pairing.test: pass=148 fail=0"
+    ]
+  },
+  {
+    "test": "ble-binding-http.test.ts",
+    "exit": 0,
+    "seconds": 2.15,
+    "tail": [
+      "[pairing] claim request_id=1bcb8e99-1762-447a-9a8e-73a8744b9daf status=200",
+      "[device-session] prefetch sn=BJP00326110200000001 prefetch=c4e02ec5-a5cd-42e5-a043-f39daa963394",
+      "[pairing] claim request_id=fed4d732-0525-40e0-93dc-21ae11f35646 status=200",
+      "[pairing] claim request_id=576cabeb-2beb-4be3-a83d-e1ac36e515ca status=409",
+      "PASS BLE HTTP: proof/bind/Brain/isolation/legacy gates/ECIES/activation/idempotence/ownership revocation",
+      "[ble-binding] brain_initializing binding_id=LwztcMrKFIDYhtG5ZCOHRLZC"
+    ]
+  },
+  {
+    "test": "simple-binding.test.ts",
+    "exit": 0,
+    "seconds": 2.09,
+    "tail": [
+      "PASS 6 disabled and deleted history are not resurrected by auto-registration",
+      "[profile] bind request_id=fbb984e6-1d21-4210-9d09-f205a3aa4d28 status=403",
+      "PASS 7 device-role JWT cannot bind or confirm for parents",
+      "PASS 8 existing unversioned legacy credential compatibility",
+      "PASS 8 groups; private fixtures /tmp/codeg-acp/63255-68dbbe24/p003-simple-binding-afvJYG",
+      "[profile] bound; Brain initialization pending"
+    ]
+  }
+]

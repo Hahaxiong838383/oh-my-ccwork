@@ -1,0 +1,18 @@
+{
+  "ble_count": 1,
+  "c": [
+    {
+      "suffix": "02000031",
+      "state": "available",
+      "issued_at_ms": 1793931289720,
+      "authenticated_at_ms": 1793931290187,
+      "pairing": {
+        "state": "claim_expired",
+        "bound_at_ms": 1793955222341,
+        "claim_deadline_ms": 1793955822341,
+        "claimed_at_ms": null,
+        "authenticated_at_ms": null
+      }
+    }
+  ]
+}

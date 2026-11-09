@@ -1,0 +1,59 @@
+{
+  "at": "2026-11-09T01:02:10.934484+00:00",
+  "candidate": "97f13f08ff060afac57a24613a80c8b6cd3f3a6f",
+  "backup": "/opt/p003/_backup/admin-credential-view-20261109T010208Z",
+  "health": {
+    "status": "ok"
+  },
+  "rooms_before": {
+    "device_rooms": 0,
+    "total_rooms": 0
+  },
+  "file_hashes": {
+    "/opt/p003/server/src/admin-device-credential-status.ts": "bf9e13f722dd0e31dd7ca889b26a4bb54c42196876ef26eedc8efff7e644d3e6",
+    "/opt/p003/server/src/routes/admin-data.ts": "056e9d3c1c7ee23f9654aee25e88bf221e6ba26d465e5c4d580bd7d868395d77",
+    "/opt/p003/web/dist/admin/index.html": "240bea050f9f8045b1f7ea00274422e6f2608710da2432306ece2e704ab91170"
+  },
+  "state_unchanged": null,
+  "core_source_unchanged": true,
+  "state_hashes_before": null,
+  "state_hashes_after": null,
+  "original_api_field_diffs": {},
+  "device_count": 18,
+  "c_ble_status": {
+    "state": "available",
+    "issued_at_ms": 1793931289720,
+    "authenticated_at_ms": 1793931290187,
+    "pairing": {
+      "state": "claim_expired",
+      "bound_at_ms": 1793955222341,
+      "claim_deadline_ms": 1793955822341,
+      "claimed_at_ms": null,
+      "authenticated_at_ms": null
+    }
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 787770,
+      "status": "online",
+      "uptime": 1794186128742,
+      "restarts": 57
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "status": "online",
+      "uptime": 1789165045850,
+      "restarts": 0
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 196818,
+      "status": "online",
+      "uptime": 1793870436043,
+      "restarts": 11
+    }
+  ],
+  "verification_note": "State hash helper omitted its return in the initial release script; null==null is invalid evidence. Original admin fields matched exactly; independently rechecking stored predeployment C registry/identity/receipt snapshots."
+}

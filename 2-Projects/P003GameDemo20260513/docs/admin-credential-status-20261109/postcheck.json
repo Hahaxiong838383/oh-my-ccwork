@@ -1,0 +1,93 @@
+{
+  "at": "2026-11-09T01:03:54.245321+00:00",
+  "health": [
+    200,
+    {
+      "status": "ok"
+    }
+  ],
+  "admin_anonymous_status": 401,
+  "authenticated_admin_status": 200,
+  "original_api_fields_unchanged": true,
+  "c_predeployment_snapshot_checks": {
+    "devices.device_registry": {
+      "matches": true,
+      "rows": 1,
+      "fields": 11
+    },
+    "devices.device_credential_revocation": {
+      "matches": true,
+      "rows": 0
+    },
+    "devices.device_binding_state": {
+      "matches": true,
+      "rows": 1,
+      "fields": 3
+    },
+    "devices.device_identity_key": {
+      "matches": true,
+      "rows": 1,
+      "fields": 6
+    },
+    "devices.ble_binding_challenge": {
+      "matches": true,
+      "rows": 7,
+      "fields": 10
+    },
+    "devices.ble_binding_receipt": {
+      "matches": true,
+      "rows": 6,
+      "fields": 11
+    },
+    "devices.device_identity_statement": {
+      "matches": true,
+      "rows": 0
+    },
+    "devices.device_enrollment_challenge": {
+      "matches": true,
+      "rows": 1,
+      "fields": 7
+    },
+    "pairing.pairing_session": {
+      "matches": true,
+      "rows": 0
+    }
+  },
+  "public_html_status": 200,
+  "public_html_sha256": "240bea050f9f8045b1f7ea00274422e6f2608710da2432306ece2e704ab91170",
+  "c_ble_status": {
+    "state": "available",
+    "issued_at_ms": 1793931289720,
+    "authenticated_at_ms": 1793931290187,
+    "pairing": {
+      "state": "claim_expired",
+      "bound_at_ms": 1793955222341,
+      "claim_deadline_ms": 1793955822341,
+      "claimed_at_ms": null,
+      "authenticated_at_ms": null
+    }
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 787770,
+      "status": "online",
+      "restarts": 57,
+      "uptime_seconds": 105.5
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1626403,
+      "status": "online",
+      "restarts": 0,
+      "uptime_seconds": 5021188.4
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 196818,
+      "status": "online",
+      "restarts": 11,
+      "uptime_seconds": 315798.2
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "restore_originals": true,
+  "remove_only_new_module": true,
+  "concurrent_drift_rejected": true,
+  "production_touched": false
+}

@@ -1,0 +1,13 @@
+{
+  "candidate": "97f13f08ff060afac57a24613a80c8b6cd3f3a6f",
+  "private_evidence_directory": "/Users/fu-121/.local/state/p003-admin-credential-view-20261109",
+  "logs": {
+    "status-test.log": "b66f296920c482e56455edc83e9d67381ac3513b0ddce8c1a78e70e4f2b57ce6",
+    "ui-test.log": "11ff1277469897c9aac1a0f204f331844c5081afdef35f798672164e8454c417",
+    "production-node22-admin-device-credential-status.test.ts.log": "fa2cefd24f029c6d8d68c257c7de783ff544897a1a668f8f1da51989cc65b6b5",
+    "production-node22-ble-binding-http.test.ts.log": "17afbe0fd06b5f89fc039c57dcbf57b7f6bd60addb7a8139bc888e14975fdf09",
+    "production-node22-simple-binding.test.ts.log": "519b617cd062e0d747987a122effa549893b20c9d5fccb4a2ad37c25e8e6738f"
+  },
+  "screenshot_sha256": "b0350794f23d466433b9d8c8bd270cae0213f5d4017a306139f388fc4b9654d8",
+  "production_html_sha256": "240bea050f9f8045b1f7ea00274422e6f2608710da2432306ece2e704ab91170"
+}

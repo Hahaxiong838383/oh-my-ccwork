@@ -1,0 +1,35 @@
+{
+  "stage": "/opt/p003/_staging/admin-credential-view-97f13f08",
+  "sha": "97f13f08ff060afac57a24613a80c8b6cd3f3a6f",
+  "node": "v22.22.2",
+  "tests": [
+    {
+      "test": "admin-device-credential-status.test.ts",
+      "exit": 0,
+      "tail": [
+        "PASS 15/15 admin credential status checks",
+        "(node:786590) ExperimentalWarning: SQLite is an experimental feature and might change at any time",
+        "(Use `node --trace-warnings ...` to show where the warning was created)"
+      ]
+    },
+    {
+      "test": "ble-binding-http.test.ts",
+      "exit": 0,
+      "tail": [
+        "(node:786610) ExperimentalWarning: SQLite is an experimental feature and might change at any time",
+        "(Use `node --trace-warnings ...` to show where the warning was created)",
+        "[ble-binding] brain_initializing binding_id=pCaVa9RpKp9AxkEgbxE20J7Z"
+      ]
+    },
+    {
+      "test": "simple-binding.test.ts",
+      "exit": 0,
+      "tail": [
+        "(node:786629) ExperimentalWarning: SQLite is an experimental feature and might change at any time",
+        "(Use `node --trace-warnings ...` to show where the warning was created)",
+        "[profile] bound; Brain initialization pending"
+      ]
+    }
+  ],
+  "runtime_files_untouched": true
+}

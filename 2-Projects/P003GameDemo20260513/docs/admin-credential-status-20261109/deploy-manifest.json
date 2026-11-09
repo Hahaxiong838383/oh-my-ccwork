@@ -1,0 +1,23 @@
+{
+  "sha": "97f13f08ff060afac57a24613a80c8b6cd3f3a6f",
+  "files": [
+    {
+      "relative": "apps/server/src/admin-device-credential-status.ts",
+      "target": "/opt/p003/server/src/admin-device-credential-status.ts",
+      "before": null,
+      "after": "bf9e13f722dd0e31dd7ca889b26a4bb54c42196876ef26eedc8efff7e644d3e6"
+    },
+    {
+      "relative": "apps/server/src/routes/admin-data.ts",
+      "target": "/opt/p003/server/src/routes/admin-data.ts",
+      "before": "64e39b14312c0371722069be5b9d417278328854547d7e9db6894f41048f7d38",
+      "after": "056e9d3c1c7ee23f9654aee25e88bf221e6ba26d465e5c4d580bd7d868395d77"
+    },
+    {
+      "relative": "apps/web/public/admin/index.html",
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "before": "88c93913a380a56af9a92fd044088ce54a2f3e4b7e579e8fe40eebc792339189",
+      "after": "240bea050f9f8045b1f7ea00274422e6f2608710da2432306ece2e704ab91170"
+    }
+  ]
+}
