@@ -66,20 +66,34 @@ impl PlayoutControl {
     }
 
     pub fn pause(&self) {
-        let _ = self.pause_tx.send(true);
+        if self.pause_tx.send_if_modified(|paused| {
+            if *paused { false } else { *paused = true; true }
+        }) {
+            info!(room=%self.room, turn_id=self.turn_id, audio_started=self.audio_started(), "playout paused");
+        }
     }
 
     pub fn resume(&self) {
         if self.fade_ms > 0 {
             self.fade_req.store(1, Ordering::SeqCst);
         }
-        let _ = self.pause_tx.send(false);
+        if self.pause_tx.send_if_modified(|paused| {
+            if *paused { *paused = false; true } else { false }
+        }) {
+            info!(room=%self.room, turn_id=self.turn_id, audio_started=self.audio_started(), "playout resumed");
+        }
     }
 
     /// 硬打断:播放循环立即退出(channel 里囤的音频一并丢弃;RTC 队列由调用方 clear)。
     pub fn abort(&self) {
         let _ = self.abort_tx.send(true);
         let _ = self.pause_tx.send(false); // 唤醒可能阻塞在暂停门上的循环
+    }
+
+    /// Silence before the very first frame is a hold, not an interrupted reply.
+    /// Keep the configured recovery grace only after real audio has started.
+    pub fn interruption_resume_delay(&self, configured: Duration) -> Duration {
+        if self.audio_started() { configured } else { Duration::ZERO }
     }
 
     /// turn 的开播观察者依赖此退出条件:硬打断后未开播的 turn,观察者不得永转。
@@ -342,6 +356,32 @@ async fn capture_with_retry(source:&NativeAudioSource, frame:&AudioFrame<'_>, ct
     capture_guarded(||async {source.capture_frame(frame).await.is_ok()},||source.clear_buffer(),ctl).await
 }
 
+/// Every return from a pause checks cancellation before permitting another frame.
+/// Keeping this gate on both chunk and residual paths prevents abort()'s wakeup
+/// from releasing one old frame into the next reply.
+async fn wait_for_playing(
+    pause: &mut watch::Receiver<bool>,
+    abort: &mut watch::Receiver<bool>,
+    buffer: &mut BufferWatch,
+) -> Result<(), ExitWhy> {
+    let mut was_paused = false;
+    loop {
+        if *abort.borrow() { return Err(ExitWhy::Aborted); }
+        if !*pause.borrow() {
+            if was_paused { buffer.on_resume(); }
+            return Ok(());
+        }
+        was_paused = true;
+        tokio::select! {
+            biased;
+            _ = abort.changed() => return Err(ExitWhy::Aborted),
+            changed = pause.changed() => {
+                if changed.is_err() { return Err(ExitWhy::ControlGone); }
+            }
+        }
+    }
+}
+
 /// PCM(24k i16le bytes)→ 10ms 帧逐帧 capture;暂停门 + 渐起 + 进度计数。
 /// RTC source 队列 200ms 背压限速(与 Python room_io queue_size_ms=200 对齐)。
 pub fn spawn_playout(
@@ -385,24 +425,27 @@ pub fn spawn_playout(
                 watch.exit(ExitWhy::Aborted);
                 return;
             }
-            // 暂停门:置 true 时停喂(source 内 ≤200ms 排队自然播完)
-            if *pause_rx.borrow() {
-                while *pause_rx.borrow() {
-                    if pause_rx.changed().await.is_err() {
-                        watch.exit(ExitWhy::ControlGone);
-                        return;
-                    }
-                }
-                watch.on_resume();
+            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch).await {
+                watch.exit(reason);
+                return;
             }
             let wait_start = Instant::now();
             let chunk = tokio::select! {
+                biased;
+                _ = abort_rx.changed() => { watch.exit(ExitWhy::Aborted); return },
+                changed = pause_rx.changed() => {
+                    if changed.is_err() { watch.exit(ExitWhy::ControlGone); return; }
+                    // End the active wait at pause, not at a later PCM arrival.
+                    // Preserve genuine supply gaps before pause; exclude the hold.
+                    if *pause_rx.borrow() { watch.on_wait(wait_start, Instant::now()); }
+                    watch.on_resume();
+                    continue;
+                },
                 // 注意 break 在 on_wait 之前:channel 关闭=本轮 TTS 吐完,那次等待是收尾不是欠载
                 c = pcm_rx.recv() => match c {
                     Some(c) => c,
                     None => { watch.exit(ExitWhy::SourceDrained); break }
                 },
-                _ = abort_rx.changed() => { watch.exit(ExitWhy::Aborted); return }
             };
             watch.on_wait(wait_start, Instant::now());
             let mut samples: Vec<i16> = chunk
@@ -415,14 +458,9 @@ pub fn spawn_playout(
                     watch.exit(ExitWhy::Aborted);
                     return;
                 }
-                if *pause_rx.borrow() {
-                    while *pause_rx.borrow() {
-                        if pause_rx.changed().await.is_err() {
-                            watch.exit(ExitWhy::ControlGone);
-                            return;
-                        }
-                    }
-                    watch.on_resume();
+                if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch).await {
+                    watch.exit(reason);
+                    return;
                 }
                 if ctl2.fade_req.swap(0, Ordering::SeqCst) != 0 {
                     fade_gain = 0.0; // resume 渐起:从静音爬回
@@ -458,6 +496,10 @@ pub fn spawn_playout(
             }
         }
         if !residual.is_empty() {
+            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch).await {
+                watch.exit(reason);
+                return;
+            }
             let n = residual.len();
             let frame = AudioFrame {
                 data: residual.into(),
@@ -471,7 +513,11 @@ pub fn spawn_playout(
             }
         }
         // 收尾:等 source 队列(≤200ms)播完再退出,让 done 语义=真播完
-        tokio::time::sleep(std::time::Duration::from_millis(220)).await;
+        tokio::select! {
+            biased;
+            _ = abort_rx.changed() => watch.exit(ExitWhy::Aborted),
+            _ = tokio::time::sleep(Duration::from_millis(220)) => {},
+        }
     });
     (task, ctl)
 }
@@ -479,6 +525,73 @@ pub fn spawn_playout(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn experience_unstarted_reply_resumes_without_false_interruption_grace() {
+        let source = NativeAudioSource::new(Default::default(), TTS_SAMPLE_RATE, 1, 200);
+        let (tx, rx) = mpsc::channel(8);
+        let (task, ctl) = spawn_playout(source, rx, "pre-audio-hold".into(), 1, None);
+        ctl.pause();
+        let delay = ctl.interruption_resume_delay(Duration::from_secs(2));
+        tx.send(vec![0; 4800]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(40)).await;
+        assert!(!ctl.audio_started(), "user is still speaking: hold must remain");
+        // VAD speech end uses this production delay; before first audio no
+        // false-interruption timer may turn a hold into another two seconds.
+        assert_eq!(delay, Duration::ZERO);
+        ctl.resume();
+        wait_captured(&ctl, 240).await;
+        assert_eq!(ctl.interruption_resume_delay(Duration::from_secs(2)), Duration::from_secs(2));
+        ctl.abort();drop(tx);
+        task.await.unwrap();
+    }
+
+    async fn wait_captured(ctl: &PlayoutControl, minimum: u64) {
+        tokio::time::timeout(Duration::from_secs(2), async {
+            while ctl.captured_samples() < minimum {
+                tokio::time::sleep(Duration::from_millis(2)).await;
+            }
+        }).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn experience_pause_during_pcm_wait_is_not_supply_underrun() {
+        let source = NativeAudioSource::new(Default::default(), TTS_SAMPLE_RATE, 1, 200);
+        let (tx, rx) = mpsc::channel(8);
+        let (task, ctl) = spawn_playout(source, rx, "pause-wait".into(), 1, None);
+        tx.send(vec![0; 4800]).await.unwrap(); // 100ms, then actually wait for PCM
+        wait_captured(&ctl, 2400).await;
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        ctl.pause();
+        tokio::time::sleep(Duration::from_millis(350)).await;
+        tx.send(vec![0; 4800]).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(30)).await;
+        assert_eq!(ctl.captured_samples(), 2400, "pause must hold arriving PCM");
+        ctl.resume();
+        drop(tx);
+        tokio::time::timeout(Duration::from_secs(2), task).await.unwrap().unwrap();
+        let stats = ctl.final_stats_handle().lock().unwrap().clone().unwrap();
+        assert!(stats.completed);
+        assert_eq!(stats.played_frames, 20);
+        assert_eq!(stats.underrun_count, 0, "paused wait is not missing TTS audio");
+    }
+
+    #[tokio::test]
+    async fn experience_abort_while_residual_paused_never_captures_old_frame() {
+        let source = NativeAudioSource::new(Default::default(), TTS_SAMPLE_RATE, 1, 200);
+        let (tx, rx) = mpsc::channel(8);
+        let (task, ctl) = spawn_playout(source, rx, "abort-paused".into(), 1, None);
+        tx.send(vec![0; 48000]).await.unwrap(); // residual spans many captures
+        wait_captured(&ctl, 2400).await;
+        ctl.pause();
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        let before = ctl.captured_samples();
+        assert!(before < 24000);
+        ctl.abort();
+        tokio::time::timeout(Duration::from_secs(2), task).await.unwrap().unwrap();
+        assert_eq!(ctl.captured_samples(), before, "abort waking pause must not leak a frame");
+        assert!(!ctl.final_stats_handle().lock().unwrap().as_ref().unwrap().completed);
+    }
 
     fn ms(n: u64) -> Duration {
         Duration::from_millis(n)

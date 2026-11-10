@@ -2239,13 +2239,15 @@ impl Orchestrator {
             return;
         }
         self.false_deadline = None;
+        let resume_delay = turn.ctl.interruption_resume_delay(self.cfg.false_interruption_timeout);
         if self.paused.is_none() {
             turn.ctl.pause();
-            self.paused = Some(self.cfg.false_interruption_timeout);
+            self.paused = Some(resume_delay);
             self.set_state(AgentState::Listening);
         } else {
-            // thinking-pause(timeout=0)升格为真打断窗
-            self.paused = Some(self.cfg.false_interruption_timeout);
+            // Before the first frame keep the speech hold, but do not upgrade
+            // it to the already-speaking false-interruption recovery timer.
+            self.paused = Some(resume_delay);
         }
     }
 
