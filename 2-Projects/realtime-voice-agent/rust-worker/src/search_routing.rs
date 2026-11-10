@@ -81,6 +81,7 @@ fn weather_topic(q: &str) -> bool {
 }
 fn weather_parameters(q: &str) -> Option<AutoWeatherRequest> {
     if !weather_topic(q) || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
+    if ["今天", "明天", "后天"].iter().filter(|day| q.contains(**day)).count() > 1 { return None; }
     let day=if q.contains("后天"){2}else if q.contains("明天"){1}else{0};
     let metric=if q.contains("空气质量") {if day!=0{return None;} "aqi"}else if q.contains("现在")||q.contains("实时"){if day!=0{return None;} "current"}else{"forecast"};
     Some(AutoWeatherRequest{day_offset:day,metric:metric.into()})
@@ -98,6 +99,34 @@ fn supported_weather(q: &str) -> Option<WeatherRequest> {
 fn weather_without_place(q: &str) -> bool {
     weather_place_words(q).is_empty()
 }
+// Only a complete, bounded weather postscript may be removed. Keep the original
+// query for the task; this view is solely for extracting its location.
+fn weather_request_core(q: &str) -> &str {
+    let q = trim(q);
+    for suffix in [
+        "再告诉我需不需要带伞", "再告诉我要不要带伞",
+        "再说一下需不需要带伞", "再说一下要不要带伞",
+        "告诉我需不需要带伞", "告诉我要不要带伞",
+        "告诉我会不会下雨", "告诉我下不下雨", "告诉我",
+    ] {
+        if let Some(core) = q.strip_suffix(suffix) {
+            let core = trim(core);
+            if weather_topic(core) { return core; }
+        }
+    }
+    q
+}
+fn multiple_weather_places(place: &str) -> bool {
+    ["以及", "还有", "和", "与", "、"].iter().any(|sep| {
+        place.split_once(sep).is_some_and(|(a, b)|
+            known_weather_place(a.trim()) && known_weather_place(b.trim()))
+    })
+}
+fn weather_followup_question(params: &AutoWeatherRequest) -> String {
+    let day = match params.day_offset { 1 => "明天", 2 => "后天", _ => "今天" };
+    let topic = match params.metric.as_str() { "aqi" => "空气质量", "current" => "现在的天气", _ => "天气" };
+    format!("{day}{topic}")
+}
 fn weather_place_words(q: &str) -> String {
     // Peel grammar only at the edges. Global replacement corrupts names such as
     // 冷水江/会同 and turns request words into fake places. Keep unknown names
@@ -105,7 +134,7 @@ fn weather_place_words(q: &str) -> String {
     const WORDS:&[&str]=&["天气预报","需不需要带伞","要不要带伞","会不会下雨","下不下雨","会下雨","空气质量","会不会","怎么样","是多少","多少度","这里","这边","本地","当地","实时","现在","今天","明天","后天","天气","气温","温度","下雨","降雨","带伞","需要","怎么","如何","好不好","不会","一下","小可","啊","的","会","吗","呢","呀","好","不","冷","热","有","没","？","?","。","，"," "];
     const PREFIXES:&[&str]=&["请你告诉我","请你提供一下","请你提供","请告诉我","请提供一下","请提供","你只说说","请查一下","请查查","请查询","请查","告诉我","提供一下","只说说","就查","查一下","查一查","查查","查询","查","呃","额"];
     const SUFFIXES:&[&str]=&["你找不着","你查不到","快一点","快点","吧"];
-    let mut rest=q;
+    let mut rest=weather_request_core(q);
     loop {
         if weather_place_names().contains(rest) {break;}
         if let Some(next)=WORDS.iter().chain(SUFFIXES).filter_map(|w|rest.strip_suffix(w).map(|next|(w.len(),next))).max_by_key(|(n,_)|*n).map(|(_,next)|next) {rest=next;continue;}
@@ -191,6 +220,13 @@ impl RoutingSession {
         let mut d=Decision::new(name,rule,"命中路由");d.query=query;
         if let Some(q)=d.query.as_ref() {
             if config.is_some() && weather_topic(q) {
+                if config.is_some_and(|c| c.weather_enabled) && multiple_weather_places(&weather_place_words(q)) {
+                    if let Some(params) = weather_parameters(q) {
+                        self.pending_weather = Some((now, weather_followup_question(&params), name == "replace"));
+                        d.action = "clarify_city".into(); d.reason = "包含多个地点，请确认要查的城市".into();
+                        d.query = None; return d;
+                    }
+                }
                 // An ASR fragment must not become the invented place "天预报".
                 if ["天天气","天天气预报"].contains(&addressed(q)) {
                     self.pending_weather=Some((now,"天气".into(),name=="replace"));d.action="clarify_city".into();d.reason="天气片段不完整，请确认城市".into();d.query=None;return d;
@@ -204,6 +240,66 @@ impl RoutingSession {
                 else {d.weather=supported_weather(q);if d.weather.is_none(){d.reason="城市或日期未由天气适配器支持，使用通用搜索".into();}}
             }
         } d
+    }
+}
+
+#[cfg(test)]
+mod routing_weather_regression_tests {
+    use super::*;
+    fn config() -> RoutingConfig {
+        let mut c = RoutingConfig::default();
+        c.weather_enabled = true;
+        c.baidu_weather_enabled = true;
+        c
+    }
+    #[test]
+    fn routing_weather_compound_clause_preserves_place_and_day() {
+        let c = config();
+        for (text, place, day) in [
+            ("帮我查一下深圳今天的天气告诉我要不要带伞", "深圳", 0),
+            ("深圳今天的天气，告诉我要不要带伞", "深圳", 0),
+            ("深圳明天的天气，再说一下需不需要带伞", "深圳", 1),
+            ("深圳今天的天气告诉我", "深圳", 0),
+            ("告诉我深圳今天的天气", "深圳", 0),
+            ("深圳明天要不要带伞", "深圳", 1),
+            ("冷水江今天的天气，告诉我会不会下雨", "冷水江", 0),
+            ("会同县后天的天气告诉我", "会同县", 2),
+        ] {
+            let d = RoutingSession::default().route(text, 0, Some(&c), "weather-fix");
+            assert_eq!(d.action, "search", "{text}");
+            assert_eq!(d.place_weather, Some(PlaceWeatherRequest { place: place.into(), day_offset: day, metric: "forecast".into() }), "{text}");
+            assert!(d.query.as_deref().is_some_and(|q| q.contains("天气") || q.contains("带伞")), "original intent retained");
+            assert!(d.auto_weather.is_none());
+        }
+        let mut legacy = c.clone(); legacy.baidu_weather_enabled = false;
+        let d = RoutingSession::default().route("深圳明天的天气告诉我要不要带伞", 0, Some(&legacy), "legacy");
+        assert_eq!(d.weather.unwrap().city_id, 892);
+    }
+    #[test]
+    fn routing_weather_conflicting_days_and_multiple_places_do_not_choose_one() {
+        let c = config();
+        for text in ["深圳今天明天的天气", "深圳明天后天天气", "现在深圳明天多少度"] {
+            let d = RoutingSession::default().route(text, 0, Some(&c), "weather-fix");
+            assert!(d.place_weather.is_none() && d.weather.is_none() && d.auto_weather.is_none(), "{text}");
+        }
+        let mut s = RoutingSession::default();
+        let d = s.route("北京和上海明天天气告诉我", 0, Some(&c), "weather-fix");
+        assert_eq!(d.action, "clarify_city");
+        assert!(d.query.is_none() && d.place_weather.is_none());
+        let next = s.route("深圳", 1, Some(&c), "weather-fix");
+        assert_eq!(next.place_weather, Some(PlaceWeatherRequest { place: "深圳".into(), day_offset: 1, metric: "forecast".into() }));
+        assert!(!next.query.unwrap().contains("北京"));
+    }
+    #[test]
+    fn routing_weather_suffix_does_not_strip_other_requests_or_negation() {
+        let c = config();
+        for text in ["不要查深圳天气", "他说查深圳天气告诉我", "天气预报是什么意思", "空调多少度", "体温多少度", "为什么会下雨"] {
+            assert_eq!(RoutingSession::default().route(text, 0, Some(&c), "weather-fix").action, "chat", "{text}");
+        }
+        for text in ["深圳天气告诉我为什么会下雨", "深圳天气告诉我别的故事", "深圳下周天气告诉我"] {
+            let d = RoutingSession::default().route(text, 0, Some(&c), "weather-fix");
+            assert!(d.place_weather.is_none() && d.weather.is_none() && d.auto_weather.is_none(), "{text}");
+        }
     }
 }
 
@@ -245,7 +341,8 @@ mod p1_weather_hotfix_tests {
     }
     #[test]
     fn p1_weather_never_replaces_unknown_or_multiple_places_with_local_weather() {
-        for (text,place) in [("北京和上海天气","北京和上海"),("东京天气预报","东京"),("查北京大学天气","北京大学"),("天预报天气","天预报")] {
+        assert_eq!(route("北京和上海天气").action, "clarify_city");
+        for (text,place) in [("东京天气预报","东京"),("查北京大学天气","北京大学"),("天预报天气","天预报")] {
             let d=route(text);assert!(d.auto_weather.is_none(),"{text}");
             assert_eq!(d.place_weather.as_ref().map(|p|p.place.as_str()),Some(place),"{text}");
         }

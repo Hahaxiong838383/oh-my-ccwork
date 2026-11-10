@@ -1,0 +1,100 @@
+{
+  "at_utc": "20261110T050228Z",
+  "hostname": "voice-worker-hk2",
+  "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z",
+  "units": {
+    "voice-worker-rust.service": {
+      "pid": 4123394,
+      "restarts": "0",
+      "state": "active",
+      "exe": "/root/rust-worker/voice-rust-worker",
+      "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622",
+      "runtime_env_sha256": "e2fc824fd24b0ce24696cdfb13e2deb045258562caa9eaa713106f6ffad8be68"
+    },
+    "p003-search-worker.service": {
+      "pid": 2446060,
+      "restarts": "0",
+      "state": "active",
+      "exe": "/opt/p003-search-canary-20261021/voice-rust-worker",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "runtime_env_sha256": "1599530453869f0b66dbd241246cdf3a844713ffec784940df51daade5293a24"
+    },
+    "p003-listening-worker.service": {
+      "pid": 4110633,
+      "restarts": "0",
+      "state": "active",
+      "exe": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+      "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "runtime_env_sha256": "8dec3f0c8c509adee9ead7283b7ce323b69d4ccc693fed3e64909b0db9c9b9a0"
+    }
+  },
+  "files": {
+    "/root/rust-worker/voice-rust-worker": {
+      "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622",
+      "bytes": 76304624,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/root/rust-worker/voice-rust-worker",
+      "mode": "0o755"
+    },
+    "/etc/systemd/system/voice-worker-rust.service": {
+      "sha256": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0",
+      "bytes": 616,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/etc/systemd/system/voice-worker-rust.service",
+      "mode": "0o644"
+    },
+    "/root/rust-worker/rust-worker.env": {
+      "sha256": "6d7774c006f5900810a2a7ed32308ce3c124c3b6cf9d4211eed6378f664d0e91",
+      "bytes": 11867,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/root/rust-worker/rust-worker.env",
+      "mode": "0o600"
+    },
+    "/opt/p003-search-canary-20261021/voice-rust-worker": {
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "bytes": 77354944,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-search-canary-20261021/voice-rust-worker",
+      "mode": "0o755"
+    },
+    "/etc/systemd/system/p003-search-worker.service": {
+      "sha256": "d576a1fd7d0b0bf1c60c7b3e9f222237b7bd520c857a04f4d7e6eaae5e764835",
+      "bytes": 629,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/etc/systemd/system/p003-search-worker.service",
+      "mode": "0o644"
+    },
+    "/opt/p003-search-canary-20261021/canary.env": {
+      "sha256": "af7b0604bfa8b25eb918841109ef5b1abd400d96ae46c74cdb6526ed7c0cfae8",
+      "bytes": 10430,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-search-canary-20261021/canary.env",
+      "mode": "0o600"
+    },
+    "/opt/p003-listening-canary-20261030/voice-rust-worker": {
+      "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "bytes": 78243704,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/voice-rust-worker",
+      "mode": "0o755"
+    },
+    "/etc/systemd/system/p003-listening-worker.service": {
+      "sha256": "761ba3e3ad252fa2c19aa6cdcb2479e580db62b7fb7d81a9b9931e36051047d0",
+      "bytes": 647,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/etc/systemd/system/p003-listening-worker.service",
+      "mode": "0o644"
+    },
+    "/opt/p003-listening-canary-20261030/canary.env": {
+      "sha256": "5d5c3aaecafb301b686f2ad742732921563dc28e0daeaa98a270197503e2fe08",
+      "bytes": 10700,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/canary.env",
+      "mode": "0o600"
+    },
+    "/opt/p003-listening-canary-20261030/release.json": {
+      "sha256": "b9287bbee82ab8ea8ce040581372da79c0041c5ab66aff05a0fb305fa9c09b48",
+      "bytes": 169,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/release.json",
+      "mode": "0o600"
+    },
+    "/root/rust-worker/apply_hotwords.py": {
+      "sha256": "15771048604e9dc56aea958afbb26597ebde5cfeee6c6a4fe990742ef89cfb49",
+      "bytes": 35742,
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/root/rust-worker/apply_hotwords.py",
+      "mode": "0o755"
+    }
+  },
+  "production_runtime_changed": false
+}
