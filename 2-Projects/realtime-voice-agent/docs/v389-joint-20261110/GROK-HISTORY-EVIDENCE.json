@@ -1,0 +1,530 @@
+{
+  "reviewer": "Grok 4.7",
+  "vendor": "xAI",
+  "round": 2,
+  "role": "independent historical recheck",
+  "tests_executed": true,
+  "production_touched": false,
+  "ssh": false,
+  "business_tree_modified": false,
+  "android_source_read": false,
+  "raw_text_or_credentials_read": false,
+  "verdict": "PENDING_SERVER_INJECTION",
+  "corrections": {
+    "trace_count": 15,
+    "trace_count_is_not": "15+1",
+    "startup_participant_subject": "remote Android participant identity dev-<sn>",
+    "worker_participant_subject": "availability identity agent-{job_id}",
+    "startup_participant_cannot_pass_receipt_worker_replacement": true
+  },
+  "inputs": {
+    "worker_safe_v3_sha256": "8d3e3d40abbf58640379e464eb2633c1d5a96040cf20b5e2c9e8f017740f67b2",
+    "historical_matrix_sha256": "67f7a6b2f52481a45b4b08ec000b347f6ab1bf4420ef56990f24251ab698a082",
+    "brain_safe_sha256": "e173fe9ad4fefa448df3ca35b0e3d30c583020e6dbda177f12e1c2ad618af265",
+    "grok_review_round1_sha256": "54dab2c180f04bdcdb131d454d65b1ecdfc8c36edbe4f74fcf39e41f83de9443",
+    "traces_json_sha256": "4fddde3e189b42d2bc61edf05999957582b3d995ed10fe119f15a6521553994f",
+    "round1_file_preserved": true
+  },
+  "source": {
+    "head": "119003bc507451e86e3f695071b92311341c8888",
+    "runtime_ancestor": "148107232d1792c2c39719113d49031c67170d13",
+    "ancestor_check_exit": 0,
+    "job_rs_blob_head_and_ancestor": "0a09bb00f579455c827fb627338e8df681676b34",
+    "file_sha256": {
+      "job.rs": "471756738f09525358e1b7803f2c25f7102bdf55b6b2fa3f6700d2b1bbffc299",
+      "startup_participant.rs": "ebebde5e18647c3e56620f391876c024f0dd5afd65fa309755d073e9ba7e7961",
+      "control.rs": "17e659e03beef5f81fe732e40f2bfcb9a6bb86733b5d667709779a2bc971cff7",
+      "worker.rs": "c2a9724ef9b30f324fb3902a254fddbbe5c34f72ad31c9a24cb48adb440d430a"
+    },
+    "citations": {
+      "worker_identity": "worker.rs:303-304 participant_identity=agent-{job_id}",
+      "process_exiting_is_job_task": "worker.rs:269",
+      "expected_device": "ordered_pcm.rs:186-194 and job.rs:233-234",
+      "replacement_republish_same_local_participant": "job.rs:360-389",
+      "replacement_log_sid_is_remote": "job.rs:389 participant_sid=p.sid()",
+      "output_ready_payload": "control.rs:248-257 room + agent_track_subscribed=true",
+      "cancel_had_turn": "pipeline.rs:2582-2591",
+      "body_frame_without_provider_check": "pipeline.rs:2821-2828",
+      "source_drained": "playout.rs:447-450",
+      "capture_failed": "playout.rs:481-483",
+      "frame_10ms": "playout.rs:412 FRAME_SAMPLES=TTS_SAMPLE_RATE/100",
+      "output_gate_5s": "gate.rs:70"
+    }
+  },
+  "android_commit": {
+    "sha": "edf0beba7194a298edc55e7079dcaa6ee06a587a",
+    "mirror": "/Users/fu-121/.local/state/p003-v375-coordination-20261102/client-source.git",
+    "bare": true,
+    "promisor": true,
+    "partial_clone_filter": "blob:none",
+    "loose_object": false,
+    "pack_objects": 4323,
+    "in_pack_index": false,
+    "cat_file_exit": 128,
+    "fetch_succeeded": false,
+    "source_read": false
+  },
+  "runtime_recheck": {
+    "method": "compare worker-safe.json, worker-safe-v2.json, worker-safe-v3.json runtime fields; no live /proc read",
+    "files_agree": true,
+    "proc_equals_disk": true,
+    "v3_read_at_ms": 1794300688094,
+    "v3_read_at_cst": "2026-11-10T16:51:28.094+08:00",
+    "units": {
+      "voice-worker-rust": {
+        "pid": "4183959",
+        "active": "active",
+        "nrestarts": "0",
+        "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+        "exe": "/root/rust-worker/voice-rust-worker"
+      },
+      "p003-listening-worker": {
+        "pid": "4170463",
+        "active": "active",
+        "nrestarts": "0",
+        "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+        "exe": "/opt/p003-listening-canary-20261030/voice-rust-worker"
+      },
+      "p003-search-worker": {
+        "pid": "2446060",
+        "active": "active",
+        "nrestarts": "0",
+        "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "exe": "/opt/p003-search-canary-20261021/voice-rust-worker"
+      }
+    },
+    "historical_listening_pid": "2750511",
+    "historical_main_pid": "3179125",
+    "historical_exe_hash_present": false,
+    "livekit_historical_lines": 0,
+    "message_byte_arrays": 2831,
+    "decode_failures": 0
+  },
+  "trace_set": {
+    "count": 15,
+    "suffixes": [
+      "ed8d2643",
+      "4de55d33",
+      "88fc47d7",
+      "3f3fecf2",
+      "03a2d982",
+      "cf3c3208",
+      "97dbcd79",
+      "363c8900",
+      "9f3cef3b",
+      "7438bf4b",
+      "e7262de5",
+      "e4d3ae97",
+      "e436605b",
+      "09e2af0f",
+      "b815e6c0"
+    ],
+    "outside_receipt_listening": [
+      {
+        "trace": "ef95499a",
+        "job": "qSyxoLBV",
+        "room": "93957301",
+        "start": "2026-11-06T17:28:22.284+08:00",
+        "end": "2026-11-06T17:28:23.631+08:00"
+      },
+      {
+        "trace": "46d5a9a7",
+        "job": "8NK5erZd",
+        "room": "93957825",
+        "start": "2026-11-06T17:37:05.608+08:00",
+        "end": "2026-11-06T17:38:00.092+08:00"
+      }
+    ],
+    "main_pool_other_suffixes": [
+      "a39b0892",
+      "2245d98d",
+      "c2db92dd",
+      "10c95236"
+    ],
+    "listening_jobs_in_window": 17,
+    "receipt_jobs_overlap": false,
+    "listening_pid": "2750511",
+    "replacement_logs": 0,
+    "output_gate_logs": 0,
+    "at_full_capacity_logs": 0,
+    "matrix_exclusive_flag_was_hardcoded": true,
+    "recomputed_exclusive": true
+  },
+  "brain": {
+    "sessions": 15,
+    "signing_logs": 15,
+    "status": "ok",
+    "device_suffix": "03800006",
+    "selected_agent": "p003-search-listening-20261030",
+    "lease_max_jobs": "2",
+    "canary_generation": "v374-listening-ark-20261102-1793613511",
+    "authority_records": 0,
+    "authority_empty_means_retention_expired": true
+  },
+  "rounds": [
+    {
+      "trace": "ed8d2643",
+      "job": "gxds7ZTa",
+      "room": "93957490",
+      "provider_first_pcm": 3,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 1988,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "4de55d33",
+      "job": "jqrxaqG7",
+      "room": "93957543",
+      "provider_first_pcm": 4,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 2456,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "88fc47d7",
+      "job": "h93pWqMJ",
+      "room": "93957583",
+      "provider_first_pcm": 1,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 540,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "3f3fecf2",
+      "job": "rZrSko55",
+      "room": "93957601",
+      "provider_first_pcm": 1,
+      "playout": [
+        {
+          "exit": "CaptureFailed",
+          "frames": 75,
+          "turn": 1
+        },
+        {
+          "exit": "SourceDrained",
+          "frames": 636,
+          "turn": 2
+        }
+      ],
+      "capture_failed": 1,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "03a2d982",
+      "job": "sfkjmjRt",
+      "room": "93957623",
+      "provider_first_pcm": 3,
+      "tts_connect_timeouts_ms": [
+        10001,
+        10001
+      ],
+      "timeouts_after_provider_pcm": true,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 2368,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "cf3c3208",
+      "job": "A5wBXBBD",
+      "room": "93957662",
+      "provider_first_pcm": 0,
+      "tts_connect_timeout_ms": 10001,
+      "tts_timeout_at": "17:34:41.131",
+      "tts_synthesize_failed_at": "17:34:41.551",
+      "playout": [
+        {
+          "exit": "Aborted",
+          "frames": 0,
+          "turn": 1
+        },
+        {
+          "exit": "CaptureFailed",
+          "frames": 69,
+          "turn": 2
+        },
+        {
+          "exit": "SourceDrained",
+          "frames": 92,
+          "turn": 3,
+          "after": "filler playout done 17:34:32.079"
+        },
+        {
+          "exit": "SourceDrained",
+          "frames": 264,
+          "turn": 4,
+          "after": "background search receipt, device hearing unverified"
+        }
+      ],
+      "capture_failed": 1,
+      "client": "FINAL_AND_ANSWER",
+      "provider_tts_success": false
+    },
+    {
+      "trace": "97dbcd79",
+      "job": "JwGWXCjp",
+      "room": "93957691",
+      "provider_first_pcm": 1,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 964,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "363c8900",
+      "job": "KfNdKVhL",
+      "room": "93957714",
+      "provider_first_pcm": 1,
+      "playout": [
+        {
+          "exit": "Aborted",
+          "frames": 0,
+          "turn": 1
+        },
+        {
+          "exit": "SourceDrained",
+          "frames": 612,
+          "turn": 2
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "9f3cef3b",
+      "job": "JxmKmSs3",
+      "room": "93957734",
+      "provider_first_pcm": 7,
+      "playout": [
+        {
+          "exit": "CaptureFailed",
+          "frames": 0,
+          "turn": 1
+        },
+        {
+          "exit": "SourceDrained",
+          "frames": 1892,
+          "turn": 2
+        }
+      ],
+      "capture_failed": 1,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "7438bf4b",
+      "job": "pMCPPRd6",
+      "room": "93957769",
+      "provider_first_pcm": 2,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 708,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "e7262de5",
+      "job": "FGx95FY9",
+      "room": "93957922",
+      "provider_first_pcm": 3,
+      "playout": [
+        {
+          "exit": "CaptureFailed",
+          "frames": 661,
+          "turn": 1,
+          "buffered_audio_ms": 197
+        }
+      ],
+      "capture_failed": 1,
+      "client": "listening"
+    },
+    {
+      "trace": "e4d3ae97",
+      "job": "LgoTXqMK",
+      "room": "93958008",
+      "provider_first_pcm": 0,
+      "asr_final": 0,
+      "user_speech_started": 1,
+      "ordered": {
+        "chunks": 78,
+        "samples_received": 49920,
+        "samples_queued": 49920,
+        "packets_rejected": 0,
+        "speech_peak_rms": 915.3,
+        "noise_floor_rms": 46.8,
+        "trailing_quiet_at_end_ms": 2000,
+        "duration_s_at_16khz": 3.12
+      },
+      "no_final_chars": 0,
+      "cancel": {
+        "at": "17:40:18.744",
+        "had_turn": false,
+        "cancelled": false,
+        "ms_after_job_start": 9893,
+        "ms_after_no_final": 7909
+      },
+      "audio_in_10s": 0,
+      "reason_no_audio_in_10s": "job ended 9.78s after input loop",
+      "client": "INCOMPLETE",
+      "received_audio": true
+    },
+    {
+      "trace": "e436605b",
+      "job": "QXLNgLMX",
+      "room": "93958066",
+      "provider_first_pcm": 1,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 624,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER"
+    },
+    {
+      "trace": "09e2af0f",
+      "job": "2yYZNUhT",
+      "room": "93958194",
+      "provider_first_pcm": 1,
+      "playout": [
+        {
+          "exit": "CaptureFailed",
+          "frames": 479,
+          "turn": 1,
+          "buffered_audio_ms": 206
+        }
+      ],
+      "capture_failed": 1,
+      "client": "touch_exit"
+    },
+    {
+      "trace": "b815e6c0",
+      "job": "RwemkGBj",
+      "room": "93958214",
+      "provider_first_pcm": 3,
+      "playout": [
+        {
+          "exit": "SourceDrained",
+          "frames": 1512,
+          "turn": 1
+        }
+      ],
+      "capture_failed": 0,
+      "client": "FINAL_AND_ANSWER",
+      "ms_after_previous_job_end": 6980
+    }
+  ],
+  "capture_failed": [
+    {
+      "trace": "3f3fecf2",
+      "abort": "17:33:29.677",
+      "capture": "17:33:29.683",
+      "delta_ms": 6,
+      "frames": 75,
+      "same_ms_client_cancel": false,
+      "later_cancel_cancelled": false
+    },
+    {
+      "trace": "cf3c3208",
+      "abort": "17:34:31.078",
+      "capture": "17:34:31.081",
+      "delta_ms": 3,
+      "frames": 69,
+      "same_ms_client_cancel": false,
+      "later_cancel_cancelled": false,
+      "separate_from_tts_timeout": true
+    },
+    {
+      "trace": "9f3cef3b",
+      "abort": "17:35:42.017",
+      "capture": "17:35:42.018",
+      "delta_ms": 1,
+      "frames": 0,
+      "same_ms_client_cancel": false,
+      "later_cancel_cancelled": false
+    },
+    {
+      "trace": "e7262de5",
+      "abort": "17:40:05.428",
+      "capture": "17:40:05.432",
+      "delta_ms": 4,
+      "frames": 661,
+      "same_ms_client_cancel": true,
+      "had_turn": true,
+      "cancelled": true
+    },
+    {
+      "trace": "09e2af0f",
+      "abort": "17:43:27.469",
+      "capture": "17:43:27.477",
+      "delta_ms": 8,
+      "frames": 479,
+      "same_ms_client_cancel": true,
+      "had_turn": true,
+      "cancelled": true
+    }
+  ],
+  "normal_rounds_with_provider_first_pcm": 9,
+  "normal_rounds": 10,
+  "cf3_provider_tts_success": false,
+  "e4d3_received_audio": true,
+  "capture_failed_are_output_gate": false,
+  "sdk_injection": {
+    "case_d": "remote device SID switch before pipeline started; log startup participant replacement accepted; does not pass receipt item 4",
+    "case_w": "same room, stable device SID, second process identity agent-{other job}; pass only on identity plus publication binding; NOT_IMPLEMENTED if room is deleted between workers",
+    "output_ready_is_not_bind_key": true,
+    "connected_true_means_previous_device_sid_discarded": true
+  },
+  "test": {
+    "rustc": "1.70.0",
+    "unmodified_startup_participant_compile": "fail E0599 is_none_or",
+    "cargo_test_crate": false,
+    "private_test_binary": "grok-r2/startup_participant_r170",
+    "private_test_source_sha256": "f87b6d0c8db49d0a5fa2a9522a20ce134286c452f84b5bd216ff6710f9a9bc88",
+    "rewrite": "two is_none_or calls replaced by map().unwrap_or(true); business tree unchanged",
+    "command": "rustc --edition 2021 --test grok-r2/startup_participant_r170.rs -o grok-r2/startup_participant_r170 && grok-r2/startup_participant_r170 --test-threads=1",
+    "result": "9 passed, 0 failed, exit 0",
+    "new_test": "agent_job_identity_is_not_remote_device_replacement",
+    "first_assertion_failed_then_fixed": "first connected() on a new device SID returns false",
+    "note": "sha256 is of the file after the assertion fix; the first run failed and is not this hash"
+  },
+  "next": [
+    "Record executed SHA of the private-SFU binary and require 8a953489... for main or 517f5290... for listening.",
+    "Run case D and archive it only as a device-SID result.",
+    "Run case W in the same room with a second agent-{job}. If the binary deletes the room, record NOT_IMPLEMENTED.",
+    "Keep the four receipt abnormalities PENDING_SERVER_INJECTION."
+  ]
+}

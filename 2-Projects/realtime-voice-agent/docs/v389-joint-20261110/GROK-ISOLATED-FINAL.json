@@ -1,0 +1,105 @@
+{
+  "document": "GROK-ISOLATED-FINAL",
+  "verdict": "SCOPED_SERVER_SDK_PASS",
+  "android_four_item_pass": false,
+  "full_canary_pass": false,
+  "this_round_executed_tests": false,
+  "review_mode": "read_only_recheck",
+  "reviewed_at": "2026-11-10",
+  "sources": [
+    "ISOLATED_VERIFICATION.json",
+    "probe.py",
+    "isolated-runner.py",
+    "MAIN-PROGRESS.md"
+  ],
+  "source_sha256": {
+    "ISOLATED_VERIFICATION.json": "78b0cbcc90dec39db214c756dd800ed31218380a45c0f6a2f43f6158a0a688f6",
+    "probe.py": "3004af6644460a6aff8b5e7073771bebf094a4484489dcbefc363ba33aaf617d",
+    "isolated-runner.py": "6a76147d8cd42caf328d3931090d89c9b53778163dea62dd6f2d843a10a3a0e3",
+    "MAIN-PROGRESS.md": "5e91fbde1ae0c612b154b12c9ffe25baecd051d6d69a18b7028732d53f0b5974"
+  },
+  "probe_identity": {
+    "on_disk_probe_matches_round2": true,
+    "round1_probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+    "round2_probe_sha256": "3004af6644460a6aff8b5e7073771bebf094a4484489dcbefc363ba33aaf617d"
+  },
+  "matrix": {
+    "unique_scenarios": 7,
+    "rounds": 2,
+    "executions": 10,
+    "round1": {
+      "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835",
+      "executed": 7,
+      "passed_executions": 6,
+      "attempt_passed": false,
+      "retained_failure": "listening/no_subscribe"
+    },
+    "round2_filtered": {
+      "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301376965876358",
+      "executed": 3,
+      "passed_executions": 3,
+      "attempt_passed": true,
+      "cases": ["main/capacity", "main/no_subscribe", "listening/no_subscribe"]
+    }
+  },
+  "claims": {
+    "main_capacity1_no_oversell_then_new_job": {
+      "status": "substantiated",
+      "rounds": [1, 2],
+      "evidence": "active_jobs=1 available=false; second room got no job_assignment; job_assignment=2; next room ASR/TTS. capacity_no_overadmit=true. capacity_decline_logged=false both rounds (no at-full-capacity text). release-to-input_ready 147ms then 411ms."
+    },
+    "main_and_listening_no_subscribe_gate_then_next_room": {
+      "status": "substantiated",
+      "authoritative_round": 2,
+      "first_failure_retained": true,
+      "evidence": "checkpoint output_ready=false voiced_ms=0 fatal_already=false before fatal; exact 5s fail-closed plus pipeline failed; first_pcm_to_fatal_ms 5068 and 5075; natural delete; different next room with ASR final and TTS playout."
+    },
+    "main_prestart_participant_replacement": {
+      "status": "substantiated",
+      "round": 1,
+      "evidence": "same room uVJZ3Usr, one job, startup participant replacement accepted=1, disjoint tracks, gen2 ASR/TTS. SDK identity, not a physical remote device."
+    },
+    "main_sfu_kick_then_isolated_process_replacement_new_room": {
+      "status": "substantiated",
+      "round": 1,
+      "same_room_hot_migration": false,
+      "android_old_publication_rejection": false,
+      "evidence": "remove_participant then old room oqNeEgGL deleted; runner replaced isolated pid 9466 with 9555 at the main production sha; new room ui9uFaXF; job_assignment=2; startup replacement signal=0; production NRestarts stayed 0."
+    }
+  },
+  "retained_first_failure": {
+    "pool": "listening",
+    "case": "no_subscribe",
+    "round": 1,
+    "error": "wrong_close_reason",
+    "already_present": ["5s reason signal=1", "first PCM signal=1", "checkpoint voiced_ms=0", "empty tracks", "delete_room_on_close=1", "room_removed=true", "forced_cleanup_count=0"],
+    "not_in_that_execution": ["first_pcm_to_fatal_ms", "next_room_recovery"]
+  },
+  "production": {
+    "unchanged_both_rounds": true,
+    "isolated_processes_stopped_both_rounds": true,
+    "forced_cleanup_count_all_10": 0,
+    "units": {
+      "voice-worker-rust": {"MainPID": "4183959", "NRestarts": "0", "ActiveState": "active", "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9"},
+      "p003-listening-worker": {"MainPID": "4170463", "NRestarts": "0", "ActiveState": "active", "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305"},
+      "p003-search-worker": {"MainPID": "2446060", "NRestarts": "0", "ActiveState": "active", "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"}
+    }
+  },
+  "binaries_under_test": {
+    "main": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+    "listening": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305"
+  },
+  "must_retest": [],
+  "not_proven": [
+    "Android four-item pass",
+    "full canary",
+    "production SFU or production rooms",
+    "listening capacity or candidate admission",
+    "search worker behavior beyond PID/sha/NRestarts freeze",
+    "same-room hot migration",
+    "Android rejection of an old publication",
+    "physical remote device",
+    "explicit capacity decline log line",
+    "runner byte hash inside ISOLATED_VERIFICATION.json"
+  ]
+}

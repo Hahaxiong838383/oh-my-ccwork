@@ -1,0 +1,33 @@
+{
+  "status": "SCOPED_SERVER_SDK_PASS_ANDROID_PENDING",
+  "unique_scenarios": 7,
+  "executions": 10,
+  "initial_fixture_failure": "listening no_subscribe wrapper mismatch retained, corrected exact gate cause, affected regression rerun",
+  "production_modified": false,
+  "historical_traces": 15,
+  "historical_tts_failure": [
+    "cf3c3208"
+  ],
+  "historical_no_final_unresolved": [
+    "e4d3ae97"
+  ],
+  "unverified": [
+    "physical Android four-fault injection",
+    "old Worker participant/publication rejection in actual Android",
+    "same-room Worker hot migration",
+    "sudden Worker process crash orphan-room reconciliation",
+    "canary admission/capacity route",
+    "original e4d3 input content / provider reason"
+  ],
+  "sha256": {
+    "HISTORICAL_MATRIX.json": "67f7a6b2f52481a45b4b08ec000b347f6ab1bf4420ef56990f24251ab698a082",
+    "HISTORICAL_JOB_EXCLUSIVITY.json": "d2adcd803377538633bc9955d293b25debb05db9fd6b0eead21f58e737ff6f9a",
+    "worker-safe-v4.json": "d3a8c5d4c9d59ca869425e62173b47a98862c741f1855a2a8ad64fbca62026bb",
+    "brain-safe.json": "e173fe9ad4fefa448df3ca35b0e3d30c583020e6dbda177f12e1c2ad618af265",
+    "ISOLATED_VERIFICATION.json": "78b0cbcc90dec39db214c756dd800ed31218380a45c0f6a2f43f6158a0a688f6",
+    "probe.py": "3004af6644460a6aff8b5e7073771bebf094a4484489dcbefc363ba33aaf617d",
+    "isolated-runner.py": "6a76147d8cd42caf328d3931090d89c9b53778163dea62dd6f2d843a10a3a0e3",
+    "FINAL_RUNTIME_CHECK.json": "faffaab0eee423cdc3ad3325113c8576ee0d9a80d09829a7060d3cc2c0cb69fc",
+    "REPLACEMENT_SID_EVIDENCE.json": "1053df9b5598347f0ae24677e4414a84c7ecfd5e78bb4e4b5a322353c9c15035"
+  }
+}

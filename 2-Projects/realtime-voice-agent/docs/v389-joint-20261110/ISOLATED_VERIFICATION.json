@@ -1,0 +1,1392 @@
+{
+  "attempts": [
+    {
+      "started_ms": 1794301140772,
+      "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835",
+      "production_before": {
+        "voice-worker-rust": {
+          "MainPID": "4183959",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9"
+        },
+        "p003-listening-worker": {
+          "MainPID": "4170463",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        }
+      },
+      "cases": [
+        {
+          "pool": "main",
+          "case": "normal",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/main-normal",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "75b093fb5d127d4cdbf125b26d589f6c94f2ad01c1c3ff5fd5497efc3e7ec04d",
+          "result_sha256": "14871abec04da556d7e577986d03d267e9b47be6d14d9df62096625317bf6c01",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "start_ms": 1794301145672,
+            "end_ms": 1794301156639,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "Eeib46dt",
+              "connect_ms": 201,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3980.0,
+              "tracks": {
+                "BgnYsvJk": {
+                  "samples": 246000,
+                  "voiced_ms": 3980.0,
+                  "max_peak": 18446,
+                  "wav_sha256": "df65428c741148307ef37174fb8cf8785c3003ae4d487f7e8434787272d7644f"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301150883
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 1,
+            "pipeline failed \u2192 closing job": 0,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 0,
+            "worker capacity advertised after job status": 3,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 1,
+            "process exiting": 1,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T08:59:05.959649Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:05.961025Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:16.545160Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "main",
+          "case": "capacity",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/main-capacity",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "c432f80cd0b750e5c50290d83b72c531f3693248ca74cb4992996e2c0fe8f26f",
+          "result_sha256": "633d2a1b2d7a5d44425ca95ecd7267d4f6b75d355894d947bc921596082a051e",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "recovery_passed": true,
+            "capacity_no_overadmit": true,
+            "capacity_decline_logged": false,
+            "capacity_release_start_ms": 1794301165894,
+            "capacity_recovery_ready_ms": 1794301166041,
+            "start_ms": 1794301160934,
+            "end_ms": 1794301177008,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "stJDLyP6",
+              "connect_ms": 204,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 0,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {
+                "zZubyhBw": {
+                  "samples": 101280,
+                  "voiced_ms": 0,
+                  "max_peak": 2,
+                  "wav_sha256": "12bbf05a1296cc7cd8ab93ee94193cd77e6552f55baa34b464d44c92005153d7"
+                }
+              },
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "BxfYrxS7",
+              "connect_ms": 146,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3970.0,
+              "tracks": {
+                "Nta7nnfL": {
+                  "samples": 254640,
+                  "voiced_ms": 3970.0,
+                  "max_peak": 18693,
+                  "wav_sha256": "dd6a95a41feaca3bdee93fb6fe827d9888daf53a8f48d9524c6c300f6448e4a9"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301171278
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 2,
+            "pipeline failed \u2192 closing job": 0,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 0,
+            "worker capacity advertised after job status": 6,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 2,
+            "process exiting": 2,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T08:59:21.230430Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:21.232262Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:25.808495Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:26.126461Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:26.126823Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:36.988491Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "main",
+          "case": "no_subscribe",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/main-no_subscribe",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "2cad17ce4b14aa888d0a13e36f51c01dfedcffcafb1f3a8f824f5f1598a45fa5",
+          "result_sha256": "56561cb511e0af81575e4da805d557e51c5e3a521e918080e5092aef1deef07a",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "recovery_passed": true,
+            "no_subscribe_checkpoint": {
+              "at_ms": 1794301186353,
+              "output_ready": false,
+              "voiced_ms": 0,
+              "fatal_already": false
+            },
+            "output_gate_failure_passed": true,
+            "start_ms": 1794301181073,
+            "end_ms": 1794301202435,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "NUoLA5rS",
+              "connect_ms": 196,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 0
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {},
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 0,
+                "streams_closed": 0,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "4YkCxrFT",
+              "connect_ms": 165,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3970.0,
+              "tracks": {
+                "GhsYTzJ9": {
+                  "samples": 249600,
+                  "voiced_ms": 3970.0,
+                  "max_peak": 18253,
+                  "wav_sha256": "bc479bf59be2c4c6c2aa230e66d09b1446bf31f46a1895045b060ce0ce686159"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301196586
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 2,
+            "pipeline failed \u2192 closing job": 1,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 1,
+            "worker capacity advertised after job status": 6,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 2,
+            "process exiting": 2,
+            "tts provider first PCM observed": 2
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T08:59:41.349130Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:41.350618Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:51.424778Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:51.710383Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T08:59:51.711599Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:02.422049Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "main",
+          "case": "prestart_replacement",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/main-prestart_replacement",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "30ded7bf5076cbd8e63c51732425d558170659fa37bb4c5530e25023f328a011",
+          "result_sha256": "260e0206201b4ecb3dd478df794cde494b0320b3a0945c77c9d5f9464b794f8c",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "prestart_device_replacement_passed": true,
+            "start_ms": 1794301207184,
+            "end_ms": 1794301218603,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "uVJZ3Usr",
+              "connect_ms": 185,
+              "controls": {
+                "session.input_ready": 0,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 0,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {
+                "PdatPMqJ": {
+                  "samples": 240,
+                  "voiced_ms": 0,
+                  "max_peak": 0,
+                  "wav_sha256": "4afc69be59c1e5da4ecb345b729e7f8a0d81539738b1042f4bb1b58c2fe5b4ae"
+                }
+              },
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 0,
+                "sources_closed": 0,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "uVJZ3Usr",
+              "connect_ms": 174,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3960.0,
+              "tracks": {
+                "3dXXB83U": {
+                  "samples": 250080,
+                  "voiced_ms": 3960.0,
+                  "max_peak": 17695,
+                  "wav_sha256": "6f6c024cf075c2832c5861355dd1b7efb0b179bdd13aaff64a0c03e7f93e4dfd"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301212748
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 1,
+            "pipeline failed \u2192 closing job": 0,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 0,
+            "worker capacity advertised after job status": 3,
+            "startup participant replacement accepted": 1,
+            "room deleted (delete_room_on_close)": 1,
+            "process exiting": 1,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T09:00:07.456580Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:07.459157Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:18.513379Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "main",
+          "case": "worker_replacement",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/main-worker_replacement",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "c73fb5d190d202ee66a07ec274332b607f65e12e3eb604e098d9a7766e2e9d8b",
+          "result_sha256": "5fa710047c428ff02508d4aab5a7833fb1603d3b73c9413385f5ed9d7572b89a",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "recovery_passed": true,
+            "worker_process_replacement_passed": true,
+            "replacement_process": {
+              "old_pid": 9466,
+              "new_pid": 9555,
+              "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9"
+            },
+            "start_ms": 1794301222725,
+            "end_ms": 1794301235530,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "oqNeEgGL",
+              "connect_ms": 178,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 0,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {
+                "S8ZJWSYA": {
+                  "samples": 960,
+                  "voiced_ms": 0,
+                  "max_peak": 2,
+                  "wav_sha256": "deeec2e3b32c12b612883dd5b245bde1b1e889d64f2735f3534eaebfd65051cd"
+                }
+              },
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "ui9uFaXF",
+              "connect_ms": 140,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3940.0,
+              "tracks": {
+                "kePM9b2S": {
+                  "samples": 251520,
+                  "voiced_ms": 3940.0,
+                  "max_peak": 18189,
+                  "wav_sha256": "9d85bd0ad5182f55a2b1229f62a46381ad6e015eed8ed2ed690fa3894dca9e2b"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301229733
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 2,
+            "pipeline failed \u2192 closing job": 0,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 0,
+            "worker capacity advertised after job status": 6,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 2,
+            "process exiting": 2,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T09:00:22.992874Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:22.995952Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:23.260187Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:24.631875Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:24.634966Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:00:35.432141Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "listening",
+          "case": "normal",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/listening-normal",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "7c657794987e3078e0a22de63bca9526bcaea9c39e37557d596ac8b4061a7104",
+          "result_sha256": "ce478bdf25bab389bd2e5cf4cc4de2dc7c95125193b47b97908c99b8d861670f",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "start_ms": 1794301239874,
+            "end_ms": 1794301250804,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "2UvzJet4",
+              "connect_ms": 178,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3970.0,
+              "tracks": {
+                "8o76fr2Q": {
+                  "samples": 245760,
+                  "voiced_ms": 3970.0,
+                  "max_peak": 18651,
+                  "wav_sha256": "ee57dc1729c20c32ff91fdef1c23f50f3130f56bf54239984b220420d0caa8bb"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301245077
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 1,
+            "pipeline failed \u2192 closing job": 0,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 0,
+            "worker capacity advertised after job status": 0,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 1,
+            "process exiting": 1,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": []
+        },
+        {
+          "pool": "listening",
+          "case": "no_subscribe",
+          "rc": 1,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301138818541835/listening-no_subscribe",
+          "passed": false,
+          "errors": [
+            {
+              "type": "AssertionError",
+              "reason": "wrong_close_reason"
+            }
+          ],
+          "binary_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+          "probe_sha256": "59dbb6c62a1ed63159e1aedd99a0904f86407d9bf35806d3796f540e11e78969",
+          "worker_log_sha256": "452964fb0265a3cf3fe1161b75e575244efc2ec8d25b005d5baf3db64385d811",
+          "result_sha256": "8f1f9baced5fd819f4814b5c22ccea23268b8454aac88a8161528ca1f337f8ee",
+          "summary": {
+            "checks_passed": false,
+            "room_removed": true,
+            "no_subscribe_checkpoint": {
+              "at_ms": 1794301260025,
+              "output_ready": false,
+              "voiced_ms": 0,
+              "fatal_already": false
+            },
+            "start_ms": 1794301255023,
+            "end_ms": 1794301265143,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "2UG9tskp",
+              "connect_ms": 185,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 0
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {},
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 0,
+                "streams_closed": 0,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 1,
+            "pipeline failed \u2192 closing job": 1,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 1,
+            "worker capacity advertised after job status": 0,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 1,
+            "process exiting": 1,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": []
+        }
+      ],
+      "boundary": "private loopback SFU; same production Worker bytes; synthetic identity+LLM; actual ASR/TTS; SDK, not Android; no production service/config/room changed",
+      "error": "case failed: listening-no_subscribe",
+      "production_after": {
+        "voice-worker-rust": {
+          "MainPID": "4183959",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9"
+        },
+        "p003-listening-worker": {
+          "MainPID": "4170463",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        }
+      },
+      "production_unchanged": true,
+      "isolated_processes_stopped": true,
+      "passed": false,
+      "ended_ms": 1794301267251,
+      "manifest_sha256": "dcd77f6749d908474bcfd0450e50ca88698a5125854790b2a70217b4dddc0a6e"
+    },
+    {
+      "started_ms": 1794301378759,
+      "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301376965876358",
+      "production_before": {
+        "voice-worker-rust": {
+          "MainPID": "4183959",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9"
+        },
+        "p003-listening-worker": {
+          "MainPID": "4170463",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        }
+      },
+      "cases": [
+        {
+          "pool": "main",
+          "case": "capacity",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301376965876358/main-capacity",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "3004af6644460a6aff8b5e7073771bebf094a4484489dcbefc363ba33aaf617d",
+          "worker_log_sha256": "e0064eb58b01df9337563168af525dde41127b771ce044a56854fadf06fa91dc",
+          "result_sha256": "a6abb1037abaca7ab73c82f387c74de3289c6d40ffcd927bddce0c4a857c5c27",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "recovery_passed": true,
+            "capacity_no_overadmit": true,
+            "capacity_decline_logged": false,
+            "capacity_release_start_ms": 1794301388148,
+            "capacity_recovery_ready_ms": 1794301388559,
+            "start_ms": 1794301383238,
+            "end_ms": 1794301399008,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "uLRuiLnW",
+              "connect_ms": 185,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 0,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {
+                "tz9qyYUe": {
+                  "samples": 100800,
+                  "voiced_ms": 0,
+                  "max_peak": 2,
+                  "wav_sha256": "953af670d2035e411de683c6d15cfc2ab75849443e2058d04a66beeb219e4f38"
+                }
+              },
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "Qh8vZz8y",
+              "connect_ms": 152,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 4060.0,
+              "tracks": {
+                "69e5df86": {
+                  "samples": 247920,
+                  "voiced_ms": 4060.0,
+                  "max_peak": 20214,
+                  "wav_sha256": "3aee61d5ada54654aa015d50a30cad052314c0e1fe928c96704eec8fa8396380"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 520
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301393335
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 2,
+            "pipeline failed \u2192 closing job": 0,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 0,
+            "worker capacity advertised after job status": 6,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 2,
+            "process exiting": 2,
+            "tts provider first PCM observed": 1
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T09:03:03.510449Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:03.513262Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:08.063751Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:08.387265Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:08.388430Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:18.995297Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "main",
+          "case": "no_subscribe",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301376965876358/main-no_subscribe",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+          "probe_sha256": "3004af6644460a6aff8b5e7073771bebf094a4484489dcbefc363ba33aaf617d",
+          "worker_log_sha256": "6202bb9fccb2fd71ca53e850185a824682becaa30718ae6088cb9b9446e4ddc3",
+          "result_sha256": "f595a48af3aa4dd1fb915567a3773ce46084622eb6924e829a18bcd5e9bca833",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "recovery_passed": true,
+            "no_subscribe_checkpoint": {
+              "at_ms": 1794301408197,
+              "output_ready": false,
+              "voiced_ms": 0,
+              "fatal_already": false
+            },
+            "output_gate_failure_passed": true,
+            "first_pcm_to_fatal_ms": 5068,
+            "start_ms": 1794301403227,
+            "end_ms": 1794301424183,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "GrjcjrYY",
+              "connect_ms": 226,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 0
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {},
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 0,
+                "streams_closed": 0,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "DcM4TrPG",
+              "connect_ms": 157,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 3930.0,
+              "tracks": {
+                "vYCiLxEr": {
+                  "samples": 247920,
+                  "voiced_ms": 3930.0,
+                  "max_peak": 18334,
+                  "wav_sha256": "3af19dbb51124ad65ebbde04cc58cd3bde6e4414610ef850001572d4d7ae13b0"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 512
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301418527
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 2,
+            "pipeline failed \u2192 closing job": 1,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 1,
+            "worker capacity advertised after job status": 6,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 2,
+            "process exiting": 2,
+            "tts provider first PCM observed": 2
+          },
+          "capacity_events": [
+            {
+              "timestamp": "2026-11-10T09:03:23.494922Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:23.501205Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:33.278960Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:33.557912Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:33.558449Z",
+              "values": {
+                "active_jobs": "1",
+                "max_jobs": "1",
+                "available": "false"
+              }
+            },
+            {
+              "timestamp": "2026-11-10T09:03:44.172164Z",
+              "values": {
+                "active_jobs": "0",
+                "max_jobs": "1",
+                "available": "true"
+              }
+            }
+          ]
+        },
+        {
+          "pool": "listening",
+          "case": "no_subscribe",
+          "rc": 0,
+          "folder": "/root/p003-v389-voice-recovery-joint-20261110/isolated-1794301376965876358/listening-no_subscribe",
+          "passed": true,
+          "errors": [],
+          "binary_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+          "probe_sha256": "3004af6644460a6aff8b5e7073771bebf094a4484489dcbefc363ba33aaf617d",
+          "worker_log_sha256": "3e9b078d1db3471a787a03985b765269bf5f79e7b60c9638ff92bfee84bcdb92",
+          "result_sha256": "bc205def253248c7afedaad6c6900388fb6ece1a10f6bee9c7666d5e1b95e765",
+          "summary": {
+            "checks_passed": true,
+            "room_removed": true,
+            "recovery_passed": true,
+            "no_subscribe_checkpoint": {
+              "at_ms": 1794301433443,
+              "output_ready": false,
+              "voiced_ms": 0,
+              "fatal_already": false
+            },
+            "output_gate_failure_passed": true,
+            "first_pcm_to_fatal_ms": 5075,
+            "start_ms": 1794301428420,
+            "end_ms": 1794301449886,
+            "forced_cleanup_count": 0
+          },
+          "generations": [
+            {
+              "generation": 1,
+              "room_sid_suffix": "YqQu3rVV",
+              "connect_ms": 188,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 0
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 0
+              },
+              "voiced_ms": 0,
+              "tracks": {},
+              "server_playout_completed": [],
+              "answer_passed": false,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 0,
+                "streams_closed": 0,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": null
+            },
+            {
+              "generation": 2,
+              "room_sid_suffix": "qfbwLeP6",
+              "connect_ms": 146,
+              "controls": {
+                "session.input_ready": 1,
+                "session.output_ready": 1
+              },
+              "caption_finals": {
+                "user": 1,
+                "agent": 1
+              },
+              "voiced_ms": 4070.0,
+              "tracks": {
+                "xncowaxc": {
+                  "samples": 255360,
+                  "voiced_ms": 4070.0,
+                  "max_peak": 20009,
+                  "wav_sha256": "d6fbb69d7b8d30a512bad33bcf003cf590ee6a170156eba25f52b24d2ddec521"
+                }
+              },
+              "server_playout_completed": [
+                {
+                  "turn_id": 1,
+                  "underrun_count": 0,
+                  "underrun_ms": 0,
+                  "played_frames": 528
+                }
+              ],
+              "answer_passed": true,
+              "cleanup": {
+                "rooms_connected": 1,
+                "rooms_disconnected": 1,
+                "streams_created": 1,
+                "streams_closed": 1,
+                "sources_created": 1,
+                "sources_closed": 1,
+                "errors": []
+              },
+              "first_voice_ms": 1794301443828
+            }
+          ],
+          "signals": {
+            "job_assignment_received": 2,
+            "pipeline failed \u2192 closing job": 1,
+            "output gate 5s \u672a\u5c31\u7eea(Android \u672a\u8ba2\u9605 agent \u8f68),fail-closed": 1,
+            "worker capacity advertised after job status": 0,
+            "startup participant replacement accepted": 0,
+            "room deleted (delete_room_on_close)": 2,
+            "process exiting": 2,
+            "tts provider first PCM observed": 2
+          },
+          "capacity_events": []
+        }
+      ],
+      "boundary": "private loopback SFU; same production Worker bytes; synthetic identity+LLM; actual ASR/TTS; SDK, not Android; no production service/config/room changed",
+      "production_after": {
+        "voice-worker-rust": {
+          "MainPID": "4183959",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9"
+        },
+        "p003-listening-worker": {
+          "MainPID": "4170463",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305"
+        },
+        "p003-search-worker": {
+          "MainPID": "2446060",
+          "NRestarts": "0",
+          "ActiveState": "active",
+          "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+        }
+      },
+      "production_unchanged": true,
+      "isolated_processes_stopped": true,
+      "passed": true,
+      "ended_ms": 1794301451853,
+      "manifest_sha256": "c60f37890f7f150fa9f6e6669d80be9788f5729d6fa4afa5bf517b3f59cf1e41"
+    }
+  ]
+}

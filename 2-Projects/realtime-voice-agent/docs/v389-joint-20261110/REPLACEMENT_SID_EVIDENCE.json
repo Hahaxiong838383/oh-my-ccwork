@@ -1,0 +1,58 @@
+[
+  {
+    "case": "prestart_replacement",
+    "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+    "generations": [
+      {
+        "generation": 1,
+        "room_sid_suffix": "uVJZ3Usr",
+        "subscribed_participants": [
+          "fN3eZHwt"
+        ],
+        "subscribed_tracks": [
+          "PdatPMqJ"
+        ],
+        "voiced_ms": 0
+      },
+      {
+        "generation": 2,
+        "room_sid_suffix": "uVJZ3Usr",
+        "subscribed_participants": [
+          "fN3eZHwt"
+        ],
+        "subscribed_tracks": [
+          "3dXXB83U"
+        ],
+        "voiced_ms": 3960.0
+      }
+    ]
+  },
+  {
+    "case": "worker_replacement",
+    "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+    "generations": [
+      {
+        "generation": 1,
+        "room_sid_suffix": "oqNeEgGL",
+        "subscribed_participants": [
+          "7PBszJMk"
+        ],
+        "subscribed_tracks": [
+          "S8ZJWSYA"
+        ],
+        "voiced_ms": 0
+      },
+      {
+        "generation": 2,
+        "room_sid_suffix": "ui9uFaXF",
+        "subscribed_participants": [
+          "SzvrqV2i"
+        ],
+        "subscribed_tracks": [
+          "kePM9b2S"
+        ],
+        "voiced_ms": 3940.0
+      }
+    ]
+  }
+]
