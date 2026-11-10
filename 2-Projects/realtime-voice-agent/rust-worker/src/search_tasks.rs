@@ -810,6 +810,7 @@ async fn run(api: Api, commands: mpsc::Receiver<Command>, events: mpsc::Sender<E
 async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>,
     business: tokio::sync::watch::Sender<(u64, Option<Instant>)>) {
     let mut current: Option<String> = None;
+    let mut submitted_turn: Option<String> = None;
     let mut current_grant:Option<String>=None;
     let mut current_delivery:Option<String>=None;
     let mut progress_jobs=tokio::task::JoinSet::new();
@@ -851,12 +852,16 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
                     Command::RoutingAck {version}=>{let ack_api=api.clone();tokio::spawn(async move {let _=ack_api.request("/routing/ack",Some(json!({"version":version}))).await;});},
                     Command::Submit { routing, query, turn, replace, epoch: e, generation } => {
                         epoch = e; replaying = false;
+                        submitted_turn = Some(turn.clone());
                         business.send_replace((epoch, Some(Instant::now() + Duration::from_millis(1500 + 3000))));
                         let resumed=current_grant.take().is_some();
                         if !replace || resumed { current = None; }
                         let mut body = json!({"protocol":1,"phase":"committed","query":query,"turn":turn});
                         if let Some(routing)=routing {body["routing"]=routing;}
                         if replace && !resumed { if let Some(id) = &current { body["replace"] = json!(id); } }
+                        // Replacement targets belong only in the POST; an uncertain
+                        // acknowledgement may recover only this new request turn.
+                        current = None; current_delivery = None;
                         let mut attempt = 0;
                         let response = loop {
                             let budget_ms = if attempt == 0 { 1500 } else { 3000 };
@@ -906,7 +911,7 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
                             } else if status.is_ok() { if flag("P003_SEARCH_RESUME_V1")&&api.request("/resume/cancel",Some(json!({}))).await.is_ok(){"好，已取消这次搜索。"}else{"当前没有进行中的搜索。"} } else { "暂时没能确认取消，请稍后再试。" };
                         // A failed remote acknowledgement never authorizes local
                         // polling/playback to revive the query the user stopped.
-                        current = None; current_delivery = None; polling = false;
+                        current = None; current_delivery = None; submitted_turn = None; polling = false;
                         let _ = events.send(Event::Ack { text, epoch, generation }).await;
                         let _ = events.send(Event::Finished { epoch }).await;
                     }
@@ -970,7 +975,12 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
                         for task in tasks {
                             if let (Some(id),Some(text)) = (task["id"].as_str(),result_text(task)) {
                                 // A lost POST acknowledgement can be recovered by the owned ledger.
-                                if current.is_none() { current = Some(id.to_owned()); }
+                                if let Some(expected) = &current {
+                                    if id != expected { continue; }
+                                } else {
+                                    if submitted_turn.as_deref().is_none_or(|turn| task["turn"].as_str() != Some(turn)) { continue; }
+                                    current = Some(id.to_owned());
+                                }
                                 let _ = events.send(Event::Ready { id: id.into(),text,epoch }).await;
                             }
                         }
@@ -1149,6 +1159,41 @@ mod tests {
             events,
             commands,
         )
+    }
+    #[tokio::test]
+    async fn routing_cancel_next_submit_cannot_relabel_old_ledger_result() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use std::sync::{Arc, atomic::{AtomicUsize,Ordering}};
+        let _=rustls::crypto::ring::default_provider().install_default();
+        for lost_ack in [false,true] {
+            let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let addr=listener.local_addr().unwrap();
+            let posts=Arc::new(AtomicUsize::new(0));let state=posts.clone();
+            let server=tokio::spawn(async move{loop{
+                let (mut socket,_)=listener.accept().await.unwrap();let posts=state.clone();
+                tokio::spawn(async move{
+                    let mut bytes=Vec::new();let mut buf=[0u8;8192];
+                    loop{let n=socket.read(&mut buf).await.unwrap();if n==0{return;}bytes.extend_from_slice(&buf[..n]);if let Some(end)=bytes.windows(4).position(|w|w==b"\r\n\r\n"){
+                        let header=String::from_utf8_lossy(&bytes[..end]);let length=header.lines().find_map(|l|l.to_lowercase().strip_prefix("content-length:").and_then(|v|v.trim().parse::<usize>().ok())).unwrap_or(0);
+                        if bytes.len()>=end+4+length{break;}
+                    }}
+                    let raw=String::from_utf8_lossy(&bytes);let first=raw.lines().next().unwrap();
+                    let (status,body)=if first.contains("/cancel?"){(503,json!({}))}
+                    else if first.starts_with("POST "){let n=posts.fetch_add(1,Ordering::SeqCst);(200,if n==0{json!({"task":{"id":"old","revision":1}})}else if lost_ack{json!({})}else{json!({"task":{"id":"new","revision":1}})})}
+                    else{let mut tasks=vec![json!({"id":"old","turn":"old-turn","status":"ready","valid_for_ms":10000,"automatic_for_ms":10000,"result":{"text":"不该复活的旧结果"}})];
+                        if posts.load(Ordering::SeqCst)>=2{tasks.push(json!({"id":"new","turn":"new-turn","status":"ready","valid_for_ms":10000,"automatic_for_ms":10000,"result":{"text":"新结果"}}));}(200,json!({"tasks":tasks}))};
+                    let body=body.to_string();let _=socket.write_all(format!("HTTP/1.1 {status} Test\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).as_bytes()).await;
+                });
+            }});
+            let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/tasks?room=synthetic").parse().unwrap(),token:"test".into(),key:"test".into()};
+            let(tx,commands)=mpsc::channel(8);let(events,mut rx)=mpsc::channel(32);let actor=tokio::spawn(run(api,commands,events));
+            tx.send(Command::Submit{routing:None,query:"旧查询".into(),turn:"old-turn".into(),replace:false,epoch:1,generation:1}).await.unwrap();
+            tokio::time::timeout(Duration::from_secs(2),async{while !matches!(rx.recv().await,Some(Event::Accepted{epoch:1,..})) {}}).await.unwrap();
+            tx.send(Command::Cancel{epoch:2,generation:1}).await.unwrap();
+            tokio::time::timeout(Duration::from_secs(2),async{while !matches!(rx.recv().await,Some(Event::Finished{epoch:2})) {}}).await.unwrap();
+            tx.send(Command::Submit{routing:None,query:"新查询".into(),turn:"new-turn".into(),replace:false,epoch:3,generation:1}).await.unwrap();
+            let next=tokio::time::timeout(Duration::from_secs(3),async{loop{if let Some(Event::Ready{id,epoch:3,..})=rx.recv().await{return id;}}}).await;
+            actor.abort();server.abort();assert_eq!(next.unwrap(),"new","old result must not inherit a new epoch, lost_ack={lost_ack}");
+        }
     }
     #[tokio::test]
     async fn routing_cancel_observed_asr_variant_requires_an_active_query() {
