@@ -1,0 +1,169 @@
+{
+  "decision": "releasable",
+  "decision_zh": "可发布",
+  "blockers": [],
+  "proven_new_defects": [],
+  "pre_release_code_changes": [],
+  "reviewer": "grok",
+  "reviewed_at": "2026-11-10T14:13:38+08:00",
+  "scope": "final release gate: bundle payloads, fixed candidates, rollback completeness, unverified boundaries",
+  "actions_not_taken": [
+    "no deploy",
+    "no source, config, or device edits",
+    "no production connection",
+    "no full-project re-review",
+    "no worker rebuild and no cargo rerun"
+  ],
+  "code_author": "codex",
+  "prior_reviews": {
+    "worker": "GROK_WORKER_REVIEW.md",
+    "brain": "GROK_BRAIN_REVIEW.md",
+    "listening": "GROK_LISTENING_REVIEW.md",
+    "resolution": "NO_OPEN_SCOPED_BLOCKER"
+  },
+  "bundle": {
+    "path": "/Users/fu-121/.local/state/p003-voice-routing-weather-execution-20261110/p003-voice-weather-candidate-20261110.tar",
+    "sha256": "7a217fcc0d023f668e0c24ba78bead7cd15fedeec6d0eb00e9a6ae623bfad024",
+    "bytes": 53923840,
+    "payloads": 7,
+    "extracted_after_sha_matches_manifest": true,
+    "manifest_in_tar_matches_evidence_root": true
+  },
+  "candidates": {
+    "main": {
+      "source": "148107232d1792c2c39719113d49031c67170d13",
+      "head": "937dd7d631feb730eda7de1cee39445c081a788a",
+      "baseline": "f0380202eb93303bc69563d37c08bab6f3f9d0fa",
+      "rollback_tag": "rollback/p003-voice-routing-pre-20261110",
+      "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+      "bytes": 76329944,
+      "build_id": "761ba9b48361413f0d16d9394e2de6a9c301ea82",
+      "head_delta": "docs only",
+      "worktree_clean": true
+    },
+    "listening": {
+      "source": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+      "head": "37afa96201ba2432ee9614f66cb1698df0593f94",
+      "baseline": "ac18707965623b85540408fc1d989eacb04ce798",
+      "rollback_tag": "rollback/p003-voice-routing-listening-pre-20261110",
+      "binary_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+      "bytes": 78225912,
+      "build_id": "0a213037df090714b040174554dae501d215aa1f",
+      "release_json_sha256": "594fe0fb2f1dbd1fc125461ef01b9627de224108cd339b055d4cd536551f8eb2",
+      "head_delta": "docs only",
+      "worktree_clean": true,
+      "binary_embeds_source_commit": true
+    },
+    "brain": {
+      "source": "15d07e6161dcd083d12501cd37d9511cad489427",
+      "head": "9ffc5c160c15bd287b432ee0143fc5820f1242dd",
+      "baseline": "62d840c2e347d65bec1de4ddf523b6a2a7c117d6",
+      "rollback_tag": "rollback/p003-weather-preview-pre-20261110",
+      "head_delta": "docs plus one preview UI test-script line plus weather-compiled-http.test.ts",
+      "runtime_blobs_unchanged_from_reviewed_source": true,
+      "provider_files_unchanged_from_baseline": [
+        "fixed-weather.ts",
+        "search-runtime.ts",
+        "search-routing-config.ts"
+      ],
+      "worktree_clean": true
+    }
+  },
+  "payloads": [
+    {
+      "target": "/root/rust-worker/voice-rust-worker",
+      "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+      "bytes": 76329944
+    },
+    {
+      "target": "/opt/p003/server/src/tools/weather-places.ts",
+      "sha256": "31549c3c36450b77caa377d20d900300df5a34b21affa8bfa69b600492f28f3a",
+      "bytes": 2743,
+      "matches_git": "15d07e6161dcd083d12501cd37d9511cad489427"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/search-routing-admin.ts",
+      "sha256": "6c5b38ff9d47602238311493bff8c543eb64a509d106d4b23b531dc3eb4699ab",
+      "bytes": 5464,
+      "matches_git": "15d07e6161dcd083d12501cd37d9511cad489427"
+    },
+    {
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "sha256": "491ad58daab6e9319a9df21e4c28f07191999bc09500b7491ad99b5f5ceb8267",
+      "bytes": 729453,
+      "matches_reviewed_public_admin_html": true
+    },
+    {
+      "target": "/opt/p003/server/bin/search-route-preview",
+      "sha256": "5cedfef79540b28a25c3275d409ce40446da99448457dd5cb822d94b032d0f50",
+      "bytes": 997560,
+      "build_id": "50307eafb6156d36e2bb79e0232de515ab5b2499",
+      "pool": "main routing engine"
+    },
+    {
+      "target": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+      "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+      "bytes": 78225912
+    },
+    {
+      "target": "/opt/p003-listening-canary-20261030/release.json",
+      "sha256": "594fe0fb2f1dbd1fc125461ef01b9627de224108cd339b055d4cd536551f8eb2",
+      "bytes": 170,
+      "build_sha": "fd3ad604c64079b607fbfc285c5d7c9baf2002df"
+    }
+  ],
+  "pool_separation": {
+    "ordered_pcm_sha256_both": "abe02f2e979401785156fd2f63b2e7afdea66c15b9b7ef93eb345f11446bc541",
+    "main_search_policy_sha256": "ac05fdb1013d05f986d7d7119ffa6486f6ed536880731278c159051efcf66ee6",
+    "listening_search_policy_sha256": "b799e076e53461ab9a69b2a980a2bb1d9fd01e5eb4c9496e6d19cb48b2436165",
+    "main_search_routing_sha256": "394113db4dc32a96f51c2afc2f5d101baec32fd81eb82e0d94f5eae3e1a46901",
+    "listening_search_routing_sha256": "71ad2d36de7b6cce2ed48904b361c6865bc1e35f6769d8147eb57b7e7bc64313",
+    "main_search_tasks_sha256": "c5922ecd8f788b064a6b4d7f92b580178c310931d14147051068c098962e3574",
+    "listening_search_tasks_sha256": "16e4ee7efde1b1aeb4d48a8395533ae6e8a25abfe1200e69003de4dfbc02aa9d",
+    "weather_places_catalog_sha256": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "merge_base": "8a34369413035470a929418f1dcd48f1f9ebed57",
+    "neither_source_contains_the_other": true,
+    "main_lacks_listening_adapter": true,
+    "listening_binary_has_listening_only_literals": true,
+    "main_and_preview_lack_listening_commit_and_literals": true,
+    "legacy_search_binary_absent": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+  },
+  "rollback": {
+    "complete": true,
+    "entries": 7,
+    "each_entry_has_before_after_backup_mode": true,
+    "listening_binary_and_release_json_paired": true,
+    "preview_backup": "/opt/p003/_backup/voice-routing-weather-20261110/preview-supplement/search-route-preview",
+    "worker_backup_root": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z",
+    "brain_backup_root": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z",
+    "online_before_and_backup_items": 14,
+    "online_before_snapshot_matched": true,
+    "local_checker_accepts_match_and_rejects_drift": true,
+    "local_tags_point_at_baselines": true,
+    "remote_rechecked_this_gate": false
+  },
+  "accepted_baseline": {
+    "tsc_log_sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "tsc_logs_identical": true,
+    "tsc_error_count": 12,
+    "fixed_weather_baseline_log_sha256": "6ee1f70f3f86a8b59fb5a33612d01e1bfa8e3edcf641d1dcec1525196e28ee3b",
+    "fixed_weather_candidate_log_sha256": "2bab28185db2ceb30a9681c78cbd3aaf31c46aac41ae913fb04df386a2011f78",
+    "fallback_runtime_baseline_log_sha256": "bfa169c861d0b10f506b85a8a13a84b5f3b8ee1a758cf821c469cea4d79cd126",
+    "fallback_runtime_candidate_log_sha256": "a5e46b92bed6c45eb97053a26044b8a197240220676f49c7650623f660245c31",
+    "provider_switch": false
+  },
+  "open_boundaries": [
+    "ResumeLatest plus failed cancellation plus failed next admission has no end-to-end fault injection",
+    "Real-person acoustic attenuation and Android PCM alignment are still pending",
+    "Isolated formal voice and the frozen weather stub do not certify live provider weather, live LLM answers, or production admission",
+    "Legacy search pool is outside this manifest"
+  ],
+  "go_live_checks": [
+    "Confirm the target device, pool, config revision, previous device scope, and agent/build. Do not change unrelated device gates.",
+    "Rerun check_manifest.py --mode before and --mode backup on the live hosts. Defer if that pool has an active room. Reconfirm tar 7a217fcc0d023f668e0c24ba78bead7cd15fedeec6d0eb00e9a6ae623bfad024 and the seven after SHA-256 values.",
+    "Apply the Brain TS, admin index.html, and search-route-preview first. Atomically replace each worker pool. Replace the listening binary and release.json together.",
+    "Restart only this batch. Verify /proc exe SHA-256, health, ticket build, live assignment, public preview, and a voice probe.",
+    "On rollback, verify --mode after and backup-before, then restore only the affected pool and recheck /proc SHA-256, ordinary answers, cancel, listening exit, and room re-entry.",
+    "Keep the business window at least 7 days. Any recording diagnostic uses the real open time, one device, 30 minutes, and 200MB."
+  ]
+}
