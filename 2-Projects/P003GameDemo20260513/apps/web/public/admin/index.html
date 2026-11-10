@@ -1345,7 +1345,16 @@
                         </div>
                         <div class="canary-device-row"><el-button :disabled="routing.draft.rules.length>=32" @click="routingAdd">增加规则</el-button><el-button :disabled="!routing.dirty" @click="saveRoutingDraft">保存路由草稿</el-button><span class="kh-sub">{{ routing.dirty ? '有未保存修改' : '草稿已同步' }} · 修订 {{ routing.editRevision }}</span></div>
                         <h3 style="margin-top:24px">话术预览</h3><label for="routing-utterances">每行一句，可验证自动定位或指定城市；预览不读取设备位置</label><textarea id="routing-utterances" rows="3" v-model="routing.utterances" @input="routing.preview=null" placeholder="查查恐龙灭绝的原因&#10;成都明天天气&#10;我今天画了一只猫"></textarea><el-button @click="previewRoutingDraft">预览路由（不执行搜索）</el-button>
-                        <div v-if="routing.preview" class="routing-preview"><p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : (d.auto_weather ? ' · 按设备网络定位 · '+['今天','明天','后天'][d.auto_weather.day_offset] : '') }}</span></p></div>
+                        <div v-if="routing.preview" class="routing-preview" data-testid="weather-preview">
+                          <p v-if="routing.catalog" class="kh-sub">天气目录：{{ routing.catalog.count }} 个站点 · SHA256 {{ routing.catalog.sha256 }}</p>
+                          <p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : (d.auto_weather ? ' · 按设备网络定位 · '+['今天','明天','后天'][d.auto_weather.day_offset] : '') }}</span>
+                            <template v-if="d.place_weather"><br>提取地点：{{ d.place_weather.place }} · {{ ['今天','明天','后天'][d.place_weather.day_offset] || '不支持的日期' }} · {{ ({forecast:'天气预报',current:'当前温度',aqi:'当前空气质量'})[d.place_weather.metric] || d.place_weather.metric }}
+                              <template v-if="d.place_inspection"><br>{{ ({unique:'地点唯一，可继续校验天气来源与时效',ambiguous:'地点有歧义，请明确省市',unknown:'目录未匹配，不会自动替换为本地天气',invalid:'地点格式不合法'})[d.place_inspection.status] }}<span v-for="p in d.place_inspection.candidates" :key="p.station"><br>{{ p.label }} · 天气站 {{ p.station }}</span></template>
+                              <template v-else><br>本版本未提供地点详情</template>
+                            </template>
+                          </p>
+                          <p class="kh-sub">这里只预览路由和地点解析，不请求天气；实际执行还需通过供应商、时效及权限校验。</p>
+                        </div>
                         <h3 style="margin-top:24px">发布与回滚</h3><div v-if="searchLane==='p2'" class="canary-device-row"><label v-for="sn in routing.data.eligible_sns" :key="sn"><input type="checkbox" :value="sn" v-model="routing.sns"> {{ sn }}</label></div><p class="kh-sub">{{ searchLane==='p1' ? '发布全量默认路由，存量及新增内测设备自动使用；不改变 P2。' : '只影响所选灰度设备，不开窗、不延窗、不改变 P1。' }} 发布前自动执行固定正反例回归。</p>
                         <div class="canary-device-row"><el-button type="primary" :disabled="routing.dirty || (searchLane==='p2' && !routing.sns.length)" @click="publishRouting">校验并发布路由</el-button><select v-model="routing.rollbackVersion" aria-label="历史路由版本"><option value="">选择历史版本</option><option v-for="v in routing.data.versions" :key="v.version" :value="v.version">{{ v.version }}</option></select><el-button :disabled="!routing.rollbackVersion || (searchLane==='p2' && !routing.sns.length)" @click="rollbackRouting">{{ searchLane==='p1' ? '回滚全量路由' : '回滚所选设备' }}</el-button></div>
                       </fieldset>
@@ -4979,7 +4988,7 @@
           finally{if(epoch===authSessionEpoch&&token===getToken()){amapUsage.saving=false;if(!amapUsage.pending)void loadAmapUsage();}}
         }
 
-        var routing=reactive({data:null,draft:null,loading:false,busy:false,dirty:false,error:'',notice:'',seq:0,editRevision:0,sns:[],rollbackVersion:'',utterances:'今天北京的天气\n我今天画了一只猫',preview:null});
+        var routing=reactive({data:null,draft:null,loading:false,busy:false,dirty:false,error:'',notice:'',seq:0,editRevision:0,sns:[],rollbackVersion:'',utterances:'今天北京的天气\n我今天画了一只猫',preview:null,catalog:null});
         watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){routing.seq++;routing.data=null;routing.draft=null;routing.loading=false;routing.busy=false;routing.error='';routing.notice='';routing.preview=null;routing.dirty=false;routing.sns=[];}});
         function routingDirty(){routing.dirty=true;routing.preview=null;routing.notice='';}
         function routingPhrases(r,k,e){r[k]=e.target.value.split(/[、，,\n]/).map(function(t){return t.trim();}).filter(Boolean);routingDirty();}
@@ -5003,7 +5012,7 @@
           finally{if(seq===routing.seq)routing.busy=false;}
         }
         function saveRoutingDraft(){return routingMutation('/draft','PUT',{expected_revision:routing.editRevision,config:routing.draft},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='草稿已保存，运行版本未改变';});}
-        function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.notice='预览完成，没有执行搜索';});}
+        function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.catalog=j.weather_catalog||null;routing.notice='预览完成，没有执行搜索';});}
         function publishRouting(){return routingMutation(searchLane.value==='p1'?'/publish-all':'/publish','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision}:{expected_revision:routing.data.revision,sns:routing.sns},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='路由已发布；等待 Worker 加载确认，不等于真机实听通过';});}
         function rollbackRouting(){return routingMutation(searchLane.value==='p1'?'/rollback-all':'/rollback','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision,version:routing.rollbackVersion}:{expected_revision:routing.data.revision,sns:routing.sns,version:routing.rollbackVersion},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,!routing.dirty);routing.notice=searchLane.value==='p1'?'全量路由已回滚发布，等待 Worker 确认':'所选设备已回滚发布，等待 Worker 确认';});}
 

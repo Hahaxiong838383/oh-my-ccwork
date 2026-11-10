@@ -1,0 +1,23 @@
+{
+  "worker_full": "594 passed;0 failed;1 existing ignored",
+  "brain_new_tests": "3230 catalog cases; HTTP preview unique/ambiguous/unknown/invalid/legacy/no-write passed",
+  "ui": "production Vue/WebKit passed: 11 grouped scenarios; API fixtures",
+  "baseline_failures": [
+    {
+      "test": "fixed-weather",
+      "baseline_exit": 1,
+      "candidate_exit": 1,
+      "reason": "Test expects Amap injection; this main-pool implementation is Baidu+Moji and lacks that candidate-pool behavior.",
+      "baseline_log_sha256": "6ee1f70f3f86a8b59fb5a33612d01e1bfa8e3edcf641d1dcec1525196e28ee3b",
+      "candidate_log_sha256": "2bab28185db2ceb30a9681c78cbd3aaf31c46aac41ae913fb04df386a2011f78"
+    },
+    {
+      "test": "search-weather-fallback-runtime",
+      "baseline_exit": 1,
+      "candidate_exit": 1,
+      "reason": "Test expects general web fallback after Baidu 429; this baseline returns explicit unverified-weather text instead.",
+      "baseline_log_sha256": "bfa169c861d0b10f506b85a8a13a84b5f3b8ee1a758cf821c469cea4d79cd126",
+      "candidate_log_sha256": "a5e46b92bed6c45eb97053a26044b8a197240220676f49c7650623f660245c31"
+    }
+  ]
+}
