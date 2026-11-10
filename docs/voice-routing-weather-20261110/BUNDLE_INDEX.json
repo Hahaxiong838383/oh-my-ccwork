@@ -1,0 +1,51 @@
+[
+  {
+    "target": "/root/rust-worker/voice-rust-worker",
+    "payload": "payload/main-worker.gz",
+    "gzip": true,
+    "sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+    "bytes": 76329944
+  },
+  {
+    "target": "/opt/p003/server/src/tools/weather-places.ts",
+    "payload": "payload/weather-places.ts",
+    "gzip": false,
+    "sha256": "31549c3c36450b77caa377d20d900300df5a34b21affa8bfa69b600492f28f3a",
+    "bytes": 2743
+  },
+  {
+    "target": "/opt/p003/server/src/routes/search-routing-admin.ts",
+    "payload": "payload/search-routing-admin.ts",
+    "gzip": false,
+    "sha256": "6c5b38ff9d47602238311493bff8c543eb64a509d106d4b23b531dc3eb4699ab",
+    "bytes": 5464
+  },
+  {
+    "target": "/opt/p003/web/dist/admin/index.html",
+    "payload": "payload/admin-index.html",
+    "gzip": false,
+    "sha256": "491ad58daab6e9319a9df21e4c28f07191999bc09500b7491ad99b5f5ceb8267",
+    "bytes": 729453
+  },
+  {
+    "target": "/opt/p003/server/bin/search-route-preview",
+    "payload": "payload/search-route-preview",
+    "gzip": false,
+    "sha256": "5cedfef79540b28a25c3275d409ce40446da99448457dd5cb822d94b032d0f50",
+    "bytes": 997560
+  },
+  {
+    "target": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+    "payload": "payload/listening-worker.gz",
+    "gzip": true,
+    "sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+    "bytes": 78225912
+  },
+  {
+    "target": "/opt/p003-listening-canary-20261030/release.json",
+    "payload": "payload/listening-release.json",
+    "gzip": false,
+    "sha256": "594fe0fb2f1dbd1fc125461ef01b9627de224108cd339b055d4cd536551f8eb2",
+    "bytes": 170
+  }
+]
