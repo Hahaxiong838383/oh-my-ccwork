@@ -1,0 +1,86 @@
+{
+  "at_utc": "2026-11-10T01:47:01.007805+00:00",
+  "hostname": "voice-worker-hk2",
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "4110554",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Tue 2026-11-10 01:41:46 UTC",
+      "ActiveState": "active",
+      "SubState": "running",
+      "exe_path": "/root/rust-worker/voice-rust-worker",
+      "process_sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78",
+      "disk_sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78",
+      "effective_env": {
+        "AGENT_NAME": "rust-worker",
+        "TTS_PROVIDER": "xfyun",
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_ASR_CONNECT_RECOVERY_V1": "1",
+        "P003_TTS_CONNECT_RECOVERY_V1": "1",
+        "P003_TTS_DNS_HEDGE_V1": "1",
+        "P003_BUSINESS_WATCHDOG_MODE": "enforce",
+        "P003_BUSINESS_WATCHDOG_SCOPE": "all_registered"
+      },
+      "watchdog_allowlist_suffixes": [
+        "02000053",
+        "99999901"
+      ]
+    },
+    "p003-listening-worker": {
+      "MainPID": "4110633",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Tue 2026-11-10 01:41:59 UTC",
+      "ActiveState": "active",
+      "SubState": "running",
+      "exe_path": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+      "process_sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "disk_sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "effective_env": {
+        "AGENT_NAME": "p003-search-listening-20261030",
+        "TTS_PROVIDER": "xfyun",
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_ASR_CONNECT_RECOVERY_V1": "1",
+        "P003_TTS_CONNECT_RECOVERY_V1": "1",
+        "P003_TTS_DNS_HEDGE_V1": "1",
+        "P003_BUSINESS_WATCHDOG_MODE": "enforce",
+        "P003_BUSINESS_WATCHDOG_SCOPE": "all_registered"
+      },
+      "watchdog_allowlist_suffixes": [
+        "03800006"
+      ]
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ExecMainStartTimestamp": "Tue 2026-11-03 11:03:55 UTC",
+      "ActiveState": "active",
+      "SubState": "running",
+      "exe_path": "/opt/p003-search-canary-20261021/voice-rust-worker",
+      "process_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "disk_sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+      "effective_env": {
+        "AGENT_NAME": "p003-search-canary-20261021",
+        "TTS_PROVIDER": "xfyun",
+        "P003_ASYNC_DNS_V1": "1",
+        "P003_ASR_CONNECT_RECOVERY_V1": null,
+        "P003_TTS_CONNECT_RECOVERY_V1": null,
+        "P003_TTS_DNS_HEDGE_V1": "1",
+        "P003_BUSINESS_WATCHDOG_MODE": null,
+        "P003_BUSINESS_WATCHDOG_SCOPE": null
+      },
+      "watchdog_allowlist_suffixes": []
+    }
+  },
+  "dns_file_sha256": {
+    "/etc/systemd/resolved.conf.d/60-p003-negative-cache.conf": "b8ca5c4b6eef8bc28d0e4e0b5eb04c4b340d02ecef461a557102b82eb0d504be",
+    "/run/systemd/resolve/stub-resolv.conf": "ebdf560272a77357195c39e98340b77e18c8a8ce2025ee950e9e0c7b01467ab8",
+    "/run/systemd/resolve/resolv.conf": "5bc964bc8cdc65de633b68eb223bc43c97eb21030d2200c068145f053793b6f1"
+  },
+  "verification": {
+    "stable": true,
+    "scope_readout_added_now": true,
+    "old_search_existing_fields_unchanged": true,
+    "dns_unchanged": true,
+    "prior_strict_compare_failure": "new readout key scope=None vs absent; runtime unchanged"
+  }
+}

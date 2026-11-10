@@ -1,0 +1,24 @@
+{
+  "main": {
+    "candidate": {
+      "source_commit": "1b1628649be24e13b248bea7fe91639de3a8879a",
+      "binary_sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78",
+      "binary_bytes": 76205344,
+      "full_test": "575 passed; 1 ignored"
+    },
+    "test_build_sources_exact": true,
+    "build_log_sha256": "e1bc71e0499e8db1318933cb1f2296847785d048da04c91e44f829646ecd7555",
+    "source_manifest_sha256": "324a6c4ffd0e8de24d45fa5ea66919d21e13f63af54a5f68ff315a4a5c3f8a2d"
+  },
+  "listening": {
+    "candidate": {
+      "source_commit": "ac18707965623b85540408fc1d989eacb04ce798",
+      "binary_sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "binary_bytes": 78243704,
+      "full_test": "661 unit + 53 integration passed; 2 ignored"
+    },
+    "test_build_sources_exact": true,
+    "build_log_sha256": "e46d0304aed32228646bc08deb6409c60b1cc4c76a6cd798124df0927cea29df",
+    "source_manifest_sha256": "dcaa56cd01353da6b85bed65d77a0ff32df010fe1ec8b2a23ea29a8e202a273e"
+  }
+}
