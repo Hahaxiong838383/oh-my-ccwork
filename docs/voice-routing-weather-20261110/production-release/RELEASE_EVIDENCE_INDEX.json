@@ -1,0 +1,82 @@
+{
+  "RELEASE_REVIEW.md": {
+    "sha256": "9b5628d024dcdee4665b4cfe99465f3163ae144774bbc76be8f672a2bf18f0a8",
+    "bytes": 11578
+  },
+  "RELEASE_REVIEW.json": {
+    "sha256": "c864563d345d56b73271ed1be312d134c826809db93eed7b7177478ea754682b",
+    "bytes": 8561
+  },
+  "DEPLOY_SAFETY_REVIEW.md": {
+    "sha256": "e7e331e9d4028087fef715d9bc70b6b65252653d4298480e9a2eca2ea53ee77c",
+    "bytes": 10355
+  },
+  "DEPLOY_SAFETY_REVIEW.json": {
+    "sha256": "45ebbace8d7b882865ae152513e964cacafeb5ffe0d227f918f674af83ea558a",
+    "bytes": 5401
+  },
+  "DEPLOY_REVIEW_RESOLUTION.json": {
+    "sha256": "ee96506b64984bf10f081141940a3fc2caacd96c0e8da681d0d9de81f714270f",
+    "bytes": 597
+  },
+  "GROK_ATTEMPT2_REVIEW.json": {
+    "sha256": "6a816a9a21ce50ded7d699e117401e6149dc18c380c4ff3d79c206f2545fd215",
+    "bytes": 2025
+  },
+  "brain-brain-deploy-apply.json": {
+    "sha256": "b146e51b9eb8725afa3e085cd6405ac68256aa7ca1fca5cf0d636cbd54e66101",
+    "bytes": 554
+  },
+  "brain-first-attempt-recovery.json": {
+    "sha256": "2ec53d26c6b5601f5b0432b722a8c18552ed857f3578efbac258f59414add1b2",
+    "bytes": 1055
+  },
+  "brain-brain-deploy-attempt2-apply.json": {
+    "sha256": "81e70ae4bbf616438368019748003675eaf1e53daab5f10a71026b1a8ad6fda2",
+    "bytes": 2543
+  },
+  "worker-deploy-pool-main.json": {
+    "sha256": "d4ef2ae90447727bac9c2a7aaafaf9e8a10f9bc2135e45e0b264d4aaed0e470d",
+    "bytes": 791
+  },
+  "worker-deploy-pool-listening.json": {
+    "sha256": "5c553569a9b28ca25577bb66953e003e9b7543c1854463cbb19ec4a33dfbac1b",
+    "bytes": 801
+  },
+  "worker-production-runner-main.json": {
+    "sha256": "1012080d59bc2394caf6f152d10390d4c28d76ec18a0e41a111d6ffdaf39ae6b",
+    "bytes": 1978
+  },
+  "worker-production-runner-listening.json": {
+    "sha256": "b719fe0f88c228c9c8315a499bfbce637707031445b1d1425da76d889931e8d3",
+    "bytes": 1783
+  },
+  "worker-production-ticket-runner-listening.json": {
+    "sha256": "a1e7a61d27097e99b6fcbfec2b3a57aa6fb989d8f967954d02a10dae918bf5bd",
+    "bytes": 1994
+  },
+  "brain-listening-metadata-apply.json": {
+    "sha256": "12be9c5ea8b72024d2a29645885001ef1062502d540b25a9e5b73c3dbaea3c4a",
+    "bytes": 1105
+  },
+  "brain-p1-metadata-apply.json": {
+    "sha256": "6b4d2976b6abfbee37a472412b3e62348eb3f9e328f918a851cd0b323648e3aa",
+    "bytes": 565
+  },
+  "brain-postcheck-apply.json": {
+    "sha256": "e55db96756253d94196fe02f8fa79bb74268b7602af0e24300813701a2ce966d",
+    "bytes": 10733
+  },
+  "worker-stability-and-rollback.json": {
+    "sha256": "411d2615c69bf1309f807bf82b3650a7dceedcecbc927f4824dca5bdcbbb7bdf",
+    "bytes": 1081
+  },
+  "PRODUCTION_MANIFEST.json": {
+    "sha256": "2891952c846e98f945b5de08f64febd962439da6a54c3d6c6b7422162a32ee9c",
+    "bytes": 5099
+  },
+  "PRODUCTION_RELEASE.json": {
+    "sha256": "ccec815fa8c33d7a9287340d20eb4a03dd852401ac5ce4cca141ca7fc4a02955",
+    "bytes": 6465
+  }
+}

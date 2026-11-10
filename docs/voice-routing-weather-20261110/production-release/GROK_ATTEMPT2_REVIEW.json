@@ -1,0 +1,30 @@
+{
+  "tasks": [
+    {
+      "task_id": "ba1e4e53-b96a-4e4f-a9e2-49eb1621330c",
+      "status": "completed",
+      "child_conversation_id": 232,
+      "agent_type": "grok",
+      "text": "可执行。无阻断。\n\n首次失败与「健康已起来、倾听 ready 断言过早」一致：整段 2419ms，`AssertionError` 且 `error` 为空，`rolled_back: true`。`p003-voice` 的 restarts 从 58 到 60（应用重启加回滚重启各一次）。`kidshub-voice`（pid 1626403，restarts 0）和 `p003-analytics`（pid 196818，restarts 11）未变。恢复态为 health ok、`runtime.ready true`、`config_same`、`files_restored`。`last_ack_at` 比脚本结束晚约 19.8 秒，落在 15 秒租约之后的下一次心跳窗口里。\n\nattempt2 只把倾听 ready 改成 `monotonic` 截止的 30 秒轮询，请求 `/api/admin/worker-voice/listening`，并在循环前把逐次 `ready` / `status` / `last_ack_at` 挂进 result。超时文案明确，失败带 traceback。通过后仍复检配置快照、ready、其他 PM2、env 哈希和四文件 after SHA。回滚仍先核 after SHA，再按清单备份写回，且只重启一次 `p003-voice`。备份目录是 `before-brain-attempt2`，第一次的 `before-brain` 保留。两个 Worker 不在这个脚本的重启范围内。30 秒覆盖两个 15 秒心跳周期。\n\n残留一项，不构成阻断：轮询中的 HTTP 错误或超时会立刻走原回滚；`ready=false` 会等到 30 秒。本次现场是后者。该调用使用同目录 `brain-common.request` 的 `timeout` 参数，当前 helper 已接收它。\n\ngrok（xAI）",
+      "duration_ms": 339955,
+      "progress": {
+        "steps": 19,
+        "marks": [
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok",
+          "ok"
+        ],
+        "last_step": "Read `/Users/fu-121/.local/state/p003-voice-routing-weather-release-20261110/brain-common.py`"
+      }
+    }
+  ]
+}

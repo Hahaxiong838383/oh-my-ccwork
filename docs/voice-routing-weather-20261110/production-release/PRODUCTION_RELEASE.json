@@ -1,0 +1,186 @@
+{
+  "status": "PRODUCTION_DEPLOYED_SERVER_VERIFIED_ANDROID_EXPERIENCE_PENDING",
+  "at": "2026-11-10 14:39:49 CST",
+  "runtime_sources": {
+    "main": "148107232d1792c2c39719113d49031c67170d13",
+    "listening": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+    "brain_incremental": "15d07e6161dcd083d12501cd37d9511cad489427"
+  },
+  "production_switches": {
+    "main": "2026-11-10 14:31:06 CST",
+    "listening": "2026-11-10 14:32:22 CST",
+    "brain": "2026-11-10 14:30:33 CST",
+    "listening_authority": "2026-11-10 14:32:32 CST",
+    "display_record": "2026-11-10 14:39:49 CST"
+  },
+  "probes": {
+    "main": {
+      "passed": true,
+      "trace": "ops-release-probe-e5ec8a92-e0e2-4784-a96d-6e66a12f01c6",
+      "physical_android": false,
+      "candidate_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+      "runtime_pid": "4170090",
+      "ready_ms": 1005,
+      "audible_ms": 9310.0,
+      "user_finals": 2,
+      "assistant_finals": 2,
+      "first_audio_ms_from_probe_start": 7237,
+      "input_sent_ms_from_probe_start": 1006,
+      "fixture_duration_ms": 3793.688,
+      "last_audio_to_close_ms": 5878,
+      "metrics": [
+        "eou",
+        "eou",
+        "tts",
+        "tts",
+        "llm"
+      ],
+      "natural_room_gone": true,
+      "signals": {
+        "registered worker": 0,
+        "job assignment received": 1,
+        "process exiting": 1,
+        "xfyun tts": 0,
+        "tts metrics": 2,
+        "llm disaster started": 0,
+        "panicked": 0,
+        "CaptureFailed": 0,
+        "ERROR": 0
+      },
+      "worker_log_sha256": "e84ef678affb5d810cc40026f2de59f8a94899cf35bf63495b597a8d673679d2"
+    },
+    "listening": {
+      "passed": true,
+      "trace": "ops-release-ticket-probe-c471935a-251d-4314-9aec-35d721849b5a",
+      "physical_android": false,
+      "candidate_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+      "runtime_pid": "4170463",
+      "ready_ms": 712,
+      "audible_ms": 11260.0,
+      "user_finals": 2,
+      "assistant_finals": 2,
+      "first_audio_ms_from_probe_start": 4884,
+      "input_sent_ms_from_probe_start": 719,
+      "fixture_duration_ms": 3793.688,
+      "last_audio_to_close_ms": 6452,
+      "metrics": [
+        "eou",
+        "tts",
+        "llm",
+        "tts"
+      ],
+      "natural_room_gone": true,
+      "signals": {
+        "registered worker": 0,
+        "job assignment received": 1,
+        "process exiting": 1,
+        "xfyun tts": 0,
+        "tts metrics": 2,
+        "llm disaster started": 0,
+        "panicked": 0,
+        "CaptureFailed": 0,
+        "ERROR": 0
+      },
+      "worker_log_sha256": "3655e17dbe231b1870f8f9415efd34248a815c371d05949115362420495435d9"
+    }
+  },
+  "listening_probe_identity": "existing development-test device suffix 03800006; server generated fixture; physical device not connected; no analytics uploaded",
+  "production_preview": {
+    "local_http": 200,
+    "public_http": 200,
+    "cases": 7,
+    "station_shenzhen": "101280601",
+    "catalog": {
+      "sha256": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+      "count": 3220
+    },
+    "public_admin": {
+      "status": 200,
+      "sha256": "491ad58daab6e9319a9df21e4c28f07191999bc09500b7491ad99b5f5ceb8267"
+    },
+    "preview_did_not_call_weather_provider": true,
+    "visual_test": "prior isolated Vue/WebKit; production HTML SHA and real API verified"
+  },
+  "stability": {
+    "main": {
+      "rollback_check": {
+        "pool": "main",
+        "rollback_check": "PASS",
+        "backup": "/root/p003-voice-routing-weather-release-20261110/before-main",
+        "applied": false
+      },
+      "stable_seconds": 517.887,
+      "same_pid": true,
+      "NRestarts": "0",
+      "signals": {
+        "registered worker": 1,
+        "panicked": 0,
+        "CaptureFailed": 0,
+        "ERROR": 0,
+        "at full capacity, declining job": 0
+      },
+      "journal_sha256": "e063a13c55f7d50f3451579973d096d59259333b8fbf7e2a804c4b01f67b0dbe"
+    },
+    "listening": {
+      "rollback_check": {
+        "pool": "listening",
+        "rollback_check": "PASS",
+        "backup": "/root/p003-voice-routing-weather-release-20261110/before-listening",
+        "applied": false
+      },
+      "stable_seconds": 444.254,
+      "same_pid": true,
+      "NRestarts": "0",
+      "signals": {
+        "registered worker": 1,
+        "panicked": 0,
+        "CaptureFailed": 0,
+        "ERROR": 0,
+        "at full capacity, declining job": 1
+      },
+      "journal_sha256": "abfc30fe7f25b79d8a806e6dd37c5f16c0d158969764153cf9ba1cf8d60aafa9"
+    }
+  },
+  "configuration_sha256": "0d89d26325b3718bce0115223b5ff482fd585fb22d2f140ec85623665b511fbc",
+  "configuration_unchanged": true,
+  "legacy_search_pool_unchanged": true,
+  "other_pm2_unchanged": true,
+  "listening_authority": {
+    "build_sha": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+    "ready": true,
+    "revision": 6,
+    "expires_at_ms": 1794391200000,
+    "expiry_preserved": true
+  },
+  "known_attempts": [
+    {
+      "kind": "Brain first apply",
+      "result": "automatic rollback; old files and health verified",
+      "evidence": "brain-brain-deploy-apply.json",
+      "resolution": "readiness checked before asynchronous Worker heartbeat; bounded wait added after Grok review, second attempt captured false-to-true in 5028 ms",
+      "business_source_changed_after_review": false
+    },
+    {
+      "kind": "first listening synthetic probe",
+      "result": "FAIL, no assignment/input/audio; fixture SN outside existing canary allowlist and missing signed canary metadata",
+      "evidence": "worker-production-runner-listening.json",
+      "resolution": "existing development-test identity via actual Brain device ticket, no allowlist modification; later FUNCTIONAL_PASS"
+    }
+  ],
+  "unverified": [
+    "physical Android acoustic attenuation/front-end capture and speaker experience",
+    "natural production weather-provider result for original query in a real device round",
+    "cross-room ResumeLatest plus cancel HTTP failure plus next admission failure end-to-end fault injection",
+    "long-term latency SLA and concurrent real-user load"
+  ],
+  "baseline_test_debt": [
+    "2 existing Brain tests fail unchanged vs baseline",
+    "12 existing tsc errors unchanged vs baseline"
+  ],
+  "reviewers": [
+    "codex (OpenAI)",
+    "grok (xAI)"
+  ],
+  "rollback_checks_only": true,
+  "brain_first_attempt_automatic_rollback_actually_executed": true
+}
