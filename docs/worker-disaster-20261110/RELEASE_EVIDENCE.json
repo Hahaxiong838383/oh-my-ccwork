@@ -1,0 +1,79 @@
+{
+  "worker_source": "b071e579f1354511267d3ba45766da94dcf07d7e",
+  "admin_source": "48fbace2cde2da5a77ed0f5567357b0299e13d9e",
+  "binary_sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622",
+  "configuration": {
+    "LLM_FALLBACK_BASE_URL": "https://api.deepseek.com/v1",
+    "LLM_FALLBACK_MODEL": "deepseek-v4-flash",
+    "LLM_FALLBACK_ENABLED": "1",
+    "LLM_FALLBACK_PROVIDER": "deepseek",
+    "LLM_FALLBACK_TRIGGER_MS": "2000",
+    "LLM_FALLBACK_DEADLINE_MS": "6000"
+  },
+  "public_ui": {
+    "status": 200,
+    "sha256": "106ddfdfb45ca76993310e5dfa6e05d66fa82c15e14e194c47b4873d8e3e0478",
+    "bytes": 728058,
+    "bounded_ui": true
+  },
+  "units": {
+    "voice-worker-rust": {
+      "MainPID": "4123394",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622"
+    },
+    "p003-listening-worker": {
+      "MainPID": "4110633",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "production_cases": [
+    {
+      "kind": "normal",
+      "rc": 0,
+      "status": "FUNCTIONAL_PASS",
+      "audible_ms": 7960.0,
+      "natural_room_gone": true
+    },
+    {
+      "kind": "ordered",
+      "rc": 0,
+      "status": "FUNCTIONAL_PASS",
+      "audible_ms": 7650.0,
+      "natural_room_gone": true
+    }
+  ],
+  "llm_metrics": [
+    "2026-11-10T02:44:15.947291Z  INFO llm race won won_by=\"main\" race_ttft_ms=866 fallback_started=false mode=\"bounded\"",
+    "2026-11-10T02:44:55.886286Z  INFO llm race won won_by=\"main\" race_ttft_ms=909 fallback_started=false mode=\"bounded\""
+  ],
+  "formal_pass": true,
+  "rollback_check": {
+    "pool": "main",
+    "rollback_check": "PASS",
+    "backup": "/root/p003-worker-disaster-fallback-20261110/before-main",
+    "applied": false
+  },
+  "backup_worker": "/root/p003-worker-disaster-fallback-20261110/before-main",
+  "backup_brain": "/opt/p003/_backup/worker-disaster-20261110",
+  "test_results": {
+    "rust_pass": 583,
+    "rust_ignored": 1,
+    "publisher_pass": 8,
+    "worker_race_api_pass": 14,
+    "worker_voice_api_pass": 12,
+    "hotword_pass": 26,
+    "ui": "PASS",
+    "typecheck": "12 pre-existing errors; byte-identical baseline"
+  },
+  "review_boundary": "Grok reviewed Worker b071e579 and admin functional a8226a0d; its cited publisher mutex lines additionally match 48fbace2 current tree. No independent runtime tests by Grok."
+}
