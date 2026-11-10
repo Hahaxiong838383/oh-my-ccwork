@@ -375,6 +375,9 @@ impl SearchSession {
                 self.gate.cancel();
                 self.speech.clear();
                 self.remainder = None; self.dialogue=None;
+                // Retire the old playback owner too: its later finish callback
+                // must not recreate replay state or release a new query.
+                self.active = None;
                 if self
                     .tx
                     .try_send(Command::Cancel {
@@ -1180,6 +1183,18 @@ mod tests {
         events.send(Event::Finished { epoch:s.epoch }).await.unwrap(); s.poll(false);
         s.command(Intent::Resume);
         assert!(commands.try_recv().is_err(), "cancel HTTP failure must not let resume revive the old result");
+    }
+    #[tokio::test]
+    async fn routing_cancel_late_playback_finish_cannot_restore_remainder_or_clear_new_busy() {
+        for sentences in [false, true] {
+            let (mut s, _events, mut commands) = test_session();
+            s.active = Some(claimed_speech(&json!({"valid_for_ms":20000,"automatic_for_ms":10000,"result":{"text":"旧结果第一句。第二句。"}}),"old".into(),"d1".into()).unwrap());
+            s.command(Intent::Cancel); commands.try_recv().unwrap();
+            assert!(s.command(Intent::Search("木星有多大".into()))); commands.try_recv().unwrap();
+            if sentences { s.finish_sentences(true,0,100); } else { s.finish_with_progress(true,0,100,false); }
+            assert!(s.remainder.is_none(), "cancelled active speech must not return as a remainder");
+            assert!(s.busy, "old playback finish must not clear the new task's busy flag");
+        }
     }
     #[tokio::test]
     async fn routing_cancel_full_command_queue_does_not_leave_a_permanent_busy_lock() {
