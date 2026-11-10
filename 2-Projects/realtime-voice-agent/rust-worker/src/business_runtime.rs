@@ -34,8 +34,23 @@ impl Runtime {
         Some(Self { origin, mode, idle_ms, revision,
             state: Arc::new(Mutex::new(State { model: BusinessWatchdog::new(policy, 0), deadlines: [None; 6], generations: [0; 6] })) })
     }
+    /// Scope is deployment-controlled; policy still comes exclusively from the
+    /// trusted Brain job metadata. Unknown/missing policy stays observe-only.
+    pub fn from_scoped_settings(mode: &str, scope: &str, allow: &str, room: &str,
+        metadata: Option<&serde_json::Value>, origin: Instant) -> Option<Self> {
+        let allow = match scope {
+            "allowlist" => allow,
+            // Reuse the same strict device-room parser in from_settings. The
+            // scope only removes local SN maintenance; it cannot manufacture a
+            // policy or authorize a room outside authenticated Brain dispatch.
+            "all_registered" => room.strip_prefix("sn-")?.split_once('-')?.0,
+            _ => return None,
+        };
+        Self::from_settings(mode, allow, room, metadata, origin)
+    }
     pub fn from_env(room: &str, metadata: Option<&serde_json::Value>, origin: Instant) -> Option<Self> {
-        Self::from_settings(&std::env::var("P003_BUSINESS_WATCHDOG_MODE").unwrap_or_default(),
+        Self::from_scoped_settings(&std::env::var("P003_BUSINESS_WATCHDOG_MODE").unwrap_or_default(),
+            &std::env::var("P003_BUSINESS_WATCHDOG_SCOPE").unwrap_or_else(|_| "allowlist".into()),
             &std::env::var("P003_BUSINESS_WATCHDOG_DEVICE_ALLOWLIST").unwrap_or_default(), room, metadata, origin)
     }
     fn ms(&self, now: Instant) -> u64 { now.saturating_duration_since(self.origin).as_millis().min(u64::MAX as u128) as u64 }
@@ -139,6 +154,35 @@ mod tests {
     use serde_json::json;
     const SN: &str = "BJP00326110799999901";
     const ROOM: &str = "sn-BJP00326110799999901-123";
+    #[test]
+    fn experience_all_registered_watchdog_uses_signed_policy_for_new_device_rooms() {
+        let t = Instant::now();
+        for room in [ROOM, "sn-BJP00326060100100004-1794230000"] {
+            let w = Runtime::from_scoped_settings("enforce", "all_registered", "", room, Some(&policy()), t)
+                .expect("all registered rooms must not depend on a stale SN list");
+            assert!(w.enforcing());
+            assert_eq!(w.evaluate(t+Duration::from_secs(59)), Decision::Keep);
+            assert_eq!(w.evaluate(t+Duration::from_secs(60)), Decision::Close(Reason::StartupNoInput));
+            let w = Runtime::from_scoped_settings("enforce", "all_registered", "", room, Some(&policy()), t).unwrap();
+            w.input_frame(t, 160);
+            assert_eq!(w.evaluate(t+Duration::from_secs(5)), Decision::Close(Reason::IdleNoProgress));
+        }
+    }
+    #[test]
+    fn experience_full_scope_preserves_invalid_policy_and_allowlist_boundaries() {
+        let t = Instant::now();
+        assert!(Runtime::from_scoped_settings("enforce", "allowlist", "", ROOM, Some(&policy()), t).is_none());
+        assert!(Runtime::from_scoped_settings("enforce", "typo", SN, ROOM, Some(&policy()), t).is_none());
+        for room in ["probe", "sn-other-123", "sn-BJP00326110799999901-bad"] {
+            assert!(Runtime::from_scoped_settings("enforce", "all_registered", "", room, Some(&policy()), t).is_none());
+        }
+        for value in [None, Some(serde_json::json!({"timeout_ms":0,"revision":"cfg-12"})), Some(serde_json::json!({"timeout_ms":5000,"revision":"builtin"}))] {
+            let w = Runtime::from_scoped_settings("enforce", "all_registered", "", ROOM, value.as_ref(), t).unwrap();
+            assert!(!w.enforcing());
+            assert_eq!(w.evaluate(t+Duration::from_secs(3600)), Decision::Observe(Reason::UnknownPolicy));
+        }
+        assert!(Runtime::from_scoped_settings("off", "all_registered", "", ROOM, Some(&policy()), t).is_none());
+    }
     #[tokio::test]
     async fn expired_startup_budget_never_polls_even_an_immediately_ready_operation() {
         let mut polled = false;
