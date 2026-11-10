@@ -1,0 +1,15 @@
+{
+  "at_ms": 1794291791339,
+  "review_verdict": "two Grok reviews executable, no blockers",
+  "corrections": [
+    {
+      "review": "DEPLOY_SAFETY_REVIEW.md note 1",
+      "fact": "listening-metadata.py --rollback 已补 c.idle()；复核文本引用了先前读取的旧快照。部署脚本与远端同字节。",
+      "sha256": "70eaa5759af84644563e079106cb8cbc9eb147357da8242938f67c862d3d2b58"
+    },
+    {
+      "review": "rollback order",
+      "resolution": "采用Grok建议逆序：Brain metadata先恢复，再倾听Worker，保持空房，最终核旧build三处一致。"
+    }
+  ]
+}

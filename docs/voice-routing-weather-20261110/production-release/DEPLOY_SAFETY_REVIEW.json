@@ -1,0 +1,101 @@
+{
+  "reviewer": "Grok (xAI)",
+  "reviewed_at": "2026-11-10",
+  "verdict": "executable",
+  "blocked": false,
+  "production_cut_performed": false,
+  "real_device_passed": false,
+  "ssh_or_deploy_by_reviewer": false,
+  "source_modified_by_reviewer": false,
+  "scope": "Deployment scripts and supplementary listening metadata in this directory only. Does not repeat the fixed-candidate and 7-file package review.",
+  "identities": {
+    "main_worker": {
+      "git_sha": "148107232d1792c2c39719113d49031c67170d13",
+      "binary_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+      "live_binary_sha256_expected_before": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622"
+    },
+    "listening_worker": {
+      "git_sha": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+      "binary_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+      "live_binary_sha256_expected_before": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "previous_build_sha": "ac18707965623b85540408fc1d989eacb04ce798"
+    },
+    "brain": {
+      "git_sha": "15d07e6161dcd083d12501cd37d9511cad489427",
+      "file_count": 4
+    }
+  },
+  "independent_pools": true,
+  "targets": {
+    "brain_four_files": [
+      "/opt/p003/server/src/tools/weather-places.ts",
+      "/opt/p003/server/src/routes/search-routing-admin.ts",
+      "/opt/p003/web/dist/admin/index.html",
+      "/opt/p003/server/bin/search-route-preview"
+    ],
+    "brain_authority_listening_release": "/opt/p003/listening-canary-20261030/listening-release.json",
+    "worker_listening_release": "/opt/p003-listening-canary-20261030/release.json",
+    "manifest_contains_brain_authority_file": false,
+    "p1_display_path_written_by_reviewed_scripts": false,
+    "p1_display_path": "/opt/p003/server/data/search-p1/release.json"
+  },
+  "metadata": {
+    "before_sha256": "7754f69d17c1a66bc52039cb1dd7ed89b0e0c65c9a54c2da3f1d2a3385b12068",
+    "after_sha256": "b649d23cc54c91693096be21d1ebad0d614049a9eabc4913beaed42fa36fda51",
+    "local_after_file_matches_plan": true,
+    "structural_diff_only": ["agents[0].build_sha", "evidence_ref"],
+    "preserved": ["version", "expires_at_ms", "agents[0].agent", "agents[0].capabilities"],
+    "expires_at_ms": 1794391200000,
+    "expires_at_utc": "2026-11-11T10:00:00Z",
+    "new_build_sha": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+    "worker_release_after_sha256": "594fe0fb2f1dbd1fc125461ef01b9627de224108cd339b055d4cd536551f8eb2",
+    "mode": "0o600"
+  },
+  "forward_guards_present": [
+    "brain-common.idle rejects LiveKit rooms and p1 tasks.recent queued/running",
+    "brain-deploy and listening-metadata forward path call idle",
+    "deploy-pool idle: no rooms; main journal job pairing; listening health.json jobs==0 and fresh cleanup",
+    "empty env update map; prefixed process env must match; unit file not written",
+    "other pool unit, search worker, window files, and service file hashes pinned",
+    "listening worker release.json replace requires old build_sha ac18707965623b85540408fc1d989eacb04ce798",
+    "listening-metadata asserts new JSON equals old JSON except build_sha and evidence_ref, and pins both file hashes",
+    "one-shot receipt refuses a second forward apply",
+    "in-script failure rollback restores the same paths that were written"
+  ],
+  "rollback_pairing": {
+    "brain_four_files": "brain-rollback.py --apply calls idle and restores only host==brain entries",
+    "main_worker": "rollback-pool.py main restores /root/rust-worker/voice-rust-worker only",
+    "listening_worker_and_local_release": "rollback-pool.py listening restores voice-rust-worker and /opt/p003-listening-canary-20261030/release.json",
+    "brain_authority": "listening-metadata.py --rollback restores /opt/p003/listening-canary-20261030/listening-release.json from before-metadata backup",
+    "must_pair_when_both_listening_sides_applied": true,
+    "metadata_failure_does_not_roll_back_listening_worker": true
+  },
+  "gaps_nonblocking": [
+    "listening-metadata.py --rollback does not call idle",
+    "rollback-pool.py --apply checks rooms only, not listening jobs, main unfinished jobs, or p1",
+    "listening manual rollback waits for journal text 'registered worker' rather than health.json, and is not idempotent after the binary swap",
+    "cross-step order is not locked between brain.lock and deploy.lock",
+    "metadata apply does not restart p003-voice and does not observe a build_sha transition",
+    "configuration snapshot omits routing.locations and routing.eligible_sns",
+    "p1 idle scans tasks.recent only",
+    "production-runner pass bit ignores worker log signal counts; probe is synthetic and sets real_android false",
+    "reviewed scripts do not reject an already-expired expires_at_ms"
+  ],
+  "required_order": [
+    "brain-deploy.py",
+    "deploy-pool.py main",
+    "production-runner.py main",
+    "deploy-pool.py listening",
+    "listening-metadata.py",
+    "production-runner.py listening"
+  ],
+  "cited_dry_run_artifacts": {
+    "note": "Existing local JSON from prior --check runs. Not re-executed in this review.",
+    "brain_precheck_files": 4,
+    "brain_precheck_idle": true,
+    "worker_main_check": "PASS",
+    "worker_listening_check": "PASS",
+    "metadata_check": "PASS",
+    "configuration_sha256": "0d89d26325b3718bce0115223b5ff482fd585fb22d2f140ec85623665b511fbc"
+  }
+}
