@@ -29,4 +29,16 @@ class PublisherTests(unittest.TestCase):
  def test_bench_never_sends_active_key_to_different_base(self):
   p._bench_call=lambda *a,**k: self.fail('cross-provider request made')
   r=p.do_race_bench({'models':['deepseek-v4-flash'],'base':'https://api.deepseek.com/v1'});self.assertFalse(r['ok'])
-if __name__=='__main__':unittest.main()
+ def test_config_write_lock_blocks_concurrent_mutations(self):
+  import fcntl,io,contextlib,sys
+  before=pathlib.Path(p.RUST_ENV).read_bytes()
+  with open(p.RUST_ENV+'.config.lock','a') as lock:
+   fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+   for action in ['race_set','voice_set','apply']:
+    old=sys.stdin;sys.stdin=io.StringIO(json.dumps({'action':action,'values':{'LLM_FALLBACK_ENABLED':'0'}}));out=io.StringIO()
+    try:
+     with contextlib.redirect_stdout(out):p.main()
+    finally:sys.stdin=old
+    self.assertEqual(json.loads(out.getvalue()).get('error'),'配置发布正在进行，请稍后重试')
+  self.assertEqual(pathlib.Path(p.RUST_ENV).read_bytes(),before)
+if __name__=='__main__' :unittest.main()

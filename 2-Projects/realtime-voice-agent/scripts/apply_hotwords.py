@@ -32,6 +32,7 @@ stdin 单行 JSON,stdout 单行 JSON 回执(stderr 才是人读日志):
   走 main.rs vad::preload fail-fast 真实启动失败路径,验证自动回滚安全网非空。
 """
 import json
+import fcntl
 import os
 import re
 import subprocess
@@ -776,6 +777,18 @@ def main() -> None:
         print(json.dumps({"ok": False, "error": "stdin 不是合法 JSON"}))
         return
     action = req.get("action")
+    # One env file + one service: serialize all three writers across SSH processes.
+    # Reject immediately rather than queue another restart behind a stale browser form.
+    config_lock = None
+    if action in ("race_set", "voice_set", "apply"):
+        config_lock = open(RUST_ENV + ".config.lock", "a")
+        os.chmod(RUST_ENV + ".config.lock", 0o600)
+        try:
+            fcntl.flock(config_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            config_lock.close()
+            print(json.dumps({"ok": False, "error": "配置发布正在进行，请稍后重试"}, ensure_ascii=False))
+            return
     if action == "status":
         resp = {
             "ok": True, "env": env_values(RUST_ENV), "proc": proc_values(),
@@ -814,6 +827,8 @@ def main() -> None:
     else:
         resp = {"ok": False, "error": f"未知 action: {action}"}
     print(json.dumps(resp, ensure_ascii=False))
+    if config_lock is not None:
+        config_lock.close()
 
 
 if __name__ == "__main__":
