@@ -1,6 +1,6 @@
 //! OpenAI 兼容流式 LLM 客户端(行为对齐 fast_llm.py 主路:SSE 直发 + DeepSeek
 //! `thinking:{"type":"disabled"}` + 句首承接词流式剥除 + 投机(preemptive)支持)。
-//! 赛马/兜底(LLM_FALLBACK_*)生产未配,未实现——接入时对齐 _run_race。
+//! Worker 外层按故障/首正文超时启动一次有界灾备，Brain 内部赛马独立。
 
 use anyhow::{Context, Result};
 use futures_util::StreamExt;
@@ -57,9 +57,11 @@ impl LlmConfig {
         get: impl Fn(&str) -> Option<String>,
         main: &LlmConfig,
     ) -> Option<LlmConfig> {
+        if get("LLM_FALLBACK_ENABLED").as_deref() != Some("1") { return None; }
         let base_url = get("LLM_FALLBACK_BASE_URL")?;
         let api_key = get("LLM_FALLBACK_API_KEY")?;
         let model = get("LLM_FALLBACK_MODEL")?;
+        if [&base_url, &api_key, &model].iter().any(|v| v.trim().is_empty()) { return None; }
         Some(LlmConfig {
             base_url,
             api_key,
@@ -460,107 +462,104 @@ pub async fn stream_chat_with_context(
     })
 }
 
-// --- LLM 双路赛马(_run_race 移植,2026-08-17) -----------------------------------
+// --- Worker 外层有界灾备：首正文之前最多启动一次备用 -------------------------
+#[derive(Clone, Copy)]
+struct FallbackPolicy { trigger_ms: u64, deadline_ms: u64 }
+impl FallbackPolicy {
+    fn from_env() -> Self {
+        let read=|key: &str| std::env::var(key).ok().and_then(|v| v.parse::<u64>().ok());
+        let trigger_ms=read("LLM_FALLBACK_TRIGGER_MS").filter(|v| (500..=5000).contains(v)).unwrap_or(2000);
+        let deadline_ms=read("LLM_FALLBACK_DEADLINE_MS").filter(|v| *v>=trigger_ms+2000 && *v<=15000).unwrap_or((trigger_ms+2000).max(6000));
+        Self{trigger_ms,deadline_ms}
+    }
+}
+// Dropping an outer future (barge-in/job close) must abort every owned HTTP task.
+struct OwnedChat(tokio::task::JoinHandle<Result<ChatOutcome>>);
+impl Drop for OwnedChat { fn drop(&mut self) { self.0.abort(); } }
 
-/// 主+兜底并发,**首个产出可见 delta 的流 claim 胜**(败者 abort),全败才抛;
-/// 未配兜底=单路零变化。胜者 delta(含首个)转发外层 tx;外层断(下游打断)→
-/// drop 胜者 rx → 其 inner send 失败 → stream_chat 按 interrupted 收尾,级联干净。
-/// 解 DeepSeek 晚高峰 ttft 抖动(Python 线 1.3-40s 实测),filler 只能盖 ~2s。
+async fn visible_delta(rx: &mut mpsc::Receiver<String>, prefix: &mut String) -> Option<String> {
+    while let Some(d)=rx.recv().await {
+        let (_,spoken)=split_dev_inband(&d);
+        prefix.push_str(&d);
+        if !spoken.trim().is_empty() { return Some(std::mem::take(prefix)); }
+        // Control-only / whitespace streams cannot win or grow memory without bound.
+        if prefix.len()>4096 { return None; }
+    }
+    None
+}
+
 pub async fn stream_chat_race(
     main: (&reqwest::Client, &LlmConfig),
     fallback: Option<(&reqwest::Client, &LlmConfig)>,
-    messages: Vec<Value>,
-    tx: mpsc::Sender<String>,
-    search_context:Option<Value>,
+    messages: Vec<Value>, tx: mpsc::Sender<String>, search_context: Option<Value>,
 ) -> Result<ChatOutcome> {
-    let Some((fb_client, fb_cfg)) = fallback else {
-        return stream_chat_with_context(main.0, main.1, messages, tx,search_context).await;
+    stream_chat_bounded(main,fallback,messages,tx,search_context,FallbackPolicy::from_env()).await
+}
+
+async fn stream_chat_bounded(
+    main: (&reqwest::Client, &LlmConfig),
+    fallback: Option<(&reqwest::Client, &LlmConfig)>,
+    messages: Vec<Value>, tx: mpsc::Sender<String>, search_context: Option<Value>,
+    policy: FallbackPolicy,
+) -> Result<ChatOutcome> {
+    let Some((fc,fcfg))=fallback else {
+        return tokio::select! {
+            biased;
+            _=tx.closed()=>anyhow::bail!("llm cancelled"),
+            r=stream_chat_with_context(main.0,main.1,messages,tx.clone(),search_context)=>r,
+        };
     };
-    // 主路让步窗(2026-08-17 P1 接大脑):兜底先出首 delta 时再等主路至多 grace_ms,
-    // 主路窗内出 token 则主路胜。默认 0=公平赛马(裸模互备场景);主路=大脑(带人设
-    // 记忆)、兜底=裸模时必须配(否则裸 doubao ~550ms 常胜大脑 ~830ms,人设丢失
-    // ——「字节跳动的人工智能」就是这么来的),生产 800ms。
-    let grace_ms: u64 = std::env::var("LLM_RACE_MAIN_GRACE_MS")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(0);
-    let t0 = std::time::Instant::now();
-    let (m_tx, mut m_rx) = mpsc::channel::<String>(1024);
-    let (f_tx, mut f_rx) = mpsc::channel::<String>(1024);
-    let m_task = {
-        let (c, cfg, msgs) = (main.0.clone(), main.1.clone(), messages.clone());
-        let context=search_context.clone();
-        tokio::spawn(async move { stream_chat_with_context(&c, &cfg, msgs, m_tx,context).await })
+    anyhow::ensure!(!tx.is_closed(),"llm cancelled");
+    let start=tokio::time::Instant::now();
+    let trigger=start+std::time::Duration::from_millis(policy.trigger_ms);
+    let deadline=start+std::time::Duration::from_millis(policy.deadline_ms);
+    let (mt,mut mr)=mpsc::channel(128); let (ft,mut fr)=mpsc::channel(128);
+    let (c,cfg,msgs)=(main.0.clone(),main.1.clone(),messages.clone());
+    let mut mt=OwnedChat(tokio::spawn(async move {stream_chat_with_context(&c,&cfg,msgs,mt,search_context).await}));
+    let mut mp=String::new();let mut fp=String::new();
+    let mut main_open=true;
+    let first_main=tokio::select! {
+        biased;
+        _=tx.closed()=>anyhow::bail!("llm cancelled"),
+        _=tokio::time::sleep_until(deadline)=>anyhow::bail!("llm first content deadline"),
+        d=visible_delta(&mut mr,&mut mp)=>{ if d.is_none(){main_open=false;} d },
+        _=tokio::time::sleep_until(trigger)=>None,
     };
-    let f_task = {
-        let (c, cfg) = (fb_client.clone(), fb_cfg.clone());
-        tokio::spawn(async move { stream_chat(&c, &cfg, messages, f_tx).await })
-    };
-    // 首个可见 delta 定胜负;一路 rx 关闭(失败/空回复)→ 串行等另一路;双败合并抛
-    let (won_by, mut win_rx, win_task, lose_task, first) = tokio::select! {
-        m = m_rx.recv() => match m {
-            Some(d) => ("main", m_rx, m_task, f_task, d),
-            None => match f_rx.recv().await {
-                Some(d) => ("fallback", f_rx, f_task, m_task, d),
-                None => {
-                    let me = m_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
-                    let fe = f_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
-                    anyhow::bail!("llm race 双路全败: main={me:?} fallback={fe:?}");
-                }
-            },
-        },
-        f = f_rx.recv() => match f {
-            Some(d) => {
-                if grace_ms > 0 {
-                    // 兜底先出:给主路一个让步窗;窗内主路出 delta → 主路胜(兜底首 delta
-                    // 丢弃,兜底 task 随 lose_task.abort 终止);超时/主路流关闭 → 兜底胜
-                    match tokio::time::timeout(
-                        std::time::Duration::from_millis(grace_ms),
-                        m_rx.recv(),
-                    )
-                    .await
-                    {
-                        Ok(Some(md)) => {
-                            info!(grace_ms, "llm race: main within grace window(兜底让位)");
-                            ("main", m_rx, m_task, f_task, md)
-                        }
-                        _ => ("fallback", f_rx, f_task, m_task, d),
-                    }
-                } else {
-                    ("fallback", f_rx, f_task, m_task, d)
-                }
-            }
-            None => match m_rx.recv().await {
-                Some(d) => ("main", m_rx, m_task, f_task, d),
-                None => {
-                    let me = m_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
-                    let fe = f_task.await.map_err(anyhow::Error::from).and_then(|r| r.map(|_| ()));
-                    anyhow::bail!("llm race 双路全败: main={me:?} fallback={fe:?}");
-                }
-            },
-        },
-    };
-    info!(won_by, race_ttft_ms = t0.elapsed().as_millis() as u64, "llm race won");
-    lose_task.abort();
-    let mut fwd_broken = false;
-    if tx.send(first).await.is_err() {
-        fwd_broken = true;
-    }
-    if !fwd_broken {
-        while let Some(d) = win_rx.recv().await {
-            if tx.send(d).await.is_err() {
-                fwd_broken = true;
-                break;
+    let mut fb_task=None;
+    let (won_by,first)=if let Some(d)=first_main { ("main",d) } else {
+        anyhow::ensure!(!tx.is_closed(),"llm cancelled");
+        info!(reason=if main_open {"first_content_timeout"} else {"main_failed_or_empty"}, trigger_ms=policy.trigger_ms, deadline_ms=policy.deadline_ms, "llm disaster started");
+        if !main_open {mt.0.abort();}
+        let (c,cfg)=(fc.clone(),fcfg.clone());
+        fb_task=Some(OwnedChat(tokio::spawn(async move {stream_chat(&c,&cfg,messages,ft).await})));
+        let mut fb_open=true;
+        loop {
+            anyhow::ensure!(main_open || fb_open,"llm disaster both failed or empty");
+            tokio::select! {
+                biased;
+                _=tx.closed()=>anyhow::bail!("llm cancelled"),
+                _=tokio::time::sleep_until(deadline)=>anyhow::bail!("llm first content deadline"),
+                d=visible_delta(&mut mr,&mut mp), if main_open=>match d {Some(d)=>break ("main",d),None=>{main_open=false;mt.0.abort();}},
+                d=visible_delta(&mut fr,&mut fp), if fb_open=>match d {Some(d)=>break ("fallback",d),None=>{fb_open=false;if let Some(t)=&fb_task{t.0.abort();}}},
             }
         }
+    };
+    let fallback_started=fb_task.is_some();
+    info!(won_by,race_ttft_ms=start.elapsed().as_millis() as u64,fallback_started,mode="bounded", "llm race won");
+    let (rx,task)=if won_by=="main" {
+        if let Some(t)=fb_task.as_ref(){t.0.abort();}
+        (&mut mr,&mut mt)
+    } else {
+        mt.0.abort(); (&mut fr,fb_task.as_mut().expect("started fallback"))
+    };
+    // Winner is fixed once text is emitted. Never splice an alternate reply mid-sentence.
+    tx.send(first).await.context("llm consumer closed")?;
+    loop {
+        let d=tokio::select! {biased; _=tx.closed()=>anyhow::bail!("llm cancelled"), d=rx.recv()=>d};
+        let Some(d)=d else {break};
+        tx.send(d).await.context("llm consumer closed")?;
     }
-    if fwd_broken {
-        drop(win_rx); // 级联:胜者流 inner send 失败 → interrupted 收尾
-    }
-    match win_task.await {
-        Ok(r) => r,
-        Err(e) => Err(anyhow::anyhow!("race winner join: {e}")),
-    }
+    (&mut task.0).await.context("llm winner task")?
 }
 
 // --- 带历史的会话客户端 ---------------------------------------------------------
@@ -591,7 +590,7 @@ fn build_client() -> reqwest::Client {
 impl Llm {
     pub fn new(cfg: LlmConfig) -> Self {
         let fb = LlmConfig::fallback_from_env(&cfg).map(|f| {
-            info!(model = %f.model, "llm race 兜底路已配置");
+            info!(model = %f.model, "llm bounded disaster configured");
             (build_client(), f)
         });
         Self { cfg, client: build_client(), fb, history: Vec::new(), version: 0, speaker_slot: None }
@@ -611,9 +610,7 @@ impl Llm {
     }
 
     /// 兜底路 prewarm 用(对齐 Python「兜底路同 prewarm」;未配=None)。
-    pub fn fallback_prewarm_parts(&self) -> Option<(reqwest::Client, LlmConfig)> {
-        self.fb.as_ref().map(|(c, f)| (c.clone(), f.clone()))
-    }
+
 
     /// 投机用:当前历史 + user 文本的请求快照(client/cfg 克隆,请求不经本对象)。
     pub fn speculation_request(
@@ -873,6 +870,7 @@ mod tests {
         m.url_query = "token=secret".into();
         let f = LlmConfig::fallback_from(
             |k| match k {
+                "LLM_FALLBACK_ENABLED" => Some("1".into()),
                 "LLM_FALLBACK_BASE_URL" => Some("https://fb.example/v1".into()),
                 "LLM_FALLBACK_API_KEY" => Some("k2".into()),
                 "LLM_FALLBACK_MODEL" => Some("doubao".into()),
@@ -888,6 +886,7 @@ mod tests {
     fn fallback_cfg_requires_all_three_and_inherits() {
         let m = main_cfg();
         let full = |k: &str| match k {
+                "LLM_FALLBACK_ENABLED" => Some("1".into()),
             "LLM_FALLBACK_BASE_URL" => Some("https://ark.example/api/coding/v3".to_string()),
             "LLM_FALLBACK_API_KEY" => Some("k2".to_string()),
             "LLM_FALLBACK_MODEL" => Some("doubao-seed-2.0-lite".to_string()),
@@ -900,6 +899,7 @@ mod tests {
         assert_eq!(f.thinking, "disabled"); // 默认关思考(doubao 默认开,不关拖 speakable)
         // 缺任一件=None(不开赛马,零变化)
         let missing = |k: &str| match k {
+                "LLM_FALLBACK_ENABLED" => Some("1".into()),
             "LLM_FALLBACK_BASE_URL" => Some("x".to_string()),
             "LLM_FALLBACK_API_KEY" => Some("y".to_string()),
             _ => None, // 缺 MODEL
@@ -907,6 +907,7 @@ mod tests {
         assert!(LlmConfig::fallback_from(missing, &m).is_none());
         // THINKING 可覆盖
         let with_think = |k: &str| match k {
+                "LLM_FALLBACK_ENABLED" => Some("1".into()),
             "LLM_FALLBACK_BASE_URL" => Some("x".to_string()),
             "LLM_FALLBACK_API_KEY" => Some("y".to_string()),
             "LLM_FALLBACK_MODEL" => Some("z".to_string()),
@@ -1035,4 +1036,136 @@ mod dev_inband_tests {
         let open = format!("正文{}DEV:6", DEV_INBAND_SEP);
         assert_eq!(split_dev_inband(&open), (vec![], open.clone()));
     }
+}
+
+#[cfg(test)]
+mod disaster_tests {
+    use super::*;
+    use std::sync::{Arc, atomic::{AtomicUsize, Ordering}};
+    use tokio::{io::{AsyncReadExt, AsyncWriteExt}, net::TcpListener, time::{sleep, Duration}};
+    struct Endpoint { url: String, calls: Arc<AtomicUsize>, task: tokio::task::JoinHandle<()> }
+    impl Drop for Endpoint { fn drop(&mut self) { self.task.abort(); } }
+    async fn endpoint(delay: u64, status: u16, body: &'static str) -> Endpoint {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let calls=Arc::new(AtomicUsize::new(0)); let count=calls.clone();
+        let task=tokio::spawn(async move {
+            while let Ok((mut socket,_))=listener.accept().await {
+                count.fetch_add(1,Ordering::SeqCst);
+                tokio::spawn(async move {
+                    let mut buf=[0;8192]; let _=socket.read(&mut buf).await;
+                    sleep(Duration::from_millis(delay)).await;
+                    let response=format!("HTTP/1.1 {status} OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len());
+                    let _=socket.write_all(response.as_bytes()).await;
+                });
+            }
+        });
+        Endpoint{url,calls,task}
+    }
+    const ANSWER:&str="data: {\"choices\":[{\"delta\":{\"content\":\"正文。\"}}]}\n\ndata: [DONE]\n\n";
+    fn config(e:&Endpoint)->LlmConfig { LlmConfig {base_url:e.url.clone(),api_key:"test".into(),model:"test".into(),instructions:"".into(),thinking:"off".into(),strip_leading_filler:false,url_query:"".into(),room:"".into()} }
+    #[tokio::test]
+    async fn disaster_fast_main_never_calls_backup() {
+        let m=endpoint(40,200,ANSWER).await; let f=endpoint(10,200,ANSWER).await;
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let c=reqwest::Client::new();let (tx,_rx)=mpsc::channel(16);
+        let outcome=stream_chat_race((&c,&config(&m)),Some((&c,&config(&f))),vec![],tx,None).await.unwrap();
+        assert_eq!(outcome.full,"正文。");
+        assert_eq!(f.calls.load(Ordering::SeqCst),0,"fast Brain must not start a second LLM");
+    }
+    async fn run_case(m:&Endpoint,f:&Endpoint,trigger:u64,deadline:u64)->Result<ChatOutcome> {
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let c=reqwest::Client::new();let (tx,_rx)=mpsc::channel(16);
+        stream_chat_bounded((&c,&config(m)),Some((&c,&config(f))),vec![],tx,None,FallbackPolicy{trigger_ms:trigger,deadline_ms:deadline}).await
+    }
+    #[tokio::test]
+    async fn disaster_failure_and_empty_start_once_without_wait() {
+        for (status,body) in [(503,""),(200,"data: [DONE]\n\n"),(200,"data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"thinking\"}}]}\n\ndata: [DONE]\n\n"),(200,"data: {\"choices\":[{\"delta\":{\"content\":\"[[DEV:1]]\"}}]}\n\ndata: [DONE]\n\n")] {
+            let m=endpoint(0,status,body).await;let f=endpoint(5,200,ANSWER).await;
+            let t=std::time::Instant::now();let r=run_case(&m,&f,500,1000).await.unwrap();
+            assert_eq!(r.full,"正文。");assert!(t.elapsed().as_millis()<300);assert_eq!(f.calls.load(Ordering::SeqCst),1);
+            assert!(r.dev_labels.is_empty(),"losing control token must not leak");
+        }
+    }
+    #[tokio::test]
+    async fn disaster_delayed_backup_and_slow_main_can_still_win() {
+        const MAIN:&str="data: {\"choices\":[{\"delta\":{\"content\":\"主路。\"}}]}\n\ndata: [DONE]\n\n";
+        for (md,fd,expected) in [(500,5,"正文。"),(100,200,"主路。")] {
+            let m=endpoint(md,200,MAIN).await;let f=endpoint(fd,200,ANSWER).await;
+            let t=std::time::Instant::now();let r=run_case(&m,&f,50,900).await.unwrap();
+            assert_eq!(r.full,expected);assert!(t.elapsed().as_millis()>=50);assert_eq!(f.calls.load(Ordering::SeqCst),1);
+        }
+    }
+    // A live HTTP stream that reports peer closure, so cancellation is observed at the socket.
+    async fn hanging(prefix:&'static str)->(Endpoint,Arc<AtomicUsize>) {
+        let listener=TcpListener::bind("127.0.0.1:0").await.unwrap();let url=format!("http://{}",listener.local_addr().unwrap());
+        let calls=Arc::new(AtomicUsize::new(0));let count=calls.clone();let closed=Arc::new(AtomicUsize::new(0));let c2=closed.clone();
+        let task=tokio::spawn(async move {
+            while let Ok((mut socket,_))=listener.accept().await {
+                count.fetch_add(1,Ordering::SeqCst);let c2=c2.clone();
+                tokio::spawn(async move {
+                    let mut request=Vec::new();let mut buf=[0;8192];
+                    loop {
+                        let n=socket.read(&mut buf).await.unwrap_or(0);if n==0{return;}request.extend_from_slice(&buf[..n]);
+                        if let Some(pos)=request.windows(4).position(|v|v==b"\r\n\r\n") {
+                            let headers=String::from_utf8_lossy(&request[..pos]).to_lowercase();
+                            let len=headers.lines().find_map(|l|l.strip_prefix("content-length:").and_then(|v|v.trim().parse::<usize>().ok())).unwrap_or(0);
+                            if request.len()>=pos+4+len {break;}
+                        }
+                    }
+                    let _=socket.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nConnection: close\r\n\r\n{prefix}").as_bytes()).await;
+                    if socket.read(&mut buf).await.unwrap_or(0)==0 {c2.fetch_add(1,Ordering::SeqCst);}
+                });
+            }
+        });(Endpoint{url,calls,task},closed)
+    }
+    async fn wait_closed(c:&Arc<AtomicUsize>) {
+        tokio::time::timeout(Duration::from_millis(500),async {while c.load(Ordering::SeqCst)==0{sleep(Duration::from_millis(5)).await;}}).await.expect("HTTP request survived cancellation");
+    }
+    #[tokio::test]
+    async fn disaster_deadline_cancels_both_http_requests() {
+        let (m,mc)=hanging("").await;let (f,fc)=hanging("").await;
+        let t=std::time::Instant::now();assert!(run_case(&m,&f,30,120).await.is_err());
+        assert!(t.elapsed().as_millis()<400);assert_eq!(f.calls.load(Ordering::SeqCst),1);wait_closed(&mc).await;wait_closed(&fc).await;
+    }
+    #[tokio::test]
+    async fn disaster_parent_cancel_before_and_after_backup_cancels_sockets() {
+        let _=rustls::crypto::ring::default_provider().install_default();
+        for cancel_after in [20,100] {
+            let (m,mc)=hanging("").await;let (f,fc)=hanging("").await;
+            let c=reqwest::Client::new();let mcfg=config(&m);let fcfg=config(&f);let (tx,_rx)=mpsc::channel(16);
+            let task=tokio::spawn(async move{stream_chat_bounded((&c,&mcfg),Some((&c,&fcfg)),vec![],tx,None,FallbackPolicy{trigger_ms:50,deadline_ms:900}).await});
+            sleep(Duration::from_millis(cancel_after)).await;task.abort();let _=task.await;wait_closed(&mc).await;
+            if cancel_after>50 {wait_closed(&fc).await;assert_eq!(f.calls.load(Ordering::SeqCst),1);}else{sleep(Duration::from_millis(80)).await;assert_eq!(f.calls.load(Ordering::SeqCst),0);}
+        }
+    }
+    #[tokio::test]
+    async fn disaster_text_then_stall_never_splices_backup_and_downstream_close_aborts() {
+        let _=rustls::crypto::ring::default_provider().install_default();
+        let (m,mc)=hanging("data: {\"choices\":[{\"delta\":{\"content\":\"主路开头。\"}}]}\n\n").await;
+        let f=endpoint(0,200,ANSWER).await;let c=reqwest::Client::new();let mcfg=config(&m);let fcfg=config(&f);let (tx,mut rx)=mpsc::channel(16);
+        let task=tokio::spawn(async move {stream_chat_bounded((&c,&mcfg),Some((&c,&fcfg)),vec![],tx,None,FallbackPolicy{trigger_ms:30,deadline_ms:100}).await});
+        assert_eq!(rx.recv().await.unwrap(),"主路开头。");sleep(Duration::from_millis(150)).await;
+        assert_eq!(f.calls.load(Ordering::SeqCst),0);drop(rx);assert!(task.await.unwrap().is_err());wait_closed(&mc).await;
+    }
+    #[tokio::test]
+    async fn disaster_control_only_does_not_win_or_delay_deadline() {
+        let (m,mc)=hanging("data: {\"choices\":[{\"delta\":{\"content\":\"[[DEV:1]]\"}}]}\n\n").await;
+        let f=endpoint(5,200,ANSWER).await;
+        let r=run_case(&m,&f,30,150).await.unwrap();assert_eq!(r.full,"正文。");wait_closed(&mc).await;
+    }
+    #[tokio::test]
+    async fn disaster_disabled_config_and_closed_consumer_never_start_backup() {
+        let m=endpoint(5,200,ANSWER).await;let f=endpoint(5,200,ANSWER).await;let cfg=config(&m);
+        for enabled in [None,Some("0")] {
+            let fb=LlmConfig::fallback_from(|k|match k {"LLM_FALLBACK_ENABLED"=>enabled.map(str::to_string),"LLM_FALLBACK_BASE_URL"=>Some(f.url.clone()),"LLM_FALLBACK_API_KEY"|"LLM_FALLBACK_MODEL"=>Some("test".into()),_=>None},&cfg);
+            assert!(fb.is_none());let _=rustls::crypto::ring::default_provider().install_default();let c=reqwest::Client::new();let(tx,_rx)=mpsc::channel(16);
+            stream_chat_race((&c,&cfg),None,vec![],tx,None).await.unwrap();
+        }
+        assert_eq!(f.calls.load(Ordering::SeqCst),0);
+        let c=reqwest::Client::new();let(tx,rx)=mpsc::channel(16);drop(rx);
+        assert!(stream_chat_race((&c,&cfg),Some((&c,&config(&f))),vec![],tx,None).await.is_err());
+        assert_eq!(f.calls.load(Ordering::SeqCst),0);
+    }
+
 }
