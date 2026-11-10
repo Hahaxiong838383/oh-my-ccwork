@@ -83,6 +83,7 @@ def atomic_write(path: str, lines: list) -> None:
     tmp = f"{path}.tmp-hotwords"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")
+    os.chmod(tmp, 0o600)
     os.replace(tmp, path)
 
 
@@ -351,6 +352,10 @@ def do_apply_fillers(req: dict) -> dict:
 # ── 赛马配置通道（2026-09-03）──────────────────────────────────────────────────
 RACE_RO_KEYS = ("LLM_BASE_URL", "LLM_MODEL", "LLM_THINKING")
 RACE_RW = {
+    "LLM_FALLBACK_ENABLED": re.compile(r"^[01]$"),
+    "LLM_FALLBACK_PROVIDER": re.compile(r"^(deepseek|volc_plan|volc_coding)$"),
+    "LLM_FALLBACK_TRIGGER_MS": re.compile(r"^\d{3,4}$"),
+    "LLM_FALLBACK_DEADLINE_MS": re.compile(r"^\d{4,5}$"),
     "LLM_FALLBACK_BASE_URL": re.compile(r"^https://[A-Za-z0-9.-]+(?:/[A-Za-z0-9._/-]*)?$"),
     "LLM_FALLBACK_MODEL": re.compile(r"^[A-Za-z0-9._-]{2,64}$"),
     "LLM_FALLBACK_THINKING": re.compile(r"^(?:disabled|enabled|adaptive|off)$"),
@@ -360,7 +365,29 @@ RACE_RW = {
     "AGENT_INSTRUCTIONS": re.compile(r"^[^\r\n\"'`$\\]{0,1200}$"),
 }
 RACE_SECRET = ("LLM_FALLBACK_API_KEY",)
-BENCH_HOST_ALLOW = ("ark.cn-beijing.volces.com",)
+FALLBACK_PROFILES = {
+    "deepseek": ("https://api.deepseek.com/v1", "deepseek-v4-flash"),
+    "volc_plan": ("https://ark.cn-beijing.volces.com/api/plan/v3", "doubao-seed-2.0-mini"),
+    "volc_coding": ("https://ark.cn-beijing.volces.com/api/coding/v3", "doubao-seed-2.0-mini"),
+}
+PROFILE_FIELDS = ("API_KEY", "MODEL", "THINKING")
+def profile_key(provider, field):
+    return "LLM_FALLBACK_" + provider.upper() + "_" + field
+
+def raw_race_env():
+    return dict(line.split("=", 1) for line in read_lines(RUST_ENV) if "=" in line and not line.startswith("#"))
+
+def infer_provider(base):
+    return next((name for name, row in FALLBACK_PROFILES.items() if row[0] == base), "")
+
+def profile_views():
+    env=raw_race_env()
+    return {name: {"base":base,"model":env.get(profile_key(name,"MODEL"),model),
+        "thinking":env.get(profile_key(name,"THINKING"),"disabled"),
+        "key_set":bool(env.get(profile_key(name,"API_KEY")) or (infer_provider(env.get("LLM_FALLBACK_BASE_URL"))==name and env.get("LLM_FALLBACK_API_KEY")))}
+        for name,(base,model) in FALLBACK_PROFILES.items()}
+
+BENCH_HOST_ALLOW = ("ark.cn-beijing.volces.com", "api.deepseek.com")
 BENCH_TIME_BUDGET = 140.0
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -394,7 +421,7 @@ def race_proc_values() -> dict:
 
 def do_race_get() -> dict:
     return {
-        "ok": True, "file": _race_values(read_lines(RUST_ENV)), "proc": race_proc_values(),
+        "ok": True, "file": _race_values(read_lines(RUST_ENV)), "proc": race_proc_values(), "profiles": profile_views(),
         "unit_active": is_active(), "main_pid": main_pid(), "recent_activity": recent_activity(),
         "ts": int(time.time()),
     }
@@ -411,36 +438,40 @@ def do_race_set(req: dict) -> dict:
             return {"ok": False, "error": f"{k} 值不合法"}
     if "LLM_RACE_MAIN_GRACE_MS" in values and not (200 <= int(values["LLM_RACE_MAIN_GRACE_MS"]) <= 5000):
         return {"ok": False, "error": "LLM_RACE_MAIN_GRACE_MS 须在 200~5000"}
+    env = raw_race_env()
+    merged = dict(env, **values)
+    try:
+        trigger=int(merged.get("LLM_FALLBACK_TRIGGER_MS", "2000"))
+        deadline=int(merged.get("LLM_FALLBACK_DEADLINE_MS", "6000"))
+    except ValueError:
+        return {"ok":False,"error":"灾备时间格式错误"}
+    if not 500<=trigger<=5000 or not trigger+2000<=deadline<=15000:
+        return {"ok":False,"error":"触发须500~5000ms；总等待须至少多2000ms且不超过15000ms"}
+    old = infer_provider(env.get("LLM_FALLBACK_BASE_URL", ""))
+    target = values.get("LLM_FALLBACK_PROVIDER") or infer_provider(values.get("LLM_FALLBACK_BASE_URL", "")) or old
+    if target not in FALLBACK_PROFILES:
+        return {"ok":False,"error":"请选择 DeepSeek 或火山已知端点"}
+    base, default_model=FALLBACK_PROFILES[target]
+    if "LLM_FALLBACK_BASE_URL" in values and values["LLM_FALLBACK_BASE_URL"]!=base:
+        return {"ok":False,"error":"供应商与端点不匹配"}
+    # Keep each endpoint's key separately. Never reuse the active provider's key on a new host/plan.
+    updates=dict(values)
+    if old:
+        for field in PROFILE_FIELDS:
+            if env.get("LLM_FALLBACK_"+field):
+                updates[profile_key(old,field)]=env["LLM_FALLBACK_"+field]
+    for field in PROFILE_FIELDS:
+        active="LLM_FALLBACK_"+field
+        default={"MODEL":default_model,"THINKING":"disabled","API_KEY":""}[field]
+        value=values.get(active) or (env.get(active,default) if old==target else env.get(profile_key(target,field),default))
+        if field=="API_KEY" and not RACE_RW[active].fullmatch(value):
+            return {"ok":False,"error":"目标供应商尚未配置有效密钥，请填写后保存"}
+        updates[active]=value
+        updates[profile_key(target,field)]=value
+    updates.update(LLM_FALLBACK_PROVIDER=target, LLM_FALLBACK_BASE_URL=base)
     if not req.get("force") and (n := recent_activity()) > 0:
         return {"ok": False, "error": f"近 90s 有 {n} 条活动行(疑似通话中),拒绝重启;确认后带 force 重试"}
-    ts = time.strftime("%Y%m%d-%H%M%S")
-    bak = f"{RUST_ENV}.bak-race-{ts}"
-    with open(RUST_ENV, encoding="utf-8") as src, open(bak, "w", encoding="utf-8") as dst:
-        dst.write(src.read())
-    lines = read_lines(RUST_ENV)
-    for k, v in values.items():
-        lines = set_key(lines, k, v)
-    atomic_write(RUST_ENV, lines)
-    ok, why = stop_drain_start()
-    if ok:
-        return {"ok": True, "applied": sorted(values.keys()), "backup": bak, "proc": race_proc_values()}
-    log(f"赛马配置健康自检失败({why}),回滚快照")
-    with open(bak, encoding="utf-8") as src:
-        content = src.read()
-    tmp = f"{RUST_ENV}.tmp-rollback"
-    with open(tmp, "w", encoding="utf-8") as dst:
-        dst.write(content)
-    os.replace(tmp, RUST_ENV)
-    run(["systemctl", "stop", UNIT], timeout=30)
-    time.sleep(2)
-    t_start = time.time()
-    run(["systemctl", "start", UNIT], timeout=30)
-    time.sleep(8)
-    ok2, why2 = health(t_start)
-    return {
-        "ok": False, "rolled_back": True, "reason": why, "recovered": ok2, "recover_detail": why2,
-        "backup": bak, "proc": race_proc_values(),
-    }
+    return apply_env_and_restart(updates,"race",race_proc_values)
 
 
 # ── 语音链路配置(2026-09-03)：键表与 server 侧 VOICE_RW 同形(后端为真防线,这里是最后一道)。
@@ -532,6 +563,7 @@ def apply_env_and_restart(values: dict, tag: str, view) -> dict:
     bak = f"{RUST_ENV}.bak-{tag}-{ts}"
     with open(RUST_ENV, encoding="utf-8") as src, open(bak, "w", encoding="utf-8") as dst:
         dst.write(src.read())
+    os.chmod(bak, 0o600)
     _prune_tagged(tag)
     lines = read_lines(RUST_ENV)
     for k, v in values.items():
@@ -695,7 +727,9 @@ def do_race_bench(req: dict) -> dict:
     if not isinstance(base, str) or not RACE_RW["LLM_FALLBACK_BASE_URL"].fullmatch(base) or not any(
         base.startswith(f"https://{h}/") for h in BENCH_HOST_ALLOW
     ):
-        return {"ok": False, "error": "base 不在允许主机内(仅 ark.cn-beijing.volces.com)"}
+        return {"ok": False, "error": "base 不在允许主机内(仅已配置的 DeepSeek/火山端点)"}
+    if base != env.get("LLM_FALLBACK_BASE_URL", ""):
+        return {"ok":False,"error":"测试仅使用已保存的供应商端点，先保存切换配置"}
     key = env.get("LLM_FALLBACK_API_KEY", "")
     if not key:
         return {"ok": False, "error": "env 无 LLM_FALLBACK_API_KEY"}

@@ -82,7 +82,7 @@ await t('GET /worker-race：editor 403、admin 200 且密钥不回显', async ()
   assert.equal(j.worker.file.LLM_FALLBACK_API_KEY.set, true);
   assert.equal(JSON.stringify(j).includes('ark-XXXX…'), true, 'hint 可见');
   assert.equal(j.brain.provider, 'race');
-  assert.ok(Array.isArray(j.presets) && j.presets.length === 2 && Array.isArray(j.catalog));
+  assert.ok(Array.isArray(j.presets) && j.presets.some((p: any) => p.key === 'deepseek') && Array.isArray(j.catalog));
 });
 await t('GET /worker-race/stats 透传', async () => {
   const j = (await (await app.request('/api/admin/worker-race/stats?hours=48', { headers: H(adminToken) })).json()) as any;
@@ -121,5 +121,10 @@ await t('bench：device 真 prompt 需台账设备', async () => {
   assert.equal(r2.status, 400);
 });
 
+await t('灾备新参数：开关、供应商、完整预算接受；非法组合拒绝', () => {
+  assert.equal(validateRaceValues({LLM_FALLBACK_ENABLED:'1',LLM_FALLBACK_PROVIDER:'deepseek',LLM_FALLBACK_TRIGGER_MS:'1500',LLM_FALLBACK_DEADLINE_MS:'6000'}).ok,true);
+  assert.equal(validateRaceValues({LLM_FALLBACK_TRIGGER_MS:'5000',LLM_FALLBACK_DEADLINE_MS:'6000'}).ok,false);
+  assert.equal(validateRaceValues({LLM_FALLBACK_ENABLED:'yes'}).ok,false);
+});
 console.log(`\nworker-race tests: pass=${pass} fail=${fail}`);
 if (fail > 0) process.exit(1);

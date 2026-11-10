@@ -1303,11 +1303,16 @@ adminDataRoute.put('/devices/:sn/style-template', async (c) => {
 // server 只做校验/安全窗口/对撞/记账；env 写入、纪律重启、健康自检与回滚全在脚本内（与热词发布同一套安全网）。
 // key 永不回显（脚本只回 hint/len），也永不从 bench 载荷传（bench 用 64.90 env 里的兜底 key）。
 const RACE_RW_KEYS = [
+  'LLM_FALLBACK_ENABLED', 'LLM_FALLBACK_PROVIDER', 'LLM_FALLBACK_TRIGGER_MS', 'LLM_FALLBACK_DEADLINE_MS',
   'LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_FALLBACK_API_KEY',
   'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS',
 ] as const;
 type RaceRwKey = (typeof RACE_RW_KEYS)[number];
 const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
+  LLM_FALLBACK_ENABLED: /^[01]$/,
+  LLM_FALLBACK_PROVIDER: /^(?:deepseek|volc_plan|volc_coding)$/,
+  LLM_FALLBACK_TRIGGER_MS: /^\d{3,4}$/,
+  LLM_FALLBACK_DEADLINE_MS: /^\d{4,5}$/,
   LLM_FALLBACK_BASE_URL: /^https:\/\/[A-Za-z0-9.-]+(?:\/[A-Za-z0-9._/-]*)?$/,
   LLM_FALLBACK_MODEL: /^[A-Za-z0-9._-]{2,64}$/,
   LLM_FALLBACK_THINKING: /^(?:disabled|enabled|adaptive|off)$/,
@@ -1316,6 +1321,7 @@ const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
   AGENT_INSTRUCTIONS: /^[^\r\n"'`$\\]{0,1200}$/,
 };
 export const RACE_BASE_PRESETS = [
+  { key: 'deepseek', label: 'DeepSeek 官方（默认）', url: 'https://api.deepseek.com/v1' },
   { key: 'agent_plan', label: '火山 agent plan（api/plan/v3）', url: 'https://ark.cn-beijing.volces.com/api/plan/v3' },
   { key: 'coding_plan', label: '火山 coding plan（api/coding/v3）', url: 'https://ark.cn-beijing.volces.com/api/coding/v3' },
 ];
@@ -1347,8 +1353,12 @@ export function validateRaceValues(raw: unknown): { ok: true; values: Partial<Re
       const n = Number(val);
       if (!(n >= 200 && n <= 5000)) return { ok: false, error: 'LLM_RACE_MAIN_GRACE_MS 须在 200~5000' };
     }
+    if (k === 'LLM_FALLBACK_TRIGGER_MS' && !(Number(val)>=500 && Number(val)<=5000)) return {ok:false,error:'触发等待须500~5000ms'};
+    if (k === 'LLM_FALLBACK_DEADLINE_MS' && !(Number(val)>=2500 && Number(val)<=15000)) return {ok:false,error:'总等待须2500~15000ms'};
     values[k as RaceRwKey] = val;
   }
+  if (values.LLM_FALLBACK_TRIGGER_MS && values.LLM_FALLBACK_DEADLINE_MS && Number(values.LLM_FALLBACK_DEADLINE_MS)<Number(values.LLM_FALLBACK_TRIGGER_MS)+2000) return {ok:false,error:'总等待至少比触发等待多2000ms'};
+  // Partial updates are merged and revalidated against the actual Worker file by the publisher.
   if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
   return { ok: true, values };
 }
