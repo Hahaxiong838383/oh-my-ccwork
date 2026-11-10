@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## 语音恢复回执与异常注入验收
+
+遇到安卓普通对话/恢复回执，或 capacity、no-subscribe、output-gate、Worker replacement 专项，先读 [语音恢复取证与验收边界](references/voice-recovery-receipt-audit.md)。区分字幕、垫句与正文 PCM；按历史 job 唯一关联日志，明确设备与 Worker 替换对象；SDK 隔离结果不能替代 Android 真机通过。
+
 ## TTS 建连长等待、流中停顿与传输取证
 
 遇到预热等待、DNS/TLS/WebSocket 超时、正文迟迟无声或句中断续，先读 [TTS 连接恢复与取证](references/tts-transport-recovery.md)。前台共享截止、受限备用连接、PCM 交付后的重播边界与双向包头归因分别核验；正常探针成功不代表历史故障根治。慢 DNS 备用还须核真实运行门、私有 SFU/命名空间隔离、成功连接的实际解析路径及容量证据，不能用任意临时 agent 的成功探针替代。以下旧地址、参数及部署命令只作历史参考，操作前取当前网络/运行真值；带日期的“已根治”仅指该历史事件及已验场景，不能给新故障销号。
