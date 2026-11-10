@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "transport": "real localhost HTTP",
+  "preview": "compiled exact Worker routing engine",
+  "provider": "synthetic frozen response",
+  "real_device": false,
+  "original_query": "深圳今天的天气告诉我要不要带伞",
+  "structured": {
+    "day_offset": 0,
+    "metric": "forecast",
+    "place": "深圳"
+  },
+  "station": "101280601",
+  "target_date": "2026-10-22",
+  "preview_cases": 7,
+  "weather_catalog": {
+    "sha256": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "count": 3220
+  }
+}

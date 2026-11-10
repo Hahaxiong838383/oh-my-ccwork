@@ -1,0 +1,105 @@
+{
+  "verdict": "no_blocking",
+  "head": "15d07e6161dcd083d12501cd37d9511cad489427",
+  "base": "62d840c2e347d65bec1de4ddf523b6a2a7c117d6",
+  "commit_subject": "feat(p003): explain weather place resolution in read-only routing preview",
+  "reviewed_at": "2026-11-10",
+  "node": "/Users/fu-121/.local/node-v24/bin/node",
+  "node_version": "v24.19.0",
+  "dependencies_installed": false,
+  "source_modified_by_review": false,
+  "formal_voice_claimed": false,
+  "catalog": {
+    "sha256": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b",
+    "station_count": 3220,
+    "contract_cases": 3230
+  },
+  "checks": {
+    "brain_resolver_authority": "pass",
+    "no_config_schema_fields": "pass",
+    "no_extra_weather_network": "pass",
+    "admin_permission": "pass",
+    "preview_read_only": "pass",
+    "error_semantics": "pass",
+    "ambiguous_place_not_selected": "pass",
+    "html_interpolation": "pass",
+    "state_compatibility": "pass"
+  },
+  "rerun": [
+    {
+      "name": "weather-place-contract",
+      "exit": 0,
+      "detail": "3230 cases passed"
+    },
+    {
+      "name": "weather-preview-inspection",
+      "exit": 0,
+      "detail": "unique/ambiguous/unknown/invalid/legacy/no-write"
+    },
+    {
+      "name": "search-routing-admin",
+      "exit": 0,
+      "detail": "permissions, strict fields, no preview writes, CAS, regression gate"
+    },
+    {
+      "name": "search-routing-preview-ui",
+      "exit": 0,
+      "detail": "Vue/WebKit 11 scenarios; API fixtures, not a live provider or device voice pass"
+    },
+    {
+      "name": "fixed-weather",
+      "exit": 1,
+      "same_as_baseline": true
+    },
+    {
+      "name": "search-weather-fallback-runtime",
+      "exit": 1,
+      "same_as_baseline": true
+    }
+  ],
+  "probe": {
+    "anonymous_preview": 401,
+    "editor_preview": 403,
+    "admin_preview": 200,
+    "revision_after_preview": 0,
+    "fetch_count": 0,
+    "chaoyang_status": "ambiguous",
+    "chaoyang_stations": [
+      "101010300",
+      "101060110",
+      "101071201"
+    ],
+    "resolve_chaoyang": "weather_place_ambiguous",
+    "resolve_invalid": "weather_place_invalid",
+    "resolve_chaoyang_liaoning_station": "101071201"
+  },
+  "baseline_failures": [
+    {
+      "test": "fixed-weather",
+      "new_regression": false,
+      "implementation_byte_identical_to_62d840c2": true,
+      "archive_byte_identical_to_62d840c2": true,
+      "baseline_log_sha256": "6ee1f70f3f86a8b59fb5a33612d01e1bfa8e3edcf641d1dcec1525196e28ee3b",
+      "candidate_log_sha256": "2bab28185db2ceb30a9681c78cbd3aaf31c46aac41ae913fb04df386a2011f78",
+      "reason": "Test expects an Amap constructor option and Amap-first success. Main-pool FixedWeather accepts only Baidu and Moji, so baidu.run throws not_expected. The Baidu/Moji half prints passed before that assertion."
+    },
+    {
+      "test": "search-weather-fallback-runtime",
+      "new_regression": false,
+      "implementation_byte_identical_to_62d840c2": true,
+      "archive_byte_identical_to_62d840c2": true,
+      "baseline_log_sha256": "bfa169c861d0b10f506b85a8a13a84b5f3b8ee1a758cf821c469cea4d79cd126",
+      "candidate_log_sha256": "a5e46b92bed6c45eb97053a26044b8a197240220676f49c7650623f660245c31",
+      "reason": "After Baidu HTTP 429 the test expects web-search text matching /成都/. Main pool returns the explicit unverified-weather refusal and does not perform that webpage fallback."
+    }
+  ],
+  "blocking": [],
+  "boundaries": [
+    "Do not replace this main-pool Baidu+Moji path or the explicit unverified-weather refusal with the gray tree Amap-first or webpage-fallback behavior.",
+    "Admin preview does not read device location. Bare duplicate names stay ambiguous there. Execution may still narrow through resolveWeatherPlace when a ready province context is supplied.",
+    "Archived Rust search-route-preview compilation and this review fixture HTTP/Vue runs are not a formal device voice pass.",
+    "The WebKit ambiguous fixture lists two Chaoyang labels. The resolver and HTTP check are authoritative for all three stations.",
+    "Logout leaves routing.catalog in memory, but the catalog line renders only while routing.preview is set.",
+    "Untracked apps/server/scripts/weather-compiled-http.test.ts appeared during the review, was not created or executed here, and is not part of HEAD. Its own labels say the provider is synthetic and real_device is false."
+  ]
+}

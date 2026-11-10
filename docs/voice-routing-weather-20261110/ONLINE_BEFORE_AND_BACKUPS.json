@@ -1,0 +1,98 @@
+[
+  {
+    "host": "worker",
+    "files": [
+      {
+        "path": "/root/rust-worker/voice-rust-worker",
+        "mode": "before",
+        "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622",
+        "match": true
+      },
+      {
+        "path": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/root/rust-worker/voice-rust-worker",
+        "mode": "backup",
+        "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622",
+        "match": true
+      },
+      {
+        "path": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+        "mode": "before",
+        "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+        "match": true
+      },
+      {
+        "path": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/voice-rust-worker",
+        "mode": "backup",
+        "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+        "match": true
+      },
+      {
+        "path": "/opt/p003-listening-canary-20261030/release.json",
+        "mode": "before",
+        "sha256": "b9287bbee82ab8ea8ce040581372da79c0041c5ab66aff05a0fb305fa9c09b48",
+        "match": true
+      },
+      {
+        "path": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/release.json",
+        "mode": "backup",
+        "sha256": "b9287bbee82ab8ea8ce040581372da79c0041c5ab66aff05a0fb305fa9c09b48",
+        "match": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "host": "brain",
+    "files": [
+      {
+        "path": "/opt/p003/server/src/tools/weather-places.ts",
+        "mode": "before",
+        "sha256": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z/files/opt/p003/server/src/tools/weather-places.ts",
+        "mode": "backup",
+        "sha256": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/server/src/routes/search-routing-admin.ts",
+        "mode": "before",
+        "sha256": "04601d584d361000808b32e0d550153b3009f8185c24b94a0118efde5d063369",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z/files/opt/p003/server/src/routes/search-routing-admin.ts",
+        "mode": "backup",
+        "sha256": "04601d584d361000808b32e0d550153b3009f8185c24b94a0118efde5d063369",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/web/dist/admin/index.html",
+        "mode": "before",
+        "sha256": "106ddfdfb45ca76993310e5dfa6e05d66fa82c15e14e194c47b4873d8e3e0478",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z/files/opt/p003/web/dist/admin/index.html",
+        "mode": "backup",
+        "sha256": "106ddfdfb45ca76993310e5dfa6e05d66fa82c15e14e194c47b4873d8e3e0478",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/server/bin/search-route-preview",
+        "mode": "before",
+        "sha256": "17a2cc22538c0fbc3af8fba4d72ec25112242d434b4e5a7ca2db523ca0eabb09",
+        "match": true
+      },
+      {
+        "path": "/opt/p003/_backup/voice-routing-weather-20261110/preview-supplement/search-route-preview",
+        "mode": "backup",
+        "sha256": "17a2cc22538c0fbc3af8fba4d72ec25112242d434b4e5a7ca2db523ca0eabb09",
+        "match": true
+      }
+    ],
+    "passed": true
+  }
+]

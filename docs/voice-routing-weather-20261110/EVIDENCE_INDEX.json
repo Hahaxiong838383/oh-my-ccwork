@@ -1,0 +1,187 @@
+{
+  "private_evidence_root": "/Users/fu-121/.local/state/p003-voice-routing-weather-execution-20261110",
+  "files": {
+    "worker-all-reviewed.log": {
+      "sha256": "96c7044d9414dd17de897a0df4c9f48db3b384a1f3fe33e53901ab78593c708a",
+      "bytes": 6549
+    },
+    "worker-reviewed-release.log": {
+      "sha256": "71b6d7a718c0192b29cb82fd7f7f1b21766255c300593972337280f6bb5a7dc7",
+      "bytes": 4831
+    },
+    "worker-listening-all-reviewed.log": {
+      "sha256": "77e2daf51eb770c5b91e121cb0a673df226f54642c179d8bb8e5185861cb48c9",
+      "bytes": 6572
+    },
+    "worker-listening-reviewed-release.log": {
+      "sha256": "766218c21352eaa9f40a6af48bdf0c0516766d9c9b3d0b76c987ef89beb8c086",
+      "bytes": 6973
+    },
+    "source-all-reviewed.json": {
+      "sha256": "f8e39f970478d16ce789dcdb1b2711307013c95769871e70d5af8a2a6f5bffef",
+      "bytes": 7365
+    },
+    "source-reviewed-release.json": {
+      "sha256": "f8e39f970478d16ce789dcdb1b2711307013c95769871e70d5af8a2a6f5bffef",
+      "bytes": 7365
+    },
+    "source-listening-all-reviewed.json": {
+      "sha256": "8fd55fea73f49116296d592778f1b7ce3b6827fa6a9008a37c8332548dc840fb",
+      "bytes": 8080
+    },
+    "source-listening-reviewed-release.json": {
+      "sha256": "8fd55fea73f49116296d592778f1b7ce3b6827fa6a9008a37c8332548dc840fb",
+      "bytes": 8080
+    },
+    "worker-identity-red.log": {
+      "sha256": "0ab8e9b3d13a07b1b839b291c46235552879b59f29e5858240405ed107c21136",
+      "bytes": 2061
+    },
+    "worker-identity-green.log": {
+      "sha256": "ccfeeb49a07fcc37c55009f96cbdd5e0f1c26f826a5378706ada3e6d297dd8cb",
+      "bytes": 1550
+    },
+    "HTTP_RESULT.json": {
+      "sha256": "881ee8de7f88b75fd95b10e176336333cef7e4493de32b25005a9bb700a9f418",
+      "bytes": 546
+    },
+    "compiled-http.log": {
+      "sha256": "235f0696644ec3be6bc45e6d3b4b3ef54c06997f952ebc61d2861a6814d584e7",
+      "bytes": 1026
+    },
+    "brain-ui-final.log": {
+      "sha256": "c9eec6f89dbe264ea96e43f98ca287402f676d1ec89bb65a83792ca344e266f2",
+      "bytes": 151
+    },
+    "weather-preview-ui.png": {
+      "sha256": "3b68229a9efce94207834daf387fc61f63f7c027b9222f4a1d9951745e9bd71b",
+      "bytes": 468490
+    },
+    "tsc-baseline.log": {
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "bytes": 1267
+    },
+    "tsc-candidate.log": {
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "bytes": 1267
+    },
+    "BRAIN_TEST_RESULTS.json": {
+      "sha256": "ec6e2ac9dc07c5fb2e69f70a894bec9c943b8c06e3f27c47e91b160251475e87",
+      "bytes": 709
+    },
+    "KNOWN_BASELINE_FAILURES.json": {
+      "sha256": "7c1f34602f8767e4ec19ff5d7609f91072f9d1529f01170d79d62cc53049e08f",
+      "bytes": 1145
+    },
+    "PRESERVATION_TESTS.json": {
+      "sha256": "6596860fc82135d8f517144d64f469b9bb4bbbbaf0602d64b9449eba47f0aa71",
+      "bytes": 1044
+    },
+    "PERFORMANCE.json": {
+      "sha256": "f842ed9eeb4ebdcaebd11765edadf0638d13c5e8ee18ae0ca8b1a951b05ee4ee",
+      "bytes": 7933
+    },
+    "FORMAL_MAIN_REVIEWED_RESULT.json": {
+      "sha256": "c10b670304b82cc0656479a9daabcb3def37e93708d046bb6ca0ec431922e2a7",
+      "bytes": 7543
+    },
+    "FORMAL_LISTENING_REVIEWED_RESULT.json": {
+      "sha256": "5e7f180b27a709706bfec680e146d41b98f0768ed9fb68cfc396729cae2f8217",
+      "bytes": 5488
+    },
+    "ONLINE_BEFORE_AND_BACKUPS.json": {
+      "sha256": "35bb26c24073dc29256d3cd74720fbb17c3b7b9b1a61787ff098cf475bcb1a59",
+      "bytes": 3657
+    },
+    "MANIFEST_GUARD_TEST.json": {
+      "sha256": "5cb08225e66e43f08c7be5bc48196772ec847814b1d5b7310eda5af8aca75711",
+      "bytes": 69
+    },
+    "GROK_WORKER_REVIEW.md": {
+      "sha256": "97659ba0651cde32102a3077a891975eaf3863b306194ce97c468e528e8e69c8",
+      "bytes": 12001
+    },
+    "GROK_WORKER_REVIEW.json": {
+      "sha256": "6c6ff6578ff1e1359f8c35305c62cf8a2790e2055bff7d9909ef2d113d4da9c3",
+      "bytes": 6694
+    },
+    "GROK_LISTENING_REVIEW.md": {
+      "sha256": "c6ec480255aa1a50f6fa742fe8905026c2b81454d6b69b82213b93e43be1d0e5",
+      "bytes": 6118
+    },
+    "GROK_LISTENING_REVIEW.json": {
+      "sha256": "fe2911a6a7d29cd8f045fa5577c84f392c04a0394de7ebc927a355b9ddc2da82",
+      "bytes": 3411
+    },
+    "GROK_BRAIN_REVIEW.md": {
+      "sha256": "e09a0cc25e77e90d26d1119796fdc688b06cdcb3ff41a775bae21a65ddd989ce",
+      "bytes": 7080
+    },
+    "GROK_BRAIN_REVIEW.json": {
+      "sha256": "5cbdfb29f8929bb5f08bd28bb4f2decb1367f3e43bc864ea51cb972c6ac2a21e",
+      "bytes": 4388
+    },
+    "REVIEW_RESOLUTION.json": {
+      "sha256": "16c276744b208f29555ffe0c732c4ec408a71a681f17de4dd91cc193edba15ca",
+      "bytes": 2447
+    },
+    "BUNDLE_RECEIPT.json": {
+      "sha256": "941c4192c42e255b1368030ce19e8f32a259c1d7c13852112d0173efb136fb77",
+      "bytes": 300
+    },
+    "preserve-ark-history.log": {
+      "sha256": "04f2aa876ae2c94cd057beccb3b49cae6370b39e19bd3c8b2e8e4aa0ad5cccf1",
+      "bytes": 1212
+    },
+    "preserve-ark-http-sse.log": {
+      "sha256": "87e5feb39e4667cf2f4308d04fca862884da284f42b44a657207eb31755adcfc",
+      "bytes": 2837
+    },
+    "preserve-ark-knowledge.log": {
+      "sha256": "e657a2e86db65144dc3fa2c9af35b1d0dd092c7c8360ff823e44a5ec0bf35582",
+      "bytes": 457
+    },
+    "preserve-ark-proxy-service.log": {
+      "sha256": "46a0346c398f48e911229a2645a61f1f89d562931ab91cf77dcbc88f5c64e29b",
+      "bytes": 230
+    },
+    "preserve-ark-proxy.log": {
+      "sha256": "41618e183fa66627204f699c89b5a69e09028e1fb7ec6d265d7ef38fd5834ebb",
+      "bytes": 530
+    },
+    "preserve-ark-runtime.log": {
+      "sha256": "6e9d478a3058ec550b3da280252f1e98472e78c4e47db6a00d67cd9e507b95de",
+      "bytes": 900
+    },
+    "preserve-ark-state.log": {
+      "sha256": "17b92a2fca6b8b304a6e3d92135c470935834d28acd00b20cd44015dabac5e86",
+      "bytes": 1626
+    },
+    "preserve-listening-admin.log": {
+      "sha256": "a785c2549d667f2e9248a58610540240b87442b433cc720b8de529b0944d70af",
+      "bytes": 92
+    },
+    "preserve-listening-auth.log": {
+      "sha256": "99e0700a462e9ec5737d0d525375c1a747747901666c60b2c44a389c546e346d",
+      "bytes": 618
+    },
+    "preserve-listening-authority.log": {
+      "sha256": "ddf24ef5fa8e2293eca56e26d87c2fc8053c6a4db5865c8dea3abdc88605c621",
+      "bytes": 1673
+    },
+    "preserve-listening-content.log": {
+      "sha256": "2a13c36fc32a4d32c421b4c2cc7afdba0f17ae9424fecfa2223ed1c03ea10eff",
+      "bytes": 1996
+    },
+    "preserve-listening-integration.log": {
+      "sha256": "7203e862013d08b4484764c28a5ab76821eca28d60e9cfad42745fa87080b269",
+      "bytes": 1813
+    },
+    "preserve-listening-policy.log": {
+      "sha256": "e9c6ec63faeede6da17e87518aa81ac8a6acf56357b498bb17e07e8d41af5657",
+      "bytes": 444
+    }
+  },
+  "red_to_green_preserved": true,
+  "raw_logs_not_in_git": true
+}

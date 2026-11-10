@@ -1,0 +1,71 @@
+{
+  "verdict": "no_blocking",
+  "candidate": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+  "candidate_subject": "fix(p003): integrate bounded voice routing fixes into current listening pool",
+  "baseline": "ac18707965623b85540408fc1d989eacb04ce798",
+  "baseline_is_parent": true,
+  "main_pool_pin": "148107232d1792c2c39719113d49031c67170d13",
+  "main_pool_subject": "fix(p003): bind search polling recovery to the current request identity",
+  "worktree": "/Users/fu-121/.codex/worktrees/p003-voice-routing-listening-20261110",
+  "worktree_clean": true,
+  "reviewed_at": "2026-11-10",
+  "source_modified_by_review": false,
+  "dependencies_installed": false,
+  "tests_rerun": false,
+  "formal_voice_claimed": false,
+  "production_or_device_changed": false,
+  "files_in_commit": [
+    "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/search_policy.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/search_routing.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/tests/fixtures/weather-place-contract.json"
+  ],
+  "sha256": {
+    "src/ordered_pcm.rs": "abe02f2e979401785156fd2f63b2e7afdea66c15b9b7ef93eb345f11446bc541",
+    "src/search_policy.rs": "b799e076e53461ab9a69b2a980a2bb1d9fd01e5eb4c9496e6d19cb48b2436165",
+    "src/search_routing.rs": "71ad2d36de7b6cce2ed48904b361c6865bc1e35f6769d8147eb57b7e7bc64313",
+    "src/search_tasks.rs": "16e4ee7efde1b1aeb4d48a8395533ae6e8a25abfe1200e69003de4dfbc02aa9d",
+    "tests/fixtures/weather-place-contract.json": "f20605883e6f44ac7926eab79a30314e8c4e61839f1da7f9dbe53480982d26b2",
+    "src/weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b"
+  },
+  "checks": {
+    "listening_and_r20_r27_preserved": "pass",
+    "first_turn_wake_variants_scoped": "pass",
+    "ordered_pcm_matches_main_pin": "pass",
+    "bounded_weather_postscript_does_not_drop_second_city": "pass",
+    "buyao_chale_cancel_preserved": "pass",
+    "cancel_clears_active_before_send": "pass",
+    "actor_run_with_deadline_matches_main_pin": "pass",
+    "poll_filters_by_task_id": "pass",
+    "lost_post_ack_recovers_by_task_turn": "pass",
+    "cancel_clears_submitted_turn": "pass"
+  },
+  "catalog_name_scan": {
+    "generated_names": 83636,
+    "known_names_that_split_into_two_known_names": 0,
+    "samples_known": ["深圳", "呼和浩特", "冷水江", "北京海淀", "会同县", "和县", "西安"],
+    "beijing_and_shanghai_is_single_known_name": false
+  },
+  "fixture": {
+    "cases": 3230,
+    "with_stations": 3228,
+    "empty_stations": 2,
+    "station_ids_reaudited": false
+  },
+  "observed_log": {
+    "path": "worker-listening-all-reviewed.log",
+    "header_rc": 0,
+    "mtime": "2026-11-10T13:40:53",
+    "lib": "674 passed; 0 failed; 2 ignored",
+    "listening_core": "30 passed",
+    "listening_runtime": "13 passed",
+    "listening_voice": "10 passed",
+    "header_source_sha_covers_four_reviewed_files": false,
+    "used_as_blocking_gate": false
+  },
+  "non_blocking": [
+    "Grant-cancel early return matches main 14810723: it clears current and polling and emits Finished without clearing submitted_turn. The next Submit overwrites submitted_turn before lost-ack recovery.",
+    "A multi-id cancel still stops local polling after the clarify text. Same bytes as the main-pool actor."
+  ]
+}

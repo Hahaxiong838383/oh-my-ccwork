@@ -1,0 +1,162 @@
+{
+  "pool": "listening",
+  "candidate": {
+    "git_sha": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+    "binary_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+    "bytes": 78225912
+  },
+  "production_before": {
+    "voice-worker-rust": {
+      "MainPID": "4123394",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622"
+    },
+    "p003-listening-worker": {
+      "MainPID": "4110633",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "cases": [
+    {
+      "kind": "normal",
+      "rc": 0,
+      "result": {
+        "at": "2026-11-10T05:49:22.109438+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+        "runtime_pid": "4160929",
+        "ordered": false,
+        "mode": "normal",
+        "trace_id": "ops-release-probe-f21525f8-404b-4473-b375-d5f33af6def0",
+        "room": "sn-BJP00326111099999993-1794289745373",
+        "sid": "RM_nVGpAk5cnVXw",
+        "stats": {
+          "ready_ms": 431,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4720.0,
+          "first_audio_ms": 5189,
+          "last_audio_ms": 10599,
+          "input_sent_ms": 433,
+          "events": [
+            "session.input_ready",
+            "session.output_ready",
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 3,
+          "metric_kinds": [
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 171,
+          "track_publish_requested_ms": 171,
+          "last_audio_to_server_disconnect_ms": 5873,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 16736,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, isolated same-version SFU + actual ASR/TTS; verifies normal pipeline and server idle/startup cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      },
+      "watchdog_close_observed": true,
+      "worker_log_sha256": "7f77ce878a8b93d216ddd4e61a2cf9746d349a7cee01df6f487280964c0450f8"
+    },
+    {
+      "kind": "ordered",
+      "rc": 0,
+      "result": {
+        "at": "2026-11-10T05:49:55.927595+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+        "runtime_pid": "4161068",
+        "ordered": true,
+        "mode": "ordered",
+        "trace_id": "ops-release-probe-f5d5387b-c862-4506-9fc5-206e3a7a99e3",
+        "room": "sn-BJP00326111099999993-1794289765206",
+        "sid": "RM_NhofYWy3TBNs",
+        "stats": {
+          "ready_ms": 12241,
+          "phase_ms": 14744,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4730.0,
+          "first_audio_ms": 19702,
+          "last_audio_ms": 25090,
+          "input_sent_ms": 14745,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 3,
+          "metric_kinds": [
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [
+            "begin_timeout"
+          ],
+          "client_connected_ms": 169,
+          "track_publish_requested_ms": 12170,
+          "last_audio_to_server_disconnect_ms": 5367,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 30721,
+        "policy_source": "same formal binary hash in isolated process; synthetic SN/LLM, isolated same-version SFU + actual ASR/TTS; verifies normal pipeline and server idle/startup cleanup, not actual production candidate admission or Android",
+        "real_android": false
+      },
+      "watchdog_close_observed": true,
+      "worker_log_sha256": "47fc548d40d2e0cb481ebcb213fbf5b8f2ea98344d2b343343e6bbf298cc86d0"
+    }
+  ],
+  "boundary": "isolated same-version SFU/formal worker; synthetic LLM/SN; actual ASR/TTS; no Android",
+  "production_after": {
+    "voice-worker-rust": {
+      "MainPID": "4123394",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622"
+    },
+    "p003-listening-worker": {
+      "MainPID": "4110633",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5"
+    },
+    "p003-search-worker": {
+      "MainPID": "2446060",
+      "NRestarts": "0",
+      "ActiveState": "active",
+      "sha256": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c"
+    }
+  },
+  "production_unchanged": true,
+  "passed": true
+}

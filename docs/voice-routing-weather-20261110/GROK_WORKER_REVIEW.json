@@ -1,0 +1,188 @@
+{
+  "role": "read_only_worker_review",
+  "reviewer_ran_cargo": false,
+  "source_modified": false,
+  "production_or_device_touched": false,
+  "verdict": "pass",
+  "blocker_count": 0,
+  "reviewed_head": "148107232d1792c2c39719113d49031c67170d13",
+  "parent": "4d7835d001fe0b5f62c73a8474891244f636856d",
+  "baseline": "f0380202eb93303bc69563d37c08bab6f3f9d0fa",
+  "merge_base": "f0380202eb93303bc69563d37c08bab6f3f9d0fa",
+  "branch": "codex/p003-voice-input-routing-fix-20261110",
+  "worktree_clean": true,
+  "head_subject": "fix(p003): bind search polling recovery to the current request identity",
+  "plan_read": "docs/voice-routing-weather-20261110/EXECUTION_PLAN.md",
+  "plan_named_by_user_absent": "docs/superpowers/plans/2026-11-10-p003-voice-routing-weather-execution.md",
+  "matrix_is_oracle": false,
+  "c08_rejected": true,
+  "multi_date_uses_fixed_weather": false,
+  "candidate_json": {
+    "git_sha": "4d7835d001fe0b5f62c73a8474891244f636856d",
+    "binary_sha256": "6cdd761fd3cfb74fcd43166132f6187904c405553253e6ef43fc7b31ac33163e",
+    "bytes": 76328584,
+    "matches_reviewed_head": false
+  },
+  "reviewed_release_log": {
+    "file": "worker-reviewed-release.log",
+    "binary_sha256_recorded": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+    "bytes_recorded": 76329944,
+    "source_json": "source-reviewed-release.json",
+    "source_matches_head_four_files": true,
+    "binary_rehashed_by_reviewer": false
+  },
+  "source_sha256": {
+    "src/search_tasks.rs": "c5922ecd8f788b064a6b4d7f92b580178c310931d14147051068c098962e3574",
+    "src/search_routing.rs": "394113db4dc32a96f51c2afc2f5d101baec32fd81eb82e0d94f5eae3e1a46901",
+    "src/ordered_pcm.rs": "abe02f2e979401785156fd2f63b2e7afdea66c15b9b7ef93eb345f11446bc541",
+    "src/search_policy.rs": "ac05fdb1013d05f986d7d7119ffa6486f6ed536880731278c159051efcf66ee6"
+  },
+  "linux_evidence": [
+    {
+      "log": "worker-baseline.log",
+      "passed": 583,
+      "failed": 0,
+      "ignored": 1,
+      "search_tasks_sha256": "fb3de60ff557336e82aee96d2db76aa48c1740e27cf9100890d9483d1a905827",
+      "binds_reviewed_head": false
+    },
+    {
+      "log": "worker-full.log",
+      "passed": 594,
+      "failed": 0,
+      "ignored": 1,
+      "search_tasks_sha256": "0c024240fd7fb28889e6dad275e0cf7dc1a2898922f31b25a403947fc0c1eae2",
+      "binds": "40399f5d",
+      "binds_reviewed_head": false
+    },
+    {
+      "log": "worker-full-final.log",
+      "passed": 595,
+      "failed": 0,
+      "ignored": 1,
+      "search_tasks_sha256": "3dce74c60bb0866562e84645c88c26454b4217d5b6c7ab98da740e83d8293713",
+      "binds": "4d7835d0",
+      "binds_reviewed_head": false
+    },
+    {
+      "log": "worker-identity-red.log",
+      "rc": 101,
+      "failed_test": "routing_cancel_next_submit_cannot_relabel_old_ledger_result",
+      "assertion": "left old right new",
+      "search_tasks_sha256": "49c57da58b2cc013884a56a1d81435608a5806fd9703845aafed9bc5dbb869fe",
+      "binds_reviewed_head": false
+    },
+    {
+      "log": "worker-identity-green.log",
+      "passed": 1,
+      "failed": 0,
+      "filtered_out": 596,
+      "search_tasks_sha256": "c5922ecd8f788b064a6b4d7f92b580178c310931d14147051068c098962e3574",
+      "binds_reviewed_head": true
+    },
+    {
+      "log": "worker-all-reviewed.log",
+      "passed": 596,
+      "failed": 0,
+      "ignored": 1,
+      "seconds": 10.63,
+      "search_tasks_sha256": "c5922ecd8f788b064a6b4d7f92b580178c310931d14147051068c098962e3574",
+      "four_files_match_head": true,
+      "binds_reviewed_head": true
+    }
+  ],
+  "findings": [],
+  "checked_holding": [
+    {
+      "id": "next-task-ledger",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_tasks.rs",
+      "lines": [
+        855,
+        864,
+        886,
+        914,
+        916,
+        975,
+        985
+      ],
+      "test": "routing_cancel_next_submit_cannot_relabel_old_ledger_result",
+      "test_lines": [
+        1164,
+        1196
+      ],
+      "linux": "identity-red failed on older bytes; identity-green and worker-all-reviewed 596 bind this hash"
+    },
+    {
+      "id": "old-epoch-drop",
+      "lines": [
+        524
+      ],
+      "test": "routing_cancel_releases_busy_and_rejects_late_result_and_ack"
+    },
+    {
+      "id": "resume-while-flag",
+      "lines": [
+        394,
+        396
+      ],
+      "test": "routing_cancel_explicit_resume_does_not_revive_locally_cancelled_task"
+    },
+    {
+      "id": "queue-full-busy",
+      "lines": [
+        381,
+        390
+      ],
+      "test": "routing_cancel_full_command_queue_does_not_leave_a_permanent_busy_lock"
+    },
+    {
+      "id": "late-finish",
+      "lines": [
+        380
+      ],
+      "test": "routing_cancel_late_playback_finish_cannot_restore_remainder_or_clear_new_busy"
+    },
+    {
+      "id": "http-503-wording",
+      "lines": [
+        910,
+        916
+      ],
+      "test": "routing_cancel_http_failure_stops_polling_old_task_without_false_confirmation"
+    },
+    {
+      "id": "weather-original-and-beijing",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/search_routing.rs",
+      "lines": [
+        84,
+        104,
+        117,
+        130,
+        151,
+        287,
+        329
+      ]
+    },
+    {
+      "id": "first-turn",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/ordered_pcm.rs",
+      "lines": [
+        1106,
+        1109,
+        1224,
+        1227
+      ]
+    }
+  ],
+  "boundaries": [
+    "Reviewer did not run cargo. 594 binds 40399f5d. 595 binds parent 4d7835d. 596 binds this HEAD by the four file hashes.",
+    "CANDIDATE.json names the parent commit and an older binary.",
+    "Next successful submit clears cancelled_locally at line 469. ResumeLatest at 426-429 and 839-848 has no cancelled-task denylist. resumed_speech at 739-746 requires a resume grant, not ledger Ready text. No server evidence that cancel HTTP 503 makes /resume/latest return that task. Not filed as a blocker.",
+    "Grant-cancel at 900-902 does not clear submitted_turn; polling is false and the next Submit overwrites the turn.",
+    "Queue-full Cancel is not delivered to the actor. Old-epoch Ready is dropped by session epoch match. No combined test fills 16 commands and then asserts epoch 3 Ready id.",
+    "Multi-id cancel text at 907 is followed by clearing current and submitted_turn at 914.",
+    "Exact unprefixed 深圳今天的天气告诉我要不要带伞 has no dedicated assert; the same suffix table covers the prefixed and comma forms.",
+    "Ignored test name is absent from both 583 and 596 log tails. Count remains 1.",
+    "No device, acoustic, or live HTTP check. Brain and UI are out of scope. listening-* logs are a different source hash."
+  ]
+}
