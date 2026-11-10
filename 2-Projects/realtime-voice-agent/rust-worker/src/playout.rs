@@ -363,8 +363,9 @@ async fn wait_for_playing(
     pause: &mut watch::Receiver<bool>,
     abort: &mut watch::Receiver<bool>,
     buffer: &mut BufferWatch,
+    already_observed_pause: bool,
 ) -> Result<(), ExitWhy> {
-    let mut was_paused = false;
+    let mut was_paused = already_observed_pause;
     loop {
         if *abort.borrow() { return Err(ExitWhy::Aborted); }
         if !*pause.borrow() {
@@ -420,32 +421,41 @@ pub fn spawn_playout(
         } else {
             0.0
         };
-        loop {
+        'chunks: loop {
             if ctl2.aborted() {
                 watch.exit(ExitWhy::Aborted);
                 return;
             }
-            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch).await {
+            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch, false).await {
                 watch.exit(reason);
                 return;
             }
-            let wait_start = Instant::now();
-            let chunk = tokio::select! {
-                biased;
-                _ = abort_rx.changed() => { watch.exit(ExitWhy::Aborted); return },
-                changed = pause_rx.changed() => {
-                    if changed.is_err() { watch.exit(ExitWhy::ControlGone); return; }
-                    // End the active wait at pause, not at a later PCM arrival.
-                    // Preserve genuine supply gaps before pause; exclude the hold.
-                    if *pause_rx.borrow() { watch.on_wait(wait_start, Instant::now()); }
-                    watch.on_resume();
-                    continue;
-                },
-                // 注意 break 在 on_wait 之前:channel 关闭=本轮 TTS 吐完,那次等待是收尾不是欠载
-                c = pcm_rx.recv() => match c {
-                    Some(c) => c,
-                    None => { watch.exit(ExitWhy::SourceDrained); break }
-                },
+            let mut wait_start = Instant::now();
+            let chunk = loop {
+                tokio::select! {
+                    biased;
+                    _ = abort_rx.changed() => { watch.exit(ExitWhy::Aborted); return },
+                    changed = pause_rx.changed() => {
+                        if changed.is_err() { watch.exit(ExitWhy::ControlGone); return; }
+                        if *pause_rx.borrow() {
+                            // Settle supply time before the observed pause, then exclude only
+                            // the actual hold. Remember the observation across a fast resume.
+                            watch.on_wait(wait_start, Instant::now());
+                            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch, true).await {
+                                watch.exit(reason);
+                                return;
+                            }
+                            wait_start = Instant::now();
+                        }
+                        // watch may coalesce pause→resume into false. Keep both the
+                        // original wait start and watermark: no hold was observed.
+                    },
+                    // A closed channel is the end of supply, not an underrun.
+                    c = pcm_rx.recv() => match c {
+                        Some(c) => break c,
+                        None => { watch.exit(ExitWhy::SourceDrained); break 'chunks }
+                    },
+                }
             };
             watch.on_wait(wait_start, Instant::now());
             let mut samples: Vec<i16> = chunk
@@ -458,7 +468,7 @@ pub fn spawn_playout(
                     watch.exit(ExitWhy::Aborted);
                     return;
                 }
-                if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch).await {
+                if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch, false).await {
                     watch.exit(reason);
                     return;
                 }
@@ -496,7 +506,7 @@ pub fn spawn_playout(
             }
         }
         if !residual.is_empty() {
-            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch).await {
+            if let Err(reason) = wait_for_playing(&mut pause_rx, &mut abort_rx, &mut watch, false).await {
                 watch.exit(reason);
                 return;
             }
@@ -513,11 +523,7 @@ pub fn spawn_playout(
             }
         }
         // 收尾:等 source 队列(≤200ms)播完再退出,让 done 语义=真播完
-        tokio::select! {
-            biased;
-            _ = abort_rx.changed() => watch.exit(ExitWhy::Aborted),
-            _ = tokio::time::sleep(Duration::from_millis(220)) => {},
-        }
+        tokio::time::sleep(Duration::from_millis(220)).await;
     });
     (task, ctl)
 }
@@ -544,6 +550,38 @@ mod tests {
         assert_eq!(ctl.interruption_resume_delay(Duration::from_secs(2)), Duration::from_secs(2));
         ctl.abort();drop(tx);
         task.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn experience_coalesced_pause_does_not_erase_existing_supply_gap() {
+        let source = NativeAudioSource::new(Default::default(), TTS_SAMPLE_RATE, 1, 200);
+        let (tx, rx) = mpsc::channel(8);
+        let (task, ctl) = spawn_playout(source, rx, "coalesced-pause".into(), 1, None);
+        tx.send(vec![0; 4800]).await.unwrap();
+        wait_captured(&ctl, 2400).await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        // No await: watch coalesces these into false before the receiver polls.
+        ctl.pause();ctl.resume();
+        tx.send(vec![0; 4800]).await.unwrap();drop(tx);
+        tokio::time::timeout(Duration::from_secs(2), task).await.unwrap().unwrap();
+        let stats = ctl.final_stats_handle().lock().unwrap().clone().unwrap();
+        assert!(stats.completed);
+        assert!(stats.underrun_ms >= 150, "a real supply gap must survive a coalesced notification: {}", stats.underrun_ms);
+    }
+
+    #[tokio::test]
+    async fn experience_supply_gap_without_pause_still_counts() {
+        let source = NativeAudioSource::new(Default::default(), TTS_SAMPLE_RATE, 1, 200);
+        let (tx, rx) = mpsc::channel(8);
+        let (task, ctl) = spawn_playout(source, rx, "real-supply-gap".into(), 1, None);
+        tx.send(vec![0; 4800]).await.unwrap();
+        wait_captured(&ctl, 2400).await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
+        tx.send(vec![0; 4800]).await.unwrap();drop(tx);
+        tokio::time::timeout(Duration::from_secs(2), task).await.unwrap().unwrap();
+        let stats = ctl.final_stats_handle().lock().unwrap().clone().unwrap();
+        assert!(stats.completed);
+        assert!(stats.underrun_ms >= 150);
     }
 
     async fn wait_captured(ctl: &PlayoutControl, minimum: u64) {
