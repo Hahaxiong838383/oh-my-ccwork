@@ -85,21 +85,23 @@ pub fn intent(text: &str) -> Option<Intent> {
     if ["，不要真的查", ",不要真的查", "，但不用搜索", ",但不用搜索"].iter().any(|p| t.contains(p)) { return None; }
     if ["搜索引擎", "搜索算法", "搜索功能", "查询功能"].iter().any(|p| t.starts_with(p)) { return None; }
     // Scoped, explicit replacement can supersede a preceding cancellation.
-    if let Some((old, new)) = t.split_once('，') {
-        if (old.starts_with("不查") || old.starts_with("先别查")) && old.ends_with('了') {
+    if let Some((old, new)) = t.split_once(['，', ',']) {
+        if (old.starts_with("不查") || old.starts_with("先别查") || old.starts_with("先不查")) && old.ends_with('了') {
             if let Some(q) = new.trim().strip_prefix("改查") { return task_query(q, true); }
         }
     }
     if let Some((old, new)) = t.split_once("改查") {
-        if (old.starts_with("不查") || old.starts_with("先别查")) && old.ends_with('了') { return task_query(new, true); }
+        if (old.starts_with("不查") || old.starts_with("先别查") || old.starts_with("先不查")) && old.ends_with('了') { return task_query(new, true); }
     }
     let control = t.strip_suffix('吧').unwrap_or(t);
-    if ["别查了", "不用查了", "不要查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
-        || ["不要查了，", "不要查了,", "不用查了，", "不用查了,", "别查了，", "别查了,"].iter().any(|p| control.starts_with(p))
+    if ["不要查了", "不查了", "别查了", "不用查了", "取消搜索", "停止搜索", "不用查了，取消刚才的搜索", "不用查了取消刚才的搜索", "取消刚才的搜索", "取消刚才的查询", "不用搜索了", "别搜了", "停止查询", "取消查询"].contains(&control)
         // ASR joins clause finals with spaces. Match the explicit cancel clause
         // and a bounded chat handoff, without stripping negation or quotations.
-        || ["不用查了", "别查了", "不要查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail|
-            ["我们聊", "聊"].iter().any(|next|tail.trim_start().starts_with(next)))) {
+        || ["不要查了", "不查了", "不用查了", "别查了"].iter().any(|p|control.strip_prefix(p).is_some_and(|tail| {
+            let tail = tail.trim_start_matches(|c:char| c.is_whitespace() || "，,；;".contains(c));
+            ["取消搜索", "取消刚才的搜索", "取消刚才的查询", "停止搜索", "取消查询"].contains(&tail)
+                || ["我们聊", "聊"].iter().any(|next|tail.starts_with(next))
+        })) {
         return Some(Intent::Cancel);
     }
     if ["继续刚才的搜索结果", "刚才查到了吗", "刚才的搜索结果呢", "继续播刚才的搜索结果", "刚才查的结果呢", "查好了吗", "搜到了吗", "接着说刚才查到的", "刚才查到什么了", "搜索结果呢"].contains(&control)
@@ -227,6 +229,16 @@ impl DeliveryGate {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn routing_cancel_natural_clauses_preserve_negation_and_replacement() {
+        for text in ["不查了", "不查了取消搜索", "不查了，取消搜索", "不查了 取消搜索", "不查了，取消刚才的搜索吧", "不用查了取消搜索"] {
+            assert_eq!(intent(text), Some(Intent::Cancel), "{text}");
+        }
+        for text in ["不要取消搜索", "他说取消搜索是什么意思", "如果我说取消搜索", "不查了是什么意思", "不查了，取消搜索是什么意思", "不用查了，取消搜索是什么意思", "查了取消搜索", "查了取消搜索是什么意思"] {
+            assert_eq!(intent(text), None, "{text}");
+        }
+        for text in ["先不查北京了，改查上海", "先不查北京了,改查上海"] { assert_eq!(intent(text), Some(Intent::Replace("上海".into())), "{text}"); }
+    }
     #[test]
     fn r21_search_word_questions_are_chat_even_after_a_clarification() {
         for text in ["查查是啥", "查查是什么", "搜索啥意思", "查一下是啥意思", "查询是干什么的", "小可，查查这个词啥意思？", "请帮我查一下是什么意思"] {

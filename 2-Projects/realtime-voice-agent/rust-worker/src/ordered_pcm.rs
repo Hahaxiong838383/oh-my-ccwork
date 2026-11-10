@@ -1106,7 +1106,7 @@ impl Session {
         let text: String = self.held_finals.join("");
         self.phase = Phase::Terminal;
         // B23：纯唤醒词（小可 ×1～3，去标点空白）不是任务——端侧本地 greet，worker 不进 LLM
-        let no_task = self.limits.first_turn_rtc && crate::textproc::is_wake_only(&text);
+        let no_task = self.limits.first_turn_rtc && is_first_turn_wake_only(&text);
         self.outcome = Some(if no_task { Outcome::NoTask(NoTaskReason::WakeOnly) } else { Outcome::Committed });
         let mut extra = json!({
             "finals": self.held_finals.len(),
@@ -1219,6 +1219,13 @@ fn phase_str(p: Phase) -> &'static str {
     }
 }
 
+// The expanded vocabulary belongs only to the trusted first-turn handoff.
+// Ordinary turns keep textproc::is_wake_only's original contract.
+fn is_first_turn_wake_only(text: &str) -> bool {
+    crate::textproc::is_wake_only(text)
+        || matches!(crate::textproc::normalize_utterance(text).as_str(), "可小可" | "呃小可" | "额小可")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1327,6 +1334,35 @@ mod tests {
             }
             assert_eq!(s.phase(), Phase::Terminal);
         }
+    }
+
+    #[test]
+    fn routing_wake_variants_are_scoped_to_trusted_first_turn_and_complete_text() {
+        for text in ["可小可", "呃小可。", "额小可", "口渴", "我口渴了", "小可帮我查天气", "可小可我口渴了"] {
+            for v1 in [false, true] {
+                let mut s = if v1 { session_v1() } else { session() };
+                let mut sink = Sink { blocks:vec![], cap:None };
+                s.on_packet(&pkt(begin_hdr("in-1", 0, 0), &[]), 0);
+                let pcm = tone(16000, 4);
+                let (seq, _) = feed(&mut s, &mut sink, "in-1", 0, &pcm, 640, 0);
+                s.on_packet(&pkt(header("end", "in-1", seq, pcm.len() as u64, pcm.len() as u64), &[]), 100);
+                s.drain_submits(sink.sender()); s.on_stt_final(text.into(), 0);
+                let (d, _) = s.on_stream_end(0);
+                if v1 && ["可小可", "呃小可。", "额小可"].contains(&text) {
+                    assert_eq!(d, Decision::NoTask(text.into(), NoTaskReason::WakeOnly), "{text}");
+                } else {
+                    assert_eq!(d, Decision::Commit(text.into()), "v1={v1} {text}");
+                }
+            }
+        }
+        // Segmented ASR finals are joined before wake-only classification.
+        let mut s = session_v1(); let mut sink = Sink { blocks:vec![], cap:None };
+        s.on_packet(&pkt(begin_hdr("in-1",0,0),&[]),0);
+        let pcm=tone(16000,4);let(seq,_)=feed(&mut s,&mut sink,"in-1",0,&pcm,640,0);
+        s.on_packet(&pkt(header("end","in-1",seq,16000,16000),&[]),100);
+        s.drain_submits(sink.sender());s.on_stt_final("可小可".into(),0);s.on_stt_final("我口渴了".into(),0);
+        assert!(matches!(s.on_stream_end(0).0, Decision::Commit(text) if text.contains("我口渴了")));
+        assert!(!crate::textproc::is_wake_only("可小可"), "global ordinary-turn semantics stay unchanged");
     }
 
     /// B23：v1 下收流无 final → no_task（complete/text_chars 0）；旧合同仍 failed/no_final。

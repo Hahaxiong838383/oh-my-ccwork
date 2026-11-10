@@ -236,6 +236,7 @@ pub struct SearchSession {
     epoch: u64,
     generation: u64,
     busy: bool,
+    cancelled_locally: bool,
     gate: DeliveryGate,
     speech: VecDeque<Speech>,
     started: Instant,
@@ -287,6 +288,7 @@ impl SearchSession {
             epoch: 0,
             generation: 0,
             busy: false,
+            cancelled_locally: false,
             gate: DeliveryGate::default(),
             speech: VecDeque::new(),
             started: Instant::now(),
@@ -318,6 +320,18 @@ impl SearchSession {
         self.fragment_since=None;
         let repaired=repaired_replace(text,self.dialogue_context().is_some());
         let text=repaired.as_deref().unwrap_or(text);
+        // An observed truncated ASR form is meaningful only while there is an
+        // actual query/result to cancel. Do not put it in the stateless grammar.
+        let control = text.trim().trim_end_matches(|c:char| "。！？!? ".contains(c));
+        let active_query = self.busy || self.pending_topic.is_some() || self.remainder.is_some()
+            || self.active.as_ref().is_some_and(|s| s.task.is_some())
+            || self.speech.iter().any(|s| s.task.is_some());
+        if active_query && control.strip_prefix("查了").is_some_and(|tail|
+            tail.trim_start_matches(|c:char| c.is_whitespace() || "，,".contains(c)) == "取消搜索") {
+            self.query_intent.clear(); self.pending_topic = None; self.clarified_at = None;
+            self.last_route = None;
+            return Some(Intent::Cancel);
+        }
         let mut joined = None;
         let mut deferred = None;
         if let Some(pending) = self.pending_topic.take() {
@@ -399,9 +413,16 @@ impl SearchSession {
                 self.pending_topic=None;self.clarified_at=None;
                 self.suppress_auto_replay();
                 self.epoch += 1;
+                self.cancelled_locally = true;
+                // Old-epoch events are discarded even if the actor queue is
+                // full, so they cannot be relied on to release this flag later.
+                self.busy = false;
                 self.gate.cancel();
                 self.speech.clear();
                 self.remainder = None; self.dialogue=None;
+                // Retire the old playback owner too: its later finish callback
+                // must not recreate replay state or release a new query.
+                self.active = None;
                 if self
                     .tx
                     .try_send(Command::Cancel {
@@ -418,6 +439,10 @@ impl SearchSession {
                 self.last_resume_at=Some(Instant::now());
                 self.requires_explicit_play=false;
                 self.auto_pending = false;
+                if self.cancelled_locally {
+                    self.notice("刚才的搜索已在这里停止，请重新发起查询。");
+                    return false;
+                }
                 if self.busy {
                     self.notice("还在查或准备播报，查到后我会告诉你。");
                     return false;
@@ -497,6 +522,7 @@ impl SearchSession {
             // margin without extending ordinary chat or renewing on chatter.
             self.wait_deadline_ms=Some(self.started.elapsed().as_millis() as u64+25000);
             self.busy = true;
+            self.cancelled_locally = false;
             if self.receipt(receipt_kind) { self.receipt_epoch = Some(self.epoch); }
             true
         } else {
@@ -900,6 +926,7 @@ async fn run(api: Api, commands: mpsc::Receiver<Command>, events: mpsc::Sender<E
 async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, events: mpsc::Sender<Event>,
     business: tokio::sync::watch::Sender<(u64, Option<Instant>)>) {
     let mut current: Option<String> = None;
+    let mut submitted_turn: Option<String> = None;
     let mut current_grant:Option<String>=None;
     let mut current_delivery:Option<String>=None;
     let mut progress_jobs=tokio::task::JoinSet::new();
@@ -941,12 +968,16 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
                     Command::RoutingAck {version}=>{let ack_api=api.clone();tokio::spawn(async move {let _=ack_api.request("/routing/ack",Some(json!({"version":version}))).await;});},
                     Command::Submit { routing, query, turn, replace, epoch: e, generation } => {
                         epoch = e; replaying = false;
+                        submitted_turn = Some(turn.clone());
                         business.send_replace((epoch, Some(Instant::now() + Duration::from_millis(1500 + 3000))));
                         let resumed=current_grant.take().is_some();
                         if !replace || resumed { current = None; }
                         let mut body = json!({"protocol":1,"phase":"committed","query":query,"turn":turn});
                         if let Some(routing)=routing {body["routing"]=routing;}
                         if replace && !resumed { if let Some(id) = &current { body["replace"] = json!(id); } }
+                        // Replacement targets belong only in the POST; an uncertain
+                        // acknowledgement may recover only this new request turn.
+                        current = None; current_delivery = None;
                         let mut attempt = 0;
                         let response = loop {
                             let budget_ms = if attempt == 0 { 1500 } else { 3000 };
@@ -991,11 +1022,14 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
                         if let Some(id) = &current { if !ids.contains(id) { ids.push(id.clone()); } }
                         let text = if ids.len() > 1 { "现在有多个查询，请说明要取消哪一个。" }
                             else if let Some(id) = ids.first() {
-                                if api.request(&format!("/{id}/cancel"),Some(json!({}))).await.is_ok() { current = None; polling = false; "好，已取消这次搜索。" }
+                                if api.request(&format!("/{id}/cancel"),Some(json!({}))).await.is_ok() { "好，已取消这次搜索。" }
                                 else { "暂时没能确认取消，请稍后再试。" }
-                            } else if status.is_ok() { polling = false; if flag("P003_SEARCH_RESUME_V1")&&api.request("/resume/cancel",Some(json!({}))).await.is_ok(){"好，已取消这次搜索。"}else{"当前没有进行中的搜索。"} } else { "暂时没能确认取消，请稍后再试。" };
+                            } else if status.is_ok() { if flag("P003_SEARCH_RESUME_V1")&&api.request("/resume/cancel",Some(json!({}))).await.is_ok(){"好，已取消这次搜索。"}else{"当前没有进行中的搜索。"} } else { "暂时没能确认取消，请稍后再试。" };
+                        // A failed remote acknowledgement never authorizes local
+                        // polling/playback to revive the query the user stopped.
+                        current = None; current_delivery = None; submitted_turn = None; polling = false;
                         let _ = events.send(Event::Ack { text, epoch, generation }).await;
-                        if !polling { let _ = events.send(Event::Finished { epoch }).await; }
+                        let _ = events.send(Event::Finished { epoch }).await;
                     }
                     Command::Claim { id, delivery, epoch: e } => {
                         if e != epoch { continue; }
@@ -1057,7 +1091,12 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
                         for task in tasks {
                             if let (Some(id),Some(text)) = (task["id"].as_str(),result_text(task)) {
                                 // A lost POST acknowledgement can be recovered by the owned ledger.
-                                if current.is_none() { current = Some(id.to_owned()); }
+                                if let Some(expected) = &current {
+                                    if id != expected { continue; }
+                                } else {
+                                    if submitted_turn.as_deref().is_none_or(|turn| task["turn"].as_str() != Some(turn)) { continue; }
+                                    current = Some(id.to_owned());
+                                }
                                 let _ = events.send(Event::Ready { id: id.into(),text,epoch }).await;
                             }
                         }
@@ -1072,6 +1111,127 @@ async fn run_with_deadline(api: Api, mut commands: mpsc::Receiver<Command>, even
 
 #[cfg(test)]
 mod tests {
+    #[tokio::test]
+    async fn routing_cancel_next_submit_cannot_relabel_old_ledger_result() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        use std::sync::{Arc, atomic::{AtomicUsize,Ordering}};
+        let _=rustls::crypto::ring::default_provider().install_default();
+        for lost_ack in [false,true] {
+            let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let addr=listener.local_addr().unwrap();
+            let posts=Arc::new(AtomicUsize::new(0));let state=posts.clone();
+            let server=tokio::spawn(async move{loop{
+                let (mut socket,_)=listener.accept().await.unwrap();let posts=state.clone();
+                tokio::spawn(async move{
+                    let mut bytes=Vec::new();let mut buf=[0u8;8192];
+                    loop{let n=socket.read(&mut buf).await.unwrap();if n==0{return;}bytes.extend_from_slice(&buf[..n]);if let Some(end)=bytes.windows(4).position(|w|w==b"\r\n\r\n"){
+                        let header=String::from_utf8_lossy(&bytes[..end]);let length=header.lines().find_map(|l|l.to_lowercase().strip_prefix("content-length:").and_then(|v|v.trim().parse::<usize>().ok())).unwrap_or(0);
+                        if bytes.len()>=end+4+length{break;}
+                    }}
+                    let raw=String::from_utf8_lossy(&bytes);let first=raw.lines().next().unwrap();
+                    let (status,body)=if first.contains("/cancel?"){(503,json!({}))}
+                    else if first.starts_with("POST "){let n=posts.fetch_add(1,Ordering::SeqCst);(200,if n==0{json!({"task":{"id":"old","revision":1}})}else if lost_ack{json!({})}else{json!({"task":{"id":"new","revision":1}})})}
+                    else{let mut tasks=vec![json!({"id":"old","turn":"old-turn","status":"ready","valid_for_ms":10000,"automatic_for_ms":10000,"result":{"text":"不该复活的旧结果"}})];
+                        if posts.load(Ordering::SeqCst)>=2{tasks.push(json!({"id":"new","turn":"new-turn","status":"ready","valid_for_ms":10000,"automatic_for_ms":10000,"result":{"text":"新结果"}}));}(200,json!({"tasks":tasks}))};
+                    let body=body.to_string();let _=socket.write_all(format!("HTTP/1.1 {status} Test\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).as_bytes()).await;
+                });
+            }});
+            let api=Api{client:reqwest::Client::new(),url:format!("http://{addr}/tasks?room=synthetic").parse().unwrap(),token:"test".into(),key:"test".into()};
+            let(tx,commands)=mpsc::channel(8);let(events,mut rx)=mpsc::channel(32);let actor=tokio::spawn(run(api,commands,events));
+            tx.send(Command::Submit{routing:None,query:"旧查询".into(),turn:"old-turn".into(),replace:false,epoch:1,generation:1}).await.unwrap();
+            tokio::time::timeout(Duration::from_secs(2),async{while !matches!(rx.recv().await,Some(Event::Accepted{epoch:1,..})) {}}).await.unwrap();
+            tx.send(Command::Cancel{epoch:2,generation:1}).await.unwrap();
+            tokio::time::timeout(Duration::from_secs(2),async{while !matches!(rx.recv().await,Some(Event::Finished{epoch:2})) {}}).await.unwrap();
+            tx.send(Command::Submit{routing:None,query:"新查询".into(),turn:"new-turn".into(),replace:false,epoch:3,generation:1}).await.unwrap();
+            let next=tokio::time::timeout(Duration::from_secs(3),async{loop{if let Some(Event::Ready{id,epoch:3,..})=rx.recv().await{return id;}}}).await;
+            actor.abort();server.abort();assert_eq!(next.unwrap(),"new","old result must not inherit a new epoch, lost_ack={lost_ack}");
+        }
+    }
+    #[tokio::test]
+    async fn routing_cancel_observed_asr_variant_requires_an_active_query() {
+        let (mut s, _events, _commands) = test_session();
+        assert!(s.interpret("查了取消搜索").is_none());
+        s.busy = true;
+        assert_eq!(s.interpret("查了取消搜索"), Some(Intent::Cancel));
+        assert_eq!(s.interpret("不要查了取消搜索"), Some(Intent::Cancel), "preserve the existing listening-pool affirmative stop command");
+        for text in ["查了取消搜索是什么意思", "不要取消搜索", "他说查了取消搜索"] {
+            assert!(!matches!(s.interpret(text), Some(Intent::Cancel)), "{text}");
+        }
+    }
+    #[tokio::test]
+    async fn routing_cancel_releases_busy_and_rejects_late_result_and_ack() {
+        let (mut s, events, mut commands) = test_session();
+        assert!(s.command(Intent::Search("火星为什么红".into())));
+        commands.try_recv().unwrap(); let old = s.epoch;
+        s.command(Intent::Cancel); let cancelled = s.epoch;
+        assert!(matches!(commands.try_recv(), Ok(Command::Cancel { .. })));
+        assert!(!s.busy, "local cancellation must not wait for HTTP to free the next query");
+        assert!(s.command(Intent::Search("木星有多大".into())));
+        assert!(matches!(commands.try_recv(), Ok(Command::Submit { .. })));
+        events.send(Event::Ready { id:"old".into(), text:"旧结果".into(), epoch:old }).await.unwrap();
+        events.send(Event::Ack { text:"好，已取消这次搜索。", epoch:cancelled, generation:s.generation }).await.unwrap();
+        s.idle_since = Some(Instant::now()-Duration::from_secs(1));
+        assert!(s.poll(true).is_none()); assert!(s.speech.is_empty());
+    }
+    #[tokio::test]
+    async fn routing_cancel_explicit_resume_does_not_revive_locally_cancelled_task() {
+        let (mut s, events, mut commands) = test_session(); s.resume_v1 = true;
+        s.command(Intent::Search("火星为什么红".into())); commands.try_recv().unwrap();
+        s.command(Intent::Cancel); commands.try_recv().unwrap();
+        events.send(Event::Finished { epoch:s.epoch }).await.unwrap(); s.poll(false);
+        s.command(Intent::Resume);
+        assert!(commands.try_recv().is_err(), "cancel HTTP failure must not let resume revive the old result");
+    }
+    #[tokio::test]
+    async fn routing_cancel_late_playback_finish_cannot_restore_remainder_or_clear_new_busy() {
+        for sentences in [false, true] {
+            let (mut s, _events, mut commands) = test_session();
+            s.active = Some(claimed_speech(&json!({"valid_for_ms":20000,"automatic_for_ms":10000,"result":{"text":"旧结果第一句。第二句。"}}),"old".into(),"d1".into()).unwrap());
+            s.command(Intent::Cancel); commands.try_recv().unwrap();
+            assert!(s.command(Intent::Search("木星有多大".into()))); commands.try_recv().unwrap();
+            if sentences { s.finish_sentences(true,0,100); } else { s.finish_with_progress(true,0,100,false); }
+            assert!(s.remainder.is_none(), "cancelled active speech must not return as a remainder");
+            assert!(s.busy, "old playback finish must not clear the new task's busy flag");
+        }
+    }
+    #[tokio::test]
+    async fn routing_cancel_full_command_queue_does_not_leave_a_permanent_busy_lock() {
+        let (mut s, _events, _commands) = test_session(); s.busy = true;
+        for _ in 0..16 { s.tx.try_send(Command::RoutingAck { version:"test".into() }).unwrap(); }
+        s.command(Intent::Cancel);
+        assert!(!s.busy, "old-epoch events can no longer clear this flag after local cancellation");
+        assert!(s.speech.iter().any(|x| x.text.contains("没能确认取消")));
+    }
+    #[tokio::test]
+    async fn routing_cancel_http_failure_stops_polling_old_task_without_false_confirmation() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move { loop {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            tokio::spawn(async move {
+                let mut buf = [0u8; 8192]; let n = socket.read(&mut buf).await.unwrap();
+                let raw = String::from_utf8_lossy(&buf[..n]);
+                let first = raw.lines().next().unwrap();
+                let (status, body) = if first.contains("/cancel?") { (503, "{}") }
+                    else if first.starts_with("POST ") { (200, r#"{"task":{"id":"old","revision":1}}"#) }
+                    else { (200, r#"{"tasks":[{"id":"old","status":"running"}]}"#) };
+                let _ = socket.write_all(format!("HTTP/1.1 {status} Test\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}", body.len()).as_bytes()).await;
+            });
+        }});
+        let api = Api { client:reqwest::Client::new(), url:format!("http://{addr}/tasks?room=synthetic").parse().unwrap(), token:"test".into(), key:"test".into() };
+        let (tx, commands) = mpsc::channel(8); let (events, mut rx) = mpsc::channel(16);
+        let actor = tokio::spawn(run(api, commands, events));
+        tx.send(Command::Submit { routing:None, query:"测试查询".into(), turn:"t".into(), replace:false, epoch:1, generation:1 }).await.unwrap();
+        while !matches!(rx.recv().await, Some(Event::Accepted { .. })) {}
+        tx.send(Command::Cancel { epoch:2, generation:1 }).await.unwrap();
+        loop { if let Some(Event::Ack { text, epoch:2, .. }) = rx.recv().await {
+            assert!(text.contains("没能确认取消")); break;
+        }}
+        let finished = tokio::time::timeout(Duration::from_millis(300), rx.recv()).await;
+        actor.abort(); server.abort();
+        assert!(matches!(finished, Ok(Some(Event::Finished { epoch:2 }))), "failed remote cancellation must still retire local polling");
+    }
     #[tokio::test]
     async fn business_hold_uses_current_epoch_absolute_deadlines_not_busy_or_context() {
         let (mut s, _events, _commands) = test_session();
@@ -1329,6 +1489,7 @@ mod tests {
                 epoch: 0,
                 generation: 0,
                 busy: false,
+                cancelled_locally: false,
                 gate: DeliveryGate::default(),
                 speech: VecDeque::new(),
                 started: Instant::now(),
