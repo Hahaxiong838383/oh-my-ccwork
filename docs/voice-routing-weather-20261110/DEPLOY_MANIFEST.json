@@ -1,0 +1,72 @@
+{
+  "status": "NOT_DEPLOYED",
+  "main_source": "148107232d1792c2c39719113d49031c67170d13",
+  "brain_source": "15d07e6161dcd083d12501cd37d9511cad489427",
+  "entries": [
+    {
+      "host": "worker",
+      "path": "/root/rust-worker/voice-rust-worker",
+      "before_sha256": "1193dfd309042686d6cd55fd6c781bead516750a7aff0d77bb4761fbe5707622",
+      "after_sha256": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/root/rust-worker/voice-rust-worker",
+      "mode": "0o755"
+    },
+    {
+      "host": "brain",
+      "path": "/opt/p003/server/src/tools/weather-places.ts",
+      "before_sha256": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+      "after_sha256": "31549c3c36450b77caa377d20d900300df5a34b21affa8bfa69b600492f28f3a",
+      "backup": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z/files/opt/p003/server/src/tools/weather-places.ts",
+      "mode": "0o644"
+    },
+    {
+      "host": "brain",
+      "path": "/opt/p003/server/src/routes/search-routing-admin.ts",
+      "before_sha256": "04601d584d361000808b32e0d550153b3009f8185c24b94a0118efde5d063369",
+      "after_sha256": "6c5b38ff9d47602238311493bff8c543eb64a509d106d4b23b531dc3eb4699ab",
+      "backup": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z/files/opt/p003/server/src/routes/search-routing-admin.ts",
+      "mode": "0o644"
+    },
+    {
+      "host": "brain",
+      "path": "/opt/p003/web/dist/admin/index.html",
+      "before_sha256": "106ddfdfb45ca76993310e5dfa6e05d66fa82c15e14e194c47b4873d8e3e0478",
+      "after_sha256": "491ad58daab6e9319a9df21e4c28f07191999bc09500b7491ad99b5f5ceb8267",
+      "backup": "/opt/p003/_backup/voice-routing-weather-20261110/baseline-20261110T050230Z/files/opt/p003/web/dist/admin/index.html",
+      "mode": "0o644"
+    },
+    {
+      "host": "brain",
+      "path": "/opt/p003/server/bin/search-route-preview",
+      "before_sha256": "17a2cc22538c0fbc3af8fba4d72ec25112242d434b4e5a7ca2db523ca0eabb09",
+      "after_sha256": "5cedfef79540b28a25c3275d409ce40446da99448457dd5cb822d94b032d0f50",
+      "backup": "/opt/p003/_backup/voice-routing-weather-20261110/preview-supplement/search-route-preview",
+      "mode": "0o755"
+    },
+    {
+      "host": "worker",
+      "path": "/opt/p003-listening-canary-20261030/voice-rust-worker",
+      "before_sha256": "1fd53248c38ab38250c3fa703e98c8f2077619d5b5a7d36339132f6c9b6d79e5",
+      "after_sha256": "517f5290eeb73486ccb3bcf86e16eec24bde5b6380d825851592c1f308f5f305",
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/voice-rust-worker",
+      "mode": "0o755"
+    },
+    {
+      "host": "worker",
+      "path": "/opt/p003-listening-canary-20261030/release.json",
+      "before_sha256": "b9287bbee82ab8ea8ce040581372da79c0041c5ab66aff05a0fb305fa9c09b48",
+      "after_sha256": "594fe0fb2f1dbd1fc125461ef01b9627de224108cd339b055d4cd536551f8eb2",
+      "backup": "/root/p003-voice-routing-weather-20261110/baseline-20261110T050228Z/files/opt/p003-listening-canary-20261030/release.json",
+      "mode": "0o600"
+    }
+  ],
+  "scope": "Main and listening candidates remain distinct, each based on its own live source. Brain changes are only these enumerated files. Legacy search pool unchanged.",
+  "rules": [
+    "Verify every before SHA and backup SHA immediately before apply; reject drift.",
+    "Before switching any pool, verify no active job and exact target-device assignment; otherwise defer switch.",
+    "Apply only enumerated files, atomic file replace; do not overwrite source directories/env/databases.",
+    "Rollback only the affected batch, verifying current after SHA first.",
+    "No device/owner/feature gate changes are implied."
+  ],
+  "listening_source": "fd3ad604c64079b607fbfc285c5d7c9baf2002df"
+}

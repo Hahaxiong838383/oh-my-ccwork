@@ -1,0 +1,44 @@
+{
+  "status": "NO_OPEN_SCOPED_BLOCKER",
+  "reviewers": {
+    "worker": "148107232d1792c2c39719113d49031c67170d13",
+    "listening": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+    "brain": "15d07e6161dcd083d12501cd37d9511cad489427"
+  },
+  "source_binding": [
+    {
+      "pool": "main",
+      "source": "148107232d1792c2c39719113d49031c67170d13",
+      "files": 77,
+      "test_and_release_and_current_source_equal": true,
+      "changed_source_hashes": {
+        "src/ordered_pcm.rs": "abe02f2e979401785156fd2f63b2e7afdea66c15b9b7ef93eb345f11446bc541",
+        "src/search_policy.rs": "ac05fdb1013d05f986d7d7119ffa6486f6ed536880731278c159051efcf66ee6",
+        "src/search_routing.rs": "394113db4dc32a96f51c2afc2f5d101baec32fd81eb82e0d94f5eae3e1a46901",
+        "src/search_tasks.rs": "c5922ecd8f788b064a6b4d7f92b580178c310931d14147051068c098962e3574"
+      }
+    },
+    {
+      "pool": "listening",
+      "source": "fd3ad604c64079b607fbfc285c5d7c9baf2002df",
+      "files": 84,
+      "test_and_release_and_current_source_equal": true,
+      "changed_source_hashes": {
+        "src/ordered_pcm.rs": "abe02f2e979401785156fd2f63b2e7afdea66c15b9b7ef93eb345f11446bc541",
+        "src/search_policy.rs": "b799e076e53461ab9a69b2a980a2bb1d9fd01e5eb4c9496e6d19cb48b2436165",
+        "src/search_routing.rs": "71ad2d36de7b6cce2ed48904b361c6865bc1e35f6769d8147eb57b7e7bc64313",
+        "src/search_tasks.rs": "16e4ee7efde1b1aeb4d48a8395533ae6e8a25abfe1200e69003de4dfbc02aa9d"
+      }
+    }
+  ],
+  "corrections": [
+    "Worker review captured an earlier CANDIDATE card; final card now matches 14810723 and 8a953489, and final formal voice tests were rerun against that binary.",
+    "Listening log header summarized only preserved modules; full source-listening-all-reviewed.json and source-listening-reviewed-release.json include all four changed files and were checked byte-for-byte against fd3ad604.",
+    "Listening review message phrased cancelled_locally as cleared; its actual MD and source correctly set it true on cancel. Original review files are retained unchanged."
+  ],
+  "known_boundaries": [
+    "ResumeLatest cross-room recovery plus failed cancellation plus failed next admission is not covered by an end-to-end fault test. No unconditional cross-room cancellation claim.",
+    "Real Android acoustic attenuation and real provider weather/LLM answer quality are not validated by these isolated tests."
+  ],
+  "production_deployed": false
+}

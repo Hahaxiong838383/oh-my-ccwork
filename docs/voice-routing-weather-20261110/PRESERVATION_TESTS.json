@@ -1,0 +1,67 @@
+[
+  {
+    "test": "ark-knowledge",
+    "exit_code": 0,
+    "seconds": 0.996
+  },
+  {
+    "test": "ark-state",
+    "exit_code": 0,
+    "seconds": 1.443
+  },
+  {
+    "test": "ark-history",
+    "exit_code": 0,
+    "seconds": 4.271
+  },
+  {
+    "test": "ark-runtime",
+    "exit_code": 0,
+    "seconds": 0.937
+  },
+  {
+    "test": "ark-http-sse",
+    "exit_code": 0,
+    "seconds": 3.401
+  },
+  {
+    "test": "ark-proxy",
+    "exit_code": 0,
+    "seconds": 1.824
+  },
+  {
+    "test": "ark-proxy-service",
+    "exit_code": 0,
+    "seconds": 0.998
+  },
+  {
+    "test": "listening-policy",
+    "exit_code": 0,
+    "seconds": 0.607
+  },
+  {
+    "test": "listening-auth",
+    "exit_code": 0,
+    "seconds": 0.962
+  },
+  {
+    "test": "listening-admin",
+    "exit_code": 0,
+    "seconds": 2.591
+  },
+  {
+    "test": "listening-authority",
+    "exit_code": 0,
+    "seconds": 2.273
+  },
+  {
+    "test": "listening-content",
+    "exit_code": 0,
+    "seconds": 10.664
+  },
+  {
+    "test": "listening-integration",
+    "exit_code": 0,
+    "seconds": 2.85
+  }
+]

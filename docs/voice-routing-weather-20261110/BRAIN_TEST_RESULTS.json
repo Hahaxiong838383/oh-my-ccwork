@@ -1,0 +1,50 @@
+[
+  {
+    "name": "weather-place-contract",
+    "exit": 0
+  },
+  {
+    "name": "weather-preview-inspection",
+    "exit": 0
+  },
+  {
+    "name": "search-routing-admin",
+    "exit": 0
+  },
+  {
+    "name": "search-routing-global-admin",
+    "exit": 0
+  },
+  {
+    "name": "search-routing-store",
+    "exit": 0
+  },
+  {
+    "name": "search-routing-global",
+    "exit": 0
+  },
+  {
+    "name": "search-weather-runtime",
+    "exit": 0
+  },
+  {
+    "name": "search-weather-fallback-runtime",
+    "exit": 1
+  },
+  {
+    "name": "baidu-weather",
+    "exit": 0
+  },
+  {
+    "name": "fixed-weather",
+    "exit": 1
+  },
+  {
+    "name": "amap-weather",
+    "exit": 0
+  },
+  {
+    "name": "moji-weather",
+    "exit": 0
+  }
+]
