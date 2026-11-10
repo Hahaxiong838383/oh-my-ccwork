@@ -1,0 +1,128 @@
+{
+  "before": {
+    "MainPID": "4110554",
+    "NRestarts": "0",
+    "ActiveState": "active",
+    "sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78"
+  },
+  "cases": [
+    {
+      "kind": "normal",
+      "rc": 0,
+      "result": {
+        "at": "2026-11-10T01:42:57.443883+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78",
+        "runtime_pid": "4110554",
+        "ordered": false,
+        "mode": "normal",
+        "trace_id": "ops-release-probe-2d1579f9-a3dc-44a4-8276-3b3e8591db82",
+        "room": "sn-BJP00326111099999993-1794274958413",
+        "sid": "RM_4mt3fnuQxjvJ",
+        "stats": {
+          "ready_ms": 842,
+          "phase_ms": null,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 4670.0,
+          "first_audio_ms": 6905,
+          "last_audio_ms": 12775,
+          "input_sent_ms": 850,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "tts",
+            "llm"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [],
+          "client_connected_ms": 277,
+          "track_publish_requested_ms": 277,
+          "last_audio_to_server_disconnect_ms": 5947,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 19030,
+        "policy_source": "actual production Worker/SFU/ASR/LLM/TTS; synthetic test SN and signed test metadata; Brain global tickets independently verified; not Android",
+        "real_android": false
+      }
+    },
+    {
+      "kind": "ordered",
+      "rc": 0,
+      "result": {
+        "at": "2026-11-10T01:43:35.294277+00:00",
+        "status": "FUNCTIONAL_PASS",
+        "candidate_sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78",
+        "runtime_pid": "4110554",
+        "ordered": true,
+        "mode": "ordered",
+        "trace_id": "ops-release-probe-f8e493d8-9109-444b-8273-c5b32f5a9110",
+        "room": "sn-BJP00326111099999993-1794274979370",
+        "sid": "RM_AyQ5wXHWkKkD",
+        "stats": {
+          "ready_ms": 12335,
+          "phase_ms": 14836,
+          "user_finals": 2,
+          "answer_finals": 1,
+          "audible_ms": 6470.0,
+          "first_audio_ms": 21503,
+          "last_audio_ms": 29922,
+          "input_sent_ms": 14843,
+          "events": [
+            "session.output_ready",
+            "session.input_ready",
+            "session.input_phase",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "metrics_packets": 4,
+          "metric_kinds": [
+            "eou",
+            "eou",
+            "llm",
+            "tts"
+          ],
+          "input_samples_sent": 60699,
+          "phase_reasons": [
+            "begin_timeout"
+          ],
+          "client_connected_ms": 206,
+          "track_publish_requested_ms": 12208,
+          "last_audio_to_server_disconnect_ms": 5705,
+          "ffi_subscribers_after_cleanup": 0
+        },
+        "natural_room_gone": true,
+        "fixture_cleanup": false,
+        "elapsed_ms": 35924,
+        "policy_source": "actual production Worker/SFU/ASR/LLM/TTS; synthetic test SN and signed test metadata; Brain global tickets independently verified; not Android",
+        "real_android": false
+      }
+    }
+  ],
+  "boundary": "actual main production runtime/provider/SFU, synthetic SN, no Android; listening admission unchanged and verified separately",
+  "after": {
+    "MainPID": "4110554",
+    "NRestarts": "0",
+    "ActiveState": "active",
+    "sha256": "0f8a9721cf972822f8e030d60e707d711cab74ff3187d3683146e21d02d3ce78"
+  },
+  "same_runtime": true,
+  "passed": true
+}

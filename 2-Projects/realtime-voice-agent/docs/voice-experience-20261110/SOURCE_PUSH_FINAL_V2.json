@@ -1,0 +1,14 @@
+{
+  "p003-voice-transport-fix-20261105": {
+    "branch": "codex/p003-voice-transport-fix-20261105",
+    "sha": "1b1628649be24e13b248bea7fe91639de3a8879a",
+    "rollback_tag": "rollback/p003-voice-experience-pre-20261110",
+    "remote_verified": true
+  },
+  "p003-listening-transport-20261108": {
+    "branch": "codex/p003-listening-transport-20261108",
+    "sha": "ac18707965623b85540408fc1d989eacb04ce798",
+    "rollback_tag": "rollback/p003-listening-experience-pre-20261110",
+    "remote_verified": true
+  }
+}
