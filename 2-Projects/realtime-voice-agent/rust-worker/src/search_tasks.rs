@@ -2,7 +2,7 @@
 use crate::llm::LlmConfig;
 use crate::search_receipts::{Bank as ReceiptBank, Clip as ReceiptClip, Kind as ReceiptKind};
 use crate::search_policy::{DeliveryGate, Intent};
-use crate::search_routing::{RoutingConfig,RoutingSession,Decision};
+use crate::search_routing::{RoutingConfig,RoutingSession,Decision,truncated_place_prefix,completed_place_tail};
 use serde::Deserialize;
 #[derive(Clone,Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -194,7 +194,7 @@ fn question_tail(t: &str) -> bool {
 }
 fn missing_predicate(q: &str) -> bool {
     let q=q.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
-    ["为什么","为什么会","怎么","怎么会","如何","最近","最新"].iter().any(|p|q.ends_with(p))
+    truncated_place_prefix(q) || ["为什么","为什么会","怎么","怎么会","如何","最近","最新"].iter().any(|p|q.ends_with(p))
 }
 fn incomplete_title(q: &str) -> bool {
     // Short edition/title fragments observed before the predicate arrives.
@@ -219,6 +219,10 @@ fn explicit_weather_target(d:&Decision)->Option<(String,u8,String)> {
 }
 #[derive(PartialEq)]
 enum WeatherTarget { Auto, Explicit((String,u8,String)) }
+fn weather_signature(d:&Decision)->Option<String>{
+    (d.weather.is_some()||d.auto_weather.is_some()||d.place_weather.is_some())
+        .then(||json!([d.weather,d.auto_weather,d.place_weather,d.requested_info]).to_string())
+}
 pub struct SearchSession {
     business_deadline: tokio::sync::watch::Receiver<(u64, Option<Instant>)>,
     resume_v1: bool,
@@ -236,6 +240,7 @@ pub struct SearchSession {
     epoch: u64,
     generation: u64,
     busy: bool,
+    active_weather: Option<String>,
     cancelled_locally: bool,
     gate: DeliveryGate,
     speech: VecDeque<Speech>,
@@ -288,6 +293,7 @@ impl SearchSession {
             epoch: 0,
             generation: 0,
             busy: false,
+            active_weather: None,
             cancelled_locally: false,
             gate: DeliveryGate::default(),
             speech: VecDeque::new(),
@@ -336,7 +342,7 @@ impl SearchSession {
         let mut deferred = None;
         if let Some(pending) = self.pending_topic.take() {
             let tail=text.trim().trim_end_matches(|c:char|"。！？!?，, ".contains(c));
-            let continues=if missing_predicate(&pending.query){predicate_tail(tail)}else{question_tail(tail)};
+            let continues=if truncated_place_prefix(&pending.query){completed_place_tail(&pending.query,tail)}else if missing_predicate(&pending.query){predicate_tail(tail)}else{question_tail(tail)};
             if pending.since.elapsed() <= Duration::from_millis(pending.deadline_ms()) && continues {
                 self.fragment_since=Some(pending.since);
                 joined=Some(format!("{}{}{}",if pending.replace{"改查"}else{"帮我查一下"},pending.query,tail));
@@ -395,6 +401,8 @@ impl SearchSession {
             Intent::Search(query) => {
                 // One active query per session in v1.
                 if self.busy {
+                    let next=self.last_route.as_ref().and_then(|(_,d)|weather_signature(d));
+                    if self.active_weather.is_some() && next.is_some() && next!=self.active_weather {return self.replace_query(query);}
                     self.notice("我还在查刚才的问题；要换一个，可以说“改查”。");
                     return false;
                 }
@@ -522,6 +530,7 @@ impl SearchSession {
             // margin without extending ordinary chat or renewing on chatter.
             self.wait_deadline_ms=Some(self.started.elapsed().as_millis() as u64+25000);
             self.busy = true;
+            self.active_weather = self.last_route.as_ref().and_then(|(_,d)|weather_signature(d));
             self.cancelled_locally = false;
             if self.receipt(receipt_kind) { self.receipt_epoch = Some(self.epoch); }
             true
@@ -1466,6 +1475,32 @@ mod tests {
             "刚才查到了。"
         );
     }
+    #[tokio::test]
+    async fn lexicon_natural_weather_replacement_is_session_owned() {
+        let (mut s,events,mut commands)=test_session();
+        let mut c=RoutingConfig::default();c.weather_enabled=true;c.baidu_weather_enabled=true;c.auto_location_enabled=true;
+        s.routing=Some(RoutingSnapshot{version:"r7-000000000000000000000000".into(),config:c});
+        let a=s.interpret("北京今天天气").unwrap();assert!(s.command(a));
+        let old_epoch=match commands.try_recv().unwrap(){Command::Submit{replace:false,epoch,..}=>epoch,_=>panic!("first submit")};
+        assert!(s.interpret("讲个故事").is_none());assert!(commands.try_recv().is_err());
+        let a=s.interpret("哎查上海天气").unwrap();assert!(s.command(a));
+        let new_epoch=match commands.try_recv().unwrap(){Command::Submit{replace:true,epoch,routing:Some(r),..}=>{assert_eq!(r["place_weather"]["place"],"上海");assert!(r.get("requested_info").is_none());epoch},_=>panic!("weather replacement")};
+        assert!(new_epoch>old_epoch);
+        events.send(Event::Ready{id:"old".into(),text:"旧城市不该播".into(),epoch:old_epoch}).await.unwrap();
+        s.poll(false);assert!(!s.speech.iter().any(|r|r.task.as_deref()==Some("old")));
+        s.busy=false;let a=s.interpret("杭州天气").unwrap();s.command(a);
+        assert!(matches!(commands.try_recv().unwrap(),Command::Submit{replace:false,..}));
+    }
+    #[tokio::test]
+    async fn lexicon_truncated_city_never_leaves_device_session() {
+        let (mut s,_e,mut commands)=test_session();
+        let a=s.interpret("帮我查查深").unwrap();s.command(a);assert!(commands.try_recv().is_err());
+        s.pending_topic.as_mut().unwrap().since=Instant::now()-Duration::from_secs(6);s.poll(false);assert!(commands.try_recv().is_err());
+        let (mut s,_e,mut commands)=test_session();let a=s.interpret("帮我查查深").unwrap();s.command(a);
+        let a=s.interpret("圳今天的天气").unwrap();s.command(a);
+        assert!(matches!(commands.try_recv().unwrap(),Command::Submit{query,..} if query=="深圳今天的天气"));
+        assert!(!missing_predicate("水"));assert!(!missing_predicate("深是什么意思"));
+    }
     fn test_session() -> (SearchSession, mpsc::Sender<Event>, mpsc::Receiver<Command>) {
         let _ = rustls::crypto::ring::default_provider().install_default();
         let api = Api {
@@ -1489,6 +1524,7 @@ mod tests {
                 epoch: 0,
                 generation: 0,
                 busy: false,
+            active_weather: None,
                 cancelled_locally: false,
                 gate: DeliveryGate::default(),
                 speech: VecDeque::new(),
