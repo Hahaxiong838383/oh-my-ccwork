@@ -54,9 +54,11 @@ Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xr
 
 ## Codeg / ChatGPT 重连与公司 Lisa 自动容灾
 
+控制器版本不一致、慢响应误触发block、或仅更新控制器时，先读 [Studio容灾升级与验收](references/studio-failover-ops.md)。仓库源码存在改进不等于目标机已部署；用实际文件SHA与运行服务确认。
+
 遇到 `Reconnecting`、`workspace routing discovery timed out` 或DMIT/ZGO/home备用切换时，先读项目交付入口：`2-Projects/vps-proxy/company-lisa-failover/README.md`、`DEPLOYMENT.md`。若当前checkout尚无这些文件，查询本任务所附工作树，不把缺文件误判为未部署。部署日期、PID、选路均须实时复核。
 
-- **分开四层**：Air→Studio SSH/鉴权GET `/health`、远端回环HTTP/文件权限、ACP/原生模型请求、模型上游出站。UI重连文字和同名节点不证明是哪段断了；workspace routing超时不能直接归咎公司→DMIT。WS回落后仍查HTTPS/SSE；200响应头不等于流完整完成。
+- **分开四层**：Air→Studio SSH/鉴权健康接口（按当前版本确认方法、路径和JSON响应；0.42.2实测POST `/api/health`，GET `/health`可能只是SPA HTML）、远端回环HTTP/文件权限、ACP/原生模型请求、模型上游出站。UI重连文字和同名节点不证明是哪段断了；workspace routing超时不能直接归咎公司→DMIT。WS回落后仍查HTTPS/SSE；200响应头不等于流完整完成。
 - **对照要同条件**：同设备/同时间/同目标/真实HTTP mixed与SOCKS入口，多轮采样；固定路径探针绕过自动选路以免自证。401只证到站，最终补现有账号隔离短推理及真实长任务结果，不动原auth/session。历史长流断开仍不能由短canary排除。
 - **容灾不扩范围**：精确替换已授权Lisa规则，保留GitHub balancer、X/Grok和其他分流；dev198没有Lisa规则时先确认业务域名，不整体替换main-balancer。日常API改新连接出口；首次重载须授权和任务空闲门，旧连接不能迁移。
 - **状态正确解读**：以state更新时间和进程启动时间解释累计计数；`ALL_DOWN`是本轮三路探测均失败，一轮容忍期间selected仍可能是旧出口，不等于已切block。连续失败门槛后才block；`CONTROL_ERROR`是控制面异常，不能伪装为节点失败；日志读回/配置哈希冲突须停止变更。
