@@ -12,7 +12,7 @@ for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(m[1].tr
 
  const catalog={count:3220,sha256:'a'.repeat(64)};
  const draft={schema:1,rules:[],weather_enabled:true,baidu_weather_enabled:true,auto_location_enabled:false};
- let reply={ok:true,weather_catalog:catalog,decisions:[{action:'search',rule_id:'weather',reason:'天气词命中',place_weather:{place:'深圳',day_offset:1,metric:'forecast'},place_inspection:{status:'unique',candidates:[{label:'广东深圳',station:'101280601'}]}}]};let failure=null;const mutations=[];
+ let reply={ok:true,weather_catalog:catalog,decisions:[{action:'search',rule_id:'weather',reason:'天气词命中',requested_info:['comfort','umbrella'],place_weather:{place:'深圳',day_offset:1,metric:'forecast'},place_inspection:{status:'unique',candidates:[{label:'广东深圳',station:'101280601'}]}}]};let failure=null;const mutations=[];
  const state=()=>({ok:true,draft,revision:0,eligible_sns:[],locations:[],targets:[],versions:[{version:'r7-'+'a'.repeat(24)}]});
  await page.addInitScript(()=>{localStorage.setItem('kidshub_admin_token','test');localStorage.setItem('kidshub_admin_role','admin');localStorage.setItem('kidshub_admin_username','测试');});
  await page.route('**/*',route=>{
@@ -31,7 +31,7 @@ for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(m[1].tr
  await page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleMenuSelect('worker');p.khSelectNav('search-canary');p.setSearchLane('p1');});
  const input=page.locator('#routing-utterances'),preview=page.getByTestId('weather-preview');try{await input.waitFor({timeout:5000});}catch(e){console.error('PAGE_ERRORS',errors);console.error((await page.locator('body').innerText()).slice(-9000));throw e;}
  const run=async()=>{await input.fill('深圳明天天气');await page.getByRole('button',{name:'预览路由（不执行搜索）',exact:true}).click();await preview.waitFor();};
- await run();let text=await preview.innerText();assert(text.includes('地点唯一'));assert(text.includes('天气站 101280601'));assert(text.includes('明天 · 天气预报'));assert(text.includes(catalog.sha256));
+ await run();let text=await preview.innerText();assert(text.includes('地点唯一'));assert(text.includes('冷热建议、带伞建议'));assert(text.includes('天气站 101280601'));assert(text.includes('明天 · 天气预报'));assert(text.includes(catalog.sha256));
  reply.decisions[0].place_weather.place='朝阳';reply.decisions[0].place_inspection={status:'ambiguous',candidates:[{label:'北京朝阳',station:'101010300'},{label:'辽宁朝阳',station:'101071201'}]};await run();assert((await preview.innerText()).includes('请明确省市'));assert((await preview.innerText()).includes('辽宁朝阳'));
  reply.decisions[0].place_weather.place='北京大学';reply.decisions[0].place_inspection={status:'unknown',candidates:[]};await run();assert((await preview.innerText()).includes('不会自动替换为本地天气'));
  reply.decisions[0].place_weather.place='<img src=x onerror=window.xss=1>';reply.decisions[0].place_inspection={status:'invalid',candidates:[]};await run();assert((await preview.innerText()).includes('<img'));assert.equal(await preview.locator('img').count(),0);assert.equal(await page.evaluate(()=>window.xss),undefined);
@@ -42,7 +42,7 @@ for(const m of html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi))if(m[1].tr
  await page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.publishRouting();});await page.waitForFunction(()=>!document.querySelector('#app').__vue_app__._container._vnode.component.proxy.routing.busy);assert(mutations.some(x=>x.endsWith('/publish-all')));
  await page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.routing.rollbackVersion='r7-'+'a'.repeat(24);p.rollbackRouting();});await page.waitForFunction(()=>!document.querySelector('#app').__vue_app__._container._vnode.component.proxy.routing.busy);assert(mutations.some(x=>x.endsWith('/rollback-all')));
  await page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.routing.draft.weather_enabled=false;p.routingDirty();});await run();assert((await preview.innerText()).includes('普通聊天'));
- reply={ok:true,weather_catalog:catalog,decisions:[{action:'search',rule_id:'weather',reason:'天气词命中',place_weather:{place:'深圳',day_offset:1,metric:'forecast'},place_inspection:{status:'unique',candidates:[{label:'广东深圳',station:'101280601'}]}}]};await run();
+ reply={ok:true,weather_catalog:catalog,decisions:[{action:'search',rule_id:'weather',reason:'天气词命中',requested_info:['comfort','umbrella'],place_weather:{place:'深圳',day_offset:1,metric:'forecast'},place_inspection:{status:'unique',candidates:[{label:'广东深圳',station:'101280601'}]}}]};await run();
  assert.deepEqual(errors,[]);await page.screenshot({path:process.env.SCREENSHOT||'/tmp/p003-weather-preview-ui.png',fullPage:true});console.log('PASS: production Vue unique/ambiguous/unknown/invalid/XSS/legacy/chat/errors/publish/rollback/disabled; no JS errors. API fixtures, not live provider.');
  } finally {await browser.close();server.closeAllConnections();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exit(1)});

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+const m:any=await import('../src/tools/weather-advice.js').catch(()=>({}));
+assert.equal(typeof m.weatherAdvice,'function','same validated forecast must answer requested advice');
+const base={text:'深圳明天10到18摄氏度。预报会变化。',sources:[],weather_facts:{metric:'forecast',low:10,high:18,conditions:['小雨','多云']}};
+const rain=m.weatherAdvice(base,'深圳明天冷不冷，要带伞吗');
+assert.match(rain.text,/带.*伞/);assert.match(rain.text,/偏凉/);assert.equal(base.text,'深圳明天10到18摄氏度。预报会变化。');
+const clear=m.weatherAdvice({...base,weather_facts:{...base.weather_facts,conditions:['晴','多云']}},'要带伞吗');
+assert.match(clear.text,/未提示降水/);assert.doesNotMatch(clear.text,/不用带|不会下雨/);
+assert.equal(m.weatherAdvice(base,'深圳天气').text,base.text);
+assert.equal(m.weatherAdvice({text:'数据不可用',sources:[]},'要带伞吗').text,'数据不可用');
+assert.match(m.weatherAdvice({...base,weather_facts:{...base.weather_facts,conditions:['小雪','阴']}},'要带伞吗').text,/带.*伞/);
+assert.match(m.weatherAdvice({...base,weather_facts:{metric:'current',temperature:16,conditions:['多云']}},'现在冷不冷').text,/偏凉/);
+assert.match(m.weatherAdvice({...base,weather_facts:{metric:'current',temperature:30,conditions:['晴']}},'现在热不热，带伞吗').text,/当前观测.*临近预报/);
+console.log('weather advice: same evidence, needs isolation, no forecast invented from current observations PASS');
