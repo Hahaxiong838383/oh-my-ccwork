@@ -11,6 +11,7 @@ import { SearchAvailability } from './search-availability.js';
 import { RoutingStore } from './search-routing-store.js';
 import { MojiWeather,weatherRequestSchema,autoWeatherSchema,MOJI_CITIES } from './moji-weather.js';
 import {placeWeatherSchema,type PlaceWeatherRequest} from './baidu-weather.js';
+import {weatherAdvice} from './weather-advice.js';
 import {FixedWeather} from './fixed-weather.js';
 import {getDeviceLocationStore,closeDeviceLocationRuntime} from './device-location-runtime.js';
 import { searchCapabilityBase } from './search-chat-policy.js';
@@ -22,8 +23,8 @@ let instance: SearchTasks | null = null;
 let routingStore:RoutingStore|null=null;
 const weather=new MojiWeather();
 const expandedWeather=new FixedWeather();
-async function expandedResult(q:PlaceWeatherRequest,signal:AbortSignal,owner:import('./search-tasks.js').SearchTask,context?:{province?:string}){
- try{return await expandedWeather.run(q,signal,owner.createdAt,context);}
+async function expandedResult(q:PlaceWeatherRequest,signal:AbortSignal,owner:import('./search-tasks.js').SearchTask,query:string,context?:{province?:string}){
+ try{return weatherAdvice(await expandedWeather.run(q,signal,owner.createdAt,context),query);}
  catch(e){signal.throwIfAborted();const code=e instanceof Error&&/^weather_[a-z_0-9]+$/.test(e.message)?e.message:'weather_unavailable';console.info('[search-weather]',JSON.stringify({task_id:owner.id,outcome:'unavailable',reason:code}));
   return {text:code==='weather_place_ambiguous'?'这个地名对应多个地区，请补充省份并再问一次天气。':code==='weather_metric_unsupported'?'这个地区的空气质量数据还没有完成校验，这次先不报数值。':code==='weather_place_unknown'?'暂时没有找到可确认的天气地点，请补充省市后再试。':'这次天气数据暂时没能通过地点或时效校验，我先不报未经确认的结果。',sources:[]};
  }
@@ -93,23 +94,23 @@ export function getSearchTasks(): SearchTasks | null {
           if(location?.state!=='ready') {fallbackQuery=null;console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:location?.state??'unknown',reason:location?.reason??'location_no_session'}));return {text:'暂时没能根据设备网络确定所在城市，这次先不报天气，稍后可以再试。',sources:[]};}
           fallbackQuery=[...(location.city+' '+query)].slice(0,128).join('');
           if(owner.routing.baidu_weather_enabled){
-            const result=await expandedResult({...owner.routing.auto_weather,place:location.city!},signal,owner,{province:location.province});
+            const result=await expandedResult({...owner.routing.auto_weather,place:location.city!},signal,owner,query,{province:location.province});
             result.text='按设备网络定位，'+result.text;
             console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,city_source:'device_ip',location_provider:'ip9',location_observed_at:location.observed_at,...('weather'in result?result.weather:{})}));return result;
           }
           const city=MOJI_CITIES.find(c=>c.name===location.city);
           if(!city){console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:'unsupported_city',city:location.city}));return {text:`设备网络定位到${location.city}，目前还不能可靠查询这个城市的天气。`,sources:[]};}
-          const result=await weather.run({...owner.routing.auto_weather,city_id:city.id,city_name:city.name},signal,owner.createdAt);
+          const result=weatherAdvice(await weather.run({...owner.routing.auto_weather,city_id:city.id,city_name:city.name},signal,owner.createdAt),query);
           result.text='按设备网络定位，'+result.text;
           console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,city_source:'device_ip',location_provider:'ip9',location_observed_at:location.observed_at,...result.weather}));return result;
         }
         if(owner.routing?.weather_enabled&&owner.routing.baidu_weather_enabled&&owner.routing.place_weather){
           const location=getDeviceLocationStore()?.get(owner.subject,owner.session);
-          const result=await expandedResult(owner.routing.place_weather,signal,owner,location?.state==='ready'?{province:location.province}:undefined);
+          const result=await expandedResult(owner.routing.place_weather,signal,owner,query,location?.state==='ready'?{province:location.province}:undefined);
           console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,city_source:'explicit',...('weather'in result?result.weather:{})}));return result;
         }
         if(owner.routing?.weather_enabled&&owner.routing.weather){
-          try {const result=await weather.run(owner.routing.weather,signal,owner.createdAt);console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,...result.weather}));return result;}
+          try {const result=weatherAdvice(await weather.run(owner.routing.weather,signal,owner.createdAt),query);console.info('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,...result.weather}));return result;}
           catch{console.warn('[search-weather]',JSON.stringify({task_id:owner.id,version:owner.routing.version,outcome:'unavailable'}));throw new Error('weather_unavailable');}
         }
         return general(query,signal);
