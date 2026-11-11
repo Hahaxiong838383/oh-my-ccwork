@@ -73,7 +73,7 @@ fn ark_resource_question(t: &str) -> bool {
 }
 
 fn protected(t: &str) -> bool {
-    search_term_question(t) || ["他让我","她让我","妈妈说","爸爸说","老师说","如果","假如","例如","比如","不要","不用","别","我自己","我说","他说","她说","你说","我今天","我现在","我们","“","‘","\"","'"].iter().any(|p| t.starts_with(p))
+    search_term_question(t) || ["先别查","先不查","他让我","她让我","妈妈说","爸爸说","老师说","如果","假如","例如","比如","不要","不用","别","我自己","我说","他说","她说","你说","我今天","我现在","我们","“","‘","\"","'"].iter().any(|p| t.starts_with(p))
         || ["不要真的查","但不用搜索","心情","编一个","讲个故事"].iter().any(|p|t.contains(p))
         || ["搜索引擎","搜索算法","搜索功能","查询功能"].iter().any(|p|t.starts_with(p))
 }
@@ -92,7 +92,7 @@ fn weather_topic(q: &str) -> bool {
     (ordinary||comfort) && !["为什么","原理","形成","是什么意思","什么是","心情","故事","烤箱","体温","发烧","开水","水温","空调","冰箱","显卡","电脑","室内","屋里","房间","身体","手脚","冷笑话","冷知识","冷战","冰淇淋"].iter().any(|p|q.contains(p))
 }
 fn weather_parameters(q: &str) -> Option<AutoWeatherRequest> {
-    if !weather_topic(q) || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
+    if !weather_topic(q) || q.contains("明明天") || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
     if ["今天", "明天", "后天"].iter().filter(|day| q.contains(**day)).count() > 1 { return None; }
     let day=if q.contains("后天"){2}else if q.contains("明天"){1}else{0};
     let metric=if q.contains("空气质量") {if day!=0{return None;} "aqi"}else if q.contains("现在")||q.contains("实时"){if day!=0{return None;} "current"}else{"forecast"};
@@ -156,8 +156,8 @@ fn weather_place_words(q: &str) -> String {
             && weather_topic(&q[..i])).then_some(i)
     }).next().unwrap_or(q.len());
     let mut rest=&q[..end];
-    const WORDS:&[&str]=&["冷不冷","热不热","冷吗","热吗","几度","多少","外面","出门","天气预报","天气情况","需不需要带伞","要不要带伞","需要拿伞","要带伞","要拿伞","会不会下雨","下不下雨","会下雨","空气质量","会不会","怎么样","是多少","多少度","这里","这边","本地","当地","实时","现在","今天","明天","后天","天气","气温","温度","下雨","降雨","带伞","需要","怎么","如何","好不好","好么","不会","一下","小可","啊","的","会","吗","么","呢","呀","好","不","冷","热","有","没","？","?","。","，"," "];
-    const PREFIXES:&[&str]=&["能不能告诉我","可以告诉我","能告诉我","哎","我想查一下","我想查","我要查询","我要查","我想问","我想知道","我想问问","我想了解","想知道","帮我查查","帮我查询","帮我查一下","帮我查","请你告诉我","请你提供一下","请你提供","请告诉我","请提供一下","请提供","你只说说","请查一下","请查查","请查询","请查","告诉我","提供一下","只说说","就查","查一下","查一查","查查","查询","查","呃","额"];
+    const WORDS:&[&str]=&["冷不冷","热不热","冷吗","热吗","几度","多少","外面","出门","天气预报","天气情况","需不需要带伞","要不要带伞","需要带伞","需要拿伞","要带伞","要拿伞","会不会下雨","下不下雨","会下雨","空气质量","会不会","怎么样","是多少","多少度","这里","这边","本地","当地","实时","现在","今天","明天","后天","天气","气温","温度","下雨","降雨","带伞","需要","怎么","如何","好不好","好么","不会","一下","小可","啊","的","会","吗","么","呢","呀","好","不","冷","热","有","没","？","?","。","，"," "];
+    const PREFIXES:&[&str]=&["请问","能说说","能不能告诉我","可以告诉我","能告诉我","哎","我想查一下","我想查","我要查询","我要查","我想问","我想知道","我想问问","我想了解","想知道","帮我查查","帮我查询","帮我查一下","帮我查","请你告诉我","请你提供一下","请你提供","请告诉我","请提供一下","请提供","你只说说","请查一下","请查查","请查询","请查","告诉我","提供一下","只说说","就查","查一下","查一查","查查","查询","查","呃","额"];
     const SUFFIXES:&[&str]=&["你找不着","你查不到","快一点","快点","吧"];
     loop {
         if weather_place_names().contains(rest) {break;}
@@ -261,10 +261,8 @@ impl RoutingSession {
                 }
             }
             if let Some((at,fragment))=place_fragment {
-                if weather_tail(t) {
-                    if now.saturating_sub(at)>2000 {
-                        self.pending_weather=Some((now,t.into(),false));return Decision::new("clarify_city","weather-city-followup","城市片段已过期，请确认城市");
-                    }
+                // Expired fragments lose their authority; parse the new utterance on its own.
+                if now.saturating_sub(at)<=2000 && weather_tail(t) {
                     return self.from_intent(Intent::Search(join_city_fragment(&fragment,t)),"weather-city-followup",now,Some(config));
                 }
             }
@@ -307,6 +305,10 @@ impl RoutingSession {
         if let Some(q)=d.query.as_ref() {
             if config.is_some() && weather_topic(q) {
                 d.requested_info=weather_needs(q);
+                if q.contains("明明天") {
+                    self.pending_weather=None;d.action="clarify_city".into();d.query=None;
+                    d.reason="日期或地点没有听完整，请说清城市和日期".into();return d;
+                }
                 if config.is_some_and(|c|c.weather_enabled&&c.baidu_weather_enabled) {
                     let place=weather_place_words(q);
                     if ambiguous_weather_place(&place)||["明","后","天","多少","你那里","你那边","那里"].contains(&place.as_str()) {
@@ -666,7 +668,7 @@ mod phase1_design_tests {
         let v=serde_json::to_value(s.route("天气温度多少",650,Some(&c),"lab")).unwrap();assert_eq!(v["place_weather"]["place"],"上海");
         s.route("上海",1000,Some(&c),"lab");assert_eq!(s.route("别查了",1100,Some(&c),"lab").action,"cancel");
         assert!(s.route("天气怎么样",1200,Some(&c),"lab").auto_weather.is_some());
-        s.route("上海",2000,Some(&c),"lab");assert_eq!(s.route("天气怎么样",4001,Some(&c),"lab").action,"clarify_city");
+        s.route("上海",2000,Some(&c),"lab");assert!(s.route("天气怎么样",4001,Some(&c),"lab").auto_weather.is_some());
     }
     #[test] fn requested_advice_survives_weather_extraction(){
         let v=d("深圳今天的天气告诉我要不要带伞");assert_eq!(v["place_weather"]["place"],"深圳");assert!(v["requested_info"].as_array().unwrap_or(&vec![]).contains(&serde_json::json!("umbrella")));
@@ -733,5 +735,36 @@ mod lexicon_phase1_acceptance {
    let mut r=RoutingSession::default();r.route("深圳明天的天气",0,Some(&c),"x");
    let d=r.route(q,1000,Some(&c),"x");let w=d.place_weather.expect(q);assert_eq!(w.place,"深圳");assert_eq!(w.day_offset,1);assert!(d.requested_info.contains(&"umbrella".into()));
   }
+ }
+}
+
+#[cfg(test)] mod lexicon_review_regression {
+ use super::*;
+ #[test] fn need_umbrella_must_keep_complete_city_and_day(){
+  let mut c=RoutingConfig::default();c.weather_enabled=true;c.baidu_weather_enabled=true;c.auto_location_enabled=true;
+  for q in ["杭州今天需要带伞吗","杭州明天需要带伞吗","杭州后天需要带伞吗"] {
+   let mut r=RoutingSession::default();let d=r.route(q,0,Some(&c),"x");
+   let w=d.place_weather.expect(q);assert_eq!(w.place,"杭州");assert_eq!(w.day_offset,if q.contains("后天"){2}else if q.contains("明天"){1}else{0});
+  }
+  let mut r=RoutingSession::default();r.route("杭州明天天气",0,Some(&c),"x");
+  let d=r.route("需要带伞吗",1000,Some(&c),"x");let w=d.place_weather.unwrap();assert_eq!(w.place,"杭州");assert_eq!(w.day_offset,1);
+ }
+}
+
+#[cfg(test)] mod grok_phase1_findings {
+ use super::*;
+ fn config()->RoutingConfig{let mut c=RoutingConfig::default();c.weather_enabled=true;c.baidu_weather_enabled=true;c.auto_location_enabled=true;c}
+ #[test] fn expired_fragment_does_not_override_new_complete_question(){
+  for ms in [2001,2500,11000]{let c=config();let mut r=RoutingSession::default();r.route("杭州",0,Some(&c),"v");let d=r.route("今天会冷吗",ms,Some(&c),"v");assert_eq!(d.action,"search");assert!(d.place_weather.is_none());assert_eq!(d.auto_weather.unwrap().day_offset,0);}
+  let c=config();let mut r=RoutingSession::default();r.route("杭州",0,Some(&c),"v");assert_eq!(r.route("今天会冷吗",2000,Some(&c),"v").place_weather.unwrap().place,"杭州");
+ }
+ #[test] fn negative_prefixes_do_not_start_weather(){
+  for q in ["先别查杭州今天冷不冷","先不查杭州今天冷不冷"]{let d=RoutingSession::default().route(q,0,Some(&config()),"v");assert_eq!(d.action,"chat","{q}");assert!(d.query.is_none());}
+ }
+ #[test] fn malformed_day_does_not_guess_tomorrow(){
+  let mut r=RoutingSession::default();let c=config();let d=r.route("明明天气怎么样",0,Some(&c),"v");assert_eq!(d.action,"clarify_city");assert!(d.query.is_none()&&d.place_weather.is_none()&&d.auto_weather.is_none());assert!(weather_parameters("明明天气怎么样").is_none());
+ }
+ #[test] fn common_polite_prefixes_do_not_enter_place(){
+  for (q,place)in[("请问深圳明天会下雨吗","深圳"),("能说说会同明天的天气情况吗","会同")]{let d=RoutingSession::default().route(q,0,Some(&config()),"v");let w=d.place_weather.unwrap();assert_eq!(w.place,place);assert_eq!(w.day_offset,1);}
  }
 }
