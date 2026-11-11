@@ -1,0 +1,147 @@
+{
+  "status": "PRODUCTION_SINGLE_DEVICE_PASS_SERVER_SYNTHETIC",
+  "scope_suffix": "03800006",
+  "real_android": false,
+  "runtime_sha256": "b59660fa77bf11d6f2e7c6457702847657b504863579aa178b98cf71a6575579",
+  "route_version": "r7-62c4debd97c6562c8f277931",
+  "weather_provider": {
+    "provider": "amap",
+    "city_name": "广东深圳",
+    "adcode": "440300",
+    "target_date": "2026-11-11",
+    "updated_at": "2026-11-11T10:00:38+08:00",
+    "fetched_at": "2026-11-11T02:11:55.672Z",
+    "cache_hit": false,
+    "metric": "forecast",
+    "precision": "city"
+  },
+  "weather_task_id": "b6d86634-c04f-4cd2-9649-5a85e1ad6c6f",
+  "weather_task_status": "delivered",
+  "weather_task_ready_ms": 699,
+  "normal": {
+    "trace_id": "ops-release-ticket-probe-b46c5bb4-5cc4-4771-8f23-79b0b7680f8a",
+    "status": "FUNCTIONAL_PASS",
+    "stats": {
+      "weather_answer": false,
+      "ready_ms": 672,
+      "phase_ms": null,
+      "user_finals": 2,
+      "answer_finals": 1,
+      "audible_ms": 6360.0,
+      "first_audio_ms": 6947,
+      "last_audio_ms": 14285,
+      "input_sent_ms": 677,
+      "events": [
+        "session.input_ready",
+        "session.output_ready",
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "metrics_packets": 3,
+      "metric_kinds": [
+        "eou",
+        "llm",
+        "tts"
+      ],
+      "input_samples_sent": 60699,
+      "phase_reasons": [],
+      "client_connected_ms": 215,
+      "track_publish_requested_ms": 215,
+      "last_audio_to_server_disconnect_ms": 5589,
+      "ffi_subscribers_after_cleanup": 0
+    },
+    "natural_room_gone": true
+  },
+  "weather": {
+    "trace_id": "ops-release-ticket-probe-92cfa0c7-8743-4fc9-a833-d204d7814f08",
+    "status": "FUNCTIONAL_PASS",
+    "stats": {
+      "weather_answer": true,
+      "ready_ms": 592,
+      "phase_ms": null,
+      "user_finals": 1,
+      "answer_finals": 4,
+      "audible_ms": 11390.0,
+      "first_audio_ms": 3977,
+      "last_audio_ms": 20677,
+      "input_sent_ms": 593,
+      "events": [
+        "session.input_ready",
+        "session.output_ready",
+        null,
+        "session.search_pending",
+        null,
+        null,
+        "session.search_pending",
+        null,
+        "session.search_pending",
+        "session.search_pending",
+        "session.search_pending",
+        "session.search_pending",
+        "session.search_pending",
+        "session.search_pending",
+        "session.search_pending",
+        null,
+        "session.search_pending",
+        "session.search_pending",
+        "session.search_pending"
+      ],
+      "metrics_packets": 1,
+      "metric_kinds": [
+        "eou"
+      ],
+      "input_samples_sent": 41322,
+      "phase_reasons": [],
+      "client_connected_ms": 171,
+      "track_publish_requested_ms": 171,
+      "last_audio_to_server_disconnect_ms": 6071,
+      "ffi_subscribers_after_cleanup": 0
+    },
+    "natural_room_gone": true
+  },
+  "worker_stability": {
+    "passed": true,
+    "unit": {
+      "MainPID": "172662",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "jobs": 0,
+    "registered": true,
+    "cleanup_healthy": true,
+    "stable_ms": 432658,
+    "at_ms": 1794363405944
+  },
+  "signals": {
+    "normal": {
+      "registered worker": 0,
+      "job assignment received": 1,
+      "process exiting": 1,
+      "xfyun tts": 0,
+      "tts metrics": 1,
+      "llm disaster started": 0,
+      "panicked": 0,
+      "CaptureFailed": 0,
+      "ERROR": 0
+    },
+    "weather": {
+      "registered worker": 0,
+      "job assignment received": 1,
+      "process exiting": 1,
+      "xfyun tts": 0,
+      "tts metrics": 3,
+      "llm disaster started": 0,
+      "panicked": 0,
+      "CaptureFailed": 0,
+      "ERROR": 0
+    }
+  },
+  "prior_failed_attempt": {
+    "reason": "test harness waited for chat TTS data-channel metric; tool TTS metric exists in Worker journal; task was delivered and idle close was normal",
+    "preserved_evidence": "step-worker-production-ticket-runner-reviewed-listening-weather-1794363108.json",
+    "changed": "test harness only; runtime frozen; repeat verifies eou+audible transcript+Worker tts metrics+delivered task+natural room deletion"
+  }
+}

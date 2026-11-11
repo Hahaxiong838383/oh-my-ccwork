@@ -1,0 +1,608 @@
+{
+  "verdict": "code_blockers_closed",
+  "scope": "narrow freeze recheck of listening SHA 77c33308082941197897cc3258b1592d0fabccac",
+  "source_commit": "77c33308082941197897cc3258b1592d0fabccac",
+  "parent_commit": "f68c9acb9ce18859167463b37e5442bbbb3b6b50",
+  "worktree": "/Users/fu-121/.codex/worktrees/p003-voice-routing-listening-20261110",
+  "worktree_head_matches": true,
+  "worktree_clean": true,
+  "source_mutated_this_run": false,
+  "cargo_rebuilt_this_run": false,
+  "production_touched": false,
+  "production_deployed": false,
+  "human_device_verified": false,
+  "counts_as_production_or_device_pass": false,
+  "files": {
+    "search_routing.rs": "b8cf23af072a64bbf8c66d8b37159fff93b13ab922dd611f106bab99e81e73be",
+    "search_tasks.rs": "acd31a2c460585a7dae8afbefafe0bfec7ba452303bcd3c9cda595a69f9ed405",
+    "search_weather_intent.rs": "fea3ba4a9b485ffe189c3dfe1dfecdf0c5c014aab49a31ffb83ec1e665059ce1",
+    "search-routing-defaults.json": "92d65d9d1406664c3f7fb9fc511a077ddf66514cf93d37a72030c5ffedc6f8b4"
+  },
+  "manifests_match_exact_final_source": {
+    "source-listening-final-boundary-test.json": true,
+    "source-listening-final-boundary-release.json": true,
+    "source-listening-final-boundary-preview.json": true
+  },
+  "main_suite_search_routing_sha256": "fa1ed6fd9bc712ba19ca2b563d95455ca905841699eb0aa3e3301a51e565aa31",
+  "preview": {
+    "path": "/home/hahaxiong83/local/p003-lexicon-implementation-20261111/listening/2-Projects/realtime-voice-agent/rust-worker/tools/search-route-preview/target-final-reviewed/release/search-route-preview",
+    "actual_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+    "actual_bytes": 1047864,
+    "expected_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+    "sha_match": true,
+    "local_approved_same_sha": true,
+    "cli_returncode": 0,
+    "cli_ok": true,
+    "cli_stderr": "",
+    "session": "one process; reset=true on the first utterance of each case"
+  },
+  "runtime_declared_not_remeasured": {
+    "git_sha": "77c33308082941197897cc3258b1592d0fabccac",
+    "binary_sha256": "b59660fa77bf11d6f2e7c6457702847657b504863579aa178b98cf71a6575579",
+    "bytes": 78274304,
+    "note": "Declared in EXACT-FINAL-SOURCE.json. This pass did not re-hash the runtime binary."
+  },
+  "config": {
+    "path": "/Users/fu-121/.local/state/p003-lexicon-implementation-20261111/routing-after.json",
+    "sha256": "cad53510404e0885873fe3fa0a86c839598b9a80746354543801fe1866c8b093",
+    "echoed_config_equals_file": true
+  },
+  "deprecated_not_executed": {
+    "parent_commit": "f68c9acb9ce18859167463b37e5442bbbb3b6b50",
+    "old_preview_sha256": "4f3410f5641280ef0eb5695f5f5f21037d8e8ed19b0e68793be07fbcc299f0a9",
+    "old_paths": [
+      "/Users/fu-121/.local/state/p003-lexicon-implementation-20261111/search-route-preview-final",
+      "/Users/fu-121/.local/state/p003-lexicon-implementation-20261111/payload-final/search-route-preview"
+    ],
+    "note": "Task 247 measured the f68/4f34 candidates. Those binaries are obsolete and were not invoked."
+  },
+  "suite_logs_read_not_rerun": {
+    "worker-listening-final-boundary-test.log": "693 passed / 2 ignored, plus listening_core 30, listening_runtime 13, listening_voice 10; 693+53 passed, 2 ignored",
+    "worker-final-boundary-main-test.log": "615 passed; 0 failed; 1 ignored"
+  },
+  "cases": 18,
+  "passed": 18,
+  "failed": [],
+  "code_blockers_closed": [
+    "F1",
+    "F2",
+    "F3",
+    "F4"
+  ],
+  "code_blockers_open": [],
+  "rows": [
+    {
+      "id": "F1-2500-auto",
+      "blocker": "F1",
+      "expect": "第二句单独成为今天的自动定位冷热查询，query 不含杭州，auto_weather.day_offset=0",
+      "utterances": [
+        {
+          "text": "杭州",
+          "at_ms": 0
+        },
+        {
+          "text": "今天会冷吗",
+          "at_ms": 2500
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "未命中查询规则",
+          "rule_id": "default-chat",
+          "weather": null
+        },
+        {
+          "action": "search",
+          "auto_weather": {
+            "day_offset": 0,
+            "metric": "forecast"
+          },
+          "query": "今天会冷吗",
+          "reason": "后台按本轮设备网络定位城市，不等待前台聊天",
+          "requested_info": [
+            "comfort"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F1-2000-hangzhou",
+      "blocker": "F1",
+      "expect": "2000ms 仍合并，place=杭州，day_offset=0",
+      "utterances": [
+        {
+          "text": "杭州",
+          "at_ms": 0
+        },
+        {
+          "text": "今天会冷吗",
+          "at_ms": 2000
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "未命中查询规则",
+          "rule_id": "default-chat",
+          "weather": null
+        },
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州今天会冷吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "comfort"
+          ],
+          "rule_id": "weather-city-followup",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F2-xian-bie-cha",
+      "blocker": "F2",
+      "expect": "chat，无 query，无天气对象",
+      "utterances": [
+        {
+          "text": "先别查杭州今天冷不冷",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "普通聊天或保护表达",
+          "rule_id": "protected",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F2-xian-bu-cha",
+      "blocker": "F2",
+      "expect": "chat，无 query，无天气对象",
+      "utterances": [
+        {
+          "text": "先不查杭州今天冷不冷",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "普通聊天或保护表达",
+          "rule_id": "protected",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F3-mingming-weather",
+      "blocker": "F3",
+      "expect": "clarify_city，query 为空，无 place_weather/auto_weather",
+      "utterances": [
+        {
+          "text": "明明天气怎么样",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "clarify_city",
+          "query": null,
+          "reason": "日期或地点没有听完整，请说清城市和日期",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F3-mingming-rain",
+      "blocker": "F3",
+      "expect": "clarify_city，query 为空，无 place_weather/auto_weather",
+      "utterances": [
+        {
+          "text": "明明天会下雨吗",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "clarify_city",
+          "query": null,
+          "reason": "日期或地点没有听完整，请说清城市和日期",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F3-kunming",
+      "blocker": "F3",
+      "expect": "search，place=昆明，day_offset=1",
+      "utterances": [
+        {
+          "text": "昆明明天天气",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "昆明"
+          },
+          "query": "昆明明天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F3-sanming",
+      "blocker": "F3",
+      "expect": "search，place=三明，day_offset=1",
+      "utterances": [
+        {
+          "text": "三明明天天气",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "三明"
+          },
+          "query": "三明明天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F3-gaoming",
+      "blocker": "F3",
+      "expect": "search，place=高明，day_offset=1",
+      "utterances": [
+        {
+          "text": "高明明天天气",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "高明"
+          },
+          "query": "高明明天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F4-shenzhen",
+      "blocker": "F4",
+      "expect": "place=深圳，day_offset=1",
+      "utterances": [
+        {
+          "text": "请问深圳明天下雨",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "深圳"
+          },
+          "query": "请问深圳明天下雨",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "F4-huitong",
+      "blocker": "F4",
+      "expect": "place=会同，day_offset=1",
+      "utterances": [
+        {
+          "text": "能说说会同明天天气",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "会同"
+          },
+          "query": "能说说会同明天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "umbrella-today",
+      "blocker": null,
+      "expect": "place=杭州，day_offset=0，requested_info 含 umbrella",
+      "utterances": [
+        {
+          "text": "杭州今天需要带伞吗",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州今天需要带伞吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "umbrella"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "umbrella-tomorrow",
+      "blocker": null,
+      "expect": "place=杭州，day_offset=1，requested_info 含 umbrella",
+      "utterances": [
+        {
+          "text": "杭州明天需要带伞吗",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州明天需要带伞吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "umbrella"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "umbrella-follow-today",
+      "blocker": null,
+      "expect": "短追问保持今天：place=杭州，day_offset=0，umbrella",
+      "utterances": [
+        {
+          "text": "杭州今天天气",
+          "at_ms": 0
+        },
+        {
+          "text": "需要带伞吗",
+          "at_ms": 1000
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州今天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        },
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 0,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州今天需要带伞吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "umbrella"
+          ],
+          "rule_id": "weather-city-followup",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "umbrella-follow-tomorrow",
+      "blocker": null,
+      "expect": "短追问保持明天：place=杭州，day_offset=1，umbrella",
+      "utterances": [
+        {
+          "text": "杭州明天天气",
+          "at_ms": 0
+        },
+        {
+          "text": "需要带伞吗",
+          "at_ms": 1000
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州明天天气",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "overview"
+          ],
+          "rule_id": "natural-weather",
+          "weather": null
+        },
+        {
+          "action": "search",
+          "place_weather": {
+            "day_offset": 1,
+            "metric": "forecast",
+            "place": "杭州"
+          },
+          "query": "杭州明天需要带伞吗",
+          "reason": "后台校验省市与天气站后查询百度天气",
+          "requested_info": [
+            "umbrella"
+          ],
+          "rule_id": "weather-city-followup",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "protect-negation",
+      "blocker": null,
+      "expect": "既有否定：chat，无 query，无天气对象",
+      "utterances": [
+        {
+          "text": "别查杭州今天冷不冷",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "普通聊天或保护表达",
+          "rule_id": "protected",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "protect-ark",
+      "blocker": null,
+      "expect": "方舟本地：chat，rule ark-local-knowledge，无 query",
+      "utterances": [
+        {
+          "text": "我有几张补勤卡",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "方舟资源用途由本地知识回答",
+          "rule_id": "ark-local-knowledge",
+          "weather": null
+        }
+      ]
+    },
+    {
+      "id": "protect-chat",
+      "blocker": null,
+      "expect": "普通聊天：chat，无 query，无天气对象",
+      "utterances": [
+        {
+          "text": "我想知道你喜欢什么",
+          "at_ms": 0
+        }
+      ],
+      "pass": true,
+      "output": [
+        {
+          "action": "chat",
+          "query": null,
+          "reason": "未命中查询规则",
+          "rule_id": "default-chat",
+          "weather": null
+        }
+      ]
+    }
+  ],
+  "note_f3_clarify": "明明/明明天的 clarify_city 带 requested_info=[overview]，但 query、place_weather、auto_weather、weather 都为空，没有可提交的天气请求。",
+  "main_suite_note": "source-final-boundary-main-test.json 里的 src/search_routing.rs 与倾听树 b8cf23af 不是同一份。本次 CLI 只验收倾听 SHA 77c3330 的 target-final-reviewed preview，不把主池 615 条日志当成这份二进制的证明。"
+}

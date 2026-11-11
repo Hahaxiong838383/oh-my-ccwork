@@ -1,0 +1,78 @@
+{
+  "canary-brain-amap-manifest.json": {
+    "sha256": "d9dad045e208eaf127d13a82eab550dda4ebd297ab8a9679584e3588d7e455e6",
+    "bytes": 2595
+  },
+  "CANARY-BRAIN-AMAP-CANDIDATE.json": {
+    "sha256": "94b2992a55dc362d9883378d1a0c9ace180dada0dbe391f0e734854fde51af2f",
+    "bytes": 233
+  },
+  "P003_天气搜索词库一期_发布及真人体验回执_20261111.md": {
+    "sha256": "db8dfc9484af12c6adabf66e0cfb3348198cc6e17eebaa6d297c545ae0eceb7a",
+    "bytes": 5585
+  },
+  "FINAL-WORKER-ROLLBACK-VERIFY.json": {
+    "sha256": "ad40e8fb4387f6db69ff96b5f04205b5329b36b0a62b822634dab648a5281c97",
+    "bytes": 335
+  },
+  "FINAL-BRAIN-ROLLBACK-VERIFY.json": {
+    "sha256": "9e7e21b3b1848d9250852247d844c650a9b0730aa197fce08effb910ac0b1a0b",
+    "bytes": 152
+  },
+  "FINAL-WORKER-STABILITY.json": {
+    "sha256": "3fedae2eea23c7639dbe63d9df021a693462d3df96229eb97e53f89445eab3dc",
+    "bytes": 223
+  },
+  "main-ui-manifest.json": {
+    "sha256": "199914b68407451adc0d6f0b7ac17d4b7b068993d052e1e6df511c36b9fdfe9c",
+    "bytes": 669
+  },
+  "WINDOW-PLAN.json": {
+    "sha256": "5b640a058d1eb74b1a493198518712dfb2a44d2c6fd85d4c44d4e90220b0ad5f",
+    "bytes": 159
+  },
+  "ROLLBACK-RUNBOOK.md": {
+    "sha256": "3145a9c0aeb80bc4e40480e406f0ac6fbfa4af1be91134d44d4036cae9fb5940",
+    "bytes": 1633
+  },
+  "FINAL-BRAIN-VERIFY.json": {
+    "sha256": "295b38e46a52e4beed169f1b8c0c6c1a37f5e89ede83dee58fdbb7ce6744a8c1",
+    "bytes": 278
+  },
+  "EXACT-FINAL-SOURCE.json": {
+    "sha256": "e17429a0ff71f040d5c0566d7de39472960098b7cf94ca54bbbf39d6519eee93",
+    "bytes": 761
+  },
+  "ONLINE-VERIFICATION.json": {
+    "sha256": "8bf8391cd62d6f0d5fab82d74f4892686ee4d4e7387448f37061233d23bf7b18",
+    "bytes": 4177
+  },
+  "test-evidence/amap-advice-red.log": {
+    "sha256": "fc0e16a60682b77358f964940bd67eb9dbf4dc9123ab333ac45d40685c6c99c1",
+    "bytes": 1931
+  },
+  "test-evidence/amap-advice-green.log": {
+    "sha256": "15c9a329a619f9a2516d30f5be8a4220f65200e6c641f2f5a0a72f321f31dfba",
+    "bytes": 1018
+  },
+  "test-evidence/canary-amap-compiled-http.log": {
+    "sha256": "213211ef33a7994c9b50ecff3c27effc761a47d2c1b68c57de5b44cf8d00b864",
+    "bytes": 870
+  },
+  "grok-amap-final/RESULT.json": {
+    "sha256": "326cfc0cad1d6cd47ae1d3ae078b502d4e28d10c3aace173f2739decdf1f3878",
+    "bytes": 3476
+  },
+  "grok-amap-final/REVIEW.md": {
+    "sha256": "406ca4fc08873631d5f829280dc784969d8ec26422d10467c8ee3ff84d838f26",
+    "bytes": 4683
+  },
+  "grok-freeze-review/RESULT.json": {
+    "sha256": "53b56a99c069d621eb45e64899f84a21a6a4405a4e7a4c1dda6592db552f5abe",
+    "bytes": 17217
+  },
+  "grok-freeze-review/REVIEW.md": {
+    "sha256": "350a1e82f494e147e3ae4d2fd9a003b1d898e0ff1b8762b39e561aae7462d3f9",
+    "bytes": 9743
+  }
+}

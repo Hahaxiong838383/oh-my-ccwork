@@ -1,0 +1,58 @@
+[
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/tools/baidu-weather.ts",
+    "name": "baidu-weather.ts",
+    "payload": "payload-canary-brain/baidu-weather.ts",
+    "before_sha256": "bc757eaef3d2776bad96f1c67131337fd99ddf632acaddddaceac8a5bcdc5d97",
+    "after_sha256": "2c40c3c498efe6f3befa7349d0679fdf6a2484a1c453a517629f16194950a85a",
+    "mode": 420
+  },
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/tools/moji-weather.ts",
+    "name": "moji-weather.ts",
+    "payload": "payload-canary-brain/moji-weather.ts",
+    "before_sha256": "8f6fbe7e4b7e3c588b141c31acb350ac87c08f57ec6a05a0a3d5c52704dbc71b",
+    "after_sha256": "427ee57dc600cb4db554cc80a1b8fb78718f5afa5b5fdbd7ea6237547641509b",
+    "mode": 420
+  },
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/tools/weather-advice.ts",
+    "name": "weather-advice.ts",
+    "payload": "payload-canary-brain/weather-advice.ts",
+    "before_sha256": null,
+    "after_sha256": "074f7fd9d5b6a709fb95cf9d16a34f5681355872908d727490692237072883b0",
+    "mode": 420
+  },
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/tools/search-runtime.ts",
+    "name": "search-runtime.ts",
+    "payload": "payload-canary-brain/search-runtime.ts",
+    "before_sha256": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275",
+    "after_sha256": "ee2340592e59a3d914e605e803040f340a0a32ee0c33054343d51caa367e732b",
+    "mode": 420
+  },
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/tools/search-routing-defaults.json",
+    "name": "search-routing-defaults.json",
+    "payload": "payload-canary-brain/search-routing-defaults.json",
+    "before_sha256": "2385d1f38f029c18b4be1f30fc9cf895edd85572c70ecb0c1f5f205fb0706ed5",
+    "after_sha256": "92d65d9d1406664c3f7fb9fc511a077ddf66514cf93d37a72030c5ffedc6f8b4",
+    "mode": 420
+  },
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/bin/search-route-preview",
+    "name": "search-route-preview",
+    "payload": "payload-approved/search-route-preview",
+    "before_sha256": "5dbc544ac7d5ce99a31e29d822047718feee5cabcc60aeb7b25af0c154f389ab",
+    "after_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+    "mode": 493
+  },
+  {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/tools/amap-weather.ts",
+    "name": "amap-weather.ts",
+    "payload": "payload-canary-amap/amap-weather.ts",
+    "before_sha256": "5e8834abee94f8debaea782ff25bebde5a2a718b9950f63315b6025693c395a8",
+    "after_sha256": "78291143f08464ebc8c9ffb414d1b1e25d8d57d54079cd5121e717ae2ae7ae35",
+    "mode": 420
+  }
+]

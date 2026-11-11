@@ -1,0 +1,17 @@
+{
+  "source_commit": "77c33308082941197897cc3258b1592d0fabccac",
+  "files": {
+    "search_routing.rs": "b8cf23af072a64bbf8c66d8b37159fff93b13ab922dd611f106bab99e81e73be",
+    "search_tasks.rs": "acd31a2c460585a7dae8afbefafe0bfec7ba452303bcd3c9cda595a69f9ed405",
+    "search_weather_intent.rs": "fea3ba4a9b485ffe189c3dfe1dfecdf0c5c014aab49a31ffb83ec1e665059ce1",
+    "search-routing-defaults.json": "92d65d9d1406664c3f7fb9fc511a077ddf66514cf93d37a72030c5ffedc6f8b4"
+  },
+  "preview": {
+    "sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44"
+  },
+  "runtime": {
+    "git_sha": "77c33308082941197897cc3258b1592d0fabccac",
+    "binary_sha256": "b59660fa77bf11d6f2e7c6457702847657b504863579aa178b98cf71a6575579",
+    "bytes": 78274304
+  }
+}

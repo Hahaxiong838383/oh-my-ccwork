@@ -1,0 +1,7 @@
+{
+  "rollback_prerequisites": "PASS",
+  "apply": false,
+  "files": 9,
+  "restore_window_before_metadata": true,
+  "no_database_restore_required": true
+}

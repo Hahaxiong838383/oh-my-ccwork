@@ -1,0 +1,16 @@
+{
+  "rollback_prerequisites": "PASS",
+  "apply": false,
+  "restore_window_first": true,
+  "runtime": {
+    "MainPID": "172662",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "stable_ms": 368273,
+  "other_workers_unchanged": true,
+  "health_registered": true,
+  "health_cleanup": true,
+  "jobs": 1,
+  "at_ms": 1794363341559
+}

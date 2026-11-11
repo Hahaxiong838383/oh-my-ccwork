@@ -1,0 +1,76 @@
+{
+  "verdict": "pass",
+  "scope": "narrow review of Amap weather_facts patch only",
+  "source_commit": "c1c0e929c81681f41143a4295182f882cd21c36b",
+  "parent_commit": "5f3727b6e87fbb4d6b48aa077d37f65366da1fc1",
+  "commit_count": 1,
+  "worktree": "/Users/fu-121/.codex/worktrees/p003-lexicon-listening-brain-20261111",
+  "worktree_head_matches": true,
+  "reviewed_files_clean": true,
+  "source_mutated_this_run": false,
+  "production_touched": false,
+  "production_deployed": false,
+  "ssh_used": false,
+  "human_device_verified": false,
+  "counts_as_production_or_device_pass": false,
+  "out_of_scope_not_rerun": {
+    "worker": "77c33308082941197897cc3258b1592d0fabccac",
+    "preview_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44"
+  },
+  "files": [
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/tools/amap-weather.ts",
+      "git_blob": "078869e380382531134d547a5149d57fe2518238",
+      "sha256": "78291143f08464ebc8c9ffb414d1b1e25d8d57d54079cd5121e717ae2ae7ae35"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/amap-weather.test.ts",
+      "git_blob": "64ce9f32ef0baead6df01a4c420493e07e9e800c",
+      "sha256": "9d563756eeae76e8410447b3cece0600d6d0ee32407bea23c1f6a481c311528d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/weather-compiled-http.test.ts",
+      "git_blob": "3b37967f22af6ace28673b8e43ac9b37da28aa2c",
+      "sha256": "5f982c1b39cb0e4440bcb140e858298a97ec3afdd2a31cd6010c0ebc2f31a130"
+    }
+  ],
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "flags": ["--experimental-sqlite", "--import", "tsx"],
+    "cwd": "/Users/fu-121/.codex/worktrees/p003-lexicon-listening-brain-20261111/2-Projects/P003GameDemo20260513/apps/server",
+    "cleared_env": ["P003_AMAP_WEATHER_ENABLED", "AMAP_WEATHER_API_KEY", "AMAP_USAGE_DB_PATH", "P003_TEST_AMAP"]
+  },
+  "tests": [
+    {
+      "script": "scripts/amap-weather.test.ts",
+      "exit_code": 0,
+      "pass": 8,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "duration_ms": 178.670417,
+      "names": [
+        "R23 official weather returns coarse city/date, accepts scheduled daily forecast and negative temperatures",
+        "R23 unknown credentials, wrong city, missing values, stale data and API limits are not weather facts",
+        "R23 cache and concurrent requests share upstream work; cancelling a subscriber does not cancel another",
+        "R23 municipality geocoding may return an empty city array without losing the verified province",
+        "R24 weather attempts are persistent; cache/coalescing do not deduct, zero budget never calls upstream",
+        "R24 an upstream timeout/rejection counts once and cannot leak credentials",
+        "R24 a second subscriber shares the already paid final request even when remaining becomes zero",
+        "Lexicon advice uses only validated Amap forecast/current facts and preserves cache/metering"
+      ]
+    },
+    {
+      "script": "scripts/fixed-weather.test.ts",
+      "exit_code": 0,
+      "stdout": "fixed weather: precise fallback, scope, AQI boundary and cancellation passed"
+    }
+  ],
+  "compiled_http": {
+    "script": "scripts/weather-compiled-http.test.ts",
+    "amap_path_executed": false,
+    "reason": "P003_TEST_AMAP=1 path needs the Linux compiled preview binary and is assigned to main 13. Default Baidu path was not run either."
+  },
+  "blockers": []
+}

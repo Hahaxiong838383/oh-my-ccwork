@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "unit": {
+    "MainPID": "172662",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "jobs": 0,
+  "registered": true,
+  "cleanup_healthy": true,
+  "stable_ms": 432658,
+  "at_ms": 1794363405944
+}
