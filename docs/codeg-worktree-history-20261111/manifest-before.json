@@ -1,0 +1,14 @@
+[
+  {
+    "path": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/0.34.0/web/_next/static/chunks/048tzznh3mzxz.js",
+    "name": "048tzznh3mzxz.js",
+    "before_sha256": "570b3f6474222f3ebd08829907076619d75f8baef92db0eb186393ea6fbc8d07",
+    "bytes": 24412
+  },
+  {
+    "path": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/0.34.0/web/_next/static/chunks/3mp80sn446_ra.js",
+    "name": "3mp80sn446_ra.js",
+    "before_sha256": "519e8619f4e3f9eb71d713988625878f4f03be458e8a8d9cc3458aa4c38a3796",
+    "bytes": 94925
+  }
+]

@@ -1,0 +1,30 @@
+{
+  "imported": 2,
+  "updated": 0,
+  "skipped": 0,
+  "restored": 0,
+  "not_found": 0,
+  "failed": 0,
+  "created_folders": 0,
+  "folders": [
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-sms-login-20261103",
+      "folder_id": 38,
+      "created": false,
+      "imported": 1,
+      "updated": 0,
+      "skipped": 0,
+      "restored": 0
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-voice-routing-listening-20261110",
+      "folder_id": 50,
+      "created": false,
+      "imported": 1,
+      "updated": 0,
+      "skipped": 0,
+      "restored": 0
+    }
+  ],
+  "errors": []
+}

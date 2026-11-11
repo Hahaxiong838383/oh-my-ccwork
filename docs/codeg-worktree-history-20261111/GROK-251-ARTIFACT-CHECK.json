@@ -1,0 +1,15 @@
+{
+  "source": "artifact_consistency_only_not_independent_cli_replay",
+  "canonical_corpus_sha256": "df4d1a6a45e03b516959a6d7aa2c43f7e73268ec58467dc165c1cfba2d74cf00",
+  "raw_file_sha256": "4120d04b7df5f1e4e3379a9a21bb26c33381d785bd7e8a04fda37289599d2f68",
+  "hash_format": "json.dumps(ensure_ascii=False,separators=(comma,colon)) UTF8",
+  "cases": 251,
+  "turns": 263,
+  "baseline_pass": 223,
+  "candidate_pass": 225,
+  "new_failures": [],
+  "fixed": [
+    "nlc-0116",
+    "nlc-0247"
+  ]
+}

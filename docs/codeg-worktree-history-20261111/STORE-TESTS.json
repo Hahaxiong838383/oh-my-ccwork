@@ -1,0 +1,57 @@
+{
+  "baseline": {
+    "passed": false,
+    "assertion": "independent worktree child 251 must appear on initial refresh",
+    "private_log_sha256": "4b17b84f9d23ccfa49c83db8f48d4700a70ced77b88d5256e575023a8e7193a9"
+  },
+  "fixed": [
+    {
+      "passed": true,
+      "checks": 9,
+      "file": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/0.34.0/web/_next/static/chunks/048tzznh3mzxz.js",
+      "bundle": "048tzznh3mzxz.js",
+      "mode": "fixture",
+      "log_sha256": "7a93e5f836deba681b150f55ca023295702e6428e4ffce050b792b34dca29e95"
+    },
+    {
+      "passed": true,
+      "live_api_snapshot": true,
+      "shown_session": 251,
+      "shown_parent": 13,
+      "visible_count": 89,
+      "folderCounts": {
+        "38": 1,
+        "44": 10,
+        "50": 1,
+        "53": 1
+      },
+      "bundle": "048tzznh3mzxz.js",
+      "mode": "live",
+      "log_sha256": "2d01d9470580666f89b2757ed8c4e571e935cada59c2b32141fcc6675783ece2"
+    },
+    {
+      "passed": true,
+      "checks": 9,
+      "file": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/0.34.0/web/_next/static/chunks/3mp80sn446_ra.js",
+      "bundle": "3mp80sn446_ra.js",
+      "mode": "fixture",
+      "log_sha256": "89f77cefbadba1865c478587e88878401eef6d4592bbc90b8bda92a4249dc7a1"
+    },
+    {
+      "passed": true,
+      "live_api_snapshot": true,
+      "shown_session": 251,
+      "shown_parent": 13,
+      "visible_count": 89,
+      "folderCounts": {
+        "38": 1,
+        "44": 10,
+        "50": 1,
+        "53": 1
+      },
+      "bundle": "3mp80sn446_ra.js",
+      "mode": "live",
+      "log_sha256": "2d01d9470580666f89b2757ed8c4e571e935cada59c2b32141fcc6675783ece2"
+    }
+  ]
+}
