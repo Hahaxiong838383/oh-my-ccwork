@@ -1,0 +1,194 @@
+ISOLATED_EVIDENCE_DIR=/tmp/codeg-acp/7327-bee2ca31/mini008-http-2AngkV
+[telemetry] batch sn=****0001 snap=ok acked=2 dup=0 rejected=0 skew=70ms
+✖ no focus: posture/presence/snapshot preserve old fields but never invent usage zero (165.684917ms)
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=0 skew=8ms
+✖ HTTP focus ACK -> SQLite -> dashboard; replay/conflict never recount or renew (25.206416ms)
+[telemetry] batch sn=****0005 snap=- acked=1 dup=0 rejected=0 skew=5ms
+✖ late cross-CST-midnight splits milliseconds; short round0 available; heartbeat cannot renew usage (22.489875ms)
+[telemetry] batch sn=****0007 snap=- acked=10 dup=0 rejected=0 skew=5ms
+✖ invalid focus shape/time individually rejected while unrelated events remain accepted (25.076292ms)
+[telemetry] batch sn=****0009 snap=- acked=4 dup=0 rejected=0 skew=7ms
+✖ different-ID overlap rejected; adjacent and out-of-order disjoint segments count (16.143625ms)
+✖ legacy malformed/overlapping raw focus and old daily numbers cannot inflate usage (13.496917ms)
+✖ normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves first receive (35.989542ms)
+✖ GM/unknown latest snapshot hides resources and metadata even after normal (27.340083ms)
+✖ two owners get reciprocal 404; ownership change cannot expose previous-epoch assets (33.609459ms)
+✖ disabled/epoch/account-role/grant/scope/master invalidation hides Ark assets (18.758959ms)
+✖ authorized but missing snapshot stays empty; another device cannot fill it (20.162ms)
+[telemetry] batch sn=****0019 snap=- acked=1 dup=0 rejected=0 skew=5ms
+✖ late event updates historical day only; exact midnight end never marks next day (15.474ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 0
+ℹ fail 12
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 434.235958
+
+✖ failing tests:
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:5674
+✖ no focus: posture/presence/snapshot preserve old fields but never invent usage zero (165.684917ms)
+  TypeError: Cannot read properties of undefined (reading 'source')
+      at noUsage (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:68:17)
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:80:2)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:6581
+✖ HTTP focus ACK -> SQLite -> dashboard; replay/conflict never recount or renew (25.206416ms)
+  TypeError: Cannot read properties of undefined (reading 'today')
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:88:60)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:7997
+✖ late cross-CST-midnight splits milliseconds; short round0 available; heartbeat cannot renew usage (22.489875ms)
+  TypeError: Cannot read properties of undefined (reading 'daily')
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:101:26)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:8847
+✖ invalid focus shape/time individually rejected while unrelated events remain accepted (25.076292ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+  +   'bad-0',
+  +   'bad-1',
+  +   'bad-2',
+  +   'bad-3',
+  +   'bad-4',
+  +   'bad-5',
+  +   'bad-6',
+  +   'bad-7',
+  +   'bad-8',
+      'old-presence'
+    ]
+  
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:109:38)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [Array],
+    expected: [Array],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:9822
+✖ different-ID overlap rejected; adjacent and out-of-order disjoint segments count (16.143625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'first',
+  +   'overlap',
+      'adjacent',
+      'earlier'
+    ]
+  
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:115:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [Array],
+    expected: [Array],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:10451
+✖ legacy malformed/overlapping raw focus and old daily numbers cannot inflate usage (13.496917ms)
+  TypeError: Cannot read properties of undefined (reading 'today')
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:123:60)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:11164
+✖ normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves first receive (35.989542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + undefined
+  - {
+  -   available: true,
+  -   captured_at_ms: 1794382985701,
+  -   inventory: {
+  -     'M-CARD-001': null
+  -   },
+  -   reason: null,
+  -   received_at_ms: 1794382985716,
+  -   snapshot_id: 'ark-1',
+  -   source_mode: 'normal',
+  -   wallets: {
+  -     family_coin: 0,
+  -     stardust: null
+  -   }
+  - }
+  
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:130:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [Object],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:12364
+✖ GM/unknown latest snapshot hides resources and metadata even after normal (27.340083ms)
+  TypeError: Cannot read properties of undefined (reading 'available')
+      at emptyArk (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:63:17)
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:137:283)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:12766
+✖ two owners get reciprocal 404; ownership change cannot expose previous-epoch assets (33.609459ms)
+  TypeError: Cannot read properties of undefined (reading 'available')
+      at emptyArk (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:63:17)
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:142:89)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:13242
+✖ disabled/epoch/account-role/grant/scope/master invalidation hides Ark assets (18.758959ms)
+  TypeError: Cannot read properties of undefined (reading 'available')
+      at emptyArk (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:63:17)
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:153:57)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:14165
+✖ authorized but missing snapshot stays empty; another device cannot fill it (20.162ms)
+  TypeError: Cannot read properties of undefined (reading 'available')
+      at emptyArk (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:63:17)
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:157:147)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:1:14447
+✖ late event updates historical day only; exact midnight end never marks next day (15.474ms)
+  TypeError: Cannot read properties of undefined (reading 'today')
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/current-source/scripts/mini008-dashboard.test.ts:162:17)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)

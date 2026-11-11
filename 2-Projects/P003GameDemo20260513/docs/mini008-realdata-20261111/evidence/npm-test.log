@@ -1,0 +1,7 @@
+npm error Lifecycle script `test` failed with error:
+npm error workspace server@0.0.1
+npm error location /Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server
+npm error Missing script: "test"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run --workspace=server@0.0.1
