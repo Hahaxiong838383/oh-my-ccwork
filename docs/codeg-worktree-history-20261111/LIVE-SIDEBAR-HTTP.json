@@ -1,0 +1,90 @@
+{
+  "status": "PASS_HTTP_WRAPPER_STORE_SIDEBAR_ROWS_NOT_BROWSER",
+  "verdicts": [
+    {
+      "mode": "before",
+      "shown_sessions": [
+        253,
+        254
+      ],
+      "empty_folders": [
+        44,
+        53
+      ],
+      "store_conversation_count": 52
+    },
+    {
+      "mode": "deployed",
+      "shown_sessions": [
+        253,
+        191,
+        190,
+        189,
+        188,
+        187,
+        186,
+        185,
+        184,
+        183,
+        182,
+        254,
+        251
+      ],
+      "empty_folders": [],
+      "store_conversation_count": 89
+    }
+  ],
+  "wire": [
+    {
+      "command": "list_open_folder_details"
+    },
+    {
+      "command": "list_all_folder_details"
+    },
+    {
+      "command": "list_folder_groups",
+      "args": {}
+    },
+    {
+      "command": "list_all_conversations",
+      "args": {
+        "folderIds": null,
+        "agentType": null,
+        "search": null,
+        "sortBy": null,
+        "status": null,
+        "includeChildren": null
+      }
+    },
+    {
+      "command": "list_open_folder_details"
+    },
+    {
+      "command": "list_all_folder_details"
+    },
+    {
+      "command": "list_folder_groups",
+      "args": {}
+    },
+    {
+      "command": "list_all_folder_details"
+    },
+    {
+      "command": "list_all_conversations",
+      "args": {
+        "folderIds": null,
+        "agentType": null,
+        "search": null,
+        "sortBy": null,
+        "status": null,
+        "includeChildren": true
+      }
+    }
+  ],
+  "assets": {
+    "0mikm5622wrri.js": "78d5cf080a2b08f555c3d1762e27a9acce575c462e437b007418536de7d12cf5",
+    "048tzznh3mzxz.js": "5c9cd45fc1eedd289656861e3db44a3c91ec90473543962b8890f567b351aa2b",
+    "3r8av1xqxfxav.js": "19c18fc9876a0e3d0b9c5e0d25334bb4526ae3caa4cf87787d7e3e131466411d"
+  },
+  "visual_verified": false
+}
