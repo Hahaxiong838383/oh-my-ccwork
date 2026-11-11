@@ -49,7 +49,19 @@ export type IngestMeta = {
   traceId: string;
 };
 
-export type EventOutcome = 'accepted' | 'duplicated' | 'conflict';
+export type EventOutcome = 'accepted' | 'duplicated' | 'conflict' | 'invalid_event_data' | 'focus_segment_overlap';
+
+const DAY_MS = 86400_000;
+// Epoch milliseconds within four-digit calendar years; at most one day per segment.
+// mini008 normally reports ~60s and a final short tail. No new clock-skew/late-upload gate.
+const MAX_FOCUS_TIMESTAMP = 253402271999999;
+function focusInterval(data: Record<string, unknown>): { start: number; end: number } | null {
+  const start = data.start_ms, end = data.end_ms;
+  if (typeof start !== 'number' || typeof end !== 'number'
+    || !Number.isSafeInteger(start) || !Number.isSafeInteger(end)
+    || start < 0 || end > MAX_FOCUS_TIMESTAMP || end <= start || end - start > DAY_MS) return null;
+  return { start, end };
+}
 
 /** 自然日字符串（Asia/Shanghai）。 */
 export function dayOf(ms: number): string {
@@ -144,11 +156,31 @@ class TelemetryStore {
    * 返回 accepted / duplicated（同 ID 同 payload）/ conflict（同 ID 异 payload，路由层入 rejected 409 语义）。
    */
   ingestEvent(sn: string, ev: EventInput, meta: IngestMeta): EventOutcome {
+    if (ev.type !== 'focus_segment') return this.insertEvent(sn, ev, meta);
+    // Keep overlap check, first receipt and daily increments atomic, including across processes.
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const outcome = this.insertEvent(sn, ev, meta);
+      this.db.exec('COMMIT');
+      return outcome;
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      throw error;
+    }
+  }
+
+  private insertEvent(sn: string, ev: EventInput, meta: IngestMeta): EventOutcome {
     const hash = hashPayload({ type: ev.type, occurred_at_ms: ev.occurred_at_ms, data: ev.data });
     const existing = this.db
       .prepare(`SELECT payload_hash FROM device_telemetry_event WHERE sn = ? AND event_id = ?`)
       .get(sn, ev.event_id) as { payload_hash: string } | undefined;
     if (existing) return existing.payload_hash === hash ? 'duplicated' : 'conflict';
+    if (ev.type === 'focus_segment') {
+      const interval = focusInterval(ev.data);
+      if (!interval || !Number.isSafeInteger(ev.occurred_at_ms)
+        || ev.occurred_at_ms < 0 || ev.occurred_at_ms > MAX_FOCUS_TIMESTAMP) return 'invalid_event_data';
+      if (this.focusSegments(sn, interval.start, interval.end).length) return 'focus_segment_overlap';
+    }
     this.db
       .prepare(
         `INSERT INTO device_telemetry_event
@@ -182,9 +214,9 @@ class TelemetryStore {
         .run(sn, date, delta);
     };
     if (ev.type === 'focus_segment') {
-      const start = Number(ev.data.start_ms);
-      const end = Number(ev.data.end_ms);
-      if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+      const interval = focusInterval(ev.data);
+      if (!interval) return;
+      const { start, end } = interval;
       // 跨日按天分摊（Asia/Shanghai 自然日切分）
       let cur = start;
       while (cur < end) {
@@ -213,6 +245,66 @@ class TelemetryStore {
       const outcome = String(ev.data.outcome ?? '');
       bump(dayOf(ev.occurred_at_ms), outcome === 'played' ? 'reminder_played' : 'reminder_suppressed', 1);
     }
+  }
+
+  /** Raw focus evidence only; old daily rows can contain posture-only zero or invalid focus. */
+  private focusSegments(sn: string, from: number, to: number) {
+    const rows = this.db.prepare(`SELECT event_id, data_json, occurred_at_ms, server_received_ms
+      FROM device_telemetry_event WHERE sn = ? AND type = 'focus_segment'
+      AND CASE WHEN json_valid(data_json) THEN
+        json_extract(data_json, '$.start_ms') < ? AND json_extract(data_json, '$.end_ms') > ?
+        ELSE 0 END
+      ORDER BY server_received_ms, rowid`).all(sn, to, from) as Array<{
+        event_id: string; data_json: string; occurred_at_ms: number; server_received_ms: number;
+      }>;
+    return rows.flatMap(row => {
+      const interval = focusInterval(JSON.parse(row.data_json));
+      return interval && Number.isSafeInteger(row.occurred_at_ms)
+        && row.occurred_at_ms >= 0 && row.occurred_at_ms <= MAX_FOCUS_TIMESTAMP
+        ? [{ ...interval, received: row.server_received_ms }] : [];
+    });
+  }
+
+  /** 已上报使用时长，包含普通游戏/聊天；不代表学习质量或完整全天覆盖。 */
+  usageRange(sn: string, fromDate: string, toDate: string) {
+    const from = Date.parse(`${fromDate}T00:00:00+08:00`);
+    const to = Date.parse(`${toDate}T00:00:00+08:00`) + DAY_MS;
+    const totals = new Map<string, { ms: number; received: number }>();
+    // Include a one-segment margin so a legacy overlap across the window edge cannot count twice.
+    const segments = this.focusSegments(sn, from - DAY_MS, to + DAY_MS);
+    const prior: Array<{ start: number; end: number }> = [];
+    for (const s of segments) {
+      // Keep a sorted union of earlier raw intervals, avoiding a quadratic scan on ordinary uploads.
+      let lo = 0, hi = prior.length;
+      while (lo < hi) {
+        const mid = (lo + hi) >>> 1;
+        if (prior[mid].end <= s.start) lo = mid + 1; else hi = mid;
+      }
+      const overlaps = lo < prior.length && prior[lo].start < s.end;
+      let last = lo, start = s.start, stop = s.end;
+      while (last < prior.length && prior[last].start < stop) {
+        start = Math.min(start, prior[last].start); stop = Math.max(stop, prior[last].end); last++;
+      }
+      prior.splice(lo, last - lo, { start, end: stop });
+      // Legacy later overlaps are conservatively omitted; historical event/daily rows stay unchanged.
+      if (overlaps) continue;
+      let cur = Math.max(from, s.start);
+      const end = Math.min(to, s.end);
+      while (cur < end) {
+        const day = dayOf(cur);
+        const next = Math.min(end, Date.parse(`${day}T00:00:00+08:00`) + DAY_MS);
+        const old = totals.get(day);
+        totals.set(day, { ms: (old?.ms ?? 0) + next - cur, received: Math.max(old?.received ?? 0, s.received) });
+        cur = next;
+      }
+    }
+    const daily = [];
+    for (let cur = from; cur < to; cur += DAY_MS) {
+      const date = dayOf(cur), total = totals.get(date);
+      daily.push({ date, available: !!total, focus_minutes: total ? Math.round(total.ms / 60_000) : null,
+        updated_at_ms: total?.received ?? null });
+    }
+    return daily;
   }
 
   /** 最新快照（dashboard 设备实时态）。 */

@@ -1,0 +1,7 @@
+hono /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/hono@4.12.25/node_modules/hono/dist/cjs/index.js
+jose /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/jose@6.2.3/node_modules/jose/dist/webapi/index.js
+zod /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/zod@3.25.76/node_modules/zod/index.cjs
+tsx /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/tsx@4.22.4/node_modules/tsx/dist/loader.mjs
+typescript /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/typescript@5.9.3/node_modules/typescript/lib/typescript.js
+@hono/node-server /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules/.pnpm/@hono+node-server@1.19.14_hono@4.12.25/node_modules/@hono/node-server/dist/index.js
+v24.19.0

@@ -1,0 +1,38 @@
+[
+  {
+    "test": "telemetry",
+    "exit_code": 0,
+    "isolated_cwd": "/tmp/codeg-acp/7327-bee2ca31/mini008-regression-cvkq7tmy",
+    "log": "regression-telemetry.log"
+  },
+  {
+    "test": "ark-state",
+    "exit_code": 0,
+    "isolated_cwd": "/tmp/codeg-acp/7327-bee2ca31/mini008-regression-um6yasfb",
+    "log": "regression-ark-state.log"
+  },
+  {
+    "test": "ark-runtime",
+    "exit_code": 0,
+    "isolated_cwd": "/tmp/codeg-acp/7327-bee2ca31/mini008-regression-hor7b6x4",
+    "log": "regression-ark-runtime.log"
+  },
+  {
+    "test": "ark-proxy",
+    "exit_code": 0,
+    "isolated_cwd": "/tmp/codeg-acp/7327-bee2ca31/mini008-regression-zaziyjy1",
+    "log": "regression-ark-proxy.log"
+  },
+  {
+    "test": "ark-history",
+    "exit_code": 0,
+    "isolated_cwd": "/tmp/codeg-acp/7327-bee2ca31/mini008-regression-qxq7pu1m",
+    "log": "regression-ark-history.log"
+  },
+  {
+    "test": "ark-resource",
+    "exit_code": 1,
+    "isolated_cwd": "/tmp/codeg-acp/7327-bee2ca31/mini008-regression-ukz5rmxg",
+    "log": "regression-ark-resource.log"
+  }
+]
