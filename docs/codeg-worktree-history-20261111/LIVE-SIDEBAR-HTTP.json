@@ -57,14 +57,14 @@
       }
     },
     {
+      "command": "list_folder_groups",
+      "args": {}
+    },
+    {
       "command": "list_open_folder_details"
     },
     {
       "command": "list_all_folder_details"
-    },
-    {
-      "command": "list_folder_groups",
-      "args": {}
     },
     {
       "command": "list_all_folder_details"
@@ -85,6 +85,11 @@
     "0mikm5622wrri.js": "78d5cf080a2b08f555c3d1762e27a9acce575c462e437b007418536de7d12cf5",
     "048tzznh3mzxz.js": "5c9cd45fc1eedd289656861e3db44a3c91ec90473543962b8890f567b351aa2b",
     "3r8av1xqxfxav.js": "19c18fc9876a0e3d0b9c5e0d25334bb4526ae3caa4cf87787d7e3e131466411d"
+  },
+  "assetUrls": {
+    "0mikm5622wrri.js": "/_next/static/chunks/0mikm5622wrri.js",
+    "048tzznh3mzxz.js": "/_next/static/chunks/048tzznh3mzxz-wt-5c9cd45fc1ee.js",
+    "3r8av1xqxfxav.js": "/_next/static/chunks/3r8av1xqxfxav.js"
   },
   "visual_verified": false
 }

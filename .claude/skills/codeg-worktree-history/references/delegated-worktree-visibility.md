@@ -24,3 +24,7 @@
 回滚只恢复 manifest 中两个文件：确认当前 SHA 仍为本次 after，才原子恢复对应 before；有漂移就停止，禁止盲盖他人新版本。不回灌数据库、不删会话。恢复后 HTTP SHA 核同，刷新前端。备份只对当前固定版本有效，不能套到升级后的 release。
 
 署名：codex（OpenAI）| 2026-11-11
+
+## 用户截图复核及缓存修正
+
+随后用户截图中253/254显示，44/53仍为空。真实HTTP→wrapper→store→侧栏行对照，旧脚本严格复现截图，部署脚本不为空。独立审计255进一步指出现役sw.js对_next/static的cache-first，主13运行实际SW预存旧脚本已复现同URL留旧。因此首轮原地替换hashed内容漏了发布环节。已新建两份带内容版本的JS地址，同步八份HTML/Flight引用，旧资源保留；未改SW策略或数据库。旧缓存测试、线上10文件SHA及2路由别名核同。用户刷新后画面仍需确认，不能冒称视觉已验。详见仓库docs/codeg-worktree-history-20261111/CACHE-PUBLICATION-V2.md。

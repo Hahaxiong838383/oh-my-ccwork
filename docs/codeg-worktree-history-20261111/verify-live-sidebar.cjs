@@ -25,8 +25,8 @@ function namedFunction(source,name){const start=source.indexOf(`function ${name}
   const html=await(await fetch(`${base}/workspace`)).text();
   const scriptNames=[...html.matchAll(/<script[^>]+src="([^"]+)"/g)].map(m=>m[1]);
   const required=['0mikm5622wrri.js','048tzznh3mzxz.js','3r8av1xqxfxav.js'];
-  const assets={};
-  for(const name of required){const url=scriptNames.find(x=>x.endsWith('/'+name));assert(url, `workspace references ${name}`);const r=await fetch(base+url);assert(r.ok);assets[name]=await r.text();}
+  const assets={},assetUrls={};
+  for(const name of required){const prefix='/_next/static/chunks/'+name.slice(0,-3);const url=scriptNames.find(x=>x===prefix+'.js'||(x.startsWith(prefix+'-wt-')&&x.endsWith('.js')));assert(url, `workspace references ${name}`);assetUrls[name]=url;const r=await fetch(base+url);assert(r.ok);assets[name]=await r.text();}
   vm.runInNewContext(assets['0mikm5622wrri.js'],context);
   execute(findFactory(209165));
   const api=modules.get(209165);assert(api?.listAllConversations);
@@ -60,6 +60,6 @@ function namedFunction(source,name){const start=source.indexOf(`function ${name}
     else{assert(shown.includes(251)&&shown.includes(191)&&shown.includes(253)&&shown.includes(254));assert(!empty.length);}
     verdicts.push({mode,shown_sessions:shown,empty_folders:empty,store_conversation_count:state.conversations.length});
   }
-  const result={status:'PASS_HTTP_WRAPPER_STORE_SIDEBAR_ROWS_NOT_BROWSER',verdicts,wire,assets:Object.fromEntries(Object.entries(assets).map(([n,s])=>[n,crypto.createHash('sha256').update(s).digest('hex')])),visual_verified:false};
+  const result={status:'PASS_HTTP_WRAPPER_STORE_SIDEBAR_ROWS_NOT_BROWSER',verdicts,wire,assets:Object.fromEntries(Object.entries(assets).map(([n,s])=>[n,crypto.createHash('sha256').update(s).digest('hex')])),assetUrls,visual_verified:false};
   fs.writeFileSync(output,JSON.stringify(result,null,2)+'\n');console.log(JSON.stringify(result));
 })().catch(e=>{console.error(e.message);process.exitCode=1;});

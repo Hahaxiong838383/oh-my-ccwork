@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "stale_cache_reproduced": true,
+  "new_urls_fetch_fixed_bytes": true,
+  "new_urls_reuse_correct_cache": true,
+  "route_files_checked": 8,
+  "api_ws_unchanged": true,
+  "sw_source_changed": false,
+  "visual_verified": false
+}
