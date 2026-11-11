@@ -53,3 +53,16 @@ test('R24 a second subscriber shares the already paid final request even when re
  const p=new module.AmapWeather({apiKey:'synthetic',usage,now:()=>now,fetch:async(url:any)=>{if(String(url).includes('/geocode/'))return Response.json(geo);started();await wait;return Response.json(data);}});
  try{const first=p.run(q,new AbortController().signal,now);await sent;assert.equal(usage.snapshot().remaining,0);const second=p.run(q,new AbortController().signal,now);release();const both=await Promise.all([first,second]);assert.equal(both.length,2);assert.equal(usage.snapshot().weather_requests,1);}finally{usage.close();}
 });
+
+test('Lexicon advice uses only validated Amap forecast/current facts and preserves cache/metering',async()=>{
+ const {weatherAdvice}=await import('../src/tools/weather-advice.js');
+ const p=make();const r=await p.run(q,new AbortController().signal,now);
+ assert.deepEqual(r.weather_facts,{metric:'forecast',low:-2,high:18,conditions:['阴','小雨']});
+ const answer=weatherAdvice(r,'成都今天冷不冷，需要带伞吗');
+ assert.match(answer.text,/建议带伞/);assert.match(answer.text,/偏凉/);assert(!('weather_facts'in answer));
+ const cached=await p.run(q,new AbortController().signal,now);assert.equal(cached.weather.cache_hit,true);assert.deepEqual(cached.weather_facts,r.weather_facts);
+ const current={status:'1',infocode:'10000',lives:[{province:'四川',city:'成都市',adcode:'510100',reporttime:'2026-10-28 15:30:00',weather:'小雨',temperature:'12'}]};
+ const live=await make(current).run({...q,metric:'current'},new AbortController().signal,now);
+ assert.deepEqual(live.weather_facts,{metric:'current',temperature:12,conditions:['小雨']});
+ const currentAnswer=weatherAdvice(live,'成都现在冷不冷，要带伞吗');assert.match(currentAnswer.text,/当前观测/);assert(!currentAnswer.text.includes('预报有降水'));assert.match(currentAnswer.text,/偏凉/);
+});

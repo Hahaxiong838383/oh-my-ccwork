@@ -1,9 +1,10 @@
 import {placeWeatherSchema,type PlaceWeatherRequest} from './baidu-weather.js';
 import {resolveWeatherPlace,type WeatherPlace} from './weather-places.js';
 import type {SearchResult} from './search-tasks.js';
+import type {WeatherFacts} from './weather-advice.js';
 import {AmapUsageStore} from './amap-usage.js';
 export type AmapWeatherEvidence={provider:'amap';city_name:string;adcode:string;target_date:string;updated_at:string;fetched_at:string;cache_hit:boolean;metric:string;precision:'city'};
-type Result=SearchResult&{weather:AmapWeatherEvidence};
+type Result=SearchResult&{weather:AmapWeatherEvidence;weather_facts:WeatherFacts};
 type Flight={controller:AbortController;promise:Promise<Result>;users:number};
 const fail=(code:string):never=>{throw new Error('weather_amap_'+code);};
 const day=(ms:number)=>new Date(ms+28800000).toISOString().slice(0,10);
@@ -62,12 +63,13 @@ export class AmapWeather{
   const stamp=row.reporttime;if(typeof stamp!=='string'||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(stamp))return fail('timestamp');
   const updated=stamp.replace(' ','T')+'+08:00',at=Date.parse(updated),age=this.now()-at;
   if(!Number.isFinite(at)||age< -300000||age>(q.metric==='current'?3:24)*3600000)return fail('stale');
-  let text:string;const label=p.city===p.province?p.city:p.province+p.city;
-  if(q.metric==='current')text=`高德天气显示，${label}目前大致${words(row.weather)}，${temperature(row.temperature)}摄氏度。`;
+  let text:string;let facts:WeatherFacts;const label=p.city===p.province?p.city:p.province+p.city;
+  if(q.metric==='current'){const condition=words(row.weather),t=temperature(row.temperature);facts={metric:'current',temperature:t,conditions:[condition]};text=`高德天气显示，${label}目前大致${condition}，${t}摄氏度。`;}
   else{
    const casts=Array.isArray(row.casts)?row.casts.filter((v:any)=>v?.date===target):[];if(casts.length!==1)return fail('target_date');const cast=casts[0],a=temperature(cast.daytemp),b=temperature(cast.nighttemp);
-   text=`高德天气预报，${label}${target.slice(5).replace('-','月')}日，白天${words(cast.dayweather)}，夜间${words(cast.nightweather)}，大约${Math.min(a,b)}到${Math.max(a,b)}摄氏度。预报仅供参考。`;
+   const daytime=words(cast.dayweather),night=words(cast.nightweather);facts={metric:'forecast',low:Math.min(a,b),high:Math.max(a,b),conditions:[daytime,night]};
+   text=`高德天气预报，${label}${target.slice(5).replace('-','月')}日，白天${daytime}，夜间${night}，大约${Math.min(a,b)}到${Math.max(a,b)}摄氏度。预报仅供参考。`;
   }
-  return {text,sources:[{title:'高德天气 · '+label,url:'https://www.amap.com/',date:updated}],weather:{provider:'amap',city_name:label,adcode:location.code,target_date:target,updated_at:updated,fetched_at:new Date(this.now()).toISOString(),cache_hit:false,metric:q.metric,precision:'city'}};
+  return {text,weather_facts:facts,sources:[{title:'高德天气 · '+label,url:'https://www.amap.com/',date:updated}],weather:{provider:'amap',city_name:label,adcode:location.code,target_date:target,updated_at:updated,fetched_at:new Date(this.now()).toISOString(),cache_hit:false,metric:q.metric,precision:'city'}};
  }
 }
