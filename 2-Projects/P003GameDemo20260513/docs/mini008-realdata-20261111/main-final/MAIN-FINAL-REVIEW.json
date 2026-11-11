@@ -1,0 +1,152 @@
+{
+  "status": "MAIN_PASS_ISOLATED_NOT_RELEASED",
+  "candidate_sha": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "tests": {
+    "source": "git archive ac21c2d7",
+    "http_sqlite": 13,
+    "new_feature": 16,
+    "legacy_telemetry": 37,
+    "ark": 38,
+    "grok_authored_main_executed": 36,
+    "grok_independent_final": "NOT_RUN_TOOL_CONNECTION_UNAVAILABLE",
+    "logs": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-final",
+    "fixture_archive_error": "ark-state first run lacked JSON fixture; fetched exact same-SHA fixture and reran16/16; original error preserved"
+  },
+  "performance": {
+    "scope": "desktop isolated same deterministic216000row fixture; not production budget",
+    "baseline": {
+      "samples": 25,
+      "p50_ms": 360.91670800000065,
+      "p95_ms": 407.5784590000003,
+      "max_ms": 444.29649999999674
+    },
+    "candidate": {
+      "samples": 25,
+      "p50_ms": 126.54762500000106,
+      "p95_ms": 150.94104200000038,
+      "max_ms": 176.60599999999977
+    },
+    "candidate_new_ingest": {
+      "samples": 25,
+      "p50_ms": 1.3726669999996375,
+      "p95_ms": 2.108834000002389,
+      "max_ms": 2.2989999999990687
+    },
+    "query_plan": {
+      "usage": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+        },
+        {
+          "id": 34,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ],
+      "ingest_recent": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+        },
+        {
+          "id": 34,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ],
+      "ingest_historical": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+        },
+        {
+          "id": 34,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ]
+    },
+    "preferred_p50_under_50ms": false,
+    "migration": {
+      "rows_unchanged": true,
+      "dirty_json_before_and_after": true,
+      "integrity": "ok"
+    }
+  },
+  "evidence": [
+    {
+      "name": "ark-state-first-missing-fixture.log",
+      "sha256": "861006cb2a4bec4c005ac71fa15722098ff61e0b5bdede8d9deeadd8be1cf562"
+    },
+    {
+      "name": "performance.log",
+      "sha256": "b4a44e90d527582de4295bbfb7c2663ba0420b66efe9d9a89f13fa9329adc137"
+    },
+    {
+      "name": "ark-proxy.log",
+      "sha256": "8e20d0543aade2b5e1bd10486dfb388b7984c921a151ff6bc5e370e4ec8dd6a7"
+    },
+    {
+      "name": "GROK-ISOLATED.json",
+      "sha256": "c798f13d16dcb97546ef7f0f7848c95330f947197bccb0935d158d6c1d470cde"
+    },
+    {
+      "name": "ark-state.log",
+      "sha256": "77a5324238c3683658d38c41456dbc813f5cbd75469b753e0ae3b92b387b368a"
+    },
+    {
+      "name": "baseline-b042.json",
+      "sha256": "c00d627bf6905d1cbf16b6afd99fe7b59b85df43b1714549629a1b2a29061c33"
+    },
+    {
+      "name": "mini008.log",
+      "sha256": "986e1d23a194b025511a3a98fc268547d0f2a42893a5aa198f3c112a755d4c81"
+    },
+    {
+      "name": "ark-history.log",
+      "sha256": "bde3d7c81dbb7b8dfa55069ff76568fc498ac57d5c2337009539a7bdff54b857"
+    },
+    {
+      "name": "candidate-ac21.json",
+      "sha256": "be204bb998dcd18d01b0e9a221b82da49fccb0d889c4df36247041c1080e50ca"
+    },
+    {
+      "name": "grok-authored-main-executed.log",
+      "sha256": "3a022132e7312c2422fd5c056e24e89d8bc5e7a377373537c84872ad2b5f8c6d"
+    },
+    {
+      "name": "candidate-ac21.log",
+      "sha256": "be204bb998dcd18d01b0e9a221b82da49fccb0d889c4df36247041c1080e50ca"
+    },
+    {
+      "name": "telemetry.log",
+      "sha256": "0a1d1c9b9915de60e56bd0dcd4d1824f244dffbfb9fc94e259e7ee58970e1448"
+    },
+    {
+      "name": "independent.log",
+      "sha256": "13992f7374e85ee449a4d41178aa7983e1f2fb15d683878fbab6a8177d55d435"
+    },
+    {
+      "name": "baseline-b042.log",
+      "sha256": "64bef6eef8e904afcc301da64d1fb863af6899184497ed8de66d17ef7b8b1263"
+    },
+    {
+      "name": "ark-runtime.log",
+      "sha256": "172db81cb9527338786904210026c012987929ab2e2ae8b9591890ca88a4f371"
+    }
+  ],
+  "deployment": false,
+  "C_scope_or_grant_changed": false,
+  "blocker": "Grok fixed SHA independent review tool returns parent has no active conversation after platform interruption",
+  "at": "2026-11-11T16:18:03.457461+08:00"
+}
