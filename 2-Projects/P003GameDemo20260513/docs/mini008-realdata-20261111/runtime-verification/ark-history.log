@@ -1,0 +1,242 @@
+TAP version 13
+# Subtest: history keeps unknown distinct from zero and never uses a 12-character alias
+not ok 1 - history keeps unknown distinct from zero and never uses a 12-character alias
+  ---
+  duration_ms: 1.726032
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:1848'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:19:98)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: latest value uses event occurrence time, not delayed batch receipt or sum(delta)
+not ok 2 - latest value uses event occurrence time, not delayed batch receipt or sum(delta)
+  ---
+  duration_ms: 0.439811
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:2235'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:23:102)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: historical ownership watermark and suspicious clocks are fail-closed
+not ok 3 - historical ownership watermark and suspicious clocks are fail-closed
+  ---
+  duration_ms: 0.369357
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:2598'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:24:90)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: GM marker poisons logical day, absent marker is unknown, truncated never yields a balance
+not ok 4 - GM marker poisons logical day, absent marker is unknown, truncated never yields a balance
+  ---
+  duration_ms: 0.334928
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:2926'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:25:111)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: retention and query limit cannot turn partial unknown history into confident facts
+not ok 5 - retention and query limit cannot turn partial unknown history into confident facts
+  ---
+  duration_ms: 0.384831
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:3546'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:31:104)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: known inventory uses absolute quantity; unknown asset IDs never leak
+not ok 6 - known inventory uses absolute quantity; unknown asset IDs never leak
+  ---
+  duration_ms: 0.314656
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:3915'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:32:90)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: same occurrence-time conflicting absolute values are unknown, never resolved by upload order
+not ok 7 - same occurrence-time conflicting absolute values are unknown, never resolved by upload order
+  ---
+  duration_ms: 0.309457
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:4461'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:33:114)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: truncated or impossible receipt-time normal markers cannot authorize later unmarked facts
+not ok 8 - truncated or impossible receipt-time normal markers cannot authorize later unmarked facts
+  ---
+  duration_ms: 0.335541
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:4750'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:34:111)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: GM evidence before the authorization watermark and with future clock still excludes its logical day
+not ok 9 - GM evidence before the authorization watermark and with future clock still excludes its logical day
+  ---
+  duration_ms: 0.540222
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:5154'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:35:164)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: thousands of unrelated valid events cannot hide wallet state or GM veto
+not ok 10 - thousands of unrelated valid events cannot hide wallet state or GM veto
+  ---
+  duration_ms: 0.589425
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:5598'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:37:93)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+# Subtest: uppercase and slash-separated GM source tokens veto normal-day history
+not ok 11 - uppercase and slash-separated GM source tokens veto normal-day history
+  ---
+  duration_ms: 0.399303
+  type: 'test'
+  location: '/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:1:6426'
+  failureType: 'testCodeFailure'
+  error: 'UNSAFE_ANALYTICS_SQLITE_VERSION'
+  code: 'ERR_TEST_FAILURE'
+  stack: |-
+    assertSafeSqliteVersion (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:9:17)
+    configureAnalyticsWriter (file:///tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/sqlite-policy.mjs:13:2)
+    new AnalyticsStore (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/src/analytics/store.ts:38:28)
+    fixture (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:13:80)
+    TestContext.<anonymous> (/tmp/p003-mini008-node22-ja323mfh/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:39:155)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 0
+# fail 11
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 25.51687
+(node:1342405) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

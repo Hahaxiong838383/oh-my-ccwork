@@ -1,0 +1,8 @@
+{
+  "args_safe": [
+    "--env-file=.env.local",
+    "src/index.ts"
+  ],
+  "node_args_safe": [],
+  "config_loader_files": []
+}

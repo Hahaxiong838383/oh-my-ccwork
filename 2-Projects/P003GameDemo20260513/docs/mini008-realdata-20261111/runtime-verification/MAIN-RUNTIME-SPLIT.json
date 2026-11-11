@@ -1,0 +1,29 @@
+[
+  {
+    "name": "p003-voice",
+    "pid": 1106830,
+    "exe": "/usr/bin/node",
+    "script": "/opt/p003/server/node_modules/.bin/tsx",
+    "version": {
+      "node": "v22.22.2",
+      "sqlite": "3.51.2"
+    },
+    "interpreter": "/usr/bin/node",
+    "safe_args": [
+      "--env-file=.env.local",
+      "src/index.ts"
+    ]
+  },
+  {
+    "name": "p003-analytics",
+    "pid": 196818,
+    "exe": "/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node",
+    "script": "/opt/p003/server/deploy/analytics-start.ts",
+    "version": {
+      "node": "v24.19.0",
+      "sqlite": "3.53.3"
+    },
+    "interpreter": "/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node",
+    "safe_args": []
+  }
+]

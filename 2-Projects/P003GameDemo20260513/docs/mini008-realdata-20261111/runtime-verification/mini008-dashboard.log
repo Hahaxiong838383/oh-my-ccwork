@@ -1,0 +1,122 @@
+ISOLATED_EVIDENCE_DIR=/tmp/mini008-http-DQZVFZ
+TAP version 13
+[telemetry] batch sn=****0001 snap=ok acked=2 dup=0 rejected=0 skew=25ms
+# Subtest: no focus: posture/presence/snapshot preserve old fields but never invent usage zero
+ok 1 - no focus: posture/presence/snapshot preserve old fields but never invent usage zero
+  ---
+  duration_ms: 82.719909
+  type: 'test'
+  ...
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=0 skew=5ms
+[telemetry] batch sn=****0003 snap=- acked=0 dup=1 rejected=0 skew=5ms
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=1 skew=5ms
+# Subtest: HTTP focus ACK -> SQLite -> dashboard; replay/conflict never recount or renew
+ok 2 - HTTP focus ACK -> SQLite -> dashboard; replay/conflict never recount or renew
+  ---
+  duration_ms: 64.590711
+  type: 'test'
+  ...
+[telemetry] batch sn=****0007 snap=- acked=1 dup=0 rejected=0 skew=8ms
+[telemetry] batch sn=****0007 snap=ok acked=0 dup=0 rejected=0 skew=3ms
+# Subtest: late cross-CST-midnight splits milliseconds; short round0 available; heartbeat cannot renew usage
+ok 3 - late cross-CST-midnight splits milliseconds; short round0 available; heartbeat cannot renew usage
+  ---
+  duration_ms: 38.342142
+  type: 'test'
+  ...
+[telemetry] batch sn=****0010 snap=- acked=1 dup=0 rejected=9 skew=4ms
+# Subtest: invalid focus shape/time individually rejected while unrelated events remain accepted
+ok 4 - invalid focus shape/time individually rejected while unrelated events remain accepted
+  ---
+  duration_ms: 20.577672
+  type: 'test'
+  ...
+[telemetry] batch sn=****0012 snap=- acked=3 dup=0 rejected=1 skew=3ms
+# Subtest: different-ID overlap rejected; adjacent and out-of-order disjoint segments count
+ok 5 - different-ID overlap rejected; adjacent and out-of-order disjoint segments count
+  ---
+  duration_ms: 28.66725
+  type: 'test'
+  ...
+# Subtest: legacy malformed/overlapping raw focus and old daily numbers cannot inflate usage
+ok 6 - legacy malformed/overlapping raw focus and old daily numbers cannot inflate usage
+  ---
+  duration_ms: 24.700674
+  type: 'test'
+  ...
+# Subtest: normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves first receive
+ok 7 - normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves first receive
+  ---
+  duration_ms: 65.212424
+  type: 'test'
+  ...
+# Subtest: GM/unknown latest snapshot hides resources and metadata even after normal
+ok 8 - GM/unknown latest snapshot hides resources and metadata even after normal
+  ---
+  duration_ms: 59.42277
+  type: 'test'
+  ...
+# Subtest: two owners get reciprocal 404; ownership change cannot expose previous-epoch assets
+ok 9 - two owners get reciprocal 404; ownership change cannot expose previous-epoch assets
+  ---
+  duration_ms: 40.332635
+  type: 'test'
+  ...
+# Subtest: disabled/epoch/account-role/grant/scope/master invalidation hides Ark assets
+ok 10 - disabled/epoch/account-role/grant/scope/master invalidation hides Ark assets
+  ---
+  duration_ms: 148.131316
+  type: 'test'
+  ...
+# Subtest: authorized but missing snapshot stays empty; another device cannot fill it
+ok 11 - authorized but missing snapshot stays empty; another device cannot fill it
+  ---
+  duration_ms: 33.473865
+  type: 'test'
+  ...
+[telemetry] batch sn=****0028 snap=- acked=1 dup=0 rejected=0 skew=2ms
+# Subtest: late event updates historical day only; exact midnight end never marks next day
+ok 12 - late event updates historical day only; exact midnight end never marks next day
+  ---
+  duration_ms: 17.788758
+  type: 'test'
+  ...
+[telemetry] batch sn=****0030 snap=ok acked=0 dup=0 rejected=0 skew=2ms
+# Subtest: snapshot-only focus_active and HTTP auth/timezone errors preserve contract
+ok 13 - snapshot-only focus_active and HTTP auth/timezone errors preserve contract
+  ---
+  duration_ms: 22.599941
+  type: 'test'
+  ...
+[telemetry] batch sn=****0032 snap=- acked=1 dup=0 rejected=0 skew=2ms
+[telemetry] batch sn=****0032 snap=- acked=1 dup=0 rejected=0 skew=3ms
+[telemetry] batch sn=****0032 snap=- acked=0 dup=1 rejected=0 skew=2ms
+# Subtest: later received disjoint segment updates usage; replay of earlier receipt cannot replace it
+ok 14 - later received disjoint segment updates usage; replay of earlier receipt cannot replace it
+  ---
+  duration_ms: 43.353147
+  type: 'test'
+  ...
+# Subtest: normal assets do not expire at countdown 30s threshold, and brain-account replacement invalidates them
+ok 15 - normal assets do not expire at countdown 30s threshold, and brain-account replacement invalidates them
+  ---
+  duration_ms: 28.567696
+  type: 'test'
+  ...
+# Subtest: invalid-only legacy focus plus posture daily row remains unavailable and is not rewritten
+ok 16 - invalid-only legacy focus plus posture daily row remains unavailable and is not rewritten
+  ---
+  duration_ms: 18.737936
+  type: 'test'
+  ...
+1..16
+# tests 16
+# suites 0
+# pass 16
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 746.069813
+(node:1342201) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -1,0 +1,45 @@
+{
+  "candidate": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "node": "v22.22.2",
+  "archive_sha256": "64729d57c198a85756ee535dbe2a0d1b2e8607c0f276b9603af3669f5cac74cc",
+  "root": "/tmp/p003-mini008-node22-ja323mfh",
+  "isolated": true,
+  "production_db_untouched": true,
+  "tests": [
+    {
+      "name": "mini008-dashboard",
+      "exit": 0,
+      "log_sha256": "314c72baa671a68f7041a06325a4e272a5824e98bedf66872553133e1d46d7bb"
+    },
+    {
+      "name": "telemetry",
+      "exit": 0,
+      "log_sha256": "8dfd9604399eb0d9218bd4d81643a0b9f40294b6af3b94fe2294f8bf8017b480"
+    },
+    {
+      "name": "ark-state",
+      "exit": 0,
+      "log_sha256": "57780c8f4da43525369d527685a7d010da9ff505cbeacdf9857a30bf62d90ce5"
+    },
+    {
+      "name": "ark-runtime",
+      "exit": 0,
+      "log_sha256": "5bb4d92e49b272fef81a8261d898101bcd0dceb544559a40c38142a35f73e83a"
+    },
+    {
+      "name": "ark-proxy",
+      "exit": 0,
+      "log_sha256": "ee25e6b17df4cedd2df7484cacc84311d1c7b8e63e87a285e788af28e222399f"
+    },
+    {
+      "name": "ark-history",
+      "exit": 1,
+      "log_sha256": "bb99dd218fa9a38171bba1ed89ee80647b9cb95dac58e8d7743a1cf1cad3d4a3"
+    },
+    {
+      "name": "main-independent",
+      "exit": 0,
+      "log_sha256": "3f2f620edfab42e75d22e7ab5e742a62324c706b92d7b9211530ac6fce8831be"
+    }
+  ]
+}

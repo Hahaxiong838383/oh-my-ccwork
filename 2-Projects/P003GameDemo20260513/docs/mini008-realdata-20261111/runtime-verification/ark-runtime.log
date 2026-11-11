@@ -1,0 +1,55 @@
+TAP version 13
+# Subtest: ordinary chat and static purposes cause zero identity or internal queries
+ok 1 - ordinary chat and static purposes cause zero identity or internal queries
+  ---
+  duration_ms: 27.742489
+  type: 'test'
+  ...
+# Subtest: parent/anonymous/override/feedback/wrong-room cannot read device facts
+ok 2 - parent/anonymous/override/feedback/wrong-room cannot read device facts
+  ---
+  duration_ms: 23.149944
+  type: 'test'
+  ...
+ark_total_body_timeout_ms=124.36
+# Subtest: query timeout includes body parsing and degrades to unknown within total budget
+ok 3 - query timeout includes body parsing and degrades to unknown within total budget
+  ---
+  duration_ms: 148.888996
+  type: 'test'
+  ...
+# Subtest: late rebinding invalidates in-flight facts; malformed or oversized responses fail closed
+ok 4 - late rebinding invalidates in-flight facts; malformed or oversized responses fail closed
+  ---
+  duration_ms: 78.212201
+  type: 'test'
+  ...
+# Subtest: dynamic turns and their answers cannot reach later/idle extraction windows; normal profile statements remain
+ok 5 - dynamic turns and their answers cannot reach later/idle extraction windows; normal profile statements remain
+  ---
+  duration_ms: 0.840248
+  type: 'test'
+  ...
+# Subtest: multiple short followups retain the game topic; explicit topic switch stops both queries and stale context
+ok 6 - multiple short followups retain the game topic; explicit topic switch stops both queries and stale context
+  ---
+  duration_ms: 0.299643
+  type: 'test'
+  ...
+# Subtest: audit exclusion metadata survives even when an isolated answer contains no recognizable resource words
+ok 7 - audit exclusion metadata survives even when an isolated answer contains no recognizable resource words
+  ---
+  duration_ms: 0.125542
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 286.738953
+(node:1342369) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
