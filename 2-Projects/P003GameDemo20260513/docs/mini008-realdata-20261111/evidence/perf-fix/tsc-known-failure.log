@@ -1,0 +1,1 @@
+../../../../../Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server/src/listening-content.ts(29,133): error TS2339: Property 'abort' does not exist on type 'GeminiLlmClient'.

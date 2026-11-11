@@ -1,0 +1,19 @@
+✔ history keeps unknown distinct from zero and never uses a 12-character alias (39.794625ms)
+✔ latest value uses event occurrence time, not delayed batch receipt or sum(delta) (27.7045ms)
+✔ historical ownership watermark and suspicious clocks are fail-closed (19.211792ms)
+✔ GM marker poisons logical day, absent marker is unknown, truncated never yields a balance (24.423958ms)
+✔ retention and query limit cannot turn partial unknown history into confident facts (958.538666ms)
+✔ known inventory uses absolute quantity; unknown asset IDs never leak (25.43975ms)
+✔ same occurrence-time conflicting absolute values are unknown, never resolved by upload order (21.136667ms)
+✔ truncated or impossible receipt-time normal markers cannot authorize later unmarked facts (23.097958ms)
+✔ GM evidence before the authorization watermark and with future clock still excludes its logical day (42.281334ms)
+✔ thousands of unrelated valid events cannot hide wallet state or GM veto (97.549458ms)
+✔ uppercase and slash-separated GM source tokens veto normal-day history (93.00175ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1401.735959

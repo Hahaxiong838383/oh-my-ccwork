@@ -1,0 +1,38 @@
+ISOLATED_EVIDENCE_DIR=/tmp/codeg-acp/7327-ba656de9/mini008-http-oObBDi
+[telemetry] batch sn=****0001 snap=ok acked=2 dup=0 rejected=0 skew=62ms
+✔ no focus: posture/presence/snapshot preserve old fields but never invent usage zero (137.373416ms)
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=0 skew=6ms
+[telemetry] batch sn=****0003 snap=- acked=0 dup=1 rejected=0 skew=5ms
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=1 skew=5ms
+✔ HTTP focus ACK -> SQLite -> dashboard; replay/conflict never recount or renew (64.199958ms)
+[telemetry] batch sn=****0007 snap=- acked=1 dup=0 rejected=0 skew=4ms
+[telemetry] batch sn=****0007 snap=ok acked=0 dup=0 rejected=0 skew=8ms
+✔ late cross-CST-midnight splits milliseconds; short round0 available; heartbeat cannot renew usage (32.481208ms)
+[telemetry] batch sn=****0010 snap=- acked=1 dup=0 rejected=9 skew=4ms
+✔ invalid focus shape/time individually rejected while unrelated events remain accepted (15.624084ms)
+[telemetry] batch sn=****0012 snap=- acked=3 dup=0 rejected=1 skew=5ms
+✔ different-ID overlap rejected; adjacent and out-of-order disjoint segments count (18.402459ms)
+✔ legacy malformed/overlapping raw focus and old daily numbers cannot inflate usage (9.727ms)
+✔ normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves first receive (74.214791ms)
+✔ GM/unknown latest snapshot hides resources and metadata even after normal (50.086917ms)
+✔ two owners get reciprocal 404; ownership change cannot expose previous-epoch assets (62.145625ms)
+✔ disabled/epoch/account-role/grant/scope/master invalidation hides Ark assets (102.803ms)
+✔ authorized but missing snapshot stays empty; another device cannot fill it (19.391459ms)
+[telemetry] batch sn=****0028 snap=- acked=1 dup=0 rejected=0 skew=4ms
+✔ late event updates historical day only; exact midnight end never marks next day (19.979875ms)
+[telemetry] batch sn=****0030 snap=ok acked=0 dup=0 rejected=0 skew=4ms
+✔ snapshot-only focus_active and HTTP auth/timezone errors preserve contract (27.671041ms)
+[telemetry] batch sn=****0032 snap=- acked=1 dup=0 rejected=0 skew=5ms
+[telemetry] batch sn=****0032 snap=- acked=1 dup=0 rejected=0 skew=4ms
+[telemetry] batch sn=****0032 snap=- acked=0 dup=1 rejected=0 skew=4ms
+✔ later received disjoint segment updates usage; replay of earlier receipt cannot replace it (49.911125ms)
+✔ normal assets do not expire at countdown 30s threshold, and brain-account replacement invalidates them (25.619292ms)
+✔ invalid-only legacy focus plus posture daily row remains unavailable and is not rewritten (7.905042ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 730.98225

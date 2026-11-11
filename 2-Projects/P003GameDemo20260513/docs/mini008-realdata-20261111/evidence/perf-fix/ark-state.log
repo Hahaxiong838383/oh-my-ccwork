@@ -1,0 +1,24 @@
+✔ identity epoch ignores settings timestamp but catches ABA binding and reactivation (48.50325ms)
+✔ revocation and delete/recreate invalidate already accepted state (35.828542ms)
+✔ absent identity/epoch never falls back to an env or parent account (26.817916ms)
+✔ default closed and disabled gate cannot disclose or accept state (20.176458ms)
+✔ snapshot accepts real zero and unknown separately; current duplicate never renews timestamp (19.024708ms)
+✔ same ID different payload conflicts, superseded sequences remain stale (26.176292ms)
+✔ new boot requires strictly newer boot start, old boot cannot return (30.634917ms)
+✔ future clock, boot after capture, pre-grant capture and captured-time reversal rejected (29.127167ms)
+✔ arbitrary text, extra identity, invalid numbers and inconsistent reward shapes are rejected (3.07375ms)
+✔ GM, unknown source, stale and cross-day snapshots never become live countdown (32.551292ms)
+✔ reward kinds and paused/claimable/claimed/complete/unknown remain distinct (33.157083ms)
+✔ versioned Android example conforms to executable v1 schema (2.402292ms)
+✔ one resolved value per asset; newer occurrence wins across sources, equal-time disagreement is unknown (27.408542ms)
+✔ unchanged grants and snapshots survive repeated saves and enrolling another device (28.606459ms)
+✔ single-device authorization cannot revive another rebound device; full settings use CAS (24.95ms)
+✔ Ark settings migration survives reopening the store (10.316458ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 432.336417
