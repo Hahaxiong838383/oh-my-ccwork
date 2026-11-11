@@ -1,0 +1,103 @@
+{
+  "identity": "Grok (xAI)",
+  "role": "independent adversarial reviewer",
+  "date": "2026-11-11",
+  "candidate": "1cc55436b79cb6ff9617ad4d5421b1d17525f3aa",
+  "baseline": "77c33308082941197897cc3258b1592d0fabccac",
+  "parent_verified": true,
+  "sources": [
+    "2-Projects/realtime-voice-agent/rust-worker/src/asr_diagnostics.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/stt_volc.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+    "2-Projects/realtime-voice-agent/rust-worker/src/main.rs"
+  ],
+  "doc_outside_behavior_verdict": "2-Projects/realtime-voice-agent/docs/v391-asr-diagnostics-20261111/IMPLEMENTATION.md",
+  "verdict": "no_blocking_issue_in_static_and_private_fixture_scope",
+  "blocking": [],
+  "behavior": {
+    "recognition_decision": "unchanged",
+    "queue_capacity": 128,
+    "segment_samples": 3200,
+    "try_send": "same Ok, Full(samples), and Closed(samples) results",
+    "listening_pause": "still only when try_send returns Err and listening is active",
+    "mic_loop_added_await": false,
+    "disabled_cost": "one Option check per mic frame and one Instant::now per audio segment; no lock and no PCM scan",
+    "enabled_lock_across_await": false,
+    "write_counters_after_send_ok": ["init_written", "written", "terminator_written", "audio_sent"]
+  },
+  "distinctions": {
+    "rtc_enqueue": {
+      "can_distinguish": true,
+      "counters": ["accepted", "full", "closed", "rtc_seen", "rtc_ignored_before_switch"],
+      "boundary": "residual under 3200 stays in stt_buf; frames after stt_pcm_tx.take() are uncounted; catchup extend bypasses the second connection rtc_seen"
+    },
+    "sink_write": {
+      "can_distinguish": true,
+      "counters": ["taken", "written", "init_written", "audio_writes", "terminator_written", "stage"],
+      "meaning": "written increments after Sink::send returns Ok for that request_id"
+    },
+    "response_shape": {
+      "separated": ["binary", "error_code", "invalid_json", "missing_result", "nonobject_result", "missing_utterances", "text_present", "empty_utterances", "definite", "empty_definite", "other"],
+      "not_separated": ["non_full_message_type", "raw_flag", "non_bool_definite"],
+      "reading_rule": "definite counts bool-true utterances on every cumulative frame; result null also increments missing_utterances; punctuation-only definite does not increment empty_definite"
+    },
+    "event_delivery": {
+      "can_distinguish_channel_send": true,
+      "counters": ["interim_delivered", "final_delivered", "event_receiver_closed"],
+      "reading_rule": "delivery is event-channel send success; unread events dropped with the old receiver stay in final_delivered; definite minus final_delivered is not loss"
+    },
+    "cancellation": {
+      "can_distinguish": true,
+      "signal": "Drop keeps outcome cancelled and the in-flight stage when inner has not returned; a completed failed send records event_receiver_closed and sets stage back to receive"
+    }
+  },
+  "single_sn_and_expiry": {
+    "correct_for_documented_room_form": true,
+    "room_form": "sn-<SN>-<unix seconds>, SN without an internal hyphen",
+    "match": "case-sensitive equality of the first segment after sn-",
+    "rejected": ["wildcard", "prefix", "empty", "lowercase_of_uppercase_sn", "full_room_string"],
+    "multiple_exact_sns": "comma-separated list; one entry is one SN",
+    "hyphenated_sn": "sn-AB-CD-999 matches allow AB and does not match AB-CD",
+    "expiry": "now < until, checked once in for_room at spawn_stt; now == until is expired",
+    "sticky_generation": "an Arc created before the deadline still logs on Drop"
+  },
+  "private_tests": {
+    "command": "cargo test --offline -- --test-threads=1",
+    "compiler": "rustc 1.70.0",
+    "fixture_deps": {"tokio": "1.36.0", "uuid": "1.8.0"},
+    "module_under_test": "git show 1cc55436:asr_diagnostics.rs compiled unchanged",
+    "result": "6 passed, 0 failed",
+    "passed": [
+      "asr_diagnostics::tests::diagnostics_are_exact_identity_opt_in_and_expire_at_the_deadline",
+      "asr_diagnostics::tests::queue_success_full_closed_are_distinct_and_preserve_samples",
+      "asr_diagnostics::tests::response_shapes_do_not_store_text",
+      "single_sn_is_exact_case_sensitive_and_expires_before_a_new_spawn",
+      "enqueue_shape_delivery_and_cancel_stay_on_separate_counters",
+      "disabled_observation_drop_emits_no_summary"
+    ],
+    "high_water_on_tokio_1_36": "closing an empty capacity-4 channel did not raise observed_high_water_blocks above the earlier real occupancy of 1"
+  },
+  "not_treated_as_pass": [
+    "Linux baseline 746 PASS / 2 ignored",
+    "worker-candidate-final-all.log",
+    "live ASR",
+    "private SFU"
+  ],
+  "unverified": [
+    "rust-worker crate tests, including the localhost websocket tests in stt_volc.rs",
+    "pipeline mic loop execution",
+    "gzip and tungstenite Sink::send execution",
+    "provider receipt",
+    "pipeline recv of an event after channel send success",
+    "production tokio high-water behavior",
+    "production configuration and user audio"
+  ],
+  "actions_not_taken": [
+    "no business source edit",
+    "no worktree edit",
+    "no deploy",
+    "no production config change",
+    "no user audio read",
+    "no monitor"
+  ]
+}

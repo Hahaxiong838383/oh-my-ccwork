@@ -1,0 +1,77 @@
+{
+  "source_sha": "1cc55436b79cb6ff9617ad4d5421b1d17525f3aa",
+  "deployed_at_ms": 1794379038452,
+  "production_sha256": "3f81bfc84c14de00e7e139c6f4f2132b3c67e39305148fc461b366df067ae13e",
+  "pid": "217434",
+  "scope_sn_suffix": "03800006",
+  "until_ms": 1794962794000,
+  "rollback_check": {
+    "rollback_ready": true,
+    "old": "b59660fa77bf11d6f2e7c6457702847657b504863579aa178b98cf71a6575579",
+    "current": "3f81bfc84c14de00e7e139c6f4f2132b3c67e39305148fc461b366df067ae13e",
+    "provider_env_preserved": true
+  },
+  "post_release": {
+    "at_ms": 1794379535275,
+    "units": {
+      "voice-worker-rust": {
+        "MainPID": "4183959",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "binary_sha": "8a9534897303b8f12406df47a51bf70dba8d26ef44efd56e27db4601f5ea50a9",
+        "env_sha": "87a15913545f71cfd116fdbf3483b3393668ff4d5ad94dbfb92c924bb6bca51e"
+      },
+      "p003-listening-worker": {
+        "MainPID": "217434",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "binary_sha": "3f81bfc84c14de00e7e139c6f4f2132b3c67e39305148fc461b366df067ae13e",
+        "env_sha": "b87037b79e713915b7ecef8bb5ef7b57a8d3574c2920b7c5e467ffec2e0b818c"
+      },
+      "p003-search-worker": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "binary_sha": "56f6878f1a232139f8bba968af3a2331c03bb842ad87228a8f63a01ed77ec53c",
+        "env_sha": "1599530453869f0b66dbd241246cdf3a844713ffec784940df51daade5293a24"
+      }
+    },
+    "health_keys": [
+      "agent",
+      "at_ms",
+      "cleanup",
+      "generation",
+      "jobs",
+      "ordered_pcm_v1",
+      "registered"
+    ],
+    "health": {
+      "at_ms": 1794379536732,
+      "registered": true,
+      "jobs": 0,
+      "cleanup": {
+        "at_ms": 1794379533953,
+        "healthy": true,
+        "pending": 0,
+        "remaining": 0
+      },
+      "agent": "p003-search-listening-20261030",
+      "build": null,
+      "capabilities": null
+    },
+    "health_age_ms": 711,
+    "release": {
+      "build_sha": "1cc55436b79cb6ff9617ad4d5421b1d17525f3aa",
+      "binary_sha256": "3f81bfc84c14de00e7e139c6f4f2132b3c67e39305148fc461b366df067ae13e",
+      "bytes": 78268424
+    },
+    "diagnostics": {
+      "single_device_match": true,
+      "until_ms": "1794962794000"
+    }
+  },
+  "review_sha256": "aff1f9c219fcafddd1394e62a532aef38e4202d66733b3677fa0d7e651f251a7",
+  "receipt_sha256": "157b83480f50da94d7cd913c73494635203f558b9ad6d0cdabbb27786c5329c5",
+  "observed_seconds": 496.823,
+  "physical_device_result": "NOT_RUN; awaiting Android retest; historical intermittent ASR cause unproven"
+}
