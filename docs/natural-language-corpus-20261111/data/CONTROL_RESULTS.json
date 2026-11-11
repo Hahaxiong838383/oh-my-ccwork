@@ -1,0 +1,166 @@
+{
+  "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+  "config_sha256": "cad53510404e0885873fe3fa0a86c839598b9a80746354543801fe1866c8b093",
+  "groups": {
+    "null": {
+      "cases": 5,
+      "pass": 5,
+      "miss": 0,
+      "false_trigger": 0,
+      "slot": 0
+    }
+  },
+  "rows": [
+    {
+      "id": "ctl-f1-2500",
+      "category": null,
+      "layer": "pure_route",
+      "split": null,
+      "family": null,
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "ctl-f1-2000",
+      "category": null,
+      "layer": "pure_route",
+      "split": null,
+      "family": null,
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "weather-city-followup"
+        }
+      ]
+    },
+    {
+      "id": "ctl-f2-protected",
+      "category": null,
+      "layer": "pure_route",
+      "split": null,
+      "family": null,
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "ctl-chengdu-tomorrow",
+      "category": null,
+      "layer": "pure_route",
+      "split": null,
+      "family": null,
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "ctl-aircon",
+      "category": null,
+      "layer": "pure_route",
+      "split": null,
+      "family": null,
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    }
+  ],
+  "wall_ms": [
+    48.47692
+  ]
+}

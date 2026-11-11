@@ -1,0 +1,164 @@
+{
+  "device_verified": false,
+  "note": "最短可真人复述的变体。文本模拟没有代替真机或声学。",
+  "cases": [
+    {
+      "id": "nlc-0032",
+      "category": "weather",
+      "layer": "pure_route",
+      "utterances": [
+        "今天天气如何"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": true,
+          "place": "@auto",
+          "day_offset": 0,
+          "needs": [
+            "overview"
+          ],
+          "metric": "forecast"
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0075",
+      "category": "comfort",
+      "layer": "pure_route",
+      "utterances": [
+        "今天冷不冷呢"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": true,
+          "place": "@auto",
+          "day_offset": 0,
+          "needs": [
+            "comfort"
+          ],
+          "metric": "forecast"
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0077",
+      "category": "comfort",
+      "layer": "pure_route",
+      "utterances": [
+        "杭州明天会不会冷"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": true,
+          "place": "杭州",
+          "day_offset": 1,
+          "needs": [
+            "comfort"
+          ],
+          "metric": "forecast"
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0092",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "utterances": [
+        "今天要不要带伞啊"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": true,
+          "place": "@auto",
+          "day_offset": 0,
+          "needs": [
+            "umbrella"
+          ],
+          "metric": "forecast"
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0095",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "utterances": [
+        "杭州明天要不要打伞"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": true,
+          "place": "杭州",
+          "day_offset": 1,
+          "needs": [
+            "umbrella"
+          ],
+          "metric": "forecast"
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0107",
+      "category": "search",
+      "layer": "pure_route",
+      "utterances": [
+        "联网查一下今天的油价"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": false
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0116",
+      "category": "search",
+      "layer": "pure_route",
+      "utterances": [
+        "故宫今天开门吗"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": false
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    },
+    {
+      "id": "nlc-0124",
+      "category": "search",
+      "layer": "pure_route",
+      "utterances": [
+        "最新消息"
+      ],
+      "expected": [
+        {
+          "action": "search",
+          "weather_required": false
+        }
+      ],
+      "device_verified": false,
+      "asr_verified": false
+    }
+  ]
+}

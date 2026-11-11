@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "status": "candidate_not_released",
+  "based_on": "/Users/fu-121/.local/state/p003-lexicon-implementation-20261111/routing-after.json",
+  "config_only_note": "只改配置不能通过 weather_topic / weather_needs 的硬编码门槛。2026-11-11 冻结 CLI 已对比：天气、冷热、带伞命中数不变；搜索 30/38 变为 32/38；硬负例误触发保持 3，没有新增。",
+  "measured_on_frozen_cli": {
+    "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+    "corpus_sha256": "df4d1a6a45e03b516959a6d7aa2c43f7e73268ec58467dc165c1cfba2d74cf00",
+    "weather_comfort_umbrella_lift": 0,
+    "search_cases_fixed": ["nlc-0116", "nlc-0247"],
+    "new_hard_negative_false_triggers": 0,
+    "unexercised_additions": ["雨伞", "现在汇率", "最新汇率"],
+    "code_changes_included": false
+  },
+  "natural_weather_trigger_additions": ["打伞", "会不会热", "会不会冷", "淋雨", "用伞", "雨伞"],
+  "current_public_fact_trigger_additions": ["今天开门", "现在汇率", "今天油价", "最新汇率", "今天门票"],
+  "rejected_broad_tokens": ["冷", "热", "伞", "度", "雨", "查"],
+  "code_required": {
+    "search_weather_intent.rs weather_topic ordinary": ["打伞", "淋雨", "雨伞", "用伞"],
+    "search_weather_intent.rs weather_topic comfort": ["会不会热", "会不会冷"],
+    "search_weather_intent.rs weather_needs umbrella": ["打伞", "淋雨", "雨伞", "用伞"],
+    "search_weather_intent.rs weather_needs comfort": ["会不会热", "会不会冷"],
+    "search_routing.rs weather_place_words WORDS": ["打伞", "淋雨", "会不会热", "会不会冷", "用不用伞", "会淋雨"],
+    "search_weather_intent.rs weather_context_suffix": ["打伞吗", "会不会热", "会不会冷", "会不会淋雨"],
+    "substring_hazard": "没带伞 含 带伞。配置的 contains_any 无法做负向前缀，要在归一化里拒绝没/不/别直接贴着伞。"
+  }
+}

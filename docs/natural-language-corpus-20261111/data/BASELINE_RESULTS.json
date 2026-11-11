@@ -1,0 +1,6690 @@
+{
+  "groups": {
+    "weather": {
+      "cases": 56,
+      "pass": 56,
+      "miss": 0,
+      "false_trigger": 0,
+      "slot": 0
+    },
+    "routing_session": {
+      "cases": 12,
+      "pass": 10
+    },
+    "comfort": {
+      "cases": 41,
+      "pass": 34,
+      "miss": 7,
+      "false_trigger": 0,
+      "slot": 0
+    },
+    "umbrella": {
+      "cases": 38,
+      "pass": 28,
+      "miss": 7,
+      "false_trigger": 0,
+      "slot": 3
+    },
+    "search": {
+      "cases": 38,
+      "pass": 30,
+      "miss": 8,
+      "false_trigger": 0,
+      "slot": 0
+    },
+    "control": {
+      "cases": 4,
+      "pass": 4,
+      "miss": 0,
+      "false_trigger": 0,
+      "slot": 0
+    },
+    "single_char_pure": {
+      "cases": 8,
+      "pass": 8,
+      "miss": 0,
+      "false_trigger": 0,
+      "slot": 0
+    },
+    "single_char_pure_separate": {
+      "cases": 8,
+      "pass": 8
+    },
+    "hard_negative": {
+      "cases": 66,
+      "pass": 63,
+      "miss": 0,
+      "false_trigger": 3,
+      "slot": 0
+    }
+  },
+  "rows": [
+    {
+      "id": "nlc-0001",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|杭州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0002",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|杭州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0003",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|成都|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0004",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|成都|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0005",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.direct|武汉|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "武汉",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0006",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.direct|武汉|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "武汉",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0007",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|深圳|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "深圳",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0008",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|深圳|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "深圳",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0009",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|广州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "广州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0010",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|广州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "广州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0011",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.direct|南京|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南京",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0012",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.direct|南京|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南京",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0013",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|北京|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0014",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|北京|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0015",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|上海|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "上海",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0016",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|上海|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "上海",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0017",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.direct|拉萨|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "拉萨",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0018",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.direct|拉萨|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "拉萨",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0019",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|青岛|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "青岛",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0020",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.direct|青岛|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "青岛",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0021",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.word_order|杭州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0022",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.word_order|杭州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0023",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.address|成都|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0024",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.aqi|杭州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 0,
+          "metric": "aqi",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0025",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.aqi|上海|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "上海",
+          "day_offset": 0,
+          "metric": "aqi",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0026",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.aqi_unsupported|北京|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0027",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.current|青岛|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "青岛",
+          "day_offset": 0,
+          "metric": "current",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0028",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "weather.current|厦门|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "厦门",
+          "day_offset": 0,
+          "metric": "current",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0029",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.omitted_place|1|forecast",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0030",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.omitted_place|2|forecast",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0031",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.omitted_place|0|current",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "current",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0032",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.human|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0033",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.rain|长沙|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "长沙",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0034",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.rain|昆明|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "昆明",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0035",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.omitted_day|哈尔滨",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "哈尔滨",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0036",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.ambiguous|朝阳",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "clarify_city",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0037",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.disambiguated|辽宁朝阳|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "辽宁朝阳",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0038",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.disambiguated|北京朝阳|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京朝阳",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0039",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.ambiguous|西安",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "clarify_city",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0040",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.disambiguated|西安市|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "西安市",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0041",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.ambiguous|西湖",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "clarify_city",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0042",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.disambiguated|杭州西湖|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州西湖",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0043",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.multi|北京上海|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "clarify_city",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0044",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.multi|杭州成都|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "clarify_city",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0045",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.multi|广州深圳|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "clarify_city",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0046",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.asr_literal|抗州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "抗州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0047",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.asr_literal|沈洋|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "沈洋",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0048",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.contradictory_admin|江苏邓州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "江苏邓州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0049",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.truncated_literal|州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0050",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.unsupported_date|北京|next_week",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0051",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.unsupported_date|上海|tonight",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0052",
+      "category": "weather",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "weather.unsupported_date|广州|yesterday",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0053",
+      "category": "weather",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.place_fragment|成都|1500",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "weather-city-followup"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0054",
+      "category": "weather",
+      "layer": "routing_session",
+      "split": "holdout",
+      "family": "session.place_fragment|成都|2500",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0055",
+      "category": "weather",
+      "layer": "routing_session",
+      "split": "holdout",
+      "family": "session.recent_day|北京|3000",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        },
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "weather-city-followup"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0056",
+      "category": "weather",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.recent_day|北京|11000",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        },
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0057",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|北京|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0058",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|北京|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0059",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|上海|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "上海",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0060",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|上海|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "上海",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0061",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|广州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "广州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0062",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|广州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "广州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0063",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|深圳|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "深圳",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0064",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|深圳|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "深圳",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0065",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|成都|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0066",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|成都|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "成都",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0067",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|杭州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0068",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|杭州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0069",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "comfort.direct|南京|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0070",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "comfort.direct|南京|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0071",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|武汉|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "武汉",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0072",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|武汉|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "武汉",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0073",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.outside|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0074",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.outside|0b",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0075",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.human|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0076",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "comfort.gap_huibuhui|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0077",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.gap_huibuhui|杭州|1",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0078",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.gap_huibuhui|bare",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0079",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.statement|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0080",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.both|深圳|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "深圳",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort",
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0081",
+      "category": "comfort",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.comfort_tail|武汉|1000",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": "武汉",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "weather-city-followup"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0082",
+      "category": "comfort",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.comfort_bare|武汉|1000",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [],
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0083",
+      "category": "comfort",
+      "layer": "routing_session",
+      "split": "holdout",
+      "family": "session.comfort_expire|武汉|2500",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0084",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|杭州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "杭州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0085",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.direct|上海|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "上海",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0086",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.direct|北京|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0087",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|广州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "广州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0088",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|成都|0",
+      "pass": false,
+      "kinds": [
+        "slot"
+      ],
+      "failures": [
+        [
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0089",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.direct|深圳|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "深圳",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0090",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|南京|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0091",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|武汉|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "武汉",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0092",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.quote|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0093",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.exit|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0094",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.exit|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0095",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.gap_dasan|杭州|1",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0096",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.gap_dasan|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0097",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.gap_yongsan|南京|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0098",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.gap_linyu|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0099",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.gap_dasan_with_rain|武汉|1",
+      "pass": false,
+      "kinds": [
+        "slot"
+      ],
+      "failures": [
+        [
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0100",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.with_overview|厦门|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "厦门",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0101",
+      "category": "umbrella",
+      "layer": "routing_session",
+      "split": "holdout",
+      "family": "session.umbrella_suffix|北京|3000",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        },
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "weather-city-followup"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0102",
+      "category": "umbrella",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.umbrella_gap|北京|3000",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [],
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        },
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0103",
+      "category": "umbrella",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.umbrella_expire|北京|11000",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "北京",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        },
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0104",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|height",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0105",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|mars",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0106",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|photosynthesis",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0107",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|oil",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0108",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "search.explicit|rate_now",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0109",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "search.explicit|rate_today",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0110",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|news",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0111",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|progress",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0112",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.prefix|retrieve",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "extra-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0113",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.prefix|learn",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "extra-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0114",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.implicit|zoo",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0115",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.implicit|museum",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0116",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.gap|palace_bare",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0117",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.gap|news_bare",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0118",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.gap|rate_pair",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0119",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|page",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0120",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|oil2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0121",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|sports",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0122",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.quote|zhengzhou_now",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0123",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.quote|henan_rescue",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0124",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "search.human|news",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0125",
+      "category": "search",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.search_bind|palace|1500",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0126",
+      "category": "search",
+      "layer": "routing_session",
+      "split": "dev",
+      "family": "session.search_bind|palace|2000",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        [],
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        },
+        {
+          "action": "clarify",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0127",
+      "category": "control",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "control.cancel",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "cancel",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "builtin-control"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0128",
+      "category": "control",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "control.resume",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "resume",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "builtin-control"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0129",
+      "category": "control",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "control.replace|上海|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "replace",
+          "place": "上海",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "builtin-control"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0130",
+      "category": "control",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "control.cancel_chat",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "cancel",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "builtin-control"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0131",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "single_char.pure|杭",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0132",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "single_char.pure|深",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0133",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "single_char.pure|北",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0134",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "single_char.pure|上",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0135",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "single_char.pure|广",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0136",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "single_char.pure|成",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0137",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "single_char.pure|沈",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0138",
+      "category": "single_char_pure",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "single_char.pure|重",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0139",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|所以我一出门练车就下雨，欺负我没带伞",
+      "pass": false,
+      "kinds": [
+        "false_trigger"
+      ],
+      "failures": [
+        [
+          "action",
+          "query"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0140",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|没带伞出门，现在车外面大雨",
+      "pass": false,
+      "kinds": [
+        "false_trigger"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "query"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "@auto",
+          "day_offset": 0,
+          "metric": "current",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0141",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|今天注定落汤鸡吗",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0142",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|车辆落水怎么办",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0143",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|如何防止灾后疫情",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0144",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|先别查成都今天冷不冷",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0145",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|先不查北京天气",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0146",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|不要查上海明天带伞",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0147",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|别查天气",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0148",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|不用带伞",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0149",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|他说杭州今天下雨",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0150",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|妈妈说明天会下雨",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0151",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|老师说今天带伞",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0152",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|你说杭州热不热",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0153",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|他让我查北京天气",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0154",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|如果北京下雨怎么办",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0155",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|比如上海明天下雨",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0156",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|为什么天气会变化",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0157",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|下雨的原理是什么",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0158",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我今天的心情像阴天",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0159",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|编一个下雨的故事",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0160",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|雨是一种比喻",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0161",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|空调温度怎么调",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0162",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|室温多少度",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0163",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|宝宝体温多少度",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0164",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|我发烧了多少度",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0165",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|烤箱温度怎么设",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0166",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|冰箱冷不冷",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0167",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|室内热不热",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0168",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|屋里冷吗",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0169",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我今天热死了",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0170",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|房间里热死了",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0171",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|冷笑话讲一个",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0172",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|说个冷知识",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0173",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|冷战是什么意思",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0174",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|三角形内角多少度",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0175",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|水的沸点是多少度",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0176",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|搜索引擎是什么",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0177",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|查询功能怎么实现",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0178",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我的补勤卡有多少张",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "ark-local-knowledge"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0179",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|我有多少星尘",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "ark-local-knowledge"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0180",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|家族币还剩多少",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "ark-local-knowledge"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0181",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|我家地址是什么",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0182",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我的手机号是多少",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0183",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|你好呀",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0184",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|今天适合打球吗",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0185",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我今天看了最新新闻",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0186",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|光合作用是什么",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0187",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|恐龙为什么灭绝",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0188",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|珠穆朗玛峰有多高",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0189",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|打开客厅空调",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0190",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|把空调温度调到二十六度",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0191",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|帮我读一下这首诗",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0192",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|网站是什么",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0193",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我今天画了一只猫",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0194",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|冰淇淋冷不冷",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0195",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|显卡温度多少",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0196",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|电脑热不热",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0197",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|北京和上海哪个好玩",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0198",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|我自己查天气",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0199",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|“杭州今天下雨”",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0200",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|心情不好想听雨",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0201",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|查查是什么意思",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0202",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "hard|如果打开央视网页会怎样",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "protected"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0203",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|今天本地适合打球吗",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0204",
+      "category": "hard_negative",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "hard|订阅异常天气提醒",
+      "pass": false,
+      "kinds": [
+        "false_trigger"
+      ],
+      "failures": [
+        [
+          "action",
+          "query"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "overview"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0205",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|天津|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "天津",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0206",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|天津|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "天津",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0207",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|重庆|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "重庆",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0208",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|重庆|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "重庆",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0209",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|沈阳|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "沈阳",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0210",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|沈阳|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "沈阳",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0211",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|大连|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "大连",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0212",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|大连|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "大连",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0213",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|苏州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "苏州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0214",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|苏州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "苏州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0215",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|福州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "福州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0216",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.direct|福州|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "福州",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "comfort"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0217",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.gap_huibuhui|天津|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0218",
+      "category": "comfort",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "comfort.gap_huibuhui|重庆|2",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:comfort"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0219",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.direct|长沙|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "长沙",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0220",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|昆明|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "昆明",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0221",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|哈尔滨|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "哈尔滨",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0222",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|拉萨|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "拉萨",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0223",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|青岛|2",
+      "pass": false,
+      "kinds": [
+        "slot"
+      ],
+      "failures": [
+        [
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0224",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|厦门|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "厦门",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0225",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.direct|郑州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "郑州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0226",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|太原|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "太原",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0227",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|南昌|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南昌",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0228",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|南宁|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "南宁",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0229",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.direct|贵阳|2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "贵阳",
+          "day_offset": 2,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0230",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|海口|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "海口",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0231",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|兰州|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "兰州",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0232",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|天津|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "天津",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0233",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|重庆|1",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "重庆",
+          "day_offset": 1,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0234",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.direct|沈阳|0",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": "沈阳",
+          "day_offset": 0,
+          "metric": "forecast",
+          "requested_info": [
+            "umbrella"
+          ],
+          "weather_object": true,
+          "query_null": false,
+          "rule_id": "natural-weather"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0235",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "umbrella.gap_dasan|大连|0",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0236",
+      "category": "umbrella",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "umbrella.gap_linyu|苏州|1",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action",
+          "weather_required",
+          "place",
+          "day_offset",
+          "metric",
+          "need:umbrella"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0237",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|gold",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0238",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|score",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0239",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|policy",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0240",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "search.explicit|flight",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0241",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "holdout",
+      "family": "search.prefix|retrieve2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "extra-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0242",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.prefix|learn2",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "extra-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0243",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.implicit|library",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0244",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.implicit|park",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "current-public-facts"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0245",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.gap|exchange",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0246",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.gap|headline",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0247",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.gap|ticket",
+      "pass": false,
+      "kinds": [
+        "miss"
+      ],
+      "failures": [
+        [
+          "action"
+        ]
+      ],
+      "observed": [
+        {
+          "action": "chat",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": true,
+          "rule_id": "default-chat"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0248",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|wiki",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0249",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|who",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0250",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|stock",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    },
+    {
+      "id": "nlc-0251",
+      "category": "search",
+      "layer": "pure_route",
+      "split": "dev",
+      "family": "search.explicit|alert",
+      "pass": true,
+      "kinds": [],
+      "failures": [
+        []
+      ],
+      "observed": [
+        {
+          "action": "search",
+          "place": null,
+          "day_offset": null,
+          "metric": null,
+          "requested_info": [],
+          "weather_object": false,
+          "query_null": false,
+          "rule_id": "builtin-explicit"
+        }
+      ]
+    }
+  ],
+  "status": "RUN",
+  "binary": "/home/hahaxiong83/local/p003-lexicon-implementation-20261111/listening/2-Projects/realtime-voice-agent/rust-worker/tools/search-route-preview/target-final-reviewed/release/search-route-preview",
+  "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+  "config_sha256": "cad53510404e0885873fe3fa0a86c839598b9a80746354543801fe1866c8b093",
+  "corpus_sha256": "df4d1a6a45e03b516959a6d7aa2c43f7e73268ec58467dc165c1cfba2d74cf00",
+  "wall_ms": [
+    51.277416,
+    48.889199,
+    48.849868,
+    47.258683,
+    18.442616,
+    48.240137,
+    47.055724
+  ],
+  "wall_ms_sum": 310.013643,
+  "note": "文本路由模拟。不是声学、供应商或真机结果。单字纯路由与 routing_session 分开计数。search_tasks 暂存层不在此 CLI。"
+}

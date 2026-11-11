@@ -1,0 +1,2246 @@
+{
+  "status": "RUN",
+  "label": "prior corpora unchanged; utterance text omitted",
+  "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+  "sets": [
+    {
+      "corpus": "corpus-dev.json",
+      "status": "RUN",
+      "cases": 57,
+      "strict_passed": 50,
+      "route_matched": 52,
+      "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+      "checker": "strict old_check plus evaluate-final clarify_city exemption; utterance text omitted",
+      "rows": [
+        {
+          "id": "p1-001",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-002",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-003",
+          "source_kind": "historical",
+          "pass": false,
+          "route_match": true,
+          "failures": [
+            [
+              "weather_required",
+              "day_offset"
+            ]
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify_city"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-004",
+          "source_kind": "historical",
+          "pass": false,
+          "route_match": true,
+          "failures": [
+            [
+              "weather_required",
+              "day_offset"
+            ]
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify_city"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-005",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "chat",
+            "chat"
+          ],
+          "rules": [
+            "protected",
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-006",
+          "source_kind": "historical",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action",
+              "weather_required",
+              "place"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action",
+              "weather_required",
+              "place"
+            ]
+          ],
+          "actions": [
+            "clarify_city"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-007",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "cancel"
+          ],
+          "rules": [
+            "natural-weather",
+            "builtin-control"
+          ]
+        },
+        {
+          "id": "p1-008",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "replace"
+          ],
+          "rules": [
+            "natural-weather",
+            "builtin-control"
+          ]
+        },
+        {
+          "id": "p1-009",
+          "source_kind": "historical",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [],
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [],
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "search",
+            "search"
+          ],
+          "rules": [
+            "natural-weather",
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-010",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-011",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-012",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-013",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "ark-local-knowledge"
+          ]
+        },
+        {
+          "id": "p1-014",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "ark-local-knowledge"
+          ]
+        },
+        {
+          "id": "p1-015",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "chat",
+            "search"
+          ],
+          "rules": [
+            "default-chat",
+            "weather-city-followup"
+          ]
+        },
+        {
+          "id": "p1-016",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-017",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-018",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-019",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "chat"
+          ],
+          "rules": [
+            "natural-weather",
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-020",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-021",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-028",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-029",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-030",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-031",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-032",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-033",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-034",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-035",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "current-public-facts"
+          ]
+        },
+        {
+          "id": "p1-036",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-037",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-038",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-039",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-040",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-041",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-042",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-043",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "search"
+          ],
+          "rules": [
+            "natural-weather",
+            "weather-city-followup"
+          ]
+        },
+        {
+          "id": "p1-044",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-045",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-046",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-047",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-048",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-049",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset"
+            ]
+          ],
+          "actions": [
+            "clarify_city"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-050",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-051",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-052",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-053",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-054",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-055",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-056",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-057",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-058",
+          "source_kind": "web_inspired",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-059",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-060",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-061",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-064",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "ark-local-knowledge"
+          ]
+        },
+        {
+          "id": "p1-065",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        }
+      ]
+    },
+    {
+      "corpus": "corpus-holdout.json",
+      "status": "RUN",
+      "cases": 31,
+      "strict_passed": 24,
+      "route_matched": 26,
+      "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+      "checker": "strict old_check plus evaluate-final clarify_city exemption; utterance text omitted",
+      "rows": [
+        {
+          "id": "p1-022",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-023",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-024",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "ark-local-knowledge"
+          ]
+        },
+        {
+          "id": "p1-025",
+          "source_kind": "historical",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [],
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [],
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "search",
+            "search"
+          ],
+          "rules": [
+            "natural-weather",
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-026",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "cancel"
+          ],
+          "rules": [
+            "natural-weather",
+            "builtin-control"
+          ]
+        },
+        {
+          "id": "p1-027",
+          "source_kind": "historical",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-062",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-063",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-066",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-067",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": true,
+          "failures": [
+            [
+              "weather_required",
+              "day_offset"
+            ]
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify_city"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-068",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-069",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-070",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1-071",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-072",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": true,
+          "failures": [
+            [
+              "weather_required",
+              "day_offset"
+            ]
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify_city"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-073",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-074",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-075",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-076",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-077",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-078",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-079",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-080",
+          "source_kind": "web_quote",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-081",
+          "source_kind": "web_inspired",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-082",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-083",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1-084",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-085",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-086",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1-087",
+          "source_kind": "web_inspired",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1-088",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "search"
+          ],
+          "rules": [
+            "natural-weather",
+            "weather-city-followup"
+          ]
+        }
+      ]
+    },
+    {
+      "corpus": "corpus-holdout.json",
+      "status": "RUN",
+      "cases": 24,
+      "strict_passed": 17,
+      "route_matched": 17,
+      "binary_sha256": "f978af6f93a76400fe7c6d1c9601dca5dfd979cc305a280e57f1d2b982a77f44",
+      "checker": "strict old_check plus evaluate-final clarify_city exemption; utterance text omitted",
+      "rows": [
+        {
+          "id": "p1x-01",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-02",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-03",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-04",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-05",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-06",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset",
+              "need"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset"
+            ]
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1x-07",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1x-08",
+          "source_kind": "web_inspired",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1x-09",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "chat",
+            "search"
+          ],
+          "rules": [
+            "default-chat",
+            "weather-city-followup"
+          ]
+        },
+        {
+          "id": "p1x-10",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "chat",
+            "search"
+          ],
+          "rules": [
+            "default-chat",
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-11",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [],
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset",
+              "need"
+            ]
+          ],
+          "route_failures": [
+            [],
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset"
+            ]
+          ],
+          "actions": [
+            "search",
+            "chat"
+          ],
+          "rules": [
+            "natural-weather",
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1x-12",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset",
+              "need"
+            ],
+            []
+          ],
+          "route_failures": [
+            [
+              "action",
+              "weather_required",
+              "place",
+              "day_offset"
+            ],
+            []
+          ],
+          "actions": [
+            "chat",
+            "search"
+          ],
+          "rules": [
+            "default-chat",
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-13",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "chat"
+          ],
+          "rules": [
+            "natural-weather",
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1x-14",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1x-15",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action",
+              "weather_required"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action",
+              "weather_required"
+            ]
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "natural-weather"
+          ]
+        },
+        {
+          "id": "p1x-16",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "protected"
+          ]
+        },
+        {
+          "id": "p1x-17",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "chat"
+          ],
+          "rules": [
+            "default-chat"
+          ]
+        },
+        {
+          "id": "p1x-18",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1x-19",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [
+              "action"
+            ]
+          ],
+          "route_failures": [
+            [
+              "action"
+            ]
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1x-20",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "search"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1x-21",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            []
+          ],
+          "route_failures": [
+            []
+          ],
+          "actions": [
+            "clarify"
+          ],
+          "rules": [
+            "builtin-explicit"
+          ]
+        },
+        {
+          "id": "p1x-22",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "replace"
+          ],
+          "rules": [
+            "natural-weather",
+            "builtin-control"
+          ]
+        },
+        {
+          "id": "p1x-23",
+          "source_kind": "synthetic_boundary",
+          "pass": false,
+          "route_match": false,
+          "failures": [
+            [],
+            [
+              "weather_required",
+              "place",
+              "day_offset",
+              "need"
+            ]
+          ],
+          "route_failures": [
+            [],
+            [
+              "weather_required",
+              "place",
+              "day_offset"
+            ]
+          ],
+          "actions": [
+            "search",
+            "replace"
+          ],
+          "rules": [
+            "natural-weather",
+            "builtin-control"
+          ]
+        },
+        {
+          "id": "p1x-24",
+          "source_kind": "synthetic_boundary",
+          "pass": true,
+          "route_match": true,
+          "failures": [
+            [],
+            []
+          ],
+          "route_failures": [
+            [],
+            []
+          ],
+          "actions": [
+            "search",
+            "search"
+          ],
+          "rules": [
+            "natural-weather",
+            "natural-weather"
+          ]
+        }
+      ]
+    }
+  ]
+}

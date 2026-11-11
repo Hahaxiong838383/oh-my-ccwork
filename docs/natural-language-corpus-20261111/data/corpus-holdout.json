@@ -1,0 +1,1575 @@
+[
+  {
+    "id": "nlc-0005",
+    "category": "weather",
+    "family": "weather.direct|武汉|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S03",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "武汉今天天气好不好",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "武汉",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "直问城市和日期。礼貌变体留在同一族。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0006",
+    "category": "weather",
+    "family": "weather.direct|武汉|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S03",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "能告诉我武汉今天天气好不好",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "武汉",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "能告诉我不得进入地名。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0011",
+    "category": "weather",
+    "family": "weather.direct|南京|1",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S03",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "南京明天天气如何",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "南京",
+        "day_offset": 1,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "直问城市和日期。礼貌变体留在同一族。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0012",
+    "category": "weather",
+    "family": "weather.direct|南京|1",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S03",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "能告诉我南京明天天气如何",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "南京",
+        "day_offset": 1,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "能告诉我不得进入地名。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0017",
+    "category": "weather",
+    "family": "weather.direct|拉萨|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S03",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "拉萨今天天气怎么样",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "拉萨",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "直问城市和日期。礼貌变体留在同一族。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0018",
+    "category": "weather",
+    "family": "weather.direct|拉萨|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S03",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "能告诉我拉萨今天天气怎么样",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "拉萨",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "能告诉我不得进入地名。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0023",
+    "category": "weather",
+    "family": "weather.address|成都|1",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S15",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "小可，成都明天天气怎么样",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "成都",
+        "day_offset": 1,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "唤醒词不得进入地名。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0027",
+    "category": "weather",
+    "family": "weather.current|青岛|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S07",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "青岛现在多少度",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "青岛",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "current"
+      }
+    ],
+    "invariants": [],
+    "notes": "现在是实时。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0028",
+    "category": "weather",
+    "family": "weather.current|厦门|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S14",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "厦门现在的天气",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "厦门",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "current"
+      }
+    ],
+    "invariants": [],
+    "notes": "实时概况。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0054",
+    "category": "weather",
+    "family": "session.place_fragment|成都|2500",
+    "layer": "routing_session",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "成都",
+        "at_ms": 0,
+        "reset": true
+      },
+      {
+        "text": "今天天气如何",
+        "at_ms": 2500,
+        "reset": false
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      },
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "@auto",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [
+      "fragment_expired"
+    ],
+    "notes": "超过两秒城市碎片失效，第二句不能残留成都。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0055",
+    "category": "weather",
+    "family": "session.recent_day|北京|3000",
+    "layer": "routing_session",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "北京今天的天气情况",
+        "at_ms": 0,
+        "reset": true
+      },
+      {
+        "text": "明天呢",
+        "at_ms": 3000,
+        "reset": false
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "北京",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      },
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "北京",
+        "day_offset": 1,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "已查天气后十秒内，明天呢继承北京。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0069",
+    "category": "comfort",
+    "family": "comfort.direct|南京|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S06",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "南京今天冷不冷",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "南京",
+        "day_offset": 0,
+        "needs": [
+          "comfort"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "冷热记为 comfort，不是体温。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0070",
+    "category": "comfort",
+    "family": "comfort.direct|南京|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S04",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "能告诉我南京今天冷不冷",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "南京",
+        "day_offset": 0,
+        "needs": [
+          "comfort"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "礼貌变体同一族。能告诉我不得进入地名。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0076",
+    "category": "comfort",
+    "family": "comfort.gap_huibuhui|0",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S15",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "今天会不会热",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "@auto",
+        "day_offset": 0,
+        "needs": [
+          "comfort"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [
+      "known_gap"
+    ],
+    "notes": "会不会热应是冷热。词表没有这句，预期漏触发，标签不改。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0083",
+    "category": "comfort",
+    "family": "session.comfort_expire|武汉|2500",
+    "layer": "routing_session",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "武汉",
+        "at_ms": 0,
+        "reset": true
+      },
+      {
+        "text": "今天冷不冷呢",
+        "at_ms": 2500,
+        "reset": false
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      },
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "@auto",
+        "day_offset": 0,
+        "needs": [
+          "comfort"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "超过两秒后不再带武汉。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0085",
+    "category": "umbrella",
+    "family": "umbrella.direct|上海|2",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "上海后天需要带伞吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "上海",
+        "day_offset": 2,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "带伞或拿伞。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0086",
+    "category": "umbrella",
+    "family": "umbrella.direct|北京|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "北京今天要带伞吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "北京",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "带伞或拿伞。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0089",
+    "category": "umbrella",
+    "family": "umbrella.direct|深圳|1",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "深圳明天需要拿伞吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "深圳",
+        "day_offset": 1,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "带伞或拿伞。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0092",
+    "category": "umbrella",
+    "family": "umbrella.quote|0",
+    "layer": "pure_route",
+    "provenance": "quote",
+    "source_id": "S01",
+    "source_kind": "quote",
+    "utterances": [
+      {
+        "text": "今天要不要带伞啊",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "@auto",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "简书对灵犀的短引。",
+    "human_probe": true,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0093",
+    "category": "umbrella",
+    "family": "umbrella.exit|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "出门要带伞吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "@auto",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "没点城市。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0097",
+    "category": "umbrella",
+    "family": "umbrella.gap_yongsan|南京|0",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S15",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "南京今天用不用伞",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "南京",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [
+      "known_gap"
+    ],
+    "notes": "用伞应记为 umbrella。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0101",
+    "category": "umbrella",
+    "family": "session.umbrella_suffix|北京|3000",
+    "layer": "routing_session",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "北京今天的天气情况",
+        "at_ms": 0,
+        "reset": true
+      },
+      {
+        "text": "要不要带伞",
+        "at_ms": 3000,
+        "reset": false
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "北京",
+        "day_offset": 0,
+        "needs": [
+          "overview"
+        ],
+        "metric": "forecast"
+      },
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "北京",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "十秒内要不要带伞继承北京和今天。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0108",
+    "category": "search",
+    "family": "search.explicit|rate_now",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S15",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "现在的汇率",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": false
+      }
+    ],
+    "invariants": [],
+    "notes": "已发布的当前事实触发。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0109",
+    "category": "search",
+    "family": "search.explicit|rate_today",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S15",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "今日汇率多少",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": false
+      }
+    ],
+    "invariants": [],
+    "notes": "今日汇率。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0124",
+    "category": "search",
+    "family": "search.human|news",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S04",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "最新消息",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": false
+      }
+    ],
+    "invariants": [],
+    "notes": "最短当前事实问法。",
+    "human_probe": true,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0132",
+    "category": "single_char_pure",
+    "family": "single_char.pure|深",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S15",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "深",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress",
+      "no_fuzzy_city"
+    ],
+    "notes": "单字深是纯路由，不能当成深圳外发。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0137",
+    "category": "single_char_pure",
+    "family": "single_char.pure|沈",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S15",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "沈",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress",
+      "no_fuzzy_city"
+    ],
+    "notes": "单字沈是纯路由，不能当成沈阳外发。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0143",
+    "category": "hard_negative",
+    "family": "hard|如何防止灾后疫情",
+    "layer": "pure_route",
+    "provenance": "quote",
+    "source_id": "S02",
+    "source_kind": "quote",
+    "utterances": [
+      {
+        "text": "如何防止灾后疫情",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "百科，不是天气或新闻。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0152",
+    "category": "hard_negative",
+    "family": "hard|你说杭州热不热",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "你说杭州热不热",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "你说开头。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0159",
+    "category": "hard_negative",
+    "family": "hard|编一个下雨的故事",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "编一个下雨的故事",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "故事。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0162",
+    "category": "hard_negative",
+    "family": "hard|室温多少度",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "室温多少度",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "室温。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0163",
+    "category": "hard_negative",
+    "family": "hard|宝宝体温多少度",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "宝宝体温多少度",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "体温。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0164",
+    "category": "hard_negative",
+    "family": "hard|我发烧了多少度",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "我发烧了多少度",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "发烧。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0166",
+    "category": "hard_negative",
+    "family": "hard|冰箱冷不冷",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "冰箱冷不冷",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "冰箱。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0170",
+    "category": "hard_negative",
+    "family": "hard|房间里热死了",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "房间里热死了",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "房间。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0179",
+    "category": "hard_negative",
+    "family": "hard|我有多少星尘",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "我有多少星尘",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "个人游戏资产。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0180",
+    "category": "hard_negative",
+    "family": "hard|家族币还剩多少",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "家族币还剩多少",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "个人游戏资产。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0181",
+    "category": "hard_negative",
+    "family": "hard|我家地址是什么",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "我家地址是什么",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "隐私。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0186",
+    "category": "hard_negative",
+    "family": "hard|光合作用是什么",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "光合作用是什么",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "稳定知识，无检索动词。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0188",
+    "category": "hard_negative",
+    "family": "hard|珠穆朗玛峰有多高",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "珠穆朗玛峰有多高",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "没有帮我查时不联网。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0194",
+    "category": "hard_negative",
+    "family": "hard|冰淇淋冷不冷",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "冰淇淋冷不冷",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "食物。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0195",
+    "category": "hard_negative",
+    "family": "hard|显卡温度多少",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "显卡温度多少",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "设备温度。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0201",
+    "category": "hard_negative",
+    "family": "hard|查查是什么意思",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "查查是什么意思",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "在问查查这个词。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0202",
+    "category": "hard_negative",
+    "family": "hard|如果打开央视网页会怎样",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S16",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "如果打开央视网页会怎样",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "chat",
+        "weather_required": false,
+        "query_must_be_null": true
+      }
+    ],
+    "invariants": [
+      "no_weather_egress"
+    ],
+    "notes": "假设。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0219",
+    "category": "umbrella",
+    "family": "umbrella.direct|长沙|0",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "长沙今天要不要带伞",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "长沙",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "带伞或拿伞。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0225",
+    "category": "umbrella",
+    "family": "umbrella.direct|郑州|1",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "郑州明天要不要带伞",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "郑州",
+        "day_offset": 1,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "带伞或拿伞。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0229",
+    "category": "umbrella",
+    "family": "umbrella.direct|贵阳|2",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S01",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "贵阳后天要带伞吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "贵阳",
+        "day_offset": 2,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [],
+    "notes": "带伞或拿伞。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0235",
+    "category": "umbrella",
+    "family": "umbrella.gap_dasan|大连|0",
+    "layer": "pure_route",
+    "provenance": "synthetic",
+    "source_id": "S15",
+    "source_kind": "synthetic",
+    "utterances": [
+      {
+        "text": "大连今天打伞吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": true,
+        "place": "大连",
+        "day_offset": 0,
+        "needs": [
+          "umbrella"
+        ],
+        "metric": "forecast"
+      }
+    ],
+    "invariants": [
+      "known_gap"
+    ],
+    "notes": "打伞。已知缺口。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0240",
+    "category": "search",
+    "family": "search.explicit|flight",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S12",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "帮我搜一下今天首都机场延误吗",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": false
+      }
+    ],
+    "invariants": [],
+    "notes": "当前交通事实。",
+    "human_probe": false,
+    "split": "holdout"
+  },
+  {
+    "id": "nlc-0241",
+    "category": "search",
+    "family": "search.prefix|retrieve2",
+    "layer": "pure_route",
+    "provenance": "rewrite",
+    "source_id": "S12",
+    "source_kind": "rewrite",
+    "utterances": [
+      {
+        "text": "检索一下今天的原油价格",
+        "at_ms": 0,
+        "reset": true
+      }
+    ],
+    "expected": [
+      {
+        "action": "search",
+        "weather_required": false
+      }
+    ],
+    "invariants": [],
+    "notes": "检索前缀。",
+    "human_probe": false,
+    "split": "holdout"
+  }
+]

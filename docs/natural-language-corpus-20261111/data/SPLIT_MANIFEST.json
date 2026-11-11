@@ -1,0 +1,59 @@
+{
+  "frozen_before_cli": true,
+  "blind_holdout": false,
+  "reason_not_blind": "同一研究者持有开发集和留出集，不能称为独立盲测。",
+  "split_algorithm": "holdout if sha256(family utf-8).digest()[0] % 5 == 0 else dev",
+  "synonym_rule": "同一 family 的礼貌和语气变体必须在同一侧。",
+  "corpus_sha256": "df4d1a6a45e03b516959a6d7aa2c43f7e73268ec58467dc165c1cfba2d74cf00",
+  "cases": 251,
+  "turns": 263,
+  "dev_cases": 201,
+  "holdout_cases": 50,
+  "by_category": {
+    "weather": {
+      "n": 56,
+      "dev": 45,
+      "holdout": 11
+    },
+    "comfort": {
+      "n": 41,
+      "dev": 37,
+      "holdout": 4
+    },
+    "umbrella": {
+      "n": 38,
+      "dev": 27,
+      "holdout": 11
+    },
+    "search": {
+      "n": 38,
+      "dev": 33,
+      "holdout": 5
+    },
+    "control": {
+      "n": 4,
+      "dev": 4,
+      "holdout": 0
+    },
+    "single_char_pure": {
+      "n": 8,
+      "dev": 6,
+      "holdout": 2
+    },
+    "hard_negative": {
+      "n": 66,
+      "dev": 49,
+      "holdout": 17
+    }
+  },
+  "families": 226,
+  "prior_corpora_not_rewritten": [
+    "/Users/fu-121/.local/state/p003-lexicon-phase1-lab-20261111/corpus-frozen-review/corpus-dev.json",
+    "/Users/fu-121/.local/state/p003-lexicon-phase1-lab-20261111/corpus-frozen-review/corpus-holdout.json",
+    "/Users/fu-121/.local/state/p003-lexicon-phase1-lab-20261111/corpus-frozen-review/disputed.json",
+    "/Users/fu-121/.local/state/p003-lexicon-implementation-20261111/grok-holdout/corpus-holdout.json"
+  ],
+  "prior_overlap_utterances": 0,
+  "prior_text_count_blocked": 127,
+  "label_policy": "期待标签按用户意图和已复核契约书写。运行后不改标签追求命中率。"
+}
