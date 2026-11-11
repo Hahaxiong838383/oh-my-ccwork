@@ -1,0 +1,6 @@
+(node:1281884) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[search-weather] {"task_id":"11f9795b-7ef8-472a-bf19-cacf0b70359a","version":"r7-3d12a68f2d526b123816ae2a","city_source":"explicit","provider":"amap","city_name":"广东深圳","adcode":"440300","target_date":"2026-10-22","updated_at":"2026-10-22T18:20:00+08:00","fetched_at":"2026-10-22T10:30:00.000Z","cache_hit":false,"metric":"forecast","precision":"city"}
+{"passed":true,"transport":"real localhost HTTP","preview":"compiled exact Worker routing engine","provider":"synthetic Amap-first","real_device":false,"original_query":"深圳今天的天气告诉我要不要带伞","structured":{"day_offset":0,"metric":"forecast","place":"深圳"},"target_date":"2026-10-22","preview_cases":7}
+
+EXIT 0

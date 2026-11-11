@@ -1,0 +1,16 @@
+✔ R23 official weather returns coarse city/date, accepts scheduled daily forecast and negative temperatures (102.706834ms)
+✔ R23 unknown credentials, wrong city, missing values, stale data and API limits are not weather facts (9.237875ms)
+✔ R23 cache and concurrent requests share upstream work; cancelling a subscriber does not cancel another (4.570625ms)
+✔ R23 municipality geocoding may return an empty city array without losing the verified province (2.264ms)
+✔ R24 weather attempts are persistent; cache/coalescing do not deduct, zero budget never calls upstream (5.820042ms)
+✔ R24 an upstream timeout/rejection counts once and cannot leak credentials (7.207166ms)
+✔ R24 a second subscriber shares the already paid final request even when remaining becomes zero (5.184458ms)
+✔ Lexicon advice uses only validated Amap forecast/current facts and preserves cache/metering (11.132083ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 183.62225

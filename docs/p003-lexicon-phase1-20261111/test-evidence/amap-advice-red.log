@@ -1,0 +1,45 @@
+✔ R23 official weather returns coarse city/date, accepts scheduled daily forecast and negative temperatures (96.158333ms)
+✔ R23 unknown credentials, wrong city, missing values, stale data and API limits are not weather facts (10.56375ms)
+✔ R23 cache and concurrent requests share upstream work; cancelling a subscriber does not cancel another (3.496291ms)
+✔ R23 municipality geocoding may return an empty city array without losing the verified province (3.244084ms)
+✔ R24 weather attempts are persistent; cache/coalescing do not deduct, zero budget never calls upstream (22.210083ms)
+✔ R24 an upstream timeout/rejection counts once and cannot leak credentials (7.8825ms)
+✔ R24 a second subscriber shares the already paid final request even when remaining becomes zero (5.021541ms)
+✖ Lexicon advice uses only validated Amap forecast/current facts and preserves cache/metering (23.809834ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 7
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 230.025834
+
+✖ failing tests:
+
+test at scripts/amap-weather.test.ts:1:6665
+✖ Lexicon advice uses only validated Amap forecast/current facts and preserves cache/metering (23.809834ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + undefined
+  - {
+  -   conditions: [
+  -     '阴',
+  -     '小雨'
+  -   ],
+  -   high: 18,
+  -   low: -2,
+  -   metric: 'forecast'
+  - }
+  
+      at TestContext.<anonymous> (/Users/fu-121/.codex/worktrees/p003-lexicon-listening-brain-20261111/2-Projects/P003GameDemo20260513/apps/server/scripts/amap-weather.test.ts:60:9)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: [Object],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
