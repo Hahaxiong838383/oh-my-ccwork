@@ -84,7 +84,7 @@ fn weather_topic(q: &str) -> bool {
     (ordinary||comfort) && !["为什么","原理","形成","是什么意思","什么是","心情","故事","烤箱","体温","发烧","开水","水温","空调","冰箱","显卡","电脑","室内","屋里","房间","身体","手脚","冷笑话","冷知识","冷战","冰淇淋"].iter().any(|p|q.contains(p))
 }
 fn weather_parameters(q: &str) -> Option<AutoWeatherRequest> {
-    if !weather_topic(q) || q.contains("明明天") || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
+    if !weather_topic(q) || matches!(weather_place_words(q).as_str(),"明明"|"明") || ["后后天","大后天","下周","周末","昨天","去年","小时","几点","今晚","早上","上午","下午","晚上","一周","未来","星期","周一","周二","周三","周四","周五","周六","周日","日出","日落","穿衣"].iter().any(|p|q.contains(p)) || q.chars().any(|c|c.is_ascii_digit()) {return None;}
     if ["今天", "明天", "后天"].iter().filter(|day| q.contains(**day)).count() > 1 { return None; }
     let day=if q.contains("后天"){2}else if q.contains("明天"){1}else{0};
     let metric=if q.contains("空气质量") {if day!=0{return None;} "aqi"}else if q.contains("现在")||q.contains("实时"){if day!=0{return None;} "current"}else{"forecast"};
@@ -278,7 +278,7 @@ impl RoutingSession {
         if let Some(q)=d.query.as_ref() {
             if config.is_some() && weather_topic(q) {
                 d.requested_info=weather_needs(q);
-                if q.contains("明明天") {
+                if matches!(weather_place_words(q).as_str(),"明明"|"明") {
                     self.pending_weather=None;d.action="clarify_city".into();d.query=None;
                     d.reason="日期或地点没有听完整，请说清城市和日期".into();return d;
                 }
@@ -668,5 +668,13 @@ mod lexicon_phase1_acceptance {
  }
  #[test] fn common_polite_prefixes_do_not_enter_place(){
   for (q,place)in[("请问深圳明天会下雨吗","深圳"),("能说说会同明天的天气情况吗","会同")]{let d=RoutingSession::default().route(q,0,Some(&config()),"v");let w=d.place_weather.unwrap();assert_eq!(w.place,place);assert_eq!(w.day_offset,1);}
+ }
+}
+
+#[cfg(test)]mod date_city_boundary_tests{
+ use super::*;
+ #[test]fn real_city_ending_ming_keeps_tomorrow(){
+  let mut c=RoutingConfig::default();c.weather_enabled=true;c.baidu_weather_enabled=true;c.auto_location_enabled=true;
+  for place in ["昆明","三明","高明"]{let q=format!("{place}明天天气");let d=RoutingSession::default().route(&q,0,Some(&c),"v");assert_eq!(d.action,"search","{q}");let w=d.place_weather.unwrap();assert_eq!(w.place,place);assert_eq!(w.day_offset,1);}
  }
 }
