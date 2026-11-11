@@ -1,0 +1,82 @@
+{
+  "server": "/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server",
+  "results": [
+    {
+      "test": "mini008-dashboard",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/mini008-dashboard.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-fic5chjy"
+    },
+    {
+      "test": "telemetry",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/telemetry.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-0y5yih96"
+    },
+    {
+      "test": "ark-state",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/ark-state.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-8wvbx4by"
+    },
+    {
+      "test": "ark-runtime",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/ark-runtime.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-3_t13le9"
+    },
+    {
+      "test": "ark-proxy",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/ark-proxy.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-_ayhudnt"
+    },
+    {
+      "test": "ark-history",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/ark-history.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-oscl8xau"
+    },
+    {
+      "test": "main-independent",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/main-independent.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-8icg6nb5"
+    },
+    {
+      "test": "focus-perf",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/focus-perf.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-dyy4zz9p"
+    },
+    {
+      "test": "main-usage-perf",
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/main-usage-perf.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-v57qyqi9"
+    },
+    {
+      "test": "ark-resource-known-failure",
+      "exit_code": 1,
+      "expected_exit": 1,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/ark-resource-known-failure.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-sqdfdnk7"
+    },
+    {
+      "test": "tsc-known-failure",
+      "exit_code": 2,
+      "expected_exit": 2,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/perf-fix/working/tsc-known-failure.log",
+      "isolated_cwd": "/tmp/codeg-acp/7327-ba656de9/mini008-perf-regression-7pkznc6p"
+    }
+  ]
+}

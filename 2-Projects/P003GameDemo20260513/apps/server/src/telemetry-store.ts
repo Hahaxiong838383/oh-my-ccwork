@@ -55,6 +55,9 @@ const DAY_MS = 86400_000;
 // Epoch milliseconds within four-digit calendar years; at most one day per segment.
 // mini008 normally reports ~60s and a final short tail. No new clock-skew/late-upload gate.
 const MAX_FOCUS_TIMESTAMP = 253402271999999;
+// Keep the indexed expression identical in DDL/queries. CASE protects dirty legacy JSON
+// regardless of the planner's predicate evaluation order; the partial index excludes it.
+const FOCUS_END_SQL = "CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.end_ms') END";
 function focusInterval(data: Record<string, unknown>): { start: number; end: number } | null {
   const start = data.start_ms, end = data.end_ms;
   if (typeof start !== 'number' || typeof end !== 'number'
@@ -113,6 +116,8 @@ class TelemetryStore {
         PRIMARY KEY (sn, event_id)
       );
       CREATE INDEX IF NOT EXISTS idx_tel_evt_sn_time ON device_telemetry_event (sn, occurred_at_ms DESC);
+      CREATE INDEX IF NOT EXISTS idx_tel_focus_sn_end ON device_telemetry_event (sn, (${FOCUS_END_SQL}))
+        WHERE type = 'focus_segment' AND json_valid(data_json);
       CREATE TABLE IF NOT EXISTS device_telemetry_daily (
         sn TEXT NOT NULL,
         date TEXT NOT NULL,
@@ -251,12 +256,15 @@ class TelemetryStore {
   private focusSegments(sn: string, from: number, to: number) {
     const rows = this.db.prepare(`SELECT event_id, data_json, occurred_at_ms, server_received_ms
       FROM device_telemetry_event WHERE sn = ? AND type = 'focus_segment'
-      AND CASE WHEN json_valid(data_json) THEN
-        json_extract(data_json, '$.start_ms') < ? AND json_extract(data_json, '$.end_ms') > ?
-        ELSE 0 END
-      ORDER BY server_received_ms, rowid`).all(sn, to, from) as Array<{
+      AND json_valid(data_json)
+      AND (${FOCUS_END_SQL}) > ? AND (${FOCUS_END_SQL}) < ?
+      AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.start_ms') < ? ELSE 0 END
+      ORDER BY server_received_ms, rowid`).all(sn, from, to + DAY_MS, to) as Array<{
         event_id: string; data_json: string; occurred_at_ms: number; server_received_ms: number;
       }>;
+    // A valid segment lasts <= DAY_MS: start < to implies end < to + DAY_MS.
+    // Both end bounds are indexable, including for late historical ingest. JS validation
+    // and first-receipt ordering still decide validity/legacy overlap exactly as before.
     return rows.flatMap(row => {
       const interval = focusInterval(JSON.parse(row.data_json));
       return interval && Number.isSafeInteger(row.occurred_at_ms)

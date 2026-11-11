@@ -1,0 +1,84 @@
+{
+  "scope": "isolated desktop; deterministic 30d focus + 4x posture, no production",
+  "rows": 216000,
+  "fixture_now": 1794369600000,
+  "fixture_sha256": "a003d96ee9c7956560afea553e43f75d3bc216856c4bda411971436bd365f290",
+  "bootstrap_ms": 163.75145900000007,
+  "repeat_bootstrap_ms": 8.28729199999998,
+  "usage": {
+    "samples": 25,
+    "p50_ms": 77.32745900000009,
+    "p95_ms": 104.04670799999985,
+    "max_ms": 119.2885409999999
+  },
+  "preferred_p50_under_50ms": false,
+  "ingest_recent": {
+    "samples": 25,
+    "p50_ms": 0.1849579999998241,
+    "p95_ms": 0.4633750000011787,
+    "max_ms": 1.867792000000918
+  },
+  "ingest_historical": {
+    "samples": 25,
+    "p50_ms": 2.146708000000217,
+    "p95_ms": 3.9685410000001866,
+    "max_ms": 4.034499999999753
+  },
+  "ingest_accepted": {
+    "samples": 25,
+    "p50_ms": 0.822042000001602,
+    "p95_ms": 1.854750000000422,
+    "max_ms": 2.2472080000006827
+  },
+  "sql": "SELECT event_id, data_json, occurred_at_ms, server_received_ms\n      FROM device_telemetry_event WHERE sn = ? AND type = 'focus_segment'\n      AND json_valid(data_json)\n      AND (CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.end_ms') END) > ? AND (CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.end_ms') END) < ?\n      AND CASE WHEN json_valid(data_json) THEN json_extract(data_json, '$.start_ms') < ? ELSE 0 END\n      ORDER BY server_received_ms, rowid",
+  "plans": {
+    "usage": [
+      {
+        "id": 4,
+        "parent": 0,
+        "notused": 48,
+        "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+      },
+      {
+        "id": 34,
+        "parent": 0,
+        "notused": 0,
+        "detail": "USE TEMP B-TREE FOR ORDER BY"
+      }
+    ],
+    "ingest_recent": [
+      {
+        "id": 4,
+        "parent": 0,
+        "notused": 48,
+        "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+      },
+      {
+        "id": 34,
+        "parent": 0,
+        "notused": 0,
+        "detail": "USE TEMP B-TREE FOR ORDER BY"
+      }
+    ],
+    "ingest_historical": [
+      {
+        "id": 4,
+        "parent": 0,
+        "notused": 48,
+        "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+      },
+      {
+        "id": 34,
+        "parent": 0,
+        "notused": 0,
+        "detail": "USE TEMP B-TREE FOR ORDER BY"
+      }
+    ]
+  },
+  "migration": {
+    "rows_unchanged": true,
+    "dirty_json_before_and_after": true,
+    "integrity": "ok"
+  },
+  "db": "/tmp/codeg-acp/7327-ba656de9/mini008-focus-perf-O1fwf7"
+}
