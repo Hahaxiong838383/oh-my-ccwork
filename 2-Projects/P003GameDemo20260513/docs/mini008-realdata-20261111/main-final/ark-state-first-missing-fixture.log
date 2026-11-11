@@ -1,0 +1,43 @@
+✔ identity epoch ignores settings timestamp but catches ABA binding and reactivation (59.6595ms)
+✔ revocation and delete/recreate invalidate already accepted state (40.886416ms)
+✔ absent identity/epoch never falls back to an env or parent account (25.160208ms)
+✔ default closed and disabled gate cannot disclose or accept state (24.494459ms)
+✔ snapshot accepts real zero and unknown separately; current duplicate never renews timestamp (31.454375ms)
+✔ same ID different payload conflicts, superseded sequences remain stale (35.1695ms)
+✔ new boot requires strictly newer boot start, old boot cannot return (33.838417ms)
+✔ future clock, boot after capture, pre-grant capture and captured-time reversal rejected (34.007ms)
+✔ arbitrary text, extra identity, invalid numbers and inconsistent reward shapes are rejected (3.695958ms)
+✔ GM, unknown source, stale and cross-day snapshots never become live countdown (64.094833ms)
+✔ reward kinds and paused/claimable/claimed/complete/unknown remain distinct (46.639791ms)
+✖ versioned Android example conforms to executable v1 schema (1.518333ms)
+✔ one resolved value per asset; newer occurrence wins across sources, equal-time disagreement is unknown (37.736666ms)
+✔ unchanged grants and snapshots survive repeated saves and enrolling another device (39.878666ms)
+✔ single-device authorization cannot revive another rebound device; full settings use CAS (35.804541ms)
+✔ Ark settings migration survives reopening the store (16.64125ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 15
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 577.899292
+
+✖ failing tests:
+
+test at ../../../../../Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-fixed-ac21c2d7/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-state.test.ts:2:7188
+✖ versioned Android example conforms to executable v1 schema (1.518333ms)
+  Error: ENOENT: no such file or directory, open '/Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-fixed-ac21c2d7/2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json'
+      at readFileSync (node:fs:484:20)
+      at TestContext.<anonymous> (/Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-fixed-ac21c2d7/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-state.test.ts:71:91)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    errno: -2,
+    code: 'ENOENT',
+    syscall: 'open',
+    path: '/Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-fixed-ac21c2d7/2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json'
+  }

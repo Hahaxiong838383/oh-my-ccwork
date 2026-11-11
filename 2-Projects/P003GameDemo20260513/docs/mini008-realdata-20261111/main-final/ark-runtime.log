@@ -1,0 +1,16 @@
+✔ ordinary chat and static purposes cause zero identity or internal queries (18.898875ms)
+✔ parent/anonymous/override/feedback/wrong-room cannot read device facts (13.390416ms)
+ark_total_body_timeout_ms=150.60
+✔ query timeout includes body parsing and degrades to unknown within total budget (165.420375ms)
+✔ late rebinding invalidates in-flight facts; malformed or oversized responses fail closed (55.311333ms)
+✔ dynamic turns and their answers cannot reach later/idle extraction windows; normal profile statements remain (3.075792ms)
+✔ multiple short followups retain the game topic; explicit topic switch stops both queries and stale context (0.808042ms)
+✔ audit exclusion metadata survives even when an isolated answer contains no recognizable resource words (0.32975ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 272.769208

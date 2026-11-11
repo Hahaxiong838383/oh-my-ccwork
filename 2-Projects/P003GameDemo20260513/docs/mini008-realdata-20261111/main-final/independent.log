@@ -1,0 +1,19 @@
+PASS empty usage is unavailable/null
+PASS other owner 404
+[telemetry] batch sn=****9991 snap=- acked=1 dup=0 rejected=0 skew=20ms
+PASS events-only accepted and snapshot:null
+PASS CST cross-day 20s/40s and real rounded zero
+[telemetry] batch sn=****9991 snap=- acked=0 dup=1 rejected=0 skew=8ms
+PASS dup retains initial receive timestamp and total
+[telemetry] batch sn=****9991 snap=- acked=0 dup=0 rejected=1 skew=7ms
+PASS same ID changed payload individually rejected
+[telemetry] batch sn=****9991 snap=- acked=1 dup=0 rejected=1 skew=6ms
+PASS bad focus cannot poison valid mixed batch
+[telemetry] batch sn=****9991 snap=ok acked=0 dup=0 rejected=0 skew=7ms
+PASS snapshot time never refreshes usage time
+PASS normal Ark business ACK accepted
+PASS normal assets preserve zero/null and inventory
+PASS authorized unknown accepted, not 403
+PASS unknown current removes previous normal display
+PASS ownership change rejects A; stale grant not exposed to B
+{"pass":13,"fail":0,"tmp":"/tmp/codeg-acp/61972-f98ee95e/mini008-main-audit-Le4uHR"}

@@ -1,0 +1,99 @@
+{
+  "scope": "isolated desktop; deterministic 30d focus + 4x posture, no production",
+  "rows": 216000,
+  "fixture_now": 1794369600000,
+  "fixture_sha256": "a003d96ee9c7956560afea553e43f75d3bc216856c4bda411971436bd365f290",
+  "bootstrap_ms": 34.18041600000015,
+  "repeat_bootstrap_ms": 45.31800000000112,
+  "usage": {
+    "samples": 25,
+    "p50_ms": 360.91670800000065,
+    "p95_ms": 407.5784590000003,
+    "max_ms": 444.29649999999674
+  },
+  "preferred_p50_under_50ms": false,
+  "ingest_recent": {
+    "samples": 25,
+    "p50_ms": 269.1309999999976,
+    "p95_ms": 304.36141599999974,
+    "max_ms": 308.1218329999974
+  },
+  "ingest_historical": {
+    "samples": 25,
+    "p50_ms": 264.94079200000124,
+    "p95_ms": 309.7173330000005,
+    "max_ms": 312.86962499999936
+  },
+  "ingest_accepted": {
+    "samples": 25,
+    "p50_ms": 272.8311670000003,
+    "p95_ms": 309.58437499999854,
+    "max_ms": 394.778250000003
+  },
+  "sql": "SELECT event_id, data_json, occurred_at_ms, server_received_ms\n      FROM device_telemetry_event WHERE sn = ? AND type = 'focus_segment'\n      AND CASE WHEN json_valid(data_json) THEN\n        json_extract(data_json, '$.start_ms') < ? AND json_extract(data_json, '$.end_ms') > ?\n        ELSE 0 END\n      ORDER BY server_received_ms, rowid",
+  "plans": {
+    "usage": [
+      {
+        "id": 4,
+        "parent": 0,
+        "notused": 62,
+        "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_evt_sn_time (sn=?)"
+      },
+      {
+        "id": 38,
+        "parent": 0,
+        "notused": 0,
+        "detail": "USE TEMP B-TREE FOR ORDER BY"
+      }
+    ],
+    "ingest_recent": [
+      {
+        "id": 4,
+        "parent": 0,
+        "notused": 62,
+        "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_evt_sn_time (sn=?)"
+      },
+      {
+        "id": 38,
+        "parent": 0,
+        "notused": 0,
+        "detail": "USE TEMP B-TREE FOR ORDER BY"
+      }
+    ],
+    "ingest_historical": [
+      {
+        "id": 4,
+        "parent": 0,
+        "notused": 62,
+        "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_evt_sn_time (sn=?)"
+      },
+      {
+        "id": 38,
+        "parent": 0,
+        "notused": 0,
+        "detail": "USE TEMP B-TREE FOR ORDER BY"
+      }
+    ]
+  },
+  "migration": {
+    "rows_unchanged": true,
+    "dirty_json_before_and_after": true,
+    "integrity": "ok"
+  },
+  "db": "/tmp/codeg-acp/61972-f98ee95e/mini008-focus-perf-dcFHXM"
+}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: focus lookup must use both end bounds in the index
+    at file:///Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-fixed-ac21c2d7/2-Projects/P003GameDemo20260513/apps/server/scripts/mini008-focus-perf.mts:115:48 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

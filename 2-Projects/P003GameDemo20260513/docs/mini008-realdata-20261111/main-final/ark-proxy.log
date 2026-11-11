@@ -1,0 +1,12 @@
+✔ proxy requires dedicated token and exact scope; returns bounded trusted facts (86.859709ms)
+✔ proxy cannot use remote URLs, unknown subjects, redirects, malformed or oversized responses (2.793916ms)
+✔ proxy total deadline covers slow fetch/body and revocation suppresses in-flight facts (306.53675ms)
+✔ authority deadline includes facts and client rejects elapsed time even before timers run (511.579709ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 925.123667
