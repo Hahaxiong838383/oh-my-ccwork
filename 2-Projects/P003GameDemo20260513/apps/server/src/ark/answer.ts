@@ -14,6 +14,21 @@ export function arkDirectReplyAllowed(auth:Auth,room:string,override=false,feedb
  return !!worker&&auth.accountId===worker&&!!sn&&(process.env.ARK_DIRECT_REPLY_SN_ALLOW??'').split(',').map(s=>s.trim()).includes(sn);
 }
 const uses={family_coin:'家族币用来记录你和家长约好的奖励，具体约定由家长设置，不是平台自动兑换或提现。',stardust:'星尘是给小可换装用的资源，具体能换什么以设备页面为准。',makeup_card:'补勤卡用于符合条件的历史航线节点补签，补签后的奖励还需按设备页面提示领取。'};
+/** Static usage is separate from live-state intent: never inherit a balance or an assistant guess. */
+export function resolveArkUsageQuestion(text:string,history:Turn[]):string|null {
+ const compact=(s:string)=>s.replace(/\s/g,'').replace(/[。？！?!]+$/g,'');
+ const tail=compact(text);
+ if(!/^(?:请问|那|那么)?(?:这个|那个|它|这张卡|那张卡)?(?:有什么用|干什么用|做什么用|怎么用|用途是什么)$/.test(tail))return null;
+ const prior=[...history].reverse().find(t=>t.role==='user')?.content??'';
+ if(!prior||prior.length>120||isOutsideArkQuestion(prior)||/[“”"「」『』]|不要|不想|别聊|别说|另外|顺便|[，,；;]/.test(prior))return null;
+ const names=[...new Set((prior.match(/家族币|星尘|星辰|金币|补勤卡|补签卡/g)??[]).map(s=>s==='补签卡'?'补勤卡':s==='星辰'?'星尘':s))];
+ if(names.length!==1)return null;
+ const resource=names[0]!;
+ const bare=compact(prior).replace(/^(?:(?:请问|我想问一下|我想问|方舟里的|方舟的|小可|我的|这个|那个|这张|那张))+/,'');
+ const knownTopic=/^(?:家族币|星尘|星辰|金币|补勤卡|补签卡)(?:有什么用|干什么用|做什么用|怎么用|用途是什么)?$/.test(bare);
+ if(!knownTopic&&!isArkStateQuestion(prior))return null;
+ return resource+'有什么用';
+}
 function stamp(ms:number,now:number){const d=new Date(ms+8*3600000).toISOString();return (cstDay(ms)===cstDay(now)?'今天':d.slice(0,10))+' '+d.slice(11,19);}
 function cleanFacts(raw:ArkFacts|undefined):ArkFacts|undefined{
  if(!raw)return undefined;const p=resolvedFactsSchema.safeParse({schema_version:raw.schema_version,assets:raw.assets,progress:raw.progress});return p.success?p.data:undefined;
@@ -23,7 +38,7 @@ export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.n
  if(isOutsideArkQuestion(text))return null;
  // Mixed unrelated requests remain ordinary conversation instead of losing a question.
  if(text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|有.*用|用途|还.*多久/.test(part)))return null;
- let q=resolveArkQuestion(text,history)??text;
+ let q=resolveArkUsageQuestion(text,history)??resolveArkQuestion(text,history)??text;
  if(/^(?:家族币|星尘|星辰|补勤卡|补签卡)[。？！?！]*$/.test(text.trim())&&/金币.*(?:有什么用|用途)/.test([...history].reverse().find(t=>t.role==='user')?.content??''))q=text+'有什么用';
  const usage=/(?:有什么用|干什么用|做什么用|怎么用|是什么|用途|能干什么|可以干什么|介绍)/.test(q);
  const state=isArkStateQuestion(q);

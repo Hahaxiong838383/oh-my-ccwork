@@ -42,6 +42,7 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
+import { readBleCredentialStatuses } from '../admin-device-credential-status.js';
 import { requiresBleProof } from '../ble-binding-policy.js';
 import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
@@ -174,9 +175,12 @@ adminDataRoute.get('/devices', (c) => {
     // 绑定家长可视化（2026-08-23）：join 家长账号手机号（admin 内部台，显示全号便于核对；
     // 手机号只出现在 admin 鉴权接口，不进 worker 日志/普通用户接口）
     const now = Date.now();
-    const devices = deviceRegistryStore.list().map((d) => ({
+    const rows = deviceRegistryStore.list();
+    const bleStatuses = readBleCredentialStatuses(rows, now);
+    const devices = rows.map((d) => ({
       ...d,
       ...credentialView(d),
+      ble_status: bleStatuses.get(d.sn) ?? null,
       parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
       preauth: preauthView(pairingStore.getPreauth(d.sn), now),
     }));
@@ -1299,11 +1303,16 @@ adminDataRoute.put('/devices/:sn/style-template', async (c) => {
 // server 只做校验/安全窗口/对撞/记账；env 写入、纪律重启、健康自检与回滚全在脚本内（与热词发布同一套安全网）。
 // key 永不回显（脚本只回 hint/len），也永不从 bench 载荷传（bench 用 64.90 env 里的兜底 key）。
 const RACE_RW_KEYS = [
+  'LLM_FALLBACK_ENABLED', 'LLM_FALLBACK_PROVIDER', 'LLM_FALLBACK_TRIGGER_MS', 'LLM_FALLBACK_DEADLINE_MS',
   'LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_FALLBACK_API_KEY',
   'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS',
 ] as const;
 type RaceRwKey = (typeof RACE_RW_KEYS)[number];
 const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
+  LLM_FALLBACK_ENABLED: /^[01]$/,
+  LLM_FALLBACK_PROVIDER: /^(?:deepseek|volc_plan|volc_coding)$/,
+  LLM_FALLBACK_TRIGGER_MS: /^\d{3,4}$/,
+  LLM_FALLBACK_DEADLINE_MS: /^\d{4,5}$/,
   LLM_FALLBACK_BASE_URL: /^https:\/\/[A-Za-z0-9.-]+(?:\/[A-Za-z0-9._/-]*)?$/,
   LLM_FALLBACK_MODEL: /^[A-Za-z0-9._-]{2,64}$/,
   LLM_FALLBACK_THINKING: /^(?:disabled|enabled|adaptive|off)$/,
@@ -1312,6 +1321,7 @@ const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
   AGENT_INSTRUCTIONS: /^[^\r\n"'`$\\]{0,1200}$/,
 };
 export const RACE_BASE_PRESETS = [
+  { key: 'deepseek', label: 'DeepSeek 官方（默认）', url: 'https://api.deepseek.com/v1' },
   { key: 'agent_plan', label: '火山 agent plan（api/plan/v3）', url: 'https://ark.cn-beijing.volces.com/api/plan/v3' },
   { key: 'coding_plan', label: '火山 coding plan（api/coding/v3）', url: 'https://ark.cn-beijing.volces.com/api/coding/v3' },
 ];
@@ -1343,8 +1353,12 @@ export function validateRaceValues(raw: unknown): { ok: true; values: Partial<Re
       const n = Number(val);
       if (!(n >= 200 && n <= 5000)) return { ok: false, error: 'LLM_RACE_MAIN_GRACE_MS 须在 200~5000' };
     }
+    if (k === 'LLM_FALLBACK_TRIGGER_MS' && !(Number(val)>=500 && Number(val)<=5000)) return {ok:false,error:'触发等待须500~5000ms'};
+    if (k === 'LLM_FALLBACK_DEADLINE_MS' && !(Number(val)>=2500 && Number(val)<=15000)) return {ok:false,error:'总等待须2500~15000ms'};
     values[k as RaceRwKey] = val;
   }
+  if (values.LLM_FALLBACK_TRIGGER_MS && values.LLM_FALLBACK_DEADLINE_MS && Number(values.LLM_FALLBACK_DEADLINE_MS)<Number(values.LLM_FALLBACK_TRIGGER_MS)+2000) return {ok:false,error:'总等待至少比触发等待多2000ms'};
+  // Partial updates are merged and revalidated against the actual Worker file by the publisher.
   if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
   return { ok: true, values };
 }
@@ -1812,7 +1826,7 @@ adminDataRoute.post('/memory/:accountId', async (c) => {
 // 接入容量：LiveKit ListRooms（twirp，jose 手签 admin token）数 sn- 前缀设备房。
 // 两路各自 try-catch 降级为 null，绝不因监控拖垮管理页。
 // 30s 共享缓存(2026-08-27):admin 资源卡改 60s 自动轮询后,多标签页各自轮询会成倍打 ssh——
-// 缓存让并发消费方共享一次采集;至少一台采到才缓存(全失败下个请求重试)。
+// hosts-status.ts 统一管理成功/失败缓存与并发合并，两个页面共享同一轮采集。
 // 2026-09-22 迁 hk2：worker 可多台（WORKER_STATS_SSH_TARGETS，解析在 hosts-status.ts），逐台 try/catch 降级，
 // 老机/新机并存期两台同屏；容量 = 各台 max_jobs 求和。
 type WorkerMachine = {
@@ -1823,11 +1837,7 @@ type WorkerMachine = {
   error: string | null;
   data: Record<string, unknown> | null;
 };
-let workerStatsCache: { data: WorkerMachine[]; ts: number } | null = null;
-const WORKER_STATS_TTL_MS = 30_000;
-
 async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
-  if (workerStatsCache && Date.now() - workerStatsCache.ts < WORKER_STATS_TTL_MS) return workerStatsCache.data;
   const machines = await Promise.all(
     workerTargets().map(async (w): Promise<WorkerMachine> => {
       try {
@@ -1838,7 +1848,6 @@ async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
       }
     }),
   );
-  if (machines.some((m) => m.ok)) workerStatsCache = { data: machines, ts: Date.now() };
   return machines;
 }
 

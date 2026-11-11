@@ -12,6 +12,7 @@ import { inviteAuthRoute } from './routes/invite-auth.js';
 import { smsAuthRoute } from './routes/sms-auth.js';
 import { wechatAuthRoute } from './routes/wechat-auth.js';
 import { bleBindingsRoute } from './routes/ble-bindings.js';
+import { deviceEnrollmentRoute, deviceProvisioningRoute } from './routes/device-enrollments.js';
 import { getBleBindingStore } from './ble-binding-store.js';
 import { feedbackRoute } from './routes/feedback.js';
 import { conversationRoute } from './routes/conversation.js';
@@ -79,6 +80,8 @@ app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);
 // 配网家长侧（联调合同 v3）：token 签发 + H5 轮询
 app.route('/api/parent/pairing', parentPairingRoute);
 app.route('/api/parent/ble-bindings', bleBindingsRoute);
+app.route('/api/parent/device-enrollments', deviceEnrollmentRoute);
+app.route('/v1/device/provisioning', deviceProvisioningRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
 // Default-off independent background jobs; ordinary chat never awaits these requests.

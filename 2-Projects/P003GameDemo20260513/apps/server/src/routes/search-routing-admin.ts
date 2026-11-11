@@ -1,3 +1,4 @@
+import {inspectWeatherPlace,WEATHER_CATALOG_INFO} from '../tools/weather-places.js';
 import {Hono} from 'hono';import {z} from 'zod';
 import {isValidToken,isAdminRole,getTokenUser} from './auth.js';
 import {routingConfigSchema,validateRoutingRegression,type RoutingConfig,type RouteUtterance} from '../tools/search-routing-config.js';
@@ -13,7 +14,7 @@ export function createRoutingAdminRoute(deps:{allowGlobal?:boolean;store:()=>Rou
  const who=(c:any)=>getTokenUser((c.req.header('authorization')||'').replace(/^Bearer\s+/i,''))||'admin';
  app.get('/',c=>c.json({ok:true,...deps.store().state(),all_devices:deps.allowGlobal===true,eligible_sns:deps.scope(),locations:deps.locations?.()??[]}));
  app.put('/draft',async c=>{const v=z.object({expected_revision:revision,config:routingConfigSchema}).strict().parse(await body(c));deps.store().saveDraft(v.config,v.expected_revision,who(c));return c.json({ok:true,...deps.store().state()});});
- app.post('/preview',async c=>{const v=input.parse(await body(c));return c.json(await deps.preview(v.config,v.utterances));});
+ app.post('/preview',async c=>{const v=input.parse(await body(c)),result=await deps.preview(v.config,v.utterances);return c.json({...result,weather_catalog:WEATHER_CATALOG_INFO,decisions:result.decisions.map((d:any)=>d.place_weather?.place?{...d,place_inspection:inspectWeatherPlace(d.place_weather.place)}:d)});});
  app.post('/publish-all',async c=>{
   if(!deps.allowGlobal)return c.json({error:'outside_canary_scope'},403);
   const v=z.object({expected_revision:revision}).strict().parse(await body(c)),state=deps.store().state();

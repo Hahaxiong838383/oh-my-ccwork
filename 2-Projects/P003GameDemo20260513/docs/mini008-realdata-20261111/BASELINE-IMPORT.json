@@ -1,0 +1,162 @@
+{
+  "changed": [
+    {
+      "path": "assets/companion-kg/SOURCE.md",
+      "old": "eeffa9cbece82a90b1b1825ab6f102b2598244faa752277ff2a5dbe3ef09a80a",
+      "current": "a40cd26bd8aef9d48e395e10cca394610318a91c7fb59f9a2fd815efe174821a"
+    },
+    {
+      "path": "package-lock.json",
+      "old": null,
+      "current": "5a8faee611938a153d2c929566cade3833e1325440a9c7cf075af404fa6ac8a2"
+    },
+    {
+      "path": "package.json",
+      "old": "676b0276a7c36f19a8a6c2cb22ae8da793368e3cdd8ed990d81c8a5391813901",
+      "current": "7597bf8b21c93d238a6d8800c45512ea11a6dee66313bfe3669365ff3cbadc3e"
+    },
+    {
+      "path": "src/admin-device-credential-status.ts",
+      "old": null,
+      "current": "bf9e13f722dd0e31dd7ca889b26a4bb54c42196876ef26eedc8efff7e644d3e6"
+    },
+    {
+      "path": "src/ark/answer.ts",
+      "old": "2ba1bd32c27dd933a105767e30e1ac498a19a4928681136c4e2a7bb66841d0a3",
+      "current": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56"
+    },
+    {
+      "path": "src/ble-binding-store.ts",
+      "old": "4c72960343edd4ce6b8752c912ed0df329bfd25d6e04c45a59cbbb7209efad89",
+      "current": "b10d9c3c301d064fca3949cb7f79a21133f5f6852a651458f075047c0ba4c07f"
+    },
+    {
+      "path": "src/config-store.ts",
+      "old": "aa49c2b8171e08e72230ac3157662e70cd96eef3cd50ed58634b929fbe9590cb",
+      "current": "058d0370467e85f621339770fcdf469dbbbad0c4cadecf545247398ba0583c68"
+    },
+    {
+      "path": "src/device-credential.ts",
+      "old": "0d85a49f403ad10cb428fbbd5347838e5522cb69453aac1c5f560b269f4969d4",
+      "current": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038"
+    },
+    {
+      "path": "src/device-enrollment-proof.ts",
+      "old": null,
+      "current": "1fa10facfccd43a793912e3ebf8e00456f984528d2fe60a8083cab3e2c70965e"
+    },
+    {
+      "path": "src/device-enrollment-store.ts",
+      "old": null,
+      "current": "525acf81c66166a82f779e80d8e11d8f5fbe2890f7f27ddce1a5965491e5e3df"
+    },
+    {
+      "path": "src/device-registry-store.ts",
+      "old": "2242517c76fe72502af8a1897507612689bd3804e28766465e2e1b0af8109f63",
+      "current": "eb5a64929b5d386da39034c722b759e201c374207f3d064d73e511d5b6d48a10"
+    },
+    {
+      "path": "src/hosts-status.ts",
+      "old": "fa145a7eebcc344bf025bbf449fdaaebd6665eacb3c4f5b3ef23865ebf2a1239",
+      "current": "309d4d5cd15479546ddd1e67881d9217227652900efa49299c871beccf48b5db"
+    },
+    {
+      "path": "src/index.ts",
+      "old": "cb852a0ca5d2efd9278088facc224d5a5351acd712f7f65cab84b4e665400695",
+      "current": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c"
+    },
+    {
+      "path": "src/ota-store.ts.bak-20260907-113835-pre-release-notes",
+      "old": null,
+      "current": "ca3890dd2da700c947207e6a1e1a6021bfba32ad18f629f5948513f63ce3c546"
+    },
+    {
+      "path": "src/pairing-store.ts",
+      "old": "7606b020b8929bafd778e5ec9b06367d68917c2ba43e242cbaf3521a6628dff3",
+      "current": "2065d85f892b522200079a59066707721e3a9ed48b6db3a1aaa0afb4cb12044b"
+    },
+    {
+      "path": "src/pck-store.ts.bak-20260907-113835-pre-release-notes",
+      "old": null,
+      "current": "a3d75273af6cc4ad1ab9007d509ee6f75a4a86bd15c27161b97f071c674fdacd"
+    },
+    {
+      "path": "src/routes/admin-data.ts",
+      "old": "75b6d07ebadd06b8cbe04147eb1c5383c45fb86fe0b6ab28d70579f9893a6002",
+      "current": "4952479442d143de5da2e790f7412f92c5c12f84770a94d7af95e63a340bb61f"
+    },
+    {
+      "path": "src/routes/admin-data.ts.bak-20260907-111814-pre-announce-claimed",
+      "old": null,
+      "current": "619c1bd7954ee5fc7a0255f2f5197069f7e4709c28b6f5247144f4187b5eaf65"
+    },
+    {
+      "path": "src/routes/ble-bindings.ts",
+      "old": "80a370a2efa43e46c667e3dc2e6b3b95b361600f452e482785e5adb5de44f93a",
+      "current": "6a58a928aecd039d356caf479f6819be0ee2fab1696dfef94398831aab3316ff"
+    },
+    {
+      "path": "src/routes/custom-llm.ts",
+      "old": "cabf67279074a1fb2cab191d28d4774c981f917cc7dfee514018441c0746bc09",
+      "current": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d"
+    },
+    {
+      "path": "src/routes/device-enrollments.ts",
+      "old": null,
+      "current": "3e3fce7517b4909325eb355b14b7325c6e38dc9f2f56e2af5ed275f7f541a912"
+    },
+    {
+      "path": "src/routes/device-session.ts",
+      "old": "6763d2275f935b808e14415482f51103f1ffb449af34ff6508c23e8caf2fe531",
+      "current": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b"
+    },
+    {
+      "path": "src/routes/ota-pck.ts.bak-20260907-113835-pre-release-notes",
+      "old": null,
+      "current": "7edf51504eedcc0e122abad02d4175e84da9847eee5bfacf780938db042cc0b5"
+    },
+    {
+      "path": "src/routes/ota.ts.bak-20260907-113835-pre-release-notes",
+      "old": null,
+      "current": "01c34b5480d249a3afd006487126a33e96c18ead2164fd033fc62109def09b26"
+    },
+    {
+      "path": "src/routes/pairing.ts",
+      "old": "f1bdad9533d8090f8b5e40ff01148cdaec7f2fc272697c5cf14f3a3e9634a34a",
+      "current": "ccb89ef6547d77a87309d05b8818004713829719facbdda467f534e68d1cc8e5"
+    },
+    {
+      "path": "src/routes/pairing.ts.bak-20260907-111814-pre-announce-claimed",
+      "old": null,
+      "current": "c54ef8c4750b7bb2e114f9d23b8c12600e91755ce514f7a7fac400d6a4ddc13d"
+    },
+    {
+      "path": "src/routes/profile.ts",
+      "old": "a6f8536d42ee7907ecb2df15e4455b614279f87789fbf43d07a24a231e335681",
+      "current": "00d70dc5265014e9de95a3420ec96a6df333b07623e25f3d4f33f604f2e92614"
+    },
+    {
+      "path": "src/routes/search-routing-admin.ts",
+      "old": "04601d584d361000808b32e0d550153b3009f8185c24b94a0118efde5d063369",
+      "current": "6c5b38ff9d47602238311493bff8c543eb64a509d106d4b23b531dc3eb4699ab"
+    },
+    {
+      "path": "src/tools/weather-places.ts",
+      "old": "466772a5cf52e96e51a0ec01f9c62974e1f2c04d0097475724da23265749dbeb",
+      "current": "31549c3c36450b77caa377d20d900300df5a34b21affa8bfa69b600492f28f3a"
+    }
+  ],
+  "removed_non_current_src": [
+    "src/search-canary-main.ts",
+    "src/search-canary-guard.ts",
+    "src/tools/search-simple-fallback.ts",
+    "src/tools/search-source-scope.ts",
+    "src/tools/amap-weather.ts",
+    "src/economy-shadow/report.ts",
+    "src/economy-shadow/source.ts",
+    "src/economy-shadow/source-worker.ts",
+    "src/economy-shadow/evaluate.ts",
+    "src/economy-shadow/contracts.ts",
+    "src/economy-shadow/store.ts"
+  ]
+}

@@ -1,7 +1,9 @@
 import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
 export type WeatherPlace={province:string;city:string;name:string;station:string;label:string;query:string};
 type Row=[string,string,string,string,string[]];
-const catalog=JSON.parse(readFileSync(new URL('./weather-places.json',import.meta.url),'utf8')) as {places:Row[]};
+const catalogBytes=readFileSync(new URL('./weather-places.json',import.meta.url));
+const catalog=JSON.parse(catalogBytes.toString('utf8')) as {places:Row[];retrieved_at?:string};
 const provinces:Record<string,string>={北京:'北京市',上海:'上海市',天津:'天津市',重庆:'重庆市',内蒙古:'内蒙古自治区',广西:'广西壮族自治区',宁夏:'宁夏回族自治区',新疆:'新疆维吾尔自治区',西藏:'西藏自治区',香港:'香港特别行政区',澳门:'澳门特别行政区'};
 const places=new Map<string,WeatherPlace>(),aliases=new Map<string,Set<string>>();
 const join=(...parts:string[])=>parts.filter((x,i)=>x&&x!==parts[i-1]).join('');
@@ -14,10 +16,15 @@ for(const [province,city,name,station,cityAliases] of catalog.places){
  for(const n of ns){add(n,station);for(const p of ps)add(p+n,station);for(const c of cs){add(c+n,station);for(const p of ps)add(p+c+n,station);}}
 }
 export const WEATHER_PLACE_COUNT=places.size;
-export function resolveWeatherPlace(raw:string,context?:{province?:string}):WeatherPlace {
- if(!/^[\u4e00-\u9fff]{1,40}$/.test(raw))throw new Error('weather_place_invalid');
+export const WEATHER_CATALOG_INFO=Object.freeze({sha256:createHash('sha256').update(catalogBytes).digest('hex'),count:places.size});
+export function inspectWeatherPlace(raw:string,context?:{province?:string}):{status:'unique'|'ambiguous'|'unknown'|'invalid';candidates:WeatherPlace[]} {
+ if(typeof raw!=='string'||!/^[\u4e00-\u9fff]{1,40}$/.test(raw))return {status:'invalid',candidates:[]};
  let candidates=[...(aliases.get(raw)??[])].map(id=>places.get(id)!);
  if(candidates.length>1&&context?.province){const local=candidates.filter(p=>context.province===p.province||context.province===(provinces[p.province]??p.province+'省'));if(local.length)candidates=local;}
- if(candidates.length!==1)throw new Error(candidates.length?'weather_place_ambiguous':'weather_place_unknown');
- return {...candidates[0]};
+ return {status:candidates.length===1?'unique':candidates.length?'ambiguous':'unknown',candidates:candidates.map(p=>({...p}))};
+}
+export function resolveWeatherPlace(raw:string,context?:{province?:string}):WeatherPlace {
+ const result=inspectWeatherPlace(raw,context);
+ if(result.status!=='unique')throw new Error('weather_place_'+result.status);
+ return result.candidates[0];
 }

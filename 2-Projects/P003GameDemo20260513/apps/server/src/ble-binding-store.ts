@@ -246,9 +246,11 @@ export class BleBindingStore {
       return result;
     });
   }
-  markActivated(sn: string, version: number): void {
+  markActivated(sn: string, version: number, bindingId?: string): void {
+    // Historic credentials remain usable, but do not prove authentication for a new receipt.
+    if (!validBleId(bindingId)) return;
     this.transaction(() => {
-      const row = this.db.prepare('SELECT * FROM ble_binding_receipt WHERE sn=? AND binding_version=? AND revoked_at_ms IS NULL ORDER BY bound_at_ms DESC LIMIT 1').get(sn, version) as BleBindingRecord | undefined;
+      const row = this.db.prepare('SELECT * FROM ble_binding_receipt WHERE binding_id=? AND sn=? AND binding_version=? AND revoked_at_ms IS NULL').get(bindingId, sn, version) as BleBindingRecord | undefined;
       if (!row || row.claimed_at_ms === null) return;
       try { this.assertCurrent(row); } catch (error) { if (error instanceof BleBindingError) return; throw error; }
       this.db.prepare('UPDATE ble_binding_receipt SET activated_at_ms=COALESCE(activated_at_ms,?) WHERE binding_id=?').run(this.now(), row.binding_id);

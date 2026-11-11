@@ -14,27 +14,17 @@
     "test:exit": "tsx scripts/exit-intent.test.ts",
     "test:onboarding": "tsx scripts/onboarding-extractor.test.ts",
     "test:sms": "NODE_OPTIONS=--experimental-sqlite tsx scripts/sms-auth.test.ts",
-    "test:sms-login": "node --experimental-sqlite --import tsx scripts/sms-auth.test.ts && node --experimental-sqlite --import tsx scripts/sms-login-hardening.test.ts && node --experimental-sqlite --import tsx scripts/sms-login-http.test.ts && node --experimental-sqlite --import tsx scripts/spug-transport.test.ts",
     "test:ota": "NODE_OPTIONS=--experimental-sqlite tsx scripts/ota.test.ts",
     "test:device-config": "NODE_OPTIONS=--experimental-sqlite tsx scripts/device-config.test.ts",
     "test:pairing": "NODE_OPTIONS=--experimental-sqlite tsx scripts/pairing.test.ts",
     "test:interests": "NODE_OPTIONS=--experimental-sqlite tsx scripts/interests.test.ts",
     "test:telemetry": "NODE_OPTIONS=--experimental-sqlite tsx scripts/telemetry.test.ts",
     "test:persona": "NODE_OPTIONS=--experimental-sqlite tsx scripts/persona-state.test.ts",
-    "test:local-audio-release": "node --experimental-sqlite --import tsx scripts/local-audio-release.test.ts",
-    "test:local-audio-concurrency": "node --experimental-sqlite --import tsx scripts/local-audio-concurrency.test.ts",
-    "test:local-audio-integrity": "node --experimental-sqlite --import tsx scripts/local-audio-integrity.test.ts",
     "test:local-audio": "NODE_OPTIONS=--experimental-sqlite tsx scripts/local-audio.test.ts",
     "test:memory-extract": "NODE_OPTIONS=--experimental-sqlite tsx scripts/memory-extract.test.ts",
     "start:analytics": "node --experimental-sqlite --import tsx src/analytics/index.ts",
     "test:analytics": "node --experimental-sqlite --import tsx scripts/analytics-auth-config.test.ts && node --experimental-sqlite --import tsx scripts/analytics-registry.test.ts && node --experimental-sqlite --import tsx scripts/analytics-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-http.test.ts && node --experimental-sqlite --import tsx scripts/analytics-ops.test.ts && node --experimental-sqlite --import tsx scripts/analytics-query.test.ts && node --experimental-sqlite --import tsx scripts/analytics-structure.test.ts && node --experimental-sqlite --import tsx scripts/analytics-maintenance.test.ts && node --experimental-sqlite --import tsx scripts/analytics-checkpoint.test.ts && node --experimental-sqlite --import tsx scripts/analytics-admin-auth.test.ts",
-    "test:analytics-capacity": "node --experimental-sqlite --import tsx scripts/analytics-load-accounting.test.ts && node --experimental-sqlite --import tsx scripts/analytics-fact-layout.test.ts && node --experimental-sqlite --import tsx scripts/analytics-prune.test.ts && node --experimental-sqlite --import tsx scripts/analytics-writer.test.ts && node --experimental-sqlite --import tsx scripts/analytics-writer-http.test.ts",
-    "analytics:fact-layout": "node --experimental-sqlite --import tsx scripts/analytics-fact-layout.ts",
-    "analytics:rollup": "node --experimental-sqlite --import tsx scripts/analytics-rollup.ts",
-    "test:ark": "node --experimental-sqlite --import tsx scripts/ark-knowledge.test.ts && node --experimental-sqlite --import tsx scripts/ark-state.test.ts && node --experimental-sqlite --import tsx scripts/ark-history.test.ts && node --experimental-sqlite --import tsx scripts/ark-runtime.test.ts && node --experimental-sqlite --import tsx scripts/ark-http-sse.test.ts && node --experimental-sqlite --import tsx scripts/ark-proxy.test.ts && node --experimental-sqlite --import tsx scripts/ark-proxy-service.test.ts",
-    "test:analytics-control": "node --experimental-sqlite --import tsx scripts/analytics-policy.test.ts && node --experimental-sqlite --import tsx scripts/analytics-control-route.test.ts",
-    "test:economy-shadow": "node --experimental-sqlite --import tsx scripts/economy-shadow.test.ts && node --experimental-sqlite --import tsx scripts/economy-shadow-storage.test.ts",
-    "test:analytics-v375": "node --experimental-sqlite --import tsx scripts/analytics-gzip.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-contract.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-settings.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-retention.test.ts && node --experimental-sqlite --import tsx scripts/analytics-v375-http.test.ts"
+    "analytics:rollup": "node --experimental-sqlite --import tsx scripts/analytics-rollup.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",
@@ -45,7 +35,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "25.9.3",
     "@types/ws": "^8.5.10",
     "tsx": "^4.21.0",
     "typescript": "^5.4.5"
