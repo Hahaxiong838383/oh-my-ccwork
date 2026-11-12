@@ -1,0 +1,72 @@
+{
+  "at_ms": 1794442168695,
+  "files": {
+    "src/routes/telemetry.ts": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+    "src/telemetry-store.ts": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+    "src/ark/dashboard.ts": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+    "src/ark/routes.ts": "4a741aefd50a885815505ac445911d70b27b41bfcf29d61534eacafae344b9e6",
+    "src/ark/service.ts": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+    "src/index.ts": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+    "package.json": "7597bf8b21c93d238a6d8800c45512ea11a6dee66313bfe3669365ff3cbadc3e",
+    "package-lock.json": "5a8faee611938a153d2c929566cade3833e1325440a9c7cf075af404fa6ac8a2",
+    ".env.local": "5f25d6c874136165e74590d470a94d4e14a8add6bc0c7e02cc131611e7759d0b"
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 1503323,
+      "status": "online",
+      "restarts": 63,
+      "cwd": "/opt/p003/server"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 196818,
+      "status": "online",
+      "restarts": 11,
+      "cwd": "/opt/p003/server"
+    }
+  ],
+  "ark": {
+    "settings": [
+      {
+        "id": 1,
+        "enabled": 1,
+        "revision": 4
+      }
+    ],
+    "scope_tails": [
+      "00100004",
+      "00100010",
+      "00000002",
+      "03800006",
+      "00000001",
+      "04800006",
+      "01700006",
+      "02000002",
+      "00800010",
+      "00200003",
+      "02000004",
+      "02000020",
+      "02000025",
+      "02000053",
+      "02000026",
+      "02000038",
+      "02000031"
+    ],
+    "grants_sha256": "0bf9c88e9db04e5016a154f15d2c1b4adf5550f768d0c58cbf54f807fa3337a4",
+    "c_grant": true
+  },
+  "c": {
+    "registry_sha256": "c571708545584c8ee39d37fb363fda077842b57854c35bdca052a1bf38c74d6a",
+    "active": true,
+    "public_id": "dev_50b5415662259045",
+    "epoch": 2,
+    "has_owner": true,
+    "focus_count": 0
+  },
+  "analytics_config_sha256": "5812506cf7563dfaf87c713604692c587221914adc367b15a11733160ca29250",
+  "telemetry_counts": {
+    "events": 8648
+  }
+}

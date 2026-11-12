@@ -1,0 +1,38 @@
+ISOLATED_EVIDENCE_DIR=/tmp/mini008-http-ZilgqQ
+[telemetry] batch sn=****0001 snap=ok acked=2 dup=0 rejected=0 skew=80ms
+[32m✔ no focus: posture/presence/snapshot preserve old fields but never invent usage zero [90m(153.036916ms)[39m[39m
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=0 skew=7ms
+[telemetry] batch sn=****0003 snap=- acked=0 dup=1 rejected=0 skew=6ms
+[telemetry] batch sn=****0003 snap=- acked=1 dup=0 rejected=1 skew=5ms
+[32m✔ HTTP focus ACK -> SQLite -> dashboard; replay/conflict never recount or renew [90m(67.8995ms)[39m[39m
+[telemetry] batch sn=****0007 snap=- acked=1 dup=0 rejected=0 skew=6ms
+[telemetry] batch sn=****0007 snap=ok acked=0 dup=0 rejected=0 skew=6ms
+[32m✔ late cross-CST-midnight splits milliseconds; short round0 available; heartbeat cannot renew usage [90m(37.082917ms)[39m[39m
+[telemetry] batch sn=****0010 snap=- acked=1 dup=0 rejected=9 skew=5ms
+[32m✔ invalid focus shape/time individually rejected while unrelated events remain accepted [90m(18.365ms)[39m[39m
+[telemetry] batch sn=****0012 snap=- acked=3 dup=0 rejected=1 skew=3ms
+[32m✔ different-ID overlap rejected; adjacent and out-of-order disjoint segments count [90m(18.692167ms)[39m[39m
+[32m✔ legacy malformed/overlapping raw focus and old daily numbers cannot inflate usage [90m(10.126833ms)[39m[39m
+[32m✔ normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves first receive [90m(79.079542ms)[39m[39m
+[32m✔ GM/unknown latest snapshot hides resources and metadata even after normal [90m(101.170083ms)[39m[39m
+[32m✔ two owners get reciprocal 404; ownership change cannot expose previous-epoch assets [90m(41.7125ms)[39m[39m
+[32m✔ disabled/epoch/account-role/grant/scope/master invalidation hides Ark assets [90m(93.697042ms)[39m[39m
+[32m✔ authorized but missing snapshot stays empty; another device cannot fill it [90m(19.796334ms)[39m[39m
+[telemetry] batch sn=****0028 snap=- acked=1 dup=0 rejected=0 skew=4ms
+[32m✔ late event updates historical day only; exact midnight end never marks next day [90m(17.939583ms)[39m[39m
+[telemetry] batch sn=****0030 snap=ok acked=0 dup=0 rejected=0 skew=4ms
+[32m✔ snapshot-only focus_active and HTTP auth/timezone errors preserve contract [90m(30.928917ms)[39m[39m
+[telemetry] batch sn=****0032 snap=- acked=1 dup=0 rejected=0 skew=4ms
+[telemetry] batch sn=****0032 snap=- acked=1 dup=0 rejected=0 skew=6ms
+[telemetry] batch sn=****0032 snap=- acked=0 dup=1 rejected=0 skew=4ms
+[32m✔ later received disjoint segment updates usage; replay of earlier receipt cannot replace it [90m(49.986083ms)[39m[39m
+[32m✔ normal assets do not expire at countdown 30s threshold, and brain-account replacement invalidates them [90m(30.868166ms)[39m[39m
+[32m✔ invalid-only legacy focus plus posture daily row remains unavailable and is not rewritten [90m(11.528333ms)[39m[39m
+[34mℹ tests 16[39m
+[34mℹ suites 0[39m
+[34mℹ pass 16[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 797.489875[39m

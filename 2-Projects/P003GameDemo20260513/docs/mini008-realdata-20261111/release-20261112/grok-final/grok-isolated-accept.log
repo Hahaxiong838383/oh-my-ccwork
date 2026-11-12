@@ -1,0 +1,47 @@
+PASS DASH-OLD
+PASS CONTRACT-ARK
+PASS CONTRACT-USAGE
+PASS USE-EMPTY
+PASS USE-OLD-ZERO
+PASS DASH-TZ
+PASS PARENT-B-404
+[telemetry] batch sn=****0002 snap=ok acked=0 dup=0 rejected=0 skew=9ms
+PASS TEL-SEP-1-ACK
+PASS TEL-SEP-1
+[telemetry] batch sn=****0002 snap=- acked=1 dup=0 rejected=0 skew=2ms
+PASS TEL-SEP-2-ACK
+PASS TEL-SEP-2
+[telemetry] batch sn=****0002 snap=- acked=1 dup=0 rejected=0 skew=5ms
+PASS USE-POSTURE-ACK
+PASS USE-POSTURE
+[telemetry] batch sn=****0002 snap=- acked=1 dup=0 rejected=0 skew=1ms
+PASS TEL-ACK-1
+PASS USE-SHORT0
+PASS USE-7DAYS
+PASS USE-DUP-TIME-FIRST
+[telemetry] batch sn=****0002 snap=- acked=0 dup=1 rejected=0 skew=1ms
+PASS TEL-IDEM-1
+PASS USE-DUP-TIME
+[telemetry] batch sn=****0002 snap=- acked=0 dup=0 rejected=1 skew=1ms
+PASS TEL-IDEM-2
+PASS USE-CONFLICT
+[telemetry] batch sn=****0002 snap=ok acked=1 dup=0 rejected=0 skew=1ms
+PASS TEL-ACK-2
+[telemetry] batch sn=****0002 snap=ok acked=0 dup=0 rejected=0 skew=2ms
+PASS TEL-SEP-3-SNAP
+PASS TEL-SEP-3
+[telemetry] batch sn=****0001 snap=- acked=0 dup=0 rejected=3 skew=2ms
+PASS USE-ILLEGAL-HTTP
+PASS USE-ILLEGAL
+[telemetry] batch sn=****0001 snap=- acked=1 dup=0 rejected=0 skew=23ms
+PASS USE-CROSS-ACK
+PASS USE-CROSS
+PASS ARK-NONE
+PASS ARK-NOSNAP
+PASS ARK-UNKNOWN
+PASS ARK-GM
+PASS ARK-NORMAL
+PASS ARK-EPOCH-BEFORE
+PASS ARK-EPOCH
+PASS ARK-ISOLATION
+{"verdict":"PASS","pass":36,"fail":0,"incomplete":false,"out":"/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/GROK-ISOLATED.json"}

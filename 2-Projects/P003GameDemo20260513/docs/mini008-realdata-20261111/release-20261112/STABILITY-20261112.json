@@ -1,0 +1,39 @@
+{
+  "at_ms": 1794442341212,
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 1503323,
+      "status": "online",
+      "restarts": 63,
+      "started_at_ms": 1794442154513
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 196818,
+      "status": "online",
+      "restarts": 11,
+      "started_at_ms": 1793870436043
+    }
+  ],
+  "focus_index_present": true,
+  "index_sql_sha256": "15e59e9152f18f806ba033d6f41a81a668ea81cf3f4da1d41a9cfc04cfe8254f",
+  "telemetry_integrity": "ok",
+  "C": {
+    "latest_status": {
+      "snapshot_id": "snap_cec4b6fe-6a1f-4be6-a3c5-9b9451e74f39",
+      "captured_at_ms": 1794441949322,
+      "server_received_ms": 1794441952020
+    },
+    "focus_count": 0,
+    "ark_current": null
+  },
+  "public_dashboard_without_token": {
+    "http": 401,
+    "body": {
+      "ok": false,
+      "error": "unauthorized"
+    }
+  },
+  "no_real_parent_token_get_claimed": true
+}

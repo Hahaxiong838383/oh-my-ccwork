@@ -1,0 +1,58 @@
+{
+  "status": "DEPLOYED_AND_C_AUTHORIZED",
+  "at_ms": 1794442156327,
+  "candidate": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "backup": "/opt/p003/server/backups/mini008-20261112T000913Z",
+  "files": [
+    {
+      "path": "src/routes/telemetry.ts",
+      "before_sha256": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+      "after_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181"
+    },
+    {
+      "path": "src/telemetry-store.ts",
+      "before_sha256": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+      "after_sha256": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd"
+    },
+    {
+      "path": "src/ark/dashboard.ts",
+      "before_sha256": null,
+      "after_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d"
+    }
+  ],
+  "env_after_sha256": "5f25d6c874136165e74590d470a94d4e14a8add6bc0c7e02cc131611e7759d0b",
+  "C": {
+    "public_id": "dev_50b5415662259045",
+    "epoch": 2,
+    "authorized_at_ms": 1794442156182,
+    "original_owner_preserved": true,
+    "scope_increment_only": true
+  },
+  "ark_settings": {
+    "id": 1,
+    "enabled": 1,
+    "revision": 4
+  },
+  "other_grants_preserved": true,
+  "analytics_config_preserved": true,
+  "admin_ack": {
+    "http_status": 200,
+    "ok": true,
+    "authorized": true
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 1503323,
+      "status": "online",
+      "restarts": 63
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 196818,
+      "status": "online",
+      "restarts": 11
+    }
+  ],
+  "health": true
+}

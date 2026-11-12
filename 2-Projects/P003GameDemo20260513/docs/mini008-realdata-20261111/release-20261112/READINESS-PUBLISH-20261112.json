@@ -1,0 +1,46 @@
+{
+  "admin_login_ok": true,
+  "ark": {
+    "http": 200,
+    "ok": true,
+    "enabled": true,
+    "revision": 3,
+    "scope_tails": [
+      "00100004",
+      "00100010",
+      "00000002",
+      "03800006",
+      "00000001",
+      "04800006",
+      "01700006",
+      "02000002",
+      "00800010",
+      "00200003",
+      "02000004",
+      "02000020",
+      "02000025",
+      "02000053",
+      "02000026",
+      "02000038"
+    ],
+    "c_grant": false
+  },
+  "worker_stats": {
+    "http": 200,
+    "ok": true,
+    "rooms": {
+      "device_rooms": 0,
+      "total_rooms": 0
+    },
+    "capacity": {
+      "active_total": 0,
+      "max_jobs": 20
+    }
+  },
+  "at_ms": 1794442139753,
+  "memory": "total        used        free      shared  buff/cache   available\nMem:            3499        1305         444          13        2042        2193\nSwap:              0           0           0",
+  "health": {
+    "status": 200,
+    "ok": true
+  }
+}

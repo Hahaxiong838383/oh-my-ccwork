@@ -1,0 +1,157 @@
+{
+  "status": "ISOLATED_PASS_SINGLE_C_INTERNAL_READY",
+  "reviewer": "grok",
+  "at": "2026-11-12T08:07:58+08:00",
+  "candidate_sha": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "implementation_sha": "08567549f8f49daff7377ddf0c817c8609956bdb",
+  "documentation_head": "a760634f655187c0e33c754f73c781e8238f4c07",
+  "baseline_sha": "36f18f55b31c07472b480add33152390b3899032",
+  "old_candidate_b042_not_current": "b0426e1e86175f29d439fd601caf766024be26e0",
+  "production_deployed": false,
+  "C_scope_or_grant_changed": false,
+  "real_device_passed": false,
+  "preferred_p50_under_50ms": false,
+  "production_low_latency_claimed": false,
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0"
+  },
+  "source": {
+    "method": "git archive ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84 -- 2-Projects/P003GameDemo20260513/apps/server",
+    "archive_dir": "/tmp/grok-final-ac21-smc82mqr",
+    "files": [
+      {
+        "path": "src/routes/telemetry.ts",
+        "before_sha256": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+        "after_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+        "bytes": 14543,
+        "action": "replace"
+      },
+      {
+        "path": "src/telemetry-store.ts",
+        "before_sha256": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+        "after_sha256": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+        "bytes": 15466,
+        "action": "replace"
+      },
+      {
+        "path": "src/ark/dashboard.ts",
+        "before_sha256": null,
+        "after_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+        "bytes": 1988,
+        "action": "add"
+      }
+    ],
+    "head_src_identical_to_candidate": true,
+    "candidate_tar_sha256": "43f5ef1bc166a8bd1b8c1c96b84a78c6451e1859a4281563c8e203c4ec4c2720",
+    "rollback_tar_sha256": "477bb49e68c7c626685a97d08fcb420230fdf8066288beb9b5113944d973471b",
+    "over_engineering": []
+  },
+  "commands": [
+    "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import <archive>/node_modules/tsx/dist/loader.mjs <archive>/scripts/mini008-dashboard.test.ts",
+    "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import <loader> <archive>/scripts/telemetry.test.ts",
+    "GROK_SERVER_ROOT=<archive> GROK_OUT_DIR=.../grok-final /Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import <loader> grok-isolated-accept.ts",
+    "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import <loader> grok-final-index.mts",
+    "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import <loader> grok-final-baseline-child.mts"
+  ],
+  "tests": {
+    "this_session": {
+      "mini008_dashboard_http_sqlite": {
+        "pass": 16,
+        "fail": 0,
+        "exit": 0,
+        "log_sha256": "199b6a2dcc3609b183d48bce40a33749f083aa015c1474fe3fb91be86d0f03db"
+      },
+      "legacy_telemetry": {
+        "pass": 37,
+        "fail": 0,
+        "exit": 0,
+        "log_sha256": "d7d7bdc86baf85691fc7b794fcac3c56336924b4567f3b2523d33591e1163809"
+      },
+      "grok_isolated_matrix_on_fixed_sha": {
+        "pass": 36,
+        "fail": 0,
+        "exit": 0,
+        "log_sha256": "a2984d3dd74f80ef82824f7ad5ef5a929ad1fbfb8280e946c50d5ad89cb5fb70",
+        "json_sha256": "2886f61224c7704697dc2cad3dc2b0b251e638a0887ae9bf75f5bdd89869c312"
+      },
+      "index_queryplan": {
+        "exit": 0,
+        "plan_uses_both_end_bounds": true,
+        "log_sha256": "fa45b401f2b1722f07a6060d6aeb50fb28516c8171e9cc5601fd012903999ecb"
+      },
+      "index_rollback_keep_index": {
+        "exit": 0,
+        "retained_index": true,
+        "event_count_after_baseline_write": 4,
+        "integrity": "ok",
+        "log_sha256": "b48e3e61e8b3484547d8a16e8271efdd011bd73390e0e18deb167d2b8f0929a1",
+        "verify_sha256": "50fa565d9fb2de2203cdaa2016a348efdb82e1501a573ae937365d77e7d6623a"
+      }
+    },
+    "not_rerun_this_session": {
+      "brain_node22_isolated": {
+        "node": "v22.22.2",
+        "tests": 93,
+        "source": "NODE22-FINAL.json",
+        "sha256": "d277152743c647128db8ac99180135ea8733bc7f793efbe9a3fb940eac7b5178",
+        "ark_history_under_node22_failed_11_preserved": true
+      },
+      "analytics_node24_history": {
+        "node": "v24.19.0",
+        "tests": 11,
+        "source": "ANALYTICS-NODE24-FINAL.json",
+        "sha256": "91f57d8de2884203a12125bf88697db478733ab50844ab0d4d9c456715b8d8ad"
+      },
+      "stage1_unfrozen_36": "GROK-STAGE-1.md; unfrozen working copy; not this verdict"
+    }
+  },
+  "gates": {
+    "owner_epoch_grant_scope": "PASS",
+    "normal_null_zero": "PASS",
+    "usage_available_vs_null": "PASS",
+    "cross_day": "PASS",
+    "idempotency_first_receipt": "PASS",
+    "overlap_reject": "PASS",
+    "new_index_rollback_keep": "PASS"
+  },
+  "performance": {
+    "recaptured_216000": false,
+    "scope": "desktop isolated same deterministic 216000-row fixture; not production budget",
+    "source": "main-final/candidate-ac21.json",
+    "source_sha256": "be204bb998dcd18d01b0e9a221b82da49fccb0d889c4df36247041c1080e50ca",
+    "baseline_usage_p50_ms": 360.91670800000065,
+    "candidate_usage_p50_ms": 126.54762500000106,
+    "candidate_new_ingest_p50_ms": 1.3726669999996375,
+    "preferred_p50_under_50ms": false,
+    "this_session_query_plan": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)",
+    "production_low_latency": "NOT_CLAIMED"
+  },
+  "minimal_real_accept_boundary": [
+    "isolated loopback HTTP + temp SQLite only",
+    "synthetic JWT/SN/grant; no production token, SMS, owner, epoch, grant, scope, Analytics, or DB wipe",
+    "three business files only vs baseline 36f18f55",
+    "C 02000031 still closed; unknown/null empty-state only until main13 opens grant",
+    "T03 real presence usage and T04 normal assets remain for real device",
+    "parent public GET and miniprogram page unverified"
+  ],
+  "verdict": {
+    "isolated_server": "PASS",
+    "single_C_internal_release": "READY_WITH_CONDITIONS",
+    "conditions": [
+      "main13 is the only publisher",
+      "deploy exactly the three after SHA files; dashboard.ts must not already exist; before SHA must match",
+      "additive idx_tel_focus_sn_end; rollback keeps index; do not restore whole DB",
+      "open C scope/grant after code reload; keep epoch2/owner; do not send SMS or mint parent token here",
+      "do not claim production low-latency or p50<50ms",
+      "real-device T01-T06 remain after server ready"
+    ],
+    "blockers": []
+  },
+  "evidence_dir": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final",
+  "report": {
+    "md": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/GROK-FINAL.md",
+    "json": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/GROK-FINAL.json"
+  },
+  "report_md_sha256": "3eda946e849a9309faaf4ef4f6e7d0b6fd90038a36c5394852592a1ba2cf7c11"
+}

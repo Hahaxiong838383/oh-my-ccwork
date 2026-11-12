@@ -1,0 +1,608 @@
+{
+  "runner": "grok-isolated-accept.ts",
+  "tmp": "/tmp/grok-mini008-YZCj8d",
+  "today": "2026-11-12",
+  "pass": 36,
+  "fail": 0,
+  "incomplete": false,
+  "verdict": "PASS",
+  "results": [
+    {
+      "id": "DASH-OLD",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "keys": [
+          "ark",
+          "usage",
+          "device",
+          "today",
+          "week",
+          "availability"
+        ]
+      }
+    },
+    {
+      "id": "CONTRACT-ARK",
+      "ok": true,
+      "detail": {
+        "has_ark": true
+      }
+    },
+    {
+      "id": "CONTRACT-USAGE",
+      "ok": true,
+      "detail": {
+        "has_usage": true
+      }
+    },
+    {
+      "id": "USE-EMPTY",
+      "ok": true,
+      "detail": {
+        "usage": {
+          "source": "telemetry.focus_segment",
+          "timezone": "Asia/Shanghai",
+          "today": {
+            "date": "2026-11-12",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          "daily": [
+            {
+              "date": "2026-11-06",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            },
+            {
+              "date": "2026-11-07",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            },
+            {
+              "date": "2026-11-08",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            },
+            {
+              "date": "2026-11-09",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            },
+            {
+              "date": "2026-11-10",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            },
+            {
+              "date": "2026-11-11",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            },
+            {
+              "date": "2026-11-12",
+              "available": false,
+              "focus_minutes": null,
+              "updated_at_ms": null
+            }
+          ]
+        },
+        "today_old": {
+          "focus_minutes": 0,
+          "guarded_minutes": 0,
+          "posture_alert_count": 0
+        }
+      }
+    },
+    {
+      "id": "USE-OLD-ZERO",
+      "ok": true,
+      "detail": {
+        "focus_minutes": 0,
+        "guarded_minutes": 0,
+        "posture_alert_count": 0
+      }
+    },
+    {
+      "id": "DASH-TZ",
+      "ok": true,
+      "detail": {
+        "status": 400,
+        "error": "invalid_timezone"
+      }
+    },
+    {
+      "id": "PARENT-B-404",
+      "ok": true,
+      "detail": {
+        "status": 404,
+        "json": {
+          "ok": false,
+          "error": "not_found"
+        }
+      }
+    },
+    {
+      "id": "TEL-SEP-1-ACK",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "data": {
+          "batch_id": "grok-1b6b7267989b6",
+          "snapshot": {
+            "accepted": true,
+            "duplicated": false
+          },
+          "acked_event_ids": [],
+          "duplicated_event_ids": [],
+          "rejected": [],
+          "server_received_ms": 1794441990813
+        }
+      }
+    },
+    {
+      "id": "TEL-SEP-1",
+      "ok": true,
+      "detail": {
+        "device": {
+          "updated_at_ms": 1794441990813,
+          "online": true,
+          "lid_open": true,
+          "present": true,
+          "brightness_level": 2,
+          "color_mode": "warm",
+          "image_distance_m": 2,
+          "image_distance_state": "valid"
+        },
+        "usage": {
+          "date": "2026-11-12",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        }
+      }
+    },
+    {
+      "id": "TEL-SEP-2-ACK",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-0b21caccb5e038",
+        "snapshot": null,
+        "acked_event_ids": [
+          "pres-1"
+        ],
+        "duplicated_event_ids": [],
+        "rejected": [],
+        "server_received_ms": 1794441990819
+      }
+    },
+    {
+      "id": "TEL-SEP-2",
+      "ok": true,
+      "detail": {
+        "date": "2026-11-12",
+        "available": false,
+        "focus_minutes": null,
+        "updated_at_ms": null
+      }
+    },
+    {
+      "id": "USE-POSTURE-ACK",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-ba68d75444cfb",
+        "snapshot": null,
+        "acked_event_ids": [
+          "posture-1"
+        ],
+        "duplicated_event_ids": [],
+        "rejected": [],
+        "server_received_ms": 1794441990828
+      }
+    },
+    {
+      "id": "USE-POSTURE",
+      "ok": true,
+      "detail": {
+        "usage": {
+          "date": "2026-11-12",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        "today": {
+          "focus_minutes": 0,
+          "guarded_minutes": 0,
+          "posture_alert_count": 0
+        }
+      }
+    },
+    {
+      "id": "TEL-ACK-1",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-f67b0c8e649338",
+        "snapshot": null,
+        "acked_event_ids": [
+          "focus-short-20"
+        ],
+        "duplicated_event_ids": [],
+        "rejected": [],
+        "server_received_ms": 1794441990835
+      }
+    },
+    {
+      "id": "USE-SHORT0",
+      "ok": true,
+      "detail": {
+        "date": "2026-11-12",
+        "available": true,
+        "focus_minutes": 0,
+        "updated_at_ms": 1794441990835
+      }
+    },
+    {
+      "id": "USE-7DAYS",
+      "ok": true,
+      "detail": [
+        {
+          "date": "2026-11-06",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        {
+          "date": "2026-11-07",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        {
+          "date": "2026-11-08",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        {
+          "date": "2026-11-09",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        {
+          "date": "2026-11-10",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        {
+          "date": "2026-11-11",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        {
+          "date": "2026-11-12",
+          "available": true,
+          "focus_minutes": 0,
+          "updated_at_ms": 1794441990835
+        }
+      ]
+    },
+    {
+      "id": "USE-DUP-TIME-FIRST",
+      "ok": true,
+      "detail": {
+        "updated": 1794441990835,
+        "firstRecv": 1794441990835
+      }
+    },
+    {
+      "id": "TEL-IDEM-1",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-99f2c9abc26888",
+        "snapshot": null,
+        "acked_event_ids": [],
+        "duplicated_event_ids": [
+          "focus-short-20"
+        ],
+        "rejected": [],
+        "server_received_ms": 1794441990883
+      }
+    },
+    {
+      "id": "USE-DUP-TIME",
+      "ok": true,
+      "detail": {
+        "updated": 1794441990835,
+        "firstRecv": 1794441990835,
+        "dupRecv": 1794441990883
+      }
+    },
+    {
+      "id": "TEL-IDEM-2",
+      "ok": true,
+      "detail": [
+        {
+          "event_id": "focus-short-20",
+          "reason": "event_id_payload_conflict"
+        }
+      ]
+    },
+    {
+      "id": "USE-CONFLICT",
+      "ok": true,
+      "detail": {
+        "date": "2026-11-12",
+        "available": true,
+        "focus_minutes": 0,
+        "updated_at_ms": 1794441990835
+      }
+    },
+    {
+      "id": "TEL-ACK-2",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-ac0937575ab5d",
+        "snapshot": {
+          "accepted": true,
+          "duplicated": false
+        },
+        "acked_event_ids": [
+          "focus-combo"
+        ],
+        "duplicated_event_ids": [],
+        "rejected": [],
+        "server_received_ms": 1794441990888
+      }
+    },
+    {
+      "id": "TEL-SEP-3-SNAP",
+      "ok": true,
+      "detail": {
+        "accepted": true,
+        "duplicated": false
+      }
+    },
+    {
+      "id": "TEL-SEP-3",
+      "ok": true,
+      "detail": {
+        "usage": 1794441990888,
+        "usageAfterCombo": 1794441990888,
+        "device": 1794441990895,
+        "deviceAfterCombo": 1794441990888
+      }
+    },
+    {
+      "id": "USE-ILLEGAL-HTTP",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-7c353d58b45d7",
+        "snapshot": null,
+        "acked_event_ids": [],
+        "duplicated_event_ids": [],
+        "rejected": [
+          {
+            "event_id": "bad-end",
+            "reason": "invalid_event_data"
+          },
+          {
+            "event_id": "bad-missing",
+            "reason": "invalid_event_data"
+          },
+          {
+            "event_id": "bad-nan",
+            "reason": "invalid_event_data"
+          }
+        ],
+        "server_received_ms": 1794441990904
+      }
+    },
+    {
+      "id": "USE-ILLEGAL",
+      "ok": true,
+      "detail": {
+        "date": "2026-11-12",
+        "available": false,
+        "focus_minutes": null,
+        "updated_at_ms": null
+      }
+    },
+    {
+      "id": "USE-CROSS-ACK",
+      "ok": true,
+      "detail": {
+        "batch_id": "grok-a9030152a0e14",
+        "snapshot": null,
+        "acked_event_ids": [
+          "focus-cross"
+        ],
+        "duplicated_event_ids": [],
+        "rejected": [],
+        "server_received_ms": 1794441990934
+      }
+    },
+    {
+      "id": "USE-CROSS",
+      "ok": true,
+      "detail": {
+        "yesterday": {
+          "date": "2026-11-11",
+          "available": true,
+          "focus_minutes": 10,
+          "updated_at_ms": 1794441990934
+        },
+        "today": {
+          "date": "2026-11-12",
+          "available": true,
+          "focus_minutes": 10,
+          "updated_at_ms": 1794441990934
+        },
+        "recv": 1794441990934
+      }
+    },
+    {
+      "id": "ARK-NONE",
+      "ok": true,
+      "detail": {
+        "available": false,
+        "reason": "not_enabled",
+        "source_mode": null,
+        "snapshot_id": null,
+        "captured_at_ms": null,
+        "received_at_ms": null,
+        "wallets": {
+          "family_coin": null,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": null
+        }
+      }
+    },
+    {
+      "id": "ARK-NOSNAP",
+      "ok": true,
+      "detail": {
+        "available": false,
+        "reason": "no_snapshot",
+        "source_mode": null,
+        "snapshot_id": null,
+        "captured_at_ms": null,
+        "received_at_ms": null,
+        "wallets": {
+          "family_coin": null,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": null
+        }
+      }
+    },
+    {
+      "id": "ARK-UNKNOWN",
+      "ok": true,
+      "detail": {
+        "available": false,
+        "reason": "non_normal",
+        "source_mode": null,
+        "snapshot_id": null,
+        "captured_at_ms": null,
+        "received_at_ms": null,
+        "wallets": {
+          "family_coin": null,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": null
+        }
+      }
+    },
+    {
+      "id": "ARK-GM",
+      "ok": true,
+      "detail": {
+        "available": false,
+        "reason": "non_normal",
+        "source_mode": null,
+        "snapshot_id": null,
+        "captured_at_ms": null,
+        "received_at_ms": null,
+        "wallets": {
+          "family_coin": null,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": null
+        }
+      }
+    },
+    {
+      "id": "ARK-NORMAL",
+      "ok": true,
+      "detail": {
+        "available": true,
+        "reason": null,
+        "source_mode": "normal",
+        "snapshot_id": "grok-1f4b5cfd5bfbd8",
+        "captured_at_ms": 1794441990958,
+        "received_at_ms": 1794441990959,
+        "wallets": {
+          "family_coin": 0,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": 2
+        }
+      }
+    },
+    {
+      "id": "ARK-EPOCH-BEFORE",
+      "ok": true,
+      "detail": {
+        "available": true,
+        "reason": null,
+        "source_mode": "normal",
+        "snapshot_id": "grok-82441c06832fd8",
+        "captured_at_ms": 1794441990964,
+        "received_at_ms": 1794441990965,
+        "wallets": {
+          "family_coin": 7,
+          "stardust": 1
+        },
+        "inventory": {
+          "M-CARD-001": 3
+        }
+      }
+    },
+    {
+      "id": "ARK-EPOCH",
+      "ok": true,
+      "detail": {
+        "status": 200,
+        "ark": {
+          "available": false,
+          "reason": "identity_mismatch",
+          "source_mode": null,
+          "snapshot_id": null,
+          "captured_at_ms": null,
+          "received_at_ms": null,
+          "wallets": {
+            "family_coin": null,
+            "stardust": null
+          },
+          "inventory": {
+            "M-CARD-001": null
+          }
+        },
+        "parent": {
+          "updated_at_ms": null,
+          "online": false,
+          "lid_open": null,
+          "present": null,
+          "brightness_level": null,
+          "color_mode": null,
+          "image_distance_m": null,
+          "image_distance_state": null
+        }
+      }
+    },
+    {
+      "id": "ARK-ISOLATION",
+      "ok": true,
+      "detail": {
+        "ok": false,
+        "error": "not_found"
+      }
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "status": "deployed_single_C_server_ready_real_device_pending",
+  "candidate_sha": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "implementation_sha": "08567549f8f49daff7377ddf0c817c8609956bdb",
+  "branch": "codex/p003-mini008-realdata-20261111",
+  "start_sha": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+  "start_is_production_baseline": false,
+  "production_baseline": {
+    "git_sha": "36f18f55b31c07472b480add33152390b3899032",
+    "source_capture_commit": "60ebdbe5c9c591ad80fd7f9cc11cdf35d0372dcd",
+    "remote_root": "/opt/p003/server",
+    "captured_at": "2026-11-11T07:34:26.616783+00:00",
+    "src_file_count": 204,
+    "total_files": 214,
+    "manifest_path": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/BASELINE.json",
+    "manifest_sha256": "ddc1456dea3aa97c20149ebd6d61f5c96b18f86f35f7e3547756ba327ebe5cec",
+    "git_verification": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/BASELINE-GIT-VERIFICATION.json"
+  },
+  "changed_files": [
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/telemetry.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/telemetry-store.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/dashboard.ts"
+  ],
+  "all_changes_since_baseline": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/mini008-dashboard.test.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/mini008-focus-perf.mts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/dashboard.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/telemetry.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/telemetry-store.ts",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/IMPLEMENTATION.md",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/PERFORMANCE-FIX.md",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/BASELINE-GIT-VERIFICATION.json",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/DEPENDENCIES.txt",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/REGRESSION.json",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/baseline-ark-resource.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/green-final.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/npm-test.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/MAIN-INDEPENDENT.json",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/MAIN-PERF.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/RESULTS.json",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/ark-history.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/ark-proxy.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/ark-resource-known-failure.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/ark-runtime.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/ark-state.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/before-final.json",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/before-main-perf.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/focus-perf.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/main-independent.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/main-independent.mts",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/main-usage-perf.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/main-usage-perf.mts",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/mini008-dashboard.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/perf-queryplan.json",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/red-perf.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/red-plan.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/rollback-keep-index.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/telemetry.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/perf-fix/tsc-known-failure.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/red-baseline.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/regression-ark-history.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/regression-ark-proxy.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/regression-ark-resource.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/regression-ark-runtime.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/regression-ark-state.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/regression-telemetry.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/tsc-baseline.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/tsc-candidate.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence/tsc-with-test.log",
+    "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/verify-perf-fix.py"
+  ],
+  "sha256_files": [
+    {
+      "path": "src/routes/telemetry.ts",
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/telemetry.ts",
+      "before_sha256": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+      "after_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "bytes": 14543,
+      "action": "replace"
+    },
+    {
+      "path": "src/telemetry-store.ts",
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/telemetry-store.ts",
+      "before_sha256": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+      "after_sha256": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+      "bytes": 15466,
+      "action": "replace"
+    },
+    {
+      "path": "src/ark/dashboard.ts",
+      "repo_path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/dashboard.ts",
+      "before_sha256": null,
+      "after_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "bytes": 1988,
+      "action": "add"
+    }
+  ],
+  "artifacts": {
+    "candidate-src.tar.gz": {
+      "path": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/candidate-src.tar.gz",
+      "sha256": "43f5ef1bc166a8bd1b8c1c96b84a78c6451e1859a4281563c8e203c4ec4c2720"
+    },
+    "rollback-src.tar.gz": {
+      "path": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/rollback-src.tar.gz",
+      "sha256": "477bb49e68c7c626685a97d08fcb420230fdf8066288beb9b5113944d973471b"
+    },
+    "SHA256SUMS.json": {
+      "path": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/SHA256SUMS.json",
+      "sha256": "c33f70556fbf9f0501eb257d775f4d46f1cebc3db4f975b1d9c4eb8a7dfafcbe"
+    }
+  },
+  "tests": {
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "new_http_sqlite": {
+      "passed": 16,
+      "failed": 0,
+      "source": "2-Projects/P003GameDemo20260513/apps/server/scripts/mini008-dashboard.test.ts",
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/green-final.log"
+    },
+    "legacy_telemetry": {
+      "passed": 37,
+      "failed": 0
+    },
+    "ark_regressions": {
+      "state": 16,
+      "runtime": 7,
+      "proxy": 4,
+      "history": 11,
+      "failed": 0
+    },
+    "fixed_sha_retest": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/FIXED-VERIFICATION.json",
+    "baseline_known_failures": [
+      {
+        "test": "tsc --noEmit",
+        "failure": "src/listening-content.ts(29,133): GeminiLlmClient.abort missing",
+        "baseline_reproduced": true
+      },
+      {
+        "test": "ark-resource.test.ts",
+        "failure": "line 14 stale /实时余额/ assertion",
+        "baseline_reproduced": true
+      }
+    ],
+    "generic_test_script": "production package has no npm test script",
+    "evidence_path": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence",
+    "committed_evidence": "2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/evidence",
+    "main_final_retest": {
+      "source": "git archive ac21c2d7",
+      "http_sqlite": 13,
+      "new_feature": 16,
+      "legacy_telemetry": 37,
+      "ark": 38,
+      "grok_authored_main_executed": 36,
+      "grok_independent_final": "NOT_RUN_TOOL_CONNECTION_UNAVAILABLE",
+      "logs": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/main-final",
+      "fixture_archive_error": "ark-state first run lacked JSON fixture; fetched exact same-SHA fixture and reran16/16; original error preserved"
+    },
+    "actual_runtime_isolated": {
+      "brain_node": "22.22.2",
+      "brain_tests": 93,
+      "analytics_node": "24.19.0",
+      "analytics_history_tests": 11,
+      "initial_history_under_wrong_node": "11 failures in existing SQLite version guard, preserved",
+      "evidence": "/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/docs/mini008-realdata-20261111/runtime-verification",
+      "production_mutated": false
+    }
+  },
+  "deployment_notes": [
+    "仅主13统一发布；逐文件检查before SHA，新文件必须不存在；发现漂移停止",
+    "部署包只有3份业务src，不部署生产基线回流整树，不带env/data/credentials/node_modules",
+    "仅additive局部表达式索引DDL/无数据回灌；focus单段<=24h，非法及异ID重叠逐项reject，其他事件不变",
+    "Ark只current normal，unknown/gm资产及metadata空；合法授权unknown上传仍应成功",
+    "新消费者按usage逐日available和null判断，不使用旧daily伪0兜底",
+    "Ark读取依赖故障503，不冒充空值0；原类型/文案基线失败详见测试证据",
+    "C scope/grant与历史403独立交主13；部署后真实设备/家长token/页面待对账",
+    "索引首次启动创建有短时DDL锁；回滚代码保留索引，旧代码读写兼容已隔离验证"
+  ],
+  "minimal_rollback": [
+    "确认现役仍等于本候选after SHA，恢复两份before源码",
+    "仅候选SHA匹配时删除新增src/ark/dashboard.ts",
+    "由主13安排重载；保留所有DB/上传事件与快照，不整库恢复；授权操作另有回滚记录"
+  ],
+  "production_deployed": true,
+  "real_device_passed": false,
+  "grok_independent_status": "ISOLATED_PASS_SINGLE_C_INTERNAL_READY",
+  "updated_at": "2026-11-12T08:09:16.182000+08:00",
+  "push_verified": true,
+  "remote_sha": "a760634f655187c0e33c754f73c781e8238f4c07",
+  "remote_verification": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/evidence/LS-REMOTE.txt",
+  "worktree_clean": true,
+  "performance": {
+    "scope": "desktop isolated same deterministic216000row fixture; not production budget",
+    "baseline": {
+      "samples": 25,
+      "p50_ms": 360.91670800000065,
+      "p95_ms": 407.5784590000003,
+      "max_ms": 444.29649999999674
+    },
+    "candidate": {
+      "samples": 25,
+      "p50_ms": 126.54762500000106,
+      "p95_ms": 150.94104200000038,
+      "max_ms": 176.60599999999977
+    },
+    "candidate_new_ingest": {
+      "samples": 25,
+      "p50_ms": 1.3726669999996375,
+      "p95_ms": 2.108834000002389,
+      "max_ms": 2.2989999999990687
+    },
+    "query_plan": {
+      "usage": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+        },
+        {
+          "id": 34,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ],
+      "ingest_recent": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+        },
+        {
+          "id": 34,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ],
+      "ingest_historical": [
+        {
+          "id": 4,
+          "parent": 0,
+          "notused": 48,
+          "detail": "SEARCH device_telemetry_event USING INDEX idx_tel_focus_sn_end (sn=? AND <expr>>? AND <expr><?)"
+        },
+        {
+          "id": 34,
+          "parent": 0,
+          "notused": 0,
+          "detail": "USE TEMP B-TREE FOR ORDER BY"
+        }
+      ]
+    },
+    "preferred_p50_under_50ms": false,
+    "migration": {
+      "rows_unchanged": true,
+      "dirty_json_before_and_after": true,
+      "integrity": "ok"
+    }
+  },
+  "documentation_head": "a760634f655187c0e33c754f73c781e8238f4c07",
+  "production_release": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/PRODUCTION-RELEASE-20261112.json"
+}

@@ -1,0 +1,113 @@
+{
+  "candidate_sha": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "baseline_sha": "36f18f55b31c07472b480add33152390b3899032",
+  "node": "/Users/fu-121/.local/node-v24/bin/node",
+  "node_version": "v24.19.0",
+  "archive_dir": "/tmp/grok-final-ac21-smc82mqr",
+  "server": "/tmp/grok-final-ac21-smc82mqr/2-Projects/P003GameDemo20260513/apps/server",
+  "hashes": {
+    "src/routes/telemetry.ts": {
+      "archive_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "git_show_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "expected": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "bytes": 14543,
+      "match": true
+    },
+    "src/telemetry-store.ts": {
+      "archive_sha256": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+      "git_show_sha256": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+      "expected": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+      "bytes": 15466,
+      "match": true
+    },
+    "src/ark/dashboard.ts": {
+      "archive_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "git_show_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "expected": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "bytes": 1988,
+      "match": true
+    }
+  },
+  "candidate_tar": {
+    "src/routes/telemetry.ts": {
+      "sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "bytes": 14543,
+      "match": true
+    },
+    "src/telemetry-store.ts": {
+      "sha256": "c93a4c41448b74d032e3385468266469f16ff56ff03e6ee14d61584d86216ffd",
+      "bytes": 15466,
+      "match": true
+    },
+    "src/ark/dashboard.ts": {
+      "sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "bytes": 1988,
+      "match": true
+    }
+  },
+  "rollback_tar": {
+    "src/routes/telemetry.ts": {
+      "sha256": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+      "bytes": 13864,
+      "match": true
+    },
+    "src/telemetry-store.ts": {
+      "sha256": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+      "bytes": 10109,
+      "match": true
+    }
+  },
+  "over_engineering": [],
+  "results": [
+    {
+      "test": "mini008-dashboard",
+      "name": "mini008-dashboard.log",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/mini008-dashboard.log",
+      "sha256": "199b6a2dcc3609b183d48bce40a33749f083aa015c1474fe3fb91be86d0f03db",
+      "bytes": 3119
+    },
+    {
+      "test": "telemetry",
+      "name": "telemetry.log",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/telemetry.log",
+      "sha256": "d7d7bdc86baf85691fc7b794fcac3c56336924b4567f3b2523d33591e1163809",
+      "bytes": 17529
+    },
+    {
+      "test": "grok-isolated-accept",
+      "name": "grok-isolated-accept.log",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/grok-isolated-accept.log",
+      "sha256": "a2984d3dd74f80ef82824f7ad5ef5a929ad1fbfb8280e946c50d5ad89cb5fb70",
+      "bytes": 1481
+    },
+    {
+      "test": "index-queryplan",
+      "name": "index-queryplan.log",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/index-queryplan.log",
+      "sha256": "fa45b401f2b1722f07a6060d6aeb50fb28516c8171e9cc5601fd012903999ecb",
+      "bytes": 981
+    },
+    {
+      "test": "index-rollback",
+      "name": "index-rollback.log",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/index-rollback.log",
+      "sha256": "b48e3e61e8b3484547d8a16e8271efdd011bd73390e0e18deb167d2b8f0929a1",
+      "bytes": 63
+    },
+    {
+      "test": "index-rollback-verify",
+      "name": "index-rollback-verify.log",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/index-rollback-verify.log",
+      "sha256": "50fa565d9fb2de2203cdaa2016a348efdb82e1501a573ae937365d77e7d6623a",
+      "bytes": 97
+    }
+  ],
+  "isolated_json": "/Users/fu-121/.local/state/p003-mini008-realdata-20261111/grok-final/GROK-ISOLATED.json",
+  "index_report": null
+}

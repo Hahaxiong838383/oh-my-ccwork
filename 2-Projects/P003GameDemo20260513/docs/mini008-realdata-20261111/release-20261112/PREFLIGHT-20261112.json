@@ -1,0 +1,71 @@
+{
+  "at_ms": 1794441659673,
+  "files": {
+    "src/routes/telemetry.ts": "a9e62a0058f3cb37d61113f545a3c60d28ecf613cebe77ffa308e1c535d31ab0",
+    "src/telemetry-store.ts": "743b76ed8603f40aaf2f5878ee79e5db63f3e00a191fd3dd6b791c1fdc577400",
+    "src/ark/dashboard.ts": null,
+    "src/ark/routes.ts": "4a741aefd50a885815505ac445911d70b27b41bfcf29d61534eacafae344b9e6",
+    "src/ark/service.ts": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+    "src/index.ts": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+    "package.json": "7597bf8b21c93d238a6d8800c45512ea11a6dee66313bfe3669365ff3cbadc3e",
+    "package-lock.json": "5a8faee611938a153d2c929566cade3833e1325440a9c7cf075af404fa6ac8a2",
+    ".env.local": "255a28b1ebf69f02498f1e1f45b2a163edc47398030f3d135ba982448acbdc96"
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 1106830,
+      "status": "online",
+      "restarts": 62,
+      "cwd": "/opt/p003/server"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 196818,
+      "status": "online",
+      "restarts": 11,
+      "cwd": "/opt/p003/server"
+    }
+  ],
+  "ark": {
+    "settings": [
+      {
+        "id": 1,
+        "enabled": 1,
+        "revision": 3
+      }
+    ],
+    "scope_tails": [
+      "00100004",
+      "00100010",
+      "00000002",
+      "03800006",
+      "00000001",
+      "04800006",
+      "01700006",
+      "02000002",
+      "00800010",
+      "00200003",
+      "02000004",
+      "02000020",
+      "02000025",
+      "02000053",
+      "02000026",
+      "02000038"
+    ],
+    "grants_sha256": "637f930167823055c43ea0e0be21424b5c5e83728020dd8aa8a6f86eb0567aa2",
+    "c_grant": false
+  },
+  "c": {
+    "registry_sha256": "c571708545584c8ee39d37fb363fda077842b57854c35bdca052a1bf38c74d6a",
+    "active": true,
+    "public_id": "dev_50b5415662259045",
+    "epoch": 2,
+    "has_owner": true,
+    "focus_count": 0
+  },
+  "analytics_config_sha256": "5812506cf7563dfaf87c713604692c587221914adc367b15a11733160ca29250",
+  "telemetry_counts": {
+    "events": 8648
+  }
+}

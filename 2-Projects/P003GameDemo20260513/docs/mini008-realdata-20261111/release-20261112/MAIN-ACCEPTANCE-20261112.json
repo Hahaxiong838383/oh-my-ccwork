@@ -1,0 +1,16 @@
+{
+  "status": "SERVER_READY_DEPLOYED_REAL_DEVICE_PENDING",
+  "candidate_sha": "ac21c2d75648a4fa4fc49b18adb2ef0f9a4f7e84",
+  "review": "ISOLATED_PASS_SINGLE_C_INTERNAL_READY",
+  "source_hashes_verified": true,
+  "owner_epoch_preserved": true,
+  "scope_only_added_C": true,
+  "other_grants_preserved": true,
+  "analytics_preserved": true,
+  "health_and_admin_passed": true,
+  "public_no_token_401": true,
+  "real_parent_GET": false,
+  "real_usage_and_normal_assets": false,
+  "production_record": "PRODUCTION-RELEASE-20261112.json",
+  "grok_evidence_hashes_independently_checked": true
+}
