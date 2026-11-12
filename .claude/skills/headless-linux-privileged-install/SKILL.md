@@ -17,6 +17,7 @@ metadata:
 - 用户要求在一台无显示器/远程 Linux 机上安装系统包、加 overlay 网络（Tailscale/easytier 等）或起 root 级服务，而 `sudo -n true` 失败、必须输密码。
 - 装有完成但需要用户点账号授权链接（无头登录）的场合。
 - 不适用：已有免密 sudo 的普通装包、纯用户级（pip/npm --user）安装、重启验收（用 `home-studio-boot-maintenance`）。
+- 阿里云 CLI 的登录、profile 和回调不走本技能，用 `aliyun-cli-login`。
 
 适用主机形态：远程 SSH/ACP 接入的 Linux 服务器或工作站，用户 `hahaxiong83` 类普通账号在 sudo 组但需密码。目标是“一次 install、后续全部由 agent 免 sudo 操作”。
 
