@@ -71,7 +71,7 @@ load_secrets() {
 # ── 香港中继的 SSH 通道 ────────────────────────────────────────────────────
 # 2026-08-16 起该机已开公钥登录（此前 sshd 是 PubkeyAuthentication no，只能走密码）。
 # 优先密钥；密钥不可用时回落密码，避免哪天 sshd 配置被重置就全线瘫痪。
-VPS_HOST="${VPS_HOST:-207.57.124.191}"
+VPS_HOST="${VPS_HOST:-85.189.55.23}"
 
 vps_ssh() {
   if ssh -o IdentitiesOnly=yes -i "$HOME/.ssh/id_ed25519" \

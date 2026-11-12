@@ -75,6 +75,16 @@ tailscale debug derp-map | jq -r '.Regions[] | "\(.RegionID) \(.RegionName)"'
 
 另外：每个 region 只允许一台 DERP；derper 需随客户端升级重建（`go install tailscale.com/cmd/derper@latest`）；自定义区域不支持 regional routing。
 
+### 公网 IP 变了：DNS 和 `derpMap` 的 `IPv4` 是两处
+
+`tailscale debug derp-map` 里该 region 的 `IPv4` 有值时，客户端拨这个地址，不跟 `HostName` 的 A 记录走。只改 DNS，地图可以仍是旧 IP。改 tailnet policy 的 `IPv4`，或删掉该字段只留 `HostName`。
+
+下发后在至少两台客户端核对，缺一不可：
+
+1. `debug derp-map` 里该 region 的 `IPv4` 已是新地址，`DERPPort` 仍是非 443。
+2. 新地址的 `DERPPort` 能建立 TCP；`curl --noproxy '*' --resolve <host>:<port>:<ip> https://<host>:<port>/` 返回 200。
+3. `tailscale netcheck` 里该区域有延迟数字。成为 `Nearest DERP` 不是验收条件。
+
 现场核查 derper 本身（在本机或 SSH 到那台 VPS）：`systemctl status derper`、`ss -tlnp | grep derper`、`openssl s_client -connect <host>:<port> -servername <host>` 看证书有效期、`curl -o /dev/null -w '%{http_code}' https://<host>:<port>/` 看 200。
 
 ### 接入后的生效验证（四步，缺一不可）

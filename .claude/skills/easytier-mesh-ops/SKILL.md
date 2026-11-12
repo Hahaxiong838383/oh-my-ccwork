@@ -16,7 +16,7 @@ description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排�
 
 | 节点 | 虚拟 IP | 位置 | 角色 | NAT |
 |---|---|---|---|---|
-| hk-relay | `10.10.10.1` | 野草云 HK `207.57.124.191` | 发现 + 中继兜底 + 控制台 | PortRestricted |
+| hk-relay | `10.10.10.1` | 野草云 HK `85.189.55.23` | 发现 + 中继兜底 + 控制台 | PortRestricted |
 | mini | `10.10.10.11` | 公司有线 `.66` | 公司子网网关（主） | **Symmetric** |
 | studio | `10.10.10.12` | 公司有线 `.177` | 算力 | **Symmetric** |
 | dev198 | `10.10.10.13` | 公司有线 `.233` | 公司子网网关（备） | **Symmetric** |
@@ -38,10 +38,10 @@ description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排�
 | QNAP | `192.168.61.18:5000` / HTTPS `5001` | `http://10.10.61.18:5000` |
 
 飞牛 2 号已装 EasyTier（`10.10.10.22` / `.115`），不要和 1 号搞混。以后给飞牛 1 号装节点用 `fnos1` / `10.10.10.26`，**不要用 `.23`**（已被 home-studio 占用）。
-**上游通道**（每节点固定 2 条）：`tcp://207.57.124.191:443` · `udp://…:22`。中继另外已听备用 `tcp://207.57.124.191:8443`、`wss://207.57.124.191:8444/`（2026-10-13 面板放行后家里测通），**不要默认写进所有节点**。
+**上游通道**（每节点固定 2 条）：`tcp://85.189.55.23:443` · `udp://…:22`。中继另外已听备用 `tcp://85.189.55.23:8443`、`wss://85.189.55.23:8444/`（2026-10-13 面板放行后家里测通），**不要默认写进所有节点**。
 ⚠️ ~~第三条 `udp://…:11010`~~ **2026-08-20 已从所有节点删除**——野草云面板永久封该端口，
 该 connector 永远停在 `Connecting`，四天在 linux-lan 上刷了 4121 行 WARN，
-把真实故障信号淹没、排查僵死事故时带偏一轮。**别再给 hk-relay 加回来。** home-studio 自己的 `tcp/udp 11010` 是另一回事：2026-10-14 路由器已把公网 `120.244.92.170:11010` 转到 `192.168.1.133`，从 hk-relay 测 TCP 约 45ms 通。不要把这个地址写成 `207.57.124.191:11010`，也不要用代理出口 `154.44.3.170`。组网内国内出口是 `gost-mesh-exit.service`，只听 `10.10.10.23:7890`（HTTP+SOCKS5，用户 `grokbox`，密码在 `~/.config/gost/mesh-exit.auth`）。2026-10-14 11010 曾出现 connect 后立刻 remove；重启 `easytier-mesh` 再重启 gost 后 grok-box 回到 p2p。若日志只剩 `192.168.1.119:11010` Host unreachable，那是 linux-lan，不是 grok-box。
+把真实故障信号淹没、排查僵死事故时带偏一轮。**别再给 hk-relay 加回来。** home-studio 自己的 `tcp/udp 11010` 是另一回事：2026-10-14 路由器已把公网 `120.244.92.170:11010` 转到 `192.168.1.133`，从 hk-relay 测 TCP 约 45ms 通。不要把这个地址写成 `85.189.55.23:11010`，也不要用代理出口 `154.44.3.170`。组网内国内出口是 `gost-mesh-exit.service`，只听 `10.10.10.23:7890`（HTTP+SOCKS5，用户 `grokbox`，密码在 `~/.config/gost/mesh-exit.auth`）。2026-10-14 11010 曾出现 connect 后立刻 remove；重启 `easytier-mesh` 再重启 gost 后 grok-box 回到 p2p。若日志只剩 `192.168.1.119:11010` Host unreachable，那是 linux-lan，不是 grok-box。
 **两个内网界面**：`10.10.10.1:11211` 控制台 · `10.10.10.1:8080` 速查页（均公网不可达）
 **SSH 入口**：既有 Unix 节点用 `*-mesh` 别名；Windows 节点用 `ssh Administrator@10.10.10.24`
 
@@ -181,6 +181,18 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 ---
 
+### 4.7 公网 IP 换了
+
+虚拟 IP `10.10.10.1` 不变。hk-relay 的 listeners 是 `0.0.0.0`，不用为了公网地址重启它。要改的是各节点 peer 里写死的公网地址、`common.sh` 的 `VPS_HOST`、Kuma id 17 的探测地址。
+
+1. 先证明新地址是同一台：主机名、原有公钥能登录、`10.10.10.1` 还在、443/udp22/80/8888 仍在听。供应商重启后 SSH 主机密钥会变，`known_hosts` 按新密钥更新。
+2. 只替换公网 IP。不要把 `udp://<公网>:11010` 带过去，面板仍丢这个端口；局域网的 `11010` 留下。换 IP 时用整文件覆盖，容易把旁边的局域网 peer 一起删掉。
+3. 改 Kuma 只动监控 17 并只重启 `ops-uptime-kuma`。RackNerd 上的 sing-box 是家里电视出口，不要重启。
+4. 验收看 `easytier-cli connector`：新地址的 `tcp/443` 与 `udp/22` 都是 Connected，且别的节点 peer 表里有 `hk-relay`。进程 active、配置里已经是新 IP，都不够。
+5. Tailscale 自建 DERP 的域名解析和 policy 里的 `IPv4` 是两处，见 `tailscale-tailnet-ops`。
+
+**macOS `connect` 返回 `EADDRNOTAVAIL`，同时 ping 通：** 先数 `TIME_WAIT` 和临时端口范围（`net.inet.ip.portrange.last - first + 1`）。卡住的 `TIME_WAIT` 超过这个范围时，把 `first`/`hifirst` 降到卡住端口之下，再重启 EasyTier。这时 `bind_device`、清路由、重启网卡都不解决。该 sysctl 重启后恢复默认；重启也会清掉卡住的连接。2026-11-12 Mini 上 30155 条 `TIME_WAIT` 对 16384 个端口，放宽到 `32768` 后 `tcp/443` 变为 ESTABLISHED。
+
 ## 五、平台差异坑（macOS / Linux / Windows）
 
 | 坑 | 表现 | 修法 |
@@ -312,7 +324,7 @@ dd if=/dev/zero bs=1M count=20 2>/dev/null | nc -N -w 100 <目标mesh IP> 5601
 
 | Kuma id | 名称 | 类型 |
 |---|---|---|
-| 17 | EasyTier 中继端口 野草云HK | port `207.57.124.191:443` |
+| 17 | EasyTier 中继端口 野草云HK | port `85.189.55.23:443` |
 | 18 | EasyTier 组网探针 家侧linux-lan | push，**interval 900s** / retries 2 |
 
 ### 判读表（单看一条会误判，必须两条一起看）
