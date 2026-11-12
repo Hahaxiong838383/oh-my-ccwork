@@ -9,7 +9,7 @@ CONFIG=Path(__file__).with_name('easytier-topology.json')
 ENDPOINTS=[
  ('home4','家庭 IPv4','tcp://mesh4.hahaxiong.cc:21110','mesh4.hahaxiong.cc','A'),
  ('home6','家庭 IPv6','tcp://mesh6.hahaxiong.cc:21110','mesh6.hahaxiong.cc','AAAA'),
- ('hk4','香港 IPv4','tcp://207.57.124.191:443',None,None),
+ ('hk4','香港 IPv4','tcp://85.189.55.23:443',None,None),
  ('hk6','香港 IPv6','tcp://[2001:df1:7880:6::1ca]:443',None,None),
  ('lan_nas','家内 NAS 直连','tcp://192.168.1.115:11010',None,None),
  ('lan_pc','家内开发机直连','tcp://192.168.1.133:11010',None,None)]

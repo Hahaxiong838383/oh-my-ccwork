@@ -47,9 +47,9 @@ network_name = "__NETWORK_NAME__"
 network_secret = "__NETWORK_SECRET__"
 
 [[peer]]
-uri = "tcp://207.57.124.191:443"
+uri = "tcp://85.189.55.23:443"
 [[peer]]
-uri = "udp://207.57.124.191:22"
+uri = "udp://85.189.55.23:22"
 
 # 家里同网段直连 linux-lan，不必绕香港
 [[peer]]

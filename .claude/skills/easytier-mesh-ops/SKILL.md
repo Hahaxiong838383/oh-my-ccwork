@@ -16,7 +16,7 @@ description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排�
 
 | 节点 | 虚拟 IP | 位置 | 角色 | NAT |
 |---|---|---|---|---|
-| hk-relay | `10.10.10.1` | 野草云 HK `207.57.124.191` | 发现 + 中继兜底 + 控制台 | PortRestricted |
+| hk-relay | `10.10.10.1` | 野草云 HK `85.189.55.23` | 发现 + 中继兜底 + 控制台 | PortRestricted |
 | mini | `10.10.10.11` | 公司有线 `.66` | 公司子网网关（主） | **Symmetric** |
 | studio | `10.10.10.12` | 公司有线 `.177` | 算力 | **Symmetric** |
 | dev198 | `10.10.10.13` | 公司有线 `.233` | 公司子网网关（备） | **Symmetric** |
@@ -27,7 +27,7 @@ description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排�
 | air | `10.10.10.31` | 移动 | 笔记本 | PortRestricted |
 
 **子网映射**（末位不变只换前缀）：公司 `192.168.61.X`→`10.10.61.X`，家 `192.168.1.X`→`10.10.1.X`
-**上游通道**（每节点 2 条）：`tcp://207.57.124.191:443` · `udp://…:22`
+**上游通道**（每节点 2 条）：`tcp://85.189.55.23:443` · `udp://…:22`
 ⚠️ ~~第三条 `udp://…:11010`~~ **2026-08-20 已从所有节点删除**——野草云面板永久封该端口，
 该 connector 永远停在 `Connecting`，四天在 linux-lan 上刷了 4121 行 WARN，
 把真实故障信号淹没、排查僵死事故时带偏一轮。**别再加回来。**
@@ -196,6 +196,18 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 4. 长效：确认 air/home-studio 的 KCP/QUIC 代理还开着（§八，`easytier-cli proxy` 验证）——
    2026-08-25 开启后控制台原地址 1.5s 直开，隧道不再需要
 
+### 4.7 公网 IP 换了
+
+虚拟 IP `10.10.10.1` 不变。hk-relay 的 listeners 是 `0.0.0.0`，不用为了公网地址重启它。要改的是各节点 peer 里写死的公网地址、`common.sh` 的 `VPS_HOST`、Kuma id 17 的探测地址。
+
+1. 先证明新地址是同一台：主机名、原有公钥能登录、`10.10.10.1` 还在、443/udp22/80/8888 仍在听。SSH 主机密钥会变，更新 `known_hosts`。
+2. 只替换公网 IP。不要把 `udp://<公网>:11010` 带过去；局域网的 `11010` 留下。
+3. 改 Kuma 只动监控 17 并只重启 `ops-uptime-kuma`。RackNerd 上的 sing-box 是家里电视出口，不要重启。
+4. 验收看 `easytier-cli connector`：新地址的 `tcp/443` 与 `udp/22` 都是 Connected，且别的节点 peer 表里有 `hk-relay`。
+5. Tailscale 自建 DERP 的域名解析和 policy 里的 `IPv4` 是两处，见 `tailscale-tailnet-ops`。
+
+**macOS `connect` 返回 `EADDRNOTAVAIL`，同时 ping 通：** 先数 `TIME_WAIT` 和临时端口范围。卡住的条目超过范围时，把 `net.inet.ip.portrange.first`/`hifirst` 降到卡住端口之下，再重启 EasyTier。清路由和重启网卡不解决。2026-11-12 Mini 上 30155 条对 16384 个端口。
+
 ## 五、平台差异坑（macOS / Linux / Windows）
 
 | 坑 | 表现 | 修法 |
@@ -343,7 +355,7 @@ flag 名以 `easytier-core --help` 为准别猜）。控制台 UI **改不了**�
 
 | Kuma id | 名称 | 类型 |
 |---|---|---|
-| 17 | EasyTier 中继端口 野草云HK | port `207.57.124.191:443` |
+| 17 | EasyTier 中继端口 野草云HK | port `85.189.55.23:443` |
 | 18 | EasyTier 组网探针 家侧linux-lan | push，**interval 900s** / retries 2 |
 
 ### 判读表（单看一条会误判，必须两条一起看）

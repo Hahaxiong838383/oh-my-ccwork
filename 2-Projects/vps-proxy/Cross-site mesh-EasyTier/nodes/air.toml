@@ -20,9 +20,9 @@ network_name = "__NETWORK_NAME__"
 network_secret = "__NETWORK_SECRET__"
 
 [[peer]]
-uri = "tcp://207.57.124.191:443"
+uri = "tcp://85.189.55.23:443"
 [[peer]]
-uri = "udp://207.57.124.191:22"
+uri = "udp://85.189.55.23:22"
 # 2026-09-22：显式 IPv6 发现入口；不依赖先从 IPv4 发现后再升级为 IPv6。
 [[peer]]
 uri = "tcp://[2001:df1:7880:6::1ca]:443"

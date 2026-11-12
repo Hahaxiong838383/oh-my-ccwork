@@ -26,7 +26,7 @@
 <text x="781" y="231" fill="#a3b0c1" font-size="11">私网认证</text>
 <text x="175" y="247" fill="#79b8ff" font-size="11">香港入口 · 原有配置保留</text>
 <rect x="175" y="257" width="438" height="73" rx="6" fill="#141e2b" stroke="#2c4565"/>
-<text x="191" y="280" fill="#d8dee7" font-size="13">IPv4  207.57.124.191:443 · TCP</text><text x="191" y="302" fill="#d8dee7" font-size="13">IPv6  [2001:df1:7880:6::1ca]:443 · TCP</text><text x="191" y="319" fill="#a3b0c1" font-size="11">入网后优先 P2P；不强制所有流量走中继</text>
+<text x="191" y="280" fill="#d8dee7" font-size="13">IPv4  85.189.55.23:443 · TCP</text><text x="191" y="302" fill="#d8dee7" font-size="13">IPv6  [2001:df1:7880:6::1ca]:443 · TCP</text><text x="191" y="319" fill="#a3b0c1" font-size="11">入网后优先 P2P；不强制所有流量走中继</text>
 <rect x="659" y="252" width="220" height="83" rx="6" fill="#161b22" stroke="#48596d"/>
 <text x="769" y="278" text-anchor="middle" fill="#d8dee7" font-size="15" font-weight="600">现有 EasyTier 组网</text><text x="769" y="301" text-anchor="middle" fill="#a3b0c1" font-size="12">Studio · dev198 · 家里开发机</text><text x="769" y="322" text-anchor="middle" fill="#a3b0c1" font-size="12">真实路径与服务探测见节点列表</text>
 <text x="20" y="360" fill="#8e9bac" font-size="11">在家保留 LAN 直连：192.168.1.115:11010 / 192.168.1.133:11010，不依赖公网回流。</text>
