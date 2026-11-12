@@ -1,0 +1,27 @@
+{
+  "checked_at": "2026-10-21T00:58:42.246382+00:00",
+  "status": "baseline",
+  "upstream": {
+    "repository": "https://github.com/morluto/rea",
+    "source_commit": "d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f",
+    "source_package_version": "6.7.0",
+    "source_skill_version": "44",
+    "npm_version": "6.7.0",
+    "npm_skill_version": "42",
+    "npm_integrity": "sha512-yhIx2ioJYYT1C/tONfYeitC6LhnKmCh+ZwRUOgYuhSc733lGhkkt73zhug9WmLgxoMdKuqIYGCoBfD4fXkOhFw==",
+    "npm_tarball": "https://registry.npmjs.org/rea-agents/-/rea-agents-6.7.0.tgz",
+    "npm_integrity_verified": true,
+    "node_engines": "^22.19.0 || ^24.11.0 || >=26.0.0"
+  },
+  "installed": {
+    "version": null,
+    "state": "not_installed_in_checked_locations",
+    "node_version": "22.14.0",
+    "scope": "PATH and default user-level package/skill locations checked on 2026-10-21; not an exhaustive filesystem scan"
+  },
+  "recommendation": "Track upstream and matching released package/skill; use isolated compatible Node when integrating.",
+  "sources": [
+    "https://github.com/morluto/rea/tree/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f",
+    "https://registry.npmjs.org/rea-agents/6.7.0"
+  ]
+}

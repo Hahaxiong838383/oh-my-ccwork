@@ -1,0 +1,590 @@
+{
+  "checked_at": "2026-10-21T01:03:00.758539+00:00",
+  "status": "success",
+  "changed": true,
+  "summary": "核验成功；HEAD、npm 版本/integrity 和技能版本较基线未变。新增确认正式 release 身份、主线额外 protobuf 依赖及技能内容哈希；REA 仍未安装。",
+  "engine": "codex（OpenAI）",
+  "check_type": "daily",
+  "changed_semantics": "changed=true 表示本轮新增已核实评估信息；upstream_changed=false 表示基线已有的上游身份没有变化。",
+  "last_successful_checked_at": "2026-10-21T01:03:00.758539+00:00",
+  "upstream": {
+    "repository": "https://github.com/morluto/rea",
+    "source_commit": "d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f",
+    "source_package_version": "6.7.0",
+    "source_skill_version": "44",
+    "npm_version": "6.7.0",
+    "npm_skill_version": "42",
+    "npm_integrity": "sha512-yhIx2ioJYYT1C/tONfYeitC6LhnKmCh+ZwRUOgYuhSc733lGhkkt73zhug9WmLgxoMdKuqIYGCoBfD4fXkOhFw==",
+    "npm_tarball": "https://registry.npmjs.org/rea-agents/-/rea-agents-6.7.0.tgz",
+    "node_engines": "^22.19.0 || ^24.11.0 || >=26.0.0",
+    "default_branch": "main",
+    "head_committed_at": "2026-10-21T00:17:12Z",
+    "head_subject": "fix(native)!: preserve Swift pointer nullability and import bindings",
+    "release": {
+      "tag": "rea-agents-6.7.0",
+      "url": "https://github.com/morluto/rea/releases/tag/rea-agents-6.7.0",
+      "published_at": "2026-10-18T07:45:18Z",
+      "commit": "27dc42d10249f0410904a75c0997842eb03b931c",
+      "prerelease": false,
+      "draft": false,
+      "comparison": "baseline 未记录 release 身份；本轮首次建立，不宣称为新增发行。"
+    },
+    "npm_published_at": "2026-10-18T08:12:05.640Z",
+    "npm_integrity_verified": true,
+    "package_verification": {
+      "method": "下载官方 tarball，内存计算 SHA-512 SRI，与 /latest、精确版本及 registry dist-tags 对应版本交叉比对；仅读取归档内文件。",
+      "evidence_reused": false,
+      "first_verified_at": "2026-10-21T00:58:42.246382+00:00",
+      "first_verified_at_source": "baseline.json.checked_at（基线原始验证时间）",
+      "verified_at": "2026-10-21T01:00:34.586898+00:00",
+      "tarball_sha256": "20958a66dba1a011e50a486beb9463a343128ed368c984f94065362c13f51f90",
+      "download_bytes": 6276963,
+      "skill_sha256": "fbcd39d6abe803cf7aa49c1880815bc8e22ba2af87a23681944f687bb7629eb1",
+      "skill_files": {
+        "package/skills/reverse-engineer-anything/references/android-applications.md": {
+          "sha256": "67a9237d76a5b736640c6404f5e1fe01d83369848142feb7e11d78f4a5e62732",
+          "bytes": 2125
+        },
+        "package/skills/reverse-engineer-anything/references/connection-and-recovery.md": {
+          "sha256": "a33760c84ae100f6ffd27d666e515956c5014ac33a6ee2414807833ae666a2b1",
+          "bytes": 8823
+        },
+        "package/skills/reverse-engineer-anything/references/evidence-workflows.md": {
+          "sha256": "2bdee98a843d018cf850c706111bb74c459ba8640da00799e9208122e4d5ab80",
+          "bytes": 4363
+        },
+        "package/skills/reverse-engineer-anything/references/javascript-applications.md": {
+          "sha256": "aaa78502a3e95268f6269e75f373908045291fedf6ddd106001555ed06bb2bf6",
+          "bytes": 11962
+        },
+        "package/skills/reverse-engineer-anything/references/native-and-artifacts.md": {
+          "sha256": "18b8828aec6476be03ca92bdb9506c47cc9ef8c1415c37d33e4af2f8c55cf8f9",
+          "bytes": 18911
+        },
+        "package/skills/reverse-engineer-anything/references/runtime-observation.md": {
+          "sha256": "fea85e2005a8fd1c86a946eeede24c20e57592a1deb36576b45216e9854803c8",
+          "bytes": 4798
+        },
+        "package/skills/reverse-engineer-anything/SKILL.md": {
+          "sha256": "fbcd39d6abe803cf7aa49c1880815bc8e22ba2af87a23681944f687bb7629eb1",
+          "bytes": 23523
+        }
+      }
+    },
+    "main_skill_sha256": "36ed6adfae54029c8d8610d22140cce5d91f6f418f2423eeb63bcda896c6d1fe",
+    "skill_comparison": {
+      "files": {
+        "SKILL.md": {
+          "main_sha256": "36ed6adfae54029c8d8610d22140cce5d91f6f418f2423eeb63bcda896c6d1fe",
+          "npm_sha256": "fbcd39d6abe803cf7aa49c1880815bc8e22ba2af87a23681944f687bb7629eb1",
+          "same_bytes": false
+        },
+        "references/android-applications.md": {
+          "main_sha256": "67a9237d76a5b736640c6404f5e1fe01d83369848142feb7e11d78f4a5e62732",
+          "npm_sha256": "67a9237d76a5b736640c6404f5e1fe01d83369848142feb7e11d78f4a5e62732",
+          "same_bytes": true
+        },
+        "references/connection-and-recovery.md": {
+          "main_sha256": "cf25b8774810cc24dc188a7a351d2d948c5d07027dab7c34868522225d240ee0",
+          "npm_sha256": "a33760c84ae100f6ffd27d666e515956c5014ac33a6ee2414807833ae666a2b1",
+          "same_bytes": false
+        },
+        "references/evidence-workflows.md": {
+          "main_sha256": "e67a4d96efa266977d8959b15d3e95d468bfccffb8754e8108d809d2275328fe",
+          "npm_sha256": "2bdee98a843d018cf850c706111bb74c459ba8640da00799e9208122e4d5ab80",
+          "same_bytes": false
+        },
+        "references/javascript-applications.md": {
+          "main_sha256": "b78af72ffac3471f8ccbd060556c9eb268d78dbfc04ca9604ad15190369464a8",
+          "npm_sha256": "aaa78502a3e95268f6269e75f373908045291fedf6ddd106001555ed06bb2bf6",
+          "same_bytes": false
+        },
+        "references/native-and-artifacts.md": {
+          "main_sha256": "01b8f740f8aa4ae95aa3241b2fd2164a78f4a7e374de5fb4ea52cb699367fdb8",
+          "npm_sha256": "18b8828aec6476be03ca92bdb9506c47cc9ef8c1415c37d33e4af2f8c55cf8f9",
+          "same_bytes": false
+        },
+        "references/runtime-observation.md": {
+          "main_sha256": "da6728e31648a47444d3282fdb3fd17eaab38c0715ac987b6d410c0473ec8036",
+          "npm_sha256": "fea85e2005a8fd1c86a946eeede24c20e57592a1deb36576b45216e9854803c8",
+          "same_bytes": false
+        }
+      },
+      "same_bytes_count": 1,
+      "total_files": 7,
+      "note": "main 作者稿与发布包生成技能比较；生成器会固定包版本、注入元数据，哈希差异不全部等价于功能变化。"
+    },
+    "dependency_comparison": {
+      "main_only": {
+        "@bufbuild/protobuf": "2.16.0"
+      },
+      "npm_only": {},
+      "different_versions": {}
+    },
+    "dependency_snapshots": {
+      "main": {
+        "dependencies": {
+          "@babel/parser": "8.0.4",
+          "@babel/types": "8.0.4",
+          "@bufbuild/protobuf": "2.16.0",
+          "@clack/prompts": "1.7.0",
+          "@electron/asar": "4.2.0",
+          "@jridgewell/trace-mapping": "0.3.31",
+          "@lydell/node-pty": "1.1.0",
+          "@modelcontextprotocol/client": "2.3.1",
+          "@modelcontextprotocol/server": "2.3.1",
+          "@xmldom/xmldom": "0.9.12",
+          "@xterm/addon-serialize": "0.14.0",
+          "@xterm/headless": "6.0.0",
+          "@zip.js/zip.js": "2.15.0",
+          "ajv": "8.20.0",
+          "ajv-formats": "3.0.1",
+          "canonicalize": "3.0.0",
+          "cborg": "6.1.3",
+          "cross-spawn": "7.0.6",
+          "diff": "9.0.0",
+          "evmole": "0.9.3",
+          "har-schema": "2.0.0",
+          "ignore": "7.0.6",
+          "incur": "0.6.1",
+          "isomorphic-git": "1.38.7",
+          "jsonc-parser": "3.3.1",
+          "lossless-json": "4.3.1",
+          "openpgp": "6.3.2",
+          "parse5": "8.0.1",
+          "pino": "10.4.0",
+          "playwright-core": "1.58.2",
+          "plist": "5.0.0",
+          "saxes": "6.0.0",
+          "semver": "7.8.5",
+          "smol-toml": "1.9.0",
+          "stream-chain": "4.2.6",
+          "stream-json": "3.7.0",
+          "tokenx": "1.3.0",
+          "write-file-atomic": "7.0.0",
+          "ws": "8.21.0",
+          "yaml": "2.9.0",
+          "zod": "4.4.3"
+        },
+        "optionalDependencies": {
+          "frida": "17.23.2"
+        },
+        "engines": {
+          "node": "^22.19.0 || ^24.11.0 || >=26.0.0"
+        },
+        "os": null,
+        "cpu": null
+      },
+      "npm": {
+        "dependencies": {
+          "ws": "8.21.0",
+          "ajv": "8.20.0",
+          "zod": "4.4.3",
+          "diff": "9.0.0",
+          "pino": "10.4.0",
+          "yaml": "2.9.0",
+          "cborg": "6.1.3",
+          "incur": "0.6.1",
+          "plist": "5.0.0",
+          "saxes": "6.0.0",
+          "evmole": "0.9.3",
+          "ignore": "7.0.6",
+          "parse5": "8.0.1",
+          "semver": "7.8.5",
+          "tokenx": "1.3.0",
+          "openpgp": "6.3.2",
+          "smol-toml": "1.9.0",
+          "har-schema": "2.0.0",
+          "ajv-formats": "3.0.1",
+          "cross-spawn": "7.0.6",
+          "stream-json": "3.7.0",
+          "@babel/types": "8.0.4",
+          "canonicalize": "3.0.0",
+          "jsonc-parser": "3.3.1",
+          "stream-chain": "4.2.6",
+          "@babel/parser": "8.0.4",
+          "lossless-json": "4.3.1",
+          "@clack/prompts": "1.7.0",
+          "@electron/asar": "4.2.0",
+          "@xmldom/xmldom": "0.9.12",
+          "@zip.js/zip.js": "2.15.0",
+          "isomorphic-git": "1.38.7",
+          "@xterm/headless": "6.0.0",
+          "playwright-core": "1.58.2",
+          "@lydell/node-pty": "1.1.0",
+          "write-file-atomic": "7.0.0",
+          "@xterm/addon-serialize": "0.14.0",
+          "@jridgewell/trace-mapping": "0.3.31",
+          "@modelcontextprotocol/client": "2.3.1",
+          "@modelcontextprotocol/server": "2.3.1"
+        },
+        "optionalDependencies": {
+          "frida": "17.23.2"
+        },
+        "engines": {
+          "node": "^22.19.0 || ^24.11.0 || >=26.0.0"
+        },
+        "os": null,
+        "cpu": null
+      }
+    },
+    "compatibility": {
+      "npm_node": "^22.19.0 || ^24.11.0 || >=26.0.0",
+      "main_node": "^22.19.0 || ^24.11.0 || >=26.0.0",
+      "optional_frida": "17.23.2",
+      "pty_dependency": "1.1.0",
+      "linux_install_source": {
+        "file": "install.sh",
+        "lines": "141-149",
+        "commit": "d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f",
+        "note": "源码默认使用 ~/.local 前缀；本轮仅读取。"
+      },
+      "sqlite_main_only_requirement": {
+        "node": "24.x >=24.15 或 26+",
+        "file": "docs/sqlite-databases.md",
+        "lines": "8-11",
+        "commit": "d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f",
+        "boundary": "本条仅核验 main 文档；该文档不在 tarball 中，不能将其视为包内功能验收。"
+      },
+      "client_and_evidence_files_reviewed": [
+        "src/application/SupportedClients.ts",
+        "src/application/SetupSkill.ts",
+        "src/application/javascript/JavaScriptApplicationEvidence.ts"
+      ]
+    },
+    "existing_release_caveats": [
+      {
+        "scope": "6.7.0 release 包含 6.6.0 migration notes",
+        "fact": "Saved Evidence/snapshots 的 relationship_coverage、inventory integrity_contradictions 等协议要求变化；历史记录需重新生成。"
+      },
+      {
+        "scope": "6.7.0 release 包含 6.6.0 migration notes",
+        "fact": "Android version_code 为十进制字符串；Linux Hopper 旧版准入需保留发布者签名包证据，官方 RPM 元数据不匹配仍拒绝。"
+      },
+      {
+        "scope": "6.7.0 release fix",
+        "fact": "客户端配置按最后一个重复 JSON/JSONC 成员编辑；拒绝会重新激活遮蔽成员的移除。"
+      }
+    ]
+  },
+  "installed": {
+    "version": null,
+    "state": "not_installed_in_checked_locations",
+    "checked_at": "2026-10-21T00:59:48.449808+00:00",
+    "node_version": "22.14.0",
+    "rea_path": null,
+    "checked_paths": {
+      "/home/hahaxiong83/.local/lib/node_modules/rea-agents/package.json": false,
+      "/home/hahaxiong83/local/node/lib/node_modules/rea-agents/package.json": false,
+      "/home/hahaxiong83/.agents/skills/reverse-engineer-anything/SKILL.md": false,
+      "/home/hahaxiong83/.claude/skills/reverse-engineer-anything/SKILL.md": false,
+      "/home/hahaxiong83/.hermes/skills/reverse-engineer-anything/SKILL.md": false
+    },
+    "scope": "仅 PATH、两个既知用户级包路径及三个默认技能文件路径；未读取用户配置、未穷尽文件系统。",
+    "runtime_compatible": false,
+    "cli_verified": false,
+    "mcp_verified": false,
+    "functional_acceptance": "not_run"
+  },
+  "changes": {
+    "comparison_source": "baseline.json",
+    "compared_at": "2026-10-21T00:58:42.246382+00:00",
+    "upstream_changed": false,
+    "upstream_items": [],
+    "assessment_changed": true,
+    "newly_verified": [
+      "GitHub 正式 release/tag 的精确 commit 与发布时间（基线无此字段，无法判定相对基线是否变化）。",
+      "main 同为 6.7.0，但多出 @bufbuild/protobuf@2.16.0 依赖；基线无依赖快照，不能推断差异发生时间。",
+      "重新下载验证 tarball，建立 main/包内 7 文件技能哈希；原首次验证时间保留。",
+      "补充正式 release 中既有的 Evidence/Android/Linux Hopper 兼容性说明。"
+    ],
+    "unchanged": [
+      "GitHub HEAD",
+      "main/npm package version",
+      "main/npm skill version",
+      "npm integrity/tarball",
+      "Node engines",
+      "本机未安装状态"
+    ],
+    "not_comparable_to_baseline": [
+      "正式 release",
+      "依赖明细",
+      "技能内容哈希",
+      "支持矩阵细节"
+    ],
+    "failures": []
+  },
+  "recommendation": {
+    "decision": "继续跟踪；尚未安装或接通，不记录本机升级。",
+    "integration": "后续获准接入时固定 rea-agents@6.7.0、当前 integrity 与该包技能42；main 技能44及额外依赖单独评估。",
+    "node": "现有 Node 22.14.0 不符合发布包 engines；建议为未来 REA 使用独立、符合要求的 Node，不改共享运行时。若采用 main SQLite 能力，另核对对应发布包与更高 Node 门槛。",
+    "acceptance": "获准接入后，以自有/公开 JS fixture 验输入身份、sha256、预设模块与 IPC/import 边、非空 Evidence/limitations 及负例；CLI 与真实客户端 MCP 分别验收。",
+    "limitations": [
+      "未执行下载代码、安装脚本、doctor、setup 或 npx；未安装、升级或更改配置。",
+      "公开源码与 release 为静态证据；未运行 provider、分析样本或 CLI/MCP。",
+      "主线依赖与发布包的差异是本次首次记录，不声称当天新增。"
+    ]
+  },
+  "sources": [
+    {
+      "id": "github_repository",
+      "status": "success",
+      "fetched_at": "2026-10-21T00:59:45.175657+00:00",
+      "url": "https://api.github.com/repos/morluto/rea",
+      "http_status": 200,
+      "observed": {
+        "default_branch": "main",
+        "pushed_at": "2026-10-21T00:19:03Z"
+      }
+    },
+    {
+      "id": "github_release",
+      "status": "success",
+      "fetched_at": "2026-10-21T00:59:45.176297+00:00",
+      "url": "https://api.github.com/repos/morluto/rea/releases/latest",
+      "http_status": 200,
+      "observed": {
+        "tag_name": "rea-agents-6.7.0",
+        "published_at": "2026-10-18T07:45:18Z",
+        "prerelease": false,
+        "draft": false,
+        "html_url": "https://github.com/morluto/rea/releases/tag/rea-agents-6.7.0",
+        "target_commitish": "27dc42d10249f0410904a75c0997842eb03b931c"
+      },
+      "body_sha256": "3a9eddc9c91a5272f44a535f45b477c458b0831badb783751dfb028ce680148a"
+    },
+    {
+      "id": "npm_latest",
+      "status": "success",
+      "fetched_at": "2026-10-21T00:59:45.176798+00:00",
+      "url": "https://registry.npmjs.org/rea-agents/latest",
+      "http_status": 200
+    },
+    {
+      "id": "git_head",
+      "status": "success",
+      "fetched_at": "2026-10-21T00:59:46.503625+00:00",
+      "url": "https://github.com/morluto/rea.git",
+      "error": "",
+      "observed": "ref: refs/heads/main\tHEAD\nd0067ba34a39ea47dd7e11bb2e6169bc0938cc3f\tHEAD"
+    },
+    {
+      "id": "github_commit",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:29.535455+00:00",
+      "url": "https://api.github.com/repos/morluto/rea/commits/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f",
+      "http_status": 200,
+      "sha256": "2eef9e5e3e5a83daa4528a356403431c74e5de30b423deb25fb7a2071b7bb880",
+      "bytes": 122857
+    },
+    {
+      "id": "github_release_tag",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:29.536034+00:00",
+      "url": "https://api.github.com/repos/morluto/rea/git/ref/tags/rea-agents-6.7.0",
+      "http_status": 200,
+      "sha256": "4ef9703d8c8a644b2b5dccb81b738d947fa3de7ea3b3aced2b26598c3f9ea106",
+      "bytes": 357,
+      "observed": {
+        "sha": "27dc42d10249f0410904a75c0997842eb03b931c",
+        "type": "commit",
+        "url": "https://api.github.com/repos/morluto/rea/git/commits/27dc42d10249f0410904a75c0997842eb03b931c"
+      }
+    },
+    {
+      "id": "npm_registry",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:29.536551+00:00",
+      "url": "https://registry.npmjs.org/rea-agents",
+      "http_status": 200,
+      "sha256": "bfa6974e131d1bafa18cbfd5d2b590c9ae9ee9965916e0c45014f3e8fce36450",
+      "bytes": 327312,
+      "observed": {
+        "dist-tags": {
+          "latest": "6.7.0"
+        },
+        "latest_published_at": "2026-10-18T08:12:05.640Z",
+        "latest_integrity": "sha512-yhIx2ioJYYT1C/tONfYeitC6LhnKmCh+ZwRUOgYuhSc733lGhkkt73zhug9WmLgxoMdKuqIYGCoBfD4fXkOhFw=="
+      }
+    },
+    {
+      "id": "npm_version",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:29.537142+00:00",
+      "url": "https://registry.npmjs.org/rea-agents/6.7.0",
+      "http_status": 200,
+      "sha256": "ae3429d52774e39bda4f8c9ba9aa141b26901ec65f82a394e540ed9cc479c236",
+      "bytes": 22380
+    },
+    {
+      "id": "main_package",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:29.537841+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/package.json",
+      "http_status": 200,
+      "sha256": "25a72d47d6cc11ef7118d89aef0f98798232c382b8b757192d3e395fa7228abe",
+      "bytes": 25538
+    },
+    {
+      "id": "main_skill",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:29.538336+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/SKILL.md",
+      "http_status": 200,
+      "sha256": "36ed6adfae54029c8d8610d22140cce5d91f6f418f2423eeb63bcda896c6d1fe",
+      "bytes": 26147
+    },
+    {
+      "id": "main_skill_generator",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:30.556512+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/scripts/generate-skill-metadata.mjs",
+      "http_status": 200,
+      "sha256": "f2e1a50cb28c1e7c59d5eb951336b425ead4e874e1b7a712ffaa2f12fec2ae44",
+      "bytes": 3223
+    },
+    {
+      "id": "main_sqlite",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:30.652380+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/docs/sqlite-databases.md",
+      "http_status": 200,
+      "sha256": "bc08ea3029259cda8973ebf2eccca0351938d9abf9ad552addf139a54a023fa0",
+      "bytes": 9154
+    },
+    {
+      "id": "main_installer",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:30.669039+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/install.sh",
+      "http_status": 200,
+      "sha256": "aa6ce7945262d8ef1599f08c5b82d4ce281fae4c0c51e6eda7bbbff2879a47a8",
+      "bytes": 8121
+    },
+    {
+      "id": "npm_tarball",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:00:30.889014+00:00",
+      "url": "https://registry.npmjs.org/rea-agents/-/rea-agents-6.7.0.tgz",
+      "http_status": 200,
+      "sha256": "20958a66dba1a011e50a486beb9463a343128ed368c984f94065362c13f51f90",
+      "bytes": 6276963
+    },
+    {
+      "id": "main_file:src/application/SupportedClients.ts",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:08.096640+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/src/application/SupportedClients.ts",
+      "sha256": "0bd67d4acc7eadacd625d5db9bc0d0733a297b2a375dbb24d1cb2a1a5bc13c94",
+      "bytes": 29906
+    },
+    {
+      "id": "main_file:src/application/SetupSkill.ts",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:08.097177+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/src/application/SetupSkill.ts",
+      "sha256": "cd6898ac39f722cf387fa510e35f09153f84176444534453d9dd11b4f5da995c",
+      "bytes": 20384
+    },
+    {
+      "id": "main_file:src/application/javascript/JavaScriptApplicationEvidence.ts",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:08.097583+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/src/application/javascript/JavaScriptApplicationEvidence.ts",
+      "sha256": "582be077bff4e0c137584cc183909756eb050981be08ae068dec2ed13dbee06c",
+      "bytes": 4072
+    },
+    {
+      "id": "main_file:.agents/skills/reverse-engineer-anything/references/android-applications.md",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:08.097928+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/references/android-applications.md",
+      "sha256": "67a9237d76a5b736640c6404f5e1fe01d83369848142feb7e11d78f4a5e62732",
+      "bytes": 2125
+    },
+    {
+      "id": "main_file:.agents/skills/reverse-engineer-anything/references/connection-and-recovery.md",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:08.098322+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/references/connection-and-recovery.md",
+      "sha256": "cf25b8774810cc24dc188a7a351d2d948c5d07027dab7c34868522225d240ee0",
+      "bytes": 11396
+    },
+    {
+      "id": "main_file:.agents/skills/reverse-engineer-anything/references/evidence-workflows.md",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:08.098827+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/references/evidence-workflows.md",
+      "sha256": "e67a4d96efa266977d8959b15d3e95d468bfccffb8754e8108d809d2275328fe",
+      "bytes": 5959
+    },
+    {
+      "id": "main_file:.agents/skills/reverse-engineer-anything/references/javascript-applications.md",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:09.005981+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/references/javascript-applications.md",
+      "sha256": "b78af72ffac3471f8ccbd060556c9eb268d78dbfc04ca9604ad15190369464a8",
+      "bytes": 12229
+    },
+    {
+      "id": "main_file:.agents/skills/reverse-engineer-anything/references/native-and-artifacts.md",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:09.071935+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/references/native-and-artifacts.md",
+      "sha256": "01b8f740f8aa4ae95aa3241b2fd2164a78f4a7e374de5fb4ea52cb699367fdb8",
+      "bytes": 26503
+    },
+    {
+      "id": "main_file:.agents/skills/reverse-engineer-anything/references/runtime-observation.md",
+      "status": "success",
+      "fetched_at": "2026-10-21T01:01:09.101625+00:00",
+      "url": "https://raw.githubusercontent.com/morluto/rea/d0067ba34a39ea47dd7e11bb2e6169bc0938cc3f/.agents/skills/reverse-engineer-anything/references/runtime-observation.md",
+      "sha256": "da6728e31648a47444d3282fdb3fd17eaab38c0715ac987b6d410c0473ec8036",
+      "bytes": 5170
+    }
+  ],
+  "daily_steps": [
+    {
+      "step": 1,
+      "status": "success",
+      "detail": "读取必读文件、基线与首次评估；加锁后重读，latest 原先不存在。"
+    },
+    {
+      "step": 2,
+      "status": "success",
+      "detail": "git ls-remote HEAD、GitHub repo/commit/release/tag、npm dist-tags/精确版本独立核验。"
+    },
+    {
+      "step": 3,
+      "status": "success",
+      "detail": "固定 commit 读取 package、技能7文件及相关安装/客户端/Evidence 文件；HEAD 未变，无新增提交差异。"
+    },
+    {
+      "step": 4,
+      "status": "success",
+      "detail": "重新下载官方包、核验 integrity、读取技能哈希；首次验证时间仍为基线时间。"
+    },
+    {
+      "step": 5,
+      "status": "success",
+      "detail": "基线已有身份未变；首次建立 release/依赖/哈希比较维度，未知历史不记为无变化。"
+    },
+    {
+      "step": 6,
+      "status": "success",
+      "detail": "flock 独占锁下同目录临时文件 fsync + os.replace。"
+    },
+    {
+      "step": 7,
+      "status": "success",
+      "detail": "新增评估证据写入本日日报；与上游版本变化分开。"
+    },
+    {
+      "step": 8,
+      "status": "success",
+      "detail": "原子写后回读并断言非空 JSON、来源状态、版本/哈希与本机未安装状态；结束输出业务结果。"
+    }
+  ],
+  "evidence_path": "/home/hahaxiong83/mycc/2-Projects/rea/latest.json",
+  "report_path": "/home/hahaxiong83/mycc/2-Projects/rea/reports/2026-10-21-daily.md"
+}

@@ -1,0 +1,49 @@
+{
+  "created_at": "2026-10-21T00:59:10.222968+00:00",
+  "scheduler": "Codeg Automation",
+  "folder_id": 60,
+  "tasks": [
+    {
+      "id": 5,
+      "name": "REA 正式 Releases 检查",
+      "enabled": 1,
+      "cron": "20 9 * * 1",
+      "timezone": "Asia/Shanghai",
+      "agent_type": "codex",
+      "root_folder_id": 60,
+      "next_run_at": "2026-10-26T01:20:00+00:00"
+    },
+    {
+      "id": 6,
+      "name": "REA 每周独立复核",
+      "enabled": 0,
+      "cron": "45 9 * * 1",
+      "timezone": "Asia/Shanghai",
+      "agent_type": "hermes",
+      "root_folder_id": 60,
+      "next_run_at": null
+    }
+  ],
+  "initial_runs": [
+    {
+      "run_id": 52,
+      "automation_id": 5,
+      "status": "succeeded",
+      "ended_at": "2026-10-21T01:03:13.221426837+00:00",
+      "conversation_id": 238
+    },
+    {
+      "run_id": 53,
+      "automation_id": 6,
+      "status": "succeeded",
+      "ended_at": "2026-10-21T01:06:42.510050746+00:00",
+      "conversation_id": 239
+    }
+  ],
+  "verification": "Both initial broad reviews succeeded and artifacts read back. Revised release-only schedule independently read back; natural trigger pending.",
+  "result_location": "Codeg automation run conversations and this project directory",
+  "permission_scope": "Only project report and runtime temp edits; no global permission change.",
+  "updated_at": "2026-10-21T01:08:01.236590+00:00",
+  "current_scope": "Weekly formal Releases only; daily/main monitoring cancelled; fixed Hermes weekly review disabled.",
+  "user_direction": "2026-10-21 不需要每天跟踪，只看项目 Releases"
+}
