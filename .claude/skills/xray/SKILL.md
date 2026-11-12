@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 代理管理。管理 Xray 代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗；不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray - Xray 代理管理
@@ -11,6 +11,9 @@ description: Xray 代理管理。管理 Xray 代理引擎：启动/停止/切换
 
 - 用户说"切换代理"、"关 v2ray"、"启动 xray"、"代理不通"、"网络不行"
 - 需要检查或修复代理配置时
+
+线路优先级、探针口、软件重启后的选择器恢复和吞吐比较，读
+[电视 HY2 路径与恢复](references/tv-hy2-path-20261112.md)。配置里的 selector 默认值不等于守护优先级；当前线路健康时，空等 5 分钟不会切回更高优先级。
 
 ## 可用命令
 

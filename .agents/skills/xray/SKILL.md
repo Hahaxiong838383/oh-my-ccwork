@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 代理管理。管理 Xray 代理引擎：启动/停止/切换/状态检查/分流测试。触发词："/xray"、"代理状态"、"网络不通"
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗；不处理 Netflix 登录、遥控适配或 DRM。
 ---
 
 # xray（多引擎入口）
