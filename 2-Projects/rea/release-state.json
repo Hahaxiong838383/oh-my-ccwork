@@ -1,0 +1,41 @@
+{
+  "checked_at": "2026-11-09T01:20:53.621017+00:00",
+  "status": "success",
+  "changed": false,
+  "scope": "formal GitHub Releases only; weekly; no main polling",
+  "release": {
+    "id": 423257206,
+    "tag_name": "rea-agents-6.8.0",
+    "name": "rea-agents: v6.8.0",
+    "published_at": "2026-10-25T08:36:02Z",
+    "created_at": "2026-10-25T08:35:15Z",
+    "html_url": "https://github.com/morluto/rea/releases/tag/rea-agents-6.8.0",
+    "draft": false,
+    "prerelease": false,
+    "updated_at": "2026-10-25T08:36:02Z",
+    "body_sha256": "70efa5cf24aac5b2a013bf0976ba9d453d4df08d37317173fab7b618e477a899"
+  },
+  "source": "https://api.github.com/repos/morluto/rea/releases/latest",
+  "last_success_at": "2026-11-09T01:20:53.621017+00:00",
+  "note": "正式 Release 身份与发布说明均无变化；仅刷新检查时间和状态。",
+  "installed": {
+    "version": "6.7.0",
+    "verified_at": "2026-10-21T01:15:54.076292+00:00",
+    "manifest": "installation.json"
+  },
+  "npm": {
+    "selected_version": "6.8.0",
+    "latest_version": "6.8.0",
+    "status": "published",
+    "engines": {
+      "node": "^22.23.4 || ^24.22.1 || >=26.12.1"
+    },
+    "integrity_verified": true,
+    "skill_version": "49"
+  },
+  "assessment": {
+    "decision": "defer",
+    "report": "reports/2026-10-26-release.md",
+    "evidence": "reports/2026-10-26-release-evidence.json"
+  }
+}

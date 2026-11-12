@@ -1,0 +1,84 @@
+{
+  "installed_at": "2026-10-21T01:15:54.076292+00:00",
+  "host_scope": "home-studio only",
+  "package": "rea-agents",
+  "version": "6.7.0",
+  "release_tag": "rea-agents-6.7.0",
+  "integrity": "sha512-yhIx2ioJYYT1C/tONfYeitC6LhnKmCh+ZwRUOgYuhSc733lGhkkt73zhug9WmLgxoMdKuqIYGCoBfD4fXkOhFw==",
+  "package_root": "/home/hahaxiong83/.local/lib/rea/releases/6.7.0/node_modules/rea-agents",
+  "dependency_lock": "/home/hahaxiong83/.local/lib/rea/releases/6.7.0/package-lock.json",
+  "command": "/home/hahaxiong83/.local/bin/rea",
+  "node": {
+    "version": "v24.22.0",
+    "source": "https://nodejs.org/dist/v24.22.0/node-v24.22.0-linux-x64.tar.xz",
+    "sha256": "cc2f601cee82d9a5a233302fe307abc600727035fd7d2c3a3571755989e95008",
+    "sha256_source": "https://nodejs.org/dist/v24.22.0/SHASUMS256.txt"
+  },
+  "node_path": "/home/hahaxiong83/.local/lib/rea/runtime/node-v24.22.0-linux-x64/bin/node",
+  "skill_version": "42",
+  "mcp_tool_count_verified": 207,
+  "skill_roots": [
+    "/home/hahaxiong83/.agents/skills/reverse-engineer-anything",
+    "/home/hahaxiong83/.claude/skills/reverse-engineer-anything",
+    "/home/hahaxiong83/.hermes/skills/reverse-engineer-anything"
+  ],
+  "configured_clients": [
+    "codex",
+    "claude_code",
+    "grok_build",
+    "hermes",
+    "gemini_cli"
+  ],
+  "native_mcp_verified_clients": [
+    "hermes"
+  ],
+  "default_node_unchanged": "22.14.0",
+  "frida_native_import": "passed (17.23.2)",
+  "acceptance_report": "reports/2026-10-21-acceptance.json",
+  "installed_skill": {
+    "version": "62",
+    "source": "https://github.com/morluto/rea commit a01674377f1f2a0fed467035fddc25e90e74d75a (.agents/skills/reverse-engineer-anything)",
+    "installed_at": "2026-11-12T04:50:00Z",
+    "paths": [
+      "/home/hahaxiong83/.agents/skills/reverse-engineer-anything",
+      "/home/hahaxiong83/.claude/skills/reverse-engineer-anything",
+      "/home/hahaxiong83/.hermes/skills/reverse-engineer-anything"
+    ],
+    "reference_files": 8,
+    "build_equivalent_edit": "npx -y rea-agents@latest -> rea-agents@6.7.0",
+    "doctor_state": "stale (package expects 42; expected while package stays 6.7.0)",
+    "local_skill": {
+      "name": "rea",
+      "installed_at": "2026-11-12T04:50:00Z",
+      "paths": [
+        "/home/hahaxiong83/.agents/skills/rea",
+        "/home/hahaxiong83/.claude/skills/rea",
+        "/home/hahaxiong83/.hermes/skills/rea"
+      ]
+    },
+    "backup": "/tmp/rea-skill-v42-backup-20261112-125113.tgz"
+  },
+  "dsh_registration": {
+    "configured_at": "2026-11-12T04:55:00Z",
+    "client": "dsh",
+    "config_path": "/home/hahaxiong83/dsh-stack/home/cordis.patch.yml",
+    "entry_id": "rea-mcp",
+    "module": "@deepseek-ai/dsh-mcp-client",
+    "server_name": "rea",
+    "command": [
+      "/home/hahaxiong83/.local/bin/rea",
+      "mcp"
+    ],
+    "tool_call_timeout_ms": 600000,
+    "setup_status": "ready (configured_dsh + installed_skill)",
+    "doctor_state": "aligned",
+    "hot_mounted": "main dsh web instance (pid 1585306) spawned rea mcp at 2026-11-12T04:56:08Z via HMR",
+    "verified": {
+      "tools_list": 207,
+      "binary_session": "ok",
+      "analyze_javascript_application": "ok (evidence returned, 575ms)",
+      "launch_parity": "tested with the exact command/args from cordis.patch.yml"
+    },
+    "note": "ACP sessions started before the config write do not gain tools mid-session; open a new session/process."
+  }
+}
