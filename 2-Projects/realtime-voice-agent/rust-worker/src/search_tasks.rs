@@ -1501,6 +1501,71 @@ mod tests {
         assert!(matches!(commands.try_recv().unwrap(),Command::Submit{query,..} if query=="深圳今天的天气"));
         assert!(!missing_predicate("水"));assert!(!missing_predicate("深是什么意思"));
     }
+    #[tokio::test]
+    async fn search_fragments_ask_without_submitting_or_guessing() {
+        for configured in [false, true] {
+            for text in ["帮我查查深", "小可，帮我查查北。", "帮我查询上", "请帮我搜一下广",
+                "帮我查杭", "帮我查成", "帮我查重", "帮我查沈", "帮我查恐龙为什么",
+                "帮我查月亮为什么会", "帮我查恐龙怎么", "帮我查火星最近"] {
+                let (mut s, _, mut commands) = test_session();
+                if configured {
+                    s.routing = Some(RoutingSnapshot { version: "fragment-test".into(), config: RoutingConfig::default() });
+                }
+                let action = s.interpret(text).expect("an explicit fragment must stay out of foreground chat");
+                s.command(action);
+                assert!(commands.try_recv().is_err(), "premature search: {text}");
+                s.observe_input(true);
+                s.pending_topic.as_mut().expect("bounded ASR continuation window").since =
+                    Instant::now() - Duration::from_secs(6);
+                s.idle_since = Some(Instant::now() - Duration::from_secs(1));
+                let reply = s.poll(true).expect("unfinished request must produce a clarification");
+                assert!(reply.contains("想查什么"), "{text}: {reply}");
+                assert!(!reply.contains("深圳"), "must not invent the missing city");
+                assert!(commands.try_recv().is_err(), "fragment dispatched after timeout: {text}");
+                assert!(!s.busy);
+            }
+        }
+    }
+    #[tokio::test]
+    async fn complete_searches_including_short_topics_submit_without_fragment_wait() {
+        for configured in [false, true] {
+            for (text, expected) in [("帮我查查深圳", "深圳"), ("帮我查查深圳今天的天气", "深圳今天的天气"),
+                ("帮我查水", "水"), ("帮我查深是什么意思", "深是什么意思"),
+                ("帮我查深海", "深海"), ("帮我查重力", "重力"),
+                ("帮我查恐龙为什么会灭绝", "恐龙为什么会灭绝"),
+                ("帮我查火星最近有什么新闻", "火星最近有什么新闻")] {
+                let (mut s, _, mut commands) = test_session();
+                if configured {
+                    s.routing = Some(RoutingSnapshot { version: "fragment-test".into(), config: RoutingConfig::default() });
+                }
+                let action = s.interpret(text).unwrap();
+                assert!(s.command(action), "{text}");
+                assert!(s.pending_topic.is_none(), "complete request delayed: {text}");
+                assert!(matches!(commands.try_recv(), Ok(Command::Submit { query, .. }) if query == expected), "{text}");
+                assert!(commands.try_recv().is_err(), "duplicate search: {text}");
+            }
+        }
+    }
+    #[tokio::test]
+    async fn fragment_cannot_guess_from_unrelated_chat_or_survive_cancel() {
+        for next in ["我今天画了小猫", "不要查了", "帮我查水"] {
+            let (mut s, _, mut commands) = test_session();
+            let action = s.interpret("帮我查查深").unwrap();
+            s.command(action);
+            let action = s.interpret(next);
+            if next.starts_with("我今天") { assert!(action.is_none()); }
+            if let Some(action) = action { s.command(action); }
+            assert!(s.pending_topic.is_none());
+            let mut submitted = 0;
+            while let Ok(command) = commands.try_recv() {
+                if let Command::Submit { query, .. } = command {
+                    assert_eq!(query, "水", "fragment was guessed or joined to unrelated speech");
+                    submitted += 1;
+                }
+            }
+            assert_eq!(submitted, usize::from(next == "帮我查水"), "{next}");
+        }
+    }
     fn test_session() -> (SearchSession, mpsc::Sender<Event>, mpsc::Receiver<Command>) {
         let _ = rustls::crypto::ring::default_provider().install_default();
         let api = Api {
