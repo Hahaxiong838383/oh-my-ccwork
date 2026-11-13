@@ -74,6 +74,35 @@ fn issue_to_assignment_ms(room_name: &str, issue_ts_ms: Option<i64>) -> Option<i
     valid(now_ms - sec * 1000)
 }
 
+// A finished pipeline is terminal even while the device remains connected.
+// Same completion selector as the main/listening pools; preserve this pool's
+// existing task output type and error logging inside the task.
+enum JobWake<E> {
+    Room(Option<E>),
+    Pipeline(std::result::Result<(), tokio::task::JoinError>),
+    Watchdog,
+}
+async fn next_job_wake<E>(
+    room_event: impl std::future::Future<Output = Option<E>>,
+    pipeline: &mut Option<JoinHandle<()>>,
+    watchdog: &mut tokio::time::Interval,
+) -> JobWake<E> {
+    tokio::select! {
+        biased;
+        result = async {
+            match pipeline.as_mut() {
+                Some(task) => task.await,
+                None => std::future::pending().await,
+            }
+        } => {
+            pipeline.take(); // Already joined; cleanup must not poll twice.
+            JobWake::Pipeline(result)
+        },
+        _ = watchdog.tick() => JobWake::Watchdog,
+        event = room_event => JobWake::Room(event),
+    }
+}
+
 pub async fn run_job(config: Config, job: proto::Job, url: String, token: String) -> Result<()> {
     let room_name = job
         .room
@@ -180,12 +209,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     watchdog.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
     loop {
-        let ev = tokio::select! {
-            ev = events.recv() => match ev {
-                Some(ev) => ev,
-                None => break,
-            },
-            _ = watchdog.tick() => {
+        let ev = match next_job_wake(events.recv(), &mut pipeline_task, &mut watchdog).await {
+            JobWake::Room(Some(ev)) => ev,
+            JobWake::Room(None) => break,
+            JobWake::Pipeline(result) => {
+                match result {
+                    Ok(()) => info!(room = %room_name, "pipeline ended → closing job"),
+                    Err(e) => warn!(room = %room_name, panic = e.is_panic(), cancelled = e.is_cancelled(), "pipeline join failed → closing job"),
+                }
+                break;
+            }
+            JobWake::Watchdog => {
                 if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) {
                     info!(room=%room_name, "startup participant recovery expired → closing job");
                     break;
@@ -698,5 +732,36 @@ mod startup_queue_tests {
         tx.send("new-ordered-begin").await.unwrap();
         assert_eq!(rx.as_mut().unwrap().recv().await,Some("new-ordered-begin"));
         assert!(rx.as_mut().unwrap().try_recv().is_err());
+    }
+}
+
+#[cfg(test)]
+mod pipeline_completion_tests {
+    #[tokio::test]
+    async fn completed_pipeline_wakes_cleanup_without_device_disconnect() {
+        for panic in [false, true] {
+            let mut task = Some(tokio::spawn(async move {
+                assert!(!panic, "synthetic pipeline panic");
+            }));
+            let mut watchdog = tokio::time::interval_at(
+                tokio::time::Instant::now() + std::time::Duration::from_secs(60),
+                std::time::Duration::from_secs(1),
+            );
+            let wake = tokio::time::timeout(std::time::Duration::from_millis(200),
+                super::next_job_wake(std::future::pending::<Option<()>>(), &mut task, &mut watchdog)).await;
+            let super::JobWake::Pipeline(result) = wake.expect("completed pipeline must wake job") else { panic!("wrong wake"); };
+            assert_eq!(result.is_err(), panic);
+            assert!(task.is_none(), "joined task cannot be joined twice in cleanup");
+        }
+    }
+    #[tokio::test]
+    async fn absent_pipeline_keeps_room_events_available() {
+        let mut task = None;
+        let mut watchdog = tokio::time::interval_at(
+            tokio::time::Instant::now() + std::time::Duration::from_secs(60),
+            std::time::Duration::from_secs(1),
+        );
+        assert!(matches!(super::next_job_wake(async { Some(1) }, &mut task, &mut watchdog).await,
+            super::JobWake::Room(Some(1))));
     }
 }
