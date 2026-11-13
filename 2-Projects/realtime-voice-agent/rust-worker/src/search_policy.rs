@@ -79,9 +79,6 @@ fn resume_object(text: &str) -> bool {
 }
 
 pub fn intent(text: &str) -> Option<Intent> {
-    if crate::stop_variants::intent(text) == Some(crate::stop_variants::Intent::CancelSearch) {
-        return Some(Intent::Cancel);
-    }
     if search_term_question(text) {return None;}
     let t = addressed(text);
     if ["如果", "假如", "例如", "比如"].iter().any(|p| t.starts_with(p)) { return None; }
