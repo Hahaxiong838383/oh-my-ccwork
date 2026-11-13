@@ -122,8 +122,8 @@ pub struct PipelineConfig {
     pub canary_identity_allow: Vec<String>,
     pub vad_model_path: String,
     pub hotwords: HashSet<String>,
-    /// 退出词吞句集(EXIT_SWALLOW_HOTWORDS):整句命中→只吞轮次(防幽灵回答轮),
-    /// 回复/关房归 Android。与急停表分开配置,词表须与 Android SESSION_EXIT 一致。
+    /// 退出词集(EXIT_SWALLOW_HOTWORDS):明确结束整段对话时取消输出并有界关房。
+    /// 与仅停止当前播放的急停表分开,由后台统一发布。
     pub exit_hotwords: HashSet<String>,
     /// A 案(2026-08-28):exit 尾部匹配开关(EXIT_TAIL_MATCH,默认开;置 0 回退纯精确匹配)。
     pub exit_tail_match: bool,
@@ -3303,6 +3303,7 @@ impl Orchestrator {
         if !self.session_close.begin(Instant::now()) { return; }
         if let Some(lc) = crate::ready_confirm::swallow_lifecycle("session_exit") { self.ready_confirm.apply(lc); }
         self.hard_abort_current();
+        if let Some(listening) = self.listening.as_mut() { listening.close_for_room_exit(); }
         if let Some(r) = &mut self.search_recovery { r.cancel(); }
         if let Some(mut search) = self.search.take() { search.close(); }
         if let Some(sp) = self.spec.take() { sp.task.abort(); }

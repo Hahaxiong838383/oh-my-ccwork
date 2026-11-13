@@ -701,6 +701,15 @@ impl Adapter {
             t.abort();
         }
     }
+    /// Stop listening authority when the entire RTC conversation is closing.
+    /// Reuse the bounded, idempotent close request without resuming normal chat.
+    pub fn close_for_room_exit(&mut self) {
+        self.cancel_content();
+        self.pending_feedback = None;
+        self.pending_story.clear();
+        self.pending_chars = 0;
+        self.close(self.runtime.snapshot().epoch);
+    }
     fn close(&mut self, epoch: u64) {
         self.clear_voice_wake();
         if self.closing {
@@ -1451,6 +1460,58 @@ mod http_joint_tests {
 #[cfg(test)]
 mod adapter_tests {
     use super::*;
+    #[tokio::test]
+    async fn whole_room_exit_sends_one_http_close_without_extending_deadline() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = Vec::new();
+            let (head_end, length) = loop {
+                let mut chunk = [0u8; 4096];
+                let n = stream.read(&mut chunk).await.unwrap();
+                assert!(n > 0);
+                bytes.extend_from_slice(&chunk[..n]);
+                if let Some(i) = bytes.windows(4).position(|x| x == b"\r\n\r\n") {
+                    let head = String::from_utf8_lossy(&bytes[..i]);
+                    assert!(head.starts_with("POST /close HTTP/1.1"));
+                    let length = head.lines().find_map(|line| {
+                        let (k, v) = line.split_once(':')?;
+                        k.eq_ignore_ascii_case("content-length").then(|| v.trim().parse::<usize>().unwrap())
+                    }).unwrap();
+                    break (i + 4, length);
+                }
+            };
+            while bytes.len() < head_end + length {
+                let mut chunk = [0u8; 4096];
+                let n = stream.read(&mut chunk).await.unwrap();
+                assert!(n > 0);
+                bytes.extend_from_slice(&chunk[..n]);
+            }
+            let body: Value = serde_json::from_slice(&bytes[head_end..head_end + length]).unwrap();
+            stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: close\r\n\r\n{}").await.unwrap();
+            body
+        });
+        let mut a = active_voice_adapter();
+        let contract: Value = serde_json::from_str(include_str!("../../../../4-Assets/contracts/p003-listening-http-v1.json")).unwrap();
+        a.client = Client::joint(&json!({"url":format!("http://{addr}/"),"metadata":contract["metadata"]["shape"],"key":"synthetic","token":"synthetic"})).unwrap();
+        let expected_session = serde_json::to_value(&a.client.meta.session).unwrap();
+        let now = std::time::Instant::now();
+        let mut deadline = crate::session_close::CloseDeadline::default();
+        assert!(deadline.begin(now));
+        a.close_for_room_exit();
+        assert!(!deadline.begin(now + std::time::Duration::from_secs(1)));
+        a.close_for_room_exit();
+        let body = tokio::time::timeout(std::time::Duration::from_secs(2), server).await.unwrap().unwrap();
+        a.close_task.take().unwrap().await.unwrap();
+        assert_eq!(body["session"], expected_session);
+        assert_eq!(body["listening_id"], "trace-test-1:1");
+        assert_eq!(body["mode_epoch"], 1);
+        assert_eq!(a.counter, 1, "duplicate room exit must not issue another HTTP close");
+        assert!(a.lease_task.is_none() && a.content_task.is_none());
+        assert!(deadline.due(now + crate::session_close::SIGNAL_GRACE));
+    }
     fn adapter() -> Adapter {
         adapter_at(0)
     }
