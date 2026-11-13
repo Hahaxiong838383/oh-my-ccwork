@@ -74,7 +74,8 @@ fn active_exit_text(text: &str) -> String {
 }
 pub fn parse_active_exit(text: &str) -> Option<Utterance> {
     let value = active_exit_text(text);
-    ACTIVE_EXITS.contains(&value.as_str())
+    (ACTIVE_EXITS.contains(&value.as_str())
+        || crate::stop_variants::intent(text) == Some(crate::stop_variants::Intent::ExitListening))
         .then(|| Utterance { intent: Intent::Exit, tail: String::new() })
 }
 pub fn possible_active_exit_prefix(text: &str) -> bool {

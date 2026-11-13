@@ -1,6 +1,8 @@
 #[allow(dead_code)]
 #[path = "../../../src/search_policy.rs"]
 mod search_policy;
+#[path = "../../../src/stop_variants.rs"]
+mod stop_variants;
 #[allow(dead_code)]
 #[path = "../../../src/search_routing.rs"]
 mod search_routing;

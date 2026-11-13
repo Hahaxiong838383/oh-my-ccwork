@@ -2,6 +2,8 @@
 mod listening_mode;
 #[path = "../src/listening_voice.rs"]
 mod listening_voice;
+#[path = "../src/stop_variants.rs"]
+mod stop_variants;
 use listening_mode::Scene;
 use listening_voice::{Intent, parse, possible_prefix};
 #[test]
