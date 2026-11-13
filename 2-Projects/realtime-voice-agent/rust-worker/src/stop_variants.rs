@@ -46,6 +46,7 @@ const STOP_TURN: &[&str] = &[
     "听我说", "听我讲", "听我说完", "听我讲完", "让我说", "让我讲",
     "让我说完", "让我讲完", "让我把话说完", "我还没说完", "我还没讲完",
     "听我把话说完", "听我把话讲完",
+    "听我讲个笑话你再评价",
     "等我说完", "等我讲完", "等我一下", "别打断我", "不要打断我",
     "别插话", "不要插话", "别抢话", "不要抢话", "别抢着说",
     "stop", "pause", "打住", "稍等", "稍等一下", "稍等一会儿",
@@ -159,9 +160,19 @@ pub fn intent(text: &str) -> Option<Intent> {
             return Some(intent);
         }
         // A bounded handoff keeps the action of its leading command.
-        for tail in ["我还没说完", "我还没讲完", "听我说", "听我说完", "让我说完", "等我说完", "我来说"] {
+        for tail in ["我还没说完", "我还没讲完", "听我说", "听我说完", "让我说完", "等我说完", "我来说", "我来讲"] {
             if let Some(head) = body.strip_suffix(tail) {
                 if let Some(action @ (Intent::Close | Intent::StopTurn)) = command(head, request) { return Some(action); }
+            }
+        }
+        // "Listen to me first, then stop" yields this turn; it is not a request
+        // to close immediately. Match the complete two-command construction.
+        for head in ["听我说完", "等我说完", "让我说完"] {
+            if let Some(tail) = body.strip_prefix(head) {
+                let tail = tail.strip_prefix('你').unwrap_or(tail);
+                if let Some(tail) = tail.strip_prefix('再') {
+                    if matches!(command(tail, request), Some(Intent::Close | Intent::StopTurn)) { return Some(Intent::StopTurn); }
+                }
             }
         }
         for tail in ["我们聊点别的", "我们聊别的", "聊点别的", "聊别的吧", "换个话题", "我们继续聊"] {
@@ -212,7 +223,7 @@ mod tests {
                 "退下", "小可退下", "你先退下吧", "别说了", "别说", "先别说了", "暂时不要说话",
                 "小可安静点儿", "别念了", "别念了别念了", "别解释了", "别说了我还没说完",
                 "得了别讲了", "我不想再听你念了", "请把你自己静音", "我在会议中请不要发声", "五十秒内不要回应"], Intent::Close),
-            (vec!["先听我说", "停一下我来说", "哎停停停", "等我说完好吗", "稍等一下", "你先听我把话说完"], Intent::StopTurn),
+            (vec!["先听我说", "停一下我来说", "哎停停停", "等我说完好吗", "稍等一下", "你先听我把话说完", "听我说完再闭嘴", "先听我讲个笑话你再评价"], Intent::StopTurn),
             (vec!["小可请取消刚才的搜索", "能不能别再搜了", "不要再查了", "别搜了我们聊点别的", "不要查", "不用查", "别搜", "取消刚才的查询我们继续聊"], Intent::CancelSearch),
             (vec!["小可恢复聊天吧", "请结束倾听模式", "退出倾听", "结束倾听恢复聊天", "可以恢复聊天吗", "能不能恢复聊天", "恢复聊天好吗", "退出倾听模式恢复聊天"], Intent::ExitListening),
         ] {
@@ -225,6 +236,7 @@ mod tests {
             "不要闭嘴", "我不想退出", "你先别退出", "不要取消搜索", "不要结束倾听",
             "老师说请安静", "故事里的小可你先闭嘴", "闭嘴是什么意思", "怎么让你闭嘴",
             "五十秒内不要回应是什么意思", "我说五十秒内不要回应", "我在会议中请不要发声是台词",
+            "听我说完再闭嘴是什么意思", "先听我讲个笑话你再评价是歌词",
             "可以别说了吗是命令吗", "停一下告诉我三加五等于几", "别念了这个词怎么读",
             "小爱同学闭嘴", "精灵退出", "退出小爱", "这里太安静了", "教室里请安静点",
             "先这样做一道题", "先这样然后再见", "这首歌名叫闭嘴", "闭嘴了的小猫叫什么",
