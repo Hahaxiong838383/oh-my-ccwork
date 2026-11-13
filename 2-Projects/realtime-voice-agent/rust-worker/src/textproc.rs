@@ -117,6 +117,32 @@ pub fn session_exit_path(
     None
 }
 
+/// A partial configured close phrase may suppress speculative generation only.
+/// It never authorizes a close: that still requires the final/committed whole
+/// utterance. A later ordinary continuation immediately leaves this prefix set.
+pub fn session_exit_speculation_blocked(hotwords: &HashSet<String>, text: &str, tail_match: bool) -> bool {
+    if session_exit_path(hotwords, text, tail_match).is_some() { return true; }
+    let t = normalize_utterance(text);
+    !t.is_empty() && hotwords.iter().any(|w| w.starts_with(&t))
+}
+
+#[cfg(test)]
+mod close_speculation_tests {
+    use super::*;
+    #[test]
+    fn incomplete_close_never_opens_an_answer_or_closes_the_room() {
+        let words = parse_hotwords_with(Some("小可你闭嘴,不聊了小可,别说话"), "");
+        for t in ["小可你闭", "不聊了小", "别说"] {
+            assert!(session_exit_speculation_blocked(&words, t, true), "{t}");
+            assert!(session_exit_path(&words, t, true).is_none(), "{t}");
+        }
+        for t in ["", "小可你觉得怎么样", "别说话是什么意思", "不聊了小可是什么意思", "停一下直接告诉我3+5等于几"] {
+            assert!(!session_exit_speculation_blocked(&words, t, true), "{t}");
+            assert!(session_exit_path(&words, t, true).is_none(), "{t}");
+        }
+    }
+}
+
 fn direct_exit_prefix(mut prefix: &str) -> bool {
     // Long forms first. These are command wrappers, not arbitrary substrings.
     // Keep the previously verified compound/ASR forms without accepting
