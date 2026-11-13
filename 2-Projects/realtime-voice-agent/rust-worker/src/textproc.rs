@@ -9,6 +9,8 @@ use std::collections::HashSet;
 use unicode_normalization::UnicodeNormalization;
 use unicode_properties::{GeneralCategoryGroup, UnicodeGeneralCategory};
 
+use crate::stop_variants;
+
 /// NFKC 归一 + 去空白 + 去标点(Unicode P 类),保留数字间小数点("3.5" 不变 "35")。
 pub fn canon_transcript(s: &str) -> String {
     let chars: Vec<char> = s.nfkc().collect();
@@ -51,9 +53,9 @@ pub fn is_wake_only(text: &str) -> bool {
     matches!(normalize_utterance(text).as_str(), "小可" | "小可小可" | "小可小可小可")
 }
 
-/// 退出词吞句集默认表(2026-08-17 川哥拍板,与 Android SESSION_EXIT 合同词表一致——
-/// 联调 v2 §一.4/5:codex 现有 5 词+扩充 4 词+睡觉类 3 词)。Worker 只吞轮次防幽灵回答,
-/// 回复/关房 100% 归 Android(退出权威不变)。
+/// Default close phrases; deployed admin vocabulary remains authoritative.
+/// Whole-session exits stop output, signal Android, and close with a bounded
+/// Worker deadline (2026-11-13), including when Android sends no acknowledgement.
 pub const DEFAULT_EXIT_HOTWORDS: &str =
     "不聊了,我不想聊了,再见,拜拜,退出对话,退出,结束,结束聊天,我要睡觉了,我去睡觉了,我要休息了";
 
@@ -111,10 +113,21 @@ pub fn session_exit_path(
         return Some("exact");
     }
     if tail_match {
+        if stop_variants::intent(text) == Some(stop_variants::Intent::Close) {
+            // Keep the existing Android signal path vocabulary.
+            return Some("tail");
+        }
         return session_exit_tail_hit(text).map(|w|
             if is_fragment_exit_word(w) { "fragment" } else { "tail" });
     }
     None
+}
+
+/// Stops the current answer silently while keeping the room available. Use this
+/// only for the interrupt vocabulary, not for the configurable close table.
+pub fn is_turn_stop(hotwords: &HashSet<String>, text: &str) -> bool {
+    is_stop_only(hotwords, text)
+        || (!hotwords.is_empty() && stop_variants::intent(text) == Some(stop_variants::Intent::StopTurn))
 }
 
 /// A partial configured close phrase may suppress speculative generation only.
@@ -122,6 +135,7 @@ pub fn session_exit_path(
 /// utterance. A later ordinary continuation immediately leaves this prefix set.
 pub fn session_exit_speculation_blocked(hotwords: &HashSet<String>, text: &str, tail_match: bool) -> bool {
     if session_exit_path(hotwords, text, tail_match).is_some() { return true; }
+    if tail_match && (stop_variants::intent(text).is_some() || stop_variants::possible_prefix(text)) { return true; }
     let t = normalize_utterance(text);
     !t.is_empty() && hotwords.iter().any(|w| w.starts_with(&t))
 }
@@ -160,6 +174,65 @@ fn direct_exit_prefix(mut prefix: &str) -> bool {
         prefix = rest;
     }
     prefix.is_empty()
+}
+
+#[cfg(test)]
+mod natural_stop_variants_tests {
+    use super::*;
+
+    #[test]
+    fn explicit_silence_accepts_polite_and_colloquial_whole_commands() {
+        let words = parse_hotwords_with(Some("闭嘴,别说话,小可你闭嘴,不聊了,退出"), "");
+        for text in [
+            "小可你先闭嘴", "你能不能先别说话了", "请你别再说了", "行了别讲了",
+            "小可别吵我了", "麻烦你别说话了好吗", "可以不要再讲话了吗", "你把嘴闭上吧",
+            "我不想听你说了", "今天先聊到这儿吧", "小可我们下次再聊吧",
+        ] {
+            assert!(session_exit_path(&words, text, true).is_some(), "missed {text}");
+        }
+    }
+
+    #[test]
+    fn narration_negation_scope_and_followup_do_not_close() {
+        let words = parse_hotwords_with(Some("闭嘴,别说话,不聊了,退出"), "");
+        for text in [
+            "不要闭嘴", "你不要退出", "不是让你闭嘴", "小可别不说话呀",
+            "闭嘴是什么意思", "能不能解释一下闭嘴的意思", "怎么让你停止说话",
+            "他说你能不能先别说话了", "故事里的小可闭嘴了", "如果我说闭嘴你会怎样",
+            "停一下直接告诉我三加五等于几", "闭嘴以后再告诉我三加五等于几",
+            "别说答案只给我提示", "请你安静一点地讲故事", "先听我说", "我还没说完",
+            "停止搜索", "取消刚才的查询", "结束倾听恢复聊天", "别关房先等我一下",
+        ] {
+            assert!(session_exit_path(&words, text, true).is_none(), "false close {text}");
+        }
+    }
+
+    #[test]
+    fn temporary_pause_leaves_room_and_does_not_answer() {
+        let stop = parse_hotwords(None);
+        let exit = parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
+        for t in ["先听我说", "小可你等一会儿", "你先别说了", "小可安静点",
+            "麻烦你别念了好吗", "请停一会", "停一下我来说", "哎停停停",
+            "你能不能等我说完", "暂时不要说话", "别说了我还没说完"] {
+            assert!(is_turn_stop(&stop, t), "missed temporary stop {t}");
+            assert!(session_exit_path(&exit, t, true).is_none(), "temporary stop closed {t}");
+        }
+    }
+
+    #[test]
+    fn explicit_config_and_existing_stop_are_preserved() {
+        let stop = parse_hotwords(None);
+        let exit = parse_hotwords_with(Some("闭嘴,别说话,不聊了"), "");
+        for t in ["别说了", "别说", "安静", "停一下"] {
+            assert!(is_turn_stop(&stop, t));
+            assert!(session_exit_path(&exit, t, true).is_none());
+        }
+        assert!(session_exit_path(&exit, "小可你先闭嘴", false).is_none());
+        assert_eq!(session_exit_path(&exit, "闭嘴", false), Some("exact"));
+        assert!(!is_turn_stop(&HashSet::new(), "先听我说"));
+        let custom = parse_hotwords_with(Some("安静点"), "");
+        assert_eq!(session_exit_path(&custom, "安静点", true), Some("exact"));
+    }
 }
 
 /// 尾部强意图退出词(A 案 2026-08-28,「不想聊了，退出吧」漏网实证 room=…1787897185):

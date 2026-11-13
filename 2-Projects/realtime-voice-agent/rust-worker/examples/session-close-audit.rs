@@ -1,6 +1,8 @@
 //! Offline corpus audit. Inputs remain outside Git; only aggregate counts print.
 #[path = "../src/textproc.rs"]
 mod textproc;
+#[path = "../src/stop_variants.rs"]
+mod stop_variants;
 use std::io::Read;
 fn main() {
     let mut input = String::new();
