@@ -467,6 +467,7 @@ struct Orchestrator {
     exit_seq: i64,
     /// 在途退出信令:等 ACK/cancel/room close 任一终态;800ms 无终态同 seq 重发,至多 3 发
     exit_pending: Option<ExitSignalPending>,
+    session_close: crate::session_close::CloseDeadline,
     /// 2b:本房 LLM 慢路执行开关(启动时按 room+env 定一次,默认关=2a 观察)
     l2_execute_on: bool,
     /// 2b:Android 能力声明(wake 包 contract_version>=2 才允许发 L2;room 级,job 结束即弃)
@@ -958,6 +959,7 @@ pub async fn run_pipeline(
         exit_signal_on,
         exit_seq: 0,
         exit_pending: None,
+        session_close: crate::session_close::CloseDeadline::default(),
         l2_execute_on,
         l2_capable: false,
         echo_local_texts,
@@ -1388,6 +1390,10 @@ pub async fn run_pipeline(
                 // channel 关闭不退主循环——命令通道是可选能力
             }
         }
+        if orch.session_close.due(Instant::now()) {
+            info!(room = %room_name, "session_exit_close: signal grace ended → closing job");
+            break;
+        }
     }
 
     orch.hard_abort_current();
@@ -1762,6 +1768,7 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        if self.session_close.active() { return; }
         if self.search_ack(&text,false){return;}
         let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
@@ -1769,7 +1776,7 @@ impl Orchestrator {
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
         // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
         if crate::textproc::is_stop_only(&self.cfg.hotwords, &text)
-            || crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &text)
+            || crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &text, self.cfg.exit_tail_match).is_some()
         {
             info!(room = %self.room_name, "speculation skipped: swallow-word tail");
             return;
@@ -1921,6 +1928,7 @@ impl Orchestrator {
     }
 
     fn on_interim(&mut self, t: String) {
+        if self.session_close.active() { return; }
         self.contract.user_transcript_interim();
         self.tr.user_interim(&t);
         self.tele_text = t.clone();
@@ -1931,6 +1939,7 @@ impl Orchestrator {
     }
 
     fn on_final(&mut self, t: String) {
+        if self.session_close.active() { return; }
         self.contract.user_transcript_final();
         // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
         // 门关着或空 final → 原路立即发(空 final 在端侧不启动等待,且 turn_gate 也不收它)。
@@ -2311,6 +2320,7 @@ impl Orchestrator {
         kind: control::Inbound,
         identity: Option<&str>,
     ) {
+        if self.session_close.active() && !matches!(&kind, control::Inbound::SessionExitAck | control::Inbound::Cancel) { return; }
         match kind {
             control::Inbound::CanarySay => self.on_canary_say(ev, identity),
             // command_word(2026-08-18 晚合同):VAD 芯片 label 经 Android 转发,
@@ -2888,6 +2898,8 @@ impl Orchestrator {
     /// tick 唯一出口包装(B50 §4):`on_tick_inner` 有 8 条 return,把字幕裁决的落地放在这里,
     /// 任何一条 return 都绕不过去——将来新增 return 分支自动继承默认判决 Publish。
     async fn on_tick(&mut self) {
+        self.poll_exit_signal();
+        if self.session_close.active() { return; }
         if let Some(text)=self.search_recovery.as_mut().and_then(|r|r.poll()) {
             let control=self.search.as_ref().and_then(|s|s.recovered_text(&text));
             info!(room=%self.room_name,accepted=control.is_some(),"search control recovery completed");
@@ -2896,6 +2908,7 @@ impl Orchestrator {
         }
         self.on_tick_inner().await;
         self.flush_caption_finals();
+        if self.session_close.active() { return; }
         let input_pending = self.search_user_speaking || !self.turn_gate.pending().is_empty()
             || !self.latest_interim.is_empty();
         if let Some(search) = &mut self.search { search.observe_input(input_pending); }
@@ -2983,6 +2996,60 @@ impl Orchestrator {
         }
     }
 
+    fn poll_exit_signal(&mut self) {
+        let now = Instant::now();
+        // v140 §4.3:退出信令 800ms 无终态同 seq 重发,至多 3 发后放弃(不得重试风暴;
+        // Android 侧 ACK 预算 750ms,800ms 给足单程+处理)。room close 由 job 收尾天然终止。
+        if let Some(pend) = &mut self.exit_pending {
+            if now.duration_since(pend.sent_at) >= Duration::from_millis(800) {
+                if pend.attempts >= 3 {
+                    info!(room = %self.room_name, seq = pend.seq,
+                        "session_exit signal gave up (no terminal after 3 attempts)");
+                    self.exit_pending = None;
+                } else {
+                    pend.attempts += 1;
+                    pend.sent_at = now;
+                    let env = pend.envelope.clone();
+                    let (seq, attempt) = (pend.seq, pend.attempts);
+                    self.publish_json(control::TOPIC, env);
+                    info!(room = %self.room_name, seq, attempt, "session_exit signal retry (same seq)");
+                }
+            }
+        }
+    }
+
+    fn begin_session_exit(&mut self, text: &str, path: &str) {
+        if !self.session_close.begin(Instant::now()) { return; }
+        if let Some(lc) = crate::ready_confirm::swallow_lifecycle("session_exit") { self.ready_confirm.apply(lc); }
+        self.hard_abort_current();
+        if let Some(r) = &mut self.search_recovery { r.cancel(); }
+        if let Some(mut search) = self.search.take() { search.close(); }
+        if let Some(sp) = self.spec.take() { sp.task.abort(); }
+        self.pending_tts_warm = None;
+        self.false_deadline = None;
+        self.paused = None;
+        self.resume_grace = None;
+        self.latest_interim.clear();
+        self.tele_text.clear();
+        self.pf.reset();
+        if self.exit_signal_on {
+            if let Some(trace) = self.device_trace.clone() {
+                self.exit_seq += 1;
+                let rk = crate::textproc::exit_reply_kind(text);
+                let env = control::session_exit_detected(&trace, now_unix_ms(), self.exit_seq, rk, path);
+                self.publish_json(control::TOPIC, env.clone());
+                self.exit_pending = Some(ExitSignalPending {
+                    seq: self.exit_seq, sent_at: Instant::now(), attempts: 1, envelope: env,
+                });
+                info!(room = %self.room_name, seq = self.exit_seq, reply_kind = rk, path, "session_exit signal sent");
+            } else {
+                info!(room = %self.room_name, "session_exit signal skipped: no session trace");
+            }
+        }
+        info!(room = %self.room_name, path, grace_ms = crate::session_close::SIGNAL_GRACE.as_millis(),
+            "session_exit close armed");
+    }
+
     async fn on_tick_inner(&mut self) {
         // One-shot v0.3:有序 PCM 代次超时(begin 后无 end)→ 整代失败终态
         if self.ordered.is_some() {
@@ -3004,24 +3071,6 @@ impl Orchestrator {
         // cancel 掉的 canary:turn.task.abort() 后 BufferWatch Drop 异步落槽,tick 兜底补发
         self.try_flush_canary_metrics();
         let now = Instant::now();
-        // v140 §4.3:退出信令 800ms 无终态同 seq 重发,至多 3 发后放弃(不得重试风暴;
-        // Android 侧 ACK 预算 750ms,800ms 给足单程+处理)。room close 由 job 收尾天然终止。
-        if let Some(pend) = &mut self.exit_pending {
-            if now.duration_since(pend.sent_at) >= Duration::from_millis(800) {
-                if pend.attempts >= 3 {
-                    info!(room = %self.room_name, seq = pend.seq,
-                        "session_exit signal gave up (no terminal after 3 attempts)");
-                    self.exit_pending = None;
-                } else {
-                    pend.attempts += 1;
-                    pend.sent_at = now;
-                    let env = pend.envelope.clone();
-                    let (seq, attempt) = (pend.seq, pend.attempts);
-                    self.publish_json(control::TOPIC, env);
-                    info!(room = %self.room_name, seq, attempt, "session_exit signal retry (same seq)");
-                }
-            }
-        }
         // 字幕逐句推进(按播出位置;pause 时 played 冻结自然停发)
         self.publish_agent_progress();
         self.log_playout_segments();
@@ -3196,28 +3245,11 @@ impl Orchestrator {
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
             let search_cancel = self.search.as_ref().is_some_and(|s|s.cancel_before_exit(&user_text));
-            let swallow_kind = if search_cancel { None } else if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
-                Some(("stop_only", "exact"))
-            } else if crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &user_text) {
-                // 退出词吞句(2026-08-17 川哥拍板):trace 88185b1e 实证「退出」被 commit
-                // 起幽灵回答轮(filler 入轨+LLM 回 2 字),79ms 后才被 Android cancel 杀——
-                // 预测式判停必然抢先 cancel,竞态改确定性。Worker 只吞轮次;
-                // 退出回复/关房 100% 归 Android(退出权威不变)。
-                Some(("session_exit", "exact"))
-            } else if self.cfg.exit_tail_match {
-                // A 案(2026-08-28「不想聊了，退出吧」漏网实证):自然复合句对整句精确匹配
-                // 结构性免疫→尾部强意图词匹配,否定/疑问豁免见 textproc。语义与 exact 同=只吞。
-                // path 分桶(v140 §2):碎片词(不想聊/不想聊天)=fragment,复合句尾部命中=tail。
-                match crate::textproc::session_exit_tail_hit(&user_text) {
-                    Some(w) if crate::textproc::is_fragment_exit_word(w) => {
-                        Some(("session_exit", "fragment"))
-                    }
-                    Some(_) => Some(("session_exit", "tail")),
-                    None => None,
-                }
-            } else {
-                None
-            };
+            let swallow_kind = if search_cancel { None } else if let Some(path) = crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &user_text, self.cfg.exit_tail_match) {
+                    Some(("session_exit", path))
+                } else if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
+                    Some(("stop_only", "exact"))
+                } else { None };
             if let Some((kind, path)) = swallow_kind {
                 if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 info!(room = %self.room_name, path, "{kind} utterance swallowed: '{user_text}'");
@@ -3227,33 +3259,7 @@ impl Orchestrator {
                 if let Some(lc) = crate::ready_confirm::swallow_lifecycle(kind) {
                     self.ready_confirm.apply(lc);
                 }
-                // v140 §4.1:三路命中(exact/tail/fragment)任一 → 发 session_exit_detected。
-                // 纪律:envelope 不带转写正文;trace 缺失=不发(受信通道没建立,fail-closed)。
-                if kind == "session_exit" { self.hard_abort_current(); if let Some(mut search)=self.search.take(){search.close();} }
-                if kind == "session_exit" && self.exit_signal_on {
-                    if let Some(trace) = self.device_trace.clone() {
-                        self.exit_seq += 1;
-                        let rk = crate::textproc::exit_reply_kind(&user_text);
-                        let env = control::session_exit_detected(
-                            &trace,
-                            now_unix_ms(),
-                            self.exit_seq,
-                            rk,
-                            path,
-                        );
-                        self.publish_json(control::TOPIC, env.clone());
-                        self.exit_pending = Some(ExitSignalPending {
-                            seq: self.exit_seq,
-                            sent_at: Instant::now(),
-                            attempts: 1,
-                            envelope: env,
-                        });
-                        info!(room = %self.room_name, seq = self.exit_seq, reply_kind = rk, path,
-                            "session_exit signal sent");
-                    } else {
-                        info!(room = %self.room_name, "session_exit signal skipped: no session trace");
-                    }
-                }
+                if kind == "session_exit" { self.begin_session_exit(&user_text, path); }
                 // 在途回答若还在(未被急停白名单/cancel 停掉,如用户轻声说「停」
                 // 而 interim 未及命中)→ 此刻补硬停,保证「停=安静」
                 if self.agent_turn.is_some() {
@@ -3621,6 +3627,7 @@ impl Orchestrator {
     }
 
     fn start_turn(&mut self, kind: TurnKind) {
+        if self.session_close.active() { return; }
         let record_history = !matches!(&kind, TurnKind::BackgroundSay(_) | TurnKind::BackgroundClip(..));
         self.search_turn = !record_history;
         // 回声对撞:记录本 turn 的 filler 文案(Say/无 filler 轮清空)——synth_text 只有 TTS 正文,

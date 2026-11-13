@@ -101,12 +101,47 @@ pub fn is_stop_only(hotwords: &HashSet<String>, text: &str) -> bool {
     false
 }
 
+/// A close command must consume the whole utterance. The configurable table
+/// owns exact phrases; the legacy tail path accepts only direct command prefixes.
+/// Never search for a close word inside a story, quotation or follow-up request.
+pub fn session_exit_path(
+    hotwords: &HashSet<String>, text: &str, tail_match: bool,
+) -> Option<&'static str> {
+    if is_stop_only(hotwords, text) {
+        return Some("exact");
+    }
+    if tail_match {
+        return session_exit_tail_hit(text).map(|w|
+            if is_fragment_exit_word(w) { "fragment" } else { "tail" });
+    }
+    None
+}
+
+fn direct_exit_prefix(mut prefix: &str) -> bool {
+    // Long forms first. These are command wrappers, not arbitrary substrings.
+    // Keep the previously verified compound/ASR forms without accepting
+    // "他说退出" or "故事里的小可退出" as instructions to this assistant.
+    const PREFIXES: &[&str] = &[
+        "今天就到这里", "不想聊你", "不想聊了", "不想聊天", "不想聊",
+        "小可", "我们", "现在", "今天", "好的", "好吧", "麻烦",
+        "我", "要", "想", "请", "先", "就", "好", "那", "嗯", "哎", "啊", "哦", "行",
+    ];
+    for _ in 0..12 {
+        if prefix.is_empty() { return true; }
+        let Some(rest) = PREFIXES.iter().find_map(|p| prefix.strip_prefix(p)) else {
+            return false;
+        };
+        prefix = rest;
+    }
+    prefix.is_empty()
+}
+
 /// 尾部强意图退出词(A 案 2026-08-28,「不想聊了，退出吧」漏网实证 room=…1787897185):
 /// 自然复合句永远不等于词表原子,整句精确匹配对其结构性免疫;且 ASR 错转「聊了→聊你」
 /// 连子串包含都救不了「不想聊了」——能稳定存活的是**句尾的意图核心词**。
 /// 只收误伤面可控的强意图词:「结束」「不用了」这类日常陈述高频词不进尾表
-/// (「这个游戏结束」≠退出)。误伤代价=该句被吞不回答(worker 只吞轮次,退出权威归
-/// Android,不会误退出),故词表宁紧、豁免宁宽。
+/// (「这个游戏结束」≠退出)。命中会结束整个会话,故只允许完整命令前缀,
+/// 不接受任意叙事前文或引用;具体词库仍由后台统一发布。
 /// ⚠️ 长词优先序是正确性约束不是美观:「我不想聊了」必须先中「不想聊了」——
 /// 若先中「不聊了」,前窗「不想」的「想」会被否定豁免误放(护栏用例 tail_hits 首条)。
 const STRONG_EXIT_TAILS: &[&str] = &[
@@ -170,7 +205,9 @@ pub fn session_exit_tail_hit(text: &str) -> Option<&'static str> {
                 if negated_before(&t, t.len() - w.len()) {
                     return None;
                 }
-                return Some(w);
+                if direct_exit_prefix(&t[..t.len() - w.len()]) {
+                    return Some(w);
+                }
             }
         }
         let Some(c) = t.chars().last() else { break };
