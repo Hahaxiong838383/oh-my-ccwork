@@ -59,13 +59,33 @@ pub fn control_outlet_kind(
     if let Some(path) = crate::textproc::session_exit_path(exit_hotwords, text, exit_tail_match) {
         return Some(if path == "exact" { "exit_exact" } else { "exit_tail" });
     }
-    if crate::textproc::is_stop_only(hotwords, text) {
+    if crate::textproc::is_turn_stop(hotwords, text) {
         return Some("stop");
     }
     if crate::device_intent::match_command(text).is_some() {
         return Some("command");
     }
     None
+}
+
+#[cfg(test)]
+mod natural_control_outlet_tests {
+    use super::*;
+    use crate::textproc::{parse_hotwords, parse_hotwords_with};
+    #[test]
+    fn natural_stop_and_close_share_the_caption_and_echo_exemption() {
+        let stop=parse_hotwords(None);
+        let exit=parse_hotwords_with(Some("闭嘴,别说话"), "");
+        for text in ["小可你先闭嘴", "你能不能先别说话了", "行了别讲了"] {
+            assert_eq!(control_outlet_kind(text,&stop,&exit,true),Some("exit_tail"));
+        }
+        for text in ["先听我说", "别念了", "小可安静点", "别说了"] {
+            assert_eq!(control_outlet_kind(text,&stop,&exit,true),Some("stop"));
+        }
+        for text in ["闭嘴是什么意思", "别念了这个词怎么读", "小可先听我讲个故事", "别不说话"] {
+            assert_eq!(control_outlet_kind(text,&stop,&exit,true),None);
+        }
+    }
 }
 
 /// 一条等待裁决的用户 final 字幕:段 id 在 final 到达那刻就定下并轮换,内容照原样。

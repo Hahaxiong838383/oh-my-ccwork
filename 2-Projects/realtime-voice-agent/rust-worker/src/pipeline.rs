@@ -1775,7 +1775,7 @@ impl Orchestrator {
         if self.search.is_some() && crate::search_policy::intent(&text).is_some() { return; }
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
         // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
-        if crate::textproc::is_stop_only(&self.cfg.hotwords, &text)
+        if crate::textproc::is_turn_stop(&self.cfg.hotwords, &text)
             || crate::textproc::session_exit_speculation_blocked(&self.cfg.exit_hotwords, &text, self.cfg.exit_tail_match)
         {
             info!(room = %self.room_name, "speculation skipped: swallow-word tail");
@@ -3193,7 +3193,7 @@ impl Orchestrator {
                         && speech_end_ms <= deadline
                         && crate::device_intent::match_command(&user_text).is_none()
                         && crate::device_grammar::executable(&user_text).is_none()
-                        && !crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text)
+                        && !crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text)
                         && crate::textproc::session_exit_tail_hit(&user_text).is_none()
                     {
                         let overlap = {
@@ -3247,7 +3247,7 @@ impl Orchestrator {
             let search_cancel = self.search.as_ref().is_some_and(|s|s.cancel_before_exit(&user_text));
             let swallow_kind = if search_cancel { None } else if let Some(path) = crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &user_text, self.cfg.exit_tail_match) {
                     Some(("session_exit", path))
-                } else if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
+                } else if crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text) {
                     Some(("stop_only", "exact"))
                 } else { None };
             if let Some((kind, path)) = swallow_kind {
