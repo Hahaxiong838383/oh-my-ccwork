@@ -76,10 +76,10 @@ mod natural_control_outlet_tests {
     fn natural_stop_and_close_share_the_caption_and_echo_exemption() {
         let stop=parse_hotwords(None);
         let exit=parse_hotwords_with(Some("闭嘴,别说话"), "");
-        for text in ["小可你先闭嘴", "你能不能先别说话了", "行了别讲了"] {
+        for text in ["小可你先闭嘴", "你能不能先别说话了", "行了别讲了", "别念了", "小可安静点", "别说了", "不要查"] {
             assert_eq!(control_outlet_kind(text,&stop,&exit,true),Some("exit_tail"));
         }
-        for text in ["先听我说", "别念了", "小可安静点", "别说了"] {
+        for text in ["先听我说", "停一下", "等我说完"] {
             assert_eq!(control_outlet_kind(text,&stop,&exit,true),Some("stop"));
         }
         for text in ["闭嘴是什么意思", "别念了这个词怎么读", "小可先听我讲个故事", "别不说话"] {

@@ -2061,7 +2061,7 @@ mod adapter_tests {
     }
     #[tokio::test]
     async fn listening_active_exit_aliases_complete_normal_transition() {
-        for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听", "小可，恢复普通聊天。", "小可小可退出倾听模式"] {
+        for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听", "小可，恢复普通聊天。", "小可小可退出倾听模式", "可以恢复聊天吗", "能不能恢复聊天", "恢复聊天好吗"] {
             let mut a = adapter();
             a.client.meta.voice_control = Some(listening_http::VoiceControl {
                 version: 1, capability: "listening_voice_control_v1".into(),
@@ -2085,12 +2085,12 @@ mod adapter_tests {
     }
     #[tokio::test]
     async fn listening_active_exit_does_not_capture_normal_chat_quotes_or_questions() {
-        for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听"] {
+        for phrase in ["恢复聊天", "结束倾听恢复聊天", "小可结束倾听", "可以恢复聊天吗", "能不能恢复聊天"] {
             let mut a = voice_adapter();
             assert!(!a.voice_final_candidate(phrase));
             assert!(a.voice_final(phrase).is_none());
         }
-        for phrase in ["故事里的小可说结束倾听恢复聊天", "歌词是恢复聊天", "不要结束倾听", "结束倾听是什么意思", "可以恢复聊天吗", "小可结束倾听这句话怎么说", "“恢复聊天”"] {
+        for phrase in ["故事里的小可说结束倾听恢复聊天", "歌词是恢复聊天", "不要结束倾听", "结束倾听是什么意思", "可以解释恢复聊天的意思吗", "小可结束倾听这句话怎么说", "“恢复聊天”"] {
             let mut a = adapter();
             a.client.meta.voice_control = Some(listening_http::VoiceControl {
                 version: 1, capability: "listening_voice_control_v1".into(),

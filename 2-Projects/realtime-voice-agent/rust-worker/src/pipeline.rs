@@ -3534,9 +3534,11 @@ impl Orchestrator {
             // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
-            let search_cancel = self.search.as_ref().is_some_and(|s|s.cancel_before_exit(&user_text));
-            let swallow_kind = if search_cancel { None }
-                else if let Some(path) = crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &user_text, self.cfg.exit_tail_match) {
+            // User decision B4: a complete voice cancellation closes the room.
+            // Close must precede task-only cancellation even with a live search.
+            let exit_path = crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &user_text, self.cfg.exit_tail_match);
+            let search_cancel = exit_path.is_none() && self.search.as_ref().is_some_and(|s|s.cancel_before_exit(&user_text));
+            let swallow_kind = if let Some(path) = exit_path {
                     Some(("session_exit", path))
                 } else if crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text) {
                     Some(("stop_only", "exact"))

@@ -16,8 +16,18 @@ const CLOSE: &[&str] = &[
     "别吵吵", "别唠叨", "不要唠叨", "别啰嗦", "不要啰嗦",
     "别叨叨", "不要叨叨", "别说个没完", "不要再开口", "别再开口",
     "别出声", "不要出声",
+    // Product decision 2026-11-14: A/B stop-speech phrases close the session.
+    // Pure turn-yielding commands (停一下 / 先听我说) remain separate below.
+    "别说", "别念", "不要念", "不用念", "别再念", "不要再念", "别读", "不要读",
+    "别解释", "不要解释", "不用解释", "别再解释", "不用再解释",
+    "安静", "安静点", "安静一点", "保持安静", "bequiet",
+    "安静点儿", "安静一点儿", "消停点", "消停点儿", "消停一下", "嘘",
+    "先别说", "先不用说", "先不要说", "暂时不要说话", "暂时别说话",
+    "不要发声", "别发声", "停止发声", "静音", "把你自己静音", "把自己静音",
+    "滚", "够了", "不用了", "不要了", "你休息", "您休息", "休息", "关闭", "关机",
     "我不想听", "我不想听你说", "我不想听你说话", "我不想听你讲",
     "我不想听你讲话", "不想听", "不想听你说", "不想听你说话",
+    "我不想再听你念", "我不想再听你读", "我不想再听你解释",
     "不聊", "不聊了", "不想聊", "不想聊了", "我不聊", "我不想聊",
     "我不想和你聊", "我不想跟你聊", "不跟你聊", "不和你聊",
     "退出", "退出对话", "退出聊天", "结束聊天", "结束对话", "结束这次对话",
@@ -35,36 +45,36 @@ const STOP_TURN: &[&str] = &[
     "停止当前回答", "停止当前播报", "停下当前回答", "停下当前播报",
     "听我说", "听我讲", "听我说完", "听我讲完", "让我说", "让我讲",
     "让我说完", "让我讲完", "让我把话说完", "我还没说完", "我还没讲完",
+    "听我把话说完", "听我把话讲完",
     "等我说完", "等我讲完", "等我一下", "别打断我", "不要打断我",
     "别插话", "不要插话", "别抢话", "不要抢话", "别抢着说",
-    "安静", "安静点", "安静一点", "保持安静", "bequiet", "stop", "pause",
-    "安静点儿", "安静一点儿", "消停点", "消停点儿", "消停一下", "打住", "嘘",
-    "别念", "不要念", "不用念", "别再念", "不要再念", "别读", "不要读",
-    "别解释", "不要解释", "不用解释", "别再解释", "不用再解释",
+    "stop", "pause", "打住", "稍等", "稍等一下", "稍等一会儿",
+    "听我说完再说", "等我说完再说", "让我说完再说",
     "停止播放", "暂停播放", "暂停音乐", "停止放歌",
-    "先别说", "先不用说", "先不要说", "暂时不要说话", "暂时别说话",
-    "别说",
 ];
 const CANCEL_SEARCH: &[&str] = &[
     "取消搜索", "停止搜索", "结束搜索", "取消查询", "停止查询", "结束查询",
     "取消这次搜索", "取消这次查询", "取消刚才的搜索", "取消刚才的查询",
-    // A bare refusal (不要查) must still clear a pending clarification without
-    // being promoted to a task cancellation. Complete cancel clauses keep 了.
+    // The parser retains the task intent; the 2026-11-14 voice policy closes
+    // the session for B4, including a bare refusal, before search cancellation.
+    "别查", "不要查", "不用查", "不查", "别再查", "不要再查", "不用再查",
+    "别搜", "不要搜", "不用搜", "不搜", "别再搜", "不要再搜", "不用再搜",
     "别查了", "不要查了", "不用查了", "不查了", "别再查了", "不要再查了", "不用再查了",
     "别搜了", "不要搜了", "不用搜了", "不搜了", "别再搜了", "不要再搜了", "不用再搜了",
     "别搜索了", "不要搜索了", "不用搜索了", "别查询了", "不要查询了", "不用查询了",
 ];
 const EXIT_LISTENING: &[&str] = &[
     "退出倾听", "退出倾听模式", "结束倾听", "结束倾听模式",
-    "结束倾听恢复聊天", "结束倾听模式恢复聊天", "恢复聊天", "恢复普通聊天",
+    "结束倾听恢复聊天", "结束倾听模式恢复聊天", "退出倾听恢复聊天", "退出倾听模式恢复聊天", "恢复聊天", "恢复普通聊天",
 ];
 const PREFIXES: &[&str] = &[
     "小可小可", "小可", "我想请你", "我想让你", "我让你", "我要你", "给我", "求你",
     "你能不能", "您能不能", "你可不可以", "您可不可以", "能不能", "可不可以",
     "请你", "请您", "麻烦你", "麻烦您", "拜托你", "拜托您", "麻烦", "拜托",
     "可以", "能", "请", "你", "您", "我们", "咱们", "现在", "暂时", "先", "就",
-    "行了", "够了", "好了", "好啦", "好吧", "好的", "那", "嗯", "哎", "喂", "好",
+    "行了", "得了", "够了", "好了", "好啦", "好吧", "好的", "那", "嗯", "哎呀", "哎", "喂", "好",
     "话太多了", "太啰嗦了", "太吵了",
+    "我在会议中", "我正在开会", "我在开会", "我在写作业",
 ];
 const SUFFIXES: &[&str] = &[
     "行不行", "好不好", "可以吗", "好吗", "行吗", "小可", "谢谢", "拜托了",
@@ -89,7 +99,10 @@ fn core(text: &str) -> Option<Intent> {
 /// Asking how/why, quoting a command, negating it, or appending a new task leaves
 /// unmatched material, so no action is produced.
 fn command(text: &str, request: bool) -> Option<Intent> {
-    let mut t = if request { text.strip_suffix('吗').unwrap_or(text) } else { text };
+    let asked = text.strip_suffix(['吗', '么']);
+    let mut t = if request || asked.is_some_and(|s| EXIT_LISTENING.contains(&s)) {
+        asked.unwrap_or(text)
+    } else { text };
     for _ in 0..=5 {
         if let Some(intent) = core(t) { return Some(intent); }
         // Repeated short commands still have to consume the whole utterance.
@@ -111,16 +124,28 @@ fn command(text: &str, request: bool) -> Option<Intent> {
         if let Some(rest) = SUFFIXES.iter().find_map(|s| t.strip_suffix(s)) { t = rest; }
         else { break; }
     }
-    // A limited temporary pause is not an instruction to leave the room.
+    // Temporary modifiers keep the chosen product action. B3 now closes;
+    // an actual turn-yielding command (停一下) still keeps the room.
     for suffix in ["一下", "一会儿", "一会", "一小会", "一小会儿"] {
         if let Some(rest) = t.strip_suffix(suffix) {
-            if core(rest) == Some(Intent::Close)
-                || ["安静", "安静点", "保持安静", "别说", "停", "暂停"].contains(&rest) {
-                return Some(Intent::StopTurn);
-            }
+            if core(rest) == Some(Intent::Close) { return Some(Intent::Close); }
+            if ["停", "暂停"].contains(&rest) { return Some(Intent::StopTurn); }
         }
     }
     None
+}
+
+/// A bounded "N秒/分钟内不要说话" is a stop request under user decision B3.
+/// It closes this conversation; it never claims to set a device mute timer.
+fn timed_silence(text: &str) -> bool {
+    for unit in ["秒内", "分钟内"] {
+        let Some((n, rest)) = text.split_once(unit) else { continue };
+        if !(1..=3).contains(&n.chars().count()) || !n.chars().all(|c| c.is_ascii_digit() || "零〇一二两三四五六七八九十百".contains(c)) { continue; }
+        let rest = rest.strip_prefix("请").unwrap_or(rest);
+        let Some(rest) = rest.strip_prefix("不要").or_else(|| rest.strip_prefix('别')) else { continue };
+        if ["回应", "说话", "出声", "发声", "讲话"].contains(&rest) { return true; }
+    }
+    false
 }
 
 pub fn intent(text: &str) -> Option<Intent> {
@@ -128,30 +153,18 @@ pub fn intent(text: &str) -> Option<Intent> {
     if t.len() > 240 || t.is_empty() { return None; }
     let mut body = t.as_str();
     let mut request = false;
-    let mut emphatic = false;
     for _ in 0..=10 {
+        if timed_silence(body) { return Some(Intent::Close); }
         if let Some(intent) = command(body, request) {
-            // Preserve the listening contract: a capability question is not
-            // an explicit mode exit, even when polite stop requests are valid.
-            if intent == Intent::ExitListening && (request || t.contains('吗')) {
-                return None;
-            }
-            // Keep the existing bare "别说了" as stop-turn. A complete polite
-            // or emphatic stop request may be stronger; explicit temporary
-            // scope (先别说/暂时...) is never removed before this decision.
-            if intent == Intent::StopTurn && (request || emphatic)
-                && ["别说", "别说了"].contains(&body.strip_suffix('吗').unwrap_or(body)) { return Some(Intent::Close); }
             return Some(intent);
         }
-        // Retain the room when the user explicitly asks to finish their turn.
+        // A bounded handoff keeps the action of its leading command.
         for tail in ["我还没说完", "我还没讲完", "听我说", "听我说完", "让我说完", "等我说完", "我来说"] {
             if let Some(head) = body.strip_suffix(tail) {
-                if matches!(command(head, request), Some(Intent::Close | Intent::StopTurn)) {
-                    return Some(Intent::StopTurn);
-                }
+                if let Some(action @ (Intent::Close | Intent::StopTurn)) = command(head, request) { return Some(action); }
             }
         }
-        for tail in ["我们聊点别的", "我们聊别的", "聊点别的", "聊别的吧", "换个话题"] {
+        for tail in ["我们聊点别的", "我们聊别的", "聊点别的", "聊别的吧", "换个话题", "我们继续聊"] {
             if body.strip_suffix(tail).is_some_and(|head| command(head, request) == Some(Intent::CancelSearch)) {
                 return Some(Intent::CancelSearch);
             }
@@ -166,7 +179,6 @@ pub fn intent(text: &str) -> Option<Intent> {
         }
         let Some((prefix, rest)) = PREFIXES.iter().find_map(|p| body.strip_prefix(p).map(|rest|(*p, rest))) else { break; };
         request |= prefix.contains('能') || prefix.contains("可以");
-        emphatic |= ["行了", "够了", "拜托", "拜托你", "拜托您", "求你"].contains(&prefix);
         body = rest;
     }
     None
@@ -197,12 +209,12 @@ mod tests {
             (vec!["小可你先闭嘴", "你能不能先别说话了", "可不可以别说话了", "可以别说了吗",
                 "别再说了", "行了别讲了", "行了别说了", "拜托你别说了", "闭嘴闭嘴",
                 "你给我闭嘴", "闭嘴吧闭嘴吧", "安静点别说话了", "别搜了你闭嘴",
-                "退下", "小可退下", "你先退下吧"], Intent::Close),
-            (vec!["别说了", "别说", "先别说了", "暂时不要说话", "小可安静点儿", "先听我说",
-                "别念了", "别念了别念了", "别解释了", "停一下我来说", "哎停停停",
-                "别说了我还没说完", "等我说完好吗"], Intent::StopTurn),
-            (vec!["小可请取消刚才的搜索", "能不能别再搜了", "不要再查了", "别搜了我们聊点别的"], Intent::CancelSearch),
-            (vec!["小可恢复聊天吧", "请结束倾听模式", "退出倾听", "结束倾听恢复聊天"], Intent::ExitListening),
+                "退下", "小可退下", "你先退下吧", "别说了", "别说", "先别说了", "暂时不要说话",
+                "小可安静点儿", "别念了", "别念了别念了", "别解释了", "别说了我还没说完",
+                "得了别讲了", "我不想再听你念了", "请把你自己静音", "我在会议中请不要发声", "五十秒内不要回应"], Intent::Close),
+            (vec!["先听我说", "停一下我来说", "哎停停停", "等我说完好吗", "稍等一下", "你先听我把话说完"], Intent::StopTurn),
+            (vec!["小可请取消刚才的搜索", "能不能别再搜了", "不要再查了", "别搜了我们聊点别的", "不要查", "不用查", "别搜", "取消刚才的查询我们继续聊"], Intent::CancelSearch),
+            (vec!["小可恢复聊天吧", "请结束倾听模式", "退出倾听", "结束倾听恢复聊天", "可以恢复聊天吗", "能不能恢复聊天", "恢复聊天好吗", "退出倾听模式恢复聊天"], Intent::ExitListening),
         ] {
             for t in texts { assert_eq!(intent(t), Some(expected), "{t}"); }
         }
@@ -210,9 +222,9 @@ mod tests {
     #[test]
     fn definitions_quotes_negations_and_continuations_are_not_commands() {
         for t in ["小可先听我说一会儿", "小可先听我讲个故事", "退出吗", "别不说话",
-            "可以恢复聊天吗", "能不能恢复聊天", "恢复聊天好吗", "不要查", "不用查", "别搜",
             "不要闭嘴", "我不想退出", "你先别退出", "不要取消搜索", "不要结束倾听",
             "老师说请安静", "故事里的小可你先闭嘴", "闭嘴是什么意思", "怎么让你闭嘴",
+            "五十秒内不要回应是什么意思", "我说五十秒内不要回应", "我在会议中请不要发声是台词",
             "可以别说了吗是命令吗", "停一下告诉我三加五等于几", "别念了这个词怎么读",
             "小爱同学闭嘴", "精灵退出", "退出小爱", "这里太安静了", "教室里请安静点",
             "先这样做一道题", "先这样然后再见", "这首歌名叫闭嘴", "闭嘴了的小猫叫什么",
