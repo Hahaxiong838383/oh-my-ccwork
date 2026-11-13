@@ -122,8 +122,8 @@ pub struct PipelineConfig {
     pub canary_identity_allow: Vec<String>,
     pub vad_model_path: String,
     pub hotwords: HashSet<String>,
-    /// 退出词吞句集(EXIT_SWALLOW_HOTWORDS):整句命中→只吞轮次(防幽灵回答轮),
-    /// 回复/关房归 Android。与急停表分开配置,词表须与 Android SESSION_EXIT 一致。
+    /// 退出词集(EXIT_SWALLOW_HOTWORDS):明确结束整段对话时取消输出并有界关房。
+    /// 与仅停止当前播放的急停表分开,由后台统一发布。
     pub exit_hotwords: HashSet<String>,
     /// A 案(2026-08-28):exit 尾部匹配开关(EXIT_TAIL_MATCH,默认开;置 0 回退纯精确匹配)。
     pub exit_tail_match: bool,
