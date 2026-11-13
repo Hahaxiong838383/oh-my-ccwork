@@ -1,0 +1,248 @@
+{
+  "status": "DEPLOYED_SERVER_VERIFIED_NOT_PHYSICAL_ANDROID",
+  "at": "2026-11-13 13:46:31 CST",
+  "corpus_counts": {
+    "close": 44,
+    "reject": 45,
+    "ambiguous": 22,
+    "runtime_words": 72
+  },
+  "test_summary": {
+    "listening": {
+      "candidate": {
+        "pool": "listening",
+        "source_commit": "3d76d0ac25d1efe0e6984dae28cf361e49b4fcd4",
+        "binary_sha256": "28ff1f6c5b683879dfa06fe59d920b642bb057d79e607bfa49cdf87e7910fcd3",
+        "bytes": 78283736,
+        "source_path": "/home/hahaxiong83/local/p003-session-close-20261113/listening/candidate/2-Projects/realtime-voice-agent/rust-worker/voice-rust-worker.session-close",
+        "staged_path": "/root/p003-session-close-20261113/worker-listening"
+      },
+      "tests_passed": 756,
+      "tests_ignored": 3,
+      "test_log_sha256": "196e45d16536fdc5e9bb57ee5bc1fbbe5a7870b0629193c2365c2b301f4bf3e8",
+      "corpus": {
+        "cases": 189,
+        "failed": [],
+        "passed": 189
+      },
+      "corpus_log_sha256": "fd166ad2f83cac9f17807a52e7b407992398d325533d008baf677761ce4764b7",
+      "release_log_sha256": "a64fcd7462654976c9ee3ffee870002b22c0a732ad43a476789d79929f8debbd",
+      "all_local_sources_equal_build_sources": true
+    },
+    "main": {
+      "candidate": {
+        "pool": "main",
+        "source_commit": "068f761b16fcedd91f0d8f5a8109d31bb5755c85",
+        "binary_sha256": "71496dd5925c83a9beaabd6126250fce0b4b855932e01e72954b023f706986fe",
+        "bytes": 76291976,
+        "source_path": "/home/hahaxiong83/local/p003-session-close-20261113/main/candidate/2-Projects/realtime-voice-agent/rust-worker/voice-rust-worker.session-close",
+        "staged_path": "/root/p003-session-close-20261113/worker-main"
+      },
+      "tests_passed": 599,
+      "tests_ignored": 1,
+      "test_log_sha256": "4418a7d73f3efe3e4179018151de2678ebbfb6f813b283b67fb016fc0a753bc3",
+      "corpus": {
+        "cases": 189,
+        "failed": [],
+        "passed": 189
+      },
+      "corpus_log_sha256": "21ec784e5d773c3ba8a49e87128854734e1b07e4ac0f234e931379cdea0103a1",
+      "release_log_sha256": "814be59a2d90c49b01e07edcf0de38319583526e7565b03a04f6693848180b78",
+      "all_local_sources_equal_build_sources": true
+    },
+    "search": {
+      "candidate": {
+        "pool": "search",
+        "source_commit": "9614ba81f1c042da31ab0c8744ca227c62a8a3ab",
+        "binary_sha256": "a0c504ae3bae0c8b37b02ab0cc9707475584b850e722bb320049deadffeaacf4",
+        "bytes": 77367464,
+        "source_path": "/home/hahaxiong83/local/p003-session-close-20261113/search/candidate/2-Projects/realtime-voice-agent/rust-worker/voice-rust-worker.session-close",
+        "staged_path": "/root/p003-session-close-20261113/worker-search"
+      },
+      "tests_passed": 510,
+      "tests_ignored": 0,
+      "test_log_sha256": "f3337d0c2e6c5974f4d0b3cc15c2b20e299de9e68ea31e62f16be97d2a3bfac9",
+      "corpus": {
+        "cases": 189,
+        "failed": [],
+        "passed": 189
+      },
+      "corpus_log_sha256": "045edadd9538d302858595af9e679f1233eacea59b03c5d270ffb32b2c2052c2",
+      "release_log_sha256": "9d44494f6269b44710b497c5884cd98429be5591a8698914adb5aa29f351c80e",
+      "all_local_sources_equal_build_sources": true
+    }
+  },
+  "rtc": {
+    "main": {
+      "cases": 4,
+      "result_sha256": "e94032eb9339f6ccaaee517c05e5b541d7b4a8d9314216a5d5855da1f598efde"
+    },
+    "search": {
+      "cases": 4,
+      "result_sha256": "1c69c85b0e4671c8a890bd324235ec8a33b8b608864551ad2ba12fdbaf1842b1"
+    },
+    "listening": {
+      "cases": 4,
+      "result_sha256": "9be502b313927eb2084c8588877a4ca376ab3648e0a116ee38037f9355c3b704"
+    }
+  },
+  "production_smoke": {
+    "passed": true,
+    "no_android": true,
+    "no_exit_ack_sent": true,
+    "fixture_cleanup": false,
+    "audible_ms": 0,
+    "exit_to_gone_ms": 2627
+  },
+  "deployment": {
+    "main": {
+      "pool": "main",
+      "source_commit": "068f761b16fcedd91f0d8f5a8109d31bb5755c85",
+      "before": {
+        "MainPID": "665554",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "started_ms": 1794548460571,
+      "backup": "/root/p003-session-close-20261113/before-main",
+      "success": true,
+      "after": {
+        "MainPID": "665958",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "disk_sha256": "71496dd5925c83a9beaabd6126250fce0b4b855932e01e72954b023f706986fe",
+      "process_sha256": "71496dd5925c83a9beaabd6126250fce0b4b855932e01e72954b023f706986fe",
+      "env_sha256": "9c531ea77cb368fc57485a14571888e0c1746118f8a3baec4916b216f5ab5be0",
+      "other_pools_unchanged": true,
+      "same_identity_service_token_renewed": false,
+      "finished_ms": 1794548465841
+    },
+    "search": {
+      "pool": "search",
+      "source_commit": "9614ba81f1c042da31ab0c8744ca227c62a8a3ab",
+      "before": {
+        "MainPID": "2446060",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "started_ms": 1794548497317,
+      "backup": "/root/p003-session-close-20261113/before-search",
+      "success": true,
+      "after": {
+        "MainPID": "666182",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "disk_sha256": "a0c504ae3bae0c8b37b02ab0cc9707475584b850e722bb320049deadffeaacf4",
+      "process_sha256": "a0c504ae3bae0c8b37b02ab0cc9707475584b850e722bb320049deadffeaacf4",
+      "env_sha256": "c9485b1394f168b0d84e16f1164f3147f041a2a62dff5ef2d6f265397c87fb43",
+      "other_pools_unchanged": true,
+      "same_identity_service_token_renewed": false,
+      "finished_ms": 1794548508446
+    },
+    "listening": {
+      "pool": "listening",
+      "source_commit": "3d76d0ac25d1efe0e6984dae28cf361e49b4fcd4",
+      "before": {
+        "MainPID": "217434",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "started_ms": 1794548515352,
+      "backup": "/root/p003-session-close-20261113/before-listening",
+      "success": true,
+      "after": {
+        "MainPID": "666319",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "disk_sha256": "28ff1f6c5b683879dfa06fe59d920b642bb057d79e607bfa49cdf87e7910fcd3",
+      "process_sha256": "28ff1f6c5b683879dfa06fe59d920b642bb057d79e607bfa49cdf87e7910fcd3",
+      "env_sha256": "e6bcad9bddf37629c697bfba28de909122aa4f938ba199cd1808e98a7db93415",
+      "other_pools_unchanged": true,
+      "same_identity_service_token_renewed": true,
+      "finished_ms": 1794548524996
+    }
+  },
+  "stable": {
+    "at_ms": 1794548791871,
+    "pools": {
+      "main": {
+        "unit": {
+          "MainPID": "665958",
+          "NRestarts": "0",
+          "ActiveState": "active"
+        },
+        "binary_sha256": "71496dd5925c83a9beaabd6126250fce0b4b855932e01e72954b023f706986fe",
+        "source_commit": "068f761b16fcedd91f0d8f5a8109d31bb5755c85",
+        "exit_count": 72,
+        "health": null,
+        "service_token_renewed": false
+      },
+      "search": {
+        "unit": {
+          "MainPID": "666182",
+          "NRestarts": "0",
+          "ActiveState": "active"
+        },
+        "binary_sha256": "a0c504ae3bae0c8b37b02ab0cc9707475584b850e722bb320049deadffeaacf4",
+        "source_commit": "9614ba81f1c042da31ab0c8744ca227c62a8a3ab",
+        "exit_count": 72,
+        "health": {
+          "agent": "p003-search-canary-20261021",
+          "at_ms": 1794548791690,
+          "cleanup": {
+            "at_ms": 1794548788532,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "R4-20261022-two-devices",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "service_token_renewed": false
+      },
+      "listening": {
+        "unit": {
+          "MainPID": "666319",
+          "NRestarts": "0",
+          "ActiveState": "active"
+        },
+        "binary_sha256": "28ff1f6c5b683879dfa06fe59d920b642bb057d79e607bfa49cdf87e7910fcd3",
+        "source_commit": "3d76d0ac25d1efe0e6984dae28cf361e49b4fcd4",
+        "exit_count": 72,
+        "health": {
+          "agent": "p003-search-listening-20261030",
+          "at_ms": 1794548793209,
+          "cleanup": {
+            "at_ms": 1794548788531,
+            "healthy": true,
+            "pending": 0,
+            "remaining": 0
+          },
+          "generation": "v374-listening-ark-20261102-1793613511",
+          "jobs": 0,
+          "ordered_pcm_v1": true,
+          "registered": true
+        },
+        "service_token_renewed": true
+      }
+    },
+    "stable_ms": 233952
+  },
+  "listening": {
+    "config_unchanged": true,
+    "ready": true,
+    "effective_enabled": true,
+    "applied_revision": 6,
+    "service_token_exp_ms": 1794962794000
+  },
+  "review_sha256": {
+    "REVIEW-FINAL-GROK.json": "1c8650d1ca70ab20bf88d8fa08c8bd402300362a5f317c3132e9711c77b664c6",
+    "REVIEW-SEARCH-COMPLETION-GROK.json": "6f87b418ed3a77091a74ebdc7fddef36cf23c8438b37bae176f8766b74397c4f"
+  },
+  "private_gate_sha256": "1566e09dec444dfd35475fe9050758711a028cd06bf1d4352b5c8b4a041201af"
+}
