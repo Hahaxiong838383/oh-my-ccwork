@@ -56,14 +56,11 @@ pub fn control_outlet_kind(
     exit_hotwords: &std::collections::HashSet<String>,
     exit_tail_match: bool,
 ) -> Option<&'static str> {
+    if let Some(path) = crate::textproc::session_exit_path(exit_hotwords, text, exit_tail_match) {
+        return Some(if path == "exact" { "exit_exact" } else { "exit_tail" });
+    }
     if crate::textproc::is_stop_only(hotwords, text) {
         return Some("stop");
-    }
-    if crate::textproc::is_stop_only(exit_hotwords, text) {
-        return Some("exit_exact");
-    }
-    if exit_tail_match && crate::textproc::session_exit_tail_hit(text).is_some() {
-        return Some("exit_tail");
     }
     if crate::device_intent::match_command(text).is_some() {
         return Some("command");
@@ -464,5 +461,23 @@ mod tests {
             g.buffered_texts().iter().any(|t| control_outlet_kind(t, &stop, &exit, true).is_some()),
             "逐条扫描必须命中那条「停」"
         );
+    }
+}
+
+#[cfg(test)]
+mod session_close_regressions {
+    use super::control_outlet_kind;
+    use crate::textproc::{parse_hotwords, parse_hotwords_with};
+    #[test]
+    fn configured_close_has_priority_over_interrupt() {
+        let stop = parse_hotwords(None);
+        let exit = parse_hotwords_with(Some("闭嘴,别说话,小可退出,退下"), "");
+        for text in ["闭嘴", "闭嘴。", "别说话", "小可退出", "退下"] {
+            assert_eq!(control_outlet_kind(text, &stop, &exit, true), Some("exit_exact"), "{text}");
+        }
+        for text in ["我现在再念一段话你听完说感受啊", "现在这段分享还没有结束", "停一下直接告诉我3+5等于几", "不要闭嘴", "闭嘴是什么意思", "他说闭嘴", "结束倾听恢复聊天", "恢复聊天", "小可结束倾听", "先别退出", "他说不聊了", "故事里的小可退出", "我不让你再见"] {
+            assert_eq!(control_outlet_kind(text, &stop, &exit, true), None, "{text}");
+        }
+        assert_eq!(control_outlet_kind("停一下", &stop, &exit, true), Some("stop"));
     }
 }
