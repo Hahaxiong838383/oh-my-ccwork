@@ -55,7 +55,7 @@ pub fn is_wake_only(text: &str) -> bool {
 /// 联调 v2 §一.4/5:codex 现有 5 词+扩充 4 词+睡觉类 3 词)。Worker 只吞轮次防幽灵回答,
 /// 回复/关房 100% 归 Android(退出权威不变)。
 pub const DEFAULT_EXIT_HOTWORDS: &str =
-    "不聊了,我不想聊了,再见,拜拜,退出对话,不用了,退出,结束,结束聊天,我要睡觉了,我去睡觉了,我要休息了";
+    "不聊了,我不想聊了,再见,拜拜,退出对话,退出,结束,结束聊天,我要睡觉了,我去睡觉了,我要休息了";
 
 /// 逗号分隔 → 标准化词集;显式设空串=禁用;未设=用 default_src。
 pub fn parse_hotwords_with(raw: Option<&str>, default_src: &str) -> HashSet<String> {
@@ -570,12 +570,12 @@ mod tests {
     #[test]
     fn exit_words_swallow_pure_and_keep_mixed() {
         let exits = parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
-        // 纯退出词(含标点/空白变体)→ 吞(防幽灵回答轮;退出动作归 Android)
+        // 纯退出词(含标点/空白变体)→ 关房;泛拒绝不关房
         assert!(is_stop_only(&exits, "再见"));
         assert!(is_stop_only(&exits, "不聊了。"));
         assert!(is_stop_only(&exits, " 我要睡觉了！"));
         assert!(is_stop_only(&exits, "退出对话"));
-        assert!(is_stop_only(&exits, "不用了"));
+        assert!(!is_stop_only(&exits, "不用了"));
         // Phase 1a 语气词前缀(2026-08-19):剥后完整命中才吞
         assert!(is_stop_only(&exits, "嗯退出"));
         assert!(is_stop_only(&exits, "那退出"));
@@ -841,7 +841,7 @@ mod opening_echo_verdict_tests {
 
     #[test]
     fn exit_words_and_tails_never_swallowed_even_if_bank_would_hit() {
-        for t in ["退出", "不聊了", "退出对话", "不用了", "我不想聊了", "不想聊了，退出吧"] {
+        for t in ["退出", "不聊了", "退出对话", "我不想聊了", "不想聊了，退出吧"] {
             let norm = normalize_utterance(t);
             // 把这句本身放进库,保证词库层「必命中」(子串 / LCS 两层都覆盖)
             let b = vec![("self".to_string(), norm.clone())];
@@ -885,14 +885,10 @@ mod opening_echo_verdict_tests {
     // ── 重叠窗(gate B)同样需要 outlet:精确退出词不在尾表也不在命令表 ──
 
     #[test]
-    fn overlap_gate_would_swallow_exact_exit_word_without_outlet() {
-        // 「不用了」对「你来了故事继续」LCS = 1/3 ≥ 0.3:无 VAD 起点、截止前 → 旧代码判回声
-        let b = greeting_bank();
-        let hit = opening_overlap_decision(Some(1_000), 900, false, "不用了", &b);
-        assert!(hit.is_some(), "前提:重叠窗这层真会命中");
-        // 旧内联三豁免一条都不救它:非急停、非命令、不在尾表
-        assert!(session_exit_tail_hit("不用了").is_none());
-        // 新的共同判定认它是退出精确词 → pipeline 以 control_outlet.is_none() 守门
-        assert_eq!(outlet("不用了"), Some("exit_exact"));
+    fn overlap_gate_preserves_explicit_exit_but_generic_refusal_is_not_exit() {
+        let b = vec![("synthetic".to_string(), "退出".to_string())];
+        assert!(opening_overlap_decision(Some(1_000), 900, false, "退出", &b).is_some());
+        assert_eq!(outlet("退出"), Some("exit_exact"));
+        assert_eq!(outlet("不用了"), None);
     }
 }
