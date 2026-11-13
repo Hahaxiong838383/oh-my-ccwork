@@ -52,6 +52,7 @@ mod speaker_id;
 mod stt_volc;
 mod asr_diagnostics;
 mod textproc;
+mod session_close;
 mod token;
 mod transcript_pub;
 mod tts;
