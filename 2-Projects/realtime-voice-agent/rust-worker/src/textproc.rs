@@ -113,7 +113,7 @@ pub fn session_exit_path(
         return Some("exact");
     }
     if tail_match {
-        if stop_variants::intent(text) == Some(stop_variants::Intent::Close) {
+        if matches!(stop_variants::intent(text), Some(stop_variants::Intent::Close | stop_variants::Intent::CancelSearch)) {
             // Keep the existing Android signal path vocabulary.
             return Some("tail");
         }
@@ -146,7 +146,7 @@ mod close_speculation_tests {
     #[test]
     fn incomplete_close_never_opens_an_answer_or_closes_the_room() {
         let words = parse_hotwords_with(Some("小可你闭嘴,不聊了小可,别说话"), "");
-        for t in ["小可你闭", "不聊了小", "别说"] {
+        for t in ["小可你闭", "不聊了小", "别再"] {
             assert!(session_exit_speculation_blocked(&words, t, true), "{t}");
             assert!(session_exit_path(&words, t, true).is_none(), "{t}");
         }
@@ -201,7 +201,7 @@ mod natural_stop_variants_tests {
             "他说你能不能先别说话了", "故事里的小可闭嘴了", "如果我说闭嘴你会怎样",
             "停一下直接告诉我三加五等于几", "闭嘴以后再告诉我三加五等于几",
             "别说答案只给我提示", "请你安静一点地讲故事", "先听我说", "我还没说完",
-            "停止搜索", "取消刚才的查询", "结束倾听恢复聊天", "别关房先等我一下",
+            "结束倾听恢复聊天", "可以恢复聊天吗", "别关房先等我一下",
         ] {
             assert!(session_exit_path(&words, text, true).is_none(), "false close {text}");
         }
@@ -211,11 +211,31 @@ mod natural_stop_variants_tests {
     fn temporary_pause_leaves_room_and_does_not_answer() {
         let stop = parse_hotwords(None);
         let exit = parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
-        for t in ["先听我说", "小可你等一会儿", "你先别说了", "小可安静点",
-            "麻烦你别念了好吗", "请停一会", "停一下我来说", "哎停停停",
-            "你能不能等我说完", "暂时不要说话", "别说了我还没说完"] {
+        for t in ["先听我说", "小可你等一会儿", "请停一会", "停一下我来说", "哎停停停", "你能不能等我说完"] {
             assert!(is_turn_stop(&stop, t), "missed temporary stop {t}");
             assert!(session_exit_path(&exit, t, true).is_none(), "temporary stop closed {t}");
+        }
+    }
+
+    #[test]
+    fn user_decision_ab_closes_but_b5_keeps_room() {
+        let exit=parse_hotwords_with(None, DEFAULT_EXIT_HOTWORDS);
+        for text in ["退下", "小可退下", "滚", "够了", "不用了谢谢", "请你休息吧", "关机", "关闭",
+            "别说了", "别念了", "别解释了", "小可安静点", "请保持安静", "暂时不要说话",
+            "好了你先不用说了", "你能不能先别说话了", "先别说了我还没说完",
+            "不要查", "不要查了", "请取消刚才的搜索", "停止搜索", "先这样", "到这里", "到此为止"] {
+            assert!(session_exit_path(&exit,text,true).is_some(), "user decision missed {text}");
+        }
+        for text in ["恢复聊天", "可以恢复聊天吗", "能不能恢复聊天", "别关闭", "不要关机",
+            "闭嘴是什么意思", "他说够了", "不用了谢谢是什么意思", "不要取消搜索", "先这样做一道题"] {
+            assert!(session_exit_path(&exit,text,true).is_none(), "not whole-session exit {text}");
+        }
+        let exact=parse_hotwords_with(Some("闭,我不想,嗯你最好别,我不让你"), "");
+        for text in ["闭", "我不想", "嗯你最好别", "我不让你"] {
+            assert_eq!(session_exit_path(&exact,text,true),Some("exact"));
+        }
+        for text in ["闭眼睛是什么意思", "我不想吃饭", "嗯你最好别笑", "我不让你讲答案只给我提示"] {
+            assert!(session_exit_path(&exact,text,true).is_none());
         }
     }
 
@@ -223,7 +243,7 @@ mod natural_stop_variants_tests {
     fn explicit_config_and_existing_stop_are_preserved() {
         let stop = parse_hotwords(None);
         let exit = parse_hotwords_with(Some("闭嘴,别说话,不聊了"), "");
-        for t in ["别说了", "别说", "安静", "停一下"] {
+        for t in ["停", "等一下", "停一下"] {
             assert!(is_turn_stop(&stop, t));
             assert!(session_exit_path(&exit, t, true).is_none());
         }
@@ -958,10 +978,10 @@ mod opening_echo_verdict_tests {
     // ── 重叠窗(gate B)同样需要 outlet:精确退出词不在尾表也不在命令表 ──
 
     #[test]
-    fn overlap_gate_preserves_explicit_exit_but_generic_refusal_is_not_exit() {
+    fn overlap_gate_preserves_explicit_and_user_approved_refusal_exits() {
         let b = vec![("synthetic".to_string(), "退出".to_string())];
         assert!(opening_overlap_decision(Some(1_000), 900, false, "退出", &b).is_some());
         assert_eq!(outlet("退出"), Some("exit_exact"));
-        assert_eq!(outlet("不用了"), None);
+        assert_eq!(outlet("不用了"), Some("exit_tail"));
     }
 }
