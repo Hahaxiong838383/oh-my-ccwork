@@ -1495,7 +1495,7 @@ mod adapter_tests {
         });
         let mut a = active_voice_adapter();
         let contract: Value = serde_json::from_str(include_str!("../../../../4-Assets/contracts/p003-listening-http-v1.json")).unwrap();
-        a.client = Client::joint(&json!({"url":format!("http://{addr}/"),"metadata":contract["metadata"]["shape"],"key":"synthetic","token":"synthetic"})).unwrap();
+        a.client = Client::joint(&json!({"url":format!("http://{addr}/"),"metadata":contract["metadata"]["shape"],"key":"synthetic","token":"synthetic"}));
         let expected_session = serde_json::to_value(&a.client.meta.session).unwrap();
         let now = std::time::Instant::now();
         let mut deadline = crate::session_close::CloseDeadline::default();
