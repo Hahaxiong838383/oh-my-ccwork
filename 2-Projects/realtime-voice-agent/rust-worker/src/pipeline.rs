@@ -1776,7 +1776,7 @@ impl Orchestrator {
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
         // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
         if crate::textproc::is_stop_only(&self.cfg.hotwords, &text)
-            || crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &text, self.cfg.exit_tail_match).is_some()
+            || crate::textproc::session_exit_speculation_blocked(&self.cfg.exit_hotwords, &text, self.cfg.exit_tail_match)
         {
             info!(room = %self.room_name, "speculation skipped: swallow-word tail");
             return;
