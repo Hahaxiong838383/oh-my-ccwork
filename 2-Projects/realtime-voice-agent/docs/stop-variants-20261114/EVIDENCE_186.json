@@ -1,0 +1,61 @@
+{
+  "verdict": "PASS_CONTROLLED_FINAL_TO_REAL_ROOM_DELETION_MAIN_186",
+  "count": 186,
+  "main_source": "f5b2fd61916022a67c32dfbd5c3fd33ca5c2829a",
+  "test_binary_sha256": "bbe5e585f40b114cfde470b20ac5a143a4d8713f94baa27a16b44ee24048dcc4",
+  "business_llm_calls": 0,
+  "audible_ms": 0,
+  "fixture_deleted_rooms": 0,
+  "exit_ack_sent": false,
+  "delete_after_signal_ms": {
+    "min": 2519,
+    "max": 2679,
+    "mean": 2549.9
+  },
+  "result_sha256": "93b43b27b55af5a3be4405d14f0782a46eb9e08bb28ff8f13cc84deabe4cd4b4",
+  "remote_log_audit": {
+    "log_files_verified": 186,
+    "canonical_exact_equality": true,
+    "current_production_unchanged": true,
+    "test_listeners_stopped": true,
+    "production": {
+      "voice-worker-rust": {
+        "MainPID": "795375",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "d1b1d952c365f9648677ee88cd41ce96a42bc407fe47e2258b7e44875db581cf"
+      },
+      "p003-listening-worker": {
+        "MainPID": "815868",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "c7e70e77e4600e09b02f885101a17e8e7cea0e9635bc430d456b88081b6289d5"
+      },
+      "p003-search-worker": {
+        "MainPID": "815854",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "c7bec7df92c47136fd0c91e5c2b4ed59c918ffa7158cdfb3a63415fa1e221b25"
+      }
+    }
+  },
+  "boundary": "main source test-only ASR URL; synthetic final; isolated real SFU; not 186 acoustic/Android; other pools full text+representative formal RTC",
+  "independent_review": {
+    "verdict": "内测命中到关房可以收口",
+    "blocker": null,
+    "review_md_sha256": "e03a26e50430fdadc2ee121e1d471526a4c991a09bcb6caae8fad2d654ed230c",
+    "review_json_sha256": "b53f6da679b57ed2793c1d620c1eef485c027f61704c3b32812788b22e4dc599",
+    "scope": "local evidence audit and five raw-log spots; no rerun of all186 by reviewer"
+  },
+  "ack_evidence": {
+    "count": 186,
+    "retry_counts": {
+      "2": 186
+    },
+    "gave_up_line_count": 149,
+    "all_grace_close": true,
+    "probe_source_sha256": "f00f9e4d821e547c73f605b2ff9f3e7c3541eae34091b3e3b2c88d9cdaa14f80",
+    "probe_has_no_publish_data_call": true,
+    "note": "no_exit_ack_sent is a fixture property confirmed by source; log grace-close observed in all cases. gave_up log is not mandatory because job close and signal timer share the deadline. Prior overly strict gave_up assertion failed at c010; not a room-close failure."
+  }
+}
