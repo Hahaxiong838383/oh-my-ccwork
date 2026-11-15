@@ -31,7 +31,7 @@ export function isArkStateQuestion(text: string): boolean {
   if (isOutsideArkQuestion(text) || isPureResourceUsage(text)) return false;
   if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没).*(?:加|奖励|收益)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
   const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);
-  const stateQuery=/多少|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有/.test(text);
+  const stateQuery=/多少|数量|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有|没有|没.*(?:领|拿|得)/.test(text);
   const rewardRequest=/奖励/.test(text)&&/下次|下一次|下一项|下一个|专注/.test(text)&&/领取|领到|能领|可领|怎么领|怎么拿|怎么得|有效专注|计时|进度/.test(text);
   return game&&stateQuery||rewardRequest;
 }
@@ -75,7 +75,7 @@ export function resolveArkResourceFollowup(text:string,history:{role:string;cont
   const names=[...new Set((prior.match(/家族币|星尘|星辰|金币|补勤卡|补签卡/g)??[]).map(s=>s==='金币'?'家族币':s==='星辰'?'星尘':s==='补签卡'?'补勤卡':s))];
   if(names.length!==1)return null;
   if(availability)return isArkGameExchangeQuestion(prior)?names[0]+'怎么兑换游戏道具':null;
-  const bare=prior.replace(/[。？！?!\s]/g,'').replace(/^(?:(?:请问|我想问一下|我想问|方舟里的|方舟的|小可|我的|这个|那个|这张|那张))+/,'');
+  const bare=prior.replace(/[。？！?!\s]/g,'').replace(/^(?:(?:请问|我想问一下|我想问|方舟里的|方舟的|小可|我的|的|这个|那个|这张|那张))+/,'');
   const known=/^(?:家族币|星尘|星辰|金币|补勤卡|补签卡)(?:有什么用|有啥用|干什么用|做什么用|怎么用|用途是什么|能干什么|能干嘛|是干嘛的)?$/.test(bare);
   if(!known&&!isArkStateQuestion(prior)&&!isArkGameExchangeQuestion(prior))return null;
   return names[0]+tail;
@@ -92,10 +92,12 @@ export function deferArkDirectReply(text:string):boolean {
 export function answerArkResourceUse(text:string,history:{role:string;content:string}[]=[]):string|null {
   text=normalizeArkVocabulary(text);
   if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
+  if(/加速币|加注[bB]|积分/.test(text)&&!/老师|学校|考试|数学|信用卡|会员|商场/.test(text))return '你说的是读写台上的家族币、星尘，还是其他积分？我先确认一下，免得查错。';
   if(incompleteArkCard(text))return '你说的是补勤卡吗？';
   const topic=arkDialogueTopic(history);
   if(topic&&/^(?:小可)*(?:展示出来)[。？！?!]*$/.test(text))return '当前版本不支持由我展示游戏页面，可以等后续版本迭代。';
   if(topic&&/咱俩/.test(text))return '咱俩是你和我呀。我们可以一起商量想要的奖励；家族币对应的约定奖励，还需要和家长确认并由家长兑现，小程序可以查看已同步的家族币。';
+  if(!/老师|学校|考试|公司/.test(text)&&/^(?:小可)*(?:我)?(?:怎样|怎么|如何).*(?:获得|得到|获取)奖励[。？！?!]*$/.test(text))return '在读写台前有效使用达到阶段门槛，进度条对应的奖励会点亮，再点击领取。奖励包括家族币、宝箱和道具，具体这一阶段是什么以进度条为准；小可不能代领。';
   if(/奖励.*不是.*(?:爸妈|家长|父母).*而是你|(?:方舟|小可).*(?:提供|有什么|有哪些).*(?:收益|奖励)/.test(text))return '方舟的游戏奖励包括家族币、宝箱，以及补勤卡、生态缸部件等道具；具体这一阶段能领什么，要看当前进度条。人在读写台前的有效使用时长达标后，奖励会点亮，再由你点击领取。';
   if(/家族币|金币/.test(text)&&/(?:怎么|如何|怎样|哪里|哪儿)(?:能|才|可以)?(?:获得|获取|得到|赚)|怎么攒/.test(text)&&!isArkStateQuestion(text))return ARK_GOLD_ALIAS+'在读写台前有效使用达到阶段门槛，进度条上的对应奖励会点亮，点击领取后获得家族币。'+ARK_RESOURCE_USES.family_coin;
   // A bare resource after a prior question can select its wallet/earnings subject.
@@ -286,7 +288,7 @@ export function buildKnowledgeRecall(text: string, history:{role:string;content:
     text=resolveArkResourceFollowup(text,history)??text;
     const stateQuestion = isArkStateQuestion(text);
     const hits = KB_ENTRIES.filter((e) => entryMatches(e, text) && (!stateQuestion || !['nightsail', 'halo', 'firsttime'].includes(e.key)));
-    if(!isOutsideArkQuestion(text)&&/奖励/.test(text)&&(/方舟|小可/.test(text)||/奖励.*不是.*(?:爸妈|家长|父母).*而是你/.test(text))&&!stateQuestion)hits.unshift({key:'game_rewards',keywords:[],content:'【游戏奖励】方舟奖励包含家族币、宝箱、补勤卡、生态缸部件等；是否有某项及数量按当前内容版本与进度条，不虚构小可玩具或已领取奖励。有效使用达标点亮后手动领取。'});
+    if(!isOutsideArkQuestion(text)&&/奖励/.test(text)&&(/方舟|小可/.test(text)||/奖励.*不是.*(?:爸妈|家长|父母)/.test(text))&&!stateQuestion)hits.unshift({key:'game_rewards',keywords:[],content:'【游戏奖励】方舟奖励包含家族币、宝箱、补勤卡、生态缸部件等；是否有某项及数量按当前内容版本与进度条，不虚构小可玩具或已领取奖励。有效使用达标点亮后手动领取。'});
     if (stateQuestion) hits.unshift({key: 'g1_progress', keywords: [], content: G1_PROGRESS_KNOWLEDGE});
     if (!hits.length) return null;
     const picked = hits.slice(0, MAX_RECALL); // 多命中防爆长

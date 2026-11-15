@@ -156,7 +156,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   if(ark.prompt) systemPrompt += '\n\n'+ark.prompt;
   const arkPolicy=(!overridePrompt&&!isFeedback)?arkConversationPolicy(userText,rawHistory):'';
   if(arkPolicy)systemPrompt+='\n\n'+arkPolicy;
-  const protectArkControl=!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!deferArkDirectReply(userText)&&(dynamicArk||!!staticArkAnswer||!!arkPolicy||!!knowledgeRecall?.includes('【方舟资源'));
+  const protectArkControl=!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!deferArkDirectReply(userText)&&(dynamicArk||!!staticArkAnswer||!!arkPolicy||!!knowledgeRecall?.includes('【方舟资源')||(/多少|多久|什么时候|有什么用|为什么/.test(userText)&&!/灯|亮度|音量|声音|色温|画面|虚像|设备高度|退出|别说|不想聊/.test(userText)));
   if(protectArkControl)systemPrompt+='\n本轮不是设备控制或退出请求，不输出DEV标记，不告别或自行结束。';
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;

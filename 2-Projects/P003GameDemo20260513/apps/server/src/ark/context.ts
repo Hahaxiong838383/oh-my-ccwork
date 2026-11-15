@@ -34,7 +34,7 @@ export function formatArkFacts(facts:{snapshot:ArkCurrent|null;history:ArkHistor
  const fresh=resolveArkFacts(facts,now).progress!==null;
  const h=facts.history?.status==='available'?facts.history:null;
  const daily=resolveArkFacts(facts,now).daily;
- if(daily){lines.push(`今日已同步记录截至${time(daily.observed_at_ms)}，不是完整全天实时账本。`);if(daily.progress_seconds!==null)lines.push(`今日奖励进度已记录${daily.progress_seconds}秒；这是会封顶的进度计时，不能称全天总使用时长。`);if(daily.rewards)lines.push('今日已收到的发奖记录（已按奖励实例去重，不代表全部到齐）：'+JSON.stringify(daily.rewards));}
+ if(daily){lines.push(`今日已同步记录截至${time(daily.observed_at_ms)}，不是完整全天实时账本。`);if(daily.progress_seconds!==null)lines.push(`今日奖励进度已记录${daily.progress_seconds}秒；这是会封顶的进度计时，不能称全天总使用时长。`);if(daily.rewards){const labels:Record<string,string>={'C-FAMILY-001':'家族币','C-STARDUST-001':'星尘','M-CARD-001':'补勤卡','CHEST-COMMON-001':'普通宝箱'};lines.push('今日已收到的发奖记录（已按奖励实例去重，不代表全部到齐）：'+daily.rewards.filter(r=>labels[r.item_id]).map(r=>labels[r.item_id]+'='+r.quantity).join('，')+'；其他未命名道具种类='+daily.rewards.filter(r=>!labels[r.item_id]).length+'。');}}
  lines.push(asset('家族币余额',normal?current:null,normal?s!.wallets.family_coin:null,h?.wallets.family_coin??null));
  lines.push(asset('星尘余额',normal?current:null,normal?s!.wallets.stardust:null,h?.wallets.stardust??null));
  lines.push(asset('补勤卡库存',normal?current:null,normal?s!.inventory['M-CARD-001']:null,h?.inventory['M-CARD-001']??null));

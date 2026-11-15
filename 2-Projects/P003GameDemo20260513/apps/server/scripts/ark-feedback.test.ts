@@ -36,3 +36,20 @@ test('unfinished sentences stay conversational; control tag filtering handles al
  const str='[[DEV:90]]你继续说，我在听。';for(let i=0;i<=str.length;i++){const filter=createArkControlFilter(true);assert.equal(filter.feed(str.slice(0,i))+filter.feed(str.slice(i))+filter.flush(),'你继续说，我在听。');}
  const filter=createArkControlFilter(false);assert.equal(filter.feed('[[DEV:3]]关灯')+filter.flush(),'[[DEV:3]]关灯');
 });
+test('fragment aliases reach model guidance without rewriting stored text; current commands do not inherit Ark restrictions',async()=>{
+ const {arkConversationPolicy,unfinishedUtterance}=await import('../src/ark/language.js');
+ assert.match(arkConversationPolicy('古琴卡有',[]),/古琴卡指补勤卡/);
+ assert.match(arkConversationPolicy('捕禽卡有',[]),/捕禽卡指补勤卡/);
+ for(const q of ['我有','我有几枚','我还有多少张','小可请告诉我我现在','展示出来'])assert.equal(unfinishedUtterance(q),true,q);
+ assert.equal(arkConversationPolicy('关灯',[user('金币有什么用')]),'');
+ assert.match(answerArk('我怎样才能获得奖励',undefined,[],now)??'',/有效使用.*点亮.*点击/);
+ assert.match(answerArk('没有宝箱啊',undefined,[],now)??'',/暂时查不到/);
+});
+test('a screen-resource topic survives acknowledgements; unrelated topic still resets',()=>{
+ const h=[user('请把字典拿来'),{role:'assistant',content:'字典在旁边'},user('这个界面有币，这个币可以做什么'),{role:'assistant',content:'旧错误：金币换小摆件'},user('对呀')];
+ for(const q of ['好你帮我','好你帮我换吧'])assert.match(answerArk(q,f,h,now)??'',/2项.*点.*进度条/);
+ const card=[user('我现在有多少张古琴卡'),{role:'assistant',content:'以前没查到'}];
+ assert.match(answerArk('我还有多少张',f,card,now)??'',/补勤卡库存是1张/);
+ assert.equal(answerArk('好你帮我',f,[...h,user('给我讲个故事')],now),null);
+ for(const q of ['我有几枚加速币','我可以领积分了吗','加注b有什么用'])assert.match(answerArk(q,f,[],now)??'',/先确认/);
+});
