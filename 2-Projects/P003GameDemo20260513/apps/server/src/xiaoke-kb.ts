@@ -91,10 +91,19 @@ export function deferArkDirectReply(text:string):boolean {
 /** Public product knowledge only: never reads or answers a user's balance/progress. */
 export function answerArkResourceUse(text:string,history:{role:string;content:string}[]=[]):string|null {
   text=normalizeArkVocabulary(text);
+  // A complaint about contradictory old exchange advice is not a quote to obey.
+  const recent=history.slice(-8),exchangeAt=recent.map(t=>t.role==='user'&&/金币|家族币/.test(t.content)&&/换/.test(t.content)).lastIndexOf(true);
+  const contradiction=/^(?:然后)?.{0,18}(?:又说|没说过|没有说过|没有说)[。？！?!]*$/.test(text);
+  if(contradiction&&exchangeAt>=0&&!deferArkDirectReply(text)&&!recent.slice(exchangeAt+1).some(t=>t.role==='user'&&/天气|故事|翻译|学校|别的游戏|其他游戏/.test(t.content)))return '刚才的兑换说明让你困惑了，我重新说清楚：方舟里的金币就是家族币，用来和家长兑换约定的奖励；游戏道具使用星尘，具体能换什么以设备页面为准。小可目前不能替你兑换或领取。';
   if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
+  if(/(?:母亲卡(?:有什么用|有啥用|多少|[。？！?!]*$)|方舟里的母亲(?:[。？！?!]*$))/.test(text))return '你说的是方舟里的补勤卡吗？我确认一下，免得讲错了。';
   if(/加速币|加注[bB]|积分/.test(text)&&!/老师|学校|考试|数学|信用卡|会员|商场/.test(text))return '你说的是读写台上的家族币、星尘，还是其他积分？我先确认一下，免得查错。';
   if(incompleteArkCard(text))return '你说的是补勤卡吗？';
+  const compactCard=text.replace(/[\s。？！?!]/g,'');
+  if(/^(?:请问)?(?:方舟里的|方舟的|的|帮我看看)?补勤卡(?:有|有什么)?$/.test(compactCard)&&!history.some(t=>t.role==='user'&&isArkStateQuestion(t.content)))return ARK_RESOURCE_USES.makeup_card;
+  if(/帮.*收.*补勤卡/.test(text))return '小可不能替你收取或使用补勤卡。'+ARK_RESOURCE_USES.makeup_card;
   const topic=arkDialogueTopic(history);
+  if(!topic&&/^(?:我)?点哪里[。？！?!]*$/.test(text.trim()))return '你想操作哪一项？我看不到你当前屏幕，先告诉我想领取奖励，还是做别的。';
   if(topic&&/^(?:小可)*(?:展示出来)[。？！?!]*$/.test(text))return '当前版本不支持由我展示游戏页面，可以等后续版本迭代。';
   if(topic&&/咱俩/.test(text))return '咱俩是你和我呀。我们可以一起商量想要的奖励；家族币对应的约定奖励，还需要和家长确认并由家长兑现，小程序可以查看已同步的家族币。';
   if(!/老师|学校|考试|公司/.test(text)&&/^(?:小可)*(?:我)?(?:怎样|怎么|如何).*(?:获得|得到|获取)奖励[。？！?!]*$/.test(text))return '在读写台前有效使用达到阶段门槛，进度条对应的奖励会点亮，再点击领取。奖励包括家族币、宝箱和道具，具体这一阶段是什么以进度条为准；小可不能代领。';

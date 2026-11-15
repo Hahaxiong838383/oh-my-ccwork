@@ -53,3 +53,15 @@ test('a screen-resource topic survives acknowledgements; unrelated topic still r
  assert.equal(answerArk('好你帮我',f,[...h,user('给我讲个故事')],now),null);
  for(const q of ['我有几枚加速币','我可以领积分了吗','加注b有什么用'])assert.match(answerArk(q,f,[],now)??'',/先确认/);
 });
+test('complete card fragments explain known use, while ambiguous mother-card needs confirmation',()=>{
+ for(const q of ['古琴卡有','补签卡有什么','请问方舟里的补勤卡','的补勤卡'])assert.match(answerArkResourceUse(q)??'',/补勤卡.*补签/);
+ for(const q of ['母亲卡有什么用','请问方舟里的母亲']){const a=answerArk(q,f,[],now)??'';assert.match(a,/补勤卡吗/);assert.doesNotMatch(a,/专属卡|亲子卡|库存是/);}
+});
+test('complaints about contradictory prior exchange advice correct the explanation without blaming or ending',()=>{
+ const h=[user('刚才说金币可以换企鹅摆件儿'),{role:'assistant',content:'旧错误：小可没说过，去找游戏客服'},user('然后让他知道我他又说他没有说')];
+ for(const q of ['然后让他知道我他又说他没有说','然后我让他指导我他又说他没有说过']){
+  const a=answerArkResourceUse(q,h)??'';assert.match(a,/家族币.*家长/);assert.match(a,/星尘/);assert.match(a,/不能.*代|不能.*替/);assert.doesNotMatch(a,/记错|没说过|再聊|再见/);
+ }
+ assert.equal(answerArkResourceUse('他说没有说过明天天气会下雨',h),null);
+ assert.equal(answerArkResourceUse('然后我让他指导我他又说他没有说过',[]),null);
+});

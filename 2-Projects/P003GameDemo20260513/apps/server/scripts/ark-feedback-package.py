@@ -33,7 +33,8 @@ for pool in ['main','search','listening']:
         (target/rel).write_bytes((src/rel).read_bytes())
     if pool!='main':
         p=target/'src/routes/custom-llm.ts';s=p.read_text()
-        s="import {arkConversationPolicy,createArkControlFilter} from '../ark/language.js';\n"+s
+        s="import {arkConversationPolicy,unfinishedUtterance,createArkControlFilter} from '../ark/language.js';\n"+s
+        s=replace(s,'  const history = stripArkDynamicTurns(rawHistory);','  const history = unfinishedUtterance(userText) ? [] : stripArkDynamicTurns(rawHistory);')
         s=replace(s,'import {isArkStateQuestion}', 'import {isArkStateQuestion,deferArkDirectReply}')
         reference=(src/'src/routes/custom-llm.ts').read_text()
         policy=reference[reference.index('  const arkPolicy='):reference.index('  if (voiceStylePolicy)')]

@@ -1,4 +1,4 @@
-import {arkConversationPolicy,createArkControlFilter} from '../ark/language.js';
+import {arkConversationPolicy,unfinishedUtterance,createArkControlFilter} from '../ark/language.js';
 import {answerArk,arkDirectReplyAllowed} from '../ark/answer.js';
 import {arkContext} from '../ark/service.js';
 import {isArkStateQuestion,deferArkDirectReply} from '../xiaoke-kb.js';
@@ -94,7 +94,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: extractText(m.content) }));
 
   const dynamicArk = isArkStateQuestion(userText) || isArkFollowup(userText,rawHistory);
-  const history = stripArkDynamicTurns(rawHistory);
+  const history = unfinishedUtterance(userText) ? [] : stripArkDynamicTurns(rawHistory);
 
   // 复用与 WS pipeline 同一个大脑：内置世界观 + AI 安全基座 + 课程护栏 + AI 启蒙门控 + 尾部人设锚点。
   curriculumKG.load();
