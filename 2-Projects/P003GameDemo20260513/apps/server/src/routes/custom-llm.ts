@@ -1,4 +1,4 @@
-import {answerArk,arkDirectReplyAllowed,resolveArkUsageQuestion} from '../ark/answer.js';
+import {answerArk,arkDirectReplyAllowed} from '../ark/answer.js';
 import {arkContext} from '../ark/service.js';
 import {isArkStateQuestion} from '../xiaoke-kb.js';
 import {isArkFollowup,stripArkDynamicTurns} from '../ark/memory-policy.js';
@@ -28,7 +28,7 @@ import * as extractScheduler from '../extract-scheduler.js';
 import { conversationStore } from '../conversation-store.js';
 import { createParenFilter } from '../paren-filter.js';
 import { createExitMarkerStripper } from '../exit-intent.js';
-import { buildKnowledgeRecall } from '../xiaoke-kb.js';
+import { buildKnowledgeRecall,answerArkResourceUse } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
 import { getPromptOverride } from '../rtc-prompt-override.js';
@@ -118,7 +118,8 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 吐槽模式（docs/37）：前端点「我要吐槽」arm 过 → 本轮一次性消费走吐槽（落反馈库 + 吐槽人格回应）。
   // 吐槽优先：不走 onboarding 引导、不召回世界观，专注接住孩子的吐槽。
   const isFeedback = authContext ? consumeFeedbackArmed(authContext.accountId) : false;
-  const directArkQuestion = arkDirectReplyAllowed(workerAuth,c.req.query('room')??'',Boolean(overridePrompt),isFeedback) && answerArk(userText,undefined,rawHistory)!==null;
+  const staticArkAnswer = !overridePrompt && !isFeedback && workerAuth?.role==='device' && authContext?.role==='device' ? answerArkResourceUse(userText,rawHistory) : null;
+  const directArkQuestion = Boolean(staticArkAnswer) || arkDirectReplyAllowed(workerAuth,c.req.query('room')??'',Boolean(overridePrompt),isFeedback) && answerArk(userText,undefined,rawHistory)!==null;
   // 语音调档 S1 快路（Phase A，2026-09-03）：仅设备账号真实轮；命中即处置（observe 只记 / execute 切档）——
   // 必须在 assembleSystemPrompt 之前，切了本轮 prompt 就读到新档；policy 行让小可先答应一句。
   let voiceStylePolicy = '';
@@ -136,7 +137,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const inOnboarding = !dynamicArk && !directArkQuestion && !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
-  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(dynamicArk ? '当前方舟进度 '+userText : resolveArkUsageQuestion(userText,rawHistory)??userText);
+  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(dynamicArk ? '当前方舟进度 '+userText : userText, rawHistory);
   // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
   // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
   const companionGuardrail = (directArkQuestion || overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
@@ -150,7 +151,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
-  const ark = await arkContext({auth:workerAuth,room:c.req.query('room')??'',text:userText,history:rawHistory,override:Boolean(overridePrompt),feedback:isFeedback});
+  const ark = staticArkAnswer ? {prompt:'',facts_v1:undefined} : await arkContext({auth:workerAuth,room:c.req.query('room')??'',text:userText,history:rawHistory,override:Boolean(overridePrompt),feedback:isFeedback});
   if(ark.prompt) systemPrompt += '\n\n'+ark.prompt;
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
@@ -259,7 +260,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     if(directArkQuestion){
       if(stream.aborted || c.req.raw.signal.aborted) return;
       console.info('[ark-direct]',JSON.stringify({room:c.req.query('room'),response_id:id,typed_facts:!!ark.facts_v1}));
-      assistantText=answerArk(userText,ark.facts_v1,rawHistory)??'这部分方舟数据我暂时查不到。';
+      assistantText=staticArkAnswer??answerArk(userText,ark.facts_v1,rawHistory)??'这部分方舟数据我暂时查不到。';
       enqueue(chunk({role:'assistant',content:assistantText},null));enqueue(chunk({},'stop'));
       await chain;
       if(stream.aborted || c.req.raw.signal.aborted) return;

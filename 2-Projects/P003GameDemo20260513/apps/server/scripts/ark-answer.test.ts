@@ -43,7 +43,7 @@ test('bounded factual answers do not invent game economics or turn balance into 
  assert.match(answerArk('我离下一个宝箱还需要多久',facts,[],now)!,/暂停/);
  assert.match(answerArk('我离下一个宝箱还需要多久',facts,[],now)!,/2分钟/);
  assert.doesNotMatch(answerArk('我离下一个宝箱还需要多久',facts,[],now)!,/自动到账|会来得更快|一定/);
- assert.match(answerArk('我有几枚金币',facts,[],now)!,/星尘.*家族币|家族币.*星尘/);
+ assert.match(answerArk('我有几枚金币',facts,[],now)!,/金币.*家族币.*家族币余额是0枚/);
  assert.equal(answerArk('企鹅为什么不会飞',facts,[],now),null);
  assert.equal(answerArk('原神金币有什么用',facts,[],now),null);
  const use=answerArk('星尘有什么用',undefined,[],now)!;assert.match(use,/换装/);assert.doesNotMatch(use,/装饰|充能|帽子/);

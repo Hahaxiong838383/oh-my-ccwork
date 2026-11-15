@@ -1,0 +1,68 @@
+{
+  "main/src/xiaoke-kb.ts": {
+    "path": "/opt/p003/server/src/xiaoke-kb.ts",
+    "before_sha256": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
+    "after_sha256": "2f14297e36cd15e804b93493abfb1a30ffdb0b1766b1cc55f31466b283243576",
+    "bytes": 28834
+  },
+  "main/src/prompts.ts": {
+    "path": "/opt/p003/server/src/prompts.ts",
+    "before_sha256": "80d1901a01be454c86ef758d95b4dd001000f6034d04da8c30612549b1c5dc63",
+    "after_sha256": "108e3ed3097b9a48d7c7a7a113dec2393dec97dc330d7821dc3330812450e0bf",
+    "bytes": 8390
+  },
+  "main/src/routes/custom-llm.ts": {
+    "path": "/opt/p003/server/src/routes/custom-llm.ts",
+    "before_sha256": "ce416f6c86ce429d1132970aa57b378648ffa04d164895f1b52fe67205c73c4d",
+    "after_sha256": "095b05ea879a0deed90c9391a8b3658744ee78d4280b8aa302747737394731fe",
+    "bytes": 22051
+  },
+  "main/src/ark/answer.ts": {
+    "path": "/opt/p003/server/src/ark/answer.ts",
+    "before_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+    "after_sha256": "df4c70c7f9cce9204c96e5141f31eb0a5f99f9fce860442af7f34422c3f5f2e5",
+    "bytes": 7466
+  },
+  "search/src/xiaoke-kb.ts": {
+    "path": "/opt/p003/search-canary-20261021/brain/src/xiaoke-kb.ts",
+    "before_sha256": "42d152fd04a6ac2cf3228cd858b7e8b2b5da915509eece8b8f444835581f5f6d",
+    "after_sha256": "2f14297e36cd15e804b93493abfb1a30ffdb0b1766b1cc55f31466b283243576",
+    "bytes": 28834
+  },
+  "search/src/prompts.ts": {
+    "path": "/opt/p003/search-canary-20261021/brain/src/prompts.ts",
+    "before_sha256": "80d1901a01be454c86ef758d95b4dd001000f6034d04da8c30612549b1c5dc63",
+    "after_sha256": "108e3ed3097b9a48d7c7a7a113dec2393dec97dc330d7821dc3330812450e0bf",
+    "bytes": 8390
+  },
+  "search/src/routes/custom-llm.ts": {
+    "path": "/opt/p003/search-canary-20261021/brain/src/routes/custom-llm.ts",
+    "before_sha256": "c668eccd98b2c9cde188caad447f87f3420d29b9f9b1dcd21ce33f66e7352750",
+    "after_sha256": "e5d174e7bc5995f8ae987c16a0a7975f2d5eca3d90ddd1f64176056096ce8091",
+    "bytes": 22886
+  },
+  "listening/src/xiaoke-kb.ts": {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/xiaoke-kb.ts",
+    "before_sha256": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
+    "after_sha256": "2f14297e36cd15e804b93493abfb1a30ffdb0b1766b1cc55f31466b283243576",
+    "bytes": 28834
+  },
+  "listening/src/prompts.ts": {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/prompts.ts",
+    "before_sha256": "80d1901a01be454c86ef758d95b4dd001000f6034d04da8c30612549b1c5dc63",
+    "after_sha256": "108e3ed3097b9a48d7c7a7a113dec2393dec97dc330d7821dc3330812450e0bf",
+    "bytes": 8390
+  },
+  "listening/src/routes/custom-llm.ts": {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts",
+    "before_sha256": "60a2047295becdc502ae6b8bbbc9727750d4dd39429d55ab0bb1ddfc8c70e477",
+    "after_sha256": "4f15607c4c6dd3bc596e5e30c1da02fdf8361bf84d6b8b47a63ada56b1650d69",
+    "bytes": 23148
+  },
+  "listening/src/ark/answer.ts": {
+    "path": "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts",
+    "before_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+    "after_sha256": "df4c70c7f9cce9204c96e5141f31eb0a5f99f9fce860442af7f34422c3f5f2e5",
+    "bytes": 7466
+  }
+}

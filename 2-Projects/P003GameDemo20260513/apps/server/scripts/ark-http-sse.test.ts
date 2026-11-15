@@ -110,7 +110,7 @@ test('v384 split usage: authenticated SSE is finite; ordinary fallback recalls t
    assert.equal(captured.filter(x=>x.stream).length,calls);assert.equal(historyCalls,queries);
   }
   delete process.env.ARK_DIRECT_REPLY_SN_ALLOW;
-  const data=await chat('有什么用',[{role:'user',content:'请问 方舟里的补勤卡'}]);
+  const data=await chat('有什么用',[{role:'user',content:'请问 方舟里的补勤卡'}],'');
   assert.match(data.messages[0].content,/【方舟资源·道具】/);
   assert.match(data.messages[0].content,/补勤卡用于符合条件的历史航线节点补签/);
   assert.doesNotMatch(data.messages[0].content,/【方舟事实·临时上下文】/);
