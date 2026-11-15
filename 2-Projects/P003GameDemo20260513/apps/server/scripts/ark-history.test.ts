@@ -37,3 +37,29 @@ test('GM evidence before the authorization watermark and with future clock still
 test('thousands of unrelated valid events cannot hide wallet state or GM veto',()=>{const f=fixture();try{f.normal();f.wallet(21);const e=f.store.db.prepare('SELECT * FROM analytics_event LIMIT 1').get() as any;const insert=f.store.db.prepare('INSERT INTO analytics_event VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');f.store.transaction(()=>{for(let i=0;i<3000;i++)insert.run(KEY,'noise'+i,'voice.session_state_changed',NOW-500,NOW,'s',i,'normal','{}','{}',e.batch_attempt_id,'2026-10-31','2026-10-31',0);});assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).wallets.family_coin?.value,21);f.add('g1.logical_day_changed',{previous_logical_day:'2026-10-30',logical_day:'2026-10-31',previous_usage_day_index:1,usage_day_index:2,gm_override:true},NOW-1);assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).status,'unknown');}finally{f.done();}});
 
 test('uppercase and slash-separated GM source tokens veto normal-day history',()=>{for(const source of ['GM','gm/debug','foo+DEBUG','TEST@tool']){const f=fixture();try{f.normal();f.wallet(31);const catalog=JSON.parse(requireFile()).events;const event=catalog.find((e:any)=>e.eventName==='g1.reward_granted');f.add(event.eventName,{...event.sample,source_kind:source});assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).status,'unknown',source);}finally{f.done();}}});
+
+test('daily awards deduplicate stable instances; checkpoints are progress only, never wallet deltas',()=>{const f=fixture();try{
+ f.normal();f.wallet(999);
+ const grant={logical_day:'2026-10-31',tank_id:'TANK-001',reward_instance_id:'day:reward1',source_kind:'progress_stage',source_id:'REGULAR-01',rewards:[{kind:'currency',item_id:'C-FAMILY-001',quantity:20,tank_id:''}]};
+ f.add('g1.reward_granted',grant);f.add('g1.reward_granted',grant,NOW-900);
+ f.add('g1.progress_checkpoint',{logical_day:'2026-10-31',elapsed_seconds:600,checkpoint_minutes:10,completed_slots:1,current_slot:1});
+ let h=readArkHistory(f.store,KEY,NOW-5000,NOW);assert.equal(h.daily?.progress_seconds,600);assert.deepEqual(h.daily?.rewards,[{item_id:'C-FAMILY-001',quantity:20}]);assert.equal(h.wallets.family_coin?.value,999);
+ f.add('g1.reward_granted',{...grant,rewards:[{...grant.rewards[0],quantity:30}]},NOW-100);h=readArkHistory(f.store,KEY,NOW-5000,NOW);assert.equal(h.daily?.rewards,null);assert.equal(h.daily?.progress_seconds,600);
+}finally{f.done();}});
+test('daily absent/GM/owner/day changes do not become zero; resets are unknown',()=>{const f=fixture();try{
+ f.normal();assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).daily,undefined);
+ const checkpoint=(n:number,t:number)=>f.add('g1.progress_checkpoint',{logical_day:'2026-10-31',elapsed_seconds:n,checkpoint_minutes:5,completed_slots:0,current_slot:0},t);
+ checkpoint(600,NOW-1000);checkpoint(300,NOW-100);
+ assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).daily,undefined);
+ assert.equal(readArkHistory(f.store,KEY,NOW-50,NOW).daily,undefined);
+ assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW+86400000).daily,undefined);
+ f.add('g1.logical_day_changed',{previous_logical_day:'2026-10-30',logical_day:'2026-10-31',previous_usage_day_index:1,usage_day_index:2,gm_override:true},NOW-1);
+ assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).daily,undefined);
+}finally{f.done();}});
+test('bad award row invalidates the observed award subtotal instead of silently omitting it',()=>{for(const defect of ['clock','truncated','kind']){const f=fixture();try{
+ f.normal();const grant={logical_day:'2026-10-31',tank_id:'TANK-001',reward_instance_id:'valid',source_kind:'progress_stage',source_id:'REGULAR-01',rewards:[{kind:'currency',item_id:'C-FAMILY-001',quantity:20,tank_id:''}]};f.add('g1.reward_granted',grant);
+ f.add('g1.reward_granted',{...grant,reward_instance_id:'bad',rewards:[{...grant.rewards[0],kind:defect==='kind'?'item':'currency'}]},NOW-900);
+ if(defect==='clock')f.store.db.prepare("UPDATE analytics_event SET clock_suspicious=1 WHERE json_extract(properties_json,'$.reward_instance_id')='bad'").run();
+ if(defect==='truncated')f.store.db.prepare("UPDATE analytics_event SET properties_json='{\"truncated\":true}' WHERE json_extract(properties_json,'$.reward_instance_id')='bad'").run();
+ assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).daily,undefined,defect);
+}finally{f.done();}}});

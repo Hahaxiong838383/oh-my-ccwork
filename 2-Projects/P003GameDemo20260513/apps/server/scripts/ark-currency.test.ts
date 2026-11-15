@@ -39,7 +39,7 @@ test('exchange price and affordability do not use wallet balance as price or pro
 });
 test('resource followups share knowledge and direct reply, and stop at a user topic change',()=>{
  const h=[user('金币有什么用'),{role:'assistant',content:'错误旧回答：金币可以买企鹅摆件'}];
- for(const q of ['那能换什么','那怎么买企鹅摆件','好你帮我换吧']){
+ for(const q of ['那能换什么','那怎么买企鹅摆件']){
   const a=answerArk(q,undefined,h,now);assert.match(a??'',/家族币/);assert.match(a!,/星尘/);assert.match(buildKnowledgeRecall(q,h)??'',/家族币/);
  }
  for(const h2 of [[],[{role:'assistant',content:'金币可以买东西'}],[user('金币有什么用'),user('今天天气怎么样')],[user('原神金币有什么用')]]){

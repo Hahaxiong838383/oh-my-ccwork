@@ -1,6 +1,7 @@
+import {arkConversationPolicy,createArkControlFilter} from '../ark/language.js';
 import {answerArk,arkDirectReplyAllowed} from '../ark/answer.js';
 import {arkContext} from '../ark/service.js';
-import {isArkStateQuestion} from '../xiaoke-kb.js';
+import {isArkStateQuestion,deferArkDirectReply} from '../xiaoke-kb.js';
 import {isArkFollowup,stripArkDynamicTurns} from '../ark/memory-policy.js';
 import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
 import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
@@ -153,6 +154,10 @@ customLlmRoute.post('/chat/completions', async (c) => {
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
   const ark = staticArkAnswer ? {prompt:'',facts_v1:undefined} : await arkContext({auth:workerAuth,room:c.req.query('room')??'',text:userText,history:rawHistory,override:Boolean(overridePrompt),feedback:isFeedback});
   if(ark.prompt) systemPrompt += '\n\n'+ark.prompt;
+  const arkPolicy=(!overridePrompt&&!isFeedback)?arkConversationPolicy(userText,rawHistory):'';
+  if(arkPolicy)systemPrompt+='\n\n'+arkPolicy;
+  const protectArkControl=!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!deferArkDirectReply(userText)&&(dynamicArk||!!staticArkAnswer||!!arkPolicy||!!knowledgeRecall?.includes('【方舟资源'));
+  if(protectArkControl)systemPrompt+='\n本轮不是设备控制或退出请求，不输出DEV标记，不告别或自行结束。';
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
   const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
@@ -161,7 +166,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),local_clarification:Boolean(searchClarification)}));
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
-  const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
+  const intentProtocol = (!overridePrompt && !protectArkControl && authContext?.role === 'device') ? deviceIntentProtocol() : '';
   if (intentProtocol) systemPrompt += `\n\n${intentProtocol}`;
   // 吐槽人格放 systemPrompt 最末尾（近因效应，docs/36 同源）：否则被世界观 + 用户字面意图(如"想听故事")盖过，LLM 会去满足请求而非收集吐槽。
   if (isFeedback) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
@@ -278,6 +283,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
+    const arkControlFilter=createArkControlFilter(protectArkControl);
     const claimGuardEnabled = Boolean(searchPolicy.instruction) && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText);
     const searchClaimFilter = createSearchClaimFilter(claimGuardEnabled);
     const modelStarted = performance.now();
@@ -308,7 +314,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
         history,
         onDelta: (delta) => {
           if (delta && firstUpstreamAt === null) firstUpstreamAt = performance.now();
-          const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(delta).text)); // EXIT → 括号 两级串联
+          const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(arkControlFilter.feed(delta)).text)); // EXIT → 括号 两级串联
           if (!clean) return; // 整个 delta 都在过滤器扣留中
           observeFirstForwarded(clean);
           assistantText += clean;
@@ -316,7 +322,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
         },
         onDone: () => {
           // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
-          const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
+          const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(arkControlFilter.flush()).text+exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
           if (tail) {
             observeFirstForwarded(tail);
             assistantText += tail;

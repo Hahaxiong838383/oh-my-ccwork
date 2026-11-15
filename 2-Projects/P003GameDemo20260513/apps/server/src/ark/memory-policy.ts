@@ -1,3 +1,4 @@
+import {normalizeArkVocabulary,arkConversationQuery} from './language.js';
 import {isArkStateQuestion,isOutsideArkQuestion} from '../xiaoke-kb.js';
 type Turn={role:string;content:string;memory_excluded?:boolean};
 const transientAnswer=(s:string)=>/(?:还(?:有|需|剩)|剩余|约)\s*\d+\s*(?:分钟|分|秒)/.test(s);
@@ -5,6 +6,7 @@ const numericAnswer=(s:string)=>transientAnswer(s)||/(金币|家族币|星尘|�
 const shortFollowup=(text:string)=>text.length<=20&&/^(那(?:么)?(?:现在|还|要|多久|多少|能领|可领)|现在呢|现在还有|还要多久|还有多久|多久|多少|领了吗|可以领了吗)/.test(text.trim());
 const resourceChoice=(text:string)=>/^(?:家族币|星尘|星辰|补勤卡|补签卡)[。？！?！]*$/.test(text.trim());
 function advance(text:string,prior:string|null):string|null{
+ text=normalizeArkVocabulary(text);
  if(isOutsideArkQuestion(text))return null;
  if(isArkStateQuestion(text))return text;
  if(!prior)return null;
@@ -13,6 +15,7 @@ function advance(text:string,prior:string|null):string|null{
 }
 /** Single intent state for fetching, direct replies, and memory exclusion. */
 export function resolveArkQuestion(text:string,history:Turn[]):string|null{
+ const conversation=arkConversationQuery(text,history);if(conversation)return conversation;
  let prior:string|null=null;for(const t of history)if(t.role==='user')prior=advance(t.content,prior);
  return advance(text,prior);
 }
