@@ -38,7 +38,7 @@ export function arkConversationQuery(text:string,history:{role:string;content:st
 }
 export function arkConversationPolicy(text:string,history:{role:string;content:string}[]):string {
  const topic=arkDialogueTopic(history),t=compact(text);
- if(/收入|收益/.test(text)&&!/别|不要|不用|停止|结束|不想|退出|再见|拜拜|关房|退下|闭嘴/.test(text))return '【收益问询】这是询问收益，不是结束对话。对象或意思不清时简短确认是在问哪一项收益；不得捏造数量或代领，不告别，不输出设备或退出标记。';
+ if(/收入|收益/.test(text)&&!/别|不要|不用|停止|结束|不想|退出|再见|拜拜|关房|退下|闭嘴/.test(text))return '【收益话题】先理解用户是在分享还是询问。分享收获或心情时简短回应，不强行查数或追问；确实在询问且对象或意思不清时，才简短确认是哪一项收益。没有可信事实不捏造数量或代领；这不是结束对话，不告别，不输出设备或退出标记。';
  if(!topic&&/^(?:好你帮我换吧|换换快点换|好你帮我)$/.test(t))return '【对象待确认】用户没有说换什么。用一句话询问想换什么；不是退出请求，不告别，不调灯，不声称已完成。';
  if(/界面.*(?:币|[bB])/.test(text))return '【界面资源】不能直接看到屏幕。若指金币则是家族币，星尘是另一种资源；未说清对象时简短确认，不捏造金额、按钮或商品，不输出设备控制标记。';
  const aliases=text.match(/捕禽卡|古琴卡|抚琴卡|抚琴弹|补签卡|加组币/g);

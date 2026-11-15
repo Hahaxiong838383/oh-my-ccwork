@@ -29,10 +29,11 @@ function isPureResourceUsage(text:string):boolean {
 /** Limited reward phrasing; ordinary real-world rewards never imply a device query. */
 function naturalArkRewardState(text:string):boolean {
  if(/老师|学校|考试|公司|比赛|抽奖|外卖|奖金|工资|股票|基金|理财|订阅|提醒/.test(text))return false;
- if(/^(?:小可[，,\s]*)?(?:今天|今日|当天)(?:的)?收益[。？！?!]*$/.test(text.trim()))return true;
+ if(/^(?:小可[，,\s]*)?(?:(?:今天|今日|当天)(?:的)?收益|(?:未|没|待)领(?:取)?的?奖励)(?:啊|呀|吧|呢)?[。？！?!]*$/.test(text.trim()))return true;
  return text.split(/[，,。；;！!]/).some(part=>{
-  const asks=/(?:吗|么)[?？\s]*$|多少|哪些|什么|啥|多久|多长|怎么样|咋样|怎样|如何|有没有|是否|几[项个]|帮我(?:查|看)|查一下|看看/.test(part)
-   || /(?:收益|收获|奖励|宝箱)呢[?？\s]*$/.test(part);
+  const asks=/(?:吗|么)[?？\s]*$|多少|哪些|什么|啥|多久|多长|怎么样|咋样|怎样|如何|有没有|是否|几[项个]/.test(part)
+   || /(?:收益|收获|奖励|宝箱)呢[?？\s]*$/.test(part)
+   || /(?:帮我(?:查|看)(?:一下|看|查)?|查一下|看看).{0,12}(?:收益|收获|奖励|宝箱)(?:情况|状态|进度|数量)?[?？\s]*$/.test(part);
   if(!asks)return false;
   return /(?:奖励|收益|宝箱).{0,8}(?:未领|没领|漏领|待领|可领|可以领)|(?:未领|没领|漏领|待领|可领|可以领).{0,8}(?:奖励|收益|宝箱)/.test(part)
    || /下(?:一[个项次]?|次).{0,3}奖励.{0,10}(?:多久|多长|多少|是什么|是啥|还差|还需)/.test(part)

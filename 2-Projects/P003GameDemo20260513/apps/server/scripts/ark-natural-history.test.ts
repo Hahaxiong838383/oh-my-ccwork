@@ -84,8 +84,8 @@ test('sharing a reward experience stays conversation, not a personal data query'
  }
 });
 test('question particles belong to the reward clause, not narrative adverbs or another clause',()=>{
- for(const q of ['今天收益这么好','今天收获这么多，我很开心','我还有点开心，今天收益不错','今天收益不错呢','我这么开心，终于把未领取的奖励都领完了','那么今天收益不错','今天收益不错，还有什么好玩的']){
+ for(const q of ['今天收益这么好','今天收获这么多，我很开心','我还有点开心，今天收益不错','今天收益不错呢','看看今天收益不错','我这么开心，终于把未领取的奖励都领完了','那么今天收益不错','今天收益不错，还有什么好玩的']){
   assert.equal(isArkStateQuestion(q),false,q);assert.equal(answerArk(q),null,q);
  }
- for(const q of ['今天收益怎样','今天收益如何','今天的收益呢','今天收益不错吗'])assert.equal(isArkStateQuestion(q),true,q);
+ for(const q of ['今天收益怎样','今天收益如何','今天的收益呢','今天收益不错吗','看看今天收益','今天收益吧','今天收益呀','未领取的奖励'])assert.equal(isArkStateQuestion(q),true,q);
 });
