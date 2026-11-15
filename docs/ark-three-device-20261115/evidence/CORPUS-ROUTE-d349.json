@@ -1,0 +1,22 @@
+{
+  "base": "94a40ceb21705dd2f94fdcac62215df98a83d386",
+  "candidate": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+  "pools": {
+    "main": {
+      "checked": 256,
+      "unchanged": 256,
+      "changed": []
+    },
+    "search": {
+      "checked": 256,
+      "unchanged": 256,
+      "changed": []
+    },
+    "listening": {
+      "checked": 256,
+      "unchanged": 256,
+      "changed": []
+    }
+  },
+  "note": "256 original inputs and histories evaluated in three pools with absent and fresh facts. This is function comparison, not fresh model calls or real devices."
+}

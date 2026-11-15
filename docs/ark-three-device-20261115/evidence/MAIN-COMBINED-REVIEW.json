@@ -1,0 +1,22 @@
+{
+  "final_candidate": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+  "code_release_authorized_by_main_review": true,
+  "grok_model": "grok-4.7-build/xhigh",
+  "basis": {
+    "322_fixed_backend": "b5ea904aca702bce1b21d1d8b9660eb1b3745c9c",
+    "324_fixed_query_guard_and_pools": "69150858b1636193de8b252ef432895c7c7b79c0",
+    "325_final_prompt_and_13_outputs": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+  },
+  "individual_325_not_whole_tree_approval": true,
+  "324_file_was_not_present_when_325_checked_but_is_now_independently_verified": true,
+  "three_device_real_normal_closed_loop": false,
+  "source_only_final_package": 10,
+  "hashes": {
+    "FINAL-GROK-REVIEW.json": "d14ca59479c4cfade45ececb825d32afc3de3b4e167de99da7f9e4baff0e0976",
+    "REPAIR-GROK-REVIEW.json": "81edb645d7bfc4dc2a15e9e4942479530e61c61ee1a1d9239e583fac1f9bd7c1",
+    "LAST-GROK-REVIEW.json": "6e53a2315e843a08259b4fc9886a9d3dfa51ff7d61bde6c41c5b7f40a5fae76a",
+    "CODEX-GROK-322-VERIFIED.json": "612d43f6719cc9e5320c4098a82a859eeea11b4614e398a98e04d57e306612c1",
+    "CODEX-GROK-324-VERIFIED.json": "f7e2f034938717910144c88031208cf7d117727095f1d19c5b347093451defb5",
+    "DEPLOY-REVIEWABLE.py": "861b9bfd86df507f75cea1e4040ad9a460d2b7e67e8576f41eb1e51f0f587dd2"
+  }
+}

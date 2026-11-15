@@ -1,0 +1,16 @@
+{
+  "failure_injected": "analytics restart after all three pools installed",
+  "rolled_back_source_files": 10,
+  "rolled_back_env_files": 0,
+  "added_files_removed": true,
+  "all_original_source_hashes_restored": true,
+  "unrelated_env_preserved": true,
+  "restart_order": [
+    "analytics",
+    "main",
+    "listening",
+    "search"
+  ],
+  "concurrent_source_drift_rejected": true,
+  "production_changed": false
+}

@@ -1,0 +1,115 @@
+{
+  "candidate": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+  "production_status": "DEPLOYED_SERVER_PASS_REAL_NORMAL_DATA_PENDING",
+  "tests": {
+    "new_natural_history": 10,
+    "final_feedback_plus_natural": 21,
+    "three_pool_http": {
+      "main": 16,
+      "search": 16,
+      "listening": 16
+    },
+    "original_corpus_per_pool": 256,
+    "function_changes_in_original_corpus": 0,
+    "new_real_model_requests": 13,
+    "real_device_normal_closed_loop": false,
+    "baseline_typecheck_errors": 12
+  },
+  "source_file_count": 10,
+  "schema_migrations": 0,
+  "upload_policy_revision": 4,
+  "upload_subject_tails": [
+    "03800006",
+    "02000026",
+    "02000031"
+  ],
+  "daily_upload_hour_cst": 23,
+  "config_saved_not_device_ack": true,
+  "files": {
+    "RESULTS-closed.jsonl": "be73aaefbffa48db00c7e27e125c238df7ba1e28b064a58183d8ef307032919e",
+    "RESULTS-d349.jsonl": "cc583bb72b7bea5017867d2e8c476488a26f87e969645c7cfae00077e0f87533",
+    "CORPUS-ROUTE-d349.json": "d4db4530670945a03522b3886e1d6d4c09a04eefda123c949cf918cf657134b9",
+    "POOL-d349.json": "1e0e89887981e0fe88067a0c92ce2fadd5d2e2f5e44e6d29063eba355a4d5cf1",
+    "ROLLBACK-SIMULATION.json": "6ede5173173bba00f4280fe464811bed4ec97c11b93b9cce1062b84dea9dcc86",
+    "FINAL-GROK-REVIEW.json": "d14ca59479c4cfade45ececb825d32afc3de3b4e167de99da7f9e4baff0e0976",
+    "PRODUCTION-RECEIPT.json": "e48ea0f78e1caa5a3eb73c89f717ee10d4c05983ae412eb8687e9ec74c9221ec",
+    "PRODUCTION-STABILITY.json": "1af1b2fb9286a7505d69df05757ff9dd7d515503425bd4277c6878f3f797b41a",
+    "POST-RELEASE-DATA.private.json": "4106904b67af73951b29298d117a900a3390fbba189f0f2b9fc1bf656ee39799",
+    "MAIN-COMBINED-REVIEW.json": "076f175193b96ae77f7ed430f77356218b639dfed1cde40e011db282234d42fc",
+    "REPAIR-GROK-REVIEW.json": "81edb645d7bfc4dc2a15e9e4942479530e61c61ee1a1d9239e583fac1f9bd7c1",
+    "LAST-GROK-REVIEW.json": "6e53a2315e843a08259b4fc9886a9d3dfa51ff7d61bde6c41c5b7f40a5fae76a",
+    "REAL-DEVICE-REPLIES.json": "f16a9759f0495b638d4a573a27b717cec5eb5022b10ce72dc0195a15a3a2c47d"
+  },
+  "production": {
+    "candidate": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "finished_cst": "2026-11-15 22:06:36",
+    "backup": "/opt/p003/backups/ark-natural-history-20261115-d34955cd",
+    "files": 10,
+    "scope_counts": {
+      "main": 17,
+      "search": 3,
+      "listening": 1
+    },
+    "health": {
+      "search": 200,
+      "listening": 200,
+      "main": 200,
+      "analytics": 200
+    },
+    "post": {
+      "p003-voice": {
+        "pid": 2075857,
+        "restarts": 3,
+        "status": "online"
+      },
+      "p003-analytics": {
+        "pid": 2075980,
+        "restarts": 2,
+        "status": "online"
+      },
+      "search": {
+        "MainPID": "2075648",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "listening": {
+        "MainPID": "2075757",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      }
+    },
+    "environment_files_unchanged": true,
+    "database_restored": false
+  },
+  "stability": {
+    "seconds": 81.103,
+    "same_processes": true,
+    "files_match": true,
+    "health": {
+      "3001": 200,
+      "3006": 200,
+      "3007": 200,
+      "3008": 200
+    }
+  },
+  "real_data": {
+    "at_ms": 1794751640730,
+    "normal_snapshots": 0,
+    "real_data_replies": 30,
+    "numeric_asset_replies": 0
+  },
+  "reviews": {
+    "322": "fixed b5 backend PASS",
+    "324": "fixed 691 query/pool PASS",
+    "325": "d349 prompt/13 replies PASS only; 324 report not available when 325 checked",
+    "main_combination": "main independently verified 322+324+325 fixed code equivalence, final tests and release preflight"
+  },
+  "memory": {
+    "local_global_updated": true,
+    "not_in_git": true
+  },
+  "source_push": {
+    "branch": "codex/p003-ark-currency-20261115",
+    "verified_sha": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+  }
+}

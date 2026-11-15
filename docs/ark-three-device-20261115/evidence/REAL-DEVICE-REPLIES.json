@@ -1,0 +1,397 @@
+{
+  "candidate": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+  "data_observed_at_ms": 1794751640730,
+  "mode": "read_only_actual_cloud_data_plus_same_source_function_replay_not_audio",
+  "rows": [
+    {
+      "device_tail": "03800006",
+      "question": "我还有多少金币",
+      "reply": "方舟里显示的金币就是家族币。家族币余额我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "我的星尘还剩多少",
+      "reply": "星尘余额我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "我有几张补勤卡",
+      "reply": "补勤卡库存我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "今天获得了多少金币",
+      "reply": "方舟里显示的金币就是家族币。今日收益中已获得的家族币数量我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "今天获得多少星尘",
+      "reply": "今日收益中已获得的星尘数量我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "今天收益有哪些",
+      "reply": "今日收益中已获得的收益和道具我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "还有未领取的奖励吗",
+      "reply": "当前待领状态和下一项剩余时间我暂时查不到。人在读写台前有效使用达到阶段门槛，进度条上的奖励会点亮，点击即可领取；小可不能代领。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "下一个奖励还需要多久",
+      "reply": "当前待领状态和下一项剩余时间我暂时查不到。人在读写台前有效使用达到阶段门槛，进度条上的奖励会点亮，点击即可领取；小可不能代领。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "今天使用了多久，获得了多少收益",
+      "reply": "今天的累计使用时长和奖励进度时长，我暂时查不到。今日收益中已获得的收益和道具我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "03800006",
+      "question": "补勤卡能补10月30日吗",
+      "reply": "补勤卡库存我暂时查不到，可以看设备上的资源页面。具体可补日期和该日期是否符合补签条件，我暂时查不到，不能只凭补勤卡数量判断；请按设备补签页面提示查看。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "gm"
+    },
+    {
+      "device_tail": "02000026",
+      "question": "我还有多少金币",
+      "reply": "方舟里显示的金币就是家族币。家族币余额我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "我的星尘还剩多少",
+      "reply": "星尘余额我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "我有几张补勤卡",
+      "reply": "补勤卡库存我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "今天获得了多少金币",
+      "reply": "方舟里显示的金币就是家族币。今日收益中已获得的家族币数量我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "今天获得多少星尘",
+      "reply": "今日收益中已获得的星尘数量我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "今天收益有哪些",
+      "reply": "今日收益中已获得的收益和道具我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "还有未领取的奖励吗",
+      "reply": "当前待领状态和下一项剩余时间我暂时查不到。人在读写台前有效使用达到阶段门槛，进度条上的奖励会点亮，点击即可领取；小可不能代领。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "下一个奖励还需要多久",
+      "reply": "当前待领状态和下一项剩余时间我暂时查不到。人在读写台前有效使用达到阶段门槛，进度条上的奖励会点亮，点击即可领取；小可不能代领。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "今天使用了多久，获得了多少收益",
+      "reply": "今天的累计使用时长和奖励进度时长，我暂时查不到。今日收益中已获得的收益和道具我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000026",
+      "question": "补勤卡能补10月30日吗",
+      "reply": "补勤卡库存我暂时查不到，可以看设备上的资源页面。具体可补日期和该日期是否符合补签条件，我暂时查不到，不能只凭补勤卡数量判断；请按设备补签页面提示查看。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": null
+    },
+    {
+      "device_tail": "02000031",
+      "question": "我还有多少金币",
+      "reply": "方舟里显示的金币就是家族币。家族币余额我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "我的星尘还剩多少",
+      "reply": "星尘余额我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "我有几张补勤卡",
+      "reply": "补勤卡库存我暂时查不到，可以看设备上的资源页面。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "今天获得了多少金币",
+      "reply": "方舟里显示的金币就是家族币。今日收益中已获得的家族币数量我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "今天获得多少星尘",
+      "reply": "今日收益中已获得的星尘数量我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "今天收益有哪些",
+      "reply": "今日收益中已获得的收益和道具我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "还有未领取的奖励吗",
+      "reply": "当前待领状态和下一项剩余时间我暂时查不到。人在读写台前有效使用达到阶段门槛，进度条上的奖励会点亮，点击即可领取；小可不能代领。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "下一个奖励还需要多久",
+      "reply": "当前待领状态和下一项剩余时间我暂时查不到。人在读写台前有效使用达到阶段门槛，进度条上的奖励会点亮，点击即可领取；小可不能代领。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "今天使用了多久，获得了多少收益",
+      "reply": "今天的累计使用时长和奖励进度时长，我暂时查不到。今日收益中已获得的收益和道具我暂时查不到，不能把钱包余额当成今天获得的数量。在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    },
+    {
+      "device_tail": "02000031",
+      "question": "补勤卡能补10月30日吗",
+      "reply": "补勤卡库存我暂时查不到，可以看设备上的资源页面。具体可补日期和该日期是否符合补签条件，我暂时查不到，不能只凭补勤卡数量判断；请按设备补签页面提示查看。",
+      "assets": {
+        "family_coin": null,
+        "stardust": null,
+        "makeup_card": null
+      },
+      "progress_available": false,
+      "history_status": "unknown",
+      "snapshot_source": "unknown"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "main/src/ark/answer.ts": {
+    "pool": "main",
+    "file": "src/ark/answer.ts",
+    "before": "d3619d5f83df5df1458f7346cbbb23935aca44287b6fd29661116f5460de9bf6",
+    "after": "38a57bc670603164b249acb610738c7ea2eb1912664425c7ab2e8d1003c3fd9c"
+  },
+  "main/src/xiaoke-kb.ts": {
+    "pool": "main",
+    "file": "src/xiaoke-kb.ts",
+    "before": "1c69a9761f959959e74653d4dea186b4d79b201272129f3c80f26c52486aeb38",
+    "after": "d45c317a4081b5fe1d061a80496a308a607b3438182986343a46d6e361ebb586"
+  },
+  "main/src/ark/history.ts": {
+    "pool": "main",
+    "file": "src/ark/history.ts",
+    "before": "49784e51ab7f45798703e08eaeb6b4b33bc9786d4e7c9d70bf9780bd0220fa50",
+    "after": "b477919e35370415b4bdeca701af8f629b85ab497bb881bd082980a5e8774e29"
+  },
+  "search/src/ark/answer.ts": {
+    "pool": "search",
+    "file": "src/ark/answer.ts",
+    "before": "d3619d5f83df5df1458f7346cbbb23935aca44287b6fd29661116f5460de9bf6",
+    "after": "38a57bc670603164b249acb610738c7ea2eb1912664425c7ab2e8d1003c3fd9c"
+  },
+  "search/src/xiaoke-kb.ts": {
+    "pool": "search",
+    "file": "src/xiaoke-kb.ts",
+    "before": "1c69a9761f959959e74653d4dea186b4d79b201272129f3c80f26c52486aeb38",
+    "after": "d45c317a4081b5fe1d061a80496a308a607b3438182986343a46d6e361ebb586"
+  },
+  "listening/src/ark/answer.ts": {
+    "pool": "listening",
+    "file": "src/ark/answer.ts",
+    "before": "d3619d5f83df5df1458f7346cbbb23935aca44287b6fd29661116f5460de9bf6",
+    "after": "38a57bc670603164b249acb610738c7ea2eb1912664425c7ab2e8d1003c3fd9c"
+  },
+  "listening/src/xiaoke-kb.ts": {
+    "pool": "listening",
+    "file": "src/xiaoke-kb.ts",
+    "before": "1c69a9761f959959e74653d4dea186b4d79b201272129f3c80f26c52486aeb38",
+    "after": "d45c317a4081b5fe1d061a80496a308a607b3438182986343a46d6e361ebb586"
+  },
+  "main/src/ark/language.ts": {
+    "pool": "main",
+    "file": "src/ark/language.ts",
+    "before": "bf9df351d014c52f57d92721e22b876884faed75c21c7b6067ae02793d5a34b1",
+    "after": "8a0227a10b1970397e637fc4aa5142f7e8ce110e4e6c35562758d498ea6234f1"
+  },
+  "search/src/ark/language.ts": {
+    "pool": "search",
+    "file": "src/ark/language.ts",
+    "before": "bf9df351d014c52f57d92721e22b876884faed75c21c7b6067ae02793d5a34b1",
+    "after": "8a0227a10b1970397e637fc4aa5142f7e8ce110e4e6c35562758d498ea6234f1"
+  },
+  "listening/src/ark/language.ts": {
+    "pool": "listening",
+    "file": "src/ark/language.ts",
+    "before": "bf9df351d014c52f57d92721e22b876884faed75c21c7b6067ae02793d5a34b1",
+    "after": "8a0227a10b1970397e637fc4aa5142f7e8ce110e4e6c35562758d498ea6234f1"
+  }
+}
