@@ -1,0 +1,63 @@
+{
+  "candidate": "a26b046a1d02d34e367bb2998a870932dfbbb1d6",
+  "backup": "/opt/p003/backups/ark-currency-20261115-a26b046a",
+  "started_ms": 1794726321424,
+  "pools": {
+    "search": {
+      "health": 200,
+      "isolated_http_exit": 0,
+      "log_sha256": "80f146ac48d9611d76cb353921cffd1c0311823981227533a55cb5c46e518edc"
+    },
+    "listening": {
+      "health": 200,
+      "isolated_http_exit": 0,
+      "log_sha256": "a6e0d062e730eb5e6d66974ab66b76c75c9067224154e561a747d2414a0cb8d3"
+    },
+    "main": {
+      "health": 200,
+      "isolated_http_exit": 0,
+      "log_sha256": "b0187c83af60f326baef6cb882a7995b6e019273481588a55937f4eb008a59bd"
+    }
+  },
+  "success": true,
+  "post": {
+    "pm2": {
+      "p003-voice": {
+        "pid": 2030765,
+        "restarts": 1
+      },
+      "kidshub-voice": {
+        "pid": 1856264,
+        "restarts": 0
+      },
+      "p003-analytics": {
+        "pid": 1856270,
+        "restarts": 0
+      }
+    },
+    "search": {
+      "MainPID": "2030627",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "listening": {
+      "MainPID": "2030700",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    }
+  },
+  "files": {
+    "/opt/p003/server/src/xiaoke-kb.ts": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "/opt/p003/server/src/prompts.ts": "108e3ed3097b9a48d7c7a7a113dec2393dec97dc330d7821dc3330812450e0bf",
+    "/opt/p003/server/src/routes/custom-llm.ts": "095b05ea879a0deed90c9391a8b3658744ee78d4280b8aa302747737394731fe",
+    "/opt/p003/server/src/ark/answer.ts": "bdfff9679ee44d6e76c41c9157bb1163278fbd2500f999a54be64714c4786eb5",
+    "/opt/p003/search-canary-20261021/brain/src/xiaoke-kb.ts": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "/opt/p003/search-canary-20261021/brain/src/prompts.ts": "108e3ed3097b9a48d7c7a7a113dec2393dec97dc330d7821dc3330812450e0bf",
+    "/opt/p003/search-canary-20261021/brain/src/routes/custom-llm.ts": "e5d174e7bc5995f8ae987c16a0a7975f2d5eca3d90ddd1f64176056096ce8091",
+    "/opt/p003/listening-canary-20261030/brain/src/xiaoke-kb.ts": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "/opt/p003/listening-canary-20261030/brain/src/prompts.ts": "108e3ed3097b9a48d7c7a7a113dec2393dec97dc330d7821dc3330812450e0bf",
+    "/opt/p003/listening-canary-20261030/brain/src/routes/custom-llm.ts": "4f15607c4c6dd3bc596e5e30c1da02fdf8361bf84d6b8b47a63ada56b1650d69",
+    "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts": "bdfff9679ee44d6e76c41c9157bb1163278fbd2500f999a54be64714c4786eb5"
+  },
+  "ended_ms": 1794726333788
+}

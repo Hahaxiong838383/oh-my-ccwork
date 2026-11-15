@@ -1,0 +1,24 @@
+{
+  "candidate_sha": "a26b046a1d02d34e367bb2998a870932dfbbb1d6",
+  "previous_sha": "17dd53fc43d12cf8bb7cc0723003da971fa14b72",
+  "tree_clean": true,
+  "diff_stat": {"files": 2, "insertions": 18, "deletions": 5, "paths": ["2-Projects/P003GameDemo20260513/apps/server/src/xiaoke-kb.ts", "2-Projects/P003GameDemo20260513/apps/server/src/ark/answer.ts"]},
+  "unit": {"cwd": "2-Projects/P003GameDemo20260513/apps/server", "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx --test --test-concurrency=1 scripts/ark-*.test.ts scripts/xiaoke-kb.test.ts", "tests": 71, "pass": 71, "fail": 0, "exit": 0, "duration_ms": 13689},
+  "http": {
+    "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx --test --test-concurrency=1 scripts/ark-currency-http.test.ts",
+    "main": {"tests": 1, "pass": 1, "fail": 0, "exit": 0, "duration_ms": 2293},
+    "search": {"tests": 1, "pass": 1, "fail": 0, "exit": 0},
+    "listening": {"tests": 1, "pass": 1, "fail": 0, "exit": 0, "duration_ms": 2152}
+  },
+  "manifest_after_mismatch_count": 0,
+  "git_matches_manifest": {
+    "src/xiaoke-kb.ts": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "src/ark/answer.ts": "bdfff9679ee44d6e76c41c9157bb1163278fbd2500f999a54be64714c4786eb5"
+  },
+  "blockers_closed": {"mixed_sentence": true, "current_sentence_negation": true, "paired_quotation": true, "usage_particle": true},
+  "balance_gate_relaxed": false,
+  "new_blockers": [],
+  "ship_11_file_patch": true,
+  "deployed": false,
+  "committed": false
+}

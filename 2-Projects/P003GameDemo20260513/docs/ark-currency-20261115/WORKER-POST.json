@@ -1,0 +1,20 @@
+[
+  {
+    "unit": "p003-listening-worker.service",
+    "MainPID": "815868",
+    "ActiveState": "active",
+    "exe_sha": "c7e70e77e4600e09b02f885101a17e8e7cea0e9635bc430d456b88081b6289d5"
+  },
+  {
+    "unit": "p003-search-worker.service",
+    "MainPID": "815854",
+    "ActiveState": "active",
+    "exe_sha": "c7bec7df92c47136fd0c91e5c2b4ed59c918ffa7158cdfb3a63415fa1e221b25"
+  },
+  {
+    "unit": "voice-worker-rust.service",
+    "MainPID": "795375",
+    "ActiveState": "active",
+    "exe_sha": "d1b1d952c365f9648677ee88cd41ce96a42bc407fe47e2258b7e44875db581cf"
+  }
+]

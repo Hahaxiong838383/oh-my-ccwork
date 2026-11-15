@@ -1,0 +1,10 @@
+{
+  "candidate": "a26b046a1d02d34e367bb2998a870932dfbbb1d6",
+  "checked_at_ms": 1794726512086,
+  "stability_seconds": 178.298,
+  "three_brains_healthy": true,
+  "same_pids_and_restart_counts": true,
+  "all_11_source_hashes_match": true,
+  "three_worker_pid_and_binary_unchanged": true,
+  "analytics_pid_unchanged": true
+}
