@@ -41,7 +41,7 @@ test('fragment aliases reach model guidance without rewriting stored text; curre
  const {arkConversationPolicy,unfinishedUtterance}=await import('../src/ark/language.js');
  assert.match(arkConversationPolicy('古琴卡有',[]),/古琴卡指补勤卡/);
  assert.match(arkConversationPolicy('捕禽卡有',[]),/捕禽卡指补勤卡/);
- for(const q of ['我有','我有几枚','我还有多少张','小可请告诉我我现在','展示出来'])assert.equal(unfinishedUtterance(q),true,q);
+ for(const q of ['我有','我有几枚','就是这个家族','下一个老乡还需要多久','我还有多少张','小可请告诉我我现在','展示出来'])assert.equal(unfinishedUtterance(q),true,q);
  assert.equal(arkConversationPolicy('关灯',[user('金币有什么用')]),'');
  assert.match(answerArk('我怎样才能获得奖励',undefined,[],now)??'',/有效使用.*点亮.*点击/);
  assert.match(answerArk('没有宝箱啊',undefined,[],now)??'',/暂时查不到/);

@@ -159,7 +159,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const protectArkControl=!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!deferArkDirectReply(userText)&&(dynamicArk||!!staticArkAnswer||!!arkPolicy||!!knowledgeRecall?.includes('【方舟资源')||(/多少|多久|什么时候|有什么用|为什么/.test(userText)&&!/灯|亮度|音量|声音|色温|画面|虚像|设备高度|退出|别说|不想聊/.test(userText)));
   if(protectArkControl)systemPrompt+='\n本轮不是设备控制或退出请求，不输出DEV标记，不告别或自行结束。';
   // Incomplete speech needs a clarification, not old worldview/profile examples to complete it.
-  if(!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!directArkQuestion&&unfinishedUtterance(userText))systemPrompt='你是陪伴用户的小伙伴小可。用户这句话没有说完整，或没有说明具体对象。只用一句简短自然的中文，请用户接着说，或确认是在问哪个对象。不要猜测物品、数字、玩法、界面位置或能力，不要介绍世界观，不许承诺代操作，不告别、不结束对话、不输出任何控制标记。';
+  if(!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!directArkQuestion&&unfinishedUtterance(userText))systemPrompt='你是陪伴用户的小伙伴小可。这里的方舟指小可读写台的游戏世界，不是其它游戏。用户这句话没有说完整，或没有说明具体对象。只用一句简短自然的中文，请用户接着说，或确认是在问哪个对象。不要猜测物品、数字、玩法、界面位置或能力，不要介绍世界观，不许承诺代操作，不告别、不结束对话、不输出任何控制标记。';
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
   if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
   const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
