@@ -29,7 +29,7 @@ export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.n
  if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
  const knownUse=answerArkResourceUse(text,history);if(knownUse)return knownUse;
  // Mixed unrelated requests remain ordinary conversation instead of losing a question.
- if(text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|有.*用|用途|还.*多久/.test(part)))return null;
+ if(text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|收益|使用时长|使用了多久|有.*用|用途|还.*多久/.test(part)))return null;
  let q=resolveArkUsageQuestion(text,history)??resolveArkQuestion(text,history)??text;
  if(/^(?:家族币|星尘|星辰|补勤卡|补签卡)[。？！?！]*$/.test(text.trim())&&/金币.*(?:有什么用|用途)/.test([...history].reverse().find(t=>t.role==='user')?.content??''))q=text+'有什么用';
  const exchange=isArkGameExchangeQuestion(q);
@@ -39,7 +39,7 @@ export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.n
  if(!state&&!(usage&&(family||star||card||coin||exchange)))return null;
  const f=cleanFacts(raw);
  const complaint=/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)/.test(q);
- const summary=complaint||/(?:分钟|读写台|方舟).*领不了(?:东西|奖励|宝箱)/.test(q)||/方舟.{0,8}(?:进度|进展)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)/.test(q);
+ const summary=complaint||/(?:分钟|读写台|方舟).*领不了(?:东西|奖励|宝箱)/.test(q)||/方舟.{0,8}(?:进度|进展)|(?:今天|今日).*(?:使用时长|使用了多久|用了多久|用了多长)/.test(q);
  const earned=state&&/今天|今日|当天/.test(q)&&/赚|获得|收益|所得|收入/.test(q);
  const day=f?.daily,validDay=day&&day.logical_day===cstDay(now)&&day.observed_at_ms<=now&&day.received_at_ms<=now?day:null;
  const dailyParts:string[]=[];
@@ -48,9 +48,10 @@ export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.n
  }
  if(earned||summary){
   const labels:Record<string,[string,string]>={'C-FAMILY-001':['家族币','枚'],'C-STARDUST-001':['星尘',''],'M-CARD-001':['补勤卡','张'],'CHEST-COMMON-001':['普通宝箱','个']};
-  const rewards=validDay?.rewards?.filter(r=>!earned||!family||r.item_id==='C-FAMILY-001');
+  const wanted=[...(family?['C-FAMILY-001']:[]),...(star?['C-STARDUST-001']:[]),...(card?['M-CARD-001']:[])];
+  const rewards=validDay?.rewards?.filter(r=>!earned||!wanted.length||wanted.includes(r.item_id));
   const known=rewards?.filter(r=>labels[r.item_id]);
-  dailyParts.push(known?.length?`今天已同步的发奖记录有${known.map(r=>labels[r.item_id][0]+r.quantity+labels[r.item_id][1]).join('、')}；后续同步可能补齐更多记录。`:'今日收益中已获得的'+(family?'家族币数量':'收益和道具')+'我暂时查不到，不能把钱包余额当成今天获得的数量。');
+  dailyParts.push(known?.length?`今天已同步的发奖记录有${known.map(r=>labels[r.item_id][0]+r.quantity+labels[r.item_id][1]).join('、')}；后续同步可能补齐更多记录。`:'今日收益中已获得的'+(family?'家族币数量':star?'星尘数量':card?'补勤卡数量':'收益和道具')+'我暂时查不到，不能把钱包余额当成今天获得的数量。');
   if(rewards?.some(r=>!labels[r.item_id]))dailyParts.push('另有已同步的道具记录，具体名称我暂时无法确认。');
   if(earned)return (coin?ARK_GOLD_ALIAS:'')+dailyParts.join('')+'在读写台前有效使用达到奖励门槛，进度条奖励点亮后点击领取，就能获得对应家族币或道具。';
  }
@@ -73,6 +74,7 @@ export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.n
  if(exchange&&!star)parts.push(uses.stardust);
  if(star&&/人民币|现金|现实|提现|肯德基/.test(q))parts.push('星尘不能兑换现实金钱或物品。');
  if(card)addAsset('makeup_card','补勤卡库存','张');
+ if(card&&/(?:可以补|能补|可补|补哪)/.test(q))parts.push('具体可补日期和该日期是否符合补签条件，我暂时查不到，不能只凭补勤卡数量判断；请按设备补签页面提示查看。');
  if(progress&&state&&!exchange&&!(usage&&/爸妈|爸爸|妈妈|父母|家长|亲子|约定/.test(q))){
   const p=f?.progress;
   const fresh=p&&now-p.received_at_ms>=0&&now-p.received_at_ms<=30000&&now-p.captured_at_ms>=-2000&&now-p.captured_at_ms<=30000&&p.logical_day===cstDay(now);

@@ -19,7 +19,7 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  if(evidence.length>512)return unknownHistory('query_limit');
  const facts=store.db.prepare(`SELECT ${columns} FROM analytics_event e LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
  WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=?
- AND e.occurred_at_ms>=? AND e.occurred_at_ms<=? AND e.event_name IN ('g1.wallet_balance_changed','g1.inventory_changed')
+ AND e.occurred_at_ms>=? AND e.occurred_at_ms<=? AND e.event_name IN ('g1.wallet_balance_changed','g1.inventory_changed','g1.makeup_card_balance_changed')
  ORDER BY e.occurred_at_ms DESC,e.received_at_ms DESC LIMIT 513`).all(key,Math.max(notBefore,now-14*DAY),now,Math.max(notBefore,now-14*DAY),now) as Row[];
  // Truncating older asset changes cannot invalidate an already-newer latest value.
  // A tie at the truncation boundary is ambiguous and must not be reported.
@@ -35,18 +35,21 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  const result=unknownHistory(),conflicts=new Set<string>();
  for(const e of events){const day=cstDay(e.occurred_at_ms),p=e.p;
   if(e.occurred_at_ms<Math.max(notBefore,now-14*DAY)||e.occurred_at_ms>now||e.received_at_ms<notBefore||e.clock_suspicious||e.received_at_ms<e.occurred_at_ms-2000||e.received_at_ms-e.occurred_at_ms>14*DAY||p.truncated===true||gmDays.has(day)||!normal.has(day)||normal.get(day)!>e.occurred_at_ms)continue;
-  const value=e.event_name==='g1.wallet_balance_changed'&&p.item_id==='C-FAMILY-001'?p.after:e.event_name==='g1.inventory_changed'&&p.item_id==='M-CARD-001'?p.quantity:undefined;
+  const field=e.event_name==='g1.wallet_balance_changed'?(p.item_id==='C-FAMILY-001'?'family_coin':p.item_id==='C-STARDUST-001'?'stardust':null):e.event_name==='g1.makeup_card_balance_changed'||e.event_name==='g1.inventory_changed'&&p.item_id==='M-CARD-001'?'M-CARD-001':null;
+  if(!field)continue;
+  const value=e.event_name==='g1.inventory_changed'?p.quantity:p.after;
   if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0||value>1e9)continue;
   let version:null|string=null;
   if(e.client_json){const client=JSON.parse(e.client_json);if(typeof client.content_version==='string'&&/^[A-Za-z0-9_.:-]{1,64}$/.test(client.content_version))version=client.content_version;}
   const fact={value,occurred_at_ms:e.occurred_at_ms,received_at_ms:e.received_at_ms,content_version:version};
-  const wallet=e.event_name==='g1.wallet_balance_changed',field=wallet?'family_coin':'M-CARD-001';
+  const get=()=>field==='M-CARD-001'?result.inventory[field]:result.wallets[field];
+  const set=(value:typeof fact|null)=>{if(field==='M-CARD-001')result.inventory[field]=value;else result.wallets[field]=value;};
   if(conflicts.has(field))continue;
-  const old=wallet?result.wallets.family_coin:result.inventory['M-CARD-001'];
-  if(old&&old.occurred_at_ms===fact.occurred_at_ms&&old.value!==fact.value){conflicts.add(field);if(wallet)result.wallets.family_coin=null;else result.inventory['M-CARD-001']=null;continue;}
-  if(wallet)result.wallets.family_coin??=fact;else result.inventory['M-CARD-001']??=fact;
+  const old=get();
+  if(old&&old.occurred_at_ms===fact.occurred_at_ms&&old.value!==fact.value){conflicts.add(field);set(null);continue;}
+  if(!old)set(fact);
  }
- if(boundary!==null){if(result.wallets.family_coin&&result.wallets.family_coin.occurred_at_ms<=boundary)result.wallets.family_coin=null;if(result.inventory['M-CARD-001']&&result.inventory['M-CARD-001']!.occurred_at_ms<=boundary)result.inventory['M-CARD-001']=null;}
+ if(boundary!==null){for(const field of ['family_coin','stardust'] as const){if(result.wallets[field]&&result.wallets[field]!.occurred_at_ms<=boundary)result.wallets[field]=null;}if(result.inventory['M-CARD-001']&&result.inventory['M-CARD-001']!.occurred_at_ms<=boundary)result.inventory['M-CARD-001']=null;}
  // Separate bounded day scan: reward grants are not wallet deltas; aggregated diagnostics never enter.
  const today=cstDay(now),start=Date.parse(today+'T00:00:00+08:00');
  if(normal.has(today)&&!gmDays.has(today)){
@@ -81,7 +84,7 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
    if(progress_seconds!==null||rewards!==null){const parsed=dailyFactSchema.safeParse({logical_day:today,observed_at_ms:at,received_at_ms:received,coverage:'received_records',progress_seconds,rewards});if(parsed.success)result.daily=parsed.data;}
   }
  }
- if(result.wallets.family_coin||result.inventory['M-CARD-001']||result.daily){result.status='available';result.reason='none';}
+ if(result.wallets.family_coin||result.wallets.stardust||result.inventory['M-CARD-001']||result.daily){result.status='available';result.reason='none';}
  return result;
  });
 }

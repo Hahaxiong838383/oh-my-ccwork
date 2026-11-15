@@ -26,12 +26,20 @@ function isPureResourceUsage(text:string):boolean {
   return /金币|家族币|星尘|星辰|补[勤签]卡/.test(text)&&/有什么用|有啥用|干什么用|做什么用|怎么用|是什么|用途|用处|作用|能干什么|能干嘛|是干嘛的/.test(text)
     && !/多少|几(?:枚|个|张|分|秒)|余额|库存|赚|收益|所得|收入|进度|进展|领取|可领|领到|多久|还剩/.test(text);
 }
+/** Limited reward phrasing; ordinary real-world rewards never imply a device query. */
+function naturalArkRewardState(text:string):boolean {
+ if(/老师|学校|考试|公司|比赛|抽奖|外卖|奖金|工资|股票|基金|理财|订阅|提醒/.test(text))return false;
+ return /(?:奖励|收益|宝箱).{0,8}(?:未领|没领|漏领|待领|可领|可以领)|(?:未领|没领|漏领|待领|可领|可以领).{0,8}(?:奖励|收益|宝箱)/.test(text)
+  || /下(?:一[个项次]?|次).{0,3}奖励.{0,10}(?:多久|多长|多少|是什么|是啥|还差|还需)/.test(text)
+  || /(?:今天|今日|当天).{0,6}(?:收益|收获|获得了什么奖励|得到了什么奖励)/.test(text);
+}
 export function isArkStateQuestion(text: string): boolean {
   text=normalizeArkVocabulary(text);
   if (isOutsideArkQuestion(text) || isPureResourceUsage(text)) return false;
+  if(naturalArkRewardState(text)||/补[勤签]卡.{0,8}(?:可以补|能补|可补|补哪)/.test(text))return true;
   if(/(?:分钟|读写台|方舟).*领不了(?:东西|奖励|宝箱)/.test(text))return true;
   if(/^(?:小可)?界面是[。？！?!]*$/.test(text))return true;
-  if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
+  if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)|(?:今天|今日).*(?:使用时长|使用了多久|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
   const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);
   const stateQuery=/多少|数量|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有|没有|没.*(?:领|拿|得)/.test(text);
   const rewardRequest=/奖励/.test(text)&&/下次|下一次|下一项|下一个|专注/.test(text)&&/领取|领到|能领|可领|怎么领|怎么拿|怎么得|有效专注|计时|进度/.test(text);
@@ -87,7 +95,7 @@ export function deferArkDirectReply(text:string):boolean {
   if(/(?:不要|别|不用)(?:再|继续)?(?:告诉我|给我介绍|说|讲|介绍|解释)|不想(?:听|知道|了解)|停止介绍|别说了|闭嘴|退下|关房|结束倾听|恢复聊天|再见|拜拜|不聊了/.test(text))return true;
   if(/[“「『"].*[”」』"]/.test(text))return true;
   if(/天气|气温|下雨|带伞|冷不冷|热不热|讲.{0,6}故事|编.{0,6}故事|唱.{0,6}歌|播放|音量|调.{0,4}灯|灯光/.test(text))return true;
-  return text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|有.*用|用途|还.*多久/.test(part));
+  return text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|收益|使用时长|使用了多久|有.*用|用途|还.*多久/.test(part));
 }
 
 /** Public product knowledge only: never reads or answers a user's balance/progress. */
