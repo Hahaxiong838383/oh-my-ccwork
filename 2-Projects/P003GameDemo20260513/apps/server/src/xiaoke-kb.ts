@@ -98,6 +98,8 @@ export function answerArkResourceUse(text:string,history:{role:string;content:st
   const contradiction=/^(?:然后)?.{0,18}(?:又说|没说过|没有说过|没有说)[。？！?!]*$/.test(text);
   if(contradiction&&exchangeAt>=0&&!deferArkDirectReply(text)&&!recent.slice(exchangeAt+1).some(t=>t.role==='user'&&/天气|故事|翻译|学校|别的游戏|其他游戏/.test(t.content)))return '刚才的兑换说明让你困惑了，我重新说清楚：方舟里的金币就是家族币，用来和家长兑换约定的奖励；游戏道具使用星尘，具体能换什么以设备页面为准。小可目前不能替你兑换或领取。';
   if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
+  if(/^(?:请问)?方舟里的补[。？！?!]*$/.test(text.trim()))return '你继续说，我在听。';
+  if(/^就是这个家族[。？！?!]*$/.test(text.trim()))return '你指的是家族币吗？'+ARK_GOLD_ALIAS+ARK_RESOURCE_USES.family_coin;
   if(/(?:母亲卡(?:有什么用|有啥用|多少|[。？！?!]*$)|方舟里的母亲(?:[。？！?!]*$))/.test(text))return '你说的是方舟里的补勤卡吗？我确认一下，免得讲错了。';
   if(/加速币|加注[bB]|积分/.test(text)&&!/老师|学校|考试|数学|信用卡|会员|商场/.test(text))return '你说的是读写台上的家族币、星尘，还是其他积分？我先确认一下，免得查错。';
   if(/界面.*币/.test(text)&&/有什么用|可以.*做什么|用于|用来/.test(text))return ARK_GOLD_ALIAS+ARK_RESOURCE_USES.family_coin+ARK_RESOURCE_USES.stardust;

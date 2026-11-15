@@ -38,4 +38,9 @@ test('time-linked claim failure queries facts instead of inventing a charging st
  process.env.ARK_DIRECT_REPLY_SN_ALLOW=sn;const before=modelCalls;
  try{const reply=await chat('分钟我领不了东西');assert.match(reply,/当前待领状态.*暂时查不到/);assert.doesNotMatch(reply,/看到你正在|夜航|合盖/);assert.equal(modelCalls,before);}finally{process.env.ARK_DIRECT_REPLY_SN_ALLOW='';}
 });
+test('family and half-word clarifications stay grounded without provider calls',async()=>{
+ const before=modelCalls;
+ for(const q of ['就是这个家族','方舟里的补','请问方舟里的补']){const reply=await chat(q);assert.equal(reply,answerArkResourceUse(q));assert.doesNotMatch(reply,/补给|补位|DEV:/);}
+ assert.equal(modelCalls,before);
+});
 after(async()=>{for(const s of servers){s.closeAllConnections();await new Promise<void>(r=>s.close(()=>r()));}process.chdir(cwd);rmSync(root,{recursive:true,force:true});});

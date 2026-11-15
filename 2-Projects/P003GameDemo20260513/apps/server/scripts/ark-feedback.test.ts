@@ -32,7 +32,7 @@ test('today earned uses deduplicated awards, not wallet; progress explains remai
 
 test('unfinished sentences stay conversational; control tag filtering handles all split boundaries',async()=>{
  const {unfinishedUtterance,createArkControlFilter,arkConversationPolicy}=await import('../src/ark/language.js');
- for(const q of ['小可我现在有','请问','请告诉','方舟里的补','方舟里的补勤','文章捕']){assert.equal(unfinishedUtterance(q),true,q);assert.match(arkConversationPolicy(q,[]),/不要结束/);assert.equal(answerArk(q,f,[],now),null,q);}
+ for(const q of ['小可我现在有','请问','请告诉','方舟里的补','方舟里的补勤','文章捕']){assert.equal(unfinishedUtterance(q),true,q);assert.match(arkConversationPolicy(q,[]),/不要结束/);assert.equal(answerArk(q,f,[],now),q==='方舟里的补'?'你继续说，我在听。':null,q);}
  for(const q of ['退下','关灯','不想聊了','退出倾听恢复聊天','我现在有多少金币'])assert.equal(unfinishedUtterance(q),false,q);
  const str='[[DEV:90]]你继续说，我在听。';for(let i=0;i<=str.length;i++){const filter=createArkControlFilter(true);assert.equal(filter.feed(str.slice(0,i))+filter.feed(str.slice(i))+filter.flush(),'你继续说，我在听。');}
  const filter=createArkControlFilter(false);assert.equal(filter.feed('[[DEV:3]]关灯')+filter.flush(),'[[DEV:3]]关灯');
@@ -70,4 +70,10 @@ test('screen currency, unfinished progress complaint and bare interface use grou
  const a=answerArkResourceUse('看看你这个界面有币什么的这个币可以用于做什么我现在有200币')??'';
  assert.match(a,/金币就是家族币/);assert.match(a,/家长/);assert.match(a,/星尘/);assert.doesNotMatch(a,/余额是200|家族币.*换.*小道具/);
  for(const q of ['我在这待了这么久了为什么不给','界面是']){assert.ok(resolveArkQuestion(q,[]),q);const b=answerArk(q,f,[],now)??'';assert.match(b,/2项/,q);assert.doesNotMatch(b,/合盖|夜航|左边|右边|驾驶舱/,q);}
+});
+
+test('family fragment confirms currency and incomplete Ark noun never invents a candidate item',()=>{
+ for(const h of [[],[user('家族币有什么用')]]){const a=answerArkResourceUse('就是这个家族',h)??'';assert.match(a,/家族币/);assert.match(a,/小程序/);assert.match(a,/家长/);}
+ for(const q of ['方舟里的补','请问方舟里的补']){const a=answerArkResourceUse(q)??'';assert.match(a,/接着说|继续说/);assert.doesNotMatch(a,/补给|补位|补勤卡/);}
+ for(const q of ['这个家族叫什么','介绍家族历史','“就是这个家族”是什么意思','方舟里的补勤卡有多少张'])assert.equal(answerArkResourceUse(q),null,q);
 });
