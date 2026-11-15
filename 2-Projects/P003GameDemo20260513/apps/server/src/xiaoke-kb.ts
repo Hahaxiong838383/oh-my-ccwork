@@ -29,6 +29,7 @@ function isPureResourceUsage(text:string):boolean {
 export function isArkStateQuestion(text: string): boolean {
   text=normalizeArkVocabulary(text);
   if (isOutsideArkQuestion(text) || isPureResourceUsage(text)) return false;
+  if(/(?:分钟|读写台|方舟).*领不了(?:东西|奖励|宝箱)/.test(text))return true;
   if(/^(?:小可)?界面是[。？！?!]*$/.test(text))return true;
   if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
   const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);

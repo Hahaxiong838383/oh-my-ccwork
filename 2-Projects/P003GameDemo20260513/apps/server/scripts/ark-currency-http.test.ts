@@ -34,4 +34,8 @@ test('authenticated currency knowledge: real HTTP/SSE, empty dynamic allowlist, 
  assert.equal(modelCalls,10);
 });
 test('unfinished speech cannot emit model DEV exit, while explicit device commands retain protocol',async()=>{for(const q of ['请问','小可我现在有','文章捕','方舟里的补','这些收入怎么这样呢'])assert.equal(await chat(q),'你继续说，我在听。');assert.equal(await chat('关灯'),'[[DEV:3]]好的');assert.equal(await chat('关灯',[{role:'user',content:'金币有什么用'}]),'[[DEV:3]]好的');});
+test('time-linked claim failure queries facts instead of inventing a charging state',async()=>{
+ process.env.ARK_DIRECT_REPLY_SN_ALLOW=sn;const before=modelCalls;
+ try{const reply=await chat('分钟我领不了东西');assert.match(reply,/当前待领状态.*暂时查不到/);assert.doesNotMatch(reply,/看到你正在|夜航|合盖/);assert.equal(modelCalls,before);}finally{process.env.ARK_DIRECT_REPLY_SN_ALLOW='';}
+});
 after(async()=>{for(const s of servers){s.closeAllConnections();await new Promise<void>(r=>s.close(()=>r()));}process.chdir(cwd);rmSync(root,{recursive:true,force:true});});
