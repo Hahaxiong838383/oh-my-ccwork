@@ -1,0 +1,116 @@
+{
+  "candidate": "94a40ceb21705dd2f94fdcac62215df98a83d386",
+  "completed_at": "2026-11-15T19:23:22.871000+08:00",
+  "result": "DEPLOYED_TEXT_ACCEPTED",
+  "review_counts": {
+    "PASS": 256
+  },
+  "tests": {
+    "ark_http_exit": 89,
+    "exit_assertions": 58,
+    "per_pool": 28
+  },
+  "source_files": 22,
+  "runtime_direct_scope_counts": {
+    "main": 17,
+    "search": 3,
+    "listening": 1
+  },
+  "post_processes": {
+    "p003-voice": {
+      "pid": 2058960,
+      "restarts": 2,
+      "status": "online"
+    },
+    "p003-analytics": {
+      "pid": 2059053,
+      "restarts": 1,
+      "status": "online"
+    },
+    "search": {
+      "MainPID": "2058789",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "listening": {
+      "MainPID": "2058866",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    }
+  },
+  "health": {
+    "search": {
+      "health": 200,
+      "isolated_test_exit": 0,
+      "log_sha256": "2abd99bda93a844f5bbc9ad95065187d2bbf20a945cb4dac19c93242acb0a9a8"
+    },
+    "listening": {
+      "health": 200,
+      "isolated_test_exit": 0,
+      "log_sha256": "759f5357192d507662057e381c18fbbef4ccc98a6ab3b428645de6dde85b5b65"
+    },
+    "main": {
+      "health": 200,
+      "isolated_test_exit": 0,
+      "log_sha256": "27e2edd7b68f5f992fb36ef11dba89e02fd2db0a759b40b6bb35d903c433c8a2"
+    },
+    "analytics": {
+      "health": 200
+    }
+  },
+  "backup": "/opt/p003/backups/ark-feedback-20261115-94a40ceb",
+  "evidence_sha256": {
+    "USER-DECISIONS.md": "760d57dc291ffed8e78d4a3278058bb9cf51c848a48710dc2d1321ba209b8fe8",
+    "RESULTS-final-closed.jsonl": "d26e19776d69d5353a375c0fd0317444e6e980d13d7501a4696cc59c6edb5444",
+    "CLOSED-REPLAY-IDENTITY.json": "f4b8985a25753e325d57c4270c7641deed68db34ee178ac8174dc53ca18ceb23",
+    "CLOSED-ROUTE-EQUIVALENCE.json": "ce5eed864e720e0d07fc06cc0366ec286ca7fd7a7becd23793c19c115f762ee4",
+    "GROK-CLOSED-REVIEW.md": "d9c66f2afbcc71501bc0341ecac54892f70c99118172850691d351ccdbf3c912",
+    "GROK-CLOSED-VERDICTS.json": "31e48767254e33ff2a9d17a9ceb6071678f50d238e3943b1a414c1ae3be036fe",
+    "closed-regression.log": "06c28b2a5500cb782fb1bf628ce37110ae333927a6760c51fab95b3dcac2adfc",
+    "POOL-TESTS-closed.json": "0bfaec5b03cbc00100a19e0d5e79538a0307f420f3942ffcea31bc228515cc53",
+    "ROLLBACK-SIMULATION.json": "f4da8bc51e0e253d4add44f2566b4b67e712380a416c1a5e13b90752c13ba470",
+    "PRODUCTION-RECEIPT.json": "f86d41b6d987ed90b545392b70fae4a687a32538dca9944db02611bc354daf77"
+  },
+  "limits": [
+    "250 unchanged actual replies from 0efa24f9 plus 6 final-SHA actual HTTP replies; complete three-pool equivalence checks",
+    "No acoustic/Android E2E acceptance",
+    "Observed daily reward records are not complete daily earnings; capped reward timer is not total usage",
+    "12 baseline tsc errors; expanded first run 115/120 with four baseline search failures and one isolated-pass analytics assertion"
+  ],
+  "post_stability": {
+    "at_ms": 1794741870015,
+    "processes": {
+      "p003-voice": {
+        "pid": 2058960,
+        "restarts": 2,
+        "status": "online"
+      },
+      "p003-analytics": {
+        "pid": 2059053,
+        "restarts": 1,
+        "status": "online"
+      },
+      "search": {
+        "MainPID": "2058789",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "listening": {
+        "MainPID": "2058866",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      }
+    },
+    "health": {
+      "3001": 200,
+      "3006": 200,
+      "3007": 200,
+      "3008": 200
+    },
+    "files_match": true,
+    "env_match": true,
+    "stable": true,
+    "elapsed_seconds": 67.144,
+    "candidate": "94a40ceb21705dd2f94fdcac62215df98a83d386"
+  }
+}
