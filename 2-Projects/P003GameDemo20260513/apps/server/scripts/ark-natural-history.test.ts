@@ -78,3 +78,8 @@ test('natural next reward uses fresh facts, expired facts cannot report countdow
   const stale=answerArk(q,facts,[],now+30001)??'';assert.match(stale,/查不到/);assert.doesNotMatch(stale,/2项|2分钟/);
  }
 });
+test('sharing a reward experience stays conversation, not a personal data query',()=>{
+ for(const q of ['今天收获很多，我很开心','今天收益不错','我终于把未领取的奖励都领完了']){
+  assert.equal(isArkStateQuestion(q),false,q);assert.equal(answerArk(q),null,q);
+ }
+});

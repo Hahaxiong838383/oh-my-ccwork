@@ -29,6 +29,8 @@ function isPureResourceUsage(text:string):boolean {
 /** Limited reward phrasing; ordinary real-world rewards never imply a device query. */
 function naturalArkRewardState(text:string):boolean {
  if(/老师|学校|考试|公司|比赛|抽奖|外卖|奖金|工资|股票|基金|理财|订阅|提醒/.test(text))return false;
+ if(/^(?:小可[，,\s]*)?(?:今天|今日|当天)(?:的)?收益[。？！?!]*$/.test(text.trim()))return true;
+ if(!/吗|么|呢|多少|哪些|什么|啥|多久|多长|有没有|还有|还差|还需|是否|帮我(?:查|看)|查一下|看看/.test(text))return false;
  return /(?:奖励|收益|宝箱).{0,8}(?:未领|没领|漏领|待领|可领|可以领)|(?:未领|没领|漏领|待领|可领|可以领).{0,8}(?:奖励|收益|宝箱)/.test(text)
   || /下(?:一[个项次]?|次).{0,3}奖励.{0,10}(?:多久|多长|多少|是什么|是啥|还差|还需)/.test(text)
   || /(?:今天|今日|当天).{0,6}(?:收益|收获|获得了什么奖励|得到了什么奖励)/.test(text);
