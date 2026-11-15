@@ -19,6 +19,7 @@ test('claim followups fetch progress and cannot pretend to execute or expose a s
  for(const q of ['好你帮我','换换快点换','我点哪里']){assert.ok(resolveArkQuestion(q,h),q);assert.equal(answerArkResourceUse(q,h),null,q);const a=answerArk(q,f,h,now)??'';assert.match(a,/2项/);assert.match(a,/点.*进度条|进度条.*点/);assert.match(a,/不能.*代|不能.*替/);assert.doesNotMatch(a,/换好了|领好了|自动到账/);}
  assert.match(answerArk('展示出来',f,h,now)??'',/当前.*不支持|目前.*不能/);
  assert.match(answerArk('咱俩',f,[user('家族币是我和你约定的奖励')],now)??'',/你和我/);
+ assert.match(answerArk('这都必须咱俩约定',f,[],now)??'',/你和我/);
 });
 test('today earned uses deduplicated awards, not wallet; progress explains remaining effective time',()=>{
  const daily={logical_day:'2026-11-15',received_at_ms:now,observed_at_ms:now,coverage:'received_records',progress_seconds:600,rewards:[{item_id:'C-FAMILY-001',quantity:20},{item_id:'M-CARD-001',quantity:1}]};
