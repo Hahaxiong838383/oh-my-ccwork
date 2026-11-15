@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## 方舟收益、道具、真实数据与配表问答
+
+涉及资源回复、用户逐条裁定或“是否读取各设备实际数据”，先读[方舟事实与回复验收](references/ark-facts-and-product-replies.md)。产品知识、设备事实、版本配表和代操作能力分别核验；文本PASS不能冒充各设备数据已通。
+
 ## Worker可达性与倾听验收收口
 
 遇到SSH超时/认证拒绝、监控误报不可达、其他会话已修复或安卓倾听退出回执，读[Worker可达性与收口取证](references/worker-reachability-and-closeout.md)。按实际成功路径复核认证位置；区分Brain模式关闭、Worker删房和Android消费证据，补验完成后更新当前结论并保留旧失败。

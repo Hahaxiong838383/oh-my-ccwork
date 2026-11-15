@@ -1,0 +1,37 @@
+{
+  "at": "2026-11-15 20:48:26 CST",
+  "deployed_business_sha": "94a40ceb21705dd2f94fdcac62215df98a83d386",
+  "summary": {
+    "registered": 18,
+    "active": 18,
+    "context_scope": 17,
+    "valid_grants": 3,
+    "snapshot_rows": 2,
+    "normal_snapshots": 0,
+    "gm_snapshots": 1,
+    "live_endpoint_calls": 3,
+    "deployed_22_files_match": true
+  },
+  "valid_grant_tails": [
+    "03800006",
+    "02000026",
+    "02000031"
+  ],
+  "probe_scope": "production readonly facts endpoints and production-identical pure answer functions; not live voice",
+  "fact_replay_combinations": 170,
+  "evidence": {
+    "LIVE-AUDIT.private.json": "5f63fb2b9f6e45dfa1266871cbe90f1d77919e21a84bc5e36960db31f60df1de",
+    "LIVE-FACT-ANSWERS.json": "781079e4ff08801c4efeb21015477484beec62f38738355680cff8064936ef79",
+    "LIVE-SOURCE-INVENTORY.json": "d7e7b447de344e9483112e6271004a7515991562242b4befecf728b67971fa8c",
+    "MAIN-FINDINGS.md": "42ea23e6f9fbcc1656c2094a6a0fc803588c3bbca6c8cd0bd54200950d33c935",
+    "memory-skill-backup/journal.json": "b2ce20a5a65c42179bfe9ab33636205ec49b254ce03ca050b2a20fcd3ae56bc2",
+    "GROK-CODE-AUDIT.md": "5d7ced2aa8bf850e27663e692509d3ac1f3e4dddb5239a0b89c93962d38a9f65",
+    "GROK-CODE-AUDIT.json": "29d4633837f625e39a3ee0bcf332daddf9301bffd8b480f1711ddc68f000177f",
+    "INDEPENDENT-GAPS.json": "c04f282660b5c12dfa3f267254d8913f992b80be776481b0a6688805309282bf",
+    "independent-gaps.mts": "f319253498f317c2316fd1c7e2a970c5ad78bd58f4a49ef0697f7a9e81ef1828",
+    "independent-gaps.log": "ec18b1383cf9a6fb4b376eea5fa0540803973583528def8048ed89f7228b59b1"
+  },
+  "production_changed": false,
+  "independent_gap_reproduction": "GAPS_REPRODUCED_NOT_FIXED",
+  "grok_review": "completed_readonly"
+}
