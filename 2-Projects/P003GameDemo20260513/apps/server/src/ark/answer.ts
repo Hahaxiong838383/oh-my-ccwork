@@ -38,7 +38,7 @@ export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.n
  const family=/家族币|金币/.test(q),star=/星尘|星辰/.test(q),card=/补勤卡|补签卡/.test(q),coin=/金币/.test(q);
  if(!state&&!(usage&&(family||star||card||coin||exchange)))return null;
  const f=cleanFacts(raw);
- const complaint=/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没).*(?:加|奖励|收益)/.test(q);
+ const complaint=/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)/.test(q);
  const summary=complaint||/方舟.{0,8}(?:进度|进展)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)/.test(q);
  const earned=state&&/今天|今日|当天/.test(q)&&/赚|获得|收益|所得|收入/.test(q);
  const day=f?.daily,validDay=day&&day.logical_day===cstDay(now)&&day.observed_at_ms<=now&&day.received_at_ms<=now?day:null;

@@ -28,11 +28,11 @@ export function arkDialogueTopic(history:{role:string;content:string}[]):string|
 }
 export function arkConversationQuery(text:string,history:{role:string;content:string}[]):string|null {
  const t=compact(text),topic=arkDialogueTopic(history);
+ if(t==='界面是')return '方舟当前界面和奖励进度';
  if(!topic||external(text))return null;
  if(/^(?:好你帮我(?:换吧)?|换换快点换|我点哪里|帮我领(?:取)?(?:吧)?|帮我换(?:吧)?)$/.test(t))return '方舟当前待领取奖励';
  if(topic==='补勤卡'&&/^(?:我)?(?:现在|还)?(?:有)?(?:多少|几)张$/.test(t))return '我有多少补勤卡';
  if(topic==='补勤卡'&&/^(?:条件呢|什么条件|有哪些条件|有什么条件|怎么才能用)$/.test(t))return '补勤卡的用途和使用条件是什么';
- if(t==='界面是')return '方舟当前界面和奖励进度';
  if(/^(?:就是你这|就在你这啊|就是这个家族)$/.test(t)&&topic==='家族币')return '家族币有什么用';
  return null;
 }

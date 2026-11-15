@@ -29,7 +29,8 @@ function isPureResourceUsage(text:string):boolean {
 export function isArkStateQuestion(text: string): boolean {
   text=normalizeArkVocabulary(text);
   if (isOutsideArkQuestion(text) || isPureResourceUsage(text)) return false;
-  if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没).*(?:加|奖励|收益)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
+  if(/^(?:小可)?界面是[。？！?!]*$/.test(text))return true;
+  if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)|(?:今天|今日).*(?:使用时长|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
   const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);
   const stateQuery=/多少|数量|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有|没有|没.*(?:领|拿|得)/.test(text);
   const rewardRequest=/奖励/.test(text)&&/下次|下一次|下一项|下一个|专注/.test(text)&&/领取|领到|能领|可领|怎么领|怎么拿|怎么得|有效专注|计时|进度/.test(text);
@@ -98,12 +99,14 @@ export function answerArkResourceUse(text:string,history:{role:string;content:st
   if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
   if(/(?:母亲卡(?:有什么用|有啥用|多少|[。？！?!]*$)|方舟里的母亲(?:[。？！?!]*$))/.test(text))return '你说的是方舟里的补勤卡吗？我确认一下，免得讲错了。';
   if(/加速币|加注[bB]|积分/.test(text)&&!/老师|学校|考试|数学|信用卡|会员|商场/.test(text))return '你说的是读写台上的家族币、星尘，还是其他积分？我先确认一下，免得查错。';
+  if(/界面.*币/.test(text)&&/有什么用|可以.*做什么|用于|用来/.test(text))return ARK_GOLD_ALIAS+ARK_RESOURCE_USES.family_coin+ARK_RESOURCE_USES.stardust;
   if(incompleteArkCard(text))return '你说的是补勤卡吗？';
   const compactCard=text.replace(/[\s。？！?!]/g,'');
   if(/^(?:请问)?(?:方舟里的|方舟的|的|帮我看看)?补勤卡(?:有|有什么)?$/.test(compactCard)&&!history.some(t=>t.role==='user'&&isArkStateQuestion(t.content)))return ARK_RESOURCE_USES.makeup_card;
   if(/帮.*收.*补勤卡/.test(text))return '小可不能替你收取或使用补勤卡。'+ARK_RESOURCE_USES.makeup_card;
   const topic=arkDialogueTopic(history);
   if(!topic&&/^(?:我)?点哪里[。？！?!]*$/.test(text.trim()))return '你想操作哪一项？我看不到你当前屏幕，先告诉我想领取奖励，还是做别的。';
+  if(exchangeAt>=0&&/^(?:那|现在)?还没有这个功能吗[。？！?!]*$/.test(text))return '当前版本小可不能替你兑换游戏收益或道具，也不能替你领取；你可以按设备页面提示操作。';
   if(topic&&/^(?:小可)*(?:展示出来)[。？！?!]*$/.test(text))return '当前版本不支持由我展示游戏页面，可以等后续版本迭代。';
   if(/咱俩/.test(text)&&(topic||/约定/.test(text)))return '咱俩是你和我呀。我们可以一起商量想要的奖励；如果说的是家族币对应的奖励，还需要和家长确认并由家长兑现，小程序可以查看已同步的家族币。';
   if(!/老师|学校|考试|公司/.test(text)&&/^(?:小可)*(?:我)?(?:怎样|怎么|如何).*(?:获得|得到|获取)奖励[。？！?!]*$/.test(text))return '在读写台前有效使用达到阶段门槛，进度条对应的奖励会点亮，再点击领取。奖励包括家族币、宝箱和道具，具体这一阶段是什么以进度条为准；小可不能代领。';

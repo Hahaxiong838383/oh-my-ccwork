@@ -66,3 +66,8 @@ test('complaints about contradictory prior exchange advice correct the explanati
  assert.equal(answerArkResourceUse('他说没有说过明天天气会下雨',h),null);
  assert.equal(answerArkResourceUse('然后我让他指导我他又说他没有说过',[]),null);
 });
+test('screen currency, unfinished progress complaint and bare interface use grounded paths',()=>{
+ const a=answerArkResourceUse('看看你这个界面有币什么的这个币可以用于做什么我现在有200币')??'';
+ assert.match(a,/金币就是家族币/);assert.match(a,/家长/);assert.match(a,/星尘/);assert.doesNotMatch(a,/余额是200|家族币.*换.*小道具/);
+ for(const q of ['我在这待了这么久了为什么不给','界面是']){assert.ok(resolveArkQuestion(q,[]),q);const b=answerArk(q,f,[],now)??'';assert.match(b,/2项/,q);assert.doesNotMatch(b,/合盖|夜航|左边|右边|驾驶舱/,q);}
+});
