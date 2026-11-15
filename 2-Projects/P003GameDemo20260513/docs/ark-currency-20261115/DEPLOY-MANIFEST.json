@@ -2,8 +2,8 @@
   "main/src/xiaoke-kb.ts": {
     "path": "/opt/p003/server/src/xiaoke-kb.ts",
     "before_sha256": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
-    "after_sha256": "2f14297e36cd15e804b93493abfb1a30ffdb0b1766b1cc55f31466b283243576",
-    "bytes": 28834
+    "after_sha256": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "bytes": 30275
   },
   "main/src/prompts.ts": {
     "path": "/opt/p003/server/src/prompts.ts",
@@ -20,14 +20,14 @@
   "main/src/ark/answer.ts": {
     "path": "/opt/p003/server/src/ark/answer.ts",
     "before_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
-    "after_sha256": "df4c70c7f9cce9204c96e5141f31eb0a5f99f9fce860442af7f34422c3f5f2e5",
-    "bytes": 7466
+    "after_sha256": "bdfff9679ee44d6e76c41c9157bb1163278fbd2500f999a54be64714c4786eb5",
+    "bytes": 7513
   },
   "search/src/xiaoke-kb.ts": {
     "path": "/opt/p003/search-canary-20261021/brain/src/xiaoke-kb.ts",
     "before_sha256": "42d152fd04a6ac2cf3228cd858b7e8b2b5da915509eece8b8f444835581f5f6d",
-    "after_sha256": "2f14297e36cd15e804b93493abfb1a30ffdb0b1766b1cc55f31466b283243576",
-    "bytes": 28834
+    "after_sha256": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "bytes": 30275
   },
   "search/src/prompts.ts": {
     "path": "/opt/p003/search-canary-20261021/brain/src/prompts.ts",
@@ -44,8 +44,8 @@
   "listening/src/xiaoke-kb.ts": {
     "path": "/opt/p003/listening-canary-20261030/brain/src/xiaoke-kb.ts",
     "before_sha256": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689",
-    "after_sha256": "2f14297e36cd15e804b93493abfb1a30ffdb0b1766b1cc55f31466b283243576",
-    "bytes": 28834
+    "after_sha256": "3f5245f46a4a29297670cb2a5aa72442d6be2479e190b23485a71c4d857f9cd5",
+    "bytes": 30275
   },
   "listening/src/prompts.ts": {
     "path": "/opt/p003/listening-canary-20261030/brain/src/prompts.ts",
@@ -62,7 +62,7 @@
   "listening/src/ark/answer.ts": {
     "path": "/opt/p003/listening-canary-20261030/brain/src/ark/answer.ts",
     "before_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
-    "after_sha256": "df4c70c7f9cce9204c96e5141f31eb0a5f99f9fce860442af7f34422c3f5f2e5",
-    "bytes": 7466
+    "after_sha256": "bdfff9679ee44d6e76c41c9157bb1163278fbd2500f999a54be64714c4786eb5",
+    "bytes": 7513
   }
 }

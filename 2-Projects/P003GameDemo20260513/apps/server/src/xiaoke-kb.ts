@@ -20,8 +20,13 @@ const REALITY_REDLINE =
   '标「数值未公开」的（光环天数、暴击倍率、掉落权重）只讲机制、不报数字（「金色翻倍」可以，「持续3天」不行），「还剩X天」走系统实时。';
 
 // 知识条目：每条带触发关键词（≥2 字、尽量特异防误伤）+ 注入内容（讲世界里真实存在的，讲品类不讲笼统）。
+/** Usage particles are not quantity questions: “有什么用吗 / 还有什么用 / 下一枚…用途”. */
+function isPureResourceUsage(text:string):boolean {
+  return /金币|家族币|星尘|星辰|补[勤签]卡/.test(text)&&/有什么用|有啥用|干什么用|做什么用|怎么用|是什么|用途|用处|作用|能干什么|能干嘛|是干嘛的/.test(text)
+    && !/多少|几(?:枚|个|张|分|秒)|余额|库存|赚|收益|所得|收入|进度|进展|领取|可领|领到|多久|还剩/.test(text);
+}
 export function isArkStateQuestion(text: string): boolean {
-  if (isOutsideArkQuestion(text)) return false;
+  if (isOutsideArkQuestion(text) || isPureResourceUsage(text)) return false;
   const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);
   const stateQuery=/多少|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有/.test(text);
   const rewardRequest=/奖励/.test(text)&&/下次|下一次|下一项|下一个|专注/.test(text)&&/领取|领到|能领|可领|怎么领|有效专注|计时|进度/.test(text);
@@ -70,14 +75,22 @@ export function resolveArkResourceFollowup(text:string,history:{role:string;cont
   if(!known&&!isArkStateQuestion(prior)&&!isArkGameExchangeQuestion(prior))return null;
   return names[0]+tail;
 }
+/** Leave negation, quoted language and mixed commands to the ordinary conversation path. */
+export function deferArkDirectReply(text:string):boolean {
+  if(/(?:不要|别|不用)(?:再|继续)?(?:告诉我|给我介绍|说|讲|介绍|解释)|不想(?:听|知道|了解)|停止介绍|别说了|闭嘴|退下|关房|结束倾听|恢复聊天|再见|拜拜|不聊了/.test(text))return true;
+  if(/[“「『"].*[”」』"]/.test(text))return true;
+  if(/天气|气温|下雨|带伞|冷不冷|热不热|讲.{0,6}故事|编.{0,6}故事|唱.{0,6}歌|播放|音量|调.{0,4}灯|灯光/.test(text))return true;
+  return text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|有.*用|用途|还.*多久/.test(part));
+}
+
 /** Public product knowledge only: never reads or answers a user's balance/progress. */
 export function answerArkResourceUse(text:string,history:{role:string;content:string}[]=[]):string|null {
-  if(isOutsideArkQuestion(text))return null;
+  if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
   // A bare resource after a prior question can select its wallet/earnings subject.
   if(/^(?:金币|家族币|星尘|星辰)[。？！?!]*$/.test(text.trim())&&history.some(t=>t.role==='user'))return null;
   if(text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|方舟|有.*用|用途/.test(part)))return null;
   const q=resolveArkResourceFollowup(text,history)??text;
-  if(/余额|库存|还剩|还有|有多少|有几|有没有|赚|收益|所得|收入|进度|进展|领取|可领|领到|下一|下次|多久|几分钟|几秒|我.{0,4}有.{0,6}(?:金币|家族币|星尘|星辰|补[勤签]卡)吗/.test(q))return null;
+  if(!isPureResourceUsage(q)&&/余额|库存|还剩|还有|有多少|有几|有没有|赚|收益|所得|收入|进度|进展|领取|可领|领到|下一|下次|多久|几分钟|几秒|我.{0,4}有.{0,6}(?:金币|家族币|星尘|星辰|补[勤签]卡)吗/.test(q))return null;
   const exchange=isArkGameExchangeQuestion(q);
   const locate=/金币.{0,4}(?:在哪|哪里)/.test(q);
   const usage=/有什么用|有啥用|干什么用|做什么用|怎么用|是什么|用途|用处|作用|能干什么|能干嘛|是干嘛的|可以干什么|介绍|能换|兑换/.test(q)||/^(?:\d+\s*)?(?:金币|家族币|星尘|星辰)(?:能干)?[。？！?!]*$/.test(q.trim())||locate;

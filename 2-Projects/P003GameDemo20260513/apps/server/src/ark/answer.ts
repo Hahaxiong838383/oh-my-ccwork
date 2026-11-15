@@ -1,5 +1,5 @@
 import {cstDay,resolvedFactsSchema,type ArkFacts} from './contracts.js';
-import {isArkStateQuestion,isOutsideArkQuestion,isArkGameExchangeQuestion,resolveArkResourceFollowup,answerArkResourceUse,ARK_RESOURCE_USES,ARK_GOLD_ALIAS} from '../xiaoke-kb.js';
+import {isArkStateQuestion,isOutsideArkQuestion,deferArkDirectReply,isArkGameExchangeQuestion,resolveArkResourceFollowup,answerArkResourceUse,ARK_RESOURCE_USES,ARK_GOLD_ALIAS} from '../xiaoke-kb.js';
 import {resolveArkQuestion} from './memory-policy.js';
 type Turn={role:string;content:string};
 type Auth={accountId:string;role:string}|null;
@@ -24,7 +24,7 @@ function cleanFacts(raw:ArkFacts|undefined):ArkFacts|undefined{
 }
 /** A finite factual route, not a second model. The caller must return after sending it. */
 export function answerArk(text:string,raw?:ArkFacts,history:Turn[]=[],now=Date.now()):string|null{
- if(isOutsideArkQuestion(text))return null;
+ if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
  const knownUse=answerArkResourceUse(text,history);if(knownUse)return knownUse;
  // Mixed unrelated requests remain ordinary conversation instead of losing a question.
  if(text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|有.*用|用途|还.*多久/.test(part)))return null;

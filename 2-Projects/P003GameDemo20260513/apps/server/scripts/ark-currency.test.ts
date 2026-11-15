@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {answerArk} from '../src/ark/answer.js';
-import {buildKnowledgeRecall,isOutsideArkQuestion} from '../src/xiaoke-kb.js';
+import {buildKnowledgeRecall,isOutsideArkQuestion,answerArkResourceUse,isArkStateQuestion} from '../src/xiaoke-kb.js';
 import type {ArkFacts} from '../src/ark/contracts.js';
 const now=Date.parse('2026-11-15T10:00:00+08:00');
 const value=(value:number)=>({value,occurred_at_ms:now,received_at_ms:now,content_version:'synthetic'});
@@ -56,4 +56,16 @@ test('outside games, real commerce, quotation and ordinary conversation are not 
  for(const q of ['家族币能换爸妈约定的奖励吗','家族币能换爸爸妈妈约定的奖励吗']){
   const a=answerArk(q,undefined,[],now)??'';assert.match(a,/家长|爸妈/);assert.doesNotMatch(a,/星尘|查不到/);
  }
+});
+test('mixed commands, negation and quoted sentences never short-circuit ordinary conversation',()=>{
+ for(const q of ['金币有什么用？今天天气怎么样','金币有什么用。今天天气怎么样','金币有什么用，帮我查天气','金币有什么用，讲个故事','讲个故事，金币有什么用','金币有什么用？再讲个故事','不要讲金币有什么用','别说家族币有什么用','我不想听金币有什么用','“金币有什么用”','「金币有什么用」是什么意思']){
+  assert.equal(answerArkResourceUse(q),null,q);assert.equal(answerArk(q,facts,[],now),null,q);
+ }
+});
+test('usage variants with ma, haiyou and next coin do not request or disclose balances/progress',()=>{
+ for(const q of ['金币有什么用吗','金币还有什么用','下一枚金币有什么用']){
+  assert.equal(isArkStateQuestion(q),false,q);assert.match(answerArkResourceUse(q)??'',/家族币.*家长/);
+  const a=answerArk(q,facts,[],now)!;assert.doesNotMatch(a,/0枚|77|余额|分钟|计时|查不到/);
+ }
+ for(const q of ['我有多少金币，它有什么用','金币余额和用途是什么','下一枚金币还要多久'])assert.equal(answerArkResourceUse(q),null,q);
 });
