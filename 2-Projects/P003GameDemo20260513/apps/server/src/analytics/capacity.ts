@@ -5,7 +5,8 @@ import type {AnalyticsStore} from './store.js';
 import {cstDay,DAY_MS} from './store.js';
 
 export type CapacitySample={free_bytes:number;total_bytes:number;db_bytes:number;wal_bytes:number;daily_peak:number;sample_devices:number;maintenance_ok:boolean;checked_at_ms:number};
-/** Measured inclusive of indexes on 2026-10-31: raw+settlement with new indexes <1280B,
+/** T4 measured 90-day fixture including indexes: raw+settlement 2093.9B/event.
+ * Round raw up to 2304B; two facts measured 961.85B, seen 373.97B.
  * two fact dimensions <1024B/event; permanent seen <400B/event. 10% headroom.
  * Permanent dedup grows without a TTL. Forecast 30/90/180 further days.
  * This planning window does not shorten raw/fact/seen retention. */
@@ -19,7 +20,7 @@ export function capacityForecast(s:CapacitySample,controls={policy:readStoragePo
   // + last acknowledged payload + next snapshot. Never credit future cleanup.
   const copies=5; // Ark archive_enabled is not the Analytics backup timer state.
   const projections=[30,90,180].map(days=>({horizon_days:days,raw_growth_days:Math.min(14,days),fact_growth_days:Math.min(90,days),seen_growth_days:days,
-    bytes_per_device:Math.ceil(daily*(Math.min(14,days)*1280+Math.min(90,days)*1024+days*400)*1.1)*copies}));
+    bytes_per_device:Math.ceil(daily*(Math.min(14,days)*2304+Math.min(90,days)*1024+days*400)*1.1)*copies}));
   // Four legacy copies; five during archive transition until old backups are retired.
   const perDevice=projections[2].bytes_per_device;
   // Existing files remain occupied; do not count reusable/free pages as extra disk.
