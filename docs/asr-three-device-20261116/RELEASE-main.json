@@ -1,0 +1,30 @@
+{
+  "pool": "main",
+  "started_ms": 1794828566893,
+  "backup": "/root/p003-asr-three-device-20261116/release-before-main",
+  "before": {
+    "MainPID": "795375",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "device_sns": [
+    "BJP00326070803800006",
+    "BJP00326081002000026",
+    "BJP00326081002000031",
+    "BJP00326060100100004",
+    "BJP00326081002000038"
+  ],
+  "until_ms": 1795433353411,
+  "success": true,
+  "after": {
+    "MainPID": "1478835",
+    "NRestarts": "0",
+    "ActiveState": "active"
+  },
+  "process_sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+  "disk_sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+  "env_sha256": "a79735aa99122d8497040eec6d6babf32f6e43348619a269288371ad80ab3346",
+  "metadata_sha256": "92ddc38ef9ca8f323e87c852b2f6ba780a0349cac9e51921bf171a2518a48927",
+  "other_pools_unchanged": true,
+  "finished_ms": 1794828572298
+}

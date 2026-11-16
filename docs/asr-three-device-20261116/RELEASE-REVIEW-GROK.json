@@ -1,0 +1,67 @@
+{
+  "verdict": "block",
+  "fixed_commit": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+  "deployer_sha256": "fc8a60e273caf9acd67d04a2b14eb2fbdbf8d70c25d5744c9bd31fe5fc744c15",
+  "helper_sha256": "46498b02a81fce1f22929c7ff14b04cc209034b84db2cec753b558b26e564888",
+  "spec_pins_this_blob": true,
+  "spec_reviewed": false,
+  "head_at_review_not_in_scope": "d53dd824497fada79e3cf151b0134c0b18458d45",
+  "production_touched": false,
+  "real_restart": false,
+  "source_modified": false,
+  "device_sns": [
+    "BJP00326070803800006",
+    "BJP00326081002000026",
+    "BJP00326081002000031",
+    "BJP00326060100100004",
+    "BJP00326081002000038"
+  ],
+  "registry_all_active_and_equal": true,
+  "window_days_from_registry_at_ms": 7.002530856481481,
+  "env_unittest": {
+    "ran": 13,
+    "result": "OK",
+    "seconds": 0.012
+  },
+  "simulation": {
+    "cases": 30,
+    "unexpected_failures": 0,
+    "sleep_neutralized_in_private_copy_only": true
+  },
+  "blockers": [
+    {
+      "id": "rollback-start-failure-not-reentrant",
+      "file": "2-Projects/realtime-voice-agent/scripts/deploy_asr_diagnostics.py",
+      "lines": "91-101",
+      "evidence": "simulated start failure after file restore; retry AssertionError runtime binary drift; ROLLBACK json absent"
+    },
+    {
+      "id": "apply-recovery-assert-skips-env-restore",
+      "file": "2-Projects/realtime-voice-agent/scripts/deploy_asr_diagnostics.py",
+      "lines": "134-138",
+      "evidence": "binary changed during failed start; service inactive; diagnostic allow key still present; rolled_back not true"
+    }
+  ],
+  "passes": [
+    "five-sn-count",
+    "spec-equals-registry-and-user-scope",
+    "reviewed-gate",
+    "check-does-not-apply",
+    "env-lock-nonblocking",
+    "cas-drift-before-stop",
+    "per-pool-backup",
+    "credential-preserved-on-happy-rollback",
+    "nonempty-rooms-and-api-errors-block",
+    "registration-and-proc-on-happy-apply",
+    "listening-binary-unchanged",
+    "search-pool-not-restarted"
+  ],
+  "residuals": [
+    "null-or-missing-rooms-treated-as-idle",
+    "script-does-not-reread-registry",
+    "helper-executed-before-hash-check",
+    "binary-mode-0700-after-umask-077",
+    "rollback-other-settings-preserved-is-constant",
+    "asserts-removed-by-python-optimize"
+  ]
+}

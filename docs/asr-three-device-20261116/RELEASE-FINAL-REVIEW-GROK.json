@@ -1,0 +1,130 @@
+{
+  "reviewer": "grok（xAI）",
+  "reviewed_at": "2026-11-16",
+  "task": "release_caller_fix_d53",
+  "verdict": "isolation_pass",
+  "scope": "fixed_sha_isolation_only",
+  "blocking": [],
+  "candidate": "d53dd824497fada79e3cf151b0134c0b18458d45",
+  "parent": "913e6bd01584a6851579341dd265be14a266945d",
+  "behavior_base": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+  "archive": "/tmp/grok-d53-review",
+  "git_show_stat": "/tmp/grok-d53-review/show/git-show-stat.txt",
+  "git_show_code_diff": "/tmp/grok-d53-review/show/git-show-code.diff",
+  "candidate_source": "git archive and git show of the fixed SHA",
+  "worktree_used_as_candidate": false,
+  "head_at_end": "d53dd824497fada79e3cf151b0134c0b18458d45",
+  "worktree_dirty_at_end": false,
+  "committed": false,
+  "pushed": false,
+  "production_changed": false,
+  "deployed": false,
+  "real_service_contacted": false,
+  "rust_executed": false,
+  "candidate_binary_rehashed": false,
+  "live_pool_checks_rerun": false,
+  "runtime_source_recorded": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "candidate_binary_sha256_recorded": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+  "helper_blob_579_and_d53": "ee106757c629d140c8fff8702287a3b3f918fb02",
+  "helper_sha256": "46498b02a81fce1f22929c7ff14b04cc209034b84db2cec753b558b26e564888",
+  "receipt_blob_579_and_d53": "fc85212aaefea9ed11acd594c103a6b4c34e3d69",
+  "env_test_blob_579_and_d53": "66c2b5035c91b2db06addea9ede619bbf9409f14",
+  "receipt_test_blob_579_and_d53": "0977596f22435aa64b41627f701122d6c32c3e6e",
+  "deploy_blob_579": "b784fad8172542f0525c2f2b33affdae059ebb4d",
+  "deploy_sha256_579": "fc8a60e273caf9acd67d04a2b14eb2fbdbf8d70c25d5744c9bd31fe5fc744c15",
+  "deploy_blob_d53": "e67ab0f354c4392d6d2d282b0f3599b717db3654",
+  "deploy_sha256_d53": "7f69faa65170bfe98aee220cfcdd7b5b517609727e1b75c6b1fa53ac7619d466",
+  "new_test_sha256": "91f6d5ffe36d546d13f6bfb0b7f71a51292a8d33b14cf1804d161ad92aff566c",
+  "rust_worker_diff_579_to_d53": false,
+  "python": {
+    "command": "python3 -W always -m unittest discover -p test_asr_diagnostic_*.py -v",
+    "cwd": "/tmp/grok-d53-review/2-Projects/realtime-voice-agent/tests",
+    "runs": [
+      {
+        "interpreter": "Python 3.12.2",
+        "path": "/opt/anaconda3/bin/python3",
+        "ran": 38,
+        "env": 13,
+        "receipt": 19,
+        "deploy_simulations": 6,
+        "failed": 0,
+        "seconds": 0.513,
+        "resource_warnings": 0,
+        "log_sha256": "77fc8b8a34a56787ece0059801ecb03f7aafd56e6b6009c9b1cf033a01ac0edb"
+      },
+      {
+        "interpreter": "Python 3.9.6",
+        "path": "/usr/bin/python3",
+        "ran": 38,
+        "failed": 0,
+        "seconds": 0.652,
+        "resource_warnings": 0,
+        "log_sha256": "da32d95bf2fc99b0578108de261c02a94606f2b2f5d0ed1e92e3ddf2bfe4bd9d"
+      }
+    ],
+    "deploy_simulations_ok": [
+      "test_main_apply_and_rollback",
+      "test_listening_only_env_changes",
+      "test_failure_rolls_back_without_erasing_rotated_key",
+      "test_busy_cleanup_never_stops",
+      "test_runtime_drift_never_stops",
+      "test_failed_explicit_rollback_recovers_pre_rollback_candidate"
+    ]
+  },
+  "red_579": {
+    "script_blob": "b784fad8172542f0525c2f2b33affdae059ebb4d",
+    "tests_from": "d53dd824497fada79e3cf151b0134c0b18458d45",
+    "ran": 6,
+    "failed": 1,
+    "failed_name": "test_failed_explicit_rollback_recovers_pre_rollback_candidate",
+    "assertion": "b'main-original' != b'reviewed-main'",
+    "resource_warnings_unclosed_config_lock": 18,
+    "log_sha256": "6c00a2f285e48d775abcfaecdb084833b12e6f959bb3712394a8bc30dab99904"
+  },
+  "probes": {
+    "script": "/tmp/grok-d53-probe.py",
+    "result": "/tmp/grok-d53-review/probe.json",
+    "result_sha256": "b68fd666a3ce97cf3f7b2472f37bed8724df3f6619933dd16b5b0fa824f826fd",
+    "exit_code": 0,
+    "real_systemctl": false,
+    "clean_main_returns_to_reviewed_candidate": true,
+    "other_llm_key_preserved_as_other_writer_value": true,
+    "diagnostic_key_drift_not_overwritten": true,
+    "third_party_binary_not_overwritten": true,
+    "metadata_drift_not_overwritten": true,
+    "poisoned_stage_candidate_not_used": true,
+    "listening_binary_unchanged_and_diagnostic_keys_restored": true,
+    "other_pool_pids_unchanged": true,
+    "lock_reacquired_by_child_before_process_exit": true,
+    "successful_recovery_still_raises": "RuntimeError: worker failed registration/health",
+    "successful_recovery_receipt": {
+      "rolled_back": false,
+      "recovered_candidate_active": true
+    },
+    "both_starts_fail": {
+      "disk_candidate_bytes_written": true,
+      "recovered_candidate_field": false,
+      "recovery_error_type": "RuntimeError"
+    }
+  },
+  "ignored_same_commit_paths": [
+    "docs/codeg-worktree-visibility-20261116/PUBLICATION-MANIFEST.json",
+    "docs/codeg-worktree-visibility-20261116/manifest.json"
+  ],
+  "spec_pending_local": {
+    "deployer_sha256_matches_d53_script": true,
+    "helper_sha256_matches_unchanged_helper": true,
+    "binary_sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+    "reviewed": false,
+    "updated_by_this_review": false
+  },
+  "five_sn_reconfirmed_here": false,
+  "user_stated_five_sn_all_active": true,
+  "boundaries": [
+    "Isolation only. The harness answers hostname, systemctl, journalctl, and ListRooms.",
+    "A successful explicit-rollback recovery still raises the original registration error. The receipt field recovered_candidate is the success record.",
+    "If the recovered candidate also fails registration, the receipt stores recovery_error_type RuntimeError and does not claim recovered_candidate.",
+    "Apply-path rollback when the old binary also fails to start is the 579 path; the new recovery wraps explicit rollback.",
+    "Server files were not read or written. reviewed remains false until main 13 publishes."
+  ]
+}
