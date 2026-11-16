@@ -30,14 +30,18 @@ SQLite ATTACH的WAL库可能各自建立不同快照：事务内查绑定一次�
 
 | 必查项 | 通过条件 |
 |---|---|
-| 协商、信封、记录结构 | contract版本/开关、允许键、类型、资源ID、批量与数值上限一致；URL相同只证明路由相同 |
-| origin context | 原grant/epoch在业务发生时冻结并原子持久化；换绑/换回与续token分别验证 |
-| 稳定业务语义 | reason、来源ID、获得实例、激活引用来自真实业务；baseline不能改成收入，混合事务不能重复拆分钱包delta |
-| ACK | accepted/duplicated/rejected互斥、子集、批次匹配；retryable=true保留pending与原ID并退避，非重试拒绝才进保留正文的死信 |
+| 协商、信封、记录结构 | contract版本/开关、允许键、类型、资源ID、批量与数值上限与所选已知格式分支一致；不要求legacy字段与v1相同 |
+| origin与历史授权 | 原生带origin时核产生时冻结值；已知legacy无origin时可单独明确历史授权并保留原归属未验证，不能伪填；换绑/换回与续token分别验证 |
+| 稳定业务语义 | v1核原reason/来源/实例/引用；legacy可依已有grant与库存差异只读投影，无需补原生实例框架；baseline不算收入，混合事务不重复拆分钱包delta |
+| ACK | accepted/duplicated/rejected互斥、子集、批次匹配；旧端不懂retryable时服务端可整批503/429保原ID重试，不必强制先改ACK；永久拒绝才进死信 |
 | 身份scope | JWT的binding_version与Ark epoch不是同义字段；缺epoch退token指纹可能让正常续凭据导致同save暂停 |
 | 覆盖与满队列 | dropped/容量/覆盖缺口有明确合同；不能删字段只为通过strict schema，不能pending=0就称完整 |
 
-若候选是baseline/business_commit+data而服务器要求origin/reason/resource_changes/item_changes，不能仅改合同名称或删信封额外键；后者可能把整批400变成逐条终态拒绝。发现不一致保持新上传关闭，列明最小修订；不放宽服务器来伪造兼容，不在上传时给旧事实补当前owner。无原context的旧记录保留unattributed，等待可核归属。
+**优先最小兼容，不把现役schema差异一律升级成端侧重构。** 已知legacy可同接口按精确contract_id分支解析，保不可变原文/原ID/哈希，读取时投影小程序字段；只要求语义可证明的部分进入摘要。baseline可收可查但不算收入，混合事务不重复拆分钱包，激活不新增获得。需要时一张原始表比硬塞v1强制origin/实例字段更小；不要先造通用版本平台。
+
+单机已明确授权历史时冻结完整范围，标“兼容历史授权、原发生归属未验证”，不要把缺origin当永久不能接入，也不补造原owner。临时失败可整批503（限流429），部分已耐久入库者下次duplicated，无需额外整批回滚框架。正常续token的队列scope用已校验稳定绑定键；binding_version与Ark epoch分开校验，旧指纹队列只迁移已核同代际范围。无法验证的字段保留未知，不妨碍接收已授权原始事实。
+
+兼容须有真实序列化fixture→HTTP→SQLite→家长读取证据，覆盖旧端重试/原ID幂等/换绑与摘要口径；实现验证前不直接开旧不兼容链路。严格已知格式适配是兼容，任意放宽校验或只改合同名不是兼容。区分“兼容尚未实现”和“无法兼容”。
 
 ## 4. 分页是状态机，测连续失败
 

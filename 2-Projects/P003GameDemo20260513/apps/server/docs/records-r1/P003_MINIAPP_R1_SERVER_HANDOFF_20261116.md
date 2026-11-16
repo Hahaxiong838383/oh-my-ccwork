@@ -14,7 +14,7 @@
 | 历史页面 | **真实数据验证通过** | H5读取生产原始GET响应，显示184条/10页，刷新恢复首20条，退出清空；不是微信手机登录验收 |
 | 使用时长 | **精确源码缺陷已修复，C现场待验证** | 精确mini008源错误把开盖判为1/1，权威协议为4/0；mini009基线修后JVM1883/1883、Python40/40；云端仍无focus_segment |
 | 两个业务摘要 | **已上线** | 昨日已上报收益、最新整组物品计算具备；现C新流水0条，摘要为no_records，不能补0 |
-| 安卓新增R1流水 | **mini009已出包；与线上合同不兼容、未上机** | 新发现21:22端侧回执；默认网络off。须修请求/原始归属/可重试拒绝处理后再联调，同record_id仍无真实样本 |
+| 安卓新增R1流水 | **已确定最小兼容方案，尚未实施/上线；mini009未上机** | 服务端接原mini009格式并投影；临时失败503保留原队列，Native仅修续token身份稳定性。当前上传off，同record_id真实验收待测 |
 | 微信手机端与C新时长 | **未验** | 当前环境没有C所在Windows/ADB可用入口，未执行C安装或微信版本发布；不得用构建或签名探针代替 |
 
 **新客户端交付包已具备查询 C 当前绑定账号历史的能力，微信登录与手机显示待现场验收。旧小程序构建只接设备状态，不会因后台升级自动新增历史界面。**
@@ -150,34 +150,35 @@ mini009构建源`006ac68a29447e8bc14fb655206d87bbf1f771a3`；包名`371_mini_009
 
 其Runtime/Godot/原生持久日志已实现，网络默认关闭；所带TelemetryCoordinator与mini008相同，仍有开盖1/1错误。后续用时修复必须保留mini009新增R1能力，不能拿008修复包覆盖009当成新完整包。
 
-mini009候选wire不是当前线上合同，仅改合同名不能接通：
+mini009候选wire不是当前线上合同，直接开启会失败；**但可以由服务端兼容，无需端侧全量改成新版协议。** 2026-11-16按用户“兼容模式、避免过度工程化”修正实施方向如下（设计已核查，产品代码尚未实施）：
 
 | 差异 | 直接启用的结果 | 必须处理 |
 |---|---|---|
-| 端侧批次使用contract_id/save_id/coverage_from_ms/dropped_records；线上严格信封不同 | 整批400 invalid_envelope | 按已发布合同修订适配并做真实请求夹具对撞 |
-| 端侧baseline/business_commit+data；线上需origin_grant_id/origin_epoch/time_quality/reason/resource_changes/item_changes | 绕过信封仍逐条invalid_record；原始归属无法证明 | 在真实事务时保存原context并映射业务语义；旧无context事实不得套当前归属 |
-| 端侧将所有rejected当终态，未处理retryable | capacity_exceeded等可重试拒绝会被错误转死信 | retryable=true保留原记录与重试，不按HTTP200或rejected清数据 |
+| 端侧含contract_id/save_id/coverage_from_ms/dropped_records，与现信封不同 | 整批400 invalid_envelope | 同POST按精确contract_id走独立mini009解析，保原字段与覆盖信息；原v1行为保持 |
+| baseline/business_commit+data与现役origin/reason/实例结构不同 | 绕过信封仍逐条invalid_record | 一张原始表保事实，读时投影明细/摘要；单C明确历史授权且标原归属未验证，不伪造origin；基线不计收入 |
+| 端侧把所有rejected当终态 | 临时容量失败可能失去自动重试资格 | 兼容分支临时故障/容量用整批503，限流429；只对永久错误rejected，无需先改客户端ACK |
+| 无epoch claim时scope使用整枚token指纹 | 正常续凭据后同save可能save_identity_changed | Native仅改为已校验SN+binding_version稳定键；服务端另核Ark epoch，不混同二者 |
 
-因此**本轮没有下发ark_records.enabled=true，也没有认可mini009候选wire已获线上回签**。对话历史走独立只读接口，不受此合同差异影响。端侧原回执和合同副本保存在`apps/server/docs/parent-history-20261116/`。详见该目录`MINI009-COMPATIBILITY.md`；还记录了正常续token会切scope导致同存档交接暂停、baseline/混合事务/容量缺口等差异。
+**上传off是兼容代码尚未落地的当前状态，不是不能兼容，也不再以前置完成端侧全协议改造为条件。** 兼容采用同服务、同鉴权、一张原始表及读取投影，不新建版本平台或计账服务；保record_id去重与原始事实。已有C历史在明确授权范围内可接收，无法确定的字段保留未知，不阻断整条有效流水。完整方案见`apps/server/docs/parent-history-20261116/MINI009-COMPATIBILITY.md`。本轮没有部署、下发开关或安装；旧对话接口继续独立可用。
 
-**当前缺口：C时长修复安装与现场回读、mini009 R1协议修订后的真实记录，以及微信手机版本导入/发布和现场操作。服务端摘要与旧对话接入已经完成。**
+**当前缺口：最小兼容实现/隔离验证，C修复包安装与现场时长/R1记录对账，以及微信手机版本导入/发布和现场操作。已上线的摘要计算与旧对话接入保持完成；legacy投影尚未上线。**
 
 ## 5. 安卓、小程序、服务端下一步同一笔对账
 
-### 安卓：先对齐mini009与已上线R1合同，再做真实上报
+### 服务端兼容mini009，安卓只补必要小修后真实上报
 
 1. 保留C原绑定、凭据、grant/epoch、存档和未确认队列，不重绑、不清应用、不以GM造奖励。
-2. 用原Device Bearer调用`GET /v1/device/ark/records/context`，校验`contract_version=p003.ark.records.r1`，持久保存原上下文及limits。
-3. 真实业务提交与`save_id/sequence/record_id/原context/不可变Record/outbox`可靠原子交接；Launcher durable ACK前不删Runtime副本，云端ACK前不删Launcher未确认队列。
+2. 服务端实现精确`p003-ark-records-r1`兼容分支与单C历史授权，先通过真实序列化fixture/HTTP/SQLite/家长读取；Native修SN+binding_version稳定scope，现役v1 context不是legacy前置条件。
+3. 保留现有真实事务与`save_id/sequence/record_id/不可变Record/outbox`原子交接；Launcher durable ACK前不删Runtime副本，云端ACK前不删Launcher未确认队列。与开盖4/0修复合并到下一合格包，保原mini009新能力。
 4. 在已有合格正常存档上执行一笔真实领取/获得，再执行真实道具使用或激活。没有合格业务条件时如实待测，不改normal或时间绕过。
-5. 上传`POST /v1/device/ark/records:batch`，逐ID处理accepted/duplicated；HTTP200不能清整批。断网/503/截断保留原ID重放，错误不得换ID绕过。接入前没有原context的旧历史保留本地unattributed，不套当前归属补传。
+5. 单C按既有`ark_records.enabled=true,contract_id=p003-ark-records-r1`开启后上传同POST，逐ID处理accepted/duplicated；HTTP200不能清整批。断网/503/截断保原ID重放，不换ID绕过。经明确兼容授权的C旧历史可补传，标原发生归属未验证；未获授权的范围保留原文，不自动重挂。
 
 ### 小程序：新包已接入，现场按以下口径验收
 
 1. 原家长登录后读取dashboard与`GET /v1/parent/devices/{publicId}/ark/records`，严格按available/reason/null展示。
 2. 分页limit默认20、最大50；支持save_id/resource_id/from_day/to_day。首屏固定接收高水位；后页原样带cursor、limit及过滤。补传刷新首屏可见；400无效或410过期cursor重取首屏。
 3. 每个record返回整笔资源/物品；激活列表是原始事实，摘要才投影状态。切账号丢弃旧请求、设备缓存和cursor；B访问A设备必须404。
-4. 当天新上传不能保证“昨日收益”有值：需真实发生于北京时间昨天、原context合格的normal领取记录，或次日核验今天真实领取。禁止改时间制造昨日样本。
+4. 当天新上传不能保证“昨日收益”有值：需真实发生于北京时间昨天、授权合格且有真实奖励证据的normal领取，或次日核验今天真实领取。兼容基线、GM/未知及缺口不充作完整收益，禁止改时间制造昨日样本。
 
 ### 双方回传这张表，服务器按同一ID核对
 

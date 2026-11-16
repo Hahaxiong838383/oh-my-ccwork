@@ -17,5 +17,13 @@
     }
   ],
   "miniapp_package_verified": true,
-  "at": "2026-11-16T21:54:58.887642"
+  "at": "2026-11-16T21:54:58.887642",
+  "compatibility_design_revision": {
+    "document": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+    "sha256": "c906d5de8e34b23d789faeb14d4d2a252bb649bfea1678a81c578882dfb93441",
+    "bytes": 25774,
+    "backup": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md.bak-compat-20261116-223401",
+    "previous_sha256": "5ea7d385deb26c39c2c01abd1062692697f44349afc9a607a39a6dc19441aecf",
+    "at": "2026-11-16T22:34:01.760382"
+  }
 }

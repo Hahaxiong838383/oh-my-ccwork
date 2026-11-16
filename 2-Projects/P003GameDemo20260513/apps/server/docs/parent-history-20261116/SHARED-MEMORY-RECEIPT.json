@@ -43,5 +43,41 @@
       "verified_at": "2026-11-16T22:17:35.595012"
     }
   ],
-  "atomicity": "hash recheck plus per-file atomic replace, not a multi-file transaction or OS compare-and-swap"
+  "atomicity": "hash recheck plus per-file atomic replace, not a multi-file transaction or OS compare-and-swap",
+  "compatibility_design_revision": {
+    "at": "2026-11-16T22:33:13.438488",
+    "backup_dir": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313",
+    "files": [
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+        "before_sha256": "9ce8c790c555194fdb33849b9dcdbd835c5facf03691c910da234e64c6856b41",
+        "candidate_sha256": "60d3025be70c68526b84c3c19555bbb440222c828f266665134092f829ee670b",
+        "before_path": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313/memory-items.md.before",
+        "candidate_path": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313/memory-items.md.candidate",
+        "status": "written_verified",
+        "after_sha256": "60d3025be70c68526b84c3c19555bbb440222c828f266665134092f829ee670b",
+        "lines": 2739
+      },
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+        "before_sha256": "d1250de48e39c89e024685013ac397f2ebd1ad9b47add0a2f451031d10872eb9",
+        "candidate_sha256": "da0be9d62d63b50a407cdd6f79586b57ad68c489ee6bcf801bc668712550d41b",
+        "before_path": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313/RECENT_EVENTS.md.before",
+        "candidate_path": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313/RECENT_EVENTS.md.candidate",
+        "status": "written_verified",
+        "after_sha256": "da0be9d62d63b50a407cdd6f79586b57ad68c489ee6bcf801bc668712550d41b",
+        "lines": 79
+      },
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/task-log.md",
+        "before_sha256": "e4d781a25f34e687090f10ee1dfb60c15a0f6d34e6d4a7b56f3fd38b8f3dcb96",
+        "candidate_sha256": "2c2c7e79a14bcd0ccd8496316e9916aea75b3c1a08b350e0033909bc41070105",
+        "before_path": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313/task-log.md.before",
+        "candidate_path": "/Users/fu-121/.local/state/p003-compat-design-20261116-223313/task-log.md.candidate",
+        "status": "written_verified",
+        "after_sha256": "2c2c7e79a14bcd0ccd8496316e9916aea75b3c1a08b350e0033909bc41070105",
+        "lines": 1161
+      }
+    ]
+  }
 }

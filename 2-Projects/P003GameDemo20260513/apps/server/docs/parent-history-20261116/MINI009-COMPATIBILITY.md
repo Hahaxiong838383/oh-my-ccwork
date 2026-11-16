@@ -1,6 +1,8 @@
-# mini009 候选业务流水与线上 R1 兼容性核查
+# mini009 R1 最小兼容方案与现状核查
 
-**结论：mini009 已实现业务事实采集、原生持久队列和候选上传链，但当前不能直接连接线上 R1；禁止直接下发开启配置。需要协议修订与端侧适配，不能只改合同名称或放宽服务端校验。C 机历史对话接口及小程序历史展示走独立数据源，不受此阻断影响。**
+**结论：可以兼容。服务端增加一个已知格式适配分支，接收 mini009 已有事实；端侧只修正常续 token 导致队列身份变化的问题。无需先让 Runtime/Godot 全量改成服务端 v1 格式。**
+
+2026-11-16 用户明确要求“按照兼容模式设计，避免过度工程化”，本方案取代此前“优先端侧全面适配现役 v1”的方向。**当前完成设计与代码核查，兼容产品代码尚未实施或部署，上传仍关闭；不是永久禁止兼容。** 第 2 节记录的是现有代码直接对接的结果，第 5 节是消除这些差异的最小实现。已上线的两个摘要及 C 历史对话入口不受影响。
 
 核查日期：2026-11-16。只读对比 Android 仓库提交 `75378716195bda8e7414af97ffd8dbd0b109212b` 与当前服务端源码；本文件不代表已执行实机上传测试。未修改生产源码、配置、设备、凭据、队列或业务数据。
 
@@ -14,7 +16,7 @@
 
 新证据已经取代“端侧尚未实现”的旧判断。准确状态为：**候选客户端已实现，上传默认关闭；其 wire 与已部署服务端合同不兼容，三方真实对账仍未完成。** 客户端文档本身也明确不表示服务端接受或上线其新增合同，并要求回签后再启用。
 
-## 2. 精确阻断
+## 2. 现有代码直接对接的差异（适配前）
 
 | 范围 | mini009 实现 | 线上服务端要求 | 结果与源码定位 |
 |---|---|---|---|
@@ -34,27 +36,29 @@
 
 按该签发路径，mini009 会落入 token 指纹分支。同一授权正常续凭据也会改变 scope。`ArkRecordsStore.kt:25` 又把 coverage 的 save_id 固定到首次 scope：旧队列不会自动跨 scope 上传，同一 save 的后续交接也会因 `save_identity_changed` 暂停。这是保守隔离，但不能等价于服务端“同 grant/epoch 下续凭据继续上报”。
 
-更关键的是，Runtime 原记录没有 origin 字段；若事实尚未首次交接，就无法仅凭交接时的新 token 证明其原归属。最小修订必须在业务发生之前获得并持久化 context，在事务内将原 context 与事实一起冻结。已产生而没有原 context 的记录只能保留为 unattributed/待核；不得批量套当前授权、改 ID、改 save 或用新发生时间包装成新记录。
+Runtime 原记录没有 origin 字段，因此上传时不能证明原归属。但这不等于不能接入历史：本轮用户已要求 C 历史可见，可以单独记录明确的兼容历史授权，区分“当前允许谁读取”与“原发生归属未验证”，不伪填 origin。正常续凭据只需使用稳定的本地绑定代际键；不要求先把完整 context 传入 Runtime。
 
 ## 4. 还需明确的语义与边界
 
-1. **baseline 不可改成收入或新获得。** Runtime 首次生成 baseline（`g1_business_records.rs:76`），线上 R1 没有基线记录类型。最小接入可继续在本地保留基线，当前 v1 上传仅发送可准确表示的真实事务。若要云端接收基线，需单独出兼容修订，并明确不进入收益或最新获得摘要。
-2. **混合事务不能盲目拆成多笔。** 当前候选按整次状态提交记录，可能同时有多奖励、卡变化或状态变化；线上 reason 有方向和组成限制（`records-contract.ts:21`）。应由真实业务操作生成稳定分类/来源，明确完整事务如何表达；无法无损映射的类型应先保留，必要时出正式扩展。不要通过重复分摊钱包 delta 或任意子 ID 制造多笔收入。
+1. **baseline 接收但不算收入或新获得。** Runtime 首次生成 baseline（`g1_business_records.rs:76`），兼容分支保留它并展示接入时已有状态；不强塞现役 v1 事务类型。
+2. **混合事务保留完整commit。** 一次记录可能含多奖励、卡与状态变化；兼容表不强套现役v1单reason约束。利用已有grants来源作只读分类，无法确认的部分仍接收并标未知，不要求端侧重造业务分类；不重复分摊钱包delta或改子ID制造收入。
 3. **资源须显式映射。** 候选使用 `C-FAMILY-001/C-STARDUST-001`，线上使用 `family_coin/stardust`，卡仍为 `M-CARD-001`。仅对已知语义映射；物品 kind 同样需明确映射，例如 Runtime 测试中的 `ecotank_part` 与线上 `tank_component`。
-4. **时间与数值不能截断。** 候选 occurred_at_ms 为非负整数，线上未知时间为 `null + time_quality=unknown`，已知时间为 1..8e12；通用 ID 上限为候选 96、线上 80。JSON 安全整数、真实日期、资源正负方向及 1e9 资源边界也需端侧遵守；不可改写旧事实去满足校验。
-5. **覆盖和满队列政策未一致。** 候选 Rust outbox 满 2048 后递增 dropped_records 并继续业务（`g1_business_records.rs:54`）；线上合同要求可靠记录提交失败时回滚新资源业务，且不接收候选 coverage_from_ms/dropped_records 信封字段。应先回签容量/缺口政策及暴露方式，不能简单删字段让缺口不可见。线上 coverage.complete=false 仍必须保留。
-6. **已有兼容部分可保留。** 候选 16 条/64KiB 比线上 50 条/256KiB 更保守；单条均为 32KiB。accepted/duplicated 的字段、batch_id 校验、集合互斥、部分 ACK 缺项保留基本相容。服务端额外的 schema_version/server_received_ms 不会被现有 ACK 解析器拒绝。真正必须改的是 retryable 的逐 ID 语义，而非另造 ACK 字段名。
+4. **时间、ID与数值不能截断。** 兼容解析使用候选的 96 字符 ID 等已知边界，不截成 v1 的 80；非安全整数拒绝，异常时间原样保留并标可信度，不能改写旧事实去满足摘要。
+5. **保留覆盖缺口。** 候选 Rust outbox 满 2048 后递增 dropped_records 并继续业务（`g1_business_records.rs:54`）。兼容接收 coverage_from_ms/dropped_records，保存累计 dropped 最大值，保留基线前未知和序号缺口；不要求先修改游戏满队列政策，不把 pending=0 当完整历史。
+6. **已有 ACK 与重试可保留。** 候选 16 条/64KiB、单条 32KiB；accepted/duplicated、batch_id、集合互斥、缺项保留基本相容。兼容分支临时故障/容量不足整批 503、限流 429 并带 Retry-After，不发送可重试 rejected，旧客户端即可保留原 ID 退避；不要求先改客户端 retryable。
 
 ## 5. 最小兼容方向
 
-优先让端侧适配已部署的 `p003.ark.records.r1`，保留现有内部业务事实及 durable handoff，不让服务端宽松接收另一种未确认格式。
+采用服务端已知格式适配，不新增服务、队列、通用版本平台或计账系统。端侧全量重写 v1 改动过大，严格解析器任意放行又不能保证语义，均不采用。
 
-1. 冻结一份双方同意的 wire 修订与开关版本。Native 先读取现有 context、校验版本/limits，再把已验证原 context 持久交给 Runtime。正常续凭据沿同 context；换 grant/epoch 后旧记录隔离，新事务使用新 context，save/sequence 不重置。
-2. 在业务原子提交边界生成明确 reason、稳定 business_source_id、获得实例和激活引用；产出当前严格 schema 的不可变上传记录。资源映射、时间质量、上限校验均在真实语义下完成。基线、无法无损映射的混合事务、缺原 context 的旧事实继续保留，不能“适配”成假正常记录。
-3. Native 保留已冻结 body/record_id，batch 仅保留线上允许的信封键。明确 `retryable=true` 留 pending 并退避；只有 accepted/duplicated 可清传输正文，`retryable=false` 才进保留正文的 dead-letter。对缺失/非法 retryable 保守拒绝结算，不推断成终态。
-4. 容量溢出/覆盖信息、基线及确实无法表示的业务类型如需改服务端，另出显式版本修订并配套存储/摘要语义；不得在已部署 v1 上静默放宽、补造归属或仅回 ACK。
+1. **同接口兼容。** `POST /v1/device/ark/records:batch` 按精确 `contract_id=p003-ark-records-r1` 分支解析；缺该字段走现役 v1，未知合同明确拒绝。复用 Device Bearer、设备授权、限流及 SQLite，不修改原 v1 合同。保留客户端原信封与字段，不要求先 GET context。
+2. **一张原始表。** 新增 `ark_record_legacy` 及必要索引，保存原 record_id/save_id/sequence、规范化原文与 SHA、接收时间、兼容授权和覆盖元数据。现役表强制 origin/reason/获得实例，硬塞会逼出伪字段或表重建；单张原始表更小。按 SN+record_id 及 SN+save+sequence 去重，同文 duplicated、异文拒绝覆盖，跨格式同 ID 也不重复展示或计入。只 ACK 已耐久保存记录；部分已写后发生临时失败可整批 503，下次原 ID 重试自然 duplicated，无需新增整批回滚框架。
+3. **单 C 历史授权。** 复用历史对话的固定完整元组做法，但单独明确 records 兼容范围：SN/public_id/parent/device-account/binding_version/Ark epoch/grant 及允许的 save/历史范围。用户已要求接入 C 历史，实施时核当时真实元组；不直接沿用旧值或因对话开关而自动开放流水。记录 `authorization_source=legacy_explicit_scope` 和原发生归属未验证，不补造 origin。写入与返回前核权威范围，换绑/换回/重授立即失效，其他设备默认不开放；无需逐条人工审核或全设备迁移。
+4. **读时投影，复用小程序页面。** 现分页/摘要增加 legacy 来源，保留授权、高水位、过滤与游标失效语义。baseline 仅显示“接入时已有状态”；wallet_changes 显示真实增减；grants 按真实 reward_instance_id/source_kind/resolved_rewards 投影合格 normal 奖励，按真实到账日计算、同 save 奖励实例去重，并与钱包对账，不双算 grant 与 delta。混合事务无法确认的部分保留明细、摘要标未知/不完整，不重复拆分钱包 delta。
+5. **获得不依赖新实例框架。** Runtime 库存是按 item_id 聚合的 BTreeMap；从实际 grant 条目及库存 before/after 确认获得，展示键可由奖励实例+条目位置派生并标明来源。pending_activation→active 只更新状态，不再次获得；缺获得证据时只显示状态变化。同 save 序号、跨 save 真实时间、GM/unknown 不回退旧 normal 等现有摘要规则继续保留。小程序只补兼容记录/基线必要映射，不另做页面。
+6. **Native 仅修稳定 scope。** `ArkRecordsCoordinator.credentials()` 用已校验 SN+binding_version 做本地绑定代际键，正常续 token 不变；binding_version 不是 Ark epoch，后者仍由服务器授权检查。若实际已有旧指纹队列，只迁移确认同代际的特定 save，不批量重挂、改 ID 或清队列。mini009 尚未上机时优先下一包入队前修正，不为尚不存在的旧队列先造迁移系统。保留 Runtime/Godot、durable handoff、ACK和重试，与已完成的 4/0 用时修复同包交付。
 
-接入验证至少覆盖：客户端真实序列化 fixture 对服务端 HTTP/SQLite；context 与原归属冻结；同一授权续 token；换绑/换回/换 grant；重复/部分/截断 ACK；capacity_exceeded 可重试；多奖励整笔、获得→激活、GM/unknown、时钟未知、baseline、满队列与缺口。测试通过并完成回签后，才具备考虑单 C 开关及实机逐 record_id 对账的条件。
+最小实现范围为：一个服务端解析/投影模块、一张原始表、现路由/分页/摘要接线，以及 Native 稳定 scope 小修。用客户端真实序列化 fixture 验 HTTP→SQLite→家长读取；覆盖原 ID 重放、异文冲突、部分已写后 503、续 token/换绑/换回、多奖励不重复、激活不重获、baseline/GM/未知/缺口，并回归现役 v1。通过后按下一轮实测安排单 C 精确旧格式开关，核同 record_id 端→云→小程序。本轮仅完成独立只读设计复核，没有运行兼容实现测试、部署或开闸。
 
 ## 6. 与历史对话、使用时长的关系
 
