@@ -651,7 +651,7 @@ fn boundary_reply(action: &str) -> String {
 /// +380–614ms(今早四房实读),真人「提示音一停就说」的首段语音只能在 channel 里排队等握手,首个转写整体延后。
 /// 任务所有权随预热产物转交；产物被丢弃或流水线被取消时停止 ASR，不留后台重试。
 pub struct SttPre {
-    pub pcm_tx: mpsc::Sender<Vec<i16>>,
+    pub pcm_tx: crate::asr_diagnostics::PcmSender,
     pub ev_rx: mpsc::Receiver<SttEvent>,
     pub task: crate::owned_task::OwnedTask<()>,
 }
@@ -704,6 +704,8 @@ pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
 pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
     let (stt_pcm_tx, stt_pcm_rx) = mpsc::channel::<Vec<i16>>(128);
     let (stt_ev_tx, stt_ev_rx) = mpsc::channel::<SttEvent>(64);
+    let diagnostic = crate::asr_diagnostics::InputDiagnostic::for_room(room_name);
+    let stt_pcm_tx = crate::asr_diagnostics::PcmSender::new(stt_pcm_tx, diagnostic.clone());
     info!(room = %room_name, nonstream = stt_cfg.nonstream, "asr stream task spawned (preconnect)");
     let rn = room_name.to_string();
     let span = tracing::info_span!("asr_stream", room = %room_name);
@@ -713,7 +715,7 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
         loop {
             if stt_ev_tx.is_closed() || (pcm_rx.is_closed() && pcm_rx.is_empty()) { break; }
             let started = Instant::now();
-            match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone()).await {
+            match stt_volc::run_asr_stream_observed(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone(), diagnostic.clone()).await {
                 Ok(AsrEnd::InputDone | AsrEnd::Unused) => break,
                 Ok(AsrEnd::InputDoneEof) => {
                     // 收流后未见 LastNoSeq 即 EOF:输入已结束不重连,但先报 Interrupted(ordered_pcm 不得提交半段 final)
@@ -940,6 +942,7 @@ pub async fn run_pipeline(
     let stt = take_stt_preconnect(stt, || spawn_stt(stt_cfg_for_room(&room_name), &room_name)).await?;
     let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt;
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
+    stt_pcm_tx.phase("ordered_or_initial");
     let mut stt_pcm_tx = Some(stt_pcm_tx);
     let mut stt_closed = false;
     // B23：首句 end 收流后预连的第二条 STT（与首答并行建连），切 RTC 时接管；首条任务句柄留到收尾
@@ -1133,6 +1136,7 @@ pub async fn run_pipeline(
             // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
             // (2026-09-11 模拟实证:begin 超时/取消路径的 fail→EndStream 在切换后到达,关的是刚接管的第二条 → job 收尾)
             drop(stt_pcm_tx.take());
+            pcm_tx.phase("rtc");
             stt_pcm_tx = Some(pcm_tx);
             stt_ev_rx = ev_rx;
             stt_closed = false;
@@ -1215,6 +1219,7 @@ pub async fn run_pipeline(
             frame = mic.next() => {
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
+                if let Some(tx)=&stt_pcm_tx {tx.rtc_input(&samples, orch.input_phase == InputPhase::FirstTurn);}
                 // B50 §5:一次性取证窗口旁路收音(默认不存在)。只做一次 extend,不进任何判定链。
                 if let Some(a) = orch.audit.as_mut() {
                     a.push(&samples);
@@ -1554,7 +1559,7 @@ impl Orchestrator {
 
     /// publish_data 到 room(web 延迟面板/租户状态机消费;失败只记不抛)。
     /// One-shot v0.3:有序 PCM 包 → 代次状态机 → 按 3200 块写 ASR 队列(try_send 失败=计数+整代失败)→ 执行动作。
-    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) -> usize {
+    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<crate::asr_diagnostics::PcmSender>) -> usize {
         let mut submitted = 0;
         let now_ms = unix_ms_now();
         let was_idle = self.ordered.as_ref().map(|o| o.phase() == crate::ordered_pcm::Phase::Idle).unwrap_or(false);
@@ -4377,7 +4382,7 @@ mod asr_preconnect_handoff_tests {
     }
 
     async fn first_pcm_and_final(mut pre: SttPre, server: tokio::task::JoinHandle<()>) {
-        pre.pcm_tx.send(vec![42; 160]).await.expect("handoff must provide a live PCM receiver");
+        pre.pcm_tx.try_send(vec![42; 160]).expect("handoff must provide a live PCM receiver");
         let ev = tokio::time::timeout(Duration::from_secs(2), pre.ev_rx.recv()).await.unwrap();
         assert!(matches!(ev, Some(SttEvent::Final(ref text)) if text == "handoff test"),
             "old preconnect events must not terminate or invalidate the new input: {ev:?}");
@@ -4462,7 +4467,7 @@ mod asr_lifecycle_tests {
         let addr=listener.local_addr().unwrap();
         let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
         let SttPre{pcm_tx,mut ev_rx,task}=spawn_stt(cfg,"synthetic-asr-connect-failure");
-        pcm_tx.send(vec![5;3200]).await.unwrap();
+        pcm_tx.try_send(vec![5;3200]).unwrap();
         let (socket,_)=listener.accept().await.unwrap();drop(socket);
         tokio::time::timeout(Duration::from_secs(1),task).await.expect("connect failure must be terminal inside its episode").unwrap();
         assert!(matches!(ev_rx.recv().await,Some(SttEvent::Interrupted)));

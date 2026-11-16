@@ -234,7 +234,28 @@ pub async fn run_asr_stream(
     pcm_rx: &mut mpsc::Receiver<Vec<i16>>,
     event_tx: mpsc::Sender<SttEvent>,
 ) -> Result<AsrEnd> {
-    let request_id = uuid::Uuid::new_v4().to_string();
+    run_asr_stream_observed(cfg, pcm_rx, event_tx, None).await
+}
+
+pub async fn run_asr_stream_observed(
+    cfg: SttConfig, pcm_rx: &mut mpsc::Receiver<Vec<i16>>, event_tx: mpsc::Sender<SttEvent>,
+    diagnostic: Option<std::sync::Arc<crate::asr_diagnostics::InputDiagnostic>>,
+) -> Result<AsrEnd> {
+    let mut observed = crate::asr_diagnostics::Observation::new(uuid::Uuid::new_v4().to_string(), diagnostic);
+    let result = run_asr_stream_inner(cfg, pcm_rx, event_tx, &mut observed).await;
+    observed.outcome = match &result {
+        Ok(AsrEnd::Unused) => "unused", Ok(AsrEnd::InputDone) => "last_frame",
+        Ok(AsrEnd::InputDoneEof) => "input_done_eof", Ok(AsrEnd::ServerClosed) => "server_closed", Err(_) => "error",
+    };
+    result
+}
+
+async fn run_asr_stream_inner(
+    cfg: SttConfig, pcm_rx: &mut mpsc::Receiver<Vec<i16>>, event_tx: mpsc::Sender<SttEvent>,
+    observed: &mut crate::asr_diagnostics::Observation,
+) -> Result<AsrEnd> {
+    let request_id = observed.request_id.clone();
+
     let mut req = cfg.url.as_str().into_client_request()?;
     {
         let h = req.headers_mut();
@@ -273,7 +294,10 @@ pub async fn run_asr_stream(
         payload: gzip(init_payload.to_string().as_bytes()),
         ..Default::default()
     };
+    observed.stage="init_write";
     tx.send(WsMessage::Binary(init.marshal().into())).await?;
+    observed.stats.init_written=true;
+    observed.stage="receive";
 
     // 已发 Final 的句子游标:utterances 是全量数组,靠计数防重发
     let mut finals_emitted = 0usize;
@@ -288,11 +312,14 @@ pub async fn run_asr_stream(
     loop {
         tokio::select! {
             _ = ping_tick.tick() => {
+                observed.stage="ping_write";
                 tx.send(WsMessage::Ping(Vec::new().into())).await.context("asr keepalive ping")?;
+                observed.stage="receive";
             }
             pcm = pcm_rx.recv(), if !input_done => match pcm {
                 Some(samples) => {
                     if samples.is_empty() { continue; }
+                    if observed.enabled() {observed.stats.taken.push(&samples);}
                     seq += 1;
                     let bytes: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
                     let frame = Frame {
@@ -304,7 +331,16 @@ pub async fn run_asr_stream(
                         payload: gzip(&bytes),
                         ..Default::default()
                     };
+                    observed.stage="audio_write";
+                    let at=std::time::Instant::now();
                     tx.send(WsMessage::Binary(frame.marshal().into())).await?;
+                    if observed.enabled() {
+                        observed.stats.written.push(&samples);observed.stats.audio_writes+=1;
+                        observed.stats.max_write_ms=observed.stats.max_write_ms.max(at.elapsed().as_millis() as u64);
+                        if observed.stats.first_write_ms.is_none() {observed.stats.first_write_ms=Some(observed.ms());}
+                        observed.stats.last_write_ms=Some(observed.ms());
+                    }
+                    observed.stage="receive";
                     audio_sent = true;
                 }
                 None => {
@@ -331,25 +367,31 @@ pub async fn run_asr_stream(
                         payload: gzip(b""),
                         ..Default::default()
                     };
+                    observed.stage="terminator_write";
                     tx.send(WsMessage::Binary(last.marshal().into())).await?;
+                    observed.stats.terminator_written=true;
+                    observed.stage="receive";
                 }
             },
             msg = rx.next() => match msg {
                 Some(Ok(WsMessage::Binary(data))) => {
+                    observed.stats.binary+=1;observed.stage="decode_frame";
                     let frame = Frame::unmarshal(&data)?;
                     if frame.msg_type == MsgType::Error {
+                        observed.stats.error_code=Some(frame.error_code);
                         bail!("火山 ASR 流异常 code={} payload={}",
                             frame.error_code,
                             String::from_utf8_lossy(&frame.payload).chars().take(200).collect::<String>());
                     }
                     if frame.msg_type != MsgType::FullServerResponse {
-                        continue;
+                        observed.stats.other+=1;observed.stage="receive";continue;
                     }
                     let ended = is_last_frame(frame.flag);
                     if let Some(payload) = frame.json_payload() {
-                        handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon, ended)
-                            .await;
-                    }
+                        observed.response(&payload);
+                        handle_result_observed(&payload, &mut finals_emitted, &event_tx, cfg.canon, ended, observed).await;
+                    } else {observed.stats.invalid_json+=1;}
+                    observed.stage="receive";
                     if ended {
                         return Ok(AsrEnd::InputDone);
                     }
@@ -359,19 +401,16 @@ pub async fn run_asr_stream(
                     // 收流后未见 LastNoSeq 即被关闭 = 意外 EOF(与 LastNoSeq 正常终局区分;ordered_pcm 据此不提交半段 final)
                     return Ok(if input_done { AsrEnd::InputDoneEof } else { AsrEnd::ServerClosed });
                 }
-                Some(Ok(_)) => {}
+                Some(Ok(_)) => {observed.stats.other+=1;}
                 Some(Err(e)) => return Err(e.into()),
             }
         }
     }
 }
 
-async fn handle_result(
-    payload: &serde_json::Value,
-    finals_emitted: &mut usize,
-    event_tx: &mpsc::Sender<SttEvent>,
-    canon: bool,
-    ended: bool,
+async fn handle_result_observed(
+    payload: &serde_json::Value, finals_emitted: &mut usize, event_tx: &mpsc::Sender<SttEvent>,
+    canon: bool, ended: bool, observed: &mut crate::asr_diagnostics::Observation,
 ) {
     let Some(result) = payload.get("result") else { return };
     let norm = |raw: &str| -> String {
@@ -386,7 +425,7 @@ async fn handle_result(
         // 无 utterances 的响应:顶层 text 兜底发 Interim(对齐 volc_stt.py `elif not utts`)
         let top = norm(result.get("text").and_then(|t| t.as_str()).unwrap_or(""));
         if !top.is_empty() {
-            let _ = event_tx.send(SttEvent::Interim(top)).await;
+            observed.emit(event_tx,SttEvent::Interim(top)).await;
         }
         return;
     };
@@ -406,7 +445,7 @@ async fn handle_result(
                     warn!("stt: definite 句段顺滑后为空(疑似 enable_ddc 清空纯语气词), raw_utterance={u}");
                 } else {
                     info!("stt final: {text}"); // 证据日志,格式对齐 Python 版
-                    let _ = event_tx.send(SttEvent::Final(text)).await;
+                    observed.emit(event_tx,SttEvent::Final(text)).await;
                 }
                 *finals_emitted = definite_count;
             }
@@ -415,19 +454,87 @@ async fn handle_result(
             // 否则尾句只停留在 interim,永不提交
             if !text.is_empty() {
                 info!("stt final(流尾提升): {text}");
-                let _ = event_tx.send(SttEvent::Final(text)).await;
+                observed.emit(event_tx,SttEvent::Final(text)).await;
             }
         } else {
             tail_interim = if text.is_empty() { None } else { Some(text) };
         }
     }
     if let Some(t) = tail_interim {
-        let _ = event_tx.send(SttEvent::Interim(t)).await;
+        observed.emit(event_tx,SttEvent::Interim(t)).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn diagnostic_real_ws_writes_and_empty_interim_final_are_separate() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let addr=listener.local_addr().unwrap();
+        let samples=vec![0,7,-9,i16::MIN];let expected=samples.clone();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();assert_eq!(init.msg_type,MsgType::FullClientRequest);
+            let audio=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();assert_eq!(audio.msg_type,MsgType::AudioOnlyClient);
+            use std::io::Read;let mut bytes=Vec::new();flate2::read::GzDecoder::new(audio.payload.as_slice()).read_to_end(&mut bytes).unwrap();
+            assert_eq!(bytes,expected.iter().flat_map(|s|s.to_le_bytes()).collect::<Vec<_>>());
+            for (payload,flag) in [(json!({}),Flags::NoSeq),(json!({"result":{"utterances":[]}}),Flags::NoSeq),(json!({"result":{"text":"合成","utterances":[{"text":"合成","definite":false}]}}),Flags::NoSeq),(json!({"result":{"utterances":[{"text":"合成验证","definite":true}]}}),Flags::LastNoSeq)] {
+                let frame=Frame{msg_type:MsgType::FullServerResponse,flag,payload:serde_json::to_vec(&payload).unwrap(),..Default::default()};ws.send(WsMessage::Binary(frame.marshal().into())).await.unwrap();
+            }
+        });
+        let mut c=cfg(vec![]);c.url=format!("ws://{addr}");let (tx,mut rx)=mpsc::channel(2);tx.send(samples).await.unwrap();
+        let (ev,mut events)=mpsc::channel(8);let mut o=Observation::new("synthetic-diagnostic".into(),Some(InputDiagnostic::new()));
+        assert_eq!(tokio::time::timeout(Duration::from_secs(2),run_asr_stream_inner(c,&mut rx,ev,&mut o)).await.unwrap().unwrap(),AsrEnd::InputDone);
+        assert!(o.stats.init_written);assert_eq!(o.stats.taken.samples,4);assert_eq!(o.stats.written.samples,4);assert_eq!(o.stats.written.nonzero,3);
+        assert_eq!(o.stats.binary,4);assert_eq!(o.stats.responses,4);assert_eq!(o.stats.missing_result,1);assert_eq!(o.stats.empty_utterances,1);
+        assert_eq!(o.stats.interim_delivered,1);assert_eq!(o.stats.final_delivered,1);assert!(!o.stats.terminator_written);
+        assert!(matches!(events.recv().await,Some(SttEvent::Interim(_))));assert!(matches!(events.recv().await,Some(SttEvent::Final(_))));server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn diagnostic_parser_boundaries_and_closed_event_consumer_do_not_invent_finals() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let (tx,mut rx)=mpsc::channel(8);let mut n=0;let mut o=Observation::new("synthetic-shapes".into(),Some(InputDiagnostic::new()));
+        for (payload,ended) in [(json!({"result":{"text":"顶层尾句"}}),true),(json!({"result":{"text":"空数组尾句","utterances":[]}}),true),(json!({"result":{"utterances":[{"text":"数值标志","definite":1}]}}),false)] {
+            o.response(&payload);handle_result_observed(&payload,&mut n,&tx,true,ended,&mut o).await;
+        }
+        assert_eq!(o.stats.final_delivered,0);assert_eq!(o.stats.interim_delivered,2);
+        // Preserve existing behavior, expose the shape for diagnosis, do not silently "fix" protocol assumptions.
+        assert!(matches!(rx.recv().await,Some(SttEvent::Interim(_))));assert!(matches!(rx.recv().await,Some(SttEvent::Interim(_))));
+        drop(rx);handle_result_observed(&json!({"result":{"utterances":[{"text":"合成验证","definite":true}]}}),&mut n,&tx,true,false,&mut o).await;
+        assert_eq!(o.stats.event_receiver_closed,1);assert_eq!(o.stats.final_delivered,0);
+    }
+
+    #[tokio::test]
+    async fn diagnostic_cancelled_event_send_exposes_pending_stage_without_false_delivery() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let (tx,_rx)=mpsc::channel(1);tx.send(SttEvent::Interim("occupied".into())).await.unwrap();
+        let mut o=Observation::new("synthetic-blocked".into(),Some(InputDiagnostic::new()));
+        assert!(tokio::time::timeout(Duration::from_millis(20),o.emit(&tx,SttEvent::Final("合成".into()))).await.is_err());
+        assert_eq!(o.stage,"event_send");assert_eq!(o.outcome,"cancelled");assert_eq!(o.stats.final_delivered,0);
+    }
+
+    /// Private synthetic PCM only. Credentials are inherited in memory by the
+    /// controlled runner; this probe never prints headers or provider bodies.
+    #[tokio::test]
+    #[ignore = "requires explicitly supplied synthetic WAV and live provider credentials"]
+    async fn diagnostic_live_synthetic_wav() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let path=std::env::var("P003_SYNTHETIC_ASR_WAV").expect("synthetic WAV required");
+        let mut wav=hound::WavReader::open(path).unwrap();let spec=wav.spec();assert_eq!((spec.sample_rate,spec.channels,spec.bits_per_sample),(16000,1,16));
+        let mut samples:Vec<i16>=wav.samples::<i16>().map(Result::unwrap).collect();samples.extend(vec![0;16000*2]);
+        let mut c=SttConfig::from_env();
+        if std::env::var("P003_SYNTHETIC_ASR_ASYNC").as_deref()==Ok("1") {c.url=ASYNC_ASR_URL.into();c.nonstream=true;}
+        let d=InputDiagnostic::new();d.phase("direct_synthetic");let mut o=Observation::new(uuid::Uuid::new_v4().to_string(),Some(d));
+        let (tx,mut rx)=mpsc::channel(128);let (ev,mut events)=mpsc::channel(64);
+        let feeder=tokio::spawn(async move {let start=tokio::time::Instant::now();for (i,part) in samples.chunks(3200).enumerate() {tokio::time::sleep_until(start+Duration::from_millis(i as u64*200)).await;tx.send(part.to_vec()).await.unwrap();}});
+        let consume=tokio::spawn(async move {let mut finals=0;while let Some(e)=events.recv().await {if matches!(e,SttEvent::Final(_)) {finals+=1;}} finals});
+        let result=tokio::time::timeout(Duration::from_secs(25),run_asr_stream_inner(c,&mut rx,ev,&mut o)).await;
+        feeder.abort();let _=feeder.await;let finals=consume.await.unwrap();
+        println!("SYNTHETIC_ASR_RESULT {}",json!({"stats":o.stats,"finals":finals,"terminal":format!("{:?}",result.as_ref().map(|r|r.as_ref().map_err(|_|"error")))}));
+        assert!(matches!(result,Ok(Ok(AsrEnd::InputDone))));assert!(finals>0,"no final from synthetic direct ASR");
+    }
     use super::*;
 
     // A TCP peer that never finishes the WS handshake must not keep the

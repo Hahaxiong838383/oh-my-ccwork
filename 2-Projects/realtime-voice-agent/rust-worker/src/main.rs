@@ -43,6 +43,7 @@ mod ready_confirm;
 mod segmenter;
 mod speaker_id;
 mod stt_volc;
+mod asr_diagnostics;
 mod textproc;
 mod stop_variants;
 mod session_close;
