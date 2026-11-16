@@ -4382,7 +4382,7 @@ mod asr_preconnect_handoff_tests {
     }
 
     async fn first_pcm_and_final(mut pre: SttPre, server: tokio::task::JoinHandle<()>) {
-        pre.pcm_tx.try_send(vec![42; 160]).expect("handoff must provide a live PCM receiver");
+        pre.pcm_tx.send(vec![42; 160]).await.expect("handoff must provide a live PCM receiver");
         let ev = tokio::time::timeout(Duration::from_secs(2), pre.ev_rx.recv()).await.unwrap();
         assert!(matches!(ev, Some(SttEvent::Final(ref text)) if text == "handoff test"),
             "old preconnect events must not terminate or invalidate the new input: {ev:?}");
@@ -4467,7 +4467,7 @@ mod asr_lifecycle_tests {
         let addr=listener.local_addr().unwrap();
         let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
         let SttPre{pcm_tx,mut ev_rx,task}=spawn_stt(cfg,"synthetic-asr-connect-failure");
-        pcm_tx.try_send(vec![5;3200]).unwrap();
+        pcm_tx.send(vec![5;3200]).await.unwrap();
         let (socket,_)=listener.accept().await.unwrap();drop(socket);
         tokio::time::timeout(Duration::from_secs(1),task).await.expect("connect failure must be terminal inside its episode").unwrap();
         assert!(matches!(ev_rx.recv().await,Some(SttEvent::Interrupted)));

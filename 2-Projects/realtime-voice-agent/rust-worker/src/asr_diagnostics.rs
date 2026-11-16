@@ -57,6 +57,13 @@ impl From<mpsc::Sender<Vec<i16>>> for PcmSender {
 impl PcmSender {
     pub fn new(inner: mpsc::Sender<Vec<i16>>, diagnostic: Option<Arc<InputDiagnostic>>) -> Self { Self { inner, diagnostic } }
     pub fn is_closed(&self) -> bool { self.inner.is_closed() }
+    // Legacy handoff tests await a bounded, otherwise empty channel. Production
+    // still exclusively uses try_send; this adapter is absent from release builds.
+    #[cfg(test)]
+    pub async fn send(&self, samples: Vec<i16>) -> Result<(), mpsc::error::SendError<Vec<i16>>> {
+        assert!(self.diagnostic.is_none(), "test-only send does not collect diagnostics");
+        self.inner.send(samples).await
+    }
     #[cfg(test)]
     pub async fn closed(&self) { self.inner.closed().await; }
     #[cfg(test)]
