@@ -37,7 +37,7 @@ def build(schema_file,target,devices=50,events_per_day=6000,days=90,resume=False
       'analytics_batch':((raw+199)//200,f"printf('%032x',n),printf('ana-synthetic-%032x',n),printf('%032x',n),printf('%064x',n%{devices}),{base}-n*1000,{base}-n*1000,'{{\"synthetic\":true}}',200,0,0,200,1"),
       'analytics_transport':((raw+199)//200,"printf('%032x',n),'identity',256000,256000")}
     for table,(total,values) in expr.items():
-        completed=db.execute('SELECT count(*) FROM "'+table+'"').fetchone()[0] if existing else 0
+        completed=db.execute('SELECT count(1) FROM "'+table+'" NOT INDEXED').fetchone()[0] if existing else 0
         if completed>total or completed!=total and completed%10000:raise ValueError('fixture_resume_count_mismatch')
         for offset in range(completed,total,10000):
             end=min(total,offset+10000)
@@ -57,7 +57,7 @@ def build(schema_file,target,devices=50,events_per_day=6000,days=90,resume=False
     for n,tier in enumerate(['aggregate','diagnostic']):
         db.execute('INSERT OR IGNORE INTO analytics_tier_event VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',('f'*64,'tier-'+str(n),'analytics.periodic_aggregate' if n==0 else 'analytics.on_demand_sample',base,base,'fixture',n,'normal','{}','{}','fixture','2026-11-16','2026-11-16',0,tier,'focus_segment',1,None))
     db.commit();db.set_progress_handler(None,0)
-    counts={r['name']:db.execute('SELECT count(*) FROM "'+r['name']+'"').fetchone()[0] for r in schema if r['type']=='table'}
+    counts={r['name']:db.execute('SELECT count(1) FROM "'+r['name']+'" NOT INDEXED').fetchone()[0] for r in schema if r['type']=='table'}
     sample=db.execute('SELECT * FROM analytics_event WHERE rowid=1').fetchone()
     db.close();report(phase='complete',counts=counts,sample_sha256=hashlib.sha256(json.dumps(sample,separators=(',',':')).encode()).hexdigest(),schema_sha256=hashlib.sha256(Path(schema_file).read_bytes()).hexdigest())
     return state

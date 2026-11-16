@@ -5,6 +5,23 @@ from pathlib import Path
 SCRIPT = Path(__file__).with_name('storage-lock.py')
 
 class LockTests(unittest.TestCase):
+    def setUp(self):
+        self.volume=tempfile.TemporaryDirectory();marker=Path(self.volume.name).resolve()/'volume';marker.write_text('test-volume')
+        self.previous={k:os.environ.get(k) for k in ['ARCHIVE_VOLUME_MARKER','ARCHIVE_VOLUME_ID']}
+        os.environ.update(ARCHIVE_VOLUME_MARKER=str(marker),ARCHIVE_VOLUME_ID='test-volume')
+    def tearDown(self):
+        for k,v in self.previous.items():
+            if v is None:os.environ.pop(k,None)
+            else:os.environ[k]=v
+        self.volume.cleanup()
+    def test_nas_entries_require_volume_config_before_creating_lock(self):
+        with tempfile.TemporaryDirectory() as t:
+            root=Path(t).resolve();env={**os.environ,'ARCHIVE_ROOT':str(root),'ARCHIVE_PYTHON':sys.executable}
+            for key in ['ARCHIVE_VOLUME_MARKER','ARCHIVE_VOLUME_ID']:env.pop(key,None)
+            for entry,lock in [('storage-nas-pull.sh','.pull.lock'),('storage-nas-cycle.sh','.cycle.lock')]:
+                r=subprocess.run(['/bin/sh',str(SCRIPT.with_name(entry)),'a'*32],env=env,capture_output=True)
+                self.assertNotEqual(r.returncode,0)
+                self.assertFalse((root/lock).exists(),'NAS entry must reject absent volume configuration before acquiring a lock')
     def test_budget_terminates_job_and_releases_lock(self):
         with tempfile.TemporaryDirectory() as t:
             lock=Path(t).resolve()/'lock';start=time.monotonic()

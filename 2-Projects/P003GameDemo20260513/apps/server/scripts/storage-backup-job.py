@@ -74,11 +74,20 @@ def execute(database,spool,now,reserve_bytes,timeout_seconds):
         backup._copy_checked(database,work/'snapshot.partial',deadline,progress)
         os.rename(work/'snapshot.partial',source);archive.sync_dir(work)
         with sqlite3.connect('file:'+quote(str(source))+'?mode=ro',uri=True) as db:
-            db.execute('PRAGMA trusted_schema=OFF');db.set_progress_handler(lambda:1 if time.monotonic()>=deadline else 0,10000)
+            db.execute('PRAGMA trusted_schema=OFF');counting=['schema']
+            def count_progress():
+                progress({'phase':'count_rows','table':counting[0]})
+                return 1 if time.monotonic()>=deadline else 0
+            db.set_progress_handler(count_progress,10000)
             names=[r[0] for r in db.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")]
             import re
             if not names or any(not re.fullmatch('[a-z][a-z0-9_]{0,63}',n) for n in names):raise ValueError('INVALID_TABLE_NAMES')
-            tables={n:db.execute('SELECT count(*) FROM "'+n+'"').fetchone()[0] for n in names}
+            # Count(1) executes progress callbacks; NOT INDEXED avoids random
+            # traversal of interleaved device-key index pages on spinning disks.
+            tables={}
+            for n in names:
+                counting[0]=n
+                tables[n]=db.execute('SELECT count(1) FROM "'+n+'" NOT INDEXED').fetchone()[0]
         m=archive.validate({'schema_version':1,'archive_id':uuid.uuid4().hex,'kind':'analytics_backup','created_at_ms':now,
             'record_count':sum(tables.values()),'bytes':source.stat().st_size,'sha256':backup._sha(source,deadline,progress),
             'source_range':{'tables':tables,'backup_started_at_ms':now}})

@@ -59,7 +59,7 @@ async function verifyRows(m, payload) {
     let total = 0;
     for (const [name, expected] of Object.entries(tables)) {
       if (!/^[a-z][a-z0-9_]{0,63}$/.test(name) || !Number.isSafeInteger(expected) || expected < 0) fail('INVALID_TABLE_COUNTS');
-      const actual = db.prepare('SELECT count(*) AS n FROM "' + name + '"').get().n;
+      const actual = db.prepare('SELECT count(1) AS n FROM "' + name + '" NOT INDEXED').get().n;
       if (actual !== expected) fail('ROW_COUNT_MISMATCH');
       total += actual;
     }

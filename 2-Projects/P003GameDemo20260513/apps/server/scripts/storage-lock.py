@@ -13,12 +13,12 @@ def main():
         return 2
     marker=os.environ.get('ARCHIVE_VOLUME_MARKER')
     volume=os.environ.get('ARCHIVE_VOLUME_ID')
-    if marker or volume:
-        if not marker or not volume or os.path.realpath(marker)!=marker:return 2
-        st=os.lstat(marker)
-        if not stat.S_ISREG(st.st_mode) or st.st_size>256 or st.st_dev!=os.stat(os.path.dirname(lock)).st_dev:return 2
-        with open(marker) as f:
-            if f.read().strip()!=volume:return 2
+    # This launcher is a NAS entry guard, not an optional generic mutex.
+    if not marker or not volume or os.path.realpath(marker)!=marker:return 2
+    st=os.lstat(marker)
+    if not stat.S_ISREG(st.st_mode) or st.st_size>256 or st.st_dev!=os.stat(os.path.dirname(lock)).st_dev:return 2
+    with open(marker) as f:
+        if f.read().strip()!=volume:return 2
     fd = os.open(lock, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
     if not stat.S_ISREG(os.fstat(fd).st_mode):
         return 2
