@@ -25,8 +25,9 @@ try {
  store.transaction(()=>{for(let i=0;i<7000;i++)fact(store,'old-'+i,cstDay(now-91*DAY_MS));store.db.prepare('INSERT INTO analytics_event_seen VALUES (?,?,?,?)').run('device','permanent','hash',0);});
  assert.equal(typeof rollup.pruneAnalyticsCycle,'function');
  const result=await rollup.pruneAnalyticsCycle(store,now);
- assert.equal(result.facts,6000);assert.equal(result.chunks,60);assert.equal(result.budget_exhausted,true);
- assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_rollup_fact WHERE day<?').get(day)!.n,1000);
+ assert.equal(result.facts,3000);assert.equal(result.chunks,300);assert.equal(result.budget_exhausted,true);
+ assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_rollup_fact WHERE day<?').get(day)!.n,4000);
+ const middle=await rollup.pruneAnalyticsCycle(store,now);assert.equal(middle.facts,3000);assert.equal(middle.budget_exhausted,true);
  const rest=await rollup.pruneAnalyticsCycle(store,now);assert.equal(rest.facts,1000);assert.equal(rest.budget_exhausted,false);
  assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event_seen').get()!.n,1);
  assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_rollup_fact').get()!.n,3);

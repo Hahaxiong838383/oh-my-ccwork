@@ -43,12 +43,12 @@ export function rollupDirtyDays(store:AnalyticsStore,now=Date.now(),limit=16,bud
 }
 export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),limit=16,budget:RollupBudget={maxFactsPerDay:1_000_000,maxDayMs:30_000}):RollupStatus{
   if(!Number.isInteger(budget.maxFactsPerDay)||budget.maxFactsPerDay<1||budget.maxFactsPerDay>1_000_000||!Number.isInteger(budget.maxDayMs)||budget.maxDayMs<1||budget.maxDayMs>30_000)throw new Error('INVALID_ROLLUP_BUDGET');
-  const runStarted=performance.now(),runBudget=budget.maxRunMs??180_000;
-  if(!Number.isInteger(runBudget)||runBudget<1||runBudget>180_000)throw new Error('INVALID_ROLLUP_BUDGET');
+  const runStarted=performance.now(),runBudget=budget.maxRunMs??150_000;
+  if(!Number.isInteger(runBudget)||runBudget<1||runBudget>150_000)throw new Error('INVALID_ROLLUP_BUDGET');
   const dirty=store.db.prepare('SELECT d.dimension,d.day FROM analytics_dirty_day d LEFT JOIN analytics_rollup_retry r ON r.dimension=d.dimension AND r.day=d.day ORDER BY coalesce(r.last_attempt_ms,0),d.day,d.dimension LIMIT ?').all(Math.max(1,Math.min(180,limit))) as {dimension:string;day:string}[];
   const status:RollupStatus={attempted_days:0,rebuilt_days:0,failed_days:[],remaining_dirty_days:0,partial:false};
   for(const {dimension,day} of dirty){
-    // Stop between days: <=180s + one bounded 30s day, below the 240s wrapper.
+    // Stop between days: <=150s + one bounded 30s day, below the 240s wrapper.
     if(performance.now()-runStarted>=runBudget)break;
     status.attempted_days++;
     try{
@@ -117,9 +117,9 @@ function pruneChunk(store:AnalyticsStore,now:number,chunk:number,batchChunk:numb
   });
 }
 
-// 60 × 100 facts / 5min = 1,728,000 facts/day; max 1 batch (<=200
+// 300 × 10 facts / 5min = 864,000 facts/day; max 1 batch (<=200
 // settlements) per transaction. Pause permits waiting ingestion writers to run.
-export const PRUNE_CYCLE={maxChunks:60,chunk:100,batchChunk:1,maxMs:10000,pauseMs:10} as const;
+export const PRUNE_CYCLE={maxChunks:300,chunk:10,batchChunk:1,maxMs:30000,pauseMs:10} as const;
 export async function pruneAnalyticsCycle(store:AnalyticsStore,now=Date.now()){
  const start=performance.now(),result={events:0,batches:0,facts:0,chunks:0,elapsed_ms:0,max_transaction_ms:0,budget_exhausted:false};
  let empty=false;

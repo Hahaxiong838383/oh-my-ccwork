@@ -11,6 +11,7 @@ import {AnalyticsWriter} from '../src/analytics/writer.js';
 import {createAnalyticsApp} from '../src/analytics/index.js';
 import * as rollup from '../src/analytics/rollup.js';
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
+const runId=process.env.T4_RUN_ID??'first';assert.match(runId,/^[a-z0-9-]{1,40}$/);
 assert.ok(root.includes('t4-')&&!root.includes('/server/data'),'isolated t4 directory required');
 mkdirSync(root,{recursive:true});const path=join(root,'synthetic.db'),now=Date.parse('2026-11-16T12:00:00Z');
 if(mode==='prepare'){
@@ -45,7 +46,11 @@ if(mode==='prepare'){
  s.close();console.log(JSON.stringify({rollup:r,rollup_ms:scanMs,rollup_write_ms:writes,prune:{facts,events,batches,cycles,elapsed_ms:ms,max_transaction_ms:Math.max(0,...tx),p95_transaction_ms:[...tx].sort((a,b)=>a-b)[Math.floor(tx.length*.95)]},elapsed_ms:performance.now()-start}));
 }else if(mode==='http'){
  assert.ok(existsSync(join(root,'PREPARED.json')),'prepare must complete before HTTP benchmark');
- const s=new AnalyticsStore(path),writer=new AnalyticsWriter(path),control=join(root,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
+ assert.equal(existsSync(join(root,'RESULT-'+runId+'.json')),false,'do not overwrite evidence');
+ const s=new AnalyticsStore(path);
+ const before=Object.fromEntries(['analytics_rollup_fact','analytics_event','analytics_event_seen','analytics_settlement'].map(t=>[t,Number(s.db.prepare('SELECT count(*) n FROM '+t).get()!.n)]));
+ for(const dim of ['occurred','received'])s.db.prepare('INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)').run(dim,cstDay(now));
+ const writer=new AnalyticsWriter(path),control=join(root,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
  while(!writer.ready)await new Promise(r=>setTimeout(r,10));
  const checkpointer=new AnalyticsCheckpointer(path);checkpointer.start();
  const ctx={deviceKey:'t4-http-synthetic',active:true,uploadEnabled:true,uploadHourCst:23},secret='isolated-synthetic-key';
@@ -57,13 +62,13 @@ if(mode==='prepare'){
  const acks:{code:number;ms:number;accepted:number;error:string|null}[]=[];
  try{
   for(let i=0;i<50;i++){
-   const t=performance.now(),id='t4-http-'+i,received=Date.now();
+   const t=performance.now(),id='t4-http-'+runId+'-'+i,received=Date.now();
    const r=await fetch('http://127.0.0.1:'+addr.port+'/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':id},body:JSON.stringify({schema_version:1,batch_id:id,sent_at_ms:received,client:{},events:[{schema_version:1,client_event_id:id,event_name:'app.bridge_ready',occurred_at_ms:received,session_id:'s',sequence:i,priority:'normal',context:{},properties:{}}]})});const j=await r.json();acks.push({code:r.status,ms:performance.now()-t,accepted:j.accepted_event_ids?.length??0,error:j.error_code??null});await new Promise(r=>setTimeout(r,100));
   }
   const code=await exited;assert.equal(code,0,stderr);const maintenance=JSON.parse(stdout.trim());
   const quiet=rollup.rollupDirtyDaysWithStatus(s,now,16);
   const count=(table:string)=>Number(s.db.prepare('SELECT count(*) n FROM '+table).get()!.n),latency=acks.map(x=>x.ms).sort((a,b)=>a-b);
-  const result={synthetic:true,host:process.platform,node:process.version,maintenance,quiet,acks:{count:acks.length,accepted:acks.reduce((a,x)=>a+x.accepted,0),codes:acks.reduce((a,x)=>(a[x.code]=(a[x.code]??0)+1,a),{} as Record<string,number>),errors:acks.reduce((a,x)=>{if(x.error)a[x.error]=(a[x.error]??0)+1;return a;},{} as Record<string,number>),p95:latency[Math.floor(latency.length*.95)],p99:latency[Math.floor(latency.length*.99)],max:latency.at(-1)},checkpoint:checkpointer.status(),rows:{facts:count('analytics_rollup_fact'),raw:count('analytics_event'),seen:count('analytics_event_seen'),settlements:count('analytics_settlement')},database_bytes:statSync(path).size,freelist_pages:Number(s.db.prepare('PRAGMA freelist_count').get()!.freelist_count),rss:process.memoryUsage().rss};
-  console.log(JSON.stringify(result));writeFileSync(join(root,'RESULT.json'),JSON.stringify(result,null,2));
+  const result={synthetic:true,run_id:runId,before,host:process.platform,node:process.version,maintenance,quiet,acks:{count:acks.length,accepted:acks.reduce((a,x)=>a+x.accepted,0),codes:acks.reduce((a,x)=>(a[x.code]=(a[x.code]??0)+1,a),{} as Record<string,number>),errors:acks.reduce((a,x)=>{if(x.error)a[x.error]=(a[x.error]??0)+1;return a;},{} as Record<string,number>),p95:latency[Math.floor(latency.length*.95)],p99:latency[Math.floor(latency.length*.99)],max:latency.at(-1)},checkpoint:checkpointer.status(),rows:{facts:count('analytics_rollup_fact'),raw:count('analytics_event'),seen:count('analytics_event_seen'),settlements:count('analytics_settlement')},database_bytes:statSync(path).size,freelist_pages:Number(s.db.prepare('PRAGMA freelist_count').get()!.freelist_count),rss:process.memoryUsage().rss};
+  console.log(JSON.stringify(result));writeFileSync(join(root,'RESULT-'+runId+'.json'),JSON.stringify(result,null,2));
  }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await writer.close();await checkpointer.stop();s.close();}
 }else throw new Error('prepare | maintenance | http');
