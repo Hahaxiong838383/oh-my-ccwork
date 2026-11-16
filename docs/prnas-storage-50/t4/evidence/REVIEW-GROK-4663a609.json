@@ -1,0 +1,279 @@
+{
+  "reviewer": "Grok 4.7",
+  "date": "2026-11-16",
+  "candidate": "4663a60996ca2a4f44631d36e16a36736a9a25f9",
+  "candidate_subject": "fix(p003): calibrate raw storage against measured mature indexes",
+  "parent": "3ed1e7715b1a4d9ce142e4423a7e55259c18432e",
+  "ancestor_8bc": "8bc4254ef6ae1d0a22c4a97db7ade9379668d1a2",
+  "ancestor_8bc_ok": true,
+  "worktree_head_drifted_to": "d6b875db81d5f88a620db6fd13c0839fd1471d36",
+  "drift_subject": "fix(p003): cap cold maintenance transactions and preserve upload latency",
+  "drift_included": false,
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "npm": "11.17.0"
+  },
+  "test_worktree": "/tmp/p003-t4-review-4663",
+  "verdict": {
+    "blocker_whole_run_240s": "closed",
+    "blocker_analytics_policy_contract": "closed",
+    "wide_994mb_formal_order": "fail",
+    "validated_device_limit": 14,
+    "limiting_factor": "not_validated",
+    "production_pass": false,
+    "mature_maintenance_pass": false
+  },
+  "rollup_blob_3ed_equals_4663": "b84553a1e240f1ae11290b996ed4c3eb1dbd5e63",
+  "budgets": {
+    "maxRunMs_default": 180000,
+    "maxRunMs_max_inclusive": 180000,
+    "maxDayMs_default": 30000,
+    "prune_maxMs": 10000,
+    "wrapper_timeout_ms": 240000,
+    "gated_sum_ms": 220000,
+    "single_sql_transaction_has_own_deadline": false,
+    "check_before_next_day": true,
+    "meta_written_after_loop": true,
+    "cli_order": [
+      "pruneAnalyticsCycle",
+      "rollupDirtyDaysWithStatus"
+    ],
+    "cli_passes_maxRunMs": false
+  },
+  "run_budget_probe": {
+    "iterator": "Atomics.wait 10ms on real analytics_rollup_fact iterate()",
+    "red": {
+      "commit": "8bc4254ef6ae1d0a22c4a97db7ade9379668d1a2",
+      "exit": 1,
+      "actual": 2,
+      "expected": 1,
+      "message": "whole-run budget must stop before the next day"
+    },
+    "green": {
+      "commit": "4663a60996ca2a4f44631d36e16a36736a9a25f9",
+      "exit": 0,
+      "message": "PASS whole-run budget stops between atomic days, preserves remaining dirty and resumes"
+    },
+    "maxRunMs_180001": "INVALID_ROLLUP_BUDGET",
+    "maxRunMs_180000": "REACHED_DB",
+    "maxRunMs_omitted": "REACHED_DB"
+  },
+  "tests_on_4663": [
+    {
+      "cmd": "node --experimental-sqlite --import tsx scripts/analytics-policy.test.ts",
+      "exit": 0,
+      "tail": "analytics policy: PASS (CAS, atomic rollback, defaults, hard validation, 180-day conservative capacity, exact disk boundary and verified scale)"
+    },
+    {
+      "cmd": "node --experimental-sqlite --import tsx scripts/analytics-control-route.test.ts",
+      "exit": 0,
+      "tail": "analytics control HTTP: PASS (auth, limit, stop while offline, revision, duplicate validation)"
+    },
+    {
+      "cmd": "node --import tsx scripts/analytics-t4.test.ts",
+      "exit": 0,
+      "asserts": [
+        "facts==6000",
+        "chunks==60",
+        "second cycle facts==1000",
+        "copies==5",
+        "spool==8GiB",
+        "validated==14",
+        "max_enabled==14"
+      ]
+    },
+    {
+      "cmd": "node --import tsx scripts/analytics-t4-run-budget.test.ts",
+      "exit": 0
+    },
+    {
+      "cmd": "node --experimental-sqlite --import tsx scripts/analytics-maintenance.test.ts",
+      "exit": 0,
+      "asserts": [
+        "events==1001",
+        "batches==60",
+        "chunks==60",
+        "batchChunk==1"
+      ]
+    },
+    {
+      "cmd": "node --experimental-sqlite --import tsx scripts/analytics-prune.test.ts",
+      "exit": 0
+    },
+    {
+      "cmd": "node --experimental-sqlite --import tsx scripts/storage-policy.test.ts",
+      "exit": 0,
+      "note": "synthetic analytics_devices 100 is labeled not a load validation; default profile remains 14"
+    }
+  ],
+  "capacity_daily_6000_1TiB": {
+    "projections": [
+      {
+        "horizon_days": 30,
+        "raw_growth_days": 14,
+        "fact_growth_days": 30,
+        "seen_growth_days": 30,
+        "bytes_per_device": 2474208005
+      },
+      {
+        "horizon_days": 90,
+        "raw_growth_days": 14,
+        "fact_growth_days": 90,
+        "seen_growth_days": 90,
+        "bytes_per_device": 5293728005
+      },
+      {
+        "horizon_days": 180,
+        "raw_growth_days": 14,
+        "fact_growth_days": 90,
+        "seen_growth_days": 180,
+        "bytes_per_device": 6481728000
+      }
+    ],
+    "bytes_per_device": 6481728000,
+    "backup_peak_copies": 5,
+    "reserve_bytes": 4294967296,
+    "wal_reserve_bytes": 536870912,
+    "reserve_plus_wal": 4831838208,
+    "ark_spool_reserve_bytes": 8589934592,
+    "seen_daily_growth_bytes_per_device": 13200000,
+    "validated_device_limit": 14,
+    "maintenance_limit": 100,
+    "max_enabled_devices": 14,
+    "limiting_factors": [
+      "not_validated"
+    ],
+    "model": "20261116-v3-180d-migration-peak",
+    "delta_vs_8bc_1280_180d": 473088000
+  },
+  "policy_sample_daily_9000": {
+    "free_bytes": 10641600512,
+    "bytes_per_device": 9722592005,
+    "float_product": 1944518400.0000002,
+    "ceil_then_times_5": 9722592005,
+    "max_enabled_devices": 0,
+    "maintenance_limit": 67,
+    "budget_bytes": 0,
+    "validated_device_limit": 14,
+    "exact_boundary_assert_passed": true
+  },
+  "headroom": {
+    "measured": {
+      "raw_and_settlement": 2093.8937295238097,
+      "facts_two_dimensions": 961.8468408888889,
+      "seen": 373.9728402962963
+    },
+    "constants": {
+      "raw": 2304,
+      "facts": 1024,
+      "seen": 400
+    },
+    "constant_over_measured": {
+      "raw": 1.100342375314325,
+      "facts": 1.0646185613643773,
+      "seen": 1.0695963901632068
+    },
+    "after_formula_1_1": {
+      "raw": 1.2103766128457578,
+      "facts": 1.1710804175008152,
+      "seen": 1.1765560291795276
+    }
+  },
+  "prune_cycle": {
+    "maxChunks": 60,
+    "chunk": 100,
+    "batchChunk": 1,
+    "maxMs": 10000,
+    "pauseMs": 10,
+    "settlements_per_batch_in_fixture": 200
+  },
+  "dbstat": {
+    "file": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/DBSTAT.json",
+    "sha256": "c8feb75ef77dc62b020dde41af316370f9d1ed19da1189a5bcd34d30f2c5d7fe",
+    "page_size": 4096,
+    "page_count": 10954924,
+    "object_pages": 10954923,
+    "file_bytes": 44871368704,
+    "object_bytes_plus_one_page": 44871368704,
+    "wrapped_pgsize_ignored": true,
+    "groups_pages_times_4096": {
+      "raw_and_settlement": 8794353664,
+      "facts": 25969864704,
+      "seen": 10097266688
+    },
+    "matches_mature_calibration_rates": true,
+    "calibration_sha256": "bdaddd0062d65e797db1f3deb281ba0a5a2ff571fc5d04212fa8f1ce2fa73efe"
+  },
+  "wide_evidence": {
+    "pair_sha256": "a41eab18c1932e174f6080abcf9ba0017fe42c574e77eb798bd528512b86a51a",
+    "candidate_sha256": "eb86d50a153e091ccb0747ac4c29e72b546049d521684296000187a2766c36f6",
+    "candidate_result_present": true,
+    "unit": "p003-t4-http-3ed1e771",
+    "rollup_code_blob_same_as_4663": true,
+    "benchmark_delta_vs_3ed": "removed assert quiet.partial===false",
+    "database_bytes": 994037760,
+    "row_identity": {
+      "prepared": {
+        "facts": 1200000,
+        "raw": 300000,
+        "seen": 300000,
+        "settlements": 300000
+      },
+      "prune": {
+        "facts": 5200,
+        "events": 5200,
+        "batches": 52,
+        "settlements_removed": 10400
+      },
+      "accepted_uploads": 33,
+      "ending": {
+        "facts": 1194866,
+        "raw": 294833,
+        "seen": 300033,
+        "settlements": 289633
+      },
+      "reconciles": true
+    },
+    "maintenance": {
+      "prune_elapsed_ms": 11213.948399,
+      "max_transaction_ms": 3121.0776060000007,
+      "p95_transaction_ms": 423.32094399999914,
+      "rollup_ms": 60052.235177999995,
+      "rollup_write_ms": [
+        2.4954369999904884
+      ],
+      "attempted_days": 2,
+      "rebuilt_days": 0,
+      "failed_reason": "budget_exceeded",
+      "partial": true,
+      "elapsed_ms": 71272.371456
+    },
+    "quiet_after_uploads": {
+      "rebuilt_days": 2,
+      "partial": false
+    },
+    "acks": {
+      "count": 50,
+      "accepted": 33,
+      "http_200": 33,
+      "http_503": 17,
+      "error": "ANALYTICS_STORAGE_UNAVAILABLE",
+      "p95_ms": 309.13778699999966,
+      "p99_ms": 511.3145290000002
+    },
+    "baseline_pair_acks_accepted": 9,
+    "cloud_317mb_used_as_pass": false
+  },
+  "reused_same_blob_not_rerun": {
+    "analytics-maintenance.mjs": "17707b9a71583b999d49571bd30e0f1f9a9d3b53",
+    "storage-backup-job.py": "7001c28fe68fd3d61f3ee1b3d4e328e06d7f6768",
+    "storage-backup-job.test.py": "2a06a3f865bb7eb871b7ae5f9bbf07a1173cd77b",
+    "test-analytics-admin-ui.cjs": "a31ebd8ce13d652588e4fafc436f51a63ddb4b02"
+  },
+  "open_defects": [
+    "994MB formal order: 17/50 uploads returned 503 ANALYTICS_STORAGE_UNAVAILABLE",
+    "Scheduled rollup rebuilt 0 of 2 dirty dimensions with budget_exceeded; partial was persisted. Quiet retry that later rebuilt them is only in the benchmark parent, not in analytics-rollup.ts",
+    "Prune cycle elapsed 11213.95ms past the 10s inter-chunk gate; longest transaction 3121.08ms has no separate deadline"
+  ]
+}

@@ -1,0 +1,94 @@
+{
+  "reviewer": "Grok 4.7",
+  "reviewed_at": "2026-11-16",
+  "candidate": "8bc4254ef6ae1d0a22c4a97db7ade9379668d1a2",
+  "baseline": "c1008e4fda7c565a089a8fa4aaca46a94271ad86",
+  "baseline_is_ancestor": true,
+  "included_commits": [
+    "b2c6602462d4df5afaee71940be695a2713b34c8",
+    "8bc4254ef6ae1d0a22c4a97db7ade9379668d1a2"
+  ],
+  "not_in_candidate": "10b962665d3b89812fa8f12538dc3525a3926e09",
+  "node": "v24.19.0",
+  "node_path": "/Users/fu-121/.local/node-v24/bin/node",
+  "worktree": "/tmp/p003-t4-review-8bc",
+  "production_pass": false,
+  "deploy_stage": "T6",
+  "verdict": "blocked",
+  "blockers": [
+    {
+      "id": "rollup-run-exceeds-wrapper",
+      "summary": "8bc rollup has no whole-run deadline. Maintenance wrapper kills the process at 240s, before the post-loop meta write, while 16 days can each spend 30s.",
+      "evidence": "scripts/analytics-maintenance.mjs timeout 240000; rollupDirtyDaysWithStatus limit 16 and maxDayMs 30000; source of 8bc contains no maxRunMs.",
+      "repro": "Inspect those two constants on 8bc4254ef6ae1d0a22c4a97db7ade9379668d1a2. A live kill was not executed."
+    },
+    {
+      "id": "analytics-policy-stale-contract",
+      "summary": "analytics-policy.test.ts still expects the 30-day admission. On 8bc the historical sample admits 0 devices because 4.5GiB plus 8GiB exceeds 10641600512 free bytes.",
+      "evidence": "AssertionError 0 !== 2 at scripts/analytics-policy.test.ts:31",
+      "repro": "PATH=/Users/fu-121/.local/node-v24/bin:$PATH node --experimental-sqlite --import tsx scripts/analytics-policy.test.ts"
+    }
+  ],
+  "adopted_capacity": {
+    "daily_events": 6000,
+    "copies": 5,
+    "archive_switch_changes_copies": false,
+    "projections": [
+      {"horizon_days": 30, "raw_growth_days": 14, "fact_growth_days": 30, "seen_growth_days": 30, "bytes_per_device": 2001120005},
+      {"horizon_days": 90, "raw_growth_days": 14, "fact_growth_days": 90, "seen_growth_days": 90, "bytes_per_device": 4820640005},
+      {"horizon_days": 180, "raw_growth_days": 14, "fact_growth_days": 90, "seen_growth_days": 180, "bytes_per_device": 6008640000}
+    ],
+    "admission_bytes_per_device": 6008640000,
+    "seen_daily_growth_bytes_per_device": 13200000,
+    "reserve_plus_wal_bytes": 4831838208,
+    "backup_job_default_reserve_bytes": 4831838208,
+    "ark_spool_reserve_bytes": 8589934592,
+    "maintenance_limit_at_6000": 100,
+    "max_enabled_devices_default": 14,
+    "validated_device_limit_default": 14,
+    "target_devices_fit_default": false,
+    "historical_sample_max_enabled_devices": 0,
+    "historical_sample_bytes_per_device": 9012960005
+  },
+  "snapshot_upgrade": {
+    "journal_mode": "wal",
+    "errcode": 517,
+    "reason": "concurrent_write",
+    "rebuilt_days": 0,
+    "dirty_retained": true,
+    "prior_summary_event_count": 1
+  },
+  "tests": [
+    {"name": "analytics-t4.test.ts", "result": "pass"},
+    {"name": "analytics-maintenance.test.ts", "result": "pass"},
+    {"name": "analytics-prune.test.ts", "result": "pass"},
+    {"name": "storage-policy.test.ts", "result": "pass", "note": "synthetic verified profile of 100 can make target_devices_fit true; default profile remains 14"},
+    {"name": "analytics-policy.test.ts", "result": "fail", "detail": "0 !== 2 at line 31"},
+    {"name": "storage-http.test.ts", "result": "pass", "note": "fixture HTTP, not the mature benchmark"},
+    {"name": "analytics-http.test.ts", "result": "pass", "note": "fixture HTTP, not the mature benchmark"},
+    {"name": "analytics-writer-http.test.ts", "result": "pass", "note": "fixture HTTP, not the mature benchmark"},
+    {"name": "storage-backup-job.test.py", "result": "pass", "detail": "7 tests; cases pass reserve_bytes=0"},
+    {"name": "test-analytics-admin-ui.cjs", "result": "pass", "detail": "58 checks", "asset_dir": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/ui-assets"}
+  ],
+  "not_run": [
+    "analytics-t4-benchmark.ts prepare/http",
+    "cloud 0.5CPU/768MiB HTTP",
+    "NAS 44.87GB dbstat",
+    "10b96266 tests"
+  ],
+  "benchmark_order_on_8bc": "maintenance mode rollups before prune; production analytics-rollup.ts prunes before rollup",
+  "t5_remaining": [
+    "50-device mixed load",
+    "300k/hour or 600k backlog",
+    "voice 50 rounds",
+    "ACK percentile gate",
+    "continuous stability",
+    "measured net prune throughput and cloud lock time for the planning limit of 100"
+  ],
+  "t6_remaining": [
+    "production deploy",
+    "replace the Analytics backup timer",
+    "prove old keep2 is gone before lowering the copy coefficient",
+    "do not change device switches, the 23:00 batch, or the 360 module in T4"
+  ]
+}

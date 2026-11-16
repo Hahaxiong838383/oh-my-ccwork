@@ -1,0 +1,84 @@
+{
+  "source_bytes": 44871368704,
+  "counts": {
+    "analytics_batch": 21000,
+    "analytics_day": 0,
+    "analytics_device_day": 0,
+    "analytics_diagnostic_usage": 0,
+    "analytics_dirty_day": 0,
+    "analytics_event": 4200000,
+    "analytics_event_seen": 27000000,
+    "analytics_meta": 0,
+    "analytics_rollup_fact": 54000000,
+    "analytics_rollup_retry": 0,
+    "analytics_settlement": 4200000,
+    "analytics_tier_day": 0,
+    "analytics_tier_event": 2,
+    "analytics_transport": 21000,
+    "analytics_transport_day": 0
+  },
+  "tables_bytes_including_indexes": {
+    "sqlite_schema": 12288,
+    "analytics_batch": 7626752,
+    "analytics_day": 8192,
+    "analytics_device_day": 8192,
+    "analytics_diagnostic_usage": 8192,
+    "analytics_dirty_day": 8192,
+    "analytics_event": 7474315264,
+    "analytics_event_seen": 10097266688,
+    "analytics_meta": 8192,
+    "analytics_rollup_fact": 25969864704,
+    "analytics_rollup_retry": 8192,
+    "analytics_settlement": 1320038400,
+    "analytics_tier_day": 8192,
+    "analytics_tier_event": 20480,
+    "analytics_transport": 2154496,
+    "analytics_transport_day": 8192
+  },
+  "groups": {
+    "raw_and_settlement": 8794353664,
+    "facts": 25969864704,
+    "seen": 10097266688,
+    "other": 9883648
+  },
+  "bytes_per_event": {
+    "raw_and_settlement": 2093.8937295238097,
+    "facts_two_dimensions": 961.8468408888889,
+    "seen": 373.9728402962963
+  },
+  "page_total": 10954923,
+  "file_pages": 10954924,
+  "unattributed_one_page_bytes": 4096,
+  "wrapped_byte_columns": [
+    "analytics_event",
+    "analytics_event_seen",
+    "sqlite_autoindex_analytics_event_seen_1",
+    "analytics_rollup_fact",
+    "sqlite_autoindex_analytics_rollup_fact_1"
+  ],
+  "measurement_rule": "object pages * page size; raw aggregate byte fields wrap by exact multiples of 2^32, not used",
+  "elapsed_s": 961.8772857226431,
+  "projections_single_live_db": [
+    {
+      "days": 30,
+      "raw": 4200000,
+      "facts": 18000000,
+      "seen": 9000000,
+      "measured_bytes_extrapolated": 20826614443
+    },
+    {
+      "days": 90,
+      "raw": 4200000,
+      "facts": 54000000,
+      "seen": 27000000,
+      "measured_bytes_extrapolated": 44871368704
+    },
+    {
+      "days": 180,
+      "raw": 4200000,
+      "facts": 54000000,
+      "seen": 54000000,
+      "measured_bytes_extrapolated": 54968635392
+    }
+  ]
+}

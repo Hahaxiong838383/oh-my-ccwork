@@ -1,0 +1,26 @@
+{
+  "final": {
+    "session": 368,
+    "candidate": "d6b875db81d5f88a620db6fd13c0839fd1471d36",
+    "verdict": "PASS_ISOLATED",
+    "report_sha256": "48936019c4a39ed073bf780930ea9d0ecb94439e19387cea57672fb090cc7ee1"
+  },
+  "chain": [
+    {
+      "session": 366,
+      "candidate": "8bc4254e",
+      "result": "two blockers recorded"
+    },
+    {
+      "session": 367,
+      "candidate": "4663a609",
+      "result": "two blockers closed; 100-row cloud evidence still FAIL"
+    },
+    {
+      "session": 368,
+      "candidate": "d6b875db",
+      "result": "10-row final cloud and targeted regressions PASS_ISOLATED"
+    }
+  ],
+  "production": false
+}

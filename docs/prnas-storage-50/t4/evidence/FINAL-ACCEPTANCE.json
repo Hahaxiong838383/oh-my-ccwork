@@ -1,0 +1,205 @@
+{
+  "verdict": "PASS_T4_COMPONENT_ISOLATED_NOT_PRODUCTION",
+  "runtime_candidate": "d6b875db81d5f88a620db6fd13c0839fd1471d36",
+  "checks": {
+    "accepted_50_no_errors": true,
+    "ack_p95_under_500": true,
+    "ack_p99_under_2000": true,
+    "facts_exact": true,
+    "raw_exact": true,
+    "seen_exact": true,
+    "settlement_exact": true,
+    "prune_3000_in_budget": true,
+    "rollup_complete": true,
+    "checkpoint_healthy": true,
+    "profile_not_promoted": true,
+    "five_copies": true,
+    "180_day_model": true
+  },
+  "cloud": {
+    "synthetic": true,
+    "run_id": "final-10row",
+    "before": {
+      "analytics_rollup_fact": 1194866,
+      "analytics_event": 294833,
+      "analytics_event_seen": 300033,
+      "analytics_settlement": 289633
+    },
+    "host": "linux",
+    "node": "v24.19.0",
+    "maintenance": {
+      "rollup": {
+        "attempted_days": 2,
+        "rebuilt_days": 2,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "rollup_ms": 32836.051588,
+      "rollup_write_ms": [
+        10.559320000000298,
+        6.865525000001071,
+        1.4669569999969099
+      ],
+      "prune": {
+        "facts": 3000,
+        "events": 3000,
+        "batches": 300,
+        "cycles": 1,
+        "elapsed_ms": 7424.408242000001,
+        "max_transaction_ms": 221.1914859999997,
+        "p95_transaction_ms": 21.6146490000001
+      },
+      "elapsed_ms": 40302.640176999994
+    },
+    "quiet": {
+      "attempted_days": 0,
+      "rebuilt_days": 0,
+      "failed_days": [],
+      "remaining_dirty_days": 0,
+      "partial": false
+    },
+    "acks": {
+      "count": 50,
+      "accepted": 50,
+      "codes": {
+        "200": 50
+      },
+      "errors": {},
+      "p95": 253.0589179999988,
+      "p99": 408.7477199999994,
+      "max": 408.7477199999994
+    },
+    "checkpoint": {
+      "enabled": true,
+      "running": false,
+      "worker_pid": null,
+      "interval_ms": 10000,
+      "timeout_ms": 30000,
+      "stale_after_ms": 60000,
+      "last_attempt_ms": 1794844650522,
+      "last_completed_ms": 1794844650889,
+      "last_success_ms": 1794844650889,
+      "last_result": {
+        "ok": true,
+        "sqlite_version": "3.53.3",
+        "busy": 0,
+        "log_frames": 25433,
+        "checkpointed_frames": 25433,
+        "duration_ms": 5.385575000000017,
+        "reclaimed": false,
+        "reclaim_busy": false
+      },
+      "last_error": null,
+      "failures": 0,
+      "timeouts": 0,
+      "stale": false,
+      "stalled": false
+    },
+    "rows": {
+      "facts": 1191966,
+      "raw": 291883,
+      "seen": 300083,
+      "settlements": 229683
+    },
+    "database_bytes": 994037760,
+    "freelist_pages": 6187,
+    "rss": 231976960
+  },
+  "cpu_quota_percent": 50,
+  "memory_max_mib": 768,
+  "full_50_device_concurrent_load": false,
+  "production_deployed": false,
+  "raw_evidence_sha256": "3e91c036b80e9b5c24decf54947c747d130818a74dfa407a2e7c25173a0ea6da",
+  "source_sha256": {
+    "2-Projects/P003GameDemo20260513/apps/server/package.json": "065b9c8f217ed645c4601272cdaf6a28efe21d32739b1c9b396ef75f8ae02b68",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-maintenance.test.ts": "6733f1442ad2c28b79e871a2424a42d028a714f852e22f503003e24dd07c660a",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-policy.test.ts": "e825dc2d4d2caed0e18550a8e6e6996905a9a86c5a930792b1362489895e662c",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-rollup.ts": "c3e7103354160d1d306eec5a97aa38d2b61f099ab5c11a3a7d2242d93234de37",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-t4-benchmark.ts": "a7923a4e726835ddd34f936118a03bc756c71891fdf1c3149600d901a64291cc",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-t4-run-budget.test.ts": "f9341558491ae14a0d9e60f01d962df6e4a501649e37d89abd3d9d7a86fb4f1b",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-t4.test.ts": "5a09d60fa4afe8c403bf383b674a46b6f47ca8ffd80a920da591419ce082d954",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.py": "067dde819a886dce384df95e35676354909aa496c3e1c44e2bc69209553d248d",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-policy.test.ts": "3360ded6782195a229ecf2ecfbf1fb9857efff2dc938fa26fa6fb1b840e433a7",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/capacity.ts": "7e5cb3a7f0d5098d9f612ead386b5e695d77ab749b86f93b65be982758c32823",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts": "e3f0e452f4c7fa799570fb9efed446559f36524a23305cda358e1eb162027be5",
+    "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html": "d8c6362ebb90446b84bd78bede0186859010834b01dc5d202c1ef55eee18638c",
+    "2-Projects/P003GameDemo20260513/apps/web/scripts/test-analytics-admin-ui.cjs": "7dcfbe19df7d7d6e86917de6b85832579390025be5008bff4301890df0f4400d"
+  },
+  "capacity": {
+    "ok": true,
+    "free_bytes": 14207983616,
+    "total_bytes": 41882943488,
+    "db_bytes": 111222784,
+    "wal_bytes": 8252392,
+    "daily_peak": 6000,
+    "sample_devices": 50,
+    "maintenance_ok": true,
+    "checked_at_ms": 1794844636651,
+    "projections": [
+      {
+        "horizon_days": 30,
+        "raw_growth_days": 14,
+        "fact_growth_days": 30,
+        "seen_growth_days": 30,
+        "bytes_per_device": 2474208005,
+        "target_devices_bytes": 123710400250
+      },
+      {
+        "horizon_days": 90,
+        "raw_growth_days": 14,
+        "fact_growth_days": 90,
+        "seen_growth_days": 90,
+        "bytes_per_device": 5293728005,
+        "target_devices_bytes": 264686400250
+      },
+      {
+        "horizon_days": 180,
+        "raw_growth_days": 14,
+        "fact_growth_days": 90,
+        "seen_growth_days": 180,
+        "bytes_per_device": 6481728000,
+        "target_devices_bytes": 324086400000
+      }
+    ],
+    "ark_spool_reserve_bytes": 8589934592,
+    "horizon_days": 180,
+    "raw_growth_days": 14,
+    "fact_growth_days": 90,
+    "seen_growth_days": 180,
+    "daily_events_per_device": 6000,
+    "raw_retention_days": 14,
+    "fact_retention_days": 90,
+    "seen_retention": "persistent",
+    "backup_peak_copies": 5,
+    "legacy_backup_peak_copies": 4,
+    "seen_daily_growth_bytes_per_device": 13200000,
+    "reserve_bytes": 4294967296,
+    "wal_reserve_bytes": 536870912,
+    "budget_bytes": 786210816,
+    "bytes_per_device": 6481728000,
+    "storage_limit": 0,
+    "maintenance_limit": 50,
+    "storage_policy_revision": 0,
+    "target_devices": 50,
+    "target_devices_bytes": 324086400000,
+    "target_devices_fit": false,
+    "validated_device_limit": 14,
+    "validation_evidence": "ANALYTICS_MEMORY.md:14 synthetic subjects / 84000 events (legacy)",
+    "limiting_factors": [
+      "cloud_disk",
+      "not_validated"
+    ],
+    "max_enabled_devices": 0,
+    "twenty_devices_bytes": 129634560000,
+    "twenty_devices_fit": false,
+    "model": "20261116-v3-180d-migration-peak",
+    "sample_warning": null
+  },
+  "tsc_baseline_equal": {
+    "errors": 12,
+    "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "baseline": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/tsc.log"
+  },
+  "review": "evidence/REVIEW-GROK-d6b875db.json"
+}

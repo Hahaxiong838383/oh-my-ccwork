@@ -1,0 +1,51 @@
+{
+  "at": "2026-11-16T16:14:22.029965+00:00",
+  "scope": "T4 own memory entries + live skill reference; preserves v394 suffix and other entries",
+  "caveat": "hash guard plus atomic replacement, not OS atomic CAS or multi-file transaction",
+  "entries": [
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+      "before_sha256": "e427cb623fbca12def22725e0a45e450a044b72b7be675fab1855240dbb6b273",
+      "candidate_sha256": "d2e9b0af1adbc85eba68589ad5ee994b9c9b8edfd50535b251dc3e1474653e7b",
+      "before_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/0.before",
+      "candidate_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/0.candidate",
+      "mode": 384,
+      "status": "written_verified",
+      "candidate_lines": 2741,
+      "after_sha256": "d2e9b0af1adbc85eba68589ad5ee994b9c9b8edfd50535b251dc3e1474653e7b"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/status.md",
+      "before_sha256": "53c75afb1372cec808f30648c8f9ea92ed7b9c371252e86d9f3e51d592258140",
+      "candidate_sha256": "76e2ae8622a5567a2bf453dc493939911c4afb7ab693ded49b9754916fbc6c9f",
+      "before_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/1.before",
+      "candidate_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/1.candidate",
+      "mode": 384,
+      "status": "written_verified",
+      "candidate_lines": 49,
+      "after_sha256": "76e2ae8622a5567a2bf453dc493939911c4afb7ab693ded49b9754916fbc6c9f"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+      "before_sha256": "91fa68b2b06b8e441ec51651f61b9c75ca2f0338fd132d8ab2eb68f36763330d",
+      "candidate_sha256": "bea43b80fa6a830f7fd3a51e26092d787eb4d9f1d555870ff2b352747f30bb7f",
+      "before_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/2.before",
+      "candidate_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/2.candidate",
+      "mode": 384,
+      "status": "written_verified",
+      "candidate_lines": 79,
+      "after_sha256": "bea43b80fa6a830f7fd3a51e26092d787eb4d9f1d555870ff2b352747f30bb7f"
+    },
+    {
+      "path": "/Users/fu-121/mycc/.claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+      "before_sha256": "b043e6ac2d857be91b6f38eab1ba57821ec232a29fb27e9ba95c7c94b5be8b4f",
+      "candidate_sha256": "a95c4232bd032fb8316c25586550d4a93445a7a709547aced17136c4f9c29d74",
+      "before_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/3.before",
+      "candidate_backup": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/memory-final-before/3.candidate",
+      "mode": 384,
+      "status": "written_verified",
+      "candidate_lines": 37,
+      "after_sha256": "a95c4232bd032fb8316c25586550d4a93445a7a709547aced17136c4f9c29d74"
+    }
+  ]
+}

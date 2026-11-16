@@ -1,0 +1,70 @@
+{
+  "ok": true,
+  "free_bytes": 14207983616,
+  "total_bytes": 41882943488,
+  "db_bytes": 111222784,
+  "wal_bytes": 8252392,
+  "daily_peak": 6000,
+  "sample_devices": 50,
+  "maintenance_ok": true,
+  "checked_at_ms": 1794844636651,
+  "projections": [
+    {
+      "horizon_days": 30,
+      "raw_growth_days": 14,
+      "fact_growth_days": 30,
+      "seen_growth_days": 30,
+      "bytes_per_device": 2474208005,
+      "target_devices_bytes": 123710400250
+    },
+    {
+      "horizon_days": 90,
+      "raw_growth_days": 14,
+      "fact_growth_days": 90,
+      "seen_growth_days": 90,
+      "bytes_per_device": 5293728005,
+      "target_devices_bytes": 264686400250
+    },
+    {
+      "horizon_days": 180,
+      "raw_growth_days": 14,
+      "fact_growth_days": 90,
+      "seen_growth_days": 180,
+      "bytes_per_device": 6481728000,
+      "target_devices_bytes": 324086400000
+    }
+  ],
+  "ark_spool_reserve_bytes": 8589934592,
+  "horizon_days": 180,
+  "raw_growth_days": 14,
+  "fact_growth_days": 90,
+  "seen_growth_days": 180,
+  "daily_events_per_device": 6000,
+  "raw_retention_days": 14,
+  "fact_retention_days": 90,
+  "seen_retention": "persistent",
+  "backup_peak_copies": 5,
+  "legacy_backup_peak_copies": 4,
+  "seen_daily_growth_bytes_per_device": 13200000,
+  "reserve_bytes": 4294967296,
+  "wal_reserve_bytes": 536870912,
+  "budget_bytes": 786210816,
+  "bytes_per_device": 6481728000,
+  "storage_limit": 0,
+  "maintenance_limit": 50,
+  "storage_policy_revision": 0,
+  "target_devices": 50,
+  "target_devices_bytes": 324086400000,
+  "target_devices_fit": false,
+  "validated_device_limit": 14,
+  "validation_evidence": "ANALYTICS_MEMORY.md:14 synthetic subjects / 84000 events (legacy)",
+  "limiting_factors": [
+    "cloud_disk",
+    "not_validated"
+  ],
+  "max_enabled_devices": 0,
+  "twenty_devices_bytes": 129634560000,
+  "twenty_devices_fit": false,
+  "model": "20261116-v3-180d-migration-peak",
+  "sample_warning": null
+}

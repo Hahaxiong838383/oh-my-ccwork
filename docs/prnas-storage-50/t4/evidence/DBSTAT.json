@@ -1,0 +1,427 @@
+{
+  "source_bytes": 44871368704,
+  "page_size": 4096,
+  "page_count": 10954924,
+  "freelist_count": 0,
+  "objects": [
+    {
+      "name": "sqlite_schema",
+      "bytes": 12288,
+      "pages": 3,
+      "payload_bytes": 7216
+    },
+    {
+      "name": "analytics_batch",
+      "bytes": 5074944,
+      "pages": 1239,
+      "payload_bytes": 4662000
+    },
+    {
+      "name": "sqlite_autoindex_analytics_batch_1",
+      "bytes": 962560,
+      "pages": 235,
+      "payload_bytes": 776872
+    },
+    {
+      "name": "analytics_day",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_day_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_device_day",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_device_day_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_diagnostic_usage",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_diagnostic_usage_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_dirty_day",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_dirty_day_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_event",
+      "bytes": 1449082880,
+      "pages": 1402356,
+      "payload_bytes": -23600194
+    },
+    {
+      "name": "sqlite_autoindex_analytics_event_1",
+      "bytes": 514633728,
+      "pages": 125643,
+      "payload_bytes": 453567105
+    },
+    {
+      "name": "analytics_event_seen",
+      "bytes": 1541844992,
+      "pages": 1425003,
+      "payload_bytes": 1267032704
+    },
+    {
+      "name": "sqlite_autoindex_analytics_event_seen_1",
+      "bytes": -34512896,
+      "pages": 1040150,
+      "payload_bytes": -577388798
+    },
+    {
+      "name": "analytics_meta",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_meta_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_rollup_fact",
+      "bytes": -1336926208,
+      "pages": 3867906,
+      "payload_bytes": -1843869184
+    },
+    {
+      "name": "sqlite_autoindex_analytics_rollup_fact_1",
+      "bytes": 1536987136,
+      "pages": 2472393,
+      "payload_bytes": 311643906
+    },
+    {
+      "name": "analytics_rollup_retry",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_rollup_retry_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_settlement",
+      "bytes": 500088832,
+      "pages": 122092,
+      "payload_bytes": 462000000
+    },
+    {
+      "name": "sqlite_autoindex_analytics_settlement_1",
+      "bytes": 506880000,
+      "pages": 123750,
+      "payload_bytes": 436767105
+    },
+    {
+      "name": "analytics_tier_day",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_tier_day_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_tier_event",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 391
+    },
+    {
+      "name": "sqlite_autoindex_analytics_tier_event_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 151
+    },
+    {
+      "name": "analytics_transport",
+      "bytes": 1191936,
+      "pages": 291,
+      "payload_bytes": 1071000
+    },
+    {
+      "name": "sqlite_autoindex_analytics_transport_1",
+      "bytes": 962560,
+      "pages": 235,
+      "payload_bytes": 776872
+    },
+    {
+      "name": "analytics_transport_day",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "sqlite_autoindex_analytics_transport_day_1",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 0
+    },
+    {
+      "name": "analytics_ark_device_event_received",
+      "bytes": 430645248,
+      "pages": 105138,
+      "payload_bytes": 415767105
+    },
+    {
+      "name": "analytics_ark_device_received",
+      "bytes": 374349824,
+      "pages": 91394,
+      "payload_bytes": 356967105
+    },
+    {
+      "name": "analytics_batch_received",
+      "bytes": 299008,
+      "pages": 73,
+      "payload_bytes": 230872
+    },
+    {
+      "name": "analytics_batch_request",
+      "bytes": 1290240,
+      "pages": 315,
+      "payload_bytes": 1217872
+    },
+    {
+      "name": "analytics_event_client_received",
+      "bytes": 220749824,
+      "pages": 53894,
+      "payload_bytes": 205767105
+    },
+    {
+      "name": "analytics_event_days",
+      "bytes": 126603264,
+      "pages": 30909,
+      "payload_bytes": 113367105
+    },
+    {
+      "name": "analytics_event_received",
+      "bytes": 63283200,
+      "pages": 15450,
+      "payload_bytes": 50367105
+    },
+    {
+      "name": "analytics_settlement_id",
+      "bytes": 313069568,
+      "pages": 76433,
+      "payload_bytes": 298167105
+    },
+    {
+      "name": "analytics_tier_device_received",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 151
+    },
+    {
+      "name": "analytics_tier_expiry",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 40
+    },
+    {
+      "name": "analytics_tier_id_received",
+      "bytes": 4096,
+      "pages": 1,
+      "payload_bytes": 33
+    }
+  ],
+  "schema": [
+    {
+      "name": "analytics_batch",
+      "table": "analytics_batch"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_batch_1",
+      "table": "analytics_batch"
+    },
+    {
+      "name": "analytics_day",
+      "table": "analytics_day"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_day_1",
+      "table": "analytics_day"
+    },
+    {
+      "name": "analytics_device_day",
+      "table": "analytics_device_day"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_device_day_1",
+      "table": "analytics_device_day"
+    },
+    {
+      "name": "analytics_diagnostic_usage",
+      "table": "analytics_diagnostic_usage"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_diagnostic_usage_1",
+      "table": "analytics_diagnostic_usage"
+    },
+    {
+      "name": "analytics_dirty_day",
+      "table": "analytics_dirty_day"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_dirty_day_1",
+      "table": "analytics_dirty_day"
+    },
+    {
+      "name": "analytics_event",
+      "table": "analytics_event"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_event_1",
+      "table": "analytics_event"
+    },
+    {
+      "name": "analytics_event_seen",
+      "table": "analytics_event_seen"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_event_seen_1",
+      "table": "analytics_event_seen"
+    },
+    {
+      "name": "analytics_meta",
+      "table": "analytics_meta"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_meta_1",
+      "table": "analytics_meta"
+    },
+    {
+      "name": "analytics_rollup_fact",
+      "table": "analytics_rollup_fact"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_rollup_fact_1",
+      "table": "analytics_rollup_fact"
+    },
+    {
+      "name": "analytics_rollup_retry",
+      "table": "analytics_rollup_retry"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_rollup_retry_1",
+      "table": "analytics_rollup_retry"
+    },
+    {
+      "name": "analytics_settlement",
+      "table": "analytics_settlement"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_settlement_1",
+      "table": "analytics_settlement"
+    },
+    {
+      "name": "analytics_tier_day",
+      "table": "analytics_tier_day"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_tier_day_1",
+      "table": "analytics_tier_day"
+    },
+    {
+      "name": "analytics_tier_event",
+      "table": "analytics_tier_event"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_tier_event_1",
+      "table": "analytics_tier_event"
+    },
+    {
+      "name": "analytics_transport",
+      "table": "analytics_transport"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_transport_1",
+      "table": "analytics_transport"
+    },
+    {
+      "name": "analytics_transport_day",
+      "table": "analytics_transport_day"
+    },
+    {
+      "name": "sqlite_autoindex_analytics_transport_day_1",
+      "table": "analytics_transport_day"
+    },
+    {
+      "name": "analytics_ark_device_event_received",
+      "table": "analytics_event"
+    },
+    {
+      "name": "analytics_ark_device_received",
+      "table": "analytics_event"
+    },
+    {
+      "name": "analytics_batch_received",
+      "table": "analytics_batch"
+    },
+    {
+      "name": "analytics_batch_request",
+      "table": "analytics_batch"
+    },
+    {
+      "name": "analytics_event_client_received",
+      "table": "analytics_event"
+    },
+    {
+      "name": "analytics_event_days",
+      "table": "analytics_event"
+    },
+    {
+      "name": "analytics_event_received",
+      "table": "analytics_event"
+    },
+    {
+      "name": "analytics_settlement_id",
+      "table": "analytics_settlement"
+    },
+    {
+      "name": "analytics_tier_device_received",
+      "table": "analytics_tier_event"
+    },
+    {
+      "name": "analytics_tier_expiry",
+      "table": "analytics_tier_event"
+    },
+    {
+      "name": "analytics_tier_id_received",
+      "table": "analytics_tier_event"
+    }
+  ],
+  "elapsed_s": 961.8772857226431
+}

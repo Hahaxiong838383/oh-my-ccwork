@@ -1,0 +1,113 @@
+{
+  "review": "GROK-d6b875db",
+  "reviewed_at": "2026-11-17",
+  "verdict": "PASS_ISOLATED",
+  "blockers": [],
+  "production_scale": false,
+  "scope": "4663a60996ca2a4f44631d36e16a36736a9a25f9..d6b875db81d5f88a620db6fd13c0839fd1471d36 plus FINAL-10ROW-RAW-POLL2.json only",
+  "head": "d6b875db81d5f88a620db6fd13c0839fd1471d36",
+  "base": "4663a60996ca2a4f44631d36e16a36736a9a25f9",
+  "commit_subject": "fix(p003): cap cold maintenance transactions and preserve upload latency",
+  "files_changed": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-maintenance.test.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-t4-benchmark.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-t4.test.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts"
+  ],
+  "working_tree": "clean for the audited analytics sources",
+  "code_or_production_modified": false,
+  "capacity_ts_diff_empty": true,
+  "policy_ts_diff_empty": true,
+  "capacity_constants_at_head": {
+    "raw_bytes": 2304,
+    "fact_bytes": 1024,
+    "seen_bytes": 400,
+    "backup_peak_copies": 5,
+    "horizon_days": 180,
+    "raw_retention_days": 14,
+    "model": "20261116-v3-180d-migration-peak"
+  },
+  "derived_maintenance_limit_at_daily_6000": {
+    "before_formula": "floor(60*100*288/2*0.7/6000)=100",
+    "after_formula": "floor(300*10*288/2*0.7/6000)=50",
+    "exact": 50,
+    "test_assertion": "maintenance_limit>=50 and max_enabled_devices===14 and validated_device_limit===14",
+    "classified_as_blocker": false,
+    "note": "capacity.ts text is unchanged; PRUNE_CYCLE import changes the computed ceiling. Default verified profile remains 14 and is the binding admission cap in the t4 test sample."
+  },
+  "prune_cycle": {"maxChunks": 300, "chunk": 10, "batchChunk": 1, "maxMs": 30000, "pauseMs": 10},
+  "rollup_budget": {
+    "default_max_run_ms": 150000,
+    "max_run_ms_cap": 150000,
+    "default_max_day_ms": 30000,
+    "max_day_ms_cap": 30000,
+    "parent_spawn_sync_timeout_ms": 240000,
+    "composed_cap_ms": 210000,
+    "composition": "prune maxMs 30000 + rollup maxRunMs 150000 + one in-flight day maxDayMs 30000",
+    "parent_file": "apps/server/scripts/analytics-maintenance.mjs",
+    "parent_unchanged_in_this_range": true,
+    "checks_are_between_units": true
+  },
+  "tests": {
+    "node": "v24.19.0",
+    "path_prefix": "/Users/fu-121/.local/node-v24/bin",
+    "commands": [
+      "npm run test:analytics-t4",
+      "node --experimental-sqlite --import tsx scripts/analytics-maintenance.test.ts"
+    ],
+    "cwd": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server",
+    "analytics_t4_exit": 0,
+    "maintenance_exit": 0,
+    "pass_lines": [
+      "PASS concurrent ingestion, no lost dirty day, atomic stale-summary rejection and retry",
+      "PASS multi-chunk TTL, finite budget, exact retained rows, permanent dedup",
+      "PASS 30/90/180 model, 5 transition copies, 8GiB spool, reserve, verified scale unchanged",
+      "PASS whole-run budget stops between atomic days, preserves remaining dirty and resumes",
+      "analytics maintenance: PASS (isolated budget failures, healthy-day continuation, independent TTL despite partial/fatal rollup, honest watermarks)"
+    ]
+  },
+  "cloud_artifact": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/FINAL-10ROW-RAW-POLL2.json",
+  "cloud": {
+    "outer_exit": 0,
+    "stderr_empty": true,
+    "stdout_keys": ["unit", "log", "result"],
+    "log_json_equals_result": true,
+    "synthetic": true,
+    "run_id": "final-10row",
+    "host": "linux",
+    "node": "v24.19.0",
+    "before": {
+      "analytics_rollup_fact": 1194866,
+      "analytics_event": 294833,
+      "analytics_event_seen": 300033,
+      "analytics_settlement": 289633
+    },
+    "rows": {"facts": 1191966, "raw": 291883, "seen": 300083, "settlements": 229683},
+    "deltas": {"seen": 50, "facts": -2900, "raw": -2950, "settlements": -59950},
+    "identity": {
+      "seen": "+50",
+      "facts": "+100-3000=-2900",
+      "raw": "+50-3000=-2950",
+      "settlements": "+50-60000=-59950",
+      "holds": true
+    },
+    "acks": {"count": 50, "accepted": 50, "code_200": 50, "errors": {}, "p95_ms": 253.0589179999988, "p99_ms": 408.7477199999994, "max_ms": 408.7477199999994},
+    "prune": {"facts": 3000, "events": 3000, "batches": 300, "cycles": 1, "elapsed_ms": 7424.408242000001, "p95_transaction_ms": 21.6146490000001, "max_transaction_ms": 221.1914859999997},
+    "rollup": {"attempted_days": 2, "rebuilt_days": 2, "failed_days": [], "remaining_dirty_days": 0, "partial": false, "rollup_ms": 32836.051588, "write_ms": [10.559320000000298, 6.865525000001071, 1.4669569999969099], "write_max_ms": 10.559320000000298},
+    "quiet": {"attempted_days": 0, "rebuilt_days": 0, "remaining_dirty_days": 0, "partial": false},
+    "maintenance_elapsed_ms": 40302.640176999994,
+    "database_bytes": 994037760,
+    "rss_bytes": 231976960,
+    "unit": "ExecMainStatus=0; MemoryCurrent=[not set]; CPUUsageNSec=[not set]; ActiveState=inactive",
+    "cgroup_cpu_and_memory_measured": false,
+    "stated_envelope": "0.5 CPU / 768MiB; not a T5 50-device 24h run",
+    "percentile_samples_present": false
+  },
+  "not_redone": ["whole-repo regression", "UI", "backup", "prior 100-row failure", "prior 8bc run", "Grok366 deferred-snapshot/dirty/UI/backup evidence", "live production"],
+  "limits": [
+    "Percentiles are the artifact's stored aggregates; the 50 raw latencies are not in the file.",
+    "Settlement deletion of 60000 is the before/rows identity with 50 accepts, not a separate prune counter.",
+    "210s is the sum of the three configured caps. Checks run between chunks and days, so one in-flight unit can pass the nominal edge. The 240000ms spawnSync timeout is unchanged and remains the parent kill.",
+    "This file does not record the cgroup CPU quota or memory cap."
+  ]
+}
