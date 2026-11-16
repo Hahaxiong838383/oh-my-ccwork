@@ -1,0 +1,7 @@
+# Install as p003-analytics-backup.service.d/archive.conf ONLY in T6.
+# Stop the existing timer while switching; do not run a second backup service.
+[Service]
+EnvironmentFile=/opt/p003/server/.env.archive
+ExecStart=
+ExecStart=/bin/bash /opt/p003/server/scripts/analytics-archive-maintenance.sh
+Restart=no

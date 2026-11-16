@@ -15,13 +15,17 @@ function main() {
     result = JSON.parse(run.stdout.trim());
   } else if (mode === 'backup') {
     const destination = process.env.ANALYTICS_BACKUP_DIR || resolve('./backups/analytics-daily');
-    const run = spawnSync('/usr/bin/python3', ['./scripts/analytics-backup.py', '--database', database, '--destination', destination, '--keep', '2'], { encoding: 'utf8', timeout: 90000, maxBuffer: 65536 });
+    const archiveRoot=process.env.ANALYTICS_ARCHIVE_ROOT;
+    if(archiveRoot&&!isAbsolute(archiveRoot))throw new Error('INVALID_ARCHIVE_ROOT');
+    const args=archiveRoot?['./scripts/storage-backup-job.py','--database',database,'--root',archiveRoot]:['./scripts/analytics-backup.py', '--database', database, '--destination', destination, '--keep', '2'];
+    // Inner work budget <=2h. This bound includes process shutdown margin, never HTTP.
+    const run = spawnSync('/usr/bin/python3', args, { encoding: 'utf8', timeout: 7220000, maxBuffer: 1048576, killSignal:'SIGKILL' });
     if (run.status !== 0) throw new Error('BACKUP_FAILED');
     result = JSON.parse(run.stdout.trim());
     const db = new DatabaseSync(database);
     try {
       configureAnalyticsWriter(db);
-      db.prepare('INSERT INTO analytics_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('last_backup_success_ms', String(Date.now()));
+      if(!archiveRoot||result.state==='published')db.prepare('INSERT INTO analytics_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('last_backup_success_ms', String(Date.now()));
     } finally { db.close(); }
   } else throw new Error('INVALID_MAINTENANCE_MODE');
   const partial = mode === 'rollup' && result.partial === true;

@@ -35,11 +35,15 @@ def sync_dir(path):
         os.close(fd)
 
 
-def sha(path):
+def sha(path, deadline=None, on_progress=None):
     h = hashlib.sha256()
+    done=0
     with path.open('rb') as f:
         for block in iter(lambda: f.read(1024 * 1024), b''):
+            if deadline is not None and time.monotonic()>=deadline:raise TimeoutError('archive_publish_timeout')
             h.update(block)
+            done+=len(block)
+            if on_progress:on_progress({'phase':'publish_checksum','bytes_done':done,'bytes_total':path.stat().st_size})
     return h.hexdigest()
 
 
@@ -118,7 +122,7 @@ class Spool:
 
     def list(self):
         with self.lock(shared=True):
-            return [self.manifest(p.name) for p in sorted((self.root / 'published').iterdir()) if ID.fullmatch(p.name)]
+            return [self.manifest(p.name) for p in sorted((self.root / 'published').iterdir()) if ID.fullmatch(p.name) and (p/'payload.bin').exists()]
 
     def publish(self, source, kind, record_count, source_range):
         source = Path(source)
@@ -159,6 +163,49 @@ class Spool:
                 f.seek(offset)
                 shutil.copyfileobj(f, output)
             return m['bytes'] - offset
+
+    def publish_prepared(self, source, manifest, deadline=None, on_progress=None):
+        """Adopt a closed same-volume backup, recovering all rename crash points.
+
+        Caller persists this exact manifest before entering and owns its job lock.
+        No full payload copy: live DB + previous backup + building backup.
+        """
+        m = validate(manifest); source = Path(source)
+        with self.lock():
+            final = self.package(m['archive_id'])
+            if final.exists():
+                if self.manifest(m['archive_id']) != m: raise ValueError('prepared_manifest_changed')
+                payload=final/'payload.bin'
+                if self.regular(payload).st_size!=m['bytes'] or sha(payload,deadline,on_progress)!=m['sha256']:raise ValueError('prepared_payload_corrupt')
+                for p in [payload,final/'manifest.json']:
+                    self.regular(p)
+                    with p.open('rb') as f:os.fsync(f.fileno())
+                sync_dir(final);sync_dir(self.root/'pending');sync_dir(self.root/'published')
+                return m
+            stage = self.root/'pending'/m['archive_id']
+            if stage.is_symlink(): raise ValueError('stage_symlink')
+            stage.mkdir(exist_ok=True,mode=0o700)
+            payload = stage/'payload.bin'
+            if not payload.exists():
+                self.regular(source)
+                os.rename(source,payload)
+                sync_dir(source.parent);sync_dir(stage)
+            if self.regular(payload).st_size != m['bytes'] or sha(payload,deadline,on_progress) != m['sha256']:
+                raise ValueError('prepared_payload_corrupt')
+            with payload.open('rb') as f: os.fsync(f.fileno())
+            payload.chmod(0o400)
+            write_json(stage/'manifest.json',m)
+            os.rename(stage,final);sync_dir(self.root/'pending');sync_dir(self.root/'published')
+            return m
+
+    def receipt(self, m):
+        p=self.root/'receipts'/(m['archive_id']+'.json')
+        if not p.exists(): return None
+        self.regular(p);r=json.loads(p.read_text())
+        if any(r.get(k)!=m[k] for k in ['archive_id','sha256','bytes','record_count']):
+            raise ValueError('stored_receipt_mismatch')
+        if type(r.get('verified_at_ms')) is not int or r['verified_at_ms']<0: raise ValueError('invalid_receipt_time')
+        return r
 
     def ack(self, archive_id, digest, size, record_count):
         with self.lock():

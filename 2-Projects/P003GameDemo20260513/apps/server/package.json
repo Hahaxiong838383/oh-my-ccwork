@@ -36,7 +36,8 @@
     "test:economy-shadow": "node --experimental-sqlite --import tsx scripts/economy-shadow.test.ts && node --experimental-sqlite --import tsx scripts/economy-shadow-storage.test.ts",
     "test:analytics-v375": "node --experimental-sqlite --import tsx scripts/analytics-gzip.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-contract.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-settings.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-retention.test.ts && node --experimental-sqlite --import tsx scripts/analytics-v375-http.test.ts",
     "test:storage": "node --experimental-sqlite --import tsx scripts/storage-policy.test.ts && node --experimental-sqlite --import tsx scripts/storage-http.test.ts && node --experimental-sqlite --import tsx scripts/storage-concurrency.test.ts && node --experimental-sqlite --import tsx scripts/storage-legacy-scope.test.ts && node --experimental-sqlite --import tsx scripts/storage-analytics-boundaries.test.ts",
-    "test:archive": "python3 scripts/storage-archive.test.py && node scripts/storage-nas-verify.test.mjs"
+    "test:archive": "python3 scripts/storage-archive.test.py && node scripts/storage-nas-verify.test.mjs",
+    "test:archive-complete": "npm run test:archive && python3 scripts/storage-lock.test.py && python3 scripts/storage-backup-job.test.py && python3 scripts/analytics-backup.test.py && node scripts/storage-nas-retention.test.mjs && node scripts/storage-maintenance-integration.test.mjs"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

@@ -6,6 +6,34 @@ spec = importlib.util.spec_from_file_location('analytics_backup', MODULE)
 backup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(backup)
 class OnlineBackupTests(unittest.TestCase):
+    def test_hash_timeout_removes_only_own_partial_and_keeps_previous(self):
+        with tempfile.TemporaryDirectory() as d:
+            r=Path(d)
+            with sqlite3.connect(r/'db') as db:db.execute('CREATE TABLE event(id TEXT)')
+            old=backup.create_backup(r/'db',r/'backups')
+            with patch.object(backup,'_sha',side_effect=TimeoutError('deadline')):
+                with self.assertRaises(TimeoutError):backup.create_backup(r/'db',r/'backups')
+            self.assertTrue(Path(old['backup_path']).exists())
+            self.assertFalse(list((r/'backups').glob('*.partial')))
+
+    def test_pinned_legacy_backup_survives_keep2(self):
+        with tempfile.TemporaryDirectory() as d:
+            r=Path(d)
+            with sqlite3.connect(r/'db') as db:db.execute('CREATE TABLE event(id TEXT)')
+            old=backup.create_backup(r/'db',r/'backups');Path(old['backup_path']).with_suffix('.pin').write_text('awaiting offsite')
+            for _ in range(3):backup.create_backup(r/'db',r/'backups')
+            self.assertTrue(Path(old['backup_path']).exists())
+    def test_dynamic_budget_and_deadline_cover_integrity_hash_and_keep_last(self):
+        self.assertTrue(hasattr(backup,'budget_seconds'),'dynamic backup budget missing')
+        self.assertGreater(backup.budget_seconds(48*1024**3),120)
+        self.assertLessEqual(backup.budget_seconds(256*1024**3),7200)
+        with tempfile.TemporaryDirectory() as d:
+            r=Path(d)
+            with sqlite3.connect(r/'db') as db:db.execute('CREATE TABLE event(id TEXT)')
+            old=backup.create_backup(r/'db',r/'backups')
+            with self.assertRaises(TimeoutError):backup.create_backup(r/'db',r/'backups',timeout_seconds=0)
+            self.assertTrue(Path(old['backup_path']).exists())
+            self.assertEqual(len(list((r/'backups').glob('analytics-*.sqlite3'))),1)
     def test_live_wal_restore_preserves_committed_events_and_dedupe(self):
         with tempfile.TemporaryDirectory() as d:
             r=Path(d); db=sqlite3.connect(r/'analytics.db'); db.execute('PRAGMA journal_mode=WAL'); db.executescript('CREATE TABLE event(id TEXT PRIMARY KEY); CREATE TABLE seen(id TEXT PRIMARY KEY);'); db.execute("INSERT INTO event VALUES ('accepted-1')"); db.execute("INSERT INTO seen VALUES ('accepted-1')"); db.commit()

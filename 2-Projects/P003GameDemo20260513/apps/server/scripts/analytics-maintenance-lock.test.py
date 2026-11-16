@@ -26,6 +26,11 @@ with tempfile.TemporaryDirectory(prefix="analytics-maintenance-lock-") as tempor
         skipped = json.loads(rollup.stdout)
         assert skipped == {"ok": True, "mode": "rollup", "skipped": True,
                            "reason": "maintenance_lock_busy"}, skipped
+        # Backup must enter its own lock even while rollup holds the maintenance lock.
+        independent = subprocess.run(["/bin/bash", str(wrapper), "backup"], env={**env,"ANALYTICS_NODE_PATH":"/usr/bin/true","ANALYTICS_ENV_FILE":"ignored"},capture_output=True,text=True,timeout=5)
+        assert independent.returncode == 0, independent.stderr
+    with (root / "data/analytics-backup.lock").open("w") as holder:
+        fcntl.flock(holder.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
         started = time.monotonic()
         backup = subprocess.run(["/bin/bash", str(wrapper), "backup"], env=env,
                                 capture_output=True, text=True, timeout=25)

@@ -8,16 +8,19 @@ case "$analytics_mode" in
   *) echo '{"ok":false,"reason":"invalid_maintenance_mode"}'; exit 1 ;;
 esac
 cd "$analytics_server_root"
-exec 9>./data/analytics-maintenance.lock
 if [[ "$analytics_mode" == backup ]]; then
-  # The service allows 120 seconds: wait at most 20, then Python backup at most 90.
+  # Backup API has its own lock; a long backup must not stall five-minute rollup.
+  exec 9>./data/analytics-backup.lock
   if ! /usr/bin/flock -w 20 9; then
     echo '{"ok":false,"mode":"backup","skipped":true,"reason":"maintenance_lock_timeout"}'
     exit 1
   fi
-elif ! /usr/bin/flock -n 9; then
+else
+  exec 9>./data/analytics-maintenance.lock
+  if ! /usr/bin/flock -n 9; then
   echo '{"ok":true,"mode":"rollup","skipped":true,"reason":"maintenance_lock_busy"}'
   exit 0
+  fi
 fi
 # Read only the runtime path; never source a protected env file as shell code.
 analytics_node="${ANALYTICS_NODE_PATH:-}"
