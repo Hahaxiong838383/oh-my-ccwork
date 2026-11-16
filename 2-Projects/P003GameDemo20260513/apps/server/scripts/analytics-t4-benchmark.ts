@@ -34,11 +34,13 @@ if(mode==='prepare'){
  const exec=s.db.exec.bind(s.db),prepare=s.db.prepare.bind(s.db);
  s.db.exec=((sql:string)=>{if(sql==='BEGIN IMMEDIATE')began=performance.now();const result=exec(sql);if(sql==='COMMIT'||sql==='ROLLBACK'){if(began!==undefined)tx.push(performance.now()-began);began=undefined;}return result;}) as any;
  s.db.prepare=((sql:string)=>{const st=prepare(sql);if(sql.startsWith('DELETE FROM analytics_device_day WHERE dimension=? AND day=?')){const run=st.run.bind(st);st.run=((...args:any[])=>{began=performance.now();return run(...args);}) as any;}return st;}) as any;
- const start=performance.now(),scanStart=performance.now(),r=rollup.rollupDirtyDaysWithStatus(s,now,2);const scanMs=performance.now()-scanStart;
- writes.push(...tx);tx.length=0;
+ const start=performance.now();
  let facts=0,events=0,batches=0,cycles=0,ms=0;
  if(rollup.pruneAnalyticsCycle){for(;cycles<1;cycles++){const p=await rollup.pruneAnalyticsCycle(s,now);facts+=p.facts;events+=p.events;batches+=p.batches;ms+=p.elapsed_ms;if(!p.budget_exhausted){cycles++;break;}}}
  else {const t=performance.now(),p=rollup.pruneAnalytics(s,now,1000);events=p.events;batches=p.batches;ms=performance.now()-t;cycles=1;facts=1000;}
+ const pruneTransactions=[...tx];tx.length=0;
+ const scanStart=performance.now(),r=rollup.rollupDirtyDaysWithStatus(s,now,2);const scanMs=performance.now()-scanStart;
+ writes.push(...tx);tx.length=0;tx.push(...pruneTransactions);
  // After the concurrent requests stop, an explicit quiet retry must converge without losing facts.
  s.close();console.log(JSON.stringify({rollup:r,rollup_ms:scanMs,rollup_write_ms:writes,prune:{facts,events,batches,cycles,elapsed_ms:ms,max_transaction_ms:Math.max(0,...tx),p95_transaction_ms:[...tx].sort((a,b)=>a-b)[Math.floor(tx.length*.95)]},elapsed_ms:performance.now()-start}));
 }else if(mode==='http'){

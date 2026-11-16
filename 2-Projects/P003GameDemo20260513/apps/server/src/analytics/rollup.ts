@@ -1,7 +1,7 @@
 import { AnalyticsStore,AnalyticsRollupBudgetExceeded,cstDay,DAY_MS } from './store.js';
 import {pruneAnalyticsTiers} from './tiers.js';
 type Fact={device_key:string;event_name:string;session_digest:string;clock_suspicious:number;semantic_json:string;received_at_ms:number};
-export type RollupBudget={maxFactsPerDay:number;maxDayMs:number};
+export type RollupBudget={maxFactsPerDay:number;maxDayMs:number;maxRunMs?:number};
 export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"|"concurrent_write"}[];remaining_dirty_days:number;partial:boolean};
 type Counts={names:Record<string,number>;failures:Map<string,number>;suspicious:number;gm:number;facts:number;last:number};
 const newCounts=():Counts=>({names:{},failures:new Map(),suspicious:0,gm:0,facts:0,last:0});
@@ -43,9 +43,14 @@ export function rollupDirtyDays(store:AnalyticsStore,now=Date.now(),limit=16,bud
 }
 export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),limit=16,budget:RollupBudget={maxFactsPerDay:1_000_000,maxDayMs:30_000}):RollupStatus{
   if(!Number.isInteger(budget.maxFactsPerDay)||budget.maxFactsPerDay<1||budget.maxFactsPerDay>1_000_000||!Number.isInteger(budget.maxDayMs)||budget.maxDayMs<1||budget.maxDayMs>30_000)throw new Error('INVALID_ROLLUP_BUDGET');
+  const runStarted=performance.now(),runBudget=budget.maxRunMs??180_000;
+  if(!Number.isInteger(runBudget)||runBudget<1||runBudget>180_000)throw new Error('INVALID_ROLLUP_BUDGET');
   const dirty=store.db.prepare('SELECT d.dimension,d.day FROM analytics_dirty_day d LEFT JOIN analytics_rollup_retry r ON r.dimension=d.dimension AND r.day=d.day ORDER BY coalesce(r.last_attempt_ms,0),d.day,d.dimension LIMIT ?').all(Math.max(1,Math.min(180,limit))) as {dimension:string;day:string}[];
-  const status:RollupStatus={attempted_days:dirty.length,rebuilt_days:0,failed_days:[],remaining_dirty_days:0,partial:false};
+  const status:RollupStatus={attempted_days:0,rebuilt_days:0,failed_days:[],remaining_dirty_days:0,partial:false};
   for(const {dimension,day} of dirty){
+    // Stop between days: <=180s + one bounded 30s day, below the 240s wrapper.
+    if(performance.now()-runStarted>=runBudget)break;
+    status.attempted_days++;
     try{
       // DEFERRED snapshot: scanning facts does not reserve the writer. SQLite refuses
       // the upgrade if another connection commits, keeping dirty + prior summaries intact.
