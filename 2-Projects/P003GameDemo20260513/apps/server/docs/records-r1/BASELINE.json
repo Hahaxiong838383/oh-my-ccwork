@@ -1,0 +1,132 @@
+{
+  "sn": "BJP00326081002000031",
+  "at": "2026-11-16T18:35:35.345803+08:00",
+  "files": [
+    {
+      "path": "src/ark/answer.ts",
+      "production_sha256": "38a57bc670603164b249acb610738c7ea2eb1912664425c7ab2e8d1003c3fd9c",
+      "local_sha256": "801c005c4d3435aa95b7d7ab17d10b87f3cef41bb7063005d81590bc9df81c56",
+      "same": false,
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+    },
+    {
+      "path": "src/ark/context.ts",
+      "production_sha256": "3a24249ca01f083dacb2bd325c6c90105ef4fe78ff2ccd72ca64632a935c8b99",
+      "local_sha256": "f7113f2462e93a72e971971a52093077ca0aa6678c7c364d7336b899621c814c",
+      "same": false,
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+    },
+    {
+      "path": "src/ark/contracts.ts",
+      "production_sha256": "e031487cec7193f2b12e33827902361432f123ca928d38e50b41311559ccd15c",
+      "local_sha256": "6e4d7e2df287f5ed332162623507c63f0904fc96d052af793e700812372c9ffd",
+      "same": false,
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+    },
+    {
+      "path": "src/ark/dashboard.ts",
+      "production_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "local_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "same": true
+    },
+    {
+      "path": "src/ark/history.ts",
+      "production_sha256": "b477919e35370415b4bdeca701af8f629b85ab497bb881bd082980a5e8774e29",
+      "local_sha256": "76b75736878b1bd5dd9717d8649c27e17256affe541ea7ea5d39c70ba6e60a66",
+      "same": false,
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+    },
+    {
+      "path": "src/ark/http.ts",
+      "production_sha256": "c8f2fd630ea28a01cef71dc92f4723d354c4bd66b7943c747a074155c4d88a1a",
+      "local_sha256": "c8f2fd630ea28a01cef71dc92f4723d354c4bd66b7943c747a074155c4d88a1a",
+      "same": true
+    },
+    {
+      "path": "src/ark/identity.ts",
+      "production_sha256": "0aa12e50e1b7934546ae744b8a6df7eb443afb03813325c9d95b2e84c3f0a27e",
+      "local_sha256": "0aa12e50e1b7934546ae744b8a6df7eb443afb03813325c9d95b2e84c3f0a27e",
+      "same": true
+    },
+    {
+      "path": "src/ark/language.ts",
+      "production_sha256": "8a0227a10b1970397e637fc4aa5142f7e8ce110e4e6c35562758d498ea6234f1",
+      "local_sha256": null,
+      "same": false,
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+    },
+    {
+      "path": "src/ark/memory-policy.ts",
+      "production_sha256": "21e9425b368e8eba481f006849bea7a16589b4be2fee540834fdee6056fc308b",
+      "local_sha256": "b8900e1fed7e6e751161bbbf4803d912265b7353cb94b23d755a69838395b603",
+      "same": false,
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182"
+    },
+    {
+      "path": "src/ark/proxy.ts",
+      "production_sha256": "f52d71eb39046e77e76865ad643734a308bb1ee07cbad0028adfb77a4631352a",
+      "local_sha256": "f52d71eb39046e77e76865ad643734a308bb1ee07cbad0028adfb77a4631352a",
+      "same": true
+    },
+    {
+      "path": "src/ark/routes.ts",
+      "production_sha256": "4a741aefd50a885815505ac445911d70b27b41bfcf29d61534eacafae344b9e6",
+      "local_sha256": "4a741aefd50a885815505ac445911d70b27b41bfcf29d61534eacafae344b9e6",
+      "same": true
+    },
+    {
+      "path": "src/ark/runtime.ts",
+      "production_sha256": "73a32c1fe5197f6315aa8315b4ac8c8eb1fb9a938da2ed8383a904ee1878f270",
+      "local_sha256": "73a32c1fe5197f6315aa8315b4ac8c8eb1fb9a938da2ed8383a904ee1878f270",
+      "same": true
+    },
+    {
+      "path": "src/ark/service.ts",
+      "production_sha256": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+      "local_sha256": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+      "same": true
+    },
+    {
+      "path": "src/ark/store.ts",
+      "production_sha256": "08637691485c3450df2ec06f2f241e2f00f11eb11622b274cee4a945ef831f2a",
+      "local_sha256": "08637691485c3450df2ec06f2f241e2f00f11eb11622b274cee4a945ef831f2a",
+      "same": true
+    },
+    {
+      "path": "src/auth-jwt.ts",
+      "production_sha256": "621f9bee6f6886af691e7795473102fecc5b7b6c85ba67875cc8592d61fa67f7",
+      "local_sha256": "621f9bee6f6886af691e7795473102fecc5b7b6c85ba67875cc8592d61fa67f7",
+      "same": true
+    },
+    {
+      "path": "src/device-credential.ts",
+      "production_sha256": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038",
+      "local_sha256": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038",
+      "same": true
+    },
+    {
+      "path": "src/device-registry-store.ts",
+      "production_sha256": "eb5a64929b5d386da39034c722b759e201c374207f3d064d73e511d5b6d48a10",
+      "local_sha256": "eb5a64929b5d386da39034c722b759e201c374207f3d064d73e511d5b6d48a10",
+      "same": true
+    },
+    {
+      "path": "src/index.ts",
+      "production_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "local_sha256": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "same": true
+    },
+    {
+      "path": "src/routes/ark.ts",
+      "production_sha256": "e55ee9037b2b849d1e801e82a05dab5ced45e1f0d98a1c2ce9c60f922da7db7d",
+      "local_sha256": "e55ee9037b2b849d1e801e82a05dab5ced45e1f0d98a1c2ce9c60f922da7db7d",
+      "same": true
+    },
+    {
+      "path": "src/routes/telemetry.ts",
+      "production_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "local_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "same": true
+    }
+  ]
+}

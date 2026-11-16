@@ -18,7 +18,11 @@ export const snapshotSchema=z.object({schema_version:z.literal(1),snapshot_id:id
 export type ArkSnapshot=z.infer<typeof snapshotSchema>;
 export type ArkCurrent={snapshot:ArkSnapshot;received_at_ms:number};
 export const factSchema=z.object({value:count,occurred_at_ms:timestamp,received_at_ms:timestamp,content_version:id.nullable()}).strict();
-export const historySchema=z.object({ok:z.literal(true),status:z.enum(['available','unknown']),reason:z.enum(['none','no_trusted_events','query_limit']),wallets:z.object({family_coin:factSchema.nullable(),stardust:factSchema.nullable()}).strict(),inventory:z.object({'M-CARD-001':factSchema.nullable()}).strict()}).strict();
+// Observed records, not a complete settlement ledger or uncapped total device usage.
+export const dailyFactSchema=z.object({logical_day:daySchema,observed_at_ms:timestamp,received_at_ms:timestamp,coverage:z.literal('received_records'),
+ progress_seconds:z.number().int().min(0).max(86400).nullable(),
+ rewards:z.array(z.object({item_id:id,quantity:count}).strict()).max(32).nullable()}).strict();
+export const historySchema=z.object({ok:z.literal(true),status:z.enum(['available','unknown']),reason:z.enum(['none','no_trusted_events','query_limit']),wallets:z.object({family_coin:factSchema.nullable(),stardust:factSchema.nullable()}).strict(),inventory:z.object({'M-CARD-001':factSchema.nullable()}).strict(),daily:dailyFactSchema.nullable().optional()}).strict();
 export type ArkHistory=z.infer<typeof historySchema>;
 export const unknownHistory=(reason:ArkHistory['reason']='no_trusted_events'):ArkHistory=>({ok:true,status:'unknown',reason,wallets:{family_coin:null,stardust:null},inventory:{'M-CARD-001':null}});
 export const historyRequestSchema=z.object({subject:SN,account_id:z.string().min(1).max(128),epoch:z.number().int().min(1),not_before_ms:timestamp}).strict();
@@ -35,7 +39,7 @@ export const progressFactSchema=z.object({captured_at_ms:timestamp,received_at_m
  if(['claimed','day_complete','unknown'].includes(p.status)&&p.remaining_seconds!==null)c.addIssue({code:'custom',message:'invalid_remaining'});
  if(p.kind==='currency'&&p.item_id!=='C-FAMILY-001'||p.kind==='item'&&p.item_id!=='M-CARD-001'||['chest','unknown'].includes(p.kind)&&p.item_id!==null)c.addIssue({code:'custom',message:'invalid_item'});
 });
-export const resolvedFactsSchema=z.object({schema_version:z.literal(1),assets:z.object({family_coin:factSchema.nullable(),stardust:factSchema.nullable(),makeup_card:factSchema.nullable()}).strict(),progress:progressFactSchema.nullable()}).strict();
+export const resolvedFactsSchema=z.object({schema_version:z.literal(1),assets:z.object({family_coin:factSchema.nullable(),stardust:factSchema.nullable(),makeup_card:factSchema.nullable()}).strict(),progress:progressFactSchema.nullable(),daily:dailyFactSchema.nullable().optional()}).strict();
 export const wireFactsSchema=resolvedFactsSchema.extend({subject:SN});
 export type ArkFacts=z.infer<typeof resolvedFactsSchema>;
 export type ArkReadResult={prompt:string;facts_v1?:z.infer<typeof wireFactsSchema>};

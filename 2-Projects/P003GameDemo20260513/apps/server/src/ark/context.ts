@@ -12,7 +12,7 @@ function chooseAsset(current:ArkCurrent|null,value:number|null,historical:Fact|n
 export function resolveArkFacts(facts:{snapshot:ArkCurrent|null;history:ArkHistory|null},now=Date.now()):ArkFacts{
  const c=facts.snapshot,s=c?.snapshot,normal=s?.source_mode==='normal',h=facts.history?.status==='available'?facts.history:null;
  const fresh=!!c&&!!s&&normal&&now-c.received_at_ms>=0&&now-c.received_at_ms<=30000&&now-s.captured_at_ms>=-2000&&now-s.captured_at_ms<=30000&&s.logical_day===cstDay(now);
- return {schema_version:1,assets:{
+ return {schema_version:1,...((!s||normal)&&h?.daily&&h.daily.logical_day===cstDay(now)&&h.daily.observed_at_ms<=now&&h.daily.received_at_ms<=now?{daily:h.daily}:{}),assets:{
   family_coin:chooseAsset(normal?c:null,normal?s!.wallets.family_coin:null,h?.wallets.family_coin??null).fact,
   stardust:chooseAsset(normal?c:null,normal?s!.wallets.stardust:null,h?.wallets.stardust??null).fact,
   makeup_card:chooseAsset(normal?c:null,normal?s!.inventory['M-CARD-001']:null,h?.inventory['M-CARD-001']??null).fact},
@@ -33,6 +33,8 @@ export function formatArkFacts(facts:{snapshot:ArkCurrent|null;history:ArkHistor
  const current=facts.snapshot,s=current?.snapshot,normal=s?.source_mode==='normal';
  const fresh=resolveArkFacts(facts,now).progress!==null;
  const h=facts.history?.status==='available'?facts.history:null;
+ const daily=resolveArkFacts(facts,now).daily;
+ if(daily){lines.push(`今日已同步记录截至${time(daily.observed_at_ms)}，不是完整全天实时账本。`);if(daily.progress_seconds!==null)lines.push(`今日奖励进度已记录${daily.progress_seconds}秒；这是会封顶的进度计时，不能称全天总使用时长。`);if(daily.rewards){const labels:Record<string,string>={'C-FAMILY-001':'家族币','C-STARDUST-001':'星尘','M-CARD-001':'补勤卡','CHEST-COMMON-001':'普通宝箱'};lines.push('今日已收到的发奖记录（已按奖励实例去重，不代表全部到齐）：'+daily.rewards.filter(r=>labels[r.item_id]).map(r=>labels[r.item_id]+'='+r.quantity).join('，')+'；其他未命名道具种类='+daily.rewards.filter(r=>!labels[r.item_id]).length+'。');}}
  lines.push(asset('家族币余额',normal?current:null,normal?s!.wallets.family_coin:null,h?.wallets.family_coin??null));
  lines.push(asset('星尘余额',normal?current:null,normal?s!.wallets.stardust:null,h?.wallets.stardust??null));
  lines.push(asset('补勤卡库存',normal?current:null,normal?s!.inventory['M-CARD-001']:null,h?.inventory['M-CARD-001']??null));
@@ -43,7 +45,7 @@ export function formatArkFacts(facts:{snapshot:ArkCurrent|null;history:ArkHistor
    const r=s.progress.next_reward,kind=r.kind==='currency'?'家族币':r.kind==='chest'?'宝箱':r.kind==='item'?'补勤卡':'奖励类型未知';
    switch(r.status){
     case 'locked':lines.push(`${({running:'当前正在计时',paused:'计时已暂停',stopped:'计时已停止',unknown:'计时状态未知'})[s.progress.timer_state]}；下一奖励是${kind}；端侧给出的剩余有效专注约${Math.ceil(r.remaining_seconds!/60)}分钟（${r.remaining_seconds}秒）；停止/暂停/未知均不承诺到点自动到账。只引用此值，不按对话或墙钟流逝继续扣减。`);break;
-    case 'claimable':lines.push(`${kind}已可领取；当前可领取数量=${s.progress.claimable_count}。按设备奖励页面提示领取，未证明已到账；小可不能代领。`);break;
+    case 'claimable':lines.push(`${kind}已可领取；当前可领取数量=${s.progress.claimable_count}。点击读写台进度条上已点亮的奖励领取，未证明已到账；小可不能代领。`);break;
     case 'claimed':lines.push(`${kind}这一项已领取；没有下一项倒计时数据，不猜下一金币时间。`);break;
     case 'day_complete':lines.push('当天专注奖励已完成；不编造下一项奖励时间。');break;
     default:lines.push('进度未知；暂时查不到下一奖励剩余时间。');
