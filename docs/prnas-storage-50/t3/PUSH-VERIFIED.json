@@ -1,0 +1,10 @@
+{
+  "verified_at": "2026-11-16T23:03:57.792949+08:00",
+  "method": "independent git ls-remote after successful push",
+  "branch": "codex/p003-prnas-storage-50-20261116",
+  "verified_code_and_evidence_commit": "e02dc34124e661c38eabfacc6a75cdc9e5287557",
+  "runtime_candidate": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+  "rollback_tag": "rollback/p003-prnas-t3-pre-20261116",
+  "rollback_remote_sha": "ee876889647775f3c6c2bb540df7017f3571466f",
+  "this_file_is_followup_documentation_only": true
+}
