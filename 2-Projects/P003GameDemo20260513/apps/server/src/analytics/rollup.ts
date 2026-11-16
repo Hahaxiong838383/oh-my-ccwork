@@ -117,9 +117,9 @@ function pruneChunk(store:AnalyticsStore,now:number,chunk:number,batchChunk:numb
   });
 }
 
-// 12 × 500 facts / 5min = 1,728,000 facts/day; max 5 batches (<=1000
+// 60 × 100 facts / 5min = 1,728,000 facts/day; max 1 batch (<=200
 // settlements) per transaction. Pause permits waiting ingestion writers to run.
-export const PRUNE_CYCLE={maxChunks:12,chunk:500,batchChunk:5,maxMs:5000,pauseMs:10} as const;
+export const PRUNE_CYCLE={maxChunks:60,chunk:100,batchChunk:1,maxMs:10000,pauseMs:10} as const;
 export async function pruneAnalyticsCycle(store:AnalyticsStore,now=Date.now()){
  const start=performance.now(),result={events:0,batches:0,facts:0,chunks:0,elapsed_ms:0,max_transaction_ms:0,budget_exhausted:false};
  let empty=false;

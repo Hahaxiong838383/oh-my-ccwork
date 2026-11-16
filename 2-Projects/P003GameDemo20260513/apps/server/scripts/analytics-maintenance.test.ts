@@ -66,8 +66,8 @@ fact(retryDay,'retry-bad-1');fact(retryDay,'retry-bad-2');fact(futureHealthy,'fa
 assert.equal(rollupDirtyDays(store,now+2000,1,{maxFactsPerDay:1,maxDayMs:30000}),0);
 assert.equal(rollupDirtyDays(store,now+3000,1,{maxFactsPerDay:1,maxDayMs:30000}),1,'失败日不能独占每轮候选slot使后来日期饥饿');
 store.transaction(()=>{for(let i=0;i<1001;i++)expired('bounded-'+i);});
-run=cli();assert.equal(run.status,0,run.stderr);result=JSON.parse(run.stdout.trim());assert.equal(result.pruned.events,1001);assert.equal(result.pruned.batches,60);assert.equal(result.pruned.chunks,12);
-assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event').get()!.n,0,'短事务周期可清理多批raw，批结算另限每事务5批');
+run=cli();assert.equal(run.status,0,run.stderr);result=JSON.parse(run.stdout.trim());assert.equal(result.pruned.events,1001);assert.equal(result.pruned.batches,60);assert.equal(result.pruned.chunks,60);
+assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event').get()!.n,0,'短事务周期可清理多批raw，批结算另限每事务1批');
 assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_batch').get()!.n,941);
 assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_event_seen').get()!.n,1,'TTL不减少seen');
 expired('failure-probe');
