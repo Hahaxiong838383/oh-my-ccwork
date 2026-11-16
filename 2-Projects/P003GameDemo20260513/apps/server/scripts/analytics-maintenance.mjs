@@ -25,7 +25,7 @@ function main() {
     const db = new DatabaseSync(database);
     try {
       configureAnalyticsWriter(db);
-      if(!archiveRoot||result.state==='published')db.prepare('INSERT INTO analytics_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('last_backup_success_ms', String(Date.now()));
+      if(!archiveRoot||result.state==='published')db.prepare('INSERT INTO analytics_meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run('last_backup_success_ms', String(archiveRoot?result.manifest.created_at_ms:Date.now()));
     } finally { db.close(); }
   } else throw new Error('INVALID_MAINTENANCE_MODE');
   const partial = mode === 'rollup' && result.partial === true;

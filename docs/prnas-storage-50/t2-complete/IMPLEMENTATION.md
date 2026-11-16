@@ -12,3 +12,5 @@
 - 原容量四副本系数及archive_enabled=false保持；T4按实测副本与容量共同切换，T6才启用生产调度。
 
 90天夹具使用实际AnalyticsStore schema、50设备×6000事件/天；raw/settlement各420万、fact5400万、seen2700万，并保留所有二级索引。生成、备份、恢复在PRnas隔离卷进行，不将NAS性能当阿里云满载性能。最终规模和耗时见验收回执。
+
+补充修正：归档模式last_backup_success_ms采用manifest.created_at_ms，ready恢复不得把旧快照年龄归零。成熟夹具生成可在同schema/同规模下从完整提交行数续建，索引排序临时目录必须放NAS隔离卷（SQLITE_TMPDIR），不是128MiB容器tmpfs；这不改变实际备份校验128MiB缓存、两小时预算或50×6000×90行数。
