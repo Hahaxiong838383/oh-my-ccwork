@@ -1,0 +1,36 @@
+{
+  "result": "PASS_EVIDENCE_CONSISTENCY_NOT_ASR_FIX",
+  "checked_at": "2026-11-16T17:36:38.771588+08:00",
+  "brain_signings": 4,
+  "actual_unit": "voice-worker-rust",
+  "pid": "4183959",
+  "question_final_counts": {
+    "4d25ee8e": 1,
+    "ec176ee4": 1,
+    "1de9809b": 1,
+    "ca456e74": 0
+  },
+  "r4_second_connect_ms": 171,
+  "diagnostic_summaries": 0,
+  "source_units": {
+    "voice-worker-rust": {
+      "rows": 1127,
+      "bytes": 2352045,
+      "sha256": "e268d115c83f877d4b3e80d2de77ac6b94d6f76f7e1b4b8658a148bac44953cf",
+      "source_path": "/root/p003-v394-asr-review-20261116/voice-worker-rust.private.jsonl"
+    },
+    "p003-listening-worker": {
+      "rows": 8,
+      "bytes": 10600,
+      "sha256": "1bdc1d0d306b99392d0eacd9c87ce9741cd9de3619718f736d0b0ce3f646022d",
+      "source_path": "/root/p003-v394-asr-review-20261116/p003-listening-worker.private.jsonl"
+    },
+    "p003-search-worker": {
+      "rows": 8,
+      "bytes": 10536,
+      "sha256": "64db1c0b8a8fc3738254ac9cad281bc4fd57bc13795fdc2088a1acdb20e4fc62",
+      "source_path": "/root/p003-v394-asr-review-20261116/p003-search-worker.private.jsonl"
+    }
+  },
+  "runtime_change_this_turn": false
+}

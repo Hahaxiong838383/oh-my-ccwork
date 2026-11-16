@@ -1,0 +1,90 @@
+{
+  "reviewer": "Grok 4.7",
+  "reviewer_vendor": "xAI",
+  "identity_basis": "session system instruction self-identifies the model as Grok 4.7 released by xAI; no separate runtime model fingerprint was available",
+  "reviewed_at": "2026-11-16",
+  "mode": "read_only_code_and_contract",
+  "actions_not_taken": ["PRnas_T3", "deploy", "production_or_flag_or_device_change", "source_edit", "shared_memory_edit", "matrix_rerun", "new_llm_or_service", "raw_audio_or_transcript_export"],
+  "source": {
+    "behavior_commit": "1cc55436b79cb6ff9617ad4d5421b1d17525f3aa",
+    "parent": "77c33308082941197897cc3258b1592d0fabccac",
+    "head": "a64855b98a516a9b2ed25cb67ec30eae060d3e60",
+    "rust_worker_diff_since_behavior_commit": false,
+    "job_rs_in_behavior_commit": false
+  },
+  "verdict": {
+    "root_cause_unique": false,
+    "asr_item_closed": false,
+    "diagnostics_over_engineered": false,
+    "behavior_change_in_diagnostic_commit": false,
+    "r4_core_experience_miss": "question_turn_had_no_final_and_no_answer",
+    "r4_stuck_room": false,
+    "diagnostic_counters_available_for_r3_r4": false,
+    "code_fix_now": false
+  },
+  "traces": {
+    "r3": "6cc46771-6552-4910-86a7-8a571de9809b",
+    "r4": "ccad0f22-c99b-49fa-8abe-877eca456e74"
+  },
+  "safe_stats": {
+    "file": "WORKER-SAFE.json",
+    "window_utc": ["2026-11-11T11:33:00Z", "2026-11-11T11:36:50Z"],
+    "diagnostic_summary_events": 0,
+    "unit": "voice-worker-rust",
+    "historical_pid": "4183959",
+    "listening_and_search_units_had_target_traces": false,
+    "room_suffix_parser_splits_on_trailing_brace": true,
+    "current_process_pid_not_historical": "795375",
+    "current_process_diagnostic_env_empty": true,
+    "current_process_binary_sha256_prefix": "d1b1d952c365f964",
+    "r3": {
+      "asr_spawns": 2,
+      "connects": 2,
+      "stt_final_logs": 2,
+      "asr_final_received": {"FirstTurn": 1, "Rtc": 1},
+      "switch_reason": "first_turn_no_task",
+      "catchup_samples": 0,
+      "end_window_ms": 150,
+      "hotwords": 276,
+      "nonstream": true,
+      "audio_in_10s": {"frames": 1003, "samples": 160480, "nonzero_samples": 91560, "peak": 2793}
+    },
+    "r4": {
+      "asr_spawns": 2,
+      "connects": 2,
+      "second_connect_ms": 171,
+      "second_connect_dns_tcp_tls_ms": [0, 1, 169],
+      "stt_final_logs": 1,
+      "asr_final_received": {"FirstTurn": 1, "Rtc": 0},
+      "switch_reason": "first_turn_no_task",
+      "switch_cst": "19:36:04.553",
+      "second_connect_complete_cst": "19:36:04.629",
+      "catchup_samples": 0,
+      "end_window_ms": 150,
+      "hotwords": 276,
+      "nonstream": true,
+      "audio_in_10s_mixed_phases": {"frames": 1004, "samples": 160640, "nonzero_samples": 49756, "peak": 2841, "mean_abs": 26.256654631474103},
+      "control_cancel": {"cancelled": false, "had_turn": false, "seq": 20, "server_cst": "19:36:13.942"},
+      "job_closed_cst": "19:36:14.204"
+    }
+  },
+  "excluded": [
+    "entire_question_ignored_before_rtc_switch",
+    "wake_no_final_blocked_question_connection",
+    "second_asr_handshake_failed",
+    "stuck_room",
+    "overlap_room_6932_finals_belong_to_r4",
+    "definite_minus_final_delivered_equals_loss",
+    "ui_level_or_client_vad_equals_provider_write"
+  ],
+  "open_branch": "second_connection_connected_and_pipeline_observed_no_question_final; written_versus_provider_response_still_unsplit",
+  "minimal_next": "obtain existing per-generation written/responses/definite/final_delivered from the process that actually owns the room; no behavior change until that split exists",
+  "reject": [
+    "change_provider_endpointing_hotwords_nonstream_ddc_queue_or_reconnect",
+    "enable_catchup_or_flush_short_tail_or_replay_ignored_first_turn_into_question",
+    "synthesize_final_from_empty_provider_result",
+    "rerun_30_round_or_listening_matrix",
+    "add_diagnostics_fields_or_services",
+    "expand_device_scope_or_edit_client_in_this_review"
+  ]
+}

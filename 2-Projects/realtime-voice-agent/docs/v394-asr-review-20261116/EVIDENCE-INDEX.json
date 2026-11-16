@@ -1,0 +1,97 @@
+{
+  "at": "2026-11-16T17:38:03.451254+08:00",
+  "input_receipt": {
+    "name": "P003_G2_V394_ASR_DIAGNOSTIC_ANDROID_TTS_RECEIPT_20261111.md",
+    "sha256": "9ecf9401eb210537a3bfad5714f8ccc51f3ddb173b741539a91158627704152d"
+  },
+  "evidence_root": "/Users/fu-121/.local/state/p003-v394-asr-review-20261116",
+  "evidence": [
+    {
+      "path": "BRAIN-SAFE.json",
+      "bytes": 5279,
+      "sha256": "3928836fadf43a9f867861b980c9e443bf2405ab956ce01c7138fcdd0d67cbe9"
+    },
+    {
+      "path": "WORKER-SAFE-V2.json",
+      "bytes": 508055,
+      "sha256": "03932f47fd5aee5dbe7b8c50d849342758a9804228338bbc12d7959b57b2d5be"
+    },
+    {
+      "path": "WORKER-SAFE.json",
+      "bytes": 733542,
+      "sha256": "c34740ac95311e1f3d7966d05a7572effb8c19920c2d42d5ee96116075651e3f"
+    },
+    {
+      "path": "TARGET-KEYED-EVENTS.json",
+      "bytes": 162443,
+      "sha256": "c7d22552f5a9bf0142036a212532ae8da70d76beb267100337f84d48f3ba6f76"
+    },
+    {
+      "path": "CURRENT-BRAIN-LEASE-V3.json",
+      "bytes": 1067,
+      "sha256": "5496e2ead04fb2009d4da31ee16c50b59e86df24d087c221fcb2544eb4a77f00"
+    },
+    {
+      "path": "CURRENT-WORKER-HEALTH.json",
+      "bytes": 864,
+      "sha256": "beb85266542d9b68adf4377869d5140d043168b55477938f9fb53a6f3c2c4194"
+    },
+    {
+      "path": "ASR-NEGATIVE-MARKER-SCAN.json",
+      "bytes": 1156,
+      "sha256": "5aee6b635e1462355712bfbf75c63d94ff0cd648c8e0c492935ecf19d4be72cd"
+    },
+    {
+      "path": "GROK-CODE-REVIEW.md",
+      "bytes": 14428,
+      "sha256": "2aac792c51dbcee4b78d1701c316a5923f1d1caf21c25a0758c37b3d3f112e6b"
+    },
+    {
+      "path": "GROK-CODE-REVIEW.json",
+      "bytes": 3915,
+      "sha256": "bdb803ba51c8965dfd7bf2c11c42638769e8efacd9c58eafd1de641e4bacfa98"
+    },
+    {
+      "path": "EVIDENCE-VERIFIED.json",
+      "bytes": 1177,
+      "sha256": "ca2367d131225731159116b1a2d7b837ccf7cbfc92b6b76a8b777958f7692ad5"
+    },
+    {
+      "path": "collect-worker.py",
+      "bytes": 4266,
+      "sha256": "3e2b13db8960c380dbab3ed9f4f7c9927241c15af119354c12025f269f77403f"
+    },
+    {
+      "path": "collect-worker-v2.py",
+      "bytes": 4079,
+      "sha256": "18467a27a5584434f5b85cb5e79ae60644c059d0e8acf66ec200e3fea07d6130"
+    },
+    {
+      "path": "collect-brain.py",
+      "bytes": 2307,
+      "sha256": "906328f76ffaf3ae45714424b891bc76a2494d1d73dff21ed0d778bd6437879e"
+    },
+    {
+      "path": "memory-t2/RECEIPT.json",
+      "bytes": 2577,
+      "sha256": "c59c4d249c0739dc0b7bca7c2449b89647ab223f4f63ea06b48c552cc53a52a6"
+    },
+    {
+      "path": "memory-asr/RECEIPT.json",
+      "bytes": 2015,
+      "sha256": "9491eea173201c63b40b4d06e7547e6deb7947bacef39573679f550ef4c49673"
+    },
+    {
+      "path": "GROK-FINAL-CROSSCHECK.md",
+      "bytes": 4594,
+      "sha256": "1c8cc7918ba2b9a2edf215ac2b241b5bb137579cd23abefd3a234125c2a52012"
+    },
+    {
+      "path": "GROK-FINAL-CROSSCHECK.json",
+      "bytes": 5423,
+      "sha256": "369dbe2fe714a4dbe327a39253a03c97153834668bd80a90acc58776b5d6512a"
+    }
+  ],
+  "no_production_change": true,
+  "asr_closeout": false
+}

@@ -1,0 +1,565 @@
+{
+  "scope": "historical_read_only_not_fix",
+  "brain_signings": [
+    {
+      "trace_suffix": "4d25ee8e",
+      "file": "p003-voice-out.log",
+      "line": 262546,
+      "line_sha256": "e336c495820a5cddf046a79320413ed1d5bb3094761149fdaf3a0281cc31edf9",
+      "fields": {
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "\"rust-worker\"",
+        "canary_reason": "lease_invalid",
+        "lease_remaining_ms": "-5607348",
+        "lease_age_ms": "5622348",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "\"v374-listening-ark-20261102-1793613511\"",
+        "ttl": "3600s",
+        "ms": "5"
+      }
+    },
+    {
+      "trace_suffix": "ec176ee4",
+      "file": "p003-voice-out.log",
+      "line": 262576,
+      "line_sha256": "3d49195a8e2214d4d8e2e16a4f154177ae8ab16758277d5dbfbb0d17f98c62b1",
+      "fields": {
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "\"rust-worker\"",
+        "canary_reason": "lease_invalid",
+        "lease_remaining_ms": "-5650308",
+        "lease_age_ms": "5665308",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "\"v374-listening-ark-20261102-1793613511\"",
+        "ttl": "3600s",
+        "ms": "6"
+      }
+    },
+    {
+      "trace_suffix": "1de9809b",
+      "file": "p003-voice-out.log",
+      "line": 262588,
+      "line_sha256": "82940d0acdff1161af03e52eb2f122544228be685a226f8d6062b170963b928e",
+      "fields": {
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "\"rust-worker\"",
+        "canary_reason": "lease_invalid",
+        "lease_remaining_ms": "-5720131",
+        "lease_age_ms": "5735131",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "\"v374-listening-ark-20261102-1793613511\"",
+        "ttl": "3600s",
+        "ms": "5"
+      }
+    },
+    {
+      "trace_suffix": "ca456e74",
+      "file": "p003-voice-out.log",
+      "line": 262627,
+      "line_sha256": "04d015866c8561d1d3eedd3e938eb1e1e49ff0a81d1cd5d7953a28c4467725d0",
+      "fields": {
+        "contract": "first_turn_v1",
+        "policy": "capability",
+        "policy_src": "env",
+        "supports": "listening_mode_v1|listening_voice_control_v1|oneshot_first_turn_v1|local_receipt_v1",
+        "selected_agent": "\"rust-worker\"",
+        "canary_reason": "lease_invalid",
+        "lease_remaining_ms": "-5750415",
+        "lease_age_ms": "5765415",
+        "lease_jobs": "0",
+        "lease_max_jobs": "2",
+        "lease_registered": "true",
+        "canary_generation": "\"v374-listening-ark-20261102-1793613511\"",
+        "ttl": "3600s",
+        "ms": "5"
+      }
+    }
+  ],
+  "rounds": {
+    "4d25ee8e": [
+      {
+        "unit": "voice-worker-rust",
+        "line": 49,
+        "pid": "4183959",
+        "ts_us": 1794396819843251,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "202",
+          "dns_ms": "10",
+          "tcp_ms": "2",
+          "tls_ws_ms": "189"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "6a26e25baf3a9eba3ebb4bcdc8ea36bf22247dbe796edd3863fa632ea56817ea"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 140,
+        "pid": "4183959",
+        "ts_us": 1794396821500322,
+        "tags": [
+          "asr final received"
+        ],
+        "metrics": {
+          "chars": "4"
+        },
+        "enums": {
+          "phase": "FirstTurn"
+        },
+        "sha256": "e1019df74dcc2efeeb97f3566153f8203d9625ff1b778d68e1527a6b37a1867e"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 166,
+        "pid": "4183959",
+        "ts_us": 1794396821718543,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "197",
+          "dns_ms": "0",
+          "tcp_ms": "21",
+          "tls_ws_ms": "176"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "d09a07afb2a4f71afae63e38986ad92923f71ecee0a1e1ec50136b89a59acd4f"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 179,
+        "pid": "4183959",
+        "ts_us": 1794396824644613,
+        "tags": [
+          "asr final received"
+        ],
+        "metrics": {
+          "chars": "7"
+        },
+        "enums": {
+          "phase": "Rtc"
+        },
+        "sha256": "ffbdffe7d9c1b3ef66d7b2349b5f796c16326d9c44408d4e7c83e605aa817096"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 242,
+        "pid": "4183959",
+        "ts_us": 1794396830003072,
+        "tags": [
+          "audio in"
+        ],
+        "metrics": {
+          "frames": "1003",
+          "mean_amp": "20",
+          "samples": "160480",
+          "nonzero_samples": "50748",
+          "peak": "2939",
+          "mean_abs": "20.335163260219343"
+        },
+        "enums": {},
+        "sha256": "3966c587c4642b3cc3d224ad2088247aa1c6f9378c997cada128cdfa5fc7ee4e"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 280,
+        "pid": "4183959",
+        "ts_us": 1794396840249090,
+        "tags": [
+          "job closed"
+        ],
+        "metrics": {
+          "uptime_s": "20"
+        },
+        "enums": {},
+        "sha256": "82c86e69baf30ecde7d2d687f171079badda3768b1cac1e9df39813184482b5f"
+      }
+    ],
+    "ec176ee4": [
+      {
+        "unit": "voice-worker-rust",
+        "line": 325,
+        "pid": "4183959",
+        "ts_us": 1794396862841972,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "181",
+          "dns_ms": "7",
+          "tcp_ms": "3",
+          "tls_ws_ms": "170"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "8b6b071d9f61c8716d01f7faf7624e67513700791b96687662162f5c00f10311"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 361,
+        "pid": "4183959",
+        "ts_us": 1794396864561969,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "186",
+          "dns_ms": "0",
+          "tcp_ms": "2",
+          "tls_ws_ms": "184"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "dc418c2b26e3b202d92257f58cac18f36d737ebf68b71813970045d120dbe416"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 373,
+        "pid": "4183959",
+        "ts_us": 1794396869520532,
+        "tags": [
+          "asr final received"
+        ],
+        "metrics": {
+          "chars": "7"
+        },
+        "enums": {
+          "phase": "Rtc"
+        },
+        "sha256": "d6827abe9936d8826508c13e62fc0ba067f41c6c02a4cecc026021ead5ae6cb5"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 398,
+        "pid": "4183959",
+        "ts_us": 1794396872898125,
+        "tags": [
+          "audio in"
+        ],
+        "metrics": {
+          "frames": "1003",
+          "mean_amp": "24",
+          "samples": "160480",
+          "nonzero_samples": "69674",
+          "peak": "3044",
+          "mean_abs": "24.545432452642075"
+        },
+        "enums": {},
+        "sha256": "e4fc34cd2ac264b5f57884704a1da40dc9a3af38336ae4e896d37fa7de794b49"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 408,
+        "pid": "4183959",
+        "ts_us": 1794396882898578,
+        "tags": [
+          "audio in"
+        ],
+        "metrics": {
+          "frames": "1000",
+          "mean_amp": "7",
+          "samples": "160000",
+          "nonzero_samples": "70333",
+          "peak": "839",
+          "mean_abs": "8.28201875"
+        },
+        "enums": {},
+        "sha256": "1f5c025fedbb59e007d0a00ef78ee316d14dc76b46f394d8889edb81ae140176"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 416,
+        "pid": "4183959",
+        "ts_us": 1794396883980711,
+        "tags": [
+          "job closed"
+        ],
+        "metrics": {
+          "uptime_s": "21"
+        },
+        "enums": {},
+        "sha256": "ebde1824ce481ac0a03e88f5f6dcee1353923e518778e2a7dc72406b1b8d0342"
+      }
+    ],
+    "1de9809b": [
+      {
+        "unit": "voice-worker-rust",
+        "line": 527,
+        "pid": "4183959",
+        "ts_us": 1794396933237634,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "881",
+          "dns_ms": "717",
+          "tcp_ms": "2",
+          "tls_ws_ms": "160"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "5b0743b178311a7247f2f0bf5839dff71bd8e9170af179d73a64e3072aec397a"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 572,
+        "pid": "4183959",
+        "ts_us": 1794396934305535,
+        "tags": [
+          "asr final received"
+        ],
+        "metrics": {
+          "chars": "4"
+        },
+        "enums": {
+          "phase": "FirstTurn"
+        },
+        "sha256": "3cbdd84f0ca997ee275dea0e3e4b06f66dfb91abf614317bf568967acffc3bc2"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 575,
+        "pid": "4183959",
+        "ts_us": 1794396934313632,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "186",
+          "dns_ms": "0",
+          "tcp_ms": "3",
+          "tls_ws_ms": "183"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "2fac21ad481306844d428fe5133f604c668bd56614c9f539f0088b1bae75f04b"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 600,
+        "pid": "4183959",
+        "ts_us": 1794396937336998,
+        "tags": [
+          "asr final received"
+        ],
+        "metrics": {
+          "chars": "7"
+        },
+        "enums": {
+          "phase": "Rtc"
+        },
+        "sha256": "a296d4c7ed0ca4c96a645a12bbe6dc3fa1a23910a365f7c0fa66511c09110987"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 709,
+        "pid": "4183959",
+        "ts_us": 1794396942607547,
+        "tags": [
+          "audio in"
+        ],
+        "metrics": {
+          "frames": "1003",
+          "mean_amp": "28",
+          "samples": "160480",
+          "nonzero_samples": "91560",
+          "peak": "2793",
+          "mean_abs": "28.836777168494518"
+        },
+        "enums": {},
+        "sha256": "8a99057468b7d3857b9197c9e985ca8aff1b28d0bebe8d5962a20153b4fc24d8"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 806,
+        "pid": "4183959",
+        "ts_us": 1794396951639642,
+        "tags": [
+          "job closed"
+        ],
+        "metrics": {
+          "uptime_s": "19"
+        },
+        "enums": {},
+        "sha256": "d19226b075e23fb93d16f45c7a8f9d1899c311f703bc8d6c5d31e14b9792ad5f"
+      }
+    ],
+    "ca456e74": [
+      {
+        "unit": "voice-worker-rust",
+        "line": 866,
+        "pid": "4183959",
+        "ts_us": 1794396962878517,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "164",
+          "dns_ms": "0",
+          "tcp_ms": "2",
+          "tls_ws_ms": "162"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "fc83859316d7221d2b41e3dc90c5f5a362dd372f41ac3afa75d72e8be2aa8f0d"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 937,
+        "pid": "4183959",
+        "ts_us": 1794396964539346,
+        "tags": [
+          "asr final received"
+        ],
+        "metrics": {
+          "chars": "4"
+        },
+        "enums": {
+          "phase": "FirstTurn"
+        },
+        "sha256": "a27a56e941a36258ebb5919670e0cde6db8ff60254ce307279c9728fb427b4f1"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 954,
+        "pid": "4183959",
+        "ts_us": 1794396964629388,
+        "tags": [
+          "asr connection timing"
+        ],
+        "metrics": {
+          "elapsed_ms": "171",
+          "dns_ms": "0",
+          "tcp_ms": "1",
+          "tls_ws_ms": "169"
+        },
+        "enums": {
+          "stage": "tls_ws",
+          "outcome": "connected",
+          "reason": "none"
+        },
+        "sha256": "1fabe60ac46ad40d7762c9ef4481ff268a1c86c76eaab580a72d35cbbe85f9a7"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 1080,
+        "pid": "4183959",
+        "ts_us": 1794396973305437,
+        "tags": [
+          "audio in"
+        ],
+        "metrics": {
+          "frames": "1004",
+          "mean_amp": "26",
+          "samples": "160640",
+          "nonzero_samples": "49756",
+          "peak": "2841",
+          "mean_abs": "26.256654631474103"
+        },
+        "enums": {},
+        "sha256": "47a11203de07a6fac4f51556c10ad6ef1a47e1988dc737ccda55137cb9fc4b73"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 1099,
+        "pid": "4183959",
+        "ts_us": 1794396973942294,
+        "tags": [
+          "control cancel"
+        ],
+        "metrics": {
+          "seq": "20",
+          "cancelled": "false",
+          "already_done": "false",
+          "had_turn": "false"
+        },
+        "enums": {},
+        "sha256": "dcc1018ada9220b21cb445ac824a5650a38401cc1b22189fdfa222c6ff30eadf"
+      },
+      {
+        "unit": "voice-worker-rust",
+        "line": 1107,
+        "pid": "4183959",
+        "ts_us": 1794396974204086,
+        "tags": [
+          "job closed"
+        ],
+        "metrics": {
+          "uptime_s": "11"
+        },
+        "enums": {},
+        "sha256": "ff84c95090a7184fafccd866d394c93b7eea45c85360a147b6f24ff5920bb0e1"
+      }
+    ]
+  },
+  "current_health_not_historical": {
+    "now_ms": 1794821114358,
+    "mtime": 1794821110.493736,
+    "keys": [
+      "agent",
+      "generation",
+      "until_ms",
+      "ordered_pcm_v1",
+      "at_ms",
+      "jobs",
+      "max_jobs",
+      "registered",
+      "cleanup"
+    ],
+    "data": {
+      "at_ms": 1794821110495,
+      "until_ms": 1794821125495,
+      "agent": "p003-search-listening-20261030",
+      "registered": true,
+      "jobs": 0,
+      "max_jobs": 2,
+      "generation": "v374-listening-ark-20261102-1793613511",
+      "ordered_pcm_v1": true,
+      "cleanup": {
+        "healthy": true,
+        "at_ms": 1794821103767,
+        "pending": 0
+      }
+    }
+  }
+}

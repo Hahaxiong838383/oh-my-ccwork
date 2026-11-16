@@ -1,0 +1,123 @@
+{
+  "reviewer": "Grok 4.6",
+  "reviewer_vendor": "xAI",
+  "reviewed_at": "2026-11-16",
+  "mode": "final_crosscheck_read_only",
+  "scope": "ROOT-FINDINGS.md GROK-CODE-REVIEW.md BRAIN-SAFE.json WORKER-SAFE-V2.json TARGET-KEYED-EVENTS.json CURRENT-BRAIN-LEASE-V3.json CURRENT-WORKER-HEALTH.json",
+  "actions_not_taken": [
+    "expand_investigation",
+    "full_repo_read",
+    "network",
+    "new_tests",
+    "business_or_production_or_memory_edit",
+    "rewrite_prior_reports",
+    "chase_lease_publisher_root_cause",
+    "raw_transcript_or_pcm_export"
+  ],
+  "verdict": {
+    "agree_diagnostic_coverage_failure_cause": "expired_listening_lease_routed_four_rounds_to_main_rust_worker",
+    "agree_no_final_root_cause_unknown": true,
+    "cannot_blame": ["search", "llm", "tts", "android"],
+    "current_listening_health_fresh_does_not_prove_historical_ok": true,
+    "asr_item_closed": false
+  },
+  "agree": [
+    {
+      "id": "lease_invalid_dispatch",
+      "claim": "four rounds selected_agent=rust-worker canary_reason=lease_invalid lease_age ~94-96min",
+      "evidence": {
+        "file": "BRAIN-SAFE.json",
+        "traces": ["4d25ee8e", "ec176ee4", "1de9809b", "ca456e74"],
+        "lease_age_ms": [5622348, 5665308, 5735131, 5765415],
+        "lease_age_min": [93.71, 94.42, 95.59, 96.09],
+        "lease_remaining_negative": true,
+        "lease_registered": true,
+        "lease_jobs": "0/2",
+        "android_supports_listening_voice_control_oneshot": true,
+        "policy": "capability"
+      }
+    },
+    {
+      "id": "main_pool_took_rooms_diagnostics_absent",
+      "claim": "target traces on voice-worker-rust pid 4183959; listening/search had no target traces; no diagnostic summaries; diagnostics env only on current listening pool",
+      "evidence": {
+        "target_file": "TARGET-KEYED-EVENTS.json",
+        "rooms": {
+          "4d25ee8e": "94396820",
+          "ec176ee4": "94396862",
+          "1de9809b": "94396931",
+          "ca456e74": "94396962"
+        },
+        "v2_listening_search_rows": [8, 8],
+        "v2_diagnostic_summaries": 0,
+        "current_runtime_diagnostic_env": {
+          "voice-worker-rust": {"until": "", "allow": []},
+          "p003-listening-worker": {"until": "1794962794000", "allow": ["03800006"]},
+          "p003-search-worker": {"until": "", "allow": []}
+        },
+        "current_pids_are_not_historical": true
+      }
+    },
+    {
+      "id": "v2_room_brace_fix_and_r3_r4_connect",
+      "claim": "trailing-} room split fixed for targets; R3 RTC 186ms + Rtc chars7; R4 RTC 171ms + FirstTurn chars4 only",
+      "evidence": {
+        "files": ["WORKER-SAFE-V2.json", "TARGET-KEYED-EVENTS.json"],
+        "r3_second_connect_ms": [186, 0, 3, 183],
+        "r4_second_connect_ms": [171, 0, 1, 169],
+        "r3_asr_final_received": {"FirstTurn_chars": 4, "Rtc_chars": 7},
+        "r4_asr_final_received": {"FirstTurn_chars": 4, "Rtc": 0},
+        "r4_turn_or_tts": false,
+        "overlap_room_94396932_not_in_targets": true,
+        "leftover_er_asr_suffix_rows": 110,
+        "leftover_does_not_split_target_rooms": true
+      }
+    },
+    {
+      "id": "r4_no_final_not_stuck",
+      "claim": "R4 question had no Rtc final/answer; room closed; mixed audio_in is not provider write",
+      "evidence": {
+        "switch": "first_turn_no_task",
+        "catchup_samples": 0,
+        "second_connected": true,
+        "audio_in": {"samples": 160640, "nonzero": 49756, "peak": 2841, "mean_abs": 26.256654631474103},
+        "control_cancel_cancelled": false,
+        "job_closed": true
+      }
+    },
+    {
+      "id": "current_fresh_cannot_backprove_history",
+      "claim": "listening brain health fresh ~3.9s remaining ~11.1s; worker health ~0.6s; does not prove 11/11 lease or NO_FINAL fixed",
+      "evidence": {
+        "listening_brain_health_age_s": 3.864,
+        "listening_until_remaining_ms": 11137,
+        "worker_health_age_ms": {"listening": 569.6, "search": 597.8},
+        "search_brain_health_still_stale_at_collection": true,
+        "do_not_restart_live_on_historical_expiry_alone": true,
+        "do_not_chase_publisher": true
+      }
+    },
+    {
+      "id": "cannot_blame_search_llm_tts_android",
+      "claim": "search had no target traces; R4 never reached LLM/TTS; Android capabilities were declared; R3 succeeded on same device path",
+      "evidence": {
+        "search_target_traces": 0,
+        "r4_turn_committed": false,
+        "r4_tts": false,
+        "android_capability_missing": false
+      }
+    }
+  ],
+  "disagree_or_correct": [
+    {
+      "id": "rtc_seen_cannot_infer_sender_none",
+      "target": "GROK-CODE-REVIEW.md open_branch_2",
+      "type": "wording_correction_only",
+      "prior_text_problem": "rtc_seen>0 and accepted=full=closed=0 listed as also meaning sender None",
+      "correction": "rtc_seen increments only when stt_pcm_tx is Some; None increments neither rtc_seen nor accepted; accepted=0 cannot infer None from rtc_seen; rtc_seen>0 with accepted=full=closed=0 means sender was Some and below 3200; rtc_seen=0 and accepted=0 still unsplit. R4 still has no these counters.",
+      "rewrite_old_report": false
+    }
+  ],
+  "open": "second RTC connected; pipeline observed no question Final; written vs provider response still unsplit",
+  "minimal_next": "existing per-generation counters on the process that actually owns the room; no provider/endpointing/final-synthesis change; no publisher chase"
+}
