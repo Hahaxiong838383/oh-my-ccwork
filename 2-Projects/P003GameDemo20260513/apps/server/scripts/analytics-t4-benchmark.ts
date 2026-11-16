@@ -20,11 +20,11 @@ if(mode==='prepare'){
  const start=performance.now();
  // A whole 50-device day's facts in two dimensions, plus one expired day. Not a 90-day load test.
  for(let base=0;base<300000;base+=1000){s.transaction(()=>{for(let i=base;i<base+1000;i++){
-  const device='synthetic-'+String(i%50).padStart(2,'0'),id=String(i).padStart(8,'0'),attempt='b'+Math.floor(i/200);
-  for(const dim of ['occurred','received']){f.run(dim,day,device,id,'app.bridge_ready','s',0,'{}',now);f.run(dim,old,device,id,'app.bridge_ready','s',0,'{}',rawTime);}
+  const device=String(i%50).padStart(64,'0'),id=String(i).padStart(64,'0'),attempt='b'+Math.floor(i/200);
+  for(const dim of ['occurred','received']){f.run(dim,day,device,id,'app.bridge_ready','s'.repeat(32),0,'{"duration_ms":60000,"synthetic":true,"source":"t4-maintenance-fixture"}',now);f.run(dim,old,device,id,'app.bridge_ready','s'.repeat(32),0,'{"duration_ms":60000,"synthetic":true,"source":"t4-maintenance-fixture"}',rawTime);}
   ev.run(device,id,'app.bridge_ready',rawTime,rawTime,'s',i,'normal','{}','{}',attempt,cstDay(rawTime),cstDay(rawTime),0);
   if(i%200===0)batch.run(attempt,attempt,attempt,device,rawTime,rawTime,'{}',200,0,0,200,1);
-  settle.run(attempt,id,'accepted',null);seen.run(device,id,'synthetic-hash',rawTime);
+  settle.run(attempt,id,'accepted',null);seen.run(device,id,'f'.repeat(64),rawTime);
  }});if(base%10000===0)s.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');}
  s.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('received',day);
  s.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('occurred',day);
@@ -63,7 +63,7 @@ if(mode==='prepare'){
   const code=await exited;assert.equal(code,0,stderr);const maintenance=JSON.parse(stdout.trim());
   const quiet=rollup.rollupDirtyDaysWithStatus(s,now,16);assert.equal(quiet.partial,false);
   const count=(table:string)=>Number(s.db.prepare('SELECT count(*) n FROM '+table).get()!.n),latency=acks.map(x=>x.ms).sort((a,b)=>a-b);
-  const result={synthetic:true,host:process.platform,node:process.version,maintenance,quiet,acks:{count:acks.length,accepted:acks.reduce((a,x)=>a+x.accepted,0),codes:acks.reduce((a,x)=>(a[x.code]=(a[x.code]??0)+1,a),{} as Record<string,number>),p95:latency[Math.floor(latency.length*.95)],p99:latency[Math.floor(latency.length*.99)],max:latency.at(-1)},checkpoint:checkpointer.status(),rows:{facts:count('analytics_rollup_fact'),raw:count('analytics_event'),seen:count('analytics_event_seen'),settlements:count('analytics_settlement')},database_bytes:statSync(path).size,rss:process.memoryUsage().rss};
+  const result={synthetic:true,host:process.platform,node:process.version,maintenance,quiet,acks:{count:acks.length,accepted:acks.reduce((a,x)=>a+x.accepted,0),codes:acks.reduce((a,x)=>(a[x.code]=(a[x.code]??0)+1,a),{} as Record<string,number>),p95:latency[Math.floor(latency.length*.95)],p99:latency[Math.floor(latency.length*.99)],max:latency.at(-1)},checkpoint:checkpointer.status(),rows:{facts:count('analytics_rollup_fact'),raw:count('analytics_event'),seen:count('analytics_event_seen'),settlements:count('analytics_settlement')},database_bytes:statSync(path).size,freelist_pages:Number(s.db.prepare('PRAGMA freelist_count').get()!.freelist_count),rss:process.memoryUsage().rss};
   console.log(JSON.stringify(result));writeFileSync(join(root,'RESULT.json'),JSON.stringify(result,null,2));
  }finally{server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await writer.close();await checkpointer.stop();s.close();}
 }else throw new Error('prepare | maintenance | http');
