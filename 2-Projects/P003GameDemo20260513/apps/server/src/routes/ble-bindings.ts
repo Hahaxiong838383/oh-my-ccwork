@@ -132,7 +132,7 @@ export function claimBleCredential(c: Context, body: unknown) {
       if (!pk) throw new Error('invalid stored credential key');
       const iat = Math.floor(Date.now() / 1000); const exp = iat + 365 * 86400;
       const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-      const payload = Buffer.from(JSON.stringify({ kind: 'p003-device', sub: sn, iat, exp, binding_version: row.binding_version })).toString('base64url');
+      const payload = Buffer.from(JSON.stringify({ kind: 'p003-device', sub: sn, iat, exp, binding_version: row.binding_version, ble_binding_id: row.binding_id })).toString('base64url');
       const signing = `${header}.${payload}`;
       const jwt = `${signing}.${createHmac('sha256', secret).update(signing).digest('base64url')}`;
       return {
@@ -146,7 +146,7 @@ export function claimBleCredential(c: Context, body: unknown) {
 }
 
 /** Called after a successful device authentication flow. No client supplied status can activate a device. */
-export function noteBleActivation(sn: string, bindingVersion: number | undefined) {
-  if (bindingVersion === undefined) return;
-  getBleBindingStore().markActivated(sn, bindingVersion);
+export function noteBleActivation(sn: string, bindingVersion: number | undefined, bindingId?: string) {
+  if (bindingVersion === undefined || !bindingId) return;
+  getBleBindingStore().markActivated(sn, bindingVersion, bindingId);
 }

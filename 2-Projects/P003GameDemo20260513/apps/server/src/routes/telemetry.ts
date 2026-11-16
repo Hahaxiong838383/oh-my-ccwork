@@ -4,6 +4,7 @@ import { telemetryStore, dayOf } from '../telemetry-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { verifyDeviceCredential } from './device-session.js';
 import { verifyAuthToken } from '../auth-jwt.js';
+import { dashboardArk } from '../ark/dashboard.js';
 
 /**
  * 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824 + CC 实施计划）。
@@ -173,7 +174,7 @@ deviceTelemetryRoute.post('/', async (c) => {
     const outcome = telemetryStore.ingestEvent(sn, ev, meta);
     if (outcome === 'accepted') acked.push(ev.event_id);
     else if (outcome === 'duplicated') duplicated.push(ev.event_id);
-    else rejected.push({ event_id: ev.event_id, reason: 'event_id_payload_conflict' });
+    else rejected.push({ event_id: ev.event_id, reason: outcome === 'conflict' ? 'event_id_payload_conflict' : outcome });
   }
 
   console.log(
@@ -241,9 +242,19 @@ parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
   const totalFocusMin = Math.round(daily.reduce((s, d) => s + d.focus_ms, 0) / 60_000);
   const elapsedDays = daily.filter((d) => d.date < today).length || 1;
 
+  const usageDaily = telemetryStore.usageRange(dev.sn, weekFrom, today);
+  let ark: ReturnType<typeof dashboardArk>;
+  try { ark = dashboardArk(dev.sn); }
+  catch { return c.json({ ok: false, error: 'dashboard_dependency_unavailable' }, 503); }
+  const currentOwner = ownedDevice(c.req.param('publicId'), c.get('accountId'));
+  if (!currentOwner || currentOwner.sn !== dev.sn) return c.json({ ok: false, error: 'not_found' }, 404);
+
   return c.json({
     ok: true,
     data: {
+      ark,
+      usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',
+        today: usageDaily[usageDaily.length - 1], daily: usageDaily },
       device: {
         updated_at_ms: snap?.server_received_ms ?? null,
         online: snap ? now - snap.server_received_ms < ONLINE_WINDOW_MS : false,

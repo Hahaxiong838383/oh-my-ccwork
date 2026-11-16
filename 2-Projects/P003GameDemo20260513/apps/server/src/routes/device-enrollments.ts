@@ -4,7 +4,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { accountStore } from '../account-store.js';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { BleBindingError } from '../ble-binding-proof.js';
-import { ENROLLMENT_PROTOCOL, assertEnrollmentOpen, exactObject, provisioningAuthorized, readEnrollmentConfig } from '../device-enrollment-proof.js';
+import { ENROLLMENT_PROTOCOL, ENROLLMENT_PROTOCOL_V2, assertEnrollmentOpen, exactObject, provisioningAuthorized, readEnrollmentConfig } from '../device-enrollment-proof.js';
 import { getDeviceEnrollmentStore } from '../device-enrollment-store.js';
 import { initializeBrain, receipt } from './ble-bindings.js';
 
@@ -54,13 +54,20 @@ deviceEnrollmentRoute.use('*',async(c,next)=>{
 });
 deviceEnrollmentRoute.use('*',bodyLimit({maxSize:8192,onError:c=>failure(c,new BleBindingError(400,'bad_request'))}));
 deviceEnrollmentRoute.get('/capabilities',c=>{
- try{const config=readEnrollmentConfig();return c.json({ok:true,binding_protocol:ENROLLMENT_PROTOCOL,enabled:config.enabled&&Date.now()>=config.starts_at_ms&&Date.now()<config.expires_at_ms,window_starts_at_ms:config.starts_at_ms,window_expires_at_ms:config.expires_at_ms,challenge_ttl_s:120,request_id:c.get('requestId')});}catch(e){return failure(c,e);}
+ try{
+  const requested=c.req.query('binding_protocol');
+  if(requested===ENROLLMENT_PROTOCOL){
+   const config=readEnrollmentConfig();return c.json({ok:true,binding_protocol:ENROLLMENT_PROTOCOL,enabled:config.enabled&&Date.now()>=config.starts_at_ms&&Date.now()<config.expires_at_ms,identity_statement_required:true,window_starts_at_ms:config.starts_at_ms,window_expires_at_ms:config.expires_at_ms,challenge_ttl_s:120,request_id:c.get('requestId')});
+  }
+  if(requested&&requested!==ENROLLMENT_PROTOCOL_V2)throw new BleBindingError(400,'bad_request');
+  return c.json({ok:true,binding_protocol:ENROLLMENT_PROTOCOL_V2,supported_protocols:[ENROLLMENT_PROTOCOL_V2,ENROLLMENT_PROTOCOL],enabled:true,identity_statement_required:false,window_starts_at_ms:null,window_expires_at_ms:null,challenge_ttl_s:120,claim_protocol:'ble-key-v1',request_id:c.get('requestId')});
+ }catch(e){return failure(c,e);}
 });
 deviceEnrollmentRoute.post('/challenge',async c=>{
  c.set('stage','challenge');
  try{
   if(limited('challenge:'+c.get('accountId'),12))throw new BleBindingError(429,'rate_limited');
-  const result=getDeviceEnrollmentStore().prepare(c.get('accountId'),await c.req.json().catch(()=>null),readEnrollmentConfig());
+  const result=getDeviceEnrollmentStore().prepare(c.get('accountId'),await c.req.json().catch(()=>null));
   console.log(`[device-enrollment] challenge request_id=${c.get('requestId')} challenge_id=${result.challenge_id}`);
   return c.json({ok:true,...result,request_id:c.get('requestId')});
  }catch(e){return failure(c,e);}
@@ -73,6 +80,6 @@ deviceEnrollmentRoute.post('/confirm',async c=>{
   const row=getDeviceEnrollmentStore().confirm(c.get('accountId'),input.challenge_id,input.device_signature);
   const initialized=initializeBrain(c.get('accountId'),row);
   console.log(`[device-enrollment] bound request_id=${c.get('requestId')} binding_id=${row.binding_id} already_bound=${row.already_bound}`);
-  return c.json({ok:true,...receipt(initialized,row.already_bound),enrollment_protocol:ENROLLMENT_PROTOCOL,claim_protocol:'ble-key-v1',request_id:c.get('requestId')});
+  return c.json({ok:true,...receipt(initialized,row.already_bound),enrollment_protocol:row.enrollment_protocol,claim_protocol:'ble-key-v1',request_id:c.get('requestId')});
  }catch(e){return failure(c,e);}
 });

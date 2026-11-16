@@ -23,7 +23,7 @@ export type KeySpec = {
   /** admin 通用渲染用的展示元数据；min/max 只做提示与前端预校验，真门在 validate */
   label: string;
   /** bool 键：builtinDefault/值为 boolean，min/max 只占位（admin 渲染走开关） */
-  unit: 'sec' | 'day' | 'bool' | 'hour' | 'count' | 'bytes' | 'text';
+  unit: 'sec' | 'day' | 'bool' | 'hour' | 'ms' | 'count' | 'bytes' | 'text';
   hint: string;
   min: number;
   max: number;
@@ -42,6 +42,16 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     hint: '两次坐姿提醒的最短间隔',
     min: 10,
     max: 86400,
+  },
+  // Zero means no cloud idle override. Omit it from the device snapshot so
+  // registering this key cannot silently replace another device's cached policy.
+  'voice.session_idle_timeout_ms': {
+    builtinDefault: 0,
+    validate: (v) => typeof v === 'number' && Number.isInteger(v)
+      && (v === 0 || (v >= 5000 && v <= 300000)),
+    label: '语音会话空闲时间', unit: 'ms',
+    hint: '0=不下发；设置5000–300000毫秒。设备下一会话应用，服务器签票使用同一配置来源。',
+    min: 0, max: 300000,
   },
   'analytics.event_upload_enabled': {
     builtinDefault: false, validate: (v) => typeof v === 'boolean',
@@ -81,6 +91,7 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
 
 /** 校验失败的统一提示文案（route 复用，随键表走，别再手写范围） */
 export function invalidValueMessage(key: string): string {
+  if (key === 'voice.session_idle_timeout_ms') return '取值须为0（不下发）或5000至300000之间的整数毫秒';
   const s = CONFIG_KEYS[key];
   if (!s) return '取值不合法';
   if (s.unit === 'bool') return '取值须为 true/false';
@@ -404,6 +415,7 @@ export class ConfigStore {
         const parsed = JSON.parse(s.value_json);
         if (parsed !== null) value = parsed;
       }
+      if (key === 'voice.session_idle_timeout_ms' && value === 0) continue;
       // 点分路径 → 嵌套对象（posture.reminder_cooldown_sec → {posture:{reminder_cooldown_sec}}）
       const parts = key.split('.');
       let node = snapshot;

@@ -6,12 +6,17 @@ import { fromB64url } from './pairing-crypto.js';
 import { validateDeviceSn } from './device-sn.js';
 
 export const ENROLLMENT_PROTOCOL='ble-enroll-v1' as const;
+export const ENROLLMENT_PROTOCOL_V2='ble-enroll-v2' as const;
+export type EnrollmentProtocol=typeof ENROLLMENT_PROTOCOL|typeof ENROLLMENT_PROTOCOL_V2;
 export const ENROLLMENT_TTL_MS=120_000;
 export const IDENTITY_LIFETIME_MS=365*86400_000;
 export type EnrollmentConfig={enabled:boolean;starts_at_ms:number;expires_at_ms:number;issuer_key_id:string;signing_secret:string;provisioning_token:string};
 export type PublicIdentity={sn:string;model:'P003';device_key_id:string;identity_public_key_spki:string};
 export type IdentityClaims={v:1;iss:'p003';aud:'p003-ble-enroll-v1';sub:string;kid:string;fp:string;mdl:'P003';jti:string;iat:number;exp:number};
-export type EnrollmentInput={input:BleChallengeInput;identity:PublicIdentity;pem:string;fingerprint:string;statement:string;claims:IdentityClaims};
+export type EnrollmentInput={input:BleChallengeInput;identity:PublicIdentity;pem:string;fingerprint:string}&(
+ {protocol:typeof ENROLLMENT_PROTOCOL;statement:string;claims:IdentityClaims}|
+ {protocol:typeof ENROLLMENT_PROTOCOL_V2}
+);
 const invalid=()=>new BleBindingError(400,'bad_request');
 export const digest=(value:string)=>createHash('sha256').update(value).digest('hex');
 export function exactObject(value:unknown,keys:string[]):Record<string,unknown>{
@@ -68,16 +73,28 @@ export function verifyIdentityStatement(statement:unknown,identity:ReturnType<ty
   return c as IdentityClaims;
  }catch{throw new BleBindingError(403,'device_identity_invalid');}
 }
-export function parseEnrollmentInput(value:unknown,config:EnrollmentConfig,now=Date.now()):EnrollmentInput{
- const r=exactObject(value,['binding_protocol','sn','device_key_id','ble_session_id','ble_transcript_hash','pairing_nonce','credential_pk','identity_public_key_spki','identity_statement']);
- if(r.binding_protocol!==ENROLLMENT_PROTOCOL)throw invalid();
+export function enrollmentProtocol(value:unknown):EnrollmentProtocol{
+ if(!value||typeof value!=='object'||Array.isArray(value))throw invalid();
+ const p=(value as Record<string,unknown>).binding_protocol;
+ if(p!==ENROLLMENT_PROTOCOL&&p!==ENROLLMENT_PROTOCOL_V2)throw invalid();
+ return p;
+}
+export function parseEnrollmentInput(value:unknown,config?:EnrollmentConfig,now=Date.now()):EnrollmentInput{
+ const protocol=enrollmentProtocol(value);
+ const fields=['binding_protocol','sn','device_key_id','ble_session_id','ble_transcript_hash','pairing_nonce','credential_pk','identity_public_key_spki'];
+ const r=exactObject(value,protocol===ENROLLMENT_PROTOCOL?[...fields,'identity_statement']:fields);
  const input=parseBleChallengeInput({binding_protocol:'ble-key-v1',sn:r.sn,device_key_id:r.device_key_id,ble_session_id:r.ble_session_id,ble_transcript_hash:r.ble_transcript_hash,pairing_nonce:r.pairing_nonce,credential_pk:r.credential_pk});
  const identity=parsePublicIdentity({sn:r.sn,model:'P003',device_key_id:r.device_key_id,identity_public_key_spki:r.identity_public_key_spki});
- const claims=verifyIdentityStatement(r.identity_statement,identity,config,now);
- return{input,identity,pem:identity.pem,fingerprint:identity.fingerprint,statement:r.identity_statement as string,claims};
+ if(protocol===ENROLLMENT_PROTOCOL_V2){
+  if(identity.device_key_id!=='p003_'+identity.fingerprint.slice(0,48))throw new BleBindingError(400,'invalid_identity_public_key');
+  return{protocol,input,identity,pem:identity.pem,fingerprint:identity.fingerprint};
+ }
+ const claims=verifyIdentityStatement(r.identity_statement,identity,config??readEnrollmentConfig(),now);
+ return{protocol,input,identity,pem:identity.pem,fingerprint:identity.fingerprint,statement:r.identity_statement as string,claims};
 }
 export function enrollmentSigningPayload(accountId:string,value:EnrollmentInput,challengeId:string,nonce:string,expiresAt:number):string{
  if(!validBleId(accountId)||!validBleId(challengeId)||fromB64url(nonce)?.length!==32||!Number.isSafeInteger(expiresAt))throw invalid();
  const i=value.input;
- return Buffer.from(['P003-BLE-ENROLL-V1','kidshub-ai.hahaxiong.cc',challengeId,nonce,accountId,i.sn,i.device_key_id,value.fingerprint,digest(value.statement),i.ble_session_id,i.ble_transcript_hash,i.credential_pk,i.pairing_nonce,String(expiresAt)].join('\n'),'ascii').toString('base64url');
+ const v1=value.protocol===ENROLLMENT_PROTOCOL;
+ return Buffer.from([v1?'P003-BLE-ENROLL-V1':'P003-BLE-ENROLL-V2','kidshub-ai.hahaxiong.cc',challengeId,nonce,accountId,i.sn,i.device_key_id,value.fingerprint,...(v1?[digest(value.statement)]:[]),i.ble_session_id,i.ble_transcript_hash,i.credential_pk,i.pairing_nonce,String(expiresAt)].join('\n'),'ascii').toString('base64url');
 }

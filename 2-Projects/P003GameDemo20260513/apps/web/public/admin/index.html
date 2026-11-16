@@ -1344,8 +1344,17 @@
                           <div class="canary-grid"><label>触发表达（用顿号或换行分隔）<textarea rows="2" :value="r.triggers.join('、')" :aria-label="'触发表达 '+r.id" @input="routingPhrases(r,'triggers',$event)"></textarea></label><label>排除表达<textarea rows="2" :value="r.exclude.join('、')" :aria-label="'排除表达 '+r.id" @input="routingPhrases(r,'exclude',$event)"></textarea></label></div>
                         </div>
                         <div class="canary-device-row"><el-button :disabled="routing.draft.rules.length>=32" @click="routingAdd">增加规则</el-button><el-button :disabled="!routing.dirty" @click="saveRoutingDraft">保存路由草稿</el-button><span class="kh-sub">{{ routing.dirty ? '有未保存修改' : '草稿已同步' }} · 修订 {{ routing.editRevision }}</span></div>
-                        <h3 style="margin-top:24px">话术预览</h3><label for="routing-utterances">每行一句，可验证自动定位或指定城市；预览不读取设备位置</label><textarea id="routing-utterances" rows="3" v-model="routing.utterances" @input="routing.preview=null" placeholder="查查恐龙灭绝的原因&#10;成都明天天气&#10;我今天画了一只猫"></textarea><el-button @click="previewRoutingDraft">预览路由（不执行搜索）</el-button>
-                        <div v-if="routing.preview" class="routing-preview"><p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : (d.auto_weather ? ' · 按设备网络定位 · '+['今天','明天','后天'][d.auto_weather.day_offset] : '') }}</span></p></div>
+                        <p class="kh-sub">常用表达：今天冷不冷、我想知道深圳明天的天气、要不要带伞。“我想知道”本身不会触发搜索。否定、转述、体温/空调、方舟个人数据使用内置保护，不受加词影响。城市片段仅相邻2秒合并；天气短追问仅相邻10秒有效。活动天气任务中换城市沿用改查，预览不模拟任务播放状态。</p><h3 style="margin-top:24px">话术预览</h3><label for="routing-utterances">每行一句，相邻输入间隔按1.5秒模拟；可验证城市片段、天气追问。预览不读取设备位置</label><textarea id="routing-utterances" rows="3" v-model="routing.utterances" @input="routing.preview=null" placeholder="查查恐龙灭绝的原因&#10;成都明天天气&#10;我今天画了一只猫"></textarea><el-button @click="previewRoutingDraft">预览路由（不执行搜索）</el-button>
+                        <div v-if="routing.preview" class="routing-preview" data-testid="weather-preview">
+                          <p v-if="routing.catalog" class="kh-sub">天气目录：{{ routing.catalog.count }} 个站点 · SHA256 {{ routing.catalog.sha256 }}</p>
+                          <p v-for="(d,i) in routing.preview" :key="i">第{{ i+1 }}句：<b>{{ routingActionLabel(d.action) }}</b> · {{ d.reason }}<br><span class="kh-sub">规则 {{ d.rule_id }}{{ d.weather ? ' · '+d.weather.city_name+' · '+['今天','明天','后天'][d.weather.day_offset] : (d.auto_weather ? ' · 按设备网络定位 · '+['今天','明天','后天'][d.auto_weather.day_offset] : '') }}</span>
+                            <span v-if="d.requested_info && d.requested_info.length"><br>回答需求：{{ d.requested_info.map(n=>({overview:"天气概况",comfort:"冷热建议",umbrella:"带伞建议"})[n] || n).join("、") }}</span><template v-if="d.place_weather"><br>提取地点：{{ d.place_weather.place }} · {{ ['今天','明天','后天'][d.place_weather.day_offset] || '不支持的日期' }} · {{ ({forecast:'天气预报',current:'当前温度',aqi:'当前空气质量'})[d.place_weather.metric] || d.place_weather.metric }}
+                              <template v-if="d.place_inspection"><br>{{ ({unique:'地点唯一，可继续校验天气来源与时效',ambiguous:'地点有歧义，请明确省市',unknown:'目录未匹配，不会自动替换为本地天气',invalid:'地点格式不合法'})[d.place_inspection.status] }}<span v-for="p in d.place_inspection.candidates" :key="p.station"><br>{{ p.label }} · 天气站 {{ p.station }}</span></template>
+                              <template v-else><br>本版本未提供地点详情</template>
+                            </template>
+                          </p>
+                          <p class="kh-sub">这里只预览路由和地点解析，不请求天气；实际执行还需通过供应商、时效及权限校验。</p>
+                        </div>
                         <h3 style="margin-top:24px">发布与回滚</h3><div v-if="searchLane==='p2'" class="canary-device-row"><label v-for="sn in routing.data.eligible_sns" :key="sn"><input type="checkbox" :value="sn" v-model="routing.sns"> {{ sn }}</label></div><p class="kh-sub">{{ searchLane==='p1' ? '发布全量默认路由，存量及新增内测设备自动使用；不改变 P2。' : '只影响所选灰度设备，不开窗、不延窗、不改变 P1。' }} 发布前自动执行固定正反例回归。</p>
                         <div class="canary-device-row"><el-button type="primary" :disabled="routing.dirty || (searchLane==='p2' && !routing.sns.length)" @click="publishRouting">校验并发布路由</el-button><select v-model="routing.rollbackVersion" aria-label="历史路由版本"><option value="">选择历史版本</option><option v-for="v in routing.data.versions" :key="v.version" :value="v.version">{{ v.version }}</option></select><el-button :disabled="!routing.rollbackVersion || (searchLane==='p2' && !routing.sns.length)" @click="rollbackRouting">{{ searchLane==='p1' ? '回滚全量路由' : '回滚所选设备' }}</el-button></div>
                       </fieldset>
@@ -2033,44 +2042,51 @@
                     <el-button size="small" :loading="race.loading" @click="loadRace(); loadRaceStats()">刷新</el-button>
                     <span v-if="race.error" style="color:#E8833A;font-size:12px">{{ race.error }}</span>
                   </div>
-                  <div style="font-size:12px;color:#888;margin-bottom:14px">worker 每轮同时发主路（大脑，带人设与记忆）和兜底路；主路在 grace 内出首字即胜，兜底只在主路慢于 grace 时接管。应用配置 = 写 64.90 env + 纪律重启 worker（约 15 秒；有设备通话时会拦，可勾选强制）。</div>
+                  <div style="font-size:12px;color:#888;margin-bottom:14px">先由大脑回复；开启外层灾备后，仅在大脑失败或超过等待时间仍无正文时，再调用一次备用模型。保存会重启主 Worker（约 15 秒），通话中会拦截；搜索、倾听灰度池不受此配置影响。</div>
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-                    <div style="font-weight:700;margin-bottom:10px">现役配置<span v-if="race.data && race.data.worker" style="font-weight:400;font-size:12px;color:#888;margin-left:8px">worker {{ race.data.worker.unit_active ? '运行中' : '未运行' }} · PID {{ race.data.worker.main_pid }} · 近 90s 活动行 {{ race.data.worker.recent_activity }}</span></div>
+                    <div style="font-weight:700;margin-bottom:10px">Worker 外层灾备<span v-if="race.data && race.data.worker" style="font-weight:400;font-size:12px;color:#888;margin-left:8px">worker {{ race.data.worker.unit_active ? '运行中' : '未运行' }} · PID {{ race.data.worker.main_pid }} · 近 90s 活动行 {{ race.data.worker.recent_activity }}</span></div>
                     <div style="display:grid;grid-template-columns:150px 1fr;gap:8px 12px;align-items:center;font-size:13px">
                       <div style="color:#6B7785">主路（大脑，只读）</div><div><code>{{ race.data && race.data.worker.file ? race.data.worker.file.LLM_BASE_URL : '—' }}</code> · 模型 <b>{{ race.data && race.data.worker.file ? race.data.worker.file.LLM_MODEL : '—' }}</b> · thinking {{ race.data && race.data.worker.file ? race.data.worker.file.LLM_THINKING : '—' }}</div>
-                      <div style="color:#6B7785">主路 grace（ms）</div><div><input type="number" min="200" max="5000" step="50" v-model.number="race.form.grace" style="width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">主路在此时长内出首字即胜；低于主路中位会让兜底频繁抢胜（丢人设记忆）</span></div>
-                      <div style="color:#6B7785">兜底 Base</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.base_preset" size="small" style="width:280px"><el-option v-for="p in (race.data ? race.data.presets : [])" :key="p.key" :label="p.label" :value="p.key"></el-option><el-option label="自定义 URL" value="custom"></el-option></el-select><input v-if="race.form.base_preset==='custom'" v-model="race.form.base_custom" placeholder="https://…" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><code v-else style="font-size:12px;color:#999">{{ raceBaseUrl() }}</code></div>
-                      <div style="color:#6B7785">兜底模型</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.model" size="small" filterable style="width:280px"><el-option v-for="m in (race.data ? race.data.catalog : [])" :key="m.model" :label="m.model + '（' + raceTierTag(m.tier) + (m.ttft_prod_ms ? '，真 prompt ' + m.ttft_prod_ms + 'ms' : '') + '）'" :value="m.model" :disabled="m.tier==='unsupported'"></el-option><el-option label="自定义模型名" value="__custom"></el-option></el-select><input v-if="race.form.model==='__custom'" v-model="race.form.model_custom" placeholder="model name" style="width:220px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><span v-else style="font-size:12px;color:#999">{{ (race.data && race.data.catalog.find(function (m) { return m.model === race.form.model; }) || {}).note || '' }}</span></div>
+                      <div style="color:#6B7785">当前进程</div><div data-testid="race-active"><b>{{ race.data && race.data.worker.proc && race.data.worker.proc.LLM_FALLBACK_ENABLED === '1' ? '有界灾备已开启' : (race.data.worker.proc.LLM_FALLBACK_ENABLED === '0' ? '灾备关闭' : '旧版配置，待应用新策略') }}</b> · {{ race.data && race.data.worker.proc ? race.data.worker.proc.LLM_FALLBACK_MODEL : '—' }} <code>{{ race.data && race.data.worker.proc ? race.data.worker.proc.LLM_FALLBACK_BASE_URL : '' }}</code></div>
+                      <div style="color:#6B7785">有界灾备开关</div><div><el-switch v-model="race.form.enabled" data-testid="race-enabled"></el-switch><span style="color:#888;font-size:12px;margin-left:10px">关闭后只请求大脑，保留下面的备用配置；新安装默认关闭。</span></div>
+                      <div style="color:#6B7785">备用调用选择</div><div><el-select v-model="race.form.provider" @change="raceProviderChanged" data-testid="race-provider" style="width:300px"><el-option label="DeepSeek 官方（默认选择）" value="deepseek"></el-option><el-option label="火山 · Agent Plan" value="volc_plan"></el-option><el-option label="火山 · Coding Plan" value="volc_coding"></el-option></el-select><code style="margin-left:10px;color:#888">{{ raceBaseUrl() }}</code></div>
+                      <div style="color:#6B7785">启动备用前等待</div><div><input data-testid="race-trigger" type="number" min="500" max="5000" step="100" v-model.number="race.form.trigger" style="width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> ms <span style="color:#888;font-size:12px">推荐 2000ms；大脑明确失败或空回复会立即启动，不等满此时间。</span></div>
+                      <div style="color:#6B7785">首正文总等待上限</div><div><input data-testid="race-deadline" type="number" min="2500" max="15000" step="100" v-model.number="race.form.deadline" style="width:110px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> ms <span style="color:#888;font-size:12px">推荐 6000ms，从本轮请求开始计时；须比启动等待至少多 2000ms。仅在灾备开启时使用。</span></div>
+                      <div style="color:#6B7785">兜底模型</div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><el-select v-model="race.form.model" size="small" filterable style="width:280px"><el-option v-for="m in raceCatalog()" :key="m.model" :label="m.model + '（' + raceTierTag(m.tier) + (m.ttft_prod_ms ? '，真 prompt ' + m.ttft_prod_ms + 'ms' : '') + '）'" :value="m.model" :disabled="m.tier==='unsupported'"></el-option><el-option label="自定义模型名" value="__custom"></el-option></el-select><input v-if="race.form.model==='__custom'" v-model="race.form.model_custom" placeholder="model name" style="width:220px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"><span v-else style="font-size:12px;color:#999">{{ (raceCatalog().find(function (m) { return m.model === race.form.model; }) || {}).note || '' }}</span></div>
                       <div style="color:#6B7785">兜底 thinking</div><div><el-select v-model="race.form.thinking" size="small" style="width:160px"><el-option label="disabled（关思考，推荐）" value="disabled"></el-option><el-option label="enabled" value="enabled"></el-option><el-option label="adaptive" value="adaptive"></el-option></el-select></div>
-                      <div style="color:#6B7785">兜底 API key</div><div><input type="password" v-model="race.form.key" autocomplete="new-password" :placeholder="race.data && race.data.worker.file && race.data.worker.file.LLM_FALLBACK_API_KEY && race.data.worker.file.LLM_FALLBACK_API_KEY.set ? ('已配置 ' + race.data.worker.file.LLM_FALLBACK_API_KEY.hint + '（' + race.data.worker.file.LLM_FALLBACK_API_KEY.len + ' 位），留空不改') : '未配置'" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">后台永不回显整串；换套餐记得同时换 Base</span></div>
+                      <div style="color:#6B7785">兜底 API key</div><div><input type="password" v-model="race.form.key" autocomplete="new-password" :placeholder="raceProfileKeySet() ? '该端点已配置密钥，留空沿用' : '该端点未配置，请填写密钥'" style="width:340px;padding:5px 8px;border:1px solid #dcdfe6;border-radius:6px"> <span style="color:#999;font-size:12px">密钥按供应商和套餐分别保存，切换不会串用；留空不会清除已保存密钥。</span></div>
                       <div style="color:#6B7785;align-self:start;padding-top:6px">兜底人设</div><div><textarea v-model="race.form.instructions" rows="4" style="width:100%;max-width:820px;padding:6px 8px;border:1px solid #dcdfe6;border-radius:6px;font-size:12px;line-height:1.5"></textarea><div style="font-size:12px;color:#999">{{ race.form.instructions.length }}/1200 字 · 单行；禁引号、反引号、$、反斜杠 · 主路走大脑，这段只影响兜底路胜出的轮次</div></div>
                     </div>
                     <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
-                      <el-button type="primary" :loading="race.saving" @click="saveRace()">保存并纪律重启 worker</el-button>
+                      <el-button type="primary" :loading="race.saving" @click="saveRace()">保存并重启主 Worker</el-button>
                       <el-checkbox v-model="race.force">强制（忽略通话检查）</el-checkbox>
                       <span v-if="race.data && race.data.worker && race.data.worker.file && race.data.worker.proc && raceProcMismatch().length" style="color:#E8833A;font-size:12px">⚠️ 进程生效值 ≠ 文件值：{{ raceProcMismatch().join('、') }}（改过 env 未重启？）</span>
                     </div>
                     <pre v-if="race.applyResult" style="margin-top:10px;background:#F7F9FC;padding:10px;border-radius:8px;font-size:12px;white-space:pre-wrap">{{ JSON.stringify(race.applyResult, null, 1) }}</pre>
                   </div>
+                  <div style="background:#EEF5FA;border-radius:10px;padding:12px 16px;margin-bottom:14px;font-size:13px;line-height:1.8;color:#40566B">
+                    <b>怎样工作</b>：正常回复不调用外层备用，也不预热备用模型。超时启动后，大脑仍可抢先完成；一旦出现正文，就固定这一条回复，不在半句话中换模型。用户打断或达到首正文上限，会取消未完成请求。<br>
+                    <b>适用范围</b>：灾备保障基本回应，不具备大脑的实时搜索、个人数据与记忆注入能力。DeepSeek 默认用于绕过大脑服务故障；需要跨供应商容灾时可选火山。旧 grace 参数已停用。总等待上限不是整段播报时长。
+                  </div>
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-                    <div style="font-weight:700;margin-bottom:6px">大脑内赛马（server 侧，只读）<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">改这里要动 server env + pm2 重启，找 cc</span></div>
+                    <div style="font-weight:700;margin-bottom:6px">大脑内部赛马（只读）<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">DeepSeek 与火山在大脑内部竞速，与上方外层灾备独立，本页不修改</span></div>
                     <div v-if="race.data && race.data.brain" style="font-size:13px">provider <b>{{ race.data.brain.provider || '—' }}</b> · 主路 <b>{{ race.data.brain.main_model || '—' }}</b> <code style="color:#999">{{ race.data.brain.main_base }}</code> · 兜底 <b>{{ race.data.brain.fallback_model || '—' }}</b> <code style="color:#999">{{ race.data.brain.fallback_base }}</code></div>
                   </div>
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-weight:700">现役实测（worker journal「llm race won」）</div><el-select v-model="race.statsHours" size="small" style="width:110px" @change="loadRaceStats()"><el-option label="24 小时" :value="24"></el-option><el-option label="48 小时" :value="48"></el-option><el-option label="7 天" :value="168"></el-option></el-select><el-button size="small" :loading="race.statsLoading" @click="loadRaceStats()">🔄</el-button></div>
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div style="font-weight:700">外层实际结果（包含改版前记录）</div><el-select v-model="race.statsHours" size="small" style="width:110px" @change="loadRaceStats()"><el-option label="24 小时" :value="24"></el-option><el-option label="48 小时" :value="48"></el-option><el-option label="7 天" :value="168"></el-option></el-select><el-button size="small" :loading="race.statsLoading" @click="loadRaceStats()">🔄</el-button></div>
                     <div v-if="race.stats" style="font-size:13px">轮次 <b>{{ race.stats.n }}</b> · 主路胜 <b style="color:#3B7A99">{{ race.stats.won_main }}</b> · 兜底胜 <b style="color:#E8833A">{{ race.stats.won_fallback }}</b>（{{ race.stats.n ? Math.round(race.stats.won_fallback * 100 / race.stats.n) : 0 }}%）· 首字 p50 <b>{{ race.stats.p50 }}</b> / p90 {{ race.stats.p90 }} / p95 {{ race.stats.p95 }} / max {{ race.stats.max }} ms<div style="font-size:12px;color:#888;margin-top:4px">兜底胜出轮的首字（ms）：{{ (race.stats.fallback_won_ttft || []).join(' · ') || '无' }}</div></div>
                     <div v-else style="color:#999;font-size:12px">{{ race.statsLoading ? '统计中…' : '暂无' }}</div>
                   </div>
                   <div style="background:#fff;border-radius:12px;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.06)">
-                    <div style="font-weight:700;margin-bottom:6px">⏱ 延时测试<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">从 64.90 直连候选模型（用当前兜底 Base 与 key）测流式首字；每格 1~5 次，总预算 140 秒</span></div>
+                    <div style="font-weight:700;margin-bottom:6px">⏱ 延时测试<span style="font-weight:400;font-size:12px;color:#888;margin-left:8px">使用已保存的备用供应商和密钥，测试会实际调用模型并计费；修改配置后请先保存。</span></div>
                     <div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px">
-                      <el-checkbox v-for="m in (race.data ? race.data.catalog : [])" :key="m.model" v-model="race.bench.models[m.model]" :disabled="m.tier==='unsupported'"><span>{{ m.model }}</span> <span :style="{color: raceTierColor(m.tier), fontSize:'11px'}">{{ raceTierTag(m.tier) }}</span></el-checkbox>
+                      <el-checkbox v-for="m in raceCatalog()" :key="m.model" v-model="race.bench.models[m.model]" :disabled="m.tier==='unsupported'"><span>{{ m.model }}</span> <span :style="{color: raceTierColor(m.tier), fontSize:'11px'}">{{ raceTierTag(m.tier) }}</span></el-checkbox>
                     </div>
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
                       <el-radio-group v-model="race.bench.prompt" size="small"><el-radio-button label="short">短提示（60 字）</el-radio-button><el-radio-button label="device">某台设备的生产 prompt</el-radio-button></el-radio-group>
                       <el-select v-if="race.bench.prompt==='device'" v-model="race.bench.sn" size="small" filterable placeholder="选设备" style="width:260px"><el-option v-for="d in devcfgDeviceOptions()" :key="d.sn" :label="d.label" :value="d.sn"></el-option></el-select>
                       <span style="font-size:12px;color:#6B7785">次数</span><el-select v-model="race.bench.runs" size="small" style="width:70px"><el-option v-for="n in [1,2,3,4,5]" :key="n" :label="n" :value="n"></el-option></el-select>
-                      <el-button type="primary" size="small" :loading="race.bench.running" @click="runRaceBench()">开始测试</el-button>
+                      <el-button type="primary" size="small" :loading="race.bench.running" :disabled="Object.keys(raceDiff()).length > 0" @click="runRaceBench()">开始测试</el-button>
                       <span v-if="race.bench.error" style="color:#E8833A;font-size:12px">{{ race.bench.error }}</span>
                     </div>
                     <div v-if="race.bench.result" style="font-size:12px;color:#888;margin-bottom:6px">Base {{ race.bench.result.base }} · prompt {{ race.bench.result.prompt }}（{{ race.bench.result.system_chars }} 字）· 耗时 {{ race.bench.result.elapsed_ms }} ms<span v-if="race.bench.result.truncated" style="color:#E8833A">（超预算，已截断）</span></div>
@@ -2106,7 +2122,7 @@
                     </div>
                   </div>
                   <div style="display:flex;align-items:center;gap:12px;margin-top:4px;margin-bottom:14px">
-                    <el-button type="primary" :loading="voice.saving" :disabled="!(voice.data && voice.data.ok)" @click="saveVoice()">保存并纪律重启 worker</el-button>
+                    <el-button type="primary" :loading="voice.saving" :disabled="!(voice.data && voice.data.ok)" @click="saveVoice()">保存并重启主 Worker</el-button>
                     <el-checkbox v-model="voice.force">强制（忽略通话检查）</el-checkbox>
                     <span v-if="voiceMismatch().length" style="color:#E8833A;font-size:12px">⚠️ 进程生效值 ≠ 文件值：{{ voiceMismatch().join('、') }}（改过 env 未重启？）</span>
                   </div>
@@ -2263,7 +2279,7 @@
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;gap:14px">
                     <div>
                       <div class="kh-h1">服务器状态</div>
-                      <div class="kh-sub">三台机资源 · systemd / pm2 服务 · worker ↔ KidsHubAI-VoiceKit 连接 —— 同一份只读脚本采集，server 30 秒缓存，本页每分钟自动刷新</div>
+                      <div class="kh-sub">主机资源 · systemd / pm2 服务 · worker ↔ KidsHubAI-VoiceKit 连接 —— 状态与采集结果分别展示，本页每分钟自动刷新</div>
                     </div>
                     <div style="display:flex;gap:8px;align-items:center">
                       <span style="font-size:12px;color:#909399">数据采集于 {{ hostsStatus.ts ? hsAgo(hostsStatus.ts) : '—' }}{{ hostsStatus.fetchedAt ? ('，页面 ' + hostsStatus.fetchedAt + ' 拉取') : '' }}</span>
@@ -2271,13 +2287,14 @@
                     </div>
                   </div>
                   <el-alert v-if="hostsStatus.error" :title="hostsStatus.error" type="error" :closable="false" style="margin-bottom:12px"></el-alert>
-                  <div v-for="h in hostsStatus.hosts" :key="h.id" class="kh-card" style="padding:14px;margin-bottom:14px">
+                  <div v-for="h in hostsStatus.hosts" :key="h.id" class="kh-card" style="padding:14px;margin-bottom:14px;min-width:0;overflow-wrap:anywhere">
                     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
-                      <div style="font-size:14px;font-weight:700">{{ h.label }} <el-tag size="small" :type="h.ok ? 'success' : 'danger'" style="margin-left:6px">{{ h.ok ? '可达' : '不可达' }}</el-tag></div>
-                      <div style="font-size:12px;color:#909399">采集 {{ hsAgo(h.fetched_at_ms) }}{{ h.latency_ms != null ? ('，耗时 ' + h.latency_ms + ' ms') : '' }}{{ h.data && h.data.hostname ? ('，主机 ' + h.data.hostname) : '' }}</div>
+                      <div style="font-size:14px;font-weight:700">{{ h.label }} <el-tag size="small" :type="hsCollectionType(h)" style="margin-left:6px">{{ hsCollectionLabel(h) }}</el-tag></div>
+                      <div style="font-size:12px;color:#909399">采集 {{ hsAgo(h.fetched_at_ms) }}{{ h.latency_ms != null ? ('，往返 ' + h.latency_ms + ' ms') : '' }}{{ h.data && h.data.collect_ms != null ? ('，脚本 ' + h.data.collect_ms + ' ms') : '' }}{{ h.data && h.data.hostname ? ('，主机 ' + h.data.hostname) : '' }}</div>
                     </div>
-                    <div v-if="!h.ok" style="color:#E8503A;font-size:13px">采集失败：{{ h.error || '未知' }}</div>
+                    <div v-if="!h.ok" style="color:#E8503A;font-size:13px;overflow-wrap:anywhere">采集失败：{{ h.error || '未知' }}</div>
                     <template v-else-if="h.data">
+                      <div v-if="h.data.journal_cache" style="font-size:12px;margin-bottom:8px;overflow-wrap:anywhere" :style="{color: h.data.journal_cache.state === 'fresh' ? '#909399' : '#E8833A'}">{{ hsJournalCacheLabel(h.data.journal_cache) }}</div>
                       <div style="font-size:13px;line-height:1.9;margin-bottom:8px">
                         开机 <b>{{ hsDur(h.data.host && h.data.host.uptime_s) }}</b> · 负载 <b>{{ hsNum(h.data.host && h.data.host.load1) }}</b> / {{ hsNum(h.data.host && h.data.host.load5) }} / {{ hsNum(h.data.host && h.data.host.load15) }}（{{ hsNum(h.data.host && h.data.host.nproc) }} 核）· 内存可用 <b>{{ hsGb(h.data.host && h.data.host.mem_avail_mb) }}</b> / {{ hsGb(h.data.host && h.data.host.mem_total_mb) }} · 系统盘已用 <b :style="{color: h.data.host && h.data.host.disk_root_used_pct > 85 ? '#E8503A' : '#1F2933'}">{{ h.data.host && h.data.host.disk_root_used_pct != null ? h.data.host.disk_root_used_pct + '%' : '—' }}</b>（剩 {{ h.data.host && h.data.host.disk_root_avail_gb != null ? h.data.host.disk_root_avail_gb + 'G' : '—' }}）
                       </div>
@@ -2301,15 +2318,15 @@
                         <el-table-column label="连接" width="100"><template #default="{row}"><el-tag size="small" :type="hsLinkType(row)">{{ hsLinkLabel(row) }}</el-tag></template></el-table-column>
                         <el-table-column label="注册于" width="230"><template #default="{row}">{{ row.registered_at_ms ? (fmtTs(row.registered_at_ms) + '（' + hsAgo(row.registered_at_ms) + '）') : '—' }}</template></el-table-column>
                         <el-table-column label="最近断线" width="230"><template #default="{row}">{{ row.last_failure_at_ms ? (fmtTs(row.last_failure_at_ms) + '（' + hsAgo(row.last_failure_at_ms) + '）') : '—' }}</template></el-table-column>
-                        <el-table-column label="断线 24h / 本代" width="120"><template #default="{row}">{{ row.failures_24h }} / {{ row.failures_window }}</template></el-table-column>
-                        <el-table-column label="注册后连续失败" width="120"><template #default="{row}"><span :style="{color: row.consecutive_failures_since_register > 0 ? '#E8503A' : '#1F2933'}">{{ row.consecutive_failures_since_register }}</span></template></el-table-column>
-                        <el-table-column label="放弃退出(本代)" width="120"><template #default="{row}"><span :style="{color: row.give_ups_window > 0 ? '#E8503A' : '#1F2933', fontWeight: row.give_ups_window > 0 ? 700 : 400}">{{ row.give_ups_window }}</span></template></el-table-column>
-                        <el-table-column label="24h 接房" width="90"><template #default="{row}">{{ row.job_accepts_24h }}</template></el-table-column>
+                        <el-table-column label="断线 24h / 本代" width="120"><template #default="{row}">{{ hsNum(row.failures_24h) }} / {{ hsNum(row.failures_window) }}</template></el-table-column>
+                        <el-table-column label="注册后连续失败" width="120"><template #default="{row}"><span :style="{color: row.consecutive_failures_since_register > 0 ? '#E8503A' : '#1F2933'}">{{ hsNum(row.consecutive_failures_since_register) }}</span></template></el-table-column>
+                        <el-table-column label="放弃退出(本代)" width="120"><template #default="{row}"><span :style="{color: row.give_ups_window > 0 ? '#E8503A' : '#1F2933', fontWeight: row.give_ups_window > 0 ? 700 : 400}">{{ hsNum(row.give_ups_window) }}</span></template></el-table-column>
+                        <el-table-column label="24h 接房" width="90"><template #default="{row}">{{ hsNum(row.job_accepts_24h) }}</template></el-table-column>
                         <el-table-column label="最近错误" min-width="220"><template #default="{row}"><span style="font-size:12px;color:#909399">{{ row.last_failure_error || '—' }}</span></template></el-table-column>
                       </el-table>
                       <el-table v-if="h.data.sidecars && h.data.sidecars.length" :data="h.data.sidecars" size="small" style="width:100%;margin-bottom:8px">
                         <el-table-column label="判停 / 声纹边车（EOT sidecar）" width="220"><template #default="{row}"><span style="font-family:monospace">{{ row.unit }}</span></template></el-table-column>
-                        <el-table-column label="状态" width="110"><template #default="{row}"><el-tag size="small" :type="row.state === 'ok' ? 'success' : (row.state === 'degraded' ? 'warning' : (row.state === 'unit_inactive' ? 'info' : 'danger'))">{{ row.state === 'ok' ? '正常' : (row.state === 'degraded' ? '有告警' : (row.state === 'unit_inactive' ? 'worker 未运行' : '缺失')) }}</el-tag></template></el-table-column>
+                        <el-table-column label="状态" width="160"><template #default="{row}"><el-tag size="small" :type="hsSidecarType(row)">{{ hsSidecarLabel(row) }}</el-tag></template></el-table-column>
                         <el-table-column label="socket" min-width="230"><template #default="{row}"><span style="font-family:monospace;font-size:12px">{{ row.sock || '—' }}</span><span v-if="row.sock" :style="{color: row.listening ? '#3DBE78' : '#E8503A', marginLeft: '6px'}">{{ row.listening ? '在听' : '无监听' }}</span><span v-if="row.shared_with && row.shared_with.length" style="color:#E8833A;font-size:12px;margin-left:6px">共用：{{ row.shared_with.join('、') }}</span></template></el-table-column>
                         <el-table-column label="进程" width="200"><template #default="{row}">{{ row.pid ? ('pid ' + row.pid + ' · ' + hsMb(row.rss_bytes) + ' · 存活 ' + hsDur(row.age_s)) : '—' }}</template></el-table-column>
                         <el-table-column label="归属" width="150"><template #default="{row}">{{ row.pid ? (row.spawned_by_this_worker ? '本 worker 拉起' : ('由 ' + (row.owner_unit || '其它进程') + ' 拉起')) : '—' }}</template></el-table-column>
@@ -2330,13 +2347,13 @@
                       <el-table-column label="最近一句" min-width="200"><template #default="{row}"><span style="font-size:12px">{{ row.last_text || '—' }}</span><span style="font-size:12px;color:#909399;margin-left:6px">{{ row.last_ms ? hsAgo(row.last_ms) : '' }}</span></template></el-table-column>
                       </el-table>
                       <el-table v-if="d.misfire_suspects.length" :data="d.misfire_suspects" size="small" style="width:100%;margin-bottom:6px">
-                      <el-table-column label="误触发嫌疑（慢路提案但原话无设备词根）" min-width="260"><template #default="{row}"><span style="font-size:12px">{{ row.text }}</span></template></el-table-column>
+                      <el-table-column label="误触发嫌疑（慢路提案但原话无设备词根）" min-width="260"><template #default="{row}"><span style="font-size:12px">{{ row.text || '原话不保存在监控缓存' }}</span></template></el-table-column>
                       <el-table-column label="设备" width="120"><template #default="{row}"><span style="font-family:monospace">{{ row.sn }}</span></template></el-table-column>
                       <el-table-column label="标签" width="70"><template #default="{row}">{{ row.label }}</template></el-table-column>
                       <el-table-column label="结果" width="130"><template #default="{row}">{{ row.status }}</template></el-table-column>
                       <el-table-column label="时间" width="170"><template #default="{row}">{{ fmtTs(row.ts_ms) }}</template></el-table-column>
                       </el-table>
-                      <div v-if="d.recent.length" style="font-size:12px;color:#6B7785">最近提案：<span v-for="(r,i) in d.recent" :key="i" style="margin-right:10px">{{ fmtTs(r.ts_ms) }} {{ r.sn }} 「{{ r.text }}」→{{ r.label }} {{ r.lane }} {{ r.status }}</span></div>
+                      <div v-if="d.recent.length" style="font-size:12px;color:#6B7785">最近提案：<span v-for="(r,i) in d.recent" :key="i" style="margin-right:10px">{{ fmtTs(r.ts_ms) }} {{ r.sn }} {{ r.text ? ('「' + r.text + '」') : '（原话不保存在监控缓存）' }} →{{ r.label }} {{ r.lane }} {{ r.status }}</span></div>
                       <div v-else style="font-size:12px;color:#909399">24h 内无设备命令提案</div>
                       </div>
                       </template>
@@ -2346,7 +2363,7 @@
                         <div style="font-size:12px;color:#6B7785">最近事件：<span v-for="(e,i) in h.data.connections.livekit.last_events" :key="i" style="margin-right:10px">{{ fmtTs(e.ts_ms) }} {{ e.type === 'registered' ? '注册' : '注销' }} {{ e.agent || '' }}</span><span v-if="!h.data.connections.livekit.last_events.length">7 天内无</span></div>
                       </template>
                       <div v-if="h.data.connections && h.data.connections.health" style="font-size:13px">/health <b :style="{color: h.data.connections.health.status === 200 ? '#3DBE78' : '#E8503A'}">{{ h.data.connections.health.status || '失败' }}</b>{{ h.data.connections.health.ms != null ? ('（' + h.data.connections.health.ms + ' ms）') : '' }} · 监听 <span v-for="(v,k) in h.data.connections.listen" :key="k" style="margin-right:6px"><el-tag size="small" :type="v ? 'success' : 'danger'">:{{ k }}</el-tag></span></div>
-                      <div v-if="h.data.errors && h.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:6px">采集告警：{{ h.data.errors.join('；') }}</div>
+                      <div v-if="h.data.errors && h.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:6px;overflow-wrap:anywhere">部分采集失败：{{ h.data.errors.join('；') }}</div>
                     </template>
                   </div>
                   <div v-if="!hostsStatus.hosts.length && !hostsStatus.loading && !hostsStatus.error" style="color:#999;font-size:13px">暂无数据</div>
@@ -2359,25 +2376,28 @@
                     </div>
                     <el-button size="small" :loading="deviceData.loading || workerStats.loading" @click="loadDevices(); loadDeviceSessions(); loadWorkerStats()">刷新</el-button>
                   </div>
+                  <el-alert v-if="workerStats.error" :title="'本次采集请求失败，容量暂不可用；资源卡保留上次采集结果：' + workerStats.error" type="warning" :closable="false" style="margin-bottom:12px;overflow-wrap:anywhere"></el-alert>
                   <div class="stat-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-bottom:16px">
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">台账设备（env 兜底另计 {{ deviceData.envAllow.length }}）</div><div style="font-size:26px;font-weight:800;color:#3B7A99">{{ deviceData.devices.length }}</div></div>
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日 Session</div><div style="font-size:26px;font-weight:800;color:#3DBE78">{{ deviceData.stats.today_ok }}</div></div>
                     <div class="kh-card" style="padding:14px"><div style="font-size:12px;color:#6B7785">今日拒绝（403/429）</div><div style="font-size:26px;font-weight:800;color:#E8833A">{{ deviceData.stats.today_rejected }}</div></div>
                     <div class="kh-card" style="padding:14px">
-                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity ? workerStats.capacity.max_jobs : '—' }}{{ workerStats.breakdown }}）</div>
-                      <div v-if="workerStats.capacity" style="font-size:26px;font-weight:800" :style="{color: workerStats.capacity.remaining > 1 ? '#3DBE78' : (workerStats.capacity.remaining === 1 ? '#E8833A' : '#E8503A')}">{{ workerStats.capacity.remaining }}<span style="font-size:13px;color:#909399;font-weight:400"> / 在线 {{ workerStats.capacity.active_total }} 房</span></div>
+                      <div style="font-size:12px;color:#6B7785">剩余可接入设备（并发上限 {{ workerStats.capacity && !workerStats.error ? workerStats.capacity.max_jobs : '—' }}{{ workerStats.error ? '' : workerStats.breakdown }}）</div>
+                      <div v-if="workerStats.capacity && !workerStats.error" style="font-size:26px;font-weight:800" :style="{color: workerStats.capacity.remaining > 1 ? '#3DBE78' : (workerStats.capacity.remaining === 1 ? '#E8833A' : '#E8503A')}">{{ workerStats.capacity.remaining }}<span style="font-size:13px;color:#909399;font-weight:400"> / 在线 {{ workerStats.capacity.active_total }} 房</span></div>
                       <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : '暂不可用' }}</div>
                     </div>
-                    <div class="kh-card" style="padding:14px" v-for="m in workerStats.machines" :key="m.id">
+                    <div class="kh-card" style="padding:14px;min-width:0;overflow-wrap:anywhere" v-for="m in workerStats.machines" :key="m.id">
                       <div style="font-size:12px;color:#6B7785">Worker 实时资源 · {{ m.label }}</div>
                       <template v-if="m.ok && m.data">
                         <div style="font-size:13px;margin-top:4px;line-height:1.9">
-                          内存可用 <b>{{ (m.data.mem_avail_mb/1024).toFixed(1) }}G</b> / {{ (m.data.mem_total_mb/1024).toFixed(1) }}G · 负载 <b>{{ m.data.load1 }}</b>/{{ m.data.nproc }}核 · 并发上限 <b>{{ m.data.max_jobs == null ? '—' : m.data.max_jobs }}</b><br/>
-                          rust <b>{{ Math.round(m.data.rust_mem_bytes/1048576) }}M</b>/{{ Math.round(m.data.rust_mem_high_bytes/1048576) }}M 上限 · <el-tag size="small" :type="m.data.rust_active==='active' ? 'success' : 'danger'">{{ m.data.rust_active }}</el-tag>
+                          内存可用 <b>{{ hsGb(m.data.mem_avail_mb) }}</b> / {{ hsGb(m.data.mem_total_mb) }} · 负载 <b>{{ hsNum(m.data.load1) }}</b>/{{ hsNum(m.data.nproc) }}核 · 并发上限 <b>{{ m.data.max_jobs == null ? '—' : m.data.max_jobs }}</b><br/>
+                          rust <b>{{ hsMb(m.data.rust_mem_bytes) }}</b>/{{ hsMb(m.data.rust_mem_high_bytes) }} 上限 · <el-tag size="small" :type="hsSvcType({active_state:m.data.rust_active})">{{ m.data.rust_active || '未确认' }}</el-tag>
                         </div>
-                        <div style="font-size:11px;color:#B0B8C4;margin-top:2px">更新于 {{ workerStats.fetchedAt || '—' }} · 每分钟自动刷新</div>
+                        <div v-if="m.data.journal_cache" style="font-size:12px;margin-top:4px;overflow-wrap:anywhere;max-height:8em;overflow:auto" :style="{color: m.data.journal_cache.state === 'fresh' ? '#909399' : '#E8833A'}">{{ hsJournalCacheLabel(m.data.journal_cache) }}</div>
+                        <div v-if="m.data.errors && m.data.errors.length" style="font-size:12px;color:#E8833A;margin-top:4px;overflow-wrap:anywhere;max-height:8em;overflow:auto">部分采集失败：{{ m.data.errors.join('；') }}</div>
+                        <div style="font-size:11px;color:#909399;margin-top:2px">采集 {{ hsAgo(m.data.collected_at_ms || (m.data.ts ? m.data.ts * 1000 : 0)) }}{{ m.data.collect_ms != null ? (' · 脚本 ' + m.data.collect_ms + ' ms') : '' }} · 页面 {{ workerStats.fetchedAt || '—' }} 拉取</div>
                       </template>
-                      <div v-else style="font-size:14px;color:#909399;padding-top:6px">{{ workerStats.loading ? '加载中…' : ('暂不可用' + (m.error ? '：' + m.error : '')) }}</div>
+                      <div v-else style="font-size:14px;color:#E8503A;padding-top:6px;overflow-wrap:anywhere;max-height:8em;overflow:auto">{{ workerStats.loading ? '加载中…' : ('采集失败' + (m.error ? '：' + m.error : '')) }}</div>
                     </div>
                     <div class="kh-card" style="padding:14px" v-if="!workerStats.machines.length">
                       <div style="font-size:12px;color:#6B7785">Worker 服务器实时资源</div>
@@ -2457,11 +2477,34 @@
                       <el-table-column label="状态" width="90">
                         <template #default="{row}"><el-switch :model-value="row.status" active-value="active" inactive-value="disabled" @change="toggleDeviceStatus(row, $event)"></el-switch></template>
                       </el-table-column>
-                      <el-table-column label="凭据有效期至" width="170">
+                      <el-table-column label="设备凭据" width="215">
                         <template #default="{row}">
-                          <span v-if="!row.credential_expires_at" style="color:#909399">未签发</span>
-                          <span v-else :style="{color: row.credential_expires_at < Date.now() ? '#E8503A' : '#1F2933', fontWeight:600}">{{ fmtTs(row.credential_expires_at) }}</span>
-                          <small v-if="row.credential_source==='pairing_claim'" title="配网 claim 签发（台账列由最近一次 claim 会话推导，误差≤1s）" style="color:#909399;margin-left:4px">配网</small>
+                          <template v-if="row.binding_policy === 'ble-key-v1'">
+                            <span v-if="!row.ble_status || row.ble_status.state !== 'available'" style="color:#E8833A">领证状态暂不可查</span>
+                            <template v-else>
+                              <div :style="{color: row.ble_status.issued_at_ms ? '#1F2933' : '#909399', fontWeight:600}" title="当前家长、当前绑定代际的历史记录；不代表凭据当前有效">{{ row.ble_status.issued_at_ms ? '已有自动领证记录' : '暂无自动领证记录' }}</div>
+                              <div v-if="row.ble_status.issued_at_ms" style="font-size:12px;color:#6B7785">领证 {{ fmtTs(row.ble_status.issued_at_ms) }}</div>
+                              <div v-if="row.ble_status.issued_at_ms" style="font-size:12px;color:#909399">到期时间未记录</div>
+                              <div v-if="row.ble_status.authenticated_at_ms" style="font-size:12px;color:#6B7785" title="历史领证会话实际认证成功的时间，不代表设备当前在线">认证 {{ fmtTs(row.ble_status.authenticated_at_ms) }}</div>
+                            </template>
+                          </template>
+                          <template v-else>
+                            <span v-if="!row.credential_expires_at" style="color:#909399">未签发</span>
+                            <span v-else :style="{color: row.credential_expires_at < Date.now() ? '#E8503A' : '#1F2933', fontWeight:600}">至 {{ fmtTs(row.credential_expires_at) }}</span>
+                            <small v-if="row.credential_source==='pairing_claim'" title="配网 claim 签发（台账列由最近一次 claim 会话推导，误差≤1s）" style="color:#909399;margin-left:4px">配网</small>
+                          </template>
+                        </template>
+                      </el-table-column>
+                      <el-table-column label="本轮配对" width="205">
+                        <template #default="{row}">
+                          <span v-if="row.binding_policy !== 'ble-key-v1'" style="color:#C0C4CC">—</span>
+                          <span v-else-if="!row.ble_status || row.ble_status.state !== 'available' || !row.ble_status.pairing" style="color:#E8833A">配对状态暂不可查</span>
+                          <template v-else>
+                            <div :style="{color: row.ble_status.pairing.state === 'authenticated' ? '#1F2933' : '#E8833A', fontWeight:600}">{{ ({none:'暂无配对记录',waiting_claim:'已绑定 · 待设备领证',claim_expired:'领证窗口已过期',waiting_auth:'已领证 · 待设备认证',authenticated:'本轮已认证',revoked:'本轮已撤销'})[row.ble_status.pairing.state] || '状态暂不可查' }}</div>
+                            <div v-if="row.ble_status.pairing.bound_at_ms" style="font-size:12px;color:#6B7785">绑定 {{ fmtTs(row.ble_status.pairing.bound_at_ms) }}</div>
+                            <div v-if="row.ble_status.pairing.state === 'waiting_claim' || row.ble_status.pairing.state === 'claim_expired'" style="font-size:12px;color:#909399" title="仅为本次领取凭据的窗口，不是设备凭据有效期">领证截至 {{ fmtTs(row.ble_status.pairing.claim_deadline_ms) }}</div>
+                            <div v-if="row.ble_status.issued_at_ms && (row.ble_status.pairing.state === 'waiting_claim' || row.ble_status.pairing.state === 'claim_expired')" style="font-size:12px;color:#909399">历史领证与本轮进度分别记录</div>
+                          </template>
                         </template>
                       </el-table-column>
                       <el-table-column label="最近活跃" width="150">
@@ -4945,7 +4988,7 @@
           finally{if(epoch===authSessionEpoch&&token===getToken()){amapUsage.saving=false;if(!amapUsage.pending)void loadAmapUsage();}}
         }
 
-        var routing=reactive({data:null,draft:null,loading:false,busy:false,dirty:false,error:'',notice:'',seq:0,editRevision:0,sns:[],rollbackVersion:'',utterances:'今天北京的天气\n我今天画了一只猫',preview:null});
+        var routing=reactive({data:null,draft:null,loading:false,busy:false,dirty:false,error:'',notice:'',seq:0,editRevision:0,sns:[],rollbackVersion:'',utterances:'今天北京的天气\n我今天画了一只猫',preview:null,catalog:null});
         watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){routing.seq++;routing.data=null;routing.draft=null;routing.loading=false;routing.busy=false;routing.error='';routing.notice='';routing.preview=null;routing.dirty=false;routing.sns=[];}});
         function routingDirty(){routing.dirty=true;routing.preview=null;routing.notice='';}
         function routingPhrases(r,k,e){r[k]=e.target.value.split(/[、，,\n]/).map(function(t){return t.trim();}).filter(Boolean);routingDirty();}
@@ -4969,7 +5012,7 @@
           finally{if(seq===routing.seq)routing.busy=false;}
         }
         function saveRoutingDraft(){return routingMutation('/draft','PUT',{expected_revision:routing.editRevision,config:routing.draft},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='草稿已保存，运行版本未改变';});}
-        function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.notice='预览完成，没有执行搜索';});}
+        function previewRoutingDraft(){routing.preview=null;var u=routing.utterances.split('\n').map(function(t){return t.trim();}).filter(Boolean).map(function(text,i){return {text:text,at_ms:i*1500};});return routingMutation('/preview','POST',{config:routing.draft,utterances:u},function(j){routing.preview=j.decisions;routing.catalog=j.weather_catalog||null;routing.notice='预览完成，没有执行搜索';});}
         function publishRouting(){return routingMutation(searchLane.value==='p1'?'/publish-all':'/publish','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision}:{expected_revision:routing.data.revision,sns:routing.sns},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,true);routing.notice='路由已发布；等待 Worker 加载确认，不等于真机实听通过';});}
         function rollbackRouting(){return routingMutation(searchLane.value==='p1'?'/rollback-all':'/rollback','POST',searchLane.value==='p1'?{expected_revision:routing.data.revision,version:routing.rollbackVersion}:{expected_revision:routing.data.revision,sns:routing.sns,version:routing.rollbackVersion},function(j){j.eligible_sns=routing.data.eligible_sns;routingAccept(j,!routing.dirty);routing.notice=searchLane.value==='p1'?'全量路由已回滚发布，等待 Worker 确认':'所选设备已回滚发布，等待 Worker 确认';});}
 
@@ -5234,14 +5277,17 @@
         }
 
         // ── 🏇 赛马配置（2026-09-03；API /api/admin/worker-race*；64.90 脚本 race_* 动作；后端为真防线：白名单/正则/安全窗口/对撞/回滚）──
-        var race = reactive({ loading: false, error: '', data: null, form: { base_preset: 'agent_plan', base_custom: '', model: '', model_custom: '', thinking: 'disabled', key: '', grace: 800, instructions: '' }, force: false, saving: false, applyResult: null, stats: null, statsHours: 48, statsLoading: false, bench: { models: {}, prompt: 'short', sn: '', runs: 3, running: false, result: null, error: '' } });
-        function raceBaseUrl() { if (race.form.base_preset === 'custom') return race.form.base_custom.trim(); var p = ((race.data && race.data.presets) || []).find(function (x) { return x.key === race.form.base_preset; }); return p ? p.url : ''; }
+        var race = reactive({ loading: false, error: '', data: null, form: { provider: 'deepseek', enabled: false, trigger: 2000, deadline: 6000, base_preset: 'deepseek', base_custom: '', model: '', model_custom: '', thinking: 'disabled', key: '', grace: 800, instructions: '' }, force: false, saving: false, applyResult: null, stats: null, statsHours: 48, statsLoading: false, bench: { models: {}, prompt: 'short', sn: '', runs: 3, running: false, result: null, error: '' } });
+        function raceBaseUrl() { return ({deepseek:'https://api.deepseek.com/v1',volc_plan:'https://ark.cn-beijing.volces.com/api/plan/v3',volc_coding:'https://ark.cn-beijing.volces.com/api/coding/v3'})[race.form.provider] || ''; }
+        function raceCatalog() { return race.form.provider === 'deepseek' ? [{model:'deepseek-v4-flash',tier:'recommended',note:'DeepSeek 官方；沿用当前大脑主模型，外层仅故障时调用'}, {model:'deepseek-v4-pro',tier:'caution',note:'更大模型可能增加等待，切换后请手动测试'}] : ((race.data && race.data.catalog) || []); }
+        function raceProfileKeySet() { var w=race.data && race.data.worker; return !!(w && w.profiles && w.profiles[race.form.provider] && w.profiles[race.form.provider].key_set); }
+        function raceProviderChanged() { var w=race.data && race.data.worker; var p=(w && w.profiles && w.profiles[race.form.provider]) || {}; var model=p.model || (race.form.provider==='deepseek' ? 'deepseek-v4-flash' : 'doubao-seed-2.0-mini'); race.form.model=raceCatalog().some(function(m){return m.model===model;}) ? model : '__custom'; race.form.model_custom=model; race.form.thinking=p.thinking || 'disabled'; race.form.key=''; race.bench.models={}; race.bench.result=null; }
         function raceModel() { return race.form.model === '__custom' ? race.form.model_custom.trim() : race.form.model; }
         function raceTierTag(t) { return ({ recommended: '推荐', ok: '可用', caution: '慎用', unsupported: '不可用' })[t] || t; }
         function raceTierColor(t) { return ({ recommended: '#3DBE78', ok: '#3B7A99', caution: '#E8833A', unsupported: '#C0392B' })[t] || '#909399'; }
         function raceProcMismatch() {
           var w = race.data && race.data.worker; if (!w || !w.file || !w.proc) return [];
-          return ['LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS'].filter(function (k) { return (w.file[k] || '') !== (w.proc[k] || ''); });
+          return ['LLM_FALLBACK_ENABLED','LLM_FALLBACK_PROVIDER','LLM_FALLBACK_TRIGGER_MS','LLM_FALLBACK_DEADLINE_MS','LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS'].filter(function (k) { return (w.file[k] || '') !== (w.proc[k] || ''); });
         }
         async function loadRace() {
           if (!canManageInvites.value) return;
@@ -5252,9 +5298,11 @@
             if (!j.ok) { race.error = (j.worker && j.worker.error) || j.error || '读取失败（通道不可达）'; }
             else {
               var f = j.worker.file || {}; var presets = j.presets || [];
+              race.form.provider=f.LLM_FALLBACK_PROVIDER || (f.LLM_FALLBACK_BASE_URL==='https://api.deepseek.com/v1' ? 'deepseek' : (f.LLM_FALLBACK_BASE_URL || '').includes('/coding/') ? 'volc_coding' : 'volc_plan');
+              race.form.enabled=f.LLM_FALLBACK_ENABLED==='1'; race.form.trigger=Number(f.LLM_FALLBACK_TRIGGER_MS || 2000); race.form.deadline=Number(f.LLM_FALLBACK_DEADLINE_MS || 6000);
               var hit = presets.find(function (p) { return p.url === f.LLM_FALLBACK_BASE_URL; });
               race.form.base_preset = hit ? hit.key : 'custom'; race.form.base_custom = hit ? '' : (f.LLM_FALLBACK_BASE_URL || '');
-              var inCat = (j.catalog || []).some(function (m) { return m.model === f.LLM_FALLBACK_MODEL; });
+              var inCat = raceCatalog().some(function (m) { return m.model === f.LLM_FALLBACK_MODEL; });
               race.form.model = inCat ? f.LLM_FALLBACK_MODEL : '__custom'; race.form.model_custom = inCat ? '' : (f.LLM_FALLBACK_MODEL || '');
               race.form.thinking = f.LLM_FALLBACK_THINKING || 'disabled';
               race.form.grace = Number(f.LLM_RACE_MAIN_GRACE_MS || 800);
@@ -5269,19 +5317,25 @@
         function raceDiff() {
           var w = race.data && race.data.worker; if (!w || !w.file) return {};
           var f = w.file, v = {};
+          if (race.form.provider !== f.LLM_FALLBACK_PROVIDER) v.LLM_FALLBACK_PROVIDER=race.form.provider;
+          if ((race.form.enabled?'1':'0') !== f.LLM_FALLBACK_ENABLED) v.LLM_FALLBACK_ENABLED=race.form.enabled?'1':'0';
+          if (String(race.form.trigger)!==f.LLM_FALLBACK_TRIGGER_MS) v.LLM_FALLBACK_TRIGGER_MS=String(race.form.trigger);
+          if (String(race.form.deadline)!==f.LLM_FALLBACK_DEADLINE_MS) v.LLM_FALLBACK_DEADLINE_MS=String(race.form.deadline);
           var b = raceBaseUrl(); if (b && b !== f.LLM_FALLBACK_BASE_URL) v.LLM_FALLBACK_BASE_URL = b;
           var m = raceModel(); if (m && m !== f.LLM_FALLBACK_MODEL) v.LLM_FALLBACK_MODEL = m;
           if (race.form.thinking !== f.LLM_FALLBACK_THINKING) v.LLM_FALLBACK_THINKING = race.form.thinking;
-          if (String(race.form.grace) !== String(f.LLM_RACE_MAIN_GRACE_MS)) v.LLM_RACE_MAIN_GRACE_MS = String(race.form.grace);
           if (race.form.instructions.trim() !== (f.AGENT_INSTRUCTIONS || '')) v.AGENT_INSTRUCTIONS = race.form.instructions.trim();
           if (race.form.key.trim()) v.LLM_FALLBACK_API_KEY = race.form.key.trim();
           return v;
         }
         async function saveRace() {
+          if (race.form.trigger<500 || race.form.trigger>5000 || race.form.deadline<race.form.trigger+2000 || race.form.deadline>15000) { ElementPlus.ElMessage.warning('触发须500~5000ms，总等待至少多2000ms且不超过15000ms'); return; }
+          if (!raceProfileKeySet() && !race.form.key.trim()) { ElementPlus.ElMessage.warning('所选端点还没有密钥，请填写后保存'); return; }
           var v = raceDiff(); var keys = Object.keys(v);
           if (!keys.length) { ElementPlus.ElMessage.info('没有改动'); return; }
-          var summary = keys.map(function (k) { return k === 'LLM_FALLBACK_API_KEY' ? '密钥：更换' : (k + ' → ' + (k === 'AGENT_INSTRUCTIONS' ? v[k].slice(0, 30) + '…' : v[k])); }).join('\n');
-          try { await ElementPlus.ElMessageBox.confirm('将写入 64.90 并纪律重启 worker（约 15 秒）：\n' + summary, race.force ? '强制应用（忽略通话检查）' : '应用赛马配置', { type: 'warning', confirmButtonText: '应用', cancelButtonText: '取消' }); } catch (e) { return; }
+          var labels={LLM_FALLBACK_PROVIDER:'备用供应商',LLM_FALLBACK_ENABLED:'灾备开关',LLM_FALLBACK_TRIGGER_MS:'启动等待（ms）',LLM_FALLBACK_DEADLINE_MS:'总等待上限（ms）',LLM_FALLBACK_BASE_URL:'调用端点',LLM_FALLBACK_MODEL:'备用模型',LLM_FALLBACK_THINKING:'思考模式',AGENT_INSTRUCTIONS:'备用人设'};
+          var summary = keys.map(function (k) { return k === 'LLM_FALLBACK_API_KEY' ? '密钥：更换' : ((labels[k] || k) + ' → ' + (k === 'AGENT_INSTRUCTIONS' ? v[k].slice(0,30)+'…' : k==='LLM_FALLBACK_ENABLED' ? (v[k]==='1'?'开启':'关闭') : v[k])); }).join('\n');
+          try { await ElementPlus.ElMessageBox.confirm('将应用配置并重启主 Worker（约 15 秒）：\n' + summary, race.force ? '强制应用（忽略通话检查）' : '应用赛马配置', { type: 'warning', confirmButtonText: '应用', cancelButtonText: '取消' }); } catch (e) { return; }
           race.saving = true; race.applyResult = null;
           try {
             var j = await deviceApi('/api/admin/worker-race', { method: 'PUT', body: JSON.stringify({ values: v, force: race.force }) });
@@ -5594,13 +5648,13 @@
           var d = (deviceData.devices || []).find(function (x) { return x.sn === sn; });
           return d && d.note ? d.note + ' · ' + sn : sn;
         }
-        function devcfgUnit(k) { return k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : ''); }
+        function devcfgUnit(k) { return k && k.unit === 'ms' ? '毫秒' : (k && k.unit === 'sec' ? '秒' : (k && k.unit === 'day' ? '天' : '')); }
         function devcfgSpec(key) { for (var i = 0; i < devcfg.keys.length; i++) if (devcfg.keys[i].key === key) return devcfg.keys[i]; return null; }
         function devcfgOverridesFor(k) { return devcfg.overrides.filter(function (o) { return o.key === k.key; }); }
-        function devcfgValid(k, v) { if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
-        function devcfgRangeMsg(k) { if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
+        function devcfgValid(k, v) { if (k.key === 'voice.session_idle_timeout_ms') return Number.isInteger(v) && (v === 0 || (v >= 5000 && v <= 300000)); if (k.unit === 'bool') return typeof v === 'boolean'; return Number.isInteger(v) && v >= k.min && v <= k.max; }
+        function devcfgRangeMsg(k) { if (k.key === 'voice.session_idle_timeout_ms') return '取值须为0（不下发）或5000至300000之间的整数毫秒'; if (k.unit === 'bool') return '取值须为 开/关'; return '取值须为 ' + k.min + '~' + k.max + ' 的整数' + devcfgUnit(k); }
         // bool 键（2026-09-19 diagnostics.log_upload_enabled 起）：值是 true/false，展示为 开/关，编辑走开关/下拉不走数字框
-        function devcfgFmtVal(k, v) { return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
+        function devcfgFmtVal(k, v) { if (k && k.key === 'voice.session_idle_timeout_ms' && v === 0) return '不下发（保留设备现有策略）'; return k && k.unit === 'bool' ? (v ? '开' : '关') : (v + devcfgUnit(k)); }
         function devcfgFmtMin(sec) {
           var n = Number(sec);
           if (!isFinite(n) || n <= 0) return '—';
@@ -5954,21 +6008,21 @@
         });
         // worker 运行态（容量 = VoiceKit 活跃房 vs 各 worker 机 WORKER_MAX_JOBS 之和；机器资源 = 各台只读 stats）
         // 2026-09-22 迁 hk2：worker 可多台（machines[]），容量卡按各台 max_jobs 求和并给明细（breakdown）
-        var workerStats = reactive({ machine: null, machines: [], breakdown: '', capacity: null, loading: false, fetchedAt: '' });
+        var workerStats = reactive({ machine: null, machines: [], breakdown: '', capacity: null, loading: false, fetchedAt: '', error: '' });
         function loadWorkerStats() {
           if (!canManageInvites.value) return;
           workerStats.loading = true;
           deviceApi('/api/admin/worker-stats', { method: 'GET' })
             .then(function (data) {
               if (data && data.ok) {
-                workerStats.machine = data.machine; workerStats.capacity = data.capacity;
-                workerStats.machines = data.machines || (data.machine ? [{ id: '64.90', label: '64.90', host: '64.90.13.117', ok: true, error: null, data: data.machine }] : []);
+                workerStats.machine = data.machine; workerStats.capacity = data.capacity; workerStats.error = '';
+                workerStats.machines = data.machines || (data.machine ? [{ id: '64.90', label: 'voice-worker-hk2', host: '64.90.13.177', ok: true, error: null, data: data.machine }] : []);
                 var pm = (data.capacity && data.capacity.per_machine) || [];
                 workerStats.breakdown = pm.length > 1 ? ' = ' + pm.map(function (m) { return m.max_jobs == null ? '?' : m.max_jobs; }).join(' + ') : '';
                 workerStats.fetchedAt = new Date().toTimeString().slice(0, 8);
-              }
+              } else { workerStats.error = (data && data.error) || '服务响应异常'; }
             })
-            .catch(function () { /* 监控拉不到不打扰管理操作 */ })
+            .catch(function () { workerStats.error = '网络或登录态异常'; })
             .finally(function () { workerStats.loading = false; });
         }
         // 资源卡自动轮询(2026-08-27:此前只在进页时拉一次,标签页挂一晚显示的还是打开时刻的
@@ -5978,8 +6032,8 @@
           if (document.visibilityState === 'visible' && canManageInvites.value) loadWorkerStats();
         }, 60000);
         // ── 服务器状态 tab（2026-09-17，川哥：09-16 生产池 worker 退出复盘后要求各服务器资源/连接状态可见）──
-        // 数据链：/api/admin/hosts-status（server 30s 共享缓存）← 三台机同一份只读脚本 ops/host-stats.py
-        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 voicekit-stats 只读通道）。单台失败只标该台不可达。
+        // 数据链：/api/admin/hosts-status（server 30s 共享缓存）← 各主机同一份只读脚本 ops/host-stats.py
+        //（aliyun-hk 本机 / 64.90 worker-stats 只读通道 / 47.239 voicekit-stats 只读通道）。采集失败与服务运行状态分开显示。
         var hostsStatus = reactive({ hosts: [], loading: false, fetchedAt: '', ts: 0, error: '' });
         function loadHostsStatus(fresh) {
           if (!canManageInvites.value) return;
@@ -6013,9 +6067,18 @@
         function hsNum(v) { return (v == null || v === '') ? '—' : v; }
         function hsMb(b) { return b == null ? '—' : Math.round(b / 1048576) + 'M'; }
         function hsGb(mb) { return mb == null ? '—' : (mb / 1024).toFixed(1) + 'G'; }
-        function hsSvcType(s) { return s.active_state === 'active' ? 'success' : (s.active_state === 'failed' ? 'danger' : 'warning'); }
+        function hsJournalCacheLabel(c) {
+          if (c.state === 'fresh') return '日志统计更新于 ' + hsAgo(c.collected_at_ms) + ' · 每分钟更新';
+          var label = c.state === 'stale' ? '日志统计已过期' : (c.state === 'error' ? '日志统计更新失败' : (c.state === 'generation_mismatch' ? '日志统计暂不可用（worker 已换代）' : '日志统计暂不可用'));
+          return label + (c.collected_at_ms ? (' · 上次更新 ' + hsAgo(c.collected_at_ms)) : '') + (c.error ? (' · ' + c.error) : '');
+        }
+        function hsCollectionType(h) { return !h.ok || !h.data ? 'danger' : (h.data.errors && h.data.errors.length ? 'warning' : 'success'); }
+        function hsCollectionLabel(h) { return !h.ok || !h.data ? '采集失败' : (h.data.errors && h.data.errors.length ? '部分采集失败' : '采集成功'); }
+        function hsSidecarType(s) { return s.state === 'ok' ? (s.journal_ok === false ? 'warning' : 'success') : (s.state === 'degraded' ? 'warning' : (s.state === 'missing' ? 'danger' : 'info')); }
+        function hsSidecarLabel(s) { return s.state === 'ok' ? (s.journal_ok === false ? '进程在线，日志未知' : '正常') : (s.state === 'degraded' ? '有告警' : (s.state === 'unit_inactive' ? 'worker 未运行' : (s.state === 'missing' ? '缺失' : '未确认'))); }
+        function hsSvcType(s) { return s.active_state === 'active' ? 'success' : (s.active_state === 'failed' ? 'danger' : (!s.active_state || s.active_state === 'unknown' ? 'info' : 'warning')); }
         function hsLinkType(l) { return l.state === 'registered' ? 'success' : (l.state === 'reconnecting' ? 'danger' : 'info'); }
-        function hsLinkLabel(l) { return l.state === 'registered' ? '已注册' : (l.state === 'reconnecting' ? '重连中' : '无事件'); }
+        function hsLinkLabel(l) { return l.state === 'registered' ? '已注册' : (l.state === 'reconnecting' ? '重连中' : '未确认'); }
         var deviceAdd = reactive({ sn: '', note: '', phone: '' });
         // ── 后台预授权自动认领 v1（2026-09-06）：待认领列表 + 一键确认 + 预授权；API 见 admin-data.ts /devices/pairing/pending、/devices/:sn/preauth、/devices/:sn/pairing/confirm ──
         var pairingPending = reactive({ items: [], loading: false, enabled: true, phone: {} });
@@ -8260,10 +8323,10 @@
           loadConversationHistory: loadConversationHistory, loadChildProfiles: loadChildProfiles,
           loadInvites: loadInvites, genInvite: genInvite, delInvite: delInvite, saveNickname: saveNickname, resetQuota: resetQuota,
           deviceData: deviceData, deviceFilter: deviceFilter, filteredDevices: filteredDevices, deviceAdd: deviceAdd, pairingPending: pairingPending, deviceSessions: deviceSessions, credDialog: credDialog,
-          workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS, hostsStatus: hostsStatus, loadHostsStatus: loadHostsStatus, hsAgo: hsAgo, hsDur: hsDur, hsMb: hsMb, hsGb: hsGb, hsNum: hsNum, hsSvcType: hsSvcType, hsLinkType: hsLinkType, hsLinkLabel: hsLinkLabel,
+          workerStats: workerStats, loadWorkerStats: loadWorkerStats, WORKER_NAVS: WORKER_NAVS, hostsStatus: hostsStatus, loadHostsStatus: loadHostsStatus, hsAgo: hsAgo, hsDur: hsDur, hsMb: hsMb, hsGb: hsGb, hsNum: hsNum, hsSvcType: hsSvcType, hsLinkType: hsLinkType, hsLinkLabel: hsLinkLabel, hsCollectionType: hsCollectionType, hsCollectionLabel: hsCollectionLabel, hsJournalCacheLabel: hsJournalCacheLabel, hsSidecarType: hsSidecarType, hsSidecarLabel: hsSidecarLabel,
           release: release, loadRelease: loadRelease, applyPolicy: applyPolicy, clearPolicyOverride: clearPolicyOverride, todoOpen: todoOpen, todoClosed: todoClosed, addTodo: addTodo, setTodoStatus: setTodoStatus, policySourceLabel: policySourceLabel,
           ota: ota, otaPickFile: otaPickFile, loadOta: loadOta, uploadApk: uploadApk, otaPublish: otaPublish, otaEditNotes: otaEditNotes, otaForce: otaForce, otaPause: otaPause, otaDelete: otaDelete,
-          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, devcfgFmtVal: devcfgFmtVal, diaglog: diaglog, loadDiaglog: loadDiaglog, loadDiaglogEvents: loadDiaglogEvents, setDiaglogSwitch: setDiaglogSwitch, clearDiaglogOverride: clearDiaglogOverride, dlLevelType: dlLevelType, dlAgo: dlAgo, dlSkew: dlSkew, dlJson: dlJson, dlAllowlistLabel: dlAllowlistLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
+          devcfg: devcfg, devcfgUnit: devcfgUnit, devcfgOverridesFor: devcfgOverridesFor, devcfgDeviceOptions: devcfgDeviceOptions, devcfgDeviceLabel: devcfgDeviceLabel, devcfgFmtVal: devcfgFmtVal, diaglog: diaglog, loadDiaglog: loadDiaglog, loadDiaglogEvents: loadDiaglogEvents, setDiaglogSwitch: setDiaglogSwitch, clearDiaglogOverride: clearDiaglogOverride, dlLevelType: dlLevelType, dlAgo: dlAgo, dlSkew: dlSkew, dlJson: dlJson, dlAllowlistLabel: dlAllowlistLabel, pck: pck, pckPickFile: pckPickFile, uploadPck: uploadPck, loadPck: loadPck, pckPublish: pckPublish, pckAction: pckAction, pckRollback: pckRollback, pckEditMeta: pckEditMeta, pckEditNotes: pckEditNotes, pckLog: pckLog, pckFreeze: pckFreeze, pckStatusLabel: pckStatusLabel, pckStatusColor: pckStatusColor, voice: voice, loadVoice: loadVoice, saveVoice: saveVoice, voiceGroups: voiceGroups, voiceIsSecret: voiceIsSecret, voiceSecretPlaceholder: voiceSecretPlaceholder, voiceOrigin: voiceOrigin, voiceMismatch: voiceMismatch, voiceToggle: voiceToggle, race: race, raceCatalog: raceCatalog, raceProfileKeySet: raceProfileKeySet, raceProviderChanged: raceProviderChanged, raceDiff: raceDiff, raceBaseUrl: raceBaseUrl, raceModel: raceModel, raceTierTag: raceTierTag, raceTierColor: raceTierColor, raceProcMismatch: raceProcMismatch, loadRace: loadRace, saveRace: saveRace, loadRaceStats: loadRaceStats, runRaceBench: runRaceBench, raceBenchTable: raceBenchTable, devcfgFmtMin: devcfgFmtMin, loadDevcfg: loadDevcfg, saveDevcfgGlobal: saveDevcfgGlobal, addDevcfgOverride: addDevcfgOverride, editDevcfgOverride: editDevcfgOverride, clearDevcfgOverride: clearDevcfgOverride,
           hw: hw, HW_KIND_META: HW_KIND_META, loadHotwords: loadHotwords, loadFillers: loadFillers,
           loadDeviceAliases: loadDeviceAliases,
           hwEnvKey: hwEnvKey, hwLive: hwLive, hwDraft: hwDraft, hwInSync: hwInSync,

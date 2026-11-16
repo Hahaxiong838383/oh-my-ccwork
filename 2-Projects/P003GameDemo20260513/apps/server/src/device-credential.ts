@@ -9,6 +9,9 @@ export type DeviceCredentialStateReader = (sn: string) => DeviceCredentialState 
 
 /** Pure policy predicate also used by existing routes with direct JWT verification. */
 export function isDeviceCredentialBindingAllowed(state: DeviceCredentialBindingState | null, bindingVersion: unknown): boolean {
+  // Legacy tokens without a generation remain compatible; newly paired tokens carry it.
+  if (bindingVersion !== undefined && (!state || state.status !== 'active' || !state.parent_account_id
+    || !Number.isSafeInteger(bindingVersion) || bindingVersion !== state.binding_version)) return false;
   if (!state || state.binding_policy === 'legacy') return true;
   if (state.binding_policy !== 'ble-key-v1') return false;
   return state.status === 'active' && Boolean(state.parent_account_id)
@@ -27,7 +30,7 @@ export async function verifyDeviceCredential(
   secret: string,
   acceptsCredential: (subject: string, iatSec: number, bindingVersion?: number) => boolean | Promise<boolean> = () => true,
   readState: DeviceCredentialStateReader = readRegistryCredentialState,
-): Promise<{ sn: string; bindingVersion?: number } | null> {
+): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string; bleBindingId?: string } | null> {
   if (!header?.startsWith('Bearer ') || !secret) return null;
   let payload;
   try {
@@ -37,7 +40,7 @@ export async function verifyDeviceCredential(
   const first = await readState(payload.sub);
   const state = first.binding;
   if (!isDeviceCredentialBindingAllowed(state, payload.binding_version)) return null;
-  const bindingVersion = state?.binding_policy === 'ble-key-v1' ? payload.binding_version as number : undefined;
+  const bindingVersion = typeof payload.binding_version === 'number' ? payload.binding_version : undefined;
   if (bindingVersion !== undefined && (!Number.isSafeInteger(payload.iat) || !Number.isSafeInteger(payload.exp)
     || payload.iat! <= 0 || payload.exp! <= payload.iat! || payload.iat! > Math.floor(Date.now() / 1000))) return null;
   const iat = typeof payload.iat === 'number' ? payload.iat : 0;
@@ -49,5 +52,7 @@ export async function verifyDeviceCredential(
   if (!isDeviceCredentialBindingAllowed(latest.binding, payload.binding_version)) return null;
   const latestRevocation = latest.revokedThroughSec;
   if (latestRevocation !== null && iat <= latestRevocation) return null;
-  return { sn: payload.sub, ...(bindingVersion === undefined ? {} : { bindingVersion }) };
+  return { sn: payload.sub, ...(bindingVersion === undefined ? {} : { bindingVersion }),
+    ...(bindingVersion !== undefined && typeof payload.ble_binding_id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(payload.ble_binding_id) ? { bleBindingId: payload.ble_binding_id } : {}),
+    ...(bindingVersion !== undefined && typeof payload.pairing_session_id === 'string' ? { pairingSessionId: payload.pairing_session_id } : {}) };
 }
