@@ -1,0 +1,16 @@
+{
+  "candidate": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+  "isolated_simulation_tests": 5,
+  "pass": true,
+  "scenarios": [
+    "main apply and rollback",
+    "listening env only",
+    "post-start failure preserves rotated key on rollback",
+    "busy cleanup no stop",
+    "binary drift no stop"
+  ],
+  "real_production_restart": false,
+  "warnings": "Python ResourceWarning for process-lifetime config-lock file; CLI invocation exits and OS releases it; not a real restart test",
+  "harness_initial_failure": "test helper named run shadowed unittest.TestCase.run; renamed proc_run before scenarios executed",
+  "log_sha256": "47903dd56172ddc8630fa217138a214a75c627fbe994b0e9c17dcf0c7690e68e"
+}

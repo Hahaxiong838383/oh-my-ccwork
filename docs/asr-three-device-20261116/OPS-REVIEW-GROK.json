@@ -1,0 +1,145 @@
+{
+  "reviewer": "grok（xAI）",
+  "reviewed_at": "2026-11-16",
+  "verdict": "isolation_accepted_production_blocked",
+  "production_pass": false,
+  "device_pass": false,
+  "deployed": false,
+  "three_sns_confirmed": false,
+  "rollback_rehearsed_on_production_env": false,
+  "backup_exists_is_not_restore_rehearsal": true,
+  "source_modified": false,
+  "production_operated": false,
+  "device_events_sent": false,
+  "committed": false,
+  "pushed": false,
+  "env_body_emitted": false,
+  "rust_full_suite_rerun": false,
+  "reviewed_commit": "d09b3cb66df4ec99a6efcb0d8d2e93e6d6e5d0b1",
+  "base_commit": "fab1dbd2599c311cc5ccaf371ed73890fad5dd26",
+  "runtime_source": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "binary_sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+  "binary_bytes": 76399176,
+  "compressed_sha256": "53db7d553046abf02973545e5b5fe2cdd461afbe7942d9ff6648a70cbd176f33",
+  "compressed_bytes": 28513188,
+  "candidate_path": "/root/p003-asr-three-device-20261116/worker-candidate",
+  "head_at_review_start": "d09b3cb66df4ec99a6efcb0d8d2e93e6d6e5d0b1",
+  "head_at_review_end": "667d45077241f5945f5f99b3af3f7796acf1e237",
+  "later_commit_out_of_scope": "667d45077241f5945f5f99b3af3f7796acf1e237",
+  "later_commit_treated_as_accepted": false,
+  "worktree_reset": false,
+  "paths_vs_base": [
+    "2-Projects/realtime-voice-agent/scripts/asr_diagnostic_env.py",
+    "2-Projects/realtime-voice-agent/tests/test_asr_diagnostic_env.py",
+    "docs/asr-three-device-20261116/CHECKPOINT-CURRENT.json",
+    "docs/asr-three-device-20261116/ROLLBACK_AND_RELEASE.md",
+    "docs/asr-three-device-20261116/STAGED-CANDIDATE.json",
+    "docs/asr-three-device-20261116/STAGING_AND_ROLLBACK_TEST.json"
+  ],
+  "content_sha256": {
+    "scripts/asr_diagnostic_env.py": "ec0020805ee923d434c6516dd41b260c8b0e3afaef03fd53de5be337c0ca3ee3",
+    "tests/test_asr_diagnostic_env.py": "d1364f2caa578cfb0686abcd202032e5d79c698c7484b2267ddbb63d0770da96",
+    "docs/asr-three-device-20261116/CHECKPOINT-CURRENT.json": "16c0730d575d8531d5000d20e2086457bb6639beccb4d32ad681087bc632fd03",
+    "docs/asr-three-device-20261116/ROLLBACK_AND_RELEASE.md": "a6db3417367bde1d1708a10f23622b47eab4b5ed0526a14c6f5e9518dc5a51ea",
+    "docs/asr-three-device-20261116/STAGED-CANDIDATE.json": "8b6eb87e3021882611e7dae43ec2b3be78fc847026c82a29a0ecaaee944c7840",
+    "docs/asr-three-device-20261116/STAGING_AND_ROLLBACK_TEST.json": "fac33379210a9fa9355452c5c1374738ae5064c89364e746cd18bec3bdb883ab"
+  },
+  "metadata_copies_byte_equal": {
+    "STAGED-CANDIDATE.json": true,
+    "CHECKPOINT-CURRENT.json": true
+  },
+  "runtime_unchanged_vs_262dfe9c": {
+    "src/asr_diagnostics.rs": "8890d81429726a9fb412f9141442d58b272fb64fe6e9b1467118659ad7862ea1",
+    "src/pipeline.rs": "44961797abdc938350f449e8dd8d7e245ac064d4d1dabb90c41226028abf4c77",
+    "src/main.rs": "18a82bf6b453523bac0037f929e1784f1d87dca46bf68f0c40d17433e380f399",
+    "src/stt_volc.rs": "e877850ec6b3562098719f824aa75933a376dc9f5a38d868ddcbb5f468700a30",
+    "scripts/asr_diagnostic_receipt.py": "376c6bb43e273aadc8c55324a0e8a25b65e6c8b98ea84cab181a8a7a0ee6f0a6",
+    "tests/test_asr_diagnostic_receipt.py": "6b4118e8ec4d03e099ea88f81f2a283b5f924fe3e365eae5300c58533cb37fb4"
+  },
+  "grok351_runtime_receipt_audit": "accepted_not_rerun",
+  "python_29": {
+    "ran_on": "git show d09b3cb66df4ec99a6efcb0d8d2e93e6d6e5d0b1",
+    "receipt_tests": 19,
+    "env_tests": 10,
+    "passed": 29,
+    "failed": 0,
+    "seconds": 0.029,
+    "log_sha256": "d4bf3e1574360399f5dbc9e46546c7ce21c25ae446860d1cc6ebca1d729e665d"
+  },
+  "author_green_log_sha256": "9b8518bbf98d17b0602744c02c91ded03075b6643f9075ccae53af5f6ccc79e8",
+  "author_green_log_matches_staging_metadata": true,
+  "independent_env_probes": {
+    "passed": 15,
+    "failed": 0,
+    "seconds": 0.017,
+    "log_sha256": "25ba3c9a1423bd51f9e78ec64bf9fd7fae0486e78cf56897ae029823895e30e2",
+    "results": [
+      {"name": "rotated_credentials_and_other_keys_survive", "ok": true},
+      {"name": "restore_only_two_diagnostic_keys", "ok": true},
+      {"name": "tampered_state_cannot_inject_unrelated_key", "ok": true},
+      {"name": "duplicate_diagnostic_assignment_refused", "ok": true},
+      {"name": "diagnostic_cross_line_unclosed_quote_refused", "ok": true},
+      {"name": "diagnostic_continuation_backslash_refused", "ok": true},
+      {"name": "missing_terminal_newline_refused", "ok": true},
+      {"name": "diagnostic_drift_refused", "ok": true},
+      {"name": "repeated_restore_refused", "ok": true},
+      {"name": "export_prefix_restored_exactly", "ok": true},
+      {"name": "empty_content_accepted", "ok": true, "limitation": true},
+      {"name": "format_valid_sns_are_not_allowlist", "ok": true, "limitation": true},
+      {"name": "foreign_multiline_not_refused_on_d09", "ok": true, "limitation": true},
+      {"name": "foreign_continuation_not_refused_on_d09", "ok": true, "limitation": true},
+      {"name": "no_file_or_network_apis", "ok": true}
+    ]
+  },
+  "function_limitations": [
+    "enable/restore are pure functions; caller owns lock, atomic install, backup, idle check, restart",
+    "no production caller is wired in this 6-file increment",
+    "shlex/continuation checks apply only to lines that already match the two diagnostic keys",
+    "foreign multiline quotes or backslash continuations that later look like diagnostic assignments are rewritten on d09b3cb6",
+    "empty content bypasses the terminal-newline requirement",
+    "SN check is BJP003 plus 14 digits only; not an authorized device roster",
+    "enable writes unquoted KEY=value without export, even if the original line used export",
+    "checkpoint backup_created is remote copy evidence, not a restore() rehearsal"
+  ],
+  "checkpoint": {
+    "path": "/root/p003-asr-three-device-20261116/checkpoint-20261116T103717Z",
+    "production_changed": false,
+    "env_bodies_read": false,
+    "pools": {
+      "main": {
+        "pid": "795375",
+        "process_sha256": "d1b1d952c365f9648677ee88cd41ce96a42bc407fe47e2258b7e44875db581cf",
+        "backup_created": true,
+        "diagnostic_keys_empty": true
+      },
+      "listening": {
+        "pid": "815868",
+        "process_sha256": "c7e70e77e4600e09b02f885101a17e8e7cea0e9635bc430d456b88081b6289d5",
+        "backup_created": true,
+        "diagnostic_keys_empty": false,
+        "existing_scope_is_not_three_device_roster": true
+      },
+      "search": {
+        "pid": "815854",
+        "process_sha256": "c7bec7df92c47136fd0c91e5c2b4ed59c918ffa7158cdfb3a63415fa1e221b25",
+        "backup_created": false,
+        "diagnostic_keys_empty": true
+      }
+    }
+  },
+  "pass_boundary": [
+    "d09b3cb6 six-file isolation of two-key pure functions",
+    "Python 29 and named two-key counterexamples",
+    "runtime candidate remains 262dfe9c / d37a3963 in an independent directory"
+  ],
+  "block_boundary": [
+    "production switch, install, restart",
+    "three full SNs still unspecified; do not guess",
+    "no caller for lock/atomic/backup/idle/restart",
+    "backup existence is not restore rehearsal",
+    "foreign multiline/continuation not refused on d09b3cb6; live env bodies were not inspected",
+    "later commit 667d4507 is out of scope"
+  ],
+  "blocking": [],
+  "sns_guessed": false
+}

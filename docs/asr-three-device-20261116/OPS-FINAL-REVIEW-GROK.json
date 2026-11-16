@@ -1,0 +1,112 @@
+{
+  "reviewer": "grok（xAI）",
+  "reviewed_at": "2026-11-16",
+  "task": "ops_fix_667_multiline",
+  "verdict": "isolation_pass",
+  "blocking": [],
+  "candidate": "667d45077241f5945f5f99b3af3f7796acf1e237",
+  "parent": "d09b3cb66df4ec99a6efcb0d8d2e93e6d6e5d0b1",
+  "archive": "/tmp/grok-667-review-89746",
+  "candidate_source": "git show blobs",
+  "worktree_used_as_candidate": false,
+  "head_at_end": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+  "worktree_dirty_at_end": false,
+  "production_changed": false,
+  "deployed": false,
+  "device_pass": false,
+  "three_sns_confirmed": false,
+  "real_rollback_proven": false,
+  "rust_executed": false,
+  "runtime_source_recorded": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "runtime_source_object_type": "commit",
+  "staged_binary_rehashed": false,
+  "live_env_reexecuted": false,
+  "checkpoint_env_sha256_matches_commit_record": {
+    "main": "195c004bd0b68dca5ee63d2231b817d1af6b2b7be8d27dd23b618b1ebd599989",
+    "listening": "0eb30628f1e1a4a187effb1c43aded65ee42e92c02f660b7a1cbe805e7541d02"
+  },
+  "paths_vs_parent": [
+    "2-Projects/realtime-voice-agent/scripts/asr_diagnostic_env.py",
+    "2-Projects/realtime-voice-agent/tests/test_asr_diagnostic_env.py",
+    "docs/asr-three-device-20261116/ENV-COMPAT-CURRENT.json",
+    "docs/asr-three-device-20261116/ROLLBACK_AND_RELEASE.md",
+    "docs/asr-three-device-20261116/STAGING_AND_ROLLBACK_TEST.json"
+  ],
+  "content_sha256": {
+    "2-Projects/realtime-voice-agent/scripts/asr_diagnostic_env.py": "5de7407926551f09362bff966740471df5ac2953df8db3531a9011816a9b004d",
+    "2-Projects/realtime-voice-agent/tests/test_asr_diagnostic_env.py": "868a69c0c31756ea29eb37fbc8af34fcd87606f54360b2419b28962b9d8af4d0",
+    "docs/asr-three-device-20261116/ENV-COMPAT-CURRENT.json": "6def510c42961ff09346a8bb8061ccc6baabcbf51ff9058ad84bb24d20a0819c",
+    "docs/asr-three-device-20261116/ROLLBACK_AND_RELEASE.md": "8b0f5e6f73ca45fcefbd1f132ab8ffc34780cdb322465b4594edece0836263ea",
+    "docs/asr-three-device-20261116/STAGING_AND_ROLLBACK_TEST.json": "c24d6f39ef31694142d92bb325953223d9889c68c50334af66d9c6a204b8b2bb"
+  },
+  "receipt_script_blob_unchanged_d09_to_667": "fc85212aaefea9ed11acd594c103a6b4c34e3d69",
+  "module_has_file_or_network_calls": false,
+  "python": {
+    "interpreter": "Python 3.12.2",
+    "ran_on": "git show archive /tmp/grok-667-review-89746/667",
+    "discover_passed": 32,
+    "discover_seconds": 0.033,
+    "env_passed": 13,
+    "receipt_passed": 19,
+    "failed": 0,
+    "log_sha256_rederived": false
+  },
+  "d09_red": {
+    "script": "d09b3cb66df4ec99a6efcb0d8d2e93e6d6e5d0b1:2-Projects/realtime-voice-agent/scripts/asr_diagnostic_env.py",
+    "tests_from": "667",
+    "ran": 13,
+    "failed": 2,
+    "names": [
+      "test_foreign_multiline_cannot_be_mistaken_for_target",
+      "test_foreign_continuation_is_refused"
+    ]
+  },
+  "reproducible_red": [
+    {
+      "name": "foreign_double_quote",
+      "input": "OTHER=\"first\\nP003_ASR_DIAGNOSTICS_SN_ALLOW=inside-other-value\\nlast\"\\n",
+      "d09": "replaces the middle line and appends P003_ASR_DIAGNOSTICS_UNTIL_MS=2000",
+      "v667": "ValueError: No closing quotation"
+    },
+    {
+      "name": "foreign_continuation",
+      "input": "OTHER=first\\\\\\nP003_ASR_DIAGNOSTICS_SN_ALLOW=continuation\\n",
+      "d09": "replaces the second line, leaves the trailing backslash, appends the deadline",
+      "v667": "ValueError: continued environment assignment"
+    }
+  ],
+  "fail_closed_edges": [
+    "A single line ending in two backslashes is refused even though systemd treats it as a finished value ending in one backslash.",
+    "A non-UTF-8 byte on a non-comment line raises UnicodeDecodeError and returns no patch."
+  ],
+  "boundaries": [
+    "Pure-function memory result only. Not an install, lock, idle check, atomic replace, or service rollback.",
+    "Live main/listening env bytes were not re-read and the in-memory roundtrip was not re-executed here.",
+    "Rust candidate and staged binary were not executed or rehashed.",
+    "Synthetic SNs only. Three real device SNs remain unconfirmed.",
+    "Child commit 579e8a15, including its five-device deploy script, was not read or tested.",
+    "d09 audit remains with the other reviewer. This pass does not retroactively pass d09."
+  ],
+  "head_when_tests_ran": "667d45077241f5945f5f99b3af3f7796acf1e237",
+  "head_when_report_sealed": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+  "worktree_clean_when_report_sealed": true,
+  "later_commit_not_in_verdict": {
+    "sha": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+    "parent": "667d45077241f5945f5f99b3af3f7796acf1e237",
+    "subject": "ops(asr): prepare authorized five-device release with idle and drift guards",
+    "read": false,
+    "tested": false,
+    "paths_vs_667": [
+      "M 2-Projects/realtime-voice-agent/scripts/asr_diagnostic_env.py",
+      "A 2-Projects/realtime-voice-agent/scripts/deploy_asr_diagnostics.py",
+      "M 2-Projects/realtime-voice-agent/tests/test_asr_diagnostic_env.py",
+      "A docs/asr-three-device-20261116/FIVE-DEVICE-REGISTRY.json",
+      "A docs/asr-three-device-20261116/FIVE-SCOPE-TEST.json",
+      "M docs/asr-three-device-20261116/PLAN.md",
+      "A docs/asr-three-device-20261116/PRECHECK-LISTENING.json",
+      "A docs/asr-three-device-20261116/PRECHECK-MAIN.json",
+      "M docs/asr-three-device-20261116/ROLLBACK_AND_RELEASE.md",
+      "A docs/asr-three-device-20261116/USER-SCOPE.json"
+    ]
+  }
+}
