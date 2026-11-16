@@ -1,0 +1,19 @@
+{
+  "sn": "BJP00326081002000031",
+  "observed_at": "2026-11-16T18:35:00+08:00",
+  "filesystem_bytes": 41882943488,
+  "available_bytes": 14512578560,
+  "server_data_bytes": 349981580,
+  "backups_bytes": 869175370,
+  "var_log_bytes": 2467285223,
+  "pm2_logs_bytes": 19474675,
+  "memory_total_bytes": 3669209088,
+  "swap_bytes": 0,
+  "r1_global_payload_budget_bytes": 33554432,
+  "r1_per_sn_payload_budget_bytes": 33554432,
+  "r1_global_record_limit": 10000,
+  "r1_per_sn_record_limit": 10000,
+  "r1_min_free_disk_bytes": 8589934592,
+  "scope": "single C only, allowlist default empty",
+  "limits_note": "8 GiB shared-disk reserve; 32 MiB global payload budget independent of number of devices; physical SQLite/index/WAL overhead checked by free-space gate. No 50-device capacity claim; PRnas future allocation unknown so cannot enlarge."
+}

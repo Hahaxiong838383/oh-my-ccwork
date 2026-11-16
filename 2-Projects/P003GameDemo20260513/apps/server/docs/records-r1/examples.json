@@ -1,0 +1,209 @@
+{
+  "synthetic": true,
+  "not_for_production_upload": true,
+  "context": {
+    "ok": true,
+    "data": {
+      "schema_version": 1,
+      "contract_version": "p003.ark.records.r1",
+      "origin_grant_id": "00000000-0000-4000-8000-000000000001",
+      "origin_epoch": 2,
+      "not_before_ms": 1794442156182,
+      "server_time_ms": 1794824077635,
+      "limits": {
+        "max_records": 50,
+        "max_batch_bytes": 262144,
+        "max_record_bytes": 32768,
+        "upload_per_minute": 6,
+        "upload_per_hour": 120,
+        "context_per_minute": 6,
+        "global_upload_per_minute": 12,
+        "global_upload_per_hour": 240,
+        "per_sn_records": 10000,
+        "per_sn_payload_bytes": 33554432,
+        "global_records": 10000,
+        "global_payload_bytes": 33554432,
+        "min_free_disk_bytes": 8589934592,
+        "cursor_ttl_ms": 1800000,
+        "future_clock_tolerance_ms": 300000
+      }
+    }
+  },
+  "batch": {
+    "schema_version": 1,
+    "batch_id": "batch-example-1",
+    "records": [
+      {
+        "record_id": "rec-example-1",
+        "save_id": "save-example-1",
+        "sequence": 1,
+        "origin_grant_id": "00000000-0000-4000-8000-000000000001",
+        "origin_epoch": 2,
+        "occurred_at_ms": 1794700800000,
+        "time_quality": "reported",
+        "logical_day": "2026-11-13",
+        "source_mode": "normal",
+        "reason": "reward_claim",
+        "business_source_id": "reward-instance-example-1",
+        "tank_id": "tank-example-1",
+        "stage_id": "stage-example-1",
+        "resource_changes": [
+          {
+            "resource_id": "family_coin",
+            "delta": 10,
+            "before": 20,
+            "after": 30
+          },
+          {
+            "resource_id": "M-CARD-001",
+            "delta": 1,
+            "before": 0,
+            "after": 1
+          }
+        ],
+        "item_changes": [
+          {
+            "operation": "acquired",
+            "item_instance_id": "item-instance-example-1",
+            "item_id": "component-example-1",
+            "item_kind": "tank_component",
+            "quantity": 1,
+            "state": "pending_activation"
+          }
+        ]
+      }
+    ]
+  },
+  "ack": {
+    "ok": true,
+    "data": {
+      "schema_version": 1,
+      "batch_id": "batch-example-1",
+      "accepted_record_ids": [
+        "rec-example-1"
+      ],
+      "duplicated_record_ids": [],
+      "rejected": [],
+      "server_received_ms": 1794824077635
+    }
+  },
+  "makeup_card_use": {
+    "record_id": "rec-use",
+    "save_id": "save-example-1",
+    "sequence": 2,
+    "origin_grant_id": "00000000-0000-4000-8000-000000000001",
+    "origin_epoch": 2,
+    "occurred_at_ms": 1794700800000,
+    "time_quality": "reported",
+    "logical_day": "2026-11-13",
+    "source_mode": "normal",
+    "reason": "makeup_card_use",
+    "business_source_id": "reward-instance-example-1",
+    "tank_id": "tank-example-1",
+    "stage_id": "stage-example-1",
+    "resource_changes": [
+      {
+        "resource_id": "M-CARD-001",
+        "delta": -1,
+        "before": 1,
+        "after": 0
+      }
+    ],
+    "item_changes": []
+  },
+  "dashboard_records": {
+    "schema_version": 1,
+    "coverage": {
+      "kind": "received_records",
+      "complete": false,
+      "reason": "partial_history",
+      "min_occurred_at_ms": null,
+      "max_occurred_at_ms": null,
+      "first_received_at_ms": null,
+      "last_received_at_ms": null
+    },
+    "updated_at_ms": null,
+    "yesterday_income": {
+      "available": false,
+      "reason": "policy_pending",
+      "date": "2026-11-15",
+      "timezone": "Asia/Shanghai",
+      "source_mode": null,
+      "family_coin": null,
+      "stardust": null,
+      "occurred_from_ms": null,
+      "occurred_to_ms": null,
+      "received_at_ms": null
+    },
+    "latest_items": {
+      "available": false,
+      "reason": "policy_pending",
+      "source_mode": null,
+      "record_id": null,
+      "save_id": null,
+      "occurred_at_ms": null,
+      "received_at_ms": null,
+      "items": []
+    }
+  },
+  "page": {
+    "ok": true,
+    "data": {
+      "schema_version": 1,
+      "items": [
+        {
+          "record_id": "rec-example-1",
+          "save_id": "save-example-1",
+          "sequence": 1,
+          "occurred_at_ms": 1794700800000,
+          "time_quality": "reported",
+          "logical_day": "2026-11-13",
+          "source_mode": "normal",
+          "reason": "reward_claim",
+          "business_source_id": "reward-instance-example-1",
+          "tank_id": "tank-example-1",
+          "stage_id": "stage-example-1",
+          "resource_changes": [
+            {
+              "resource_id": "family_coin",
+              "delta": 10,
+              "before": 20,
+              "after": 30
+            },
+            {
+              "resource_id": "M-CARD-001",
+              "delta": 1,
+              "before": 0,
+              "after": 1
+            }
+          ],
+          "item_changes": [
+            {
+              "operation": "acquired",
+              "item_instance_id": "item-instance-example-1",
+              "item_id": "component-example-1",
+              "item_kind": "tank_component",
+              "quantity": 1,
+              "state": "pending_activation"
+            }
+          ],
+          "received_at_ms": 1794824077635,
+          "time_status": "reported",
+          "item_references": []
+        }
+      ],
+      "next_cursor": null,
+      "has_more": false,
+      "coverage": {
+        "kind": "received_records",
+        "complete": false,
+        "reason": "partial_history",
+        "min_occurred_at_ms": 1794700800000,
+        "max_occurred_at_ms": 1794700800000,
+        "first_received_at_ms": 1794824077635,
+        "last_received_at_ms": 1794824077635
+      },
+      "updated_at_ms": 1794824077635
+    }
+  }
+}

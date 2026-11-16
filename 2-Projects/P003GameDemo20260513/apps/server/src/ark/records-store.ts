@@ -93,8 +93,15 @@ export class RecordsStore{
    }else if(this.db.prepare("SELECT 1 FROM ark_record_item WHERE sn=? AND save_id=? AND item_instance_id=? AND operation='acquired'").get(i.sn,r.save_id,item.item_instance_id))return false;
   }
   // An already received activation referencing this ID must agree when its target arrives.
-  const pending=this.db.prepare(`SELECT r.*,x.item_instance_id FROM ark_record_item x JOIN ark_record r ON r.sn=x.sn AND r.record_id=x.record_id WHERE x.sn=? AND x.acquired_record_id=?`).all(i.sn,r.record_id) as (Row&{item_instance_id:string})[];
-  for(const p of pending)if(p.save_id!==r.save_id||p.origin_parent_account_id!==i.parent_account_id||p.origin_device_account_id!==i.account_id||p.origin_epoch!==i.epoch||p.origin_grant_id!==i.grant_id||p.sequence<=r.sequence||!r.item_changes.some(x=>x.operation==='acquired'&&x.item_instance_id===p.item_instance_id))return false;
+  const acquiredIds=r.item_changes.filter(x=>x.operation==='acquired').map(x=>x.item_instance_id);
+  const missingItem=acquiredIds.length?`x.item_instance_id NOT IN (${acquiredIds.map(()=>'?').join(',')})`:'1';
+  // Do not materialize a full activation body for each of its up to 32 items.
+  // This EXISTS-style query holds at most one small result, including at capacity.
+  const conflict=this.db.prepare(`SELECT 1 FROM ark_record_item x JOIN ark_record p ON p.sn=x.sn AND p.record_id=x.record_id
+   WHERE x.sn=? AND x.acquired_record_id=? AND
+   (p.save_id<>? OR p.origin_parent_account_id<>? OR p.origin_device_account_id<>? OR p.origin_epoch<>? OR p.origin_grant_id<>? OR p.sequence<=? OR ${missingItem}) LIMIT 1`)
+   .get(i.sn,r.record_id,r.save_id,i.parent_account_id,i.account_id,i.epoch,i.grant_id,r.sequence,...acquiredIds);
+  if(conflict)return false;
   return true;
  }
  accept(c:Credential,expected:Identity,r:BusinessRecord):string{return this.transaction(()=>{

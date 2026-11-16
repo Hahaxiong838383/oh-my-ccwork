@@ -3,6 +3,7 @@ export const CONTRACT='p003.ark.records.r1';
 const id=z.string().min(1).max(80).regex(/^[A-Za-z0-9_.:-]+$/);
 const safe=z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const seq=safe.min(1), time=seq.max(8e12), count=safe.max(1e9);
+export const OriginSchema=z.object({origin_grant_id:z.string().uuid(),origin_epoch:seq});
 const day=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s=>{const d=new Date(s+'T00:00:00Z');return Number.isFinite(+d)&&d.toISOString().slice(0,10)===s;});
 const resourceId=z.enum(['family_coin','stardust','M-CARD-001']);
 const resource=z.object({resource_id:resourceId,delta:z.number().int().min(-1e9).max(1e9).refine(n=>n!==0),before:count.nullable(),after:count.nullable()}).strict().superRefine((v,c)=>{if(v.before!==null&&v.after!==null&&v.after-v.before!==v.delta)c.addIssue({code:'custom',message:'balance_delta_mismatch'});});

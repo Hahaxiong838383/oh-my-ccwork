@@ -3,7 +3,7 @@ import {decodeJwt} from 'jose';
 import {verifyDeviceCredential} from '../device-credential.js';
 import {verifyAuthToken} from '../auth-jwt.js';
 import {readBoundedJson,ArkHttpError} from './http.js';
-import {parseBatch,QuerySchema,RecordsError,limits} from './records-contract.js';
+import {parseBatch,QuerySchema,OriginSchema,RecordsError,limits} from './records-contract.js';
 import type {RecordsStore,Credential} from './records-store.js';
 type Options={store:()=>RecordsStore;secret:()=>string};
 /** This router is mounted on the existing device Ark route, without changing /state. */
@@ -21,7 +21,7 @@ export function createRecordsDeviceRoutes(o:Options){
   const b=parseBatch(body),store=o.store();
   // Check all well-formed origins, even for a record whose other fields are invalid.
   // Missing/ill-typed origin is a per-ID schema error; a valid foreign origin denies the whole batch.
-  const origins=b.records.map(x=>x.raw).filter(r=>typeof r.origin_grant_id==='string'&&Number.isSafeInteger(r.origin_epoch)).map(r=>({origin_grant_id:r.origin_grant_id,origin_epoch:r.origin_epoch}));
+  const origins=b.records.map(x=>x.raw).filter(r=>OriginSchema.safeParse(r).success).map(r=>({origin_grant_id:r.origin_grant_id,origin_epoch:r.origin_epoch}));
   const identity=store.preflight(credential,origins),accepted_record_ids:string[]=[],duplicated_record_ids:string[]=[],rejected:{record_id:string;reason:string;retryable:boolean}[]=[];
   for(const {raw,parsed} of b.records){
    if(!parsed.success){rejected.push({record_id:raw.record_id,reason:'invalid_record',retryable:false});continue;}

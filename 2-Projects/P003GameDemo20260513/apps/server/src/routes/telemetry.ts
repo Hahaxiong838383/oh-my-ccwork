@@ -199,6 +199,7 @@ deviceTelemetryRoute.post('/', async (c) => {
 export const parentTelemetryRoute = new Hono<{ Variables: { accountId: string } }>();
 
 parentTelemetryRoute.use('*', async (c, next) => {
+  if (c.req.path.endsWith('/ark/records') || c.req.path.endsWith('/dashboard')) c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const auth = await verifyAuthToken(token);

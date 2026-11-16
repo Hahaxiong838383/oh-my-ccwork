@@ -17,3 +17,6 @@ Task 2-3: 27/27隔离HTTP/SQLite通过，含真实SQLITE_FULL、双连接并发�
 Task 4: mini008 16、Telemetry37、现役Ark state16/history11/runtime7等回归通过；216000行旧focus性能/保数据验证通过。
 Ruling: 保留未含R1基线亦失败的ark-currency-http三项及listening-content.ts类型错误，不扩大到语音路由/ASR；成本：整树不能标全绿，发布仅六个R1文件需主13在现役环境复核。
 Ruling: 旧Telemetry换绑后SN历史仍可见，经隔离HTTP复现；本轮只隔离新records原归属、不改旧历史。成本：旧usage跨代际限制仍待独立治理。
+
+Task 4: final scoped suite 93/93（含31组R1，Telemetry脚本内部37项）；schema实施修订59/59。全量tsc与未含R1基线均仅listening-content.ts旧错误。
+Final review: independent Codex fixed archive review。三项修复RED→GREEN，详见REVIEW_FIXES.md；未做第二轮代理复审，交13/Grok最终核验。

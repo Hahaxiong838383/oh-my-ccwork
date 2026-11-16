@@ -1,0 +1,247 @@
+{
+  "status": "PASS_LOCAL_SCHEMA_ONLY",
+  "at": "2026-11-16T10:52:09.854Z",
+  "runtime": "v24.19.0",
+  "tests": 59,
+  "production_http_tested": false,
+  "production_db_written": false,
+  "transaction_runtime_tested": false,
+  "cases": [
+    {
+      "name": "正常多资源与物品同笔",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "完整信封",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "context样例",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "ACK样例",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "超过24h记录结构合法不套快照时效",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "未知时钟保留null",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "gm记录结构保留",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "旧来源unknown不强改normal",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "禁止SN注入",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "禁止owner注入",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "未知顶层字段",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "非法授权上下文",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "序号0",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "不安全序号",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "小数序号",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "缺少存档",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "伪日期",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "未知时钟伪造时间",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "reported无时间",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "delta和前后不等",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "零delta",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "未知资源",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "重复资源",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "奖励实例缺失",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "奖励负delta",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "正常来源伪GM",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "空事务",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "超32物品",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "重复物品实例",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "真实补勤卡扣除",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "激活无新增收入数量",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "激活不能夹带quantity",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "部分schema失败可关联原ID",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "批内重复ID整批拒绝",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "缺失ID整批拒绝",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "非法JSON",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "空批",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "51条整批拒绝",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "批次字节限额",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "单条字节限额",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "规范对象键排序同内容",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "同ID异内容规范值不同",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "ACK只结算确认ID",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "部分ACK缺失ID仍保留",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "错误batch不清队列",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "请求外ID不清队列",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "重复ACK跨集合不清队列",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "冲突拒绝不能冒充成功",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "限额拒绝可重试",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "业务来源冲突为终态",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "冲突不可自动重试",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "分页默认20",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "日期反向拒绝",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "分页禁止owner注入",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "dashboard未知摘要",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "未知收入不能补0",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "分页响应样例",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "分页不外泄授权context",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "游标has_more一致",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    }
+  ]
+}
