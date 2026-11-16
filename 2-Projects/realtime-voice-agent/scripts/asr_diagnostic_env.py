@@ -16,15 +16,18 @@ def assignments(content):
     lines = content.splitlines(keepends=True)
     found = {}
     for i, line in enumerate(lines):
+        # An apparent target inside another key's multiline value is not a key.
+        # This small tool handles single-line files only; reject rather than
+        # attempting to parse/rewrite systemd's multiline environment grammar.
+        if line.strip() and not line.lstrip().startswith((b'#', b';')):
+            shlex.split(line.decode('utf-8'))
+            if line.rstrip(b'\r\n').endswith(b'\\'):
+                raise ValueError('continued environment assignment')
         match = ASSIGNMENT.match(line)
         if match:
             key = match[1].decode('ascii')
             if key in found:
                 raise ValueError('duplicate diagnostic assignment')
-            # Refuse ambiguous multiline/continuation syntax; never rewrite it.
-            shlex.split(line.decode('utf-8'))
-            if line.rstrip(b'\r\n').endswith(b'\\'):
-                raise ValueError('continued diagnostic assignment')
             found[key] = (i, line)
     return lines, found
 
@@ -35,7 +38,8 @@ def replace(content, desired):
         replacement = desired[key]
         if replacement is not None:
             _, check = assignments(replacement)
-            if set(check) != {key} or len(replacement.splitlines()) != 1:
+            if (set(check) != {key} or len(replacement.splitlines()) != 1 or
+                    not replacement.endswith(b'\n')):
                 raise ValueError('invalid diagnostic assignment')
         if key in found:
             lines[found[key][0]] = replacement or b''

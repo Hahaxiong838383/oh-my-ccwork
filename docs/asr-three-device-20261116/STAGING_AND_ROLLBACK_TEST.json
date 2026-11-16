@@ -1,10 +1,12 @@
 {
   "at": "2026-11-16",
-  "python_tests": 29,
+  "python_tests": 32,
   "exit_code": 0,
-  "log_sha256": "9b8518bbf98d17b0602744c02c91ded03075b6643f9075ccae53af5f6ccc79e8",
+  "log_sha256": "d3b6fc5affa853f908cc93c0abfedf5f40a173c8ca89c4e533a216a720d9fdaa",
   "original_red_logged": true,
   "production_switched": false,
   "three_sns_confirmed": false,
-  "runtime_source_unchanged": "262dfe9c0a7bc9c44769670e0312bcb66cb32671"
+  "runtime_source_unchanged": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "foreign_multiline_negative_before_fix": true,
+  "existing_remote_env_roundtrip_in_memory": true
 }

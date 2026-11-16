@@ -63,5 +63,18 @@ class DiagnosticEnvTests(unittest.TestCase):
         restored = m.restore(patched, state)
         with self.assertRaises(ValueError): m.restore(restored, state)
 
+    def test_foreign_multiline_cannot_be_mistaken_for_target(self):
+        original = b'OTHER="first\n'+ALLOW+b'=inside-other-value\nlast"\n'
+        with self.assertRaises(ValueError): m.enable(original, SNS, 2000, now_ms=1000)
+
+    def test_foreign_continuation_is_refused(self):
+        original = b'OTHER=first\\\n'+ALLOW+b'=continuation\n'
+        with self.assertRaises(ValueError): m.enable(original, SNS, 2000, now_ms=1000)
+
+    def test_comment_quotes_are_not_assignments(self):
+        original = b'# author\'s comment "not a value\nOTHER=yes\n'
+        patched, state = m.enable(original, SNS, 2000, now_ms=1000)
+        self.assertEqual(m.restore(patched, state), original)
+
 
 if __name__ == '__main__': unittest.main()
