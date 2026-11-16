@@ -2,7 +2,7 @@ import { AnalyticsStore,AnalyticsRollupBudgetExceeded,cstDay,DAY_MS } from './st
 import {pruneAnalyticsTiers} from './tiers.js';
 type Fact={device_key:string;event_name:string;session_digest:string;clock_suspicious:number;semantic_json:string;received_at_ms:number};
 export type RollupBudget={maxFactsPerDay:number;maxDayMs:number};
-export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"}[];remaining_dirty_days:number;partial:boolean};
+export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"|"concurrent_write"}[];remaining_dirty_days:number;partial:boolean};
 type Counts={names:Record<string,number>;failures:Map<string,number>;suspicious:number;gm:number;facts:number;last:number};
 const newCounts=():Counts=>({names:{},failures:new Map(),suspicious:0,gm:0,facts:0,last:0});
 const compareText=(a:string,b:string)=>a<b?-1:a>b?1:0;
@@ -47,13 +47,18 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
   const status:RollupStatus={attempted_days:dirty.length,rebuilt_days:0,failed_days:[],remaining_dirty_days:0,partial:false};
   for(const {dimension,day} of dirty){
     try{
-      store.transaction(()=>{
+      // DEFERRED snapshot: scanning facts does not reserve the writer. SQLite refuses
+      // the upgrade if another connection commits, keeping dirty + prior summaries intact.
+      store.readSnapshot(()=>{
         const started=performance.now();
+        const devices:{key:string;individual:ReturnType<typeof summary>}[]=[];
+        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
+          if(devices.length>=1000)throw new AnalyticsRollupBudgetExceeded();
+          devices.push({key,individual});
+        });
         store.db.prepare('DELETE FROM analytics_device_day WHERE dimension=? AND day=?').run(dimension,day);
         const insertDevice=store.db.prepare('INSERT INTO analytics_device_day VALUES (?,?,?,?,?,?,?)');
-        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
-          insertDevice.run(dimension,day,key,individual.event_count,individual.sessions,individual.data_cutoff_ms,JSON.stringify({...individual,updated_at_ms:now}));
-        });
+        for(const {key,individual} of devices)insertDevice.run(dimension,day,key,individual.event_count,individual.sessions,individual.data_cutoff_ms,JSON.stringify({...individual,updated_at_ms:now}));
         store.db.prepare('INSERT INTO analytics_day VALUES (?,?,?,?) ON CONFLICT(dimension,day) DO UPDATE SET summary_json=excluded.summary_json,updated_at_ms=excluded.updated_at_ms').run(dimension,day,JSON.stringify(result),now);
         if(performance.now()-started>budget.maxDayMs)throw new AnalyticsRollupBudgetExceeded();
         store.db.prepare('DELETE FROM analytics_dirty_day WHERE dimension=? AND day=?').run(dimension,day);
@@ -61,7 +66,7 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
       });
       status.rebuilt_days++;
     }catch(error){
-      status.failed_days.push({dimension,day,reason:error instanceof AnalyticsRollupBudgetExceeded?'budget_exceeded':'storage_unavailable'});
+      status.failed_days.push({dimension,day,reason:error instanceof AnalyticsRollupBudgetExceeded?'budget_exceeded':((Number((error as {errcode?:number}).errcode)&255)===5?'concurrent_write':'storage_unavailable')});
       try{store.db.prepare('INSERT INTO analytics_rollup_retry VALUES (?,?,?) ON CONFLICT(dimension,day) DO UPDATE SET last_attempt_ms=excluded.last_attempt_ms').run(dimension,day,now);}catch{}
     }
   }
@@ -75,7 +80,7 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
   });
   return status;
 }
-function pruneDailyTable(store:AnalyticsStore,table:string,cutoff:string,limit:number):void{
+function pruneDailyTable(store:AnalyticsStore,table:string,cutoff:string,limit:number):number{
   // All callers use the fixed daily-table list below. Its existing keys start with dimension,day.
   const first=store.db.prepare(`SELECT dimension FROM ${table} ORDER BY dimension LIMIT 1`);
   const next=store.db.prepare(`SELECT dimension FROM ${table} WHERE dimension>? ORDER BY dimension LIMIT 1`);
@@ -88,16 +93,38 @@ function pruneDailyTable(store:AnalyticsStore,table:string,cutoff:string,limit:n
     // Seek past the saved key even if its last row was deleted. Empty/unknown dimensions are included.
     if(remaining>0)current=next.get(dimension) as {dimension:string}|undefined;
   }
+  return limit-remaining;
 }
 export function pruneAnalytics(store:AnalyticsStore,now=Date.now(),chunk=1000):{events:number;batches:number}{
+  const {events,batches}=pruneChunk(store,now,chunk,chunk);return {events,batches};
+}
+function pruneChunk(store:AnalyticsStore,now:number,chunk:number,batchChunk:number){
   const bounded=Math.max(1,Math.min(5000,chunk)),rawCutoff=now-14*DAY_MS,dailyCutoff=cstDay(now-90*DAY_MS);
   return store.transaction(()=>{
     const rawEvents=Number(store.db.prepare('DELETE FROM analytics_event WHERE rowid IN (SELECT rowid FROM analytics_event WHERE received_at_ms<? LIMIT ?)').run(rawCutoff,bounded).changes);
     const events=rawEvents+pruneAnalyticsTiers(store.db,now,bounded-rawEvents);
-    const old=store.db.prepare('SELECT attempt_id FROM analytics_batch WHERE received_at_ms<? LIMIT ?').all(rawCutoff,bounded) as {attempt_id:string}[];
+    const old=store.db.prepare('SELECT attempt_id FROM analytics_batch WHERE received_at_ms<? LIMIT ?').all(rawCutoff,Math.min(bounded,batchChunk)) as {attempt_id:string}[];
     for(const {attempt_id} of old){store.db.prepare('DELETE FROM analytics_transport WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_settlement WHERE attempt_id=?').run(attempt_id);store.db.prepare('DELETE FROM analytics_batch WHERE attempt_id=?').run(attempt_id);}
-    store.db.prepare('DELETE FROM analytics_transport_day WHERE rowid IN (SELECT rowid FROM analytics_transport_day WHERE day<? LIMIT ?)').run(dailyCutoff,bounded);
-    for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry'])pruneDailyTable(store,table,dailyCutoff,bounded);
-    return {events,batches:old.length};
+    const transportDays=Number(store.db.prepare('DELETE FROM analytics_transport_day WHERE rowid IN (SELECT rowid FROM analytics_transport_day WHERE day<? LIMIT ?)').run(dailyCutoff,bounded).changes);
+    let facts=0,dailyRows=0;
+    for(const table of ['analytics_rollup_fact','analytics_day','analytics_device_day','analytics_dirty_day','analytics_rollup_retry']){const removed=pruneDailyTable(store,table,dailyCutoff,bounded);dailyRows+=removed;if(table==='analytics_rollup_fact')facts=removed;}
+    return {events,batches:old.length,facts,changed:events+old.length+transportDays+dailyRows};
   });
+}
+
+// 12 × 500 facts / 5min = 1,728,000 facts/day; max 5 batches (<=1000
+// settlements) per transaction. Pause permits waiting ingestion writers to run.
+export const PRUNE_CYCLE={maxChunks:12,chunk:500,batchChunk:5,maxMs:5000,pauseMs:10} as const;
+export async function pruneAnalyticsCycle(store:AnalyticsStore,now=Date.now()){
+ const start=performance.now(),result={events:0,batches:0,facts:0,chunks:0,elapsed_ms:0,max_transaction_ms:0,budget_exhausted:false};
+ let empty=false;
+ for(let i=0;i<PRUNE_CYCLE.maxChunks&&performance.now()-start<PRUNE_CYCLE.maxMs;i++){
+  const t=performance.now(),part=pruneChunk(store,now,PRUNE_CYCLE.chunk,PRUNE_CYCLE.batchChunk);
+  result.max_transaction_ms=Math.max(result.max_transaction_ms,performance.now()-t);
+  result.events+=part.events;result.batches+=part.batches;result.facts+=part.facts;result.chunks++;
+  if(part.changed===0){empty=true;break;}
+  await new Promise(resolve=>setTimeout(resolve,PRUNE_CYCLE.pauseMs));
+ }
+ result.elapsed_ms=performance.now()-start;result.budget_exhausted=!empty;
+ return result;
 }

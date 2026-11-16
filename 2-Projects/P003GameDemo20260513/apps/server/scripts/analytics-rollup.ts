@@ -1,14 +1,14 @@
 import { AnalyticsStore } from '../src/analytics/store.js';
-import { rollupDirtyDaysWithStatus,pruneAnalytics,type RollupStatus } from '../src/analytics/rollup.js';
+import { rollupDirtyDaysWithStatus,pruneAnalyticsCycle,type RollupStatus } from '../src/analytics/rollup.js';
 const path=process.env.ANALYTICS_DB_PATH;
 if(!path){console.error('[analytics-maintenance] MISSING_ANALYTICS_DB_PATH');process.exit(1);}
-let store:AnalyticsStore|undefined,rollup:RollupStatus|undefined,pruned:ReturnType<typeof pruneAnalytics>|undefined;
+let store:AnalyticsStore|undefined,rollup:RollupStatus|undefined,pruned:Awaited<ReturnType<typeof pruneAnalyticsCycle>>|undefined;
 let rollupError:string|undefined,pruneError:string|undefined;
 try{
   store=new AnalyticsStore(path);
-  // Commit one bounded TTL chunk before any potentially long aggregation.
+  // Commit bounded short TTL transactions before aggregation.
   // External timeout/kill during rollup cannot skip already completed pruning.
-  try{pruned=pruneAnalytics(store,Date.now(),1000);}catch{pruneError='ANALYTICS_PRUNE_FAILED';}
+  try{pruned=await pruneAnalyticsCycle(store,Date.now());}catch{pruneError='ANALYTICS_PRUNE_FAILED';}
   try{rollup=rollupDirtyDaysWithStatus(store,Date.now(),16,{maxFactsPerDay:Number(process.env.ANALYTICS_ROLLUP_MAX_FACTS_PER_DAY??1_000_000),maxDayMs:Number(process.env.ANALYTICS_ROLLUP_MAX_DAY_MS??30_000)});}
   catch{rollupError='ANALYTICS_ROLLUP_FAILED';}
 }catch{rollupError='ANALYTICS_STORAGE_UNAVAILABLE';}

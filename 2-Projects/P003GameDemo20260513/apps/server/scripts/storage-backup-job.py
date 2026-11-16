@@ -10,7 +10,7 @@ def load(name):
 archive=load('storage-archive');backup=load('analytics-backup')
 DAY=86400000
 
-def run(database,root,now_ms=None,reserve_bytes=4*1024**3,timeout_seconds=None):
+def run(database,root,now_ms=None,reserve_bytes=4*1024**3+512*1024**2,timeout_seconds=None):
     database=Path(database).resolve(strict=True);spool=archive.Spool(root)
     now=int(time.time()*1000) if now_ms is None else now_ms
     # Separate kernel lock: spool readers must remain available during a long backup.
@@ -103,7 +103,7 @@ def execute(database,spool,now,reserve_bytes,timeout_seconds):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--database',type=Path,required=True);p.add_argument('--root',type=Path,required=True)
-    p.add_argument('--reserve-bytes',type=int,default=4*1024**3);p.add_argument('--timeout-seconds',type=float)
+    p.add_argument('--reserve-bytes',type=int,default=4*1024**3+512*1024**2);p.add_argument('--timeout-seconds',type=float)
     a=p.parse_args()
     if a.reserve_bytes<0:p.error('reserve must be nonnegative')
     print(json.dumps(run(a.database,a.root,reserve_bytes=a.reserve_bytes,timeout_seconds=a.timeout_seconds),sort_keys=True))

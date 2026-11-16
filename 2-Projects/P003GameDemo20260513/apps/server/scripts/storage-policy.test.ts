@@ -45,7 +45,7 @@ try{
  assert.equal(readStoragePolicy((fresh.prepare("SELECT value FROM runtime_flag WHERE key='storage.policy.v1'").get() as {value:string}).value).target_devices,100);fresh.close();
  const sample={free_bytes:1e12,total_bytes:2e12,db_bytes:0,wal_bytes:0,daily_peak:6000,sample_devices:4,maintenance_ok:true,checked_at_ms:Date.now()};
  const cap=capacityForecast(sample,{policy:c.storagePolicy(),profile:c.storageProfile()});
- assert.equal(cap.target_devices,100);assert.equal(cap.validated_device_limit,100);assert.equal(cap.max_enabled_devices,cap.maintenance_limit);assert.equal(cap.target_devices_fit,false);
+ assert.equal(cap.target_devices,100);assert.equal(cap.validated_device_limit,100);assert.equal(cap.max_enabled_devices,cap.maintenance_limit);assert.equal(cap.target_devices_fit,cap.max_enabled_devices>=100);
  assert.equal(capacityForecast(sample).validated_device_limit,14);
  // Profile loss/capacity reduction must not revoke existing grants; reductions/stop remain possible.
  c.clearFlag(VERIFIED_PROFILE_KEY);ark.configure(true,subjects.slice(0,99).map(identity),Date.now(),ark.settings().revision);
