@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"cycle\": {\"published\": 1, \"confirmed\": 0}, \"manifest\": {\"archive_id\": \"ccf79ab0091241f88b61ab2f4b460ac6\", \"bytes\": 41755, \"created_at_ms\": 1794840525717, \"kind\": \"ark_checkpoint\", \"record_count\": 50, \"schema_version\": 1, \"sha256\": \"23a16d81e8b87638b9a250ab4d0794421ef6a7d425280843375f2169e8822c9a\", \"source_range\": {\"first_id\": 1, \"format\": \"ark_jsonl\", \"format_version\": 1, \"last_id\": 50, \"lines\": 50}}}\n",
+  "stderr": ""
+}

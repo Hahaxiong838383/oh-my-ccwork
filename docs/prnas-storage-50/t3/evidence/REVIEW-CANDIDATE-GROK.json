@@ -1,0 +1,161 @@
+{
+  "candidate": "74482851a914256591238a6cb8b9d66a1447cfbb",
+  "baseline": "ee876889647775f3c6c2bb540df7017f3571466f",
+  "verdict": "reject",
+  "summary": "固定候选 74482851 的 test:ark-archive 25 项全部通过，但同路径接受检查只把本行预留和 4.5GiB 地板比较，已排队未落盘副本不计入。满缓冲附近会接受日后写盘时穿地板的快照。",
+  "blocking": [
+    {
+      "id": "disk-floor-ignores-queued-copies",
+      "severity": "blocking",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/src/ark/archive.ts",
+      "line": 38,
+      "title": "实际磁盘地板没有计入已排队、尚未写成 spool 文件的副本",
+      "detail": "逻辑 8GiB 使用 stats.reserved_bytes+本行预留。磁盘条件是 freeBytes < reserveBytes+本行预留。service.ts 把 reserveBytes 设为 4.5GiB，freeBytes 来自数据库所在卷的 statfs。已插入行的 3 倍预留仍留在账上，但下一次 statfs 只看到数据库已写入的页，看不到导出时才生成的 jsonl/payload。",
+      "reproduction": {
+        "tree": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/audit-74482851",
+        "node": "/Users/fu-121/.local/node-v24/bin/node",
+        "node_version": "v24.19.0",
+        "probe": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/probes/disk-noise.mjs",
+        "method": "真实 ArkStore.accept。reserveBytes=200000，初始 freeBytes=240000，每接受一行后按 checkpoint 后的 db+wal+shm 增长扣减 freeBytes，模拟 statfs。逻辑上限 8GiB。",
+        "result": {
+          "accepted": 30,
+          "stopped": null,
+          "payload_bytes": 23664,
+          "reserved_bytes": 163152,
+          "db_growth_bytes": 32768,
+          "free_after_accepts": 207232,
+          "free_after_one_spool_copy": 183568,
+          "floor": 200000,
+          "floor_held": false,
+          "shortfall_bytes": 16432,
+          "current_sequence": 30,
+          "outbox_rows": 30
+        },
+        "single_row_edge": {
+          "reserved_bytes": 5430,
+          "free_equals_reserve_plus_reserved": "accepted, outbox 1",
+          "one_byte_less": "archive_buffer_full, outbox 0, current null"
+        }
+      },
+      "impact": "已接受的 current 与 outbox 会留下。导出写 spool 时可以把空闲空间打到 4.5GiB 地板以下，随后导出失败并使积压停在本地。这不是静默删历史。",
+      "fix_direction": "磁盘拒绝条件要把已经计入 reserved_bytes、尚未变成 spool 文件的字节算进去，等额单行边界继续接受。"
+    }
+  ],
+  "nonblocking": [
+    {
+      "id": "oversize-row-head-of-line",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py",
+      "line": 29,
+      "title": "单行超过 1MiB 时整个领取循环抛错，后面的小行也不领取",
+      "evidence": "插入 1048577 与 512 两行后 cycle 抛出 archive_row_too_large。两行都保持 batch_id NULL，published 包数为 0。设备 HTTP 正文上限 16384，正常快照到不了 1MiB。",
+      "disposition": "合同写了不能停在首行。当前设备入口不可达，不作为本候选的数据丢失阻断。"
+    }
+  ],
+  "checks": {
+    "same_transaction_and_duplicate": "suite 通过。SIGKILL 于 ark_current 插入前：outbox 与 current 都回滚。提交后两者都在。duplicate 不增加 outbox。插入触发器失败时 current 回滚且事务关闭。",
+    "logical_budget_edge": "suite 通过。预留差 1 字节拒绝且 current 为空；等额与多 1 字节接受。",
+    "disk_single_row_edge": "独立探针通过。等额接受，少 1 字节回滚。",
+    "disk_queued_copies": "独立探针失败，见 blocking。",
+    "grant_epoch_isolation": "suite 通过。换绑后旧身份 current 为空，旧 outbox 保留，epoch 序列为 [1,2,2]。50 个合成身份的 family_coin 分别为 1..50。GM/unknown/source_mode 会触发留档。导出器与 NAS restore 不写 grant。",
+    "noise_and_five_minutes": "suite：299999ms 的 timer/remaining 不留档，300000ms 留档。独立探针：新 boot 与新 sequence、经济字段不变时 outbox 仍为 1，随后 300 次关键变化使 outbox 变为 301。",
+    "disabled_still_drains": "suite：关闭后关键变化仍更新 current，outbox 保持 1。导出器 cycle() 不读取 archive_enabled。独立导出已有 outbox 得到 1 条 ark_jsonl 包，确认前 outbox 与 reserved 仍在。",
+    "crash_points": {
+      "accept_before_commit": "suite SIGKILL，两者回滚",
+      "accept_after_commit": "suite SIGKILL，两者保留",
+      "claim_before_commit": "探针 returncode -9。恢复前 batch 表为空、3 行未领取。恢复后 1 个包、3 行。",
+      "claim_after_commit": "探针 -9。恢复前 state=claimed。恢复后 1 个包、3 行，outbox 仍为 3。",
+      "manifest_saved_before_rename": "探针 -9。恢复前 state=prepared。恢复后 1 个包。",
+      "publish_prepared_returned": "suite SIGKILL 后重跑得到同一 manifest，ACK 后 outbox 为 0",
+      "cleanup_before_delete": "suite 清理异常后 outbox 仍为 3，再次 cycle 后为 0",
+      "not_killed_inside": "work 文件 fsync 系统调用内部、目录 fsync 内部、DELETE 语句内部没有单独下杀"
+    },
+    "ack_wrong_mapping": "suite：record_count 不符与 envelope 被改都不删除 outbox。探针：错误 sha256 抛 stored_receipt_mismatch，outbox 仍为 3，payload.bin 仍在。",
+    "jsonl_schema_hash_retention": "真实导出包 481df94d9f00447286f36eb8073e66f2，835 字节，source_range.format=ark_jsonl、format_version=1、lines=1。NAS finalize 成功且 sha 一致。改 1 字节后 CHECKSUM_MISMATCH。created+89 天无论是否 ACK 都不删；ACK 后 created+91 天删除。suite 另证未 ACK 的 100 天旧包保留，以及 437 个 schema 变体与线上 zod 一致。",
+    "batch_and_queue_bounds": {
+      "one_mib": "513 行、每行 2048 字节。同一轮产出 1048576 字节/512 行与 2048 字节/1 行。没有包超过 1048576。耗时 0.1266s。",
+      "one_thousand_rows": "1001 行、每行 512 字节。包为 1000 行/512000 字节与 1 行/512 字节。",
+      "twenty_packages": "21 个 600000 字节行。第一轮 published 20，list 20，未领取 1。ACK 1 个后的同一轮只确认该包并重发其余 19，第 21 行仍未领取。再一轮后 list 仍为 20，未领取 0，outbox 20，最大包 600000。",
+      "reservation_held_after_files": "1001 行发布后、ACK 前 stats 为 pending_records=1001、pending_bytes=512512、reserved_bytes=4612608。真实 835 字节快照的 reserved 为 5577，等于 3*(835+1024)。"
+    },
+    "performance": "单写者 300 次关键变化接受 619ms，约 2.1ms/次。1MiB 批次发布 0.127s。这不是 50 台或语音吞吐结论。",
+    "source_scope": "ee876889..74482851 共 22 文件，+593/-18。名字中无 routes/telemetry.ts、routes/ark.ts、records-*、parent-conversation。没有做 360 全仓 merge 调查。生产限额与 verified profile 逻辑不在该差分里。"
+  },
+  "tests": {
+    "command": "npm run test:ark-archive",
+    "cwd": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/audit-74482851/2-Projects/P003GameDemo20260513/apps/server",
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "node_modules": "read-only symlink to the existing server node_modules",
+    "results": [
+      {
+        "file": "scripts/ark-archive.test.ts",
+        "pass": 12,
+        "fail": 0,
+        "duration_ms": 2525.6
+      },
+      {
+        "file": "scripts/ark-archive-schema.test.ts",
+        "pass": 1,
+        "fail": 0,
+        "cases": 437,
+        "duration_ms": 143.0
+      },
+      {
+        "file": "scripts/ark-archive-http.test.ts",
+        "pass": 1,
+        "fail": 0,
+        "duration_ms": 397.2
+      },
+      {
+        "file": "scripts/storage-archive-control.test.ts",
+        "pass": 1,
+        "fail": 0,
+        "duration_ms": 111.6
+      },
+      {
+        "file": "scripts/storage-ark-export.test.py",
+        "pass": 7,
+        "fail": 0,
+        "duration_s": 4.004
+      },
+      {
+        "file": "scripts/storage-ark-nas.test.mjs",
+        "pass": 3,
+        "fail": 0,
+        "duration_ms": 435.5
+      }
+    ],
+    "total_pass": 25,
+    "total_fail": 0,
+    "typescript": "本审计没有重跑 tsc，不宣称类型检查全绿。"
+  },
+  "not_verified": [
+    "tsc，以及用户所述与 ee876889 相同的 12 个旧错误",
+    "根上已跑过的 test:archive-complete、test:storage、test:ark；本审计没有重跑",
+    "apps/web scripts/test-analytics-admin-ui.cjs 与后台页面点击",
+    "真实 NAS、SSH、设备、生产配置和部署",
+    "50 台混合负载、语音对照、T4 容量系数",
+    "fsync 与 DELETE 语句内部的 SIGKILL",
+    "多进程接受与导出的锁竞争时延",
+    "把磁盘物理缩到 4.5GiB 边缘的实盘；地板缺陷用同一策略回调注入 freeBytes 复现",
+    "360 固定提交 5d24359d 的全仓冲突。旧 fixture 的 STORAGE_CAPACITY_LIMIT 不在本结论里",
+    "审计期间工作树从 74482851 前进到 4ea6af5a（11ef01ec、4ea6af5a）。这两个提交没有纳入本次验收，不能把它们算作 74482851 已修复"
+  ],
+  "worktree_at_report": {
+    "head": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+    "ancestor_of_candidate": true,
+    "later_subjects": [
+      "11ef01ec fix(storage): reserve queued export disk and pause safely when disk fills",
+      "4ea6af5a fix(storage): drain confirmed batches despite low-disk blocked exports"
+    ],
+    "dirty_at_end": [
+      "docs/prnas-storage-50/t3/IMPLEMENTATION.md",
+      "docs/prnas-storage-50/t3/PROGRESS.md",
+      "docs/prnas-storage-50/t3/CANDIDATE-MANIFEST.json",
+      "docs/prnas-storage-50/t3/compat360/",
+      "docs/prnas-storage-50/t3/evidence/",
+      "docs/prnas-storage-50/t3/metadata-scale.mjs"
+    ],
+    "this_audit_wrote_worktree": false
+  }
+}

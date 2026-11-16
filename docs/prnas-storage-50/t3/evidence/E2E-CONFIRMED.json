@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"cycle\": {\"published\": 0, \"confirmed\": 1}, \"current\": 50, \"outbox\": 0, \"baselines\": 50, \"stats\": [0, 0, 1794840531332]}\n",
+  "stderr": ""
+}

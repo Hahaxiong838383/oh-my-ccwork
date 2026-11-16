@@ -1,0 +1,1 @@
+PASS: inline JS, entire browser-parsed #app production Vue compile, production Vue/Element Plus mount; 57 acceptance checks

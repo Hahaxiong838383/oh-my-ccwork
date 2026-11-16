@@ -1,0 +1,145 @@
+{
+  "reviewer": "Grok 4.7",
+  "reviewed_at": "2026-11-16T22:55:14+08:00",
+  "scope": "incremental disk-budget recheck of 74482851a914256591238a6cb8b9d66a1447cfbb..11ef01ecf0e05bebb2af77b6d8cfb26c813b195b only",
+  "not_744_overall_verdict": true,
+  "verdict": "INCREMENTAL_BLOCKED",
+  "summary": "累计 reserved_bytes 空闲门槛与暂停写新包在 11ef01ec 上成立。已确认清理只在进入该批时成立；同轮多批且未落盘批 archive_id 更小时，下一轮不会清理已确认批。",
+  "fixed_commit": {
+    "sha": "11ef01ecf0e05bebb2af77b6d8cfb26c813b195b",
+    "parent": "74482851a914256591238a6cb8b9d66a1447cfbb",
+    "subject": "fix(storage): reserve queued export disk and pause safely when disk fills",
+    "blobs": {
+      "2-Projects/P003GameDemo20260513/apps/server/src/ark/archive.ts": "c0131ef9f4cb164e077bacbab4e19af24778c33e",
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py": "8481c77e7577fde1ec0f7c065e98d00458990d20",
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-archive.test.ts": "1f200cde7bf61b9526cf3df211e368b6f62f72b8",
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.test.py": "67f0eed639ba25c4ea5aa6d433b6b64e2c553e60"
+    }
+  },
+  "method": {
+    "tree": "git archive of 11ef01ec extracted to /tmp/p003-disk-grok-src",
+    "blob_match": ["archive.ts", "storage-ark-export.py"],
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "python": "3.12.2",
+    "node_modules": "symlink only; no install; no files newer than 45 minutes in the linked tree after the run",
+    "worktree_360_modified_by_this_review": false,
+    "production_modified": false
+  },
+  "out_of_scope_later_head": {
+    "sha": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+    "subject": "fix(storage): drain confirmed batches despite low-disk blocked exports",
+    "executed": false,
+    "verdict": "none"
+  },
+  "clauses": {
+    "cumulative_reserved_bytes_in_free_threshold": {
+      "result": "pass",
+      "rule": "freeBytes < reserveBytes + stats.reserved_bytes + newReserved, else archive_buffer_full",
+      "conservative": "full queued reservation is counted again even though part of it is already in SQLite",
+      "actual_free_source_outside_diff": "service.ts statfs bavail*bsize on ARK_DB_PATH; reserveBytes 4831838208"
+    },
+    "pause_new_package_when_other_processes_fill_disk": {
+      "result": "pass",
+      "rule": "if final payload is absent and spool free < 4831838208 + payload_len + 65536: archive_export_disk_reserve before any ark-work write"
+    },
+    "confirmed_cleanup_still_runs": {
+      "result": "blocked",
+      "same_batch": "pass in the 8 committed export tests",
+      "multi_batch_same_cycle": "fail on 11ef01ec cycle()"
+    }
+  },
+  "tests": [
+    {
+      "name": "ark-archive.test.ts",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/ark-archive.test.ts",
+      "exit": 0,
+      "tests": 13,
+      "pass": 13,
+      "fail": 0,
+      "duration_ms": 2179.772292,
+      "log": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/grok-ark-archive-11ef01ec.log",
+      "sha256": "ab425d9ece542c726371b132318492e1a7241745478cc146e6ad7801c0af8cda"
+    },
+    {
+      "name": "storage-ark-export.test.py",
+      "command": "TEST_NODE=/Users/fu-121/.local/node-v24/bin/node python3 scripts/storage-ark-export.test.py",
+      "exit": 0,
+      "tests": 8,
+      "fail": 0,
+      "duration_s": 5.554,
+      "log": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/grok-storage-ark-export-11ef01ec.log",
+      "sha256": "8109a2dd4886bd80403b9c7e40bc3f61aff96b281aa2d225ff956eaa0cd83e86"
+    }
+  ],
+  "boundary_counterexample": {
+    "accept": {
+      "log": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/grok-boundary-accept.log",
+      "sha256": "38a71acae4ac04d99a678a37e0319dae26f9e0525d5225f80c500cd71fab8c12",
+      "r1": 5430,
+      "r2": 5430,
+      "reserve": 4831838208,
+      "exact_free_accepts": 4831849068,
+      "one_byte_less_refuses_without_new_row": 4831849067,
+      "queue_omitted_free_refuses": 4831843638
+    },
+    "export_threshold": {
+      "log": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/grok-boundary-export.log",
+      "sha256": "d25d35429602b3b600d1ae9a71e1a2c64c884e2d8a2ffc0ba97f79ca2fa46610",
+      "payload": 2505,
+      "threshold": 4831906249,
+      "threshold_minus_one": "archive_export_disk_reserve; outbox 3; ark-work empty; published empty",
+      "threshold_exact": "published 1"
+    },
+    "cleanup_order_blocker": {
+      "setup": "cycle() with MAX_ROWS=1, two rows, same now; first archive_id 32*f publishes; second archive_id 32*0 hits free=1; then ack the f batch; retry cycle at free=1",
+      "error": "archive_export_disk_reserve",
+      "states": [
+        ["00000000000000000000000000000000", "prepared"],
+        ["ffffffffffffffffffffffffffffffff", "published"]
+      ],
+      "outbox": 2,
+      "acked_batch_cleaned": false
+    }
+  },
+  "blockers": [
+    {
+      "id": "confirmed-cleanup-blocked-by-earlier-sorted-unwritten-batch",
+      "commit": "11ef01ecf0e05bebb2af77b6d8cfb26c813b195b",
+      "detail": "Pending batches are ordered by created_at_ms, archive_id. A disk-reserve error aborts cycle() before a later already-acked batch is cleaned. Same-cycle batches share one timestamp, so archive_id order can put the unwritten batch first."
+    }
+  ],
+  "evidence_consistency": {
+    "files": [
+      "E2E-SOURCE.json",
+      "E2E-NAS.json",
+      "E2E-CONFIRMED.json",
+      "E2E-NAS-INDEPENDENT.json",
+      "PRODUCTION-UNCHANGED.json"
+    ],
+    "remotely_retested_by_this_review": false,
+    "result": "internally_consistent",
+    "shared": {
+      "archive_id": "9e899fa0a14b49488569dd67a4112399",
+      "sha256": "72e7d919e217614fe6367a484e1de46b797c9f93bf5fae4b07c1bf9db7c5bd19",
+      "bytes": 41755,
+      "records": 50,
+      "source_cycle": {"published": 1, "confirmed": 0},
+      "confirmed_cycle": {"published": 0, "confirmed": 1, "current": 50, "outbox": 0, "baselines": 50},
+      "created_at_ms": 1794839903894,
+      "confirmed_stats_later_number": 1794839909202
+    },
+    "production_unchanged": {
+      "exit": 0,
+      "protected_equal": true,
+      "processes_equal": true,
+      "linked_to_archive_id": false,
+      "pids_rechecked_locally": false
+    },
+    "not_part_of_the_success_tuple": {
+      "file": "E2E-SOURCE.json.first-failed",
+      "exit": 1,
+      "reason": "remote FileNotFoundError for candidate-74482851 server directory"
+    }
+  }
+}

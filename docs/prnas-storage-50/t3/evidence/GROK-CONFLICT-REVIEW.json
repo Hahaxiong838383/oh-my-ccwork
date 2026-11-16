@@ -1,0 +1,201 @@
+{
+  "reviewer": "Grok 4.7 (xAI)",
+  "verdict": "CONFLICT",
+  "safe_to_overlay": false,
+  "declared_safe_from_old_plan": false,
+  "observed_at": "2026-11-16T22:22:49+08:00",
+  "mode": "read_only",
+  "actions_not_taken": ["business_code", "deploy", "config_change", "worktree_360_write", "service_restart", "subagent"],
+  "session_360": {
+    "session_id": 360,
+    "agent_type": "codex",
+    "title": "小程序端数据是否已齐备",
+    "status": "in_progress",
+    "branch": "codex/p003-mini008-realdata-20261111",
+    "workspace": "/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111",
+    "updated_at": "2026-11-16T14:20:53.593637Z",
+    "note": "Second lookup used max_messages=0. First lookup in this audit reported 451 messages and status in_progress. Do not treat message_count 0 from the metadata-only call as an empty session."
+  },
+  "merge_base": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+  "trees": {
+    "t3": {
+      "workspace": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116",
+      "branch": "codex/p003-prnas-storage-50-20261116",
+      "head": "ee876889647775f3c6c2bb540df7017f3571466f",
+      "dirty": true,
+      "dirty_note": "Uncommitted T3 edits appeared during the audit. They belong to main-13, not this review."
+    },
+    "miniapp_360": {
+      "workspace": "/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111",
+      "head": "5d24359d15fb33f5d91621db3dc35af6dd1a4828",
+      "head_subject": "docs(p003): record pushed revisions and shared-memory closeout",
+      "code_commit": "203b63ad7a9c8f81e4708190be650923b5d34697",
+      "code_commit_subject": "feat(p003): connect historical conversations and complete miniapp data summaries",
+      "prior_head_seen": "d400860b15d096b1e933d6e8f0eee380c730c672",
+      "dirty": false,
+      "src_changed_in_5d24359d": false
+    }
+  },
+  "blobs": {
+    "telemetry_360": "0fc728c006341e7e8b0332e156ed23c7c301b3d1",
+    "telemetry_t3_head": "bc81b3fcc5fb",
+    "records_store_360": "197b543bc1fd89cca818497690d816e66746f907",
+    "parent_conversations_360": "d05e0ce95cbff7a83a02dfc698b89a74e9ca22d0",
+    "routes_ark_360": "6e552e3f7814388798181806959275673501a511",
+    "store_t3_head": "cfd79d87bb30416bf8efc83a14951af80ae97900",
+    "store_360": "9cf9d2158a5848b7ad22d3213d97be423cff9c6e"
+  },
+  "distinction": {
+    "t1_quota": "storage policy target_devices 1-1000, STORAGE_CAPACITY_LIMIT, ark subjects max 1000, admin /api/admin/analytics/storage, arkCeiling = active registry devices, facts proxy arkAuthorizedSubjects",
+    "t3_archive": "uncommitted ark_archive_* tables and archive_buffer_full 503 on the Ark connection; spool/NAS budget is not the records payload cap",
+    "history_360": "ark_record* on a second connection to the same ARK_DB_PATH, parent dashboard records+conversations, parent-conversations.ts on CONVERSATION_DB_PATH, miniapp history client"
+  },
+  "merge_file": {
+    "ours": "ee876889647775f3c6c2bb540df7017f3571466f",
+    "theirs": "5d24359d15fb33f5d91621db3dc35af6dd1a4828",
+    "conflict_markers": [
+      {
+        "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/telemetry.ts",
+        "exit": 3,
+        "markers": 3,
+        "anchors_360": [1, 9, 200, 203, 209, 232, 233, 255, 256, 264, 266]
+      },
+      {
+        "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/custom-llm.ts",
+        "exit": 2,
+        "markers": 2,
+        "keep_both": ["arkConversationPolicy", "resolveArkUsageQuestion"]
+      },
+      {
+        "path": "2-Projects/P003GameDemo20260513/apps/server/package.json",
+        "exit": 1,
+        "markers": 1,
+        "keep_t3_scripts": ["test:storage", "test:archive", "test:archive-complete"]
+      }
+    ],
+    "clean_but_do_not_take_360": [
+      "2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/ark/service.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/ark/routes.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/ark/contracts.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/index.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/routes/admin-data.ts",
+      "2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts"
+    ],
+    "clean_keep_360_addition": [
+      "2-Projects/P003GameDemo20260513/apps/server/src/routes/ark.ts"
+    ]
+  },
+  "runtime_anchors": [
+    {
+      "id": "same_ark_db",
+      "files": [
+        "apps/server/src/ark/records-service.ts:11",
+        "apps/server/src/ark/records-store.ts:17-47",
+        "apps/server/src/ark/store.ts",
+        "apps/server/src/ark/archive.ts:12-22"
+      ],
+      "fact": "Records open a second DatabaseSync on ARK_DB_PATH and BEGIN IMMEDIATE with devices attached. T3 archive tables are created on the Ark store connection. Table prefixes differ: ark_record* vs ark_archive*. busy_timeout is 40ms vs 15ms."
+    },
+    {
+      "id": "ceiling_couples_records",
+      "files": [
+        "apps/server/src/ark/service.ts:18",
+        "apps/server/src/ark/records-service.ts:9"
+      ],
+      "fact": "recordsAllowed requires ARK_RECORDS_SN_ALLOW and arkCeiling(). T3 tree ceiling is active registry devices. 360 ceiling is an env list sliced to 32. A clean merge of service.ts keeps the T3 ceiling and changes records eligibility."
+    },
+    {
+      "id": "dashboard_shared_try",
+      "files": ["apps/server/src/routes/telemetry.ts:255-266"],
+      "fact": "dashboardArk and recordsDashboard share one try. recordsDashboard catches its own failures. A throw from dashboardArk returns 503 for the whole parent dashboard."
+    },
+    {
+      "id": "different_coin_planes",
+      "files": [
+        "apps/server/src/ark/records-store.ts summaries()",
+        "apps/server/src/ark/archive.ts signature()"
+      ],
+      "fact": "Records aggregate resource_changes deltas. T3 checkpoint signature uses snapshot wallets, M-CARD-001, next_reward, and logical_day."
+    }
+  ],
+  "do_not_overwrite": {
+    "t3_and_t1": [
+      "apps/server/src/ark/store.ts",
+      "apps/server/src/ark/service.ts",
+      "apps/server/src/ark/routes.ts",
+      "apps/server/src/ark/contracts.ts",
+      "apps/server/src/ark/archive.ts",
+      "apps/server/src/storage/policy.ts",
+      "apps/server/src/storage/routes.ts",
+      "apps/server/src/config-store.ts",
+      "apps/server/src/routes/admin-data.ts",
+      "apps/server/src/index.ts",
+      "apps/web/public/admin/index.html",
+      "apps/server/package.json"
+    ],
+    "history_360": [
+      "apps/server/src/routes/telemetry.ts",
+      "apps/server/src/routes/ark.ts",
+      "apps/server/src/ark/records-contract.ts",
+      "apps/server/src/ark/records-store.ts",
+      "apps/server/src/ark/records-routes.ts",
+      "apps/server/src/ark/records-service.ts",
+      "apps/server/src/parent-conversations.ts",
+      "apps/miniapp",
+      "apps/server/docs/records-r1",
+      "apps/server/docs/parent-history-20261116"
+    ]
+  },
+  "do_not_full_merge": {
+    "reason": "360 deletes files the T3 tree still has, and package.json plus custom-llm.ts conflict.",
+    "deleted_on_360_since_merge_base": [
+      "apps/server/src/economy-shadow",
+      "apps/server/src/search-canary-guard.ts",
+      "apps/server/src/search-canary-main.ts",
+      "apps/server/src/tools/amap-weather.ts",
+      "apps/server/src/tools/search-simple-fallback.ts",
+      "apps/server/src/tools/search-source-scope.ts"
+    ]
+  },
+  "minimal_sync": [
+    "Keep editing T1/T3 files only. Do not copy either tree onto the other.",
+    "If a later single process needs both: patch telemetry.ts by adding the 360 history lines onto the T3 dashboard, keep routes/ark.ts recordsDeviceRoute mount, leave records-* and parent-conversations.ts untouched.",
+    "Do not create or drop ark_record* from T3. Do not put archive status into the parent dashboard payload.",
+    "Re-read session 360 HEAD before any integration. It was still in_progress at the end of this audit."
+  ],
+  "compatibility_cases": [
+    "state_keeps_409_capacity_and_503_archive_rolls_back_current",
+    "concurrent_records_batch_and_state_on_one_ark_db_no_partial_row_and_no_nas_wait",
+    "parent_dashboard_keeps_ark_usage_records_conversations_when_archive_or_nas_is_down",
+    "parent_records_and_conversations_routes_keep_auth_and_no_store",
+    "records_allow_stays_env_list_AND_active_ceiling_archive_off_does_not_delete_ark_record",
+    "admin_storage_put_changes_only_target_devices_archive_cas_does_not_change_grants",
+    "settings_subject_cap_stays_1000_records_limits_stay_on_their_env_names",
+    "facts_proxy_stays_arkAuthorizedSubjects",
+    "rebind_does_not_cascade_delete_archive_outbox_or_origin_record_rows",
+    "custom_llm_bytes_unchanged_by_t3"
+  ],
+  "t3_worktree_dirty_at_audit_end": [
+    "apps/server/package.json",
+    "apps/server/scripts/storage-nas-verify.mjs",
+    "apps/server/src/ark/routes.ts",
+    "apps/server/src/ark/service.ts",
+    "apps/server/src/ark/store.ts",
+    "apps/server/src/config-store.ts",
+    "apps/server/src/routes/admin-data.ts",
+    "apps/server/src/storage/policy.ts",
+    "apps/server/src/storage/routes.ts",
+    "apps/web/public/admin/index.html",
+    "apps/web/scripts/test-analytics-admin-ui.cjs",
+    "apps/server/src/ark/archive.ts",
+    "apps/server/scripts/ark-archive-http.test.ts",
+    "apps/server/scripts/ark-archive-schema.test.ts",
+    "apps/server/scripts/ark-archive.test.ts",
+    "apps/server/scripts/storage-archive-control.test.ts",
+    "apps/server/scripts/storage-ark-export.py",
+    "apps/server/scripts/storage-ark-export.test.py",
+    "apps/server/scripts/storage-ark-nas.test.mjs",
+    "docs/prnas-storage-50/t3/"
+  ]
+}

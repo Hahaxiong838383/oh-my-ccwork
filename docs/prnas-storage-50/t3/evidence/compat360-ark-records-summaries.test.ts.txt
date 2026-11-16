@@ -1,0 +1,24 @@
+SUMMARY_FANOUT {"records":9001,"items":32,"elapsed_ms":443.16520800000035,"heap_delta":198984}
+✔ empty summaries are unavailable with null amounts and no_records (27.36725ms)
+✔ yesterday sums positive normal rewards at Shanghai day boundaries without netting spending (58.278458ms)
+✔ one observed currency leaves the other null and immutable replay never increases income (13.940291ms)
+✔ late receipt is attributed to occurrence day and no positive matching currency stays unavailable (19.056542ms)
+✔ income aggregates safely above a single record quantity maximum (15.768584ms)
+✔ latest acquired transaction spans saves and tanks and returns its whole pending group (18.213292ms)
+✔ backfilled older acquisitions do not replace latest and equal-time ordering matches records page (23.291834ms)
+✔ same-save sequence wins over a backwards acquisition clock (17.171625ms)
+✔ same-save latest non-normal sequence cannot fall back through a backwards clock (34.706625ms)
+✔ latest non-normal acquisition blocks fallback to older normal (35.039ms)
+✔ unknown or suspect acquisition time blocks a chronological latest claim (32.340458ms)
+✔ normal activation updates the matching instance without adding quantities or income (19.278333ms)
+✔ non-normal or unclocked activations never change an acquired item state (93.272542ms)
+✔ summaries never cross parent identity or a new ownership generation (16.43075ms)
+✔ 32-item summary stays bounded near capacity with a thousand repeated activation references (7860.657125ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8333.36975

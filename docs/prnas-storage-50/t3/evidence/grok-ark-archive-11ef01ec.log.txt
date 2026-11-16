@@ -1,0 +1,21 @@
+[32m✔ accepted first snapshot atomically creates one checkpoint with immutable identity and hash [90m(51.437417ms)[39m[39m
+[32m✔ noise never moves five-minute checkpoint baseline and exact boundary archives [90m(26.786292ms)[39m[39m
+[32m✔ assets, claim state, logical day and source mode trigger without waiting [90m(46.648125ms)[39m[39m
+[32m✔ full buffer rolls back latest and history but does not block duplicate or noise [90m(27.892958ms)[39m[39m
+[32m✔ actual local free-space reserve is enforced without contacting NAS [90m(20.795292ms)[39m[39m
+[32m✔ free disk also reserves the accumulated queue, not only the arriving row [90m(26.7755ms)[39m[39m
+[32m✔ archive disabled preserves old acceptance and does not discard already accepted history [90m(31.851917ms)[39m[39m
+[32m✔ checkpoint insertion failure rolls back current and SQL transaction [90m(27.832083ms)[39m[39m
+[32m✔ rebind retains old pending history without granting old identity or conflating new boot IDs [90m(34.573833ms)[39m[39m
+[32m✔ reopening DB keeps checkpoint cadence and accepted evidence [90m(29.386667ms)[39m[39m
+[32m✔ fifty independent synthetic identities retain exact distinct asset values [90m(210.22075ms)[39m[39m
+[32m✔ exact budget is accepted and one byte less refuses without partial commit [90m(79.98275ms)[39m[39m
+[32m✔ real SIGKILL before commit rolls back both, after commit preserves both [90m(1518.984417ms)[39m[39m
+[34mℹ tests 13[39m
+[34mℹ suites 0[39m
+[34mℹ pass 13[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 2179.772292[39m

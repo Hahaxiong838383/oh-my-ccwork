@@ -1,0 +1,1 @@
+{"probe":"accept-exact-free","r1":5430,"r2":5430,"reserve":4831838208,"exact_accept":4831849068,"one_byte_less_refuses":4831849067,"queue_omitted_free_refuses":4831843638,"slack_vs_committed_plus_100":{"r2_minus_100":5330}}

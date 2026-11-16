@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"protected_equal\": true, \"processes_equal\": true, \"processes\": [{\"name\": \"p003-voice\", \"pid\": 2214587, \"restarts\": 6}, {\"name\": \"kidshub-voice\", \"pid\": 1856264, \"restarts\": 0}, {\"name\": \"p003-analytics\", \"pid\": 2075980, \"restarts\": 2}]}\n",
+  "stderr": ""
+}

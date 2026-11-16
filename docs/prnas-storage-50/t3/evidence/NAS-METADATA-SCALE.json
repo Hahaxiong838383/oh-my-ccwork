@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"metadata_only\":true,\"entries\":10000,\"queued\":20,\"gc_removed\":100,\"pending_preserved\":true,\"queue_ms\":535.4912390000001,\"gc_ms\":8279.679076999999,\"rss_bytes\":60407808,\"node\":\"v22.19.0\"}\n",
+  "stderr": ""
+}

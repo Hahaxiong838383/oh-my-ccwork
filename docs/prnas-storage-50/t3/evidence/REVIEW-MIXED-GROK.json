@@ -1,0 +1,65 @@
+{
+  "scope": "P003 T3 cycle pending-loop disk_paused increment only",
+  "conclusion": "pass",
+  "previous": "11ef01ecf0e05bebb2af77b6d8cfb26c813b195b",
+  "candidate": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+  "candidate_parent_is_previous": true,
+  "diff_files": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.test.py"
+  ],
+  "blobs": {
+    "previous_exporter": "8481c77e7577fde1ec0f7c065e98d00458990d20",
+    "candidate_exporter": "35499f6d34345209ba965732426de398a4e6e60a",
+    "candidate_test": "3052700189ddc58640a0da608cb4bd26a3f17d10",
+    "fixture": "35f65e578e8d68671cb4590fe68ae49106a85f8c"
+  },
+  "fixture": "2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json",
+  "archive": {
+    "method": "git archive of candidate, Path.resolve, no /tmp symlink component",
+    "candidate_root": "/private/tmp/p003-mixed-4ea-pyyiy5dz",
+    "previous_root": "/private/tmp/p003-mixed-11ef-7ukmmn7r",
+    "previous_tree": "candidate archive with storage-ark-export.py replaced by the previous blob",
+    "node_modules": "/Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules",
+    "dependencies_installed": false,
+    "source_modified": false,
+    "production_access": false
+  },
+  "test_command": "TEST_NODE=/Users/fu-121/.local/node-v24/bin/node TMPDIR=<resolved-tmp> python3 scripts/storage-ark-export.test.py",
+  "test_cwd": "2-Projects/P003GameDemo20260513/apps/server",
+  "test_node": "/Users/fu-121/.local/node-v24/bin/node",
+  "test_node_version": "v24.19.0",
+  "python": "3.12.2",
+  "test_count": 9,
+  "max20": {
+    "constant_line": 15,
+    "pending_query_line": 133,
+    "pending_limit": "LIMIT ? bound to MAX_BATCHES",
+    "loop_queries_again": false,
+    "disk_pause_raises_before_claim_while": true,
+    "claim_while_line": 141,
+    "claim_while_cap": "count['published']+count['confirmed']<MAX_BATCHES"
+  },
+  "red": {
+    "exit": 1,
+    "summary": "8 passed, mixed test failed, later batch stayed published",
+    "later_state": "published",
+    "duration_s": 5.48,
+    "log": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/grok-mixed-11ef-red.log",
+    "log_sha256": "b7c81136bbdb1415a17d53f767c3b9e94fa024c9465271894db9137f2cca3945"
+  },
+  "green": {
+    "exit": 0,
+    "summary": "9 passed; mixed test saw later complete, outbox count 2, then spool list length 2",
+    "later_state": "complete",
+    "outbox_count": 2,
+    "spool_list_after_followup_cycle": 2,
+    "duration_s": 5.308,
+    "log": "/Users/fu-121/.local/state/p003-prnas-t3-20261116/grok-mixed-4ea-green.log",
+    "log_sha256": "5876f986faee0f0536ce101daa6bad2cf0cbd629e81304b9d4a8dc0e7c6eec91"
+  },
+  "reference_logs_not_used_as_evidence": [
+    "/Users/fu-121/.local/state/p003-prnas-t3-20261116/disk-mixed-red.log",
+    "/Users/fu-121/.local/state/p003-prnas-t3-20261116/disk-mixed-final.log"
+  ]
+}

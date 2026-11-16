@@ -1,0 +1,20 @@
+...F.....
+======================================================================
+FAIL: test_low_disk_unpublished_batch_does_not_block_later_verified_cleanup (__main__.ExportTest.test_low_disk_unpublished_batch_does_not_block_later_verified_cleanup)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.test.py", line 81, in test_low_disk_unpublished_batch_does_not_block_later_verified_cleanup
+    self.assertEqual(self.sql("SELECT state FROM ark_archive_batch WHERE archive_id='"+later+"'"),[('complete',)])
+AssertionError: Lists differ: [('published',)] != [('complete',)]
+
+First differing element 0:
+('published',)
+('complete',)
+
+- [('published',)]
++ [('complete',)]
+
+----------------------------------------------------------------------
+Ran 9 tests in 12.446s
+
+FAILED (failures=1)

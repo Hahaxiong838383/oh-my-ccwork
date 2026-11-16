@@ -1,0 +1,98 @@
+{
+  "baseline": "ee876889",
+  "candidate": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+  "deployable_as_whole_tree": false,
+  "production_changed": false,
+  "files": [
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/package.json",
+      "before_sha256": "783cc0db21cc5f08f045fa0cc29c3947632692719679331b9a20b74a11e45121",
+      "after_sha256": "7cbc2d2ff9fc82d9f0da1479298af403ad649fd2fed0c572745fe2ae8e0c1e98"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-archive-http.test.ts",
+      "before_sha256": null,
+      "after_sha256": "ad69d330b2b5cfb2c81ad422949b923bdb3085c8d84669059763bed42fd5346a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-archive-schema.test.ts",
+      "before_sha256": null,
+      "after_sha256": "9ee42f369fe83f20d807f5346be1a13259997bb768930cea76eca5c380fbefe3"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-archive.test.ts",
+      "before_sha256": null,
+      "after_sha256": "1606883165ac4ca05b56bc8c11c722609d62f7a85fefb7993cdf7356f28c629c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive-control.test.ts",
+      "before_sha256": null,
+      "after_sha256": "af09412fc743a2eb6359884b5a096ef1f1fceb447a81c3d9bac28d48be482ec9"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py",
+      "before_sha256": null,
+      "after_sha256": "8052187187dad3db3e5458a89ea8560a70911db7611802dfad1119174958db3c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.test.py",
+      "before_sha256": null,
+      "after_sha256": "714132f863555942c5eacd101898706d87b799ce5114135e61da7f80e19f616e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-nas.test.mjs",
+      "before_sha256": null,
+      "after_sha256": "1eb488bf15431555b53aae68e6b3611786f346f0b5990cff04bb37e6ab7e4a0f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-verify.mjs",
+      "before_sha256": "c2028fecac834adbae196fcb3460b25bf1069a0160ec29f693d13c6ebba11e09",
+      "after_sha256": "a5ae39e5f6d986b0f78e4c3f9994762a8ae2a43393e02149458b864c169429f8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/archive.ts",
+      "before_sha256": null,
+      "after_sha256": "9151dd99d46ed45e9fd05f0ad53f4304dc8a7a5006b86733427f246b3cc981f6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/routes.ts",
+      "before_sha256": "4c309a2602fb02d705e884b9f5c70453ed21aa5c21affb38c1bab468f668a118",
+      "after_sha256": "2474561f773b2e96895463cd495632cda8d5b11a7e50537fd429ffa1a045de72"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/service.ts",
+      "before_sha256": "3ea6cad9a3c91838f4c2add8b078a8a1ae5d1fed852fbd9fe6e201365a79a558",
+      "after_sha256": "8d399b76151a8c88a1995c7a79afdee521751e2e9561ed8b88a7d9e7d0474a61"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts",
+      "before_sha256": "6d6dd979f261d067d75d2351cf13d031e4192a3374e35d61fb3b61563f7ba310",
+      "after_sha256": "e61dde89559a857ff971f6fe26755098425b111e9094b777d5b80bd85d8fc9a6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts",
+      "before_sha256": "a603f3c3e8ee39a720ac1a0df182437b80f92c8c1909bb744dacb73c9d4515d5",
+      "after_sha256": "f325431688522b7d122f889d3d6a8a644122256a7b1e2fab78a3fbd1b3012ddb"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/admin-data.ts",
+      "before_sha256": "55e766cb1a63fd5b16b29e044724ce973df02dc3bac9ac6723ca889dcd8db78b",
+      "after_sha256": "89374acbcec793f8c210cfcec3e9cbc10c0383d25e566cd480cf8a5ecdbf4980"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/storage/policy.ts",
+      "before_sha256": "b7f4c6fd7845aa01bcb274628e079e06958959577a282fd74a417a844560aa1c",
+      "after_sha256": "d554cb7520e7d540b70599b4731b270b4cff42f11f4c5424df63d6e0621278be"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/storage/routes.ts",
+      "before_sha256": "5e67b76ed20e9d882ffb52715a1c04ac41bde70dfd7bea8fcf32254ad61a920b",
+      "after_sha256": "8e7db74f643fd851dae74d880cdee6f4a16d8d7e1cb836f9a72bac872e29ca3a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
+      "before_sha256": "9b27f8cf86bd5191f53bbf3cd7f84c8ea45e108ac1bfc1bab8a0784db400a95b",
+      "after_sha256": "520f8e06454c2ed046dda24c6b1ab0225573919b27854552cc87db78c520090a"
+    }
+  ]
+}

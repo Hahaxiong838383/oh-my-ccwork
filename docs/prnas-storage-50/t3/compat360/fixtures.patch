@@ -1,0 +1,71 @@
+--- a/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records.test.ts
++++ b/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records.test.ts
+@@ -10,6 +10,9 @@
+ process.env.AUTH_JWT_SECRET='isolated-records-test-only';process.env.ARK_CONTEXT_SN_ALLOW='';process.env.ARK_RECORDS_SN_ALLOW='';
+ for(const k of ['UPLOAD_PER_MINUTE','UPLOAD_PER_HOUR','GLOBAL_UPLOAD_PER_MINUTE','GLOBAL_UPLOAD_PER_HOUR','CONTEXT_PER_MINUTE'])process.env[`ARK_RECORDS_${k}`]='10000';process.env.ARK_RECORDS_MIN_FREE_BYTES='1';
+ const contract=await import('../docs/records-r1/schema.mjs');
++const {configStore:archiveFixtureConfig}=await import('../src/config-store.js');
++archiveFixtureConfig.setFlag('storage.verified-profile.v1',JSON.stringify({version:1,analytics_devices:14,ark_devices:50,evidence:'SYNTHETIC-360-COMPAT-FIXTURE',candidate:'isolated-test-only',validated_at_ms:Date.now()}),'test');
++if(process.env.TEST_ARCHIVE_ENABLED==='1')archiveFixtureConfig.saveStorageArchive({expected_revision:0,enabled:true},'test');
+ const {Hono}=await import('hono');const {serve}=await import('@hono/node-server');const {SignJWT}=await import('jose');
+ const {deviceTelemetryRoute,parentTelemetryRoute}=await import('../src/routes/telemetry.js');const {arkRoute}=await import('../src/routes/ark.js');
+ const {deviceRegistryStore:registry}=await import('../src/device-registry-store.js');const {accountStore}=await import('../src/account-store.js');const {arkStore}=await import('../src/ark/service.js');
+@@ -123,3 +126,25 @@
+  finally{db.exec('ALTER TABLE ark_current_unavailable RENAME TO ark_current');}
+ });
+ test('late acquisition rejects incompatible save/sequence/item without poisoning original pending reference',async()=>{const f=await fixture();const activation=record(f,'waiting',2,{reason:'item_activation',resource_changes:[],item_changes:[{operation:'activated',item_instance_id:'item-target',acquired_record_id:'target',state:'active'}]});ack(await post(f,[activation]),['waiting']);for(const patch of [{save_id:'other-save'},{sequence:3},{item_changes:[]}]){const candidate=record(f,'target',1,patch);rejected(await post(f,[candidate]),'item_reference_conflict');}ack(await post(f,[record(f,'target',1)]),['target']);assert.equal((await page(f)).body.data.items.find((r:any)=>r.record_id==='waiting').item_references[0].status,'resolved');});
++
++
++test('T3 integration: same SQLite records writes and background checkpoint exporter do not lose either stream',async()=>{
++ const f=await fixture();const {spawn}=await import('node:child_process');const {readFileSync}=await import('node:fs');
++ const template=JSON.parse(readFileSync(new URL('../../../docs/ark-brain-20261031/snapshot-v1.example.json',import.meta.url),'utf8'));const now=Date.now();
++ const exporter=process.env.T3_EXPORT_SCRIPT!;assert.ok(exporter);const py=`import sys,importlib.util,time,pathlib
++s=importlib.util.spec_from_file_location('exp',sys.argv[1]);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
++for i in range(60):
++ try:m.cycle(pathlib.Path(sys.argv[2]),pathlib.Path(sys.argv[3]).resolve())
++ except Exception as e:
++  if 'locked' not in str(e):raise
++ time.sleep(.01)
++`;
++ const child=spawn('python3',['-c',py,exporter,process.env.ARK_DB_PATH!,join(root,'checkpoint-spool')],{stdio:['ignore','pipe','pipe']});let stderr='';child.stderr.on('data',x=>stderr+=x);const end=new Promise<number|null>(r=>child.on('exit',r));
++ for(let n=1;n<=15;n++){
++  const snapshot={...template,snapshot_id:'mixed-'+n,boot_started_at_ms:now-1,captured_at_ms:now+n,sequence:n,wallets:{family_coin:n,stardust:n+20}};
++  let stored=false;for(let k=0;k<20&&!stored;k++)try{arkStore().accept(registry.arkIdentity(f.sn)!,snapshot,now+n);stored=true;}catch(e){if(!String(e).includes('locked'))throw e;await new Promise(r=>setTimeout(r,10));}assert.equal(stored,true);
++  let r;for(let k=0;k<20;k++){r=await post(f,[record(f,'mixed-'+n,n)]);if(r.status!==503)break;await new Promise(r=>setTimeout(r,10));}ack(r,['mixed-'+n]);
++ }
++ assert.equal(await end,0,stderr);assert.equal(count(f.sn),15);assert.equal(arkStore().current(registry.arkIdentity(f.sn)!)!.snapshot.wallets.family_coin,15);
++ const checkpointRows=db.prepare('SELECT envelope FROM ark_archive_outbox WHERE grant_id=? ORDER BY id').all(f.grant.grant_id) as any[];assert.equal(checkpointRows.length,15);assert.deepEqual(checkpointRows.map(x=>JSON.parse(x.envelope).snapshot.wallets.family_coin),Array.from({length:15},(_,i)=>i+1));
++});
+--- a/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records-summaries.test.ts
++++ b/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records-summaries.test.ts
+@@ -17,6 +17,9 @@
+ process.env.ARK_RECORDS_SN_ALLOW = '';
+ process.env.ARK_RECORDS_MIN_FREE_BYTES = '1';
+ for (const key of ['UPLOAD_PER_MINUTE','UPLOAD_PER_HOUR','GLOBAL_UPLOAD_PER_MINUTE','GLOBAL_UPLOAD_PER_HOUR']) process.env[`ARK_RECORDS_${key}`] = '10000';
++const {configStore:archiveFixtureConfig}=await import('../src/config-store.js');
++archiveFixtureConfig.setFlag('storage.verified-profile.v1',JSON.stringify({version:1,analytics_devices:14,ark_devices:50,evidence:'SYNTHETIC-360-COMPAT-FIXTURE',candidate:'isolated-test-only',validated_at_ms:Date.now()}),'test');
++if(process.env.TEST_ARCHIVE_ENABLED==='1')archiveFixtureConfig.saveStorageArchive({expected_revision:0,enabled:true},'test');
+ const {deviceRegistryStore: registry} = await import('../src/device-registry-store.js');
+ const {accountStore} = await import('../src/account-store.js');
+ const {arkStore} = await import('../src/ark/service.js');
+--- a/2-Projects/P003GameDemo20260513/apps/server/scripts/mini008-dashboard.test.ts
++++ b/2-Projects/P003GameDemo20260513/apps/server/scripts/mini008-dashboard.test.ts
+@@ -12,6 +12,9 @@
+ process.env.ARK_CONTEXT_SN_ALLOW = '';
+ delete process.env.TELEMETRY_SN_ALLOWLIST;
+ delete process.env.TELEMETRY_ACCEPTANCE_OVERRIDE;
++const {configStore:archiveFixtureConfig}=await import('../src/config-store.js');
++archiveFixtureConfig.setFlag('storage.verified-profile.v1',JSON.stringify({version:1,analytics_devices:14,ark_devices:50,evidence:'SYNTHETIC-360-COMPAT-FIXTURE',candidate:'isolated-test-only',validated_at_ms:Date.now()}),'test');
++if(process.env.TEST_ARCHIVE_ENABLED==='1')archiveFixtureConfig.saveStorageArchive({expected_revision:0,enabled:true},'test');
+ const { Hono } = await import('hono');
+ const { serve } = await import('@hono/node-server');
+ const { SignJWT } = await import('jose');
+@@ -148,7 +151,7 @@
+   if (change === 'epoch') { registry.setParentAccountId(f.sn, 'other'); registry.setParentAccountId(f.sn, f.owner); }
+   if (change === 'account') accounts.prepare("UPDATE account SET role='parent' WHERE id=?").run(registry.get(f.sn)!.account_id!);
+   if (change === 'grant') arkStore().db.prepare("UPDATE ark_grant SET grant_id='replaced' WHERE sn=?").run(f.sn);
+-  if (change === 'scope') process.env.ARK_CONTEXT_SN_ALLOW = process.env.ARK_CONTEXT_SN_ALLOW!.replace(f.sn, '');
++  if (change === 'scope') { process.env.ARK_CONTEXT_SN_ALLOW = process.env.ARK_CONTEXT_SN_ALLOW!.replace(f.sn, ''); assert.equal((await dash(f)).body.data.ark.available,true); arkStore().db.prepare('DELETE FROM ark_grant WHERE sn=?').run(f.sn); }
+   if (change === 'master') arkStore().db.exec('UPDATE ark_settings SET enabled=0');
+   const d = await dash(f); assert.equal(d.status, 200); emptyArk(d.body.data.ark);
+  }

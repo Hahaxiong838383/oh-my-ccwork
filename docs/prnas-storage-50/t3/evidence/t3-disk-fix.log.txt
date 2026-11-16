@@ -1,0 +1,69 @@
+
+> server@0.0.1 test:ark-archive
+> node --experimental-sqlite --import tsx scripts/ark-archive.test.ts && node --experimental-sqlite --import tsx scripts/ark-archive-schema.test.ts && node --experimental-sqlite --import tsx scripts/ark-archive-http.test.ts && node --experimental-sqlite --import tsx scripts/storage-archive-control.test.ts && python3 scripts/storage-ark-export.test.py && node scripts/storage-ark-nas.test.mjs
+
+✔ accepted first snapshot atomically creates one checkpoint with immutable identity and hash (43.228667ms)
+✔ noise never moves five-minute checkpoint baseline and exact boundary archives (24.840916ms)
+✔ assets, claim state, logical day and source mode trigger without waiting (40.266792ms)
+✔ full buffer rolls back latest and history but does not block duplicate or noise (31.762875ms)
+✔ actual local free-space reserve is enforced without contacting NAS (32.937875ms)
+✔ free disk also reserves the accumulated queue, not only the arriving row (20.076958ms)
+✔ archive disabled preserves old acceptance and does not discard already accepted history (22.333917ms)
+✔ checkpoint insertion failure rolls back current and SQL transaction (26.722958ms)
+✔ rebind retains old pending history without granting old identity or conflating new boot IDs (28.190209ms)
+✔ reopening DB keeps checkpoint cadence and accepted evidence (24.8945ms)
+✔ fifty independent synthetic identities retain exact distinct asset values (169.811792ms)
+✔ exact budget is accepted and one byte less refuses without partial commit (74.918459ms)
+✔ real SIGKILL before commit rolls back both, after commit preserves both (1200.110125ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1775.332584
+schema comparison cases 437
+✔ NAS offline v1 validator agrees with live schema on field mutations and reward cross-products (70.410417ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 98.389792
+✔ actual loopback HTTP: full archive returns 503 Retry-After, never ACKs or updates latest; disabled mode preserves contract (243.597959ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 262.753875
+✔ independent archive CAS toggles without changing quota, device policy, verified scale or grants (103.659583ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 138.606292
+........
+----------------------------------------------------------------------
+Ran 8 tests in 4.457s
+
+OK
+✔ NAS refuses correct file hash with invalid Ark inner body hash (59.32325ms)
+✔ NAS validates full snapshot, identity, strict keys, mode and ordered IDs (203.574ms)
+✔ 90-day Ark retention only removes exact acknowledged old packets, independent of backup rotation (159.051542ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 435.696541

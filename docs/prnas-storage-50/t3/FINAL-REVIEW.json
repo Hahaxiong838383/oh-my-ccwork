@@ -1,0 +1,41 @@
+{
+  "status": "T3_PASS_ISOLATED_NOT_DEPLOYED",
+  "runtime_candidate": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+  "rollback": "rollback/p003-prnas-t3-pre-20261116",
+  "session360_tested": "5d24359d15fb33f5d91621db3dc35af6dd1a4828",
+  "session360_later_docs_only": "4b5e1eb287b34d030df387d727dca79746067ad9",
+  "blocking": [],
+  "review_chain": [
+    {
+      "sha": "74482851",
+      "original_verdict": "reject",
+      "blocking": "disk-floor-ignores-queued-copies",
+      "fixed_by": "11ef01ec",
+      "independently_retested": "REVIEW-DISK-GROK.json"
+    },
+    {
+      "sha": "11ef01ec",
+      "original_verdict": "INCREMENTAL_BLOCKED",
+      "blocking": "confirmed-cleanup-blocked-by-earlier-sorted-unwritten-batch",
+      "fixed_by": "4ea6af5a",
+      "independently_retested": "REVIEW-MIXED-GROK.json"
+    }
+  ],
+  "scope": [
+    "candidate functional tests",
+    "fixed session360 integration",
+    "actual Linux Node22 isolated test",
+    "actual NAS 50 synthetic identities transfer and readback",
+    "10000 metadata scan measurement"
+  ],
+  "not_claimed": [
+    "production activation",
+    "50 real devices load",
+    "voice latency baseline comparison",
+    "90-day actual runtime",
+    "full game save restoration",
+    "future uncommitted session360 compatibility"
+  ],
+  "typecheck": "12 existing errors; byte-identical T1 baseline",
+  "production_changed": false
+}

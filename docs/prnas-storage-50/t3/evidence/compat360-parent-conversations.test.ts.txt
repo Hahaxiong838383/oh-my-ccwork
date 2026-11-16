@@ -1,0 +1,23 @@
+✔ 184 historical messages page once each with exact user/assistant counts and no authority metadata (375.751459ms)
+✔ new messages only enter a fresh first page; same timestamps have stable id ordering (61.277ms)
+✔ Shanghai day filters include exact boundaries and validate query shapes (51.521375ms)
+✔ opaque cursor rejects tampering, altered filters, expiration, and deleted high-water anchor (62.276792ms)
+✔ parent JWT and account role required; other parent and unknown device stay 404 with no-store (36.53675ms)
+✔ scope is explicit and strict; empty disables, malformed fails closed, counts are null when disabled (51.549875ms)
+✔ rebind and switch-back cannot reuse the originally authorized scope or cursor (71.21775ms)
+✔ brain, epoch, status, binding version and shared brain account each fail closed (95.485167ms)
+✔ query and cursor stay scoped to the device brain account (30.110041ms)
+✔ conversation SQL failure only degrades its dashboard domain; missing read DB is not created (43.221875ms)
+✔ all history reads preserve original message contents and rows (19.910625ms)
+✔ disabled scope remains not_enabled even when the conversation DB is absent (11.144584ms)
+✔ account lookup failure degrades only conversations and keeps existing dashboard fields (25.084375ms)
+✔ race: page rechecks authority after a second connection rebinds during the read (12.557834ms)
+✔ race: dashboard summary rejects rebind-and-switch-back during the read (14.780542ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 984.224708

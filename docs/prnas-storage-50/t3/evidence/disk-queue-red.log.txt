@@ -1,0 +1,41 @@
+✔ accepted first snapshot atomically creates one checkpoint with immutable identity and hash (73.122833ms)
+✔ noise never moves five-minute checkpoint baseline and exact boundary archives (50.732833ms)
+✔ assets, claim state, logical day and source mode trigger without waiting (57.680125ms)
+✔ full buffer rolls back latest and history but does not block duplicate or noise (50.583417ms)
+✔ actual local free-space reserve is enforced without contacting NAS (29.915209ms)
+✖ free disk also reserves the accumulated queue, not only the arriving row (85.179375ms)
+✔ archive disabled preserves old acceptance and does not discard already accepted history (46.530958ms)
+✔ checkpoint insertion failure rolls back current and SQL transaction (54.881708ms)
+✔ rebind retains old pending history without granting old identity or conflating new boot IDs (81.480084ms)
+✔ reopening DB keeps checkpoint cadence and accepted evidence (29.982875ms)
+✔ fifty independent synthetic identities retain exact distinct asset values (423.545125ms)
+✔ exact budget is accepted and one byte less refuses without partial commit (97.524833ms)
+✔ real SIGKILL before commit rolls back both, after commit preserves both (1808.713709ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2958.353833
+
+✖ failing tests:
+
+test at scripts/ark-archive.test.ts:1:4445
+✖ free disk also reserves the accumulated queue, not only the arriving row (85.179375ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-archive.test.ts:47:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /archive_buffer_full/,
+    operator: 'throws',
+    diff: 'simple'
+  }

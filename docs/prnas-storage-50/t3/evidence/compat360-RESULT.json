@@ -1,0 +1,44 @@
+{
+  "session360_sha": "5d24359d15fb33f5d91621db3dc35af6dd1a4828",
+  "candidate": "4ea6af5afb8fbd80133a7a48fbeea9565d135217",
+  "overlay_files": {
+    "src/ark/store.ts": "e61dde89559a857ff971f6fe26755098425b111e9094b777d5b80bd85d8fc9a6",
+    "src/ark/service.ts": "8d399b76151a8c88a1995c7a79afdee521751e2e9561ed8b88a7d9e7d0474a61",
+    "src/ark/routes.ts": "2474561f773b2e96895463cd495632cda8d5b11a7e50537fd429ffa1a045de72",
+    "src/ark/archive.ts": "9151dd99d46ed45e9fd05f0ad53f4304dc8a7a5006b86733427f246b3cc981f6",
+    "src/storage/policy.ts": "d554cb7520e7d540b70599b4731b270b4cff42f11f4c5424df63d6e0621278be",
+    "src/storage/routes.ts": "8e7db74f643fd851dae74d880cdee6f4a16d8d7e1cb836f9a72bac872e29ca3a",
+    "src/config-store.ts": "f325431688522b7d122f889d3d6a8a644122256a7b1e2fab78a3fbd1b3012ddb"
+  },
+  "protected_files": {
+    "src/ark/records-contract.ts": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123",
+    "src/ark/records-store.ts": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd",
+    "src/ark/records-service.ts": "90e2a237071988931c45b098ebf7df1c97d93d0175784dc594d5e75d5a089ddf",
+    "src/ark/records-routes.ts": "3e5ccd7540c05ed3a6d4653f4e07f7fe47c69661f6a4e275f753306b50da585a",
+    "src/routes/telemetry.ts": "9bb9913ab2f6680ee209a0e15d202bdab83fa0f27382ca73a117761a2fba8759",
+    "src/routes/ark.ts": "ad6231c2d37781542e2e46438e1bf8777743059bd94ccce2d7014358ff218e10",
+    "src/parent-conversations.ts": "33e17148525d71c7277ac34ce7104439caa096fc61b518d35da0a78dfa523ba5"
+  },
+  "tests": [
+    {
+      "name": "ark-records.test.ts",
+      "exit": 0,
+      "sha256": "0d7c191f2a9be7e46208382c2bc90d9c94a44d4a974492bf62868734c61e3ffc"
+    },
+    {
+      "name": "ark-records-summaries.test.ts",
+      "exit": 0,
+      "sha256": "e1336e4938d575680b9956e4c4987bc85343766d14d893f292127e418d7fd047"
+    },
+    {
+      "name": "parent-conversations.test.ts",
+      "exit": 0,
+      "sha256": "a91d957819de0a48d3c8ff7d58a9d2f6031c37c370f9034c61b6c8a194c7abc3"
+    },
+    {
+      "name": "mini008-dashboard.test.ts",
+      "exit": 0,
+      "sha256": "da2d08a9b7e1cfe1cda151c7393d89f4d5568cd407796de5047290f7a6c01ac6"
+    }
+  ]
+}

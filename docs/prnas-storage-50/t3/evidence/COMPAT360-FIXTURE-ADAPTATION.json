@@ -1,0 +1,23 @@
+{
+  "tests": [
+    {
+      "test": "ark-records.test.ts",
+      "sha256": "fa02b9c19d6ebf2a192e7f6dd92886bb1c6bc5d132ec5f003dbec4e6335b6351"
+    },
+    {
+      "test": "ark-records-summaries.test.ts",
+      "sha256": "fabcf540c9a9dc43fa6ac4e89a8f0614ae3150f0bb252f1e5aa134a6038c98df"
+    },
+    {
+      "test": "mini008-dashboard.test.ts",
+      "sha256": "84b9bb35f37204cee5b45d9a2ae7fd9e763991dbf4393c458550c5466651bed4"
+    }
+  ],
+  "purpose": [
+    "synthetic verified profile required by T1",
+    "archive enabled for isolated tests",
+    "dashboard ENV removed is not grant revoke under T1",
+    "records and export concurrent durability"
+  ],
+  "production_source_changed": false
+}
