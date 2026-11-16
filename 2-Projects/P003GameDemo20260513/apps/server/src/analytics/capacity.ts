@@ -14,21 +14,21 @@ export function capacityForecast(s:CapacitySample,controls={policy:readStoragePo
   if(Object.values(s).some(v=>typeof v==='number'&&(!Number.isFinite(v)||v<0)))throw new Error('CAPACITY_UNAVAILABLE');
   const daily=Math.ceil(Math.max(6000,s.daily_peak)/1000)*1000;
   const reserve=4*1024**3,walReserve=512*1024**2;
-  const horizon=90,rawDays=14,factDays=90,arkSpoolReserve=policy.spool_limit_bytes;
+  const horizon=180,rawDays=14,factDays=90,arkSpoolReserve=policy.spool_limit_bytes;
   // Before T6 proves old keep2 removal: archive mode may retain live + old keep2
   // + last acknowledged payload + next snapshot. Never credit future cleanup.
-  const copies=policy.archive_enabled?5:4;
+  const copies=5; // Ark archive_enabled is not the Analytics backup timer state.
   const projections=[30,90,180].map(days=>({horizon_days:days,raw_growth_days:Math.min(14,days),fact_growth_days:Math.min(90,days),seen_growth_days:days,
     bytes_per_device:Math.ceil(daily*(Math.min(14,days)*1280+Math.min(90,days)*1024+days*400)*1.1)*copies}));
   // Four legacy copies; five during archive transition until old backups are retired.
-  const perDevice=projections[1].bytes_per_device;
+  const perDevice=projections[2].bytes_per_device;
   // Existing files remain occupied; do not count reusable/free pages as extra disk.
   const budget=Math.max(0,s.free_bytes-reserve-walReserve-arkSpoolReserve);
   const storageLimit=Math.floor(budget/perDevice);
   // Scheduled budget is not load verification. Separate profile still caps admissions.
   const maintenanceLimit=Math.floor(PRUNE_CYCLE.maxChunks*PRUNE_CYCLE.chunk*288/2*.7/daily);
   const safeLimit=s.maintenance_ok?Math.max(0,Math.min(storageLimit,maintenanceLimit,profile.analytics_devices,policy.target_devices)):0;
-  return {ok:true,...s,projections:projections.map(p=>({...p,target_devices_bytes:p.bytes_per_device*policy.target_devices})),ark_spool_reserve_bytes:arkSpoolReserve,horizon_days:horizon,raw_growth_days:rawDays,fact_growth_days:factDays,seen_growth_days:horizon,daily_events_per_device:daily,raw_retention_days:14,fact_retention_days:90,seen_retention:'persistent',backup_peak_copies:copies,reserve_bytes:reserve,wal_reserve_bytes:walReserve,budget_bytes:budget,bytes_per_device:perDevice,storage_limit:storageLimit,maintenance_limit:maintenanceLimit,storage_policy_revision:policy.revision,target_devices:policy.target_devices,target_devices_bytes:policy.target_devices*perDevice,target_devices_fit:safeLimit>=policy.target_devices,validated_device_limit:profile.analytics_devices,validation_evidence:profile.evidence,limiting_factors:[...(!s.maintenance_ok?['maintenance_unhealthy']:[]),...(storageLimit<policy.target_devices?['cloud_disk']:[]),...(maintenanceLimit<policy.target_devices?['maintenance_throughput']:[]),...(profile.analytics_devices<policy.target_devices?['not_validated']:[])],max_enabled_devices:safeLimit,twenty_devices_bytes:20*perDevice,twenty_devices_fit:safeLimit>=20,model:'20261116-v3-90d-with-30-180' ,sample_warning:s.sample_devices<3?'单设备样本，按峰值及最低6000条/日保守估算':null};
+  return {ok:true,...s,projections:projections.map(p=>({...p,target_devices_bytes:p.bytes_per_device*policy.target_devices})),ark_spool_reserve_bytes:arkSpoolReserve,horizon_days:horizon,raw_growth_days:rawDays,fact_growth_days:factDays,seen_growth_days:horizon,daily_events_per_device:daily,raw_retention_days:14,fact_retention_days:90,seen_retention:'persistent',backup_peak_copies:copies,legacy_backup_peak_copies:4,seen_daily_growth_bytes_per_device:Math.ceil(daily*400*1.1)*copies,reserve_bytes:reserve,wal_reserve_bytes:walReserve,budget_bytes:budget,bytes_per_device:perDevice,storage_limit:storageLimit,maintenance_limit:maintenanceLimit,storage_policy_revision:policy.revision,target_devices:policy.target_devices,target_devices_bytes:policy.target_devices*perDevice,target_devices_fit:safeLimit>=policy.target_devices,validated_device_limit:profile.analytics_devices,validation_evidence:profile.evidence,limiting_factors:[...(!s.maintenance_ok?['maintenance_unhealthy']:[]),...(storageLimit<policy.target_devices?['cloud_disk']:[]),...(maintenanceLimit<policy.target_devices?['maintenance_throughput']:[]),...(profile.analytics_devices<policy.target_devices?['not_validated']:[])],max_enabled_devices:safeLimit,twenty_devices_bytes:20*perDevice,twenty_devices_fit:safeLimit>=20,model:'20261116-v3-180d-migration-peak' ,sample_warning:s.sample_devices<3?'单设备样本，按峰值及最低6000条/日保守估算':null};
 }
 export function capacityReader(store:AnalyticsStore,controls:()=>{policy:StoragePolicyV1;profile:VerifiedProfile}=()=>({policy:readStoragePolicy(null),profile:readVerifiedProfile(null)})){
   let cached:CapacitySample|undefined;

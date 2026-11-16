@@ -32,12 +32,12 @@ try {
  assert.equal(store.db.prepare('SELECT count(*) n FROM analytics_rollup_fact').get()!.n,3);
  console.log('PASS multi-chunk TTL, finite budget, exact retained rows, permanent dedup');
  const sample={free_bytes:1024**4,total_bytes:2*1024**4,db_bytes:0,wal_bytes:0,daily_peak:6000,sample_devices:50,maintenance_ok:true,checked_at_ms:now};
- const cap=capacityForecast(sample);assert.equal(cap.horizon_days,90);assert.equal(cap.backup_peak_copies,4);assert.equal(cap.ark_spool_reserve_bytes,8*1024**3);
+ const cap=capacityForecast(sample);assert.equal(cap.horizon_days,180);assert.equal(cap.backup_peak_copies,5);assert.equal(cap.ark_spool_reserve_bytes,8*1024**3);
  assert.deepEqual(cap.projections.map(x=>x.horizon_days),[30,90,180]);
  const [a,b,c]=cap.projections;assert.ok(a.bytes_per_device<b.bytes_per_device&&b.bytes_per_device<c.bytes_per_device);assert.equal(b.fact_growth_days,c.fact_growth_days);
  assert.equal(c.seen_growth_days,180);assert.equal(cap.validated_device_limit,14);assert.ok(cap.maintenance_limit>=50);assert.equal(cap.max_enabled_devices,14);
- const migration=capacityForecast(sample,{policy:{...readStoragePolicy(null),archive_enabled:true},profile:readVerifiedProfile(null)});assert.equal(migration.backup_peak_copies,5);assert.ok(migration.bytes_per_device>cap.bytes_per_device);
+ const migration=capacityForecast(sample,{policy:{...readStoragePolicy(null),archive_enabled:true},profile:readVerifiedProfile(null)});assert.equal(migration.backup_peak_copies,5);assert.equal(migration.bytes_per_device,cap.bytes_per_device);
  const disk=capacityForecast({...sample,free_bytes:12*1024**3});assert.equal(disk.budget_bytes,0);assert.equal(disk.max_enabled_devices,0);
  assert.throws(()=>capacityForecast({...sample,free_bytes:NaN}));
- console.log('PASS 30/90/180 model, 4 copies, 8GiB spool, reserve, verified scale unchanged');
+ console.log('PASS 30/90/180 model, 5 transition copies, 8GiB spool, reserve, verified scale unchanged');
 } finally {other.close();store.close();rmSync(dir,{recursive:true,force:true});}
