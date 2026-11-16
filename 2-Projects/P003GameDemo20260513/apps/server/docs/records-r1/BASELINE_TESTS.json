@@ -1,0 +1,37 @@
+[
+  {
+    "path": "scripts/ark-answer.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "5f90d9138706c72b3e5998b9c3c505ad86f91f15e199483d4271e16a49cd8c21"
+  },
+  {
+    "path": "scripts/ark-resource.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "9c97ff6126dbb1fce4f6f86777612e10a6949a75ee8e329b2b4aaef772f01397"
+  },
+  {
+    "path": "scripts/ark-direct-http.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "afe405f76231b5fba2405cbf803f57f3fe88612eac4b6e3f102fc01876c6e51a"
+  },
+  {
+    "path": "scripts/ark-currency.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "0ec5e1d9215942d4379d415b4fa56c618bee41f1c93504760df8e38105925215"
+  },
+  {
+    "path": "scripts/ark-currency-http.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "94d289f62e39d4aa31b383d28bf0a30be1a2fe0f7ad31d40cf740a67b257cde3"
+  },
+  {
+    "path": "scripts/ark-daily-context.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "31141bb8ca6f83a65248502c747cf2130e631a3b766ce8b27bbdb07b3bfdf253"
+  },
+  {
+    "path": "scripts/ark-natural-history.test.ts",
+    "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+    "sha256": "246a58bd84ff9345f8645180b0c2badd54b0f3b43b606c3d918e5bf0d30f54a1"
+  }
+]

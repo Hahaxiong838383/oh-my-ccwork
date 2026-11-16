@@ -22,7 +22,13 @@ test('actual SSE direct route returns authority facts, no model suffix, safe leg
  assert.match(await chat('我有几枚家族币'),/家族币余额是0枚/);assert.equal(modelCalls,0);assert.equal(factsCalls,1);
  assert.match(await chat('那现在呢',[{role:'user',content:'我有几枚家族币'},{role:'assistant',content:'999999枚'}]),/家族币余额是0枚/);assert.equal(modelCalls,0);
  for(mode of ['gm','wrong-sn','legacy']){assert.match(await chat('家族币还有多少'),/暂时查不到/);assert.equal(modelCalls,0);}
- assert.match(await chat('今天方舟收益怎么样'),/不能把钱包余额/);assert.match(await chat('星辰有什么用'),/换装/);assert.match(await chat('金币有什么用'),/家族币，还是星尘/);assert.equal(modelCalls,0);
+ assert.match(await chat('今天方舟收益怎么样'),/不能把钱包余额/);assert.match(await chat('星辰有什么用'),/换装/);assert.match(await chat('金币有什么用'),/金币就是家族币/);assert.equal(modelCalls,0);
+ assert.match(await chat('怎么兑换游戏道具'),/星尘.*页面/);
+ assert.match(await chat('我有几枚金币'),/家族币余额.*查不到/);
+ assert.match(await chat('那能换什么',[{role:'user',content:'金币有什么用'}]),/家族币.*星尘/);assert.equal(modelCalls,0);
+ for(const q of ['还有未领取的奖励吗','下一个奖励还需要多久','今天收益有哪些','今天使用了多久，获得了多少收益','补勤卡可以补哪一天']){
+  const before=factsCalls;const reply=await chat(q);assert.match(reply,/查不到/);assert.equal(factsCalls,before+1,q);assert.equal(modelCalls,0,q);
+ }
  const callsBefore=factsCalls;assert.equal(await chat('那现在原神金币还有多少',[{role:'user',content:'家族币还有多少'},{role:'assistant',content:'0枚'}]),'普通回答');assert.equal(factsCalls,callsBefore);modelCalls--;
  assert.equal(await chat('天上的星辰是什么'),'普通回答');assert.equal(modelCalls,1);
  assert.equal(await chat('家族币还有多少',[],'sn-BJP00399999999999902-123'),'普通回答');assert.equal(modelCalls,2);

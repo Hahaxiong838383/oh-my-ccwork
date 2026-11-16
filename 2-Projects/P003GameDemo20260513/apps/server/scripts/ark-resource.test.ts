@@ -11,7 +11,7 @@ for (const q of ['天上的星辰是什么', '黄金金币今天多少钱', '哆
 }
 assert.match(buildKnowledgeRecall('金币有什么用')!, /家族币/);
 assert.match(buildKnowledgeRecall('星尘有什么用')!, /换装/);
-assert.match(buildKnowledgeRecall('我有多少星尘')!, /实时余额/);
+assert.match(buildKnowledgeRecall('我有多少星尘')!, /余额.*本轮可信方舟事实/);
 assert.match(buildKnowledgeRecall('补勤卡怎么用')!, /历史|补签/);
 console.log('ark-resource regression passed');
 
