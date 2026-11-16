@@ -1,0 +1,8 @@
+
+> server@0.0.1 test:analytics-t4
+> node --import tsx scripts/analytics-t4.test.ts && node --import tsx scripts/analytics-t4-run-budget.test.ts
+
+PASS concurrent ingestion, no lost dirty day, atomic stale-summary rejection and retry
+PASS multi-chunk TTL, finite budget, exact retained rows, permanent dedup
+PASS 30/90/180 model, 5 transition copies, 8GiB spool, reserve, verified scale unchanged
+PASS whole-run budget stops between atomic days, preserves remaining dirty and resumes

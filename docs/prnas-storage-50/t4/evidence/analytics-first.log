@@ -1,0 +1,14 @@
+
+> server@0.0.1 test:analytics
+> node --experimental-sqlite --import tsx scripts/analytics-auth-config.test.ts && node --experimental-sqlite --import tsx scripts/analytics-registry.test.ts && node --experimental-sqlite --import tsx scripts/analytics-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-http.test.ts && node --experimental-sqlite --import tsx scripts/analytics-ops.test.ts && node --experimental-sqlite --import tsx scripts/analytics-query.test.ts && node --experimental-sqlite --import tsx scripts/analytics-structure.test.ts && node --experimental-sqlite --import tsx scripts/analytics-maintenance.test.ts && node --experimental-sqlite --import tsx scripts/analytics-checkpoint.test.ts && node --experimental-sqlite --import tsx scripts/analytics-admin-auth.test.ts
+
+analytics auth/config: PASS (revocation, WAL visibility, active/env, config boundaries, dependency failure)
+analytics registry: PASS (57 source-derived samples, truncated compatibility, field types, sensitive/extra/nested keys)
+analytics ingest: PASS (exact ACK, transaction rollback, dedupe TTL/restart, safe receipts)
+analytics HTTP: PASS (auth/gates, JSON413, full-body limits, rates, disk, internal auth, readiness)
+analytics ops: PASS (dirty-day replay, late/clock, reconciliation, bounded TTL, admin roles)
+analytics query: PASS (cross-day dimension/alias filters, batch receive-day, actual global empty-allowlist config)
+analytics structure: PASS (real worker transport, 4000/10000-depth terminal ACK, complete/disjoint sets, same-ID conflicts)
+analytics maintenance: PASS (isolated budget failures, healthy-day continuation, independent TTL despite partial/fatal rollup, honest watermarks)
+analytics checkpoint: PASS (FULL/auto0, safe-version gate, pinned reader/backpressure/TRUNCATE recovery, independent child, timeout/exit cleanup)
+analytics admin actual gateway: PASS (real admin login/middleware; editor/guest/unauthed denied)
