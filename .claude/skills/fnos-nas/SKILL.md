@@ -16,6 +16,10 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 2. 后续维护用官方 CLI：npm `@trimjs/trim-cli`，本机命令 `trim-cli`。登录只用 OAuth，不把密码或授权 code 放进命令参数。
 3. 家里局域网和两台飞牛的台账在独立仓 `~/home-lan`，不要写回 MyAgent。
 
+## 专项维护
+
+飞牛影视在线扩展的安装、播放/卡顿、插件更新与官方升级复连，使用 [fnmedia-ext-maintenance](../fnmedia-ext-maintenance/SKILL.md)。先查带日期的设备台账与运行态；下文历史端口/内核记录不能直接当作当前设备状态。
+
 ## 系统架构
 
 | 组件 | 说明 |
@@ -219,3 +223,17 @@ sudo tail -f /usr/trim/nginx/logs/access.log  # nginx 访问日志（POST /uploa
 
 应用中心的 `EasyTier` 1.0.9、`EasyTier-Web`、`易组网(用户版)` 不能替换飞牛 2 上已经在跑的 Docker `easytier/easytier:v2.6.4`。那个容器占 `10.10.10.22`，并导出家里网段。细节在 A 库 `project_fnos_trim_cli`。
 
+### 8. trim-cli 登录、失效与保活（2026-11-16 实测）
+
+**失效表现**：`refresh failed: client mismatch` 或连续 401 —— access/refresh token 已不能轮换，只能重新走 OAuth。
+`login --refresh` 成功时输出 `endpoint: oauth.refresh`；失败不要重试旧 token，也不要改凭据文件。
+
+**重新授权（非交互会话）**：`login` 的 `Authorization code` 提示需要 TTY，直接在管道/后台跑会报
+`IO error: not a terminal`。做法是用 python `pty` 起子进程：把授权链接读出来给用户，用户授权后把
+一次性 code 写进文件（不要放进命令行参数），由包装脚本写入 pty 并回车。
+
+**保活**：`~/.local/bin/trim-cli-keepalive.sh` + systemd 用户单元 `trim-cli-keepalive.{service,timer}`，
+每天 08:15 / 20:15（Asia/Shanghai，`Persistent=true`，±180s 随机）对 `fnos1`/`fnos2` 各跑一次
+`login --refresh`；linger=yes，未登录也会执行。日志 `~/.local/state/trim-cli/keepalive.log`（保留 400 行），
+失败记 `FAIL` 并非零退出，由 journal 留痕。NAS 长期关机/断网超过 refresh token 有效期仍会掉一次授权，
+属预期，看到 FAIL 再人工授权。
