@@ -1,0 +1,13 @@
+{
+  "document": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+  "sha256": "870397ade546f6d77bfc3bb132bb58118a24353e8874ddc5883a82ad0f4ee6ce",
+  "bytes": 21547,
+  "backup": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md.bak-20261116-214127",
+  "previous_sha256": "9be8702f93b8a9e51e892f42cc25c7db9074d9b4fc97de7b24d9b0e8c7f9f9fa",
+  "usage_package": {
+    "path": "/Users/rayman.chen/Downloads/P003_C_USAGE_FIX_20261116.zip",
+    "bytes": 23050,
+    "sha256": "d1cdf663225a42cb87f0f5468d8bbb07abfa78584b54d1f340b0cb64278dab68"
+  },
+  "at": "2026-11-16T21:41:27.214003"
+}

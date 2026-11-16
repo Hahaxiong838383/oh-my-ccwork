@@ -1,0 +1,95 @@
+{
+  "at_ms": 1794835960437,
+  "identity": "server_signed_read_only_probe_not_mobile_login",
+  "sn": "BJP00326081002000031",
+  "results": [
+    {
+      "base": "http://127.0.0.1:3001",
+      "dashboard_status": 200,
+      "summary": {
+        "available": true,
+        "reason": null,
+        "source": "conversation",
+        "history_complete": false,
+        "message_count": 184,
+        "user_message_count": 92,
+        "assistant_message_count": 92,
+        "first_message_at_ms": 1793934682300,
+        "last_message_at_ms": 1794823173474
+      },
+      "history_status": 200,
+      "cache": "no-store",
+      "pages": 10,
+      "message_count": 184,
+      "unique_ids": 184,
+      "metadata": {
+        "message_count": 184,
+        "user_message_count": 92,
+        "assistant_message_count": 92,
+        "first_message_at_ms": 1793934682300,
+        "last_message_at_ms": 1794823173474,
+        "history_complete": false
+      },
+      "exact_db_match": true,
+      "content_sha256": "40d84e66cc48ca1d1d5ae68ce6bc9161dc13b7f4de2757343cf82ba251b85061",
+      "wrong_owner_status": 404,
+      "today_filter_status": 200,
+      "today_message_count": 2,
+      "legacy_sha256": {
+        "ark": "1409340092dfa96227f44804d9ef37e5a7c273bf1dc7e1ec5c8830eda667e0e5",
+        "records": "6e8d91a94b21827a0f9e6a346c366b4b36e0a878d560a5258766ceb8ca9eced8",
+        "usage": "bdd91ee0be0030e08b3b124cdf107bab692665b05e4047e5448658dd544f929d",
+        "device": "28ad04cdf9a5acbc62e1f08d568a8f821387ec5568f23fe782adeb12075b009d",
+        "today": "2a2f22c1428cd350478f6345e9ab2b67ebcebca13832abc436cb0f6772676745",
+        "week": "a2c8e75df5e5a920f1c56bcc516cf503b4434af80e9074073d6faceab3f3de28"
+      }
+    },
+    {
+      "base": "https://kidshub-ai.hahaxiong.cc",
+      "dashboard_status": 200,
+      "summary": {
+        "available": true,
+        "reason": null,
+        "source": "conversation",
+        "history_complete": false,
+        "message_count": 184,
+        "user_message_count": 92,
+        "assistant_message_count": 92,
+        "first_message_at_ms": 1793934682300,
+        "last_message_at_ms": 1794823173474
+      },
+      "history_status": 200,
+      "cache": "no-store",
+      "pages": 10,
+      "message_count": 184,
+      "unique_ids": 184,
+      "metadata": {
+        "message_count": 184,
+        "user_message_count": 92,
+        "assistant_message_count": 92,
+        "first_message_at_ms": 1793934682300,
+        "last_message_at_ms": 1794823173474,
+        "history_complete": false
+      },
+      "exact_db_match": true,
+      "content_sha256": "40d84e66cc48ca1d1d5ae68ce6bc9161dc13b7f4de2757343cf82ba251b85061",
+      "wrong_owner_status": 404,
+      "today_filter_status": 200,
+      "today_message_count": 2,
+      "legacy_sha256": {
+        "ark": "1409340092dfa96227f44804d9ef37e5a7c273bf1dc7e1ec5c8830eda667e0e5",
+        "records": "6e8d91a94b21827a0f9e6a346c366b4b36e0a878d560a5258766ceb8ca9eced8",
+        "usage": "bdd91ee0be0030e08b3b124cdf107bab692665b05e4047e5448658dd544f929d",
+        "device": "28ad04cdf9a5acbc62e1f08d568a8f821387ec5568f23fe782adeb12075b009d",
+        "today": "2a2f22c1428cd350478f6345e9ab2b67ebcebca13832abc436cb0f6772676745",
+        "week": "a2c8e75df5e5a920f1c56bcc516cf503b4434af80e9074073d6faceab3f3de28"
+      }
+    }
+  ],
+  "real_phone_verified": false,
+  "room_check": {
+    "at_ms": 1794835960985,
+    "rooms": 0,
+    "idle": true
+  }
+}

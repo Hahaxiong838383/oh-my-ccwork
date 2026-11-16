@@ -125,7 +125,7 @@
     "updated_at_ms": null,
     "yesterday_income": {
       "available": false,
-      "reason": "policy_pending",
+      "reason": "no_records",
       "date": "2026-11-15",
       "timezone": "Asia/Shanghai",
       "source_mode": null,
@@ -137,7 +137,7 @@
     },
     "latest_items": {
       "available": false,
-      "reason": "policy_pending",
+      "reason": "no_records",
       "source_mode": null,
       "record_id": null,
       "save_id": null,

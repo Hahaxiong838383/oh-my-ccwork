@@ -1,0 +1,7 @@
+{
+  "pass": true,
+  "manifest_sha256": "97b6e75cda74882a7e3102fc8efd9a4ea466cf89a349b0be124d7f7e9cf736e5",
+  "review_sha256": "11abad9d0dc041d4f83a41b6dea0c99160a2239aab4614d2ad51dfc3147b3497",
+  "remaining_blockers": [],
+  "real_device_e2e": false
+}

@@ -1,0 +1,21 @@
+{
+  "document": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+  "sha256": "5ea7d385deb26c39c2c01abd1062692697f44349afc9a607a39a6dc19441aecf",
+  "bytes": 24877,
+  "backup": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md.bak-20261116-215458",
+  "previous_sha256": "870397ade546f6d77bfc3bb132bb58118a24353e8874ddc5883a82ad0f4ee6ce",
+  "packages": [
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_C_USAGE_FIX_MINI009_BASE_20261116.zip",
+      "bytes": 32676,
+      "sha256": "aea287f1a9be0ab17d7a455bb9d0f7af70faeb3cb703e3e8dae7e0d8e52bdc64"
+    },
+    {
+      "path": "/Users/rayman.chen/Downloads/P003_C_REALDATA_EVIDENCE_20261116.zip",
+      "bytes": 35258,
+      "sha256": "1cebed03190e8ec15ff07edf1e9ec75bc80e33875080656f01cb93e4b189c7bf"
+    }
+  ],
+  "miniapp_package_verified": true,
+  "at": "2026-11-16T21:54:58.887642"
+}

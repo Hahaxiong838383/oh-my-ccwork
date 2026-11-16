@@ -1,0 +1,33 @@
+{
+  "record_count": 0,
+  "checks": [
+    {
+      "base": "http://127.0.0.1:3001",
+      "legacy_unchanged": {
+        "ark": true,
+        "usage": true,
+        "device": true,
+        "today": true,
+        "week": true
+      },
+      "dashboard_200": true,
+      "records_200": true,
+      "wrong_owner_404": true,
+      "empty_summaries_no_records": true
+    },
+    {
+      "base": "https://kidshub-ai.hahaxiong.cc",
+      "legacy_unchanged": {
+        "ark": true,
+        "usage": true,
+        "device": true,
+        "today": true,
+        "week": true
+      },
+      "dashboard_200": true,
+      "records_200": true,
+      "wrong_owner_404": true,
+      "empty_summaries_no_records": true
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "at_ms": 1794835442294,
+  "sn": "BJP00326081002000031",
+  "public_id": "dev_50b5415662259045",
+  "binding_version": 1,
+  "epoch": 2,
+  "scope_sha256": "f436de4d53af6cc53c071e47ab33689bb30ed51dc0399322a931b999c6a5f93a",
+  "env_sha256": "e58ba0396254b8077ca678b4a087c4df49136951659e78e4ca0eb6982ce4297e",
+  "files": {
+    "src/routes/telemetry.ts": "2cdf3ebffca78f5c1783dc73bd7bd14bc13ad2e52dbcb8b89de1c09e65e0401f",
+    "src/parent-conversations.ts": null,
+    "src/ark/records-contract.ts": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123",
+    "src/ark/records-store.ts": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd"
+  },
+  "processes": {
+    "p003-voice": {
+      "pid": 2209360,
+      "status": "online",
+      "restarts": 5
+    },
+    "kidshub-voice": {
+      "pid": 1856264,
+      "status": "online",
+      "restarts": 0
+    },
+    "p003-analytics": {
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  }
+}

@@ -1,120 +1,210 @@
 # P003 小程序真实数据 R1｜服务端开发与联调回执
 
-**服务端开发、Grok独立复审和单C机部署已完成；安卓真实上报→小程序展示仍待双方执行。**
+**结论：两个摘要及 C 机历史对话接口均已上线；184 条旧对话已通过接口与数据库逐字段对账，并在 H5 真实页验证显示。精确 mini008 源码的开盖枚举错误已定位并修复，尚未安装到 C 机，现场因果待 MCU 回读验证。微信手机端与新增 R1 真实流水仍未完成验收，不能声称全链通过。**
 
-发布时间：北京时间 2026-11-16 20:01:50。服务：`https://kidshub-ai.hahaxiong.cc`。
-目标：**BJP00326081002000031**（C机），public_id **dev_50b5415662259045**。只开放这台设备的新records接口；原账号、设备凭据、grant、epoch和旧快照链路保留。
-运行源码：`997fe83243134407237e923ff632fd80edb562fd`。原工作树/分支 `codex/p003-mini008-realdata-20261111`；开发352、Grok356/359。回执直接交付主会话13，不依赖左侧正文显示。五台ASR诊断与PRnas T3均未变更。
+摘要发布：北京时间 **2026-11-16 20:57:01**；历史接口发布：**21:32:37—21:32:41**；生产数据页面验证：**21:34:25**。
+服务：`https://kidshub-ai.hahaxiong.cc`。仅 C 机 **BJP00326081002000031**，public_id **dev_50b5415662259045**。
 
-## 本轮结果
+## 1. 当前到底完成到哪一层
 
-| 验证 | 结果与边界 |
+| 层次 | 当前结果 | 证据与限制 |
+|---|---|---|
+| 后台历史对话 | **已上线，仅 C 当前绑定** | 公网和本机均返回184条，孩子92、小可92；10页无重复，id/role/text/ts与数据库逐条一致；当天2条 |
+| 小程序真实数据页 | **已开发、双构建、生产数据页面验证** | 状态、usage、资产、两个摘要、业务分页、对话分页均接入；97测试、TypeScript、微信/H5构建通过 |
+| 历史页面 | **真实数据验证通过** | H5读取生产原始GET响应，显示184条/10页，刷新恢复首20条，退出清空；不是微信手机登录验收 |
+| 使用时长 | **精确源码缺陷已修复，C现场待验证** | 精确mini008源错误把开盖判为1/1，权威协议为4/0；mini009基线修后JVM1883/1883、Python40/40；云端仍无focus_segment |
+| 两个业务摘要 | **已上线** | 昨日已上报收益、最新整组物品计算具备；现C新流水0条，摘要为no_records，不能补0 |
+| 安卓新增R1流水 | **mini009已出包；与线上合同不兼容、未上机** | 新发现21:22端侧回执；默认网络off。须修请求/原始归属/可重试拒绝处理后再联调，同record_id仍无真实样本 |
+| 微信手机端与C新时长 | **未验** | 当前环境没有C所在Windows/ADB可用入口，未执行C安装或微信版本发布；不得用构建或签名探针代替 |
+
+**新客户端交付包已具备查询 C 当前绑定账号历史的能力，微信登录与手机显示待现场验收。旧小程序构建只接设备状态，不会因后台升级自动新增历史界面。**
+
+## 1.1 重要澄清：C机有历史数据，不是全部为0
+
+用户指出后台已有对话后，于北京时间 **2026-11-16 21:04:03** 重新核查生产数据库，并实查公网dashboard。前述“0条”**仅指新增R1业务流水ark_record**，不能概括旧遥测、对话或Ark快照。
+
+| 数据类别 | 实际查得 | 对小程序的意义 |
+|---|---|---|
+| 设备状态快照 | 541条 | 当前dashboard.device已有实际亮度、色温档、像距、状态更新时间等 |
+| 坐姿检测事件 | 1243条posture_round | 检测次数不是提醒播放次数；不能把全部检测都算坐姿守护提醒 |
+| 在位变化事件 | 760条presence_transition | 证明已有在位变化上报，不自动换算成有效使用时长 |
+| 对话消息 | 184条：用户92、小可92；11月16日有2条 | 21:04时后台已有；21:32起dashboard.conversations与历史分页已接入，新真实页可读取 |
+| 使用时长片段 | 未收到focus_segment；旧daily.focus_ms合计为0 | 公网data.usage今日及近7日available=false、focus_minutes=null；应显示暂无数据，不是实测0分钟 |
+| Ark资产快照 | 当前快照存在，source_mode=unknown；原始补勤卡为1，两个币余额null | 当前家长API按既有normal门限返回non_normal/null；不是没有快照，不能把原始unknown资产冒充已验证正常资产 |
+| 新R1业务流水 | 0条 | 仅新的领取、消费、获得、激活记录尚无样本 |
+
+对话消息时间不等于连续使用时长：当前RTC消息session_id统一为rtc，不能用其distinct数量算真实会话次数，也不能将最早到最晚消息之差算使用时长。device_session_log的ms是签发接口耗时，ttl_s是令牌有效期，同样不能冒充设备使用分钟。
+
+**旧对话已接入；时长没有可恢复的focus_segment历史样本；新R1流水仍缺端侧接入证据。** 后台已有对话不能被“新流水0条”否定，不能靠旧today.focus_minutes默认0填充小程序。
+
+21:04核查证据：`summary-20261116/LEGACY-DATA-AUDIT.json`、`LEGACY-API.json`，只读计数与状态，无儿童对话正文。该次核查未改服务；21:32的历史接口发布见下节。
+
+## 1.2 历史对话接入：接口、归属与刷新
+
+- 摘要：`GET /v1/parent/devices/{publicId}/dashboard` 的 `data.conversations`。返回 available/reason/source、消息总数、孩子/小可各自条数、首末消息毫秒时间；`history_complete=false`，不宣称数据库覆盖全部设备历史。
+- 详情：`GET /v1/parent/devices/{publicId}/conversations?limit=20`；支持 `from_day/to_day`（北京时间自然日）和 `cursor`。默认20、最大50；从新到旧，排序`ts DESC,id DESC`。单条只含`id/role/text/ts`，不暴露账号、SN或session。
+- `next_cursor/has_more`配合翻页；首屏固定高水位，新对话在设备正常写入同一账号后，点“刷新”或“查询 / 刷新”可见，不需要搬迁旧数据。游标30分钟失效，绑定筛选与归属；400/410清旧游标，刷新503不复用旧游标。
+- 成功200、错误身份401、其他家长/已失效授权404、参数400、游标失效410、依赖故障503；`Cache-Control: no-store`。对话库故障只降级本域，原状态、usage、Ark、records独立返回。
+- 旧conversation没有原家长/epoch字段，因此本次仅显式授权C当前完整元组（public_id、SN、家长账号、brain账号、binding_version=1、epoch=2），并校验active及brain账号唯一。换绑/换回、换brain、换epoch都会失效，不自动把历史给新家长。读取前后再次核验当前归属，已有真实双连接ABA/WAL回归。
+- 公网/本机10页均184条、184个唯一ID，与只读数据库逐字段一致；当天筛选2条；其他真实家长404。消息内容仅在校验进程内比较，证据不存儿童原话。
+
+21:32只发布`src/parent-conversations.ts`及`src/routes/telemetry.ts`，新增单C范围配置，主Brain空房时重启一次；其他PM2未动，未写业务数据、未复制历史、未回灌数据库。紧邻发布前后原ark/records/usage/device/today/week内容SHA全部一致。
+
+- `parent-conversations.ts` SHA256：`33e17148525d71c7277ac34ce7104439caa096fc61b518d35da0a78dfa523ba5`
+- `telemetry.ts` SHA256：`9bb9913ab2f6680ee209a0e15d202bdab83fa0f27382ca73a117761a2fba8759`
+- 历史发布清单SHA256：`6996e550347eee5a65f820bb15c08b566dae7a4bf4f9f0d4b7d4aebc88b64a74`
+- 生产Node22复核：历史15/15、摘要15/15、records32/32、原dashboard16/16、遥测37/37、schema60/60。首次隔离测试漏拷race-worker后补齐复跑全过，未修改生产逻辑绕测试。
+- 21:53:21复核：health=ok、两源SHA匹配，p003-voice仍为PID2214587/restarts6，其他进程不变。
+- 证据：`apps/server/docs/parent-history-20261116/` 的发布清单、RELEASE、POST-RELEASE-PROBE、STABILITY-PROBE、BROWSER-CHECK；服务器同名目录`/root/p003-parent-history-20261116/`。
+
+## 1.3 使用时长缺失：已定位的错误与尚待实机确认的部分
+
+精确安装回执对应源码为`f083b6e4066c8bbfda43f53e2bd8b8723a9810c0`（371_mini_008）。该版本TelemetryCoordinator私有常量错写`WORK_ACTIVE=1,HALL_OPEN=1`，同一源码WelcomePolicy按协议使用`WORK_ACTIVE=4,HALL_OPEN=0`。原版测试复现：真实4/0被判为关盖、1/1反被判为开盖。mini008已取消focusActive门，实际计时仍需开盖、摄像头在位、非配对/OTA阻断、可用时钟，开盖误判会直接挡住片段生成。
+
+这与生产541条snapshot全部lid_open=false、其中110条present=true，以及focus_segment全历史0相符。现存日志范围内成功ACK遥测286批、非零拒绝0批，支持首先修采集门；不能据此排除所有历史网络/现场状态问题。当前仍未回读C实际安装APK字节和当前MCU原始值，不能把源码复现说成已完成现场硬件验证。
+
+最初修复在精确f083独立工作树完成：删除两项错误私有常量，复用WelcomePolicy的权威4/0；保留60秒分段/合盖补尾、摄像头/配对OTA/时钟门和队列ACK逻辑。JVM遥测+欢迎88/88（含真实decoder→Tracker的60秒及5秒尾段）、Python26/26通过。未改原Android工作树，未安装、未OTA、未拿主线APK替代mini008。
+
+- 最初mini008对照包（仅留证，不用于覆盖mini009）：Air Downloads `P003_C_USAGE_FIX_20261116.zip`（23,050字节），SHA256 `d1cdf663225a42cb87f0f5468d8bbb07abfa78584b54d1f340b0cb64278dab68`。含补丁、根因说明及测试证据，不是APK。
+- 源补丁：`mini008-usage-hall-fix.patch`，SHA256 `f9f3e6b12a8eb06ca3b4bee8b264a490b121b47d4cc45e705f366dc9d381da58`。
+- 修后Coordinator SHA256：`df00a9ed2f858cb2723035784dfa2e514ed52aeb7e487339e4ad59cdb50979f9`。
+- 独立树：`/Users/fu-121/.codex/worktrees/p003-mini008-usage-fix-20261116`。
+
+后续已将同一最小修复应用到 **mini009精确构建源006ac68a29447e8bc14fb655206d87bbf1f771a3** 的独立树，保留全部R1/Rust/Godot/MCU/BLE实现和默认网络off。该基线全量JVM **1883/1883、0跳过**、Python定向 **40/40**、Release Kotlin编译及MCU构建输入门通过。Release Kotlin不是完整签名APK；本树完整quick、Rust/Godot/base重建和最终签名审包尚未执行，**当前只交付源补丁，尚无修复APK、安装或OTA**。后续基线应采用Air Downloads的`P003_C_USAGE_FIX_MINI009_BASE_20261116.zip`（32,676字节，SHA256 `aea287f1a9be0ab17d7a455bb9d0f7af70faeb3cb703e3e8dae7e0d8e52bdc64`），旧008包仅作根因对照。详见`MINI009_USAGE_FIX_HANDOFF.md`、`MINI010_BUILD_READINESS.md`。
+
+**历史时长目前无法据实补回。** 没有focus_segment，不能用对话首末时间、presence间隔或token TTL造分钟。修复安装后只累计新片段；若Windows/设备另有原始有效片段，应先核原始ID与归属再按原上报链重放。小程序保持“暂无数据”，不是“0分钟”。
+
+C下一轮验收：先核SN与修复版本/签名，开盖并摄像头在位持续至少65秒（不进入配对/OTA），核MCU4/0→snapshot.lid_open=true→focus_segment→逐ID ACK→云端同事件→dashboard.usage→小程序刷新；合盖检查尾段不重复、暂停门仍有效。保留绑定/存档/未ACK队列，禁止清应用或重绑。
+
+## 1.4 当前客户端交付与测试边界
+
+新包：Air Downloads `P003_MINIAPP_C_HISTORY_20261116.zip`（4,861,183字节）。SHA256 `d73521682ecbfb86ff08879a1af9fed1d9328f2a4c93ecbe5fc8b9e1e1913639`；源指纹 `45c7682dbe961cc308cb263801fc82f3ee749e43e2cfcf95aa9fce31faeb8848`。含独立源码、`dist/weapp`、`dist/h5`、README及逐文件SHA，无node_modules/env/token。微信开发者工具导入包内工程，`miniprogramRoot=dist/weapp`，API固定生产HTTPS。旧联调包仅归档，不作为本轮真实页版本。
+
+新真实页支持设备状态、今日/近7日有效使用时长、normal资产快照、昨日收益、最新物品、业务流水及历史对话。缺测null显示暂无；真实0正常显示；unknown资产不冒充normal余额/库存。
+
+验证：97/97、TypeScript、微信与H5构建通过；H5浏览器读取生产GET原始响应（仅测试传输层补CORS头，不替换业务响应），实际显示184条/10页，刷新首20条，空业务记录、缺失时长和退出清理均通过，无页面异常。**使用服务端短效身份测试，不是微信短信登录/发布/手机验收；C现场安装与微信手机显示仍待实际入口。**
+
+## 2. 两个摘要现在如何计算、如何展示
+
+读取现有接口：
+`GET /v1/parent/devices/dev_50b5415662259045/dashboard?timezone=Asia/Shanghai`
+身份沿现有手机号登录返回的家长 Bearer。新增内容在`data.records`，原`data.ark/usage/device/today/week`不变。
+
+### 昨日已上报收益：`data.records.yesterday_income`
+
+- 时间：按北京时间昨天的实际领取时间`occurred_at_ms`，不按上传到达日或游戏`logical_day`。昨天领取、今天补传的记录仍计昨天；今天领取历史补奖计今天。
+- 来源：只统计`source_mode=normal`且`time_status=reported`的`reward_claim/tank_unlock`正向家族币、星尘；消费不抵扣、补勤卡不折算、GM/unknown/异常时钟不进入收益。
+- 金额：`family_coin`和`stardust`分列。某币种没有符合条件的已收记录时保持`null`；不得补成0。累计是安全整数，可超过单笔1e9上限。
+- 有数据：`available=true, reason=partial_history, source_mode=normal`。这是**已同步部分合计，不是昨天完整收益**。
+- 无匹配数据：`available=false, reason=no_records`，两币为`null`。即使存在其他日期/来源记录也不能宣称昨天真实0。
+- `occurred_from_ms/to_ms`是参与合计记录最早/最晚发生时间；`received_at_ms`是这些记录最近首次接收时间。
+
+推荐标题：**“昨日已上报收益”**，说明“仅含已同步记录”。正常余额仍读`data.ark.wallets`，不能以余额差替代收益。
+
+### 最近已同步获得物品：`data.records.latest_items`
+
+- 范围：当前授权可见的**全部存档、全部缸**，包含生态缸组件、小可装饰、待激活物品；同一笔多件整组返回。不是当前缸库存、完整收藏或下一奖励。
+- 顺序：同一`save_id`先按最大获得`sequence`确定业务最新，再跨存档比较可归日的设备上报发生时间（reported不代表时钟已校准）；设备时钟回拨不会把同存档旧笔选为最新。
+- 不回退：最新候选为GM/unknown则`non_normal`；任一获得记录时间未知/异常，不能确认全体最新则`clock_unknown`。均不可跳过后显示旧normal冒充最新。
+- 激活：只用同存档、原归属、同获得记录与实例、向后序号的normal/reported/item_activation记录投影成active，并填`activation_record_id`；不增加quantity、不新增收入、不修改原流水。
+- 有数据：`available=true, reason=partial_history`，含`record_id/save_id/items[]`。`items[]`每项含`item_instance_id/item_id/item_kind/quantity/state/activation_record_id`。
+- 没获得记录：`available=false, reason=no_records, items=[]`。显示“暂无已同步获得记录”，不要显示“没有物品”。
+- `received_at_ms`是获得记录的接收时间；后续激活可改变顶层`data.records.updated_at_ms`。名称/缩略图仍由端侧资源语义映射，不从服务器编造。
+
+### 共同规则
+
+`coverage.complete=false`保持不变。`not_enabled`表示该能力未开放；`dependency_unavailable`表示新记录查询异常，原资产/时长/设备状态继续独立返回；空值不能转0。当前线上C两摘要为`no_records`，原因是没有新流水，**不是摘要代码仍待开发或口径仍policy_pending**。
+
+## 3. 20:57 两个摘要发布的验证与范围（历史记录）
+
+| 验证 | 本次结果 |
 |---|---|
-| 当前Linux Node22隔离 | 记录HTTP/SQLite32/32、原dashboard16/16、Telemetry37/37、schema59/59 |
-| Grok固定归档独立复审 | 32/32、schema59/59、追加钱包/异常隔离8/8；不将重复套件相加成独立样本数 |
-| 公网与本机接口 | context/家长分页/dashboard均200；错账号两读取404；非法空批次400且无ACK |
-| 发布前后兼容 | 原ark、usage、device、today、week字段逐项相同；六文件SHA与固定候选相同 |
-| 稳定性 | 主后台PID 2203104，发布后观察124.3秒同PID、无额外重启；其他PM2服务及Worker保持 |
-| 真实业务记录 | 当前新表0条；没有伪造设备奖励。真实上传成功、设备outbox和手机页面仍待测 |
+| 生产同版本Linux Node22.22.2隔离测试 | 摘要15/15、records HTTP/SQLite32/32、原dashboard16/16、Telemetry37/37、schema60/60 |
+| 独立代码复审 | 找出的同存档时钟回拨问题已修；最终两源码SHA核同，未发现剩余发布阻断 |
+| 容量查询样本 | 9001条、32件及1000次激活引用；Node22约148.77ms、JS堆增加181592字节；合成隔离数据，非真实峰值或长期语音负载验收 |
+| 公网/本机 | dashboard、records分页200，错账号404，Cache-Control:no-store；空摘要no_records |
+| 原字段兼容 | 紧邻发布前后ark/usage/device/today/week逐项内容SHA一致 |
+| 发布操作 | 只替换2份摘要源码，主Brain受控重启1次；env/授权范围/凭据未改，其他PM2进程未变 |
+| 生产业务数据 | 没有写入合成奖励、修改来源/时间或回灌数据库；C新流水仍0条 |
 
-公网检查使用服务端短期签名测试令牌，只做读取及非法空批次；不是安卓实际凭据/手机登录A/B验收。新记录SQL故障已修复：dashboard原资产、时长、设备状态正常返回，新记录区单独dependency_unavailable；上传和分页503时不伪造ACK。原Ark故障仍保留原503行为。
+本次发布只涉及`src/ark/records-contract.ts`、`src/ark/records-store.ts`，基于原R1已部署版本增量替换；没有整树同步、扩设备、改Worker/OTA/PRnas。
+源码定位（本轮未新增Git提交，以SHA和发布清单为准）：
 
-## 安卓与小程序现在怎么配合
+- `records-contract.ts`：`f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123`
+- `records-store.ts`：`896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd`
+- 发布清单SHA256：`97b6e75cda74882a7e3102fc8efd9a4ea466cf89a349b0be124d7f7e9cf736e5`
+- 证据目录：仓库`apps/server/docs/records-r1/summary-20261116/`；服务器`/root/p003-records-summary-20261116/`。
 
-1. 安卓先用C机现有Device Bearer读取context，确认`contract_version=p003.ark.records.r1`并持久保存原context；旧余额与卡库存继续原`/state`，不要塞新字段。
-2. 产生一笔**真实领取或道具使用**，保存不可变record_id/save_id/sequence和原context，与业务事务/outbox可靠交接；合批上传并按accepted/duplicated逐ID清队列。断网、503及不完整响应保留原ID重试。
-3. 小程序用现有登录token及C的public_id读取records分页；同一record_id在安卓ACK、服务器持久记录和页面中对齐。刷新首屏才纳入后续补传；换账号清掉旧cursor及缓存。
-4. 双方回传完整SN、APK/小程序版本、北京时间、batch_id/record_id、HTTP状态、ACK和pending变化；不要发送token或家长手机号。
-5. 错账号404、重复重放不重复计入、离线恢复不丢记录、重启/强杀后outbox保留，由双方按下表完成真实联调。服务端已就绪，无需再次等待接口开发。
+现存限制：全仓TypeScript仍有`listening-content.ts:29`缺`GeminiLlmClient.abort`，旧currency-http三项语音断言失败属于原回执已知基线，本轮没有修复或冒称整仓全绿。原Telemetry历史只按SN、未带epoch，换绑旧usage风险仍存在；新records按原归属隔离。
 
-| 用例 | 期望 |
-|---|---|
-| C现有凭据context | 200，原授权上下文有效，读取limits；不重绑/重签 |
-| 真实一笔领取及道具使用 | 逐ID accepted，云端记录与端侧完全对应，多资源同笔原子接收 |
-| 原ID重复/断网恢复 | duplicated或首次accepted；不新增奖励、不篡改旧记录 |
-| 改payload重用ID | 逐条冲突拒收，保留原记录，不能换ID绕过 |
-| Launcher/Runtime重启与强杀 | 未ACK保留原ID，逐ID结算，不以HTTP200清整个队列 |
-| 家长读取/翻页/补传 | 自己设备200，同一高水位不跳页；新补传刷新首屏可见 |
-| A/B切账号 | 他人设备404，页面无旧账号缓存数据；需真人手机确认 |
-| 空值与GM | 未知保持null，真实0才显示0；GM不作正常收益 |
-| 旧链路回归 | 设备状态、使用时长、余额、补勤卡库存仍正常 |
+## 4. 真实上报对账：本轮查到了什么
 
-**展示边界：** 昨日收益和最新物品两个摘要目前为policy_pending；可先展示已同步业务记录列表，不能把摘要null变成0，也不能自行按余额变化造收入。该两项口径不阻塞可靠采集和分页开发。
+1. 先前只找到Air Downloads的18:08需求回执（SHA256 `8561e02e041630c376a35201ffcd2f48efe4aa0714e6a33364027877823444b7`），其中“R1未开发”已被后来端侧回执替代。21:43后从既有Git远端取得21:22提交`75378716195bda8e7414af97ffd8dbd0b109212b`，其正式出包回执明确mini009已开发/签名构建，但未上机、未访问服务器，真实验收PENDING。
+2. Air及Studio本轮ADB设备清单均为空。历史安装回执把C指向另一台Windows开发电脑；没有找到该电脑的既有远程入口。
+3. 旧mini008的versionCode371、旧Telemetry成功/Ark403是11月11日历史证据，不能替代今天R1的实际APK回读、context、records ACK或手机展示。
+4. 本轮服务器实时读取C新记录数为0。没有已接收record_id可与端侧和手机对齐，不能以HTTP200、旧pending0或测试样例补足真实验收。
 
-**开启范围：** records只C机，没有短时自动关窗，保持用于联调，后续按主13通知关闭；不是扩到ASR五台或全量设备。容量是单C内测预算，不是50台承诺。
+### 21:43后新增证据：mini009已出包，但不能直接接通线上R1
 
-## 回滚记录
+mini009构建源`006ac68a29447e8bc14fb655206d87bbf1f771a3`；包名`371_mini_009`/code371；Windows交付路径`D:/P003交付/小程序BLE配网/371_mini_009/371_mini_009.apk`；85,378,834字节，SHA256 `bde6b3eff817b10f3abd6e1f0b8f514ef17d44e0283829f9f0c608df9624d3db`。这些是已取到的端侧构建回执事实，尚未取得APK本体或C现装SHA。
 
-原源码两文件/新增四文件逐SHA备份：`/root/p003-records-r1-20261116/six-source-backup`；配置及Ark/devices安全快照：`/root/p003-records-r1-20261116/before-production`。
-回滚先停新records接收，保留端侧未ACK队列；只撤本次C允许项和六文件，保留其他配置/凭据。数据库新记录及去重证据保留，禁止整库回灌。发布/回滚/重复回滚及漂移拒绝已隔离验证，不冒充实际生产回滚。
+其Runtime/Godot/原生持久日志已实现，网络默认关闭；所带TelemetryCoordinator与mini008相同，仍有开盖1/1错误。后续用时修复必须保留mini009新增R1能力，不能拿008修复包覆盖009当成新完整包。
 
-## 接口
+mini009候选wire不是当前线上合同，仅改合同名不能接通：
 
-|方法|路径|身份|行为|
-|---|---|---|---|
-|GET|`/v1/device/ark/records/context`|现有 Device Bearer|只读当前有效grant，返回原grant/epoch、not_before、服务器时间和实际limits|
-|POST|`/v1/device/ark/records:batch`|现有 Device Bearer|50条／256KiB body／32KiB单记录；原子记录、逐ID ACK|
-|GET|`/v1/parent/devices/{publicId}/ark/records`|现有家长Bearer|当前owner及当前grant/epoch；分页只读|
-|GET|既有dashboard|现有家长Bearer|增加`data.records`，两个摘要policy_pending，原device/usage/ark不变|
+| 差异 | 直接启用的结果 | 必须处理 |
+|---|---|---|
+| 端侧批次使用contract_id/save_id/coverage_from_ms/dropped_records；线上严格信封不同 | 整批400 invalid_envelope | 按已发布合同修订适配并做真实请求夹具对撞 |
+| 端侧baseline/business_commit+data；线上需origin_grant_id/origin_epoch/time_quality/reason/resource_changes/item_changes | 绕过信封仍逐条invalid_record；原始归属无法证明 | 在真实事务时保存原context并映射业务语义；旧无context事实不得套当前归属 |
+| 端侧将所有rejected当终态，未处理retryable | capacity_exceeded等可重试拒绝会被错误转死信 | retryable=true保留原记录与重试，不按HTTP200或rejected清数据 |
 
-新增响应与dashboard为 `Cache-Control:no-store`。新能力允许名单默认空；`ARK_RECORDS_SN_ALLOW` 必须同时是原Ark ceiling、有效grant的子集。本次主13已完成部署，显式允许名单仅C；原Ark授权不变，不自动扩容。
+因此**本轮没有下发ark_records.enabled=true，也没有认可mini009候选wire已获线上回签**。对话历史走独立只读接口，不受此合同差异影响。端侧原回执和合同副本保存在`apps/server/docs/parent-history-20261116/`。详见该目录`MINI009-COMPATIBILITY.md`；还记录了正常续token会切scope导致同存档交接暂停、baseline/混合事务/容量缺口等差异。
 
-完整字段看 SERVER_CONTRACT_R1.md + DIFF_R1.md；可执行schema.mjs、synthetic样例examples.json已含实施细化。原协调目录schema/59例保留为主13此前审核版本，不静默替换。`node docs/records-r1/validate.mjs` 验本目录实施schema；实际服务器HTTP测试在 scripts/ark-records.test.ts。
+**当前缺口：C时长修复安装与现场回读、mini009 R1协议修订后的真实记录，以及微信手机版本导入/发布和现场操作。服务端摘要与旧对话接入已经完成。**
 
-## 安卓
+## 5. 安卓、小程序、服务端下一步同一笔对账
 
-context是原授权上下文，不是新凭据。首次成功且版本匹配后，真实业务事务一次性持久化save_id、sequence、record_id、原context和outbox。旧记录重试不重写任何字段；换绑／撤销后隔离旧队列。无原context的接入前历史留本地unattributed；不能自动套当前owner。旧`/state`严格schema不变。
+### 安卓：先对齐mini009与已上线R1合同，再做真实上报
 
-同ID同canonical内容duplicate；同ID异内容、save/sequence复用、真实business_source_id换ID均显式冲突。单笔多资源／物品整体提交；accepted/duplicate只表示云端持久接收，不代表收益摘要可展示。COMMIT之后形成ACK；503可能已有前条提交，整批原ID重放。客户端校验batch_id、互斥集合和请求内ID；仅结算明确accepted/duplicate。HTTP200不能清整个队列。
+1. 保留C原绑定、凭据、grant/epoch、存档和未确认队列，不重绑、不清应用、不以GM造奖励。
+2. 用原Device Bearer调用`GET /v1/device/ark/records/context`，校验`contract_version=p003.ark.records.r1`，持久保存原上下文及limits。
+3. 真实业务提交与`save_id/sequence/record_id/原context/不可变Record/outbox`可靠原子交接；Launcher durable ACK前不删Runtime副本，云端ACK前不删Launcher未确认队列。
+4. 在已有合格正常存档上执行一笔真实领取/获得，再执行真实道具使用或激活。没有合格业务条件时如实待测，不改normal或时间绕过。
+5. 上传`POST /v1/device/ark/records:batch`，逐ID处理accepted/duplicated；HTTP200不能清整批。断网/503/截断保留原ID重放，错误不得换ID绕过。接入前没有原context的旧历史保留本地unattributed，不套当前归属补传。
 
-超过24h同grant历史可收；早于原grant的已知时间拒绝。unknown时间保留null；超过首次接收+5min持久标clock_suspect。首次接收和time_status不随重放变化。不要人为改时间“修复”被拒记录。
+### 小程序：新包已接入，现场按以下口径验收
 
-|结果|动作|
-|---|---|
-|400|修正信封，保留原记录；批内ID重复整批拒绝|
-|401|沿现有凭据恢复，不新签或清应用|
-|403|保留并退避至少15min；上下文改变隔离旧队列|
-|413|缩小批次，禁止拆单笔业务；单笔超限保留dead-letter|
-|429|读取Retry-After（默认60秒）；保留队列|
-|503、断网、响应不完整|整批安全保留并原ID重试，指数退避30秒到15min|
-|200 rejected容量|retryable=true，至少15min退避|
-|200其他rejected|retryable=false，保留原文dead-letter，禁止换ID绕过|
+1. 原家长登录后读取dashboard与`GET /v1/parent/devices/{publicId}/ark/records`，严格按available/reason/null展示。
+2. 分页limit默认20、最大50；支持save_id/resource_id/from_day/to_day。首屏固定接收高水位；后页原样带cursor、limit及过滤。补传刷新首屏可见；400无效或410过期cursor重取首屏。
+3. 每个record返回整笔资源/物品；激活列表是原始事实，摘要才投影状态。切账号丢弃旧请求、设备缓存和cursor；B访问A设备必须404。
+4. 当天新上传不能保证“昨日收益”有值：需真实发生于北京时间昨天、原context合格的normal领取记录，或次日核验今天真实领取。禁止改时间制造昨日样本。
 
-## 小程序
+### 双方回传这张表，服务器按同一ID核对
 
-`limit`默认20最大50；可选`save_id`、`resource_id`、`from_day/to_day`（真实发生的北京时间自然日）。unknown/clock_suspect不参加日期过滤。过滤命中仍返回整笔资源/物品，不能拆分为多笔收入。
+| 项目 | 必须提供的真实证据 | 当前 |
+|---|---|---|
+| 版本/身份 | 完整SN、实际APK版本/SHA、Runtime版本、小程序版本、北京时间 | 未现场回读 |
+| 可靠交接 | record_id/save_id/sequence、Runtime记录、Launcher durable ACK、outbox/pending前后 | 未提供 |
+| 云端到账 | batch_id、HTTP、逐ID accepted/duplicated/rejected、服务器同ID记录 | 无样本；云端0条 |
+| 页面对应 | 家长API同record_id、金额/物品、页面值与时间 | 未验 |
+| 去重/离线 | 原ID重放不重复计入、断网恢复保留原文、重启/强杀未ACK不丢 | 仅服务端隔离测试通过，实机未验 |
+| 摘要 | 昨日真实领取归日、正常收益与GM隔离、最新整组及激活不重复计数 | 服务端计算已验，真实页面未验 |
+| A/B隔离 | 真人A/B登录、B访问404、切账号无旧缓存 | 服务端负例404已验，手机未验 |
 
-首屏固定ingest高水位；后页原样带cursor、limit和全部过滤条件。按可归日occurred_at DESC，save_id ASC，sequence DESC，record_id ASC；未知/异常时钟排后。补传只在刷新首屏出现。400 cursor无效或改了过滤，410过期刷新；换归属404。切账号需丢弃旧请求、设备缓存及cursor（客户端未验）。
+旧 Telemetry 状态/使用时长、Ark 正常余额与补勤卡仍须按11月12日三方联调手册回归，本轮不以新records测试替代旧链真机验收。
 
-ParentRecord不含origin_grant_id/epoch/SN/owner。`item_references`是实施细化：每个activated返回pending/resolved；resolved须同save/原归属/sequence，且目标在该分页高水位内。item_changes是原始事实，不修改成当前库存。activation不再次加数量或收入；尚无可靠当前save/tank指针。
+回传勿包含token、家长手机号或儿童原话。完整字段及错误矩阵见`SERVER_CONTRACT_R1.md`、`schema.mjs`与`INTEGRATION.md`；样例均标synthetic，不能上传到生产当作真实业务。
 
-`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard两个摘要保持不可用、policy_pending（未开则not_enabled；新记录查询故障为dependency_unavailable且不影响原资产/时长/设备状态）；家族币/星尘null，items=[]。不回退旧normal，gm/unknown在列表明确标记；正常余额和卡库存仍走旧Ark。
+## 6. 当前容量和回滚
 
-## 默认容量／配置
+单C内测范围保持，无自动短时关窗。批次≤50条/256KiB，单条≤32KiB；单SN 6批/分钟、120批/小时，全局12批/分钟、240批/小时；默认单SN及全局各10000条/32MiB payload，磁盘余量8GiB。实际值读context.limits，不能当作50台或无限历史承诺。
 
-除协议大小外均可用 `ARK_RECORDS_` 前缀配置，值必须为正安全整数，非法值fail closed。context返回生效值。
+本次两个摘要源码备份：`/root/p003-records-summary-20261116/source-backup/src/ark/`。若回滚本次摘要，先核当前文件SHA仍等于本回执候选，再恢复这两份备份并重启主Brain、验health和原dashboard；env/records允许范围不变，已收记录和去重证据保留。**禁止整库回灌或套用旧六文件全量回滚覆盖后续变更。**
 
-|键后缀|默认|
-|---|---|
-|UPLOAD_PER_MINUTE / UPLOAD_PER_HOUR|6 / 120|
-|GLOBAL_UPLOAD_PER_MINUTE / GLOBAL_UPLOAD_PER_HOUR|12 / 240|
-|CONTEXT_PER_MINUTE|6|
-|PER_SN_RECORDS / GLOBAL_RECORDS|10,000 / 10,000|
-|PER_SN_PAYLOAD_BYTES / GLOBAL_PAYLOAD_BYTES|33,554,432 / 33,554,432|
-|MIN_FREE_BYTES|8,589,934,592（8GiB共享盘余量）|
-|CURSOR_TTL_MS|1,800,000|
-|FUTURE_CLOCK_TOLERANCE_MS|300,000|
+原20:01 R1基础部署证据及六文件备份继续保留；本回执本次更新已在目标Downloads备份旧文档。
 
-限流是SQLite持久固定分钟/小时桶，重启不清；边界可有相邻两窗突发。容量包含所有历史代际，保留去重，不自动TTL。payload额外还有表/索引/WAL，写前保留磁盘余量；不能按50台乘单台上限承诺当前Ali够用。当前预算审计见CAPACITY_AUDIT.json，后续增长/PRnas容量需另核。
+脱敏证据与端侧合同对比另交付Air Downloads：`P003_C_REALDATA_EVIDENCE_20261116.zip`（35,258字节，SHA256 `1cebed03190e8ec15ff07edf1e9ec75bc80e33875080656f01cb93e4b189c7bf`）。内含生产发布/历史对账/H5验证、mini009上游回执与兼容性核查；不含儿童原话或凭据。
 
-## 验收边界
+历史接口回滚：仅核对并恢复`/root/p003-parent-history-20261116/source-backup`中的旧telemetry源码，移除本次新增parent-conversations源码及单条PARENT_CONVERSATION_SCOPE_JSON配置（先核并发漂移），受控重启主Brain并验health；保留既有摘要、数据库、grant和所有业务记录。
 
-本地真实HTTP＋SQLite使用synthetic身份与临时数据库，无生产伪记录。已验证失败回滚、SQLITE_FULL、双连接撤销、body竞态、逐ID ACK、跨代际、稳定分页、容量限流及旧mini008回归。
-
-公网已由服务端临时签名令牌核验context/分页/dashboard 200、错账号404、空批次400；未提交合成业务记录，也不代表手机登录与安卓实际凭据已通过。
-
-未验：Android/Rust业务与outbox同事务、强杀断电、Launcher durable ACK、真实SN/版本回读、手机页面、真实家长A/B公网token、真实focus/normal记录、真实峰值与长期负载。原mini008三方验收保留。旧Telemetry历史只有SN没有epoch，换绑后旧usage仍可能可见（已隔离复现）；本轮未改变或清理旧数据。该问题不影响新records按原归属隔离。
-
-整树现存限制：ark-currency-http三个语音路由测试与listening-content.ts缺GeminiLlmClient.abort的类型错误，在未含R1基线同样失败。发布只涉及六个R1源文件，不能整树rsync。源码回流的现役daily/history/币种文件仅为准确本地基线，不在发布清单。
-
-署名：codex(OpenAI) | 2026-11-16
+署名：codex（OpenAI）| 2026-11-16 21:54:57 北京时间

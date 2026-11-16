@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:p003:ark-records:response:r1",
+  "title": "Candidate R1 business ACK; HTTP 2xx alone does not settle",
+  "type": "object", "required": ["ok", "data"],
+  "properties": {
+    "ok": {"const": true},
+    "data": {
+      "type": "object", "required": ["batch_id", "accepted_record_ids", "duplicated_record_ids", "rejected"],
+      "properties": {
+        "batch_id": {"$ref": "#/$defs/id"},
+        "accepted_record_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "duplicated_record_ids": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/id"}},
+        "rejected": {"type": "array", "items": {"type": "object", "required": ["record_id", "reason"], "properties": {"record_id": {"$ref": "#/$defs/id"}, "reason": {"$ref": "#/$defs/id"}}}}
+      }
+    }
+  },
+  "$defs": {"id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,96}$"}},
+  "$comment": "Also enforce matching batch, membership in sent IDs, disjoint ACK sets and original ID/content idempotency; these cross-field constraints are checked in client code."
+}

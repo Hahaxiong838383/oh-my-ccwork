@@ -1,0 +1,16 @@
+{
+  "base_commit": "d400860b15d096b1e933d6e8f0eee380c730c672",
+  "files": [
+    {
+      "path": "src/ark/records-contract.ts",
+      "before_sha256": "4c5463b3546c33a9f0fdafa87158796025e0b55dbe0d9ce69ad63df9e750030c",
+      "after_sha256": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123"
+    },
+    {
+      "path": "src/ark/records-store.ts",
+      "before_sha256": "dd1c540531defc8cd89c817fcb451db4afca8c48d3a2824270826ddc6de7dbc2",
+      "after_sha256": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd"
+    }
+  ],
+  "scope": "existing single C records only; no env/schema change"
+}

@@ -1,0 +1,991 @@
+{
+  "files": 245,
+  "bytes": 3609368,
+  "miniapp_source_files": 168,
+  "miniapp_build_source_unchanged": true,
+  "high_confidence_secret_matches": 0,
+  "screenshot_review": "historical empty login form; no entered phone/code",
+  "exclusions": "dependencies, dist, env, credentials, database, APK/ZIP, raw runtime logs",
+  "files_manifest": [
+    {
+      "path": ".claude/skills/p003-deploy-ops/SKILL.md",
+      "sha256": "350526aac17d77b6979d97a16fabb304ac031a19ae0ff8da82b1140f4509a283"
+    },
+    {
+      "path": ".claude/skills/p003-deploy-ops/references/miniapp-realdata-reconciliation.md",
+      "sha256": "04c60d1c3d153f2c49fa86261a75ff78b6096af6862d22855c662f461276e2dc"
+    },
+    {
+      "path": ".claude/skills/p003-launcher-canary/SKILL.md",
+      "sha256": "74c14833557214046815ba874e213a5e756e5322cc6fdebde27c1068de4102ad"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/.gitignore",
+      "sha256": "0ccaa7954c714d9a518484ee6aaee6ed132d03d02aaed4bd3b935c9fc4812f18"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/README.md",
+      "sha256": "a85e5bdf738df105012c37ffd83046e2fc0aa4900d3d4bbc9e0fd248fe7d1715"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/config/index.ts",
+      "sha256": "30ddebb5b85c0f613ed43e964fe4447dd3c51a560c267883923ec408b60f9aa3"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/docs/evidence/live-login-h5.json",
+      "sha256": "2b9c54fb26fb9ccdcfd5a48116ad8de6e56eacbbb3ae56afa752a4a3f4f21690"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/docs/evidence/live-login-h5.png",
+      "sha256": "4f9b05b3e42040e3cf0a47fdf85776e5bc551e97d896f84b8184453ebe21f5b1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/docs/小可小程序接口协议.md",
+      "sha256": "2a78b447952788942329b1de189cfb228fbff2a8deafa04cd450d4c5e5470157"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/docs/首轮真实数据联调回复-2026-10-29.md",
+      "sha256": "a143f978fb835ba35e7148d20cb188c249cfd50d2c06b960bba43ccf1f60b794"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/package-lock.json",
+      "sha256": "0562260fe6fbeeeac08f4415b581e33dc5aedfa8668c2dd3122493e461cb0178"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/package.json",
+      "sha256": "e027b160ff7c23c0c5afe1e8fa4b17ee6c1228f2f9ac04c36c8b8f36724b8d1e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/project.config.json",
+      "sha256": "11dda7afecc5e4494c047db5f807a75a803249060a7fa49d2f75f4bbc68fd9dc"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/app.ts",
+      "sha256": "555235b7ef5eef0f6bdbc23dd71a099fa85f87b156abd170ed8c89c662b27466"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/cache.ts",
+      "sha256": "8e9bbac7867a371eb313d383363c2aa6e3cd707fa6537b573217b4ef4ebc23af"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/cc-client.ts",
+      "sha256": "f1e5156ba64380c3d72d2d6603171269013fa321bce1de14687dc0c9bed70256"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/config.ts",
+      "sha256": "8ff4e4fd74d628e307f9ca56a41791b8aa01e58856b08bd7eb1a1e27b813d048"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/index.ts",
+      "sha256": "8566b58a05ce6493f9ac3beb5f8afbfa25db5f9629ff1be8fe5948174dd61373"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/logger.ts",
+      "sha256": "ae3cce73739849104842d0c652f5d8b923466dc5c37522b9e12ea585fadcb023"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/mock-cc.ts",
+      "sha256": "c74232a1a42099099c57990d6f759db01099f868d39646a89ac81ecf34d7cb96"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/session.ts",
+      "sha256": "01dd9707d6157689cc5ad526687f2ab161098c82ce283a2ecb4feae991cdbc07"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/server/tsconfig.json",
+      "sha256": "64d0b5b5370a94ba7d267c9920a6f491ed666d7dcb7d8a205b153f6f89309f52"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/app.config.ts",
+      "sha256": "ebf3b471581708fbff36c9ce3c05300972c77477901e2e9538ff63c9b4051013"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/app.css",
+      "sha256": "cdcb9c2866c31a6d9b5f1a42ff7f53842a118975ae15c373654ffd9fc7288115"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/app.tsx",
+      "sha256": "e27dab7b583e8b70a109c3503034731d023e0a34b3257cdc16056c6a0b7b6d5d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets.ts",
+      "sha256": "1519d7dab48f3f21c073f2d089278a240906385dc2657d849a08e412b58550cf"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/activeIcon.png",
+      "sha256": "93b34e2d2a8e81f598e50401e7c2f4cd52ca013c5537c5567fa7375a29cccc00"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/adviceIcon.png",
+      "sha256": "848c4a23b720770cd855cc5b1bd565e44d27fe1be4c18a4ea110bb85c1980359"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/axisControlled.png",
+      "sha256": "7f15a5746f57944033709292bd5cec0a92362e7261f62bb8354b1ef8aa7992b1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/axisControlled.webp",
+      "sha256": "cf2aa687a8bc8f9aa7f5d488ec4b0fa2761cd01ab4367756fd8b08fcda79a298"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/axisFast.png",
+      "sha256": "e27fb4f2db14f9ff4815fce6a4cade31cf6a0f9233c34c38d91048c35f7c434f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/axisFast.webp",
+      "sha256": "366421b21398a7b81b878e72971d3a9d44a3de85a6d3ceaa8fc84f6c2c8bee55"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/axisTrendChart.png",
+      "sha256": "735e6a438009405cfd94f2b728d86829f97718994aa515c3647a7b2d8a07bea8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/axisTrendChart.webp",
+      "sha256": "8245fac7f4a6cfd5bde9c6018289da0d9aa09a9c8625fe759afca436c027e88e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/badgeExpert.png",
+      "sha256": "cb0959ee2e355200d2162d075d36ed9d406059b7143054b1dfd01d5217e7942c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/badgeExpert.webp",
+      "sha256": "e0641074360fb178019bedfa345df969638d1dd7f5305228b7e485c960d81b24"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/badgePioneer.png",
+      "sha256": "c8c3defe75d5e81907813c99ee5b14b5713fdd9d2e7ea11d7ed4ac196ab7aa3e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/badgePioneer.webp",
+      "sha256": "3ed58e0c9bd029eb357c0bdb19c2bdf74edd729326d892b19ee53cdb8c965834"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/book.png",
+      "sha256": "a3d46d24263ba5f1e0c33391aee8295b237bf1176cde6cb49502a5b6fd39928c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/brightness.png",
+      "sha256": "da59c83b1cae60c81610a89ea17705ca3e08f2d0c3a8fe25c386d1a15e2dae8b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/coin.png",
+      "sha256": "ac2c84f3a572fc7bb42f66a58e51479d92f5aeac0c7a07f50c472cd671c3d0eb"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/custom.png",
+      "sha256": "4c56ab3e41992a483c9dbc3bc2d1649dc8ec08265074cb1352dec152c384d779"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/customerQr.png",
+      "sha256": "2cbe381c89d549055323c720eb0e06c0586c7f40030640e29ce4c7a854f8c058"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/desk.png",
+      "sha256": "0e37e308e7bb35b8fd82007e8c812f329f0c04167ccdbb35b50d38af6043ffcc"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/desk.webp",
+      "sha256": "5c751e23c0e2254bb0ab1a4cfaece090bec80f34d0277c674abf73a15296aada"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/detailAdopted.png",
+      "sha256": "f70652ec4eac2ce00db5f41a7edb83480767483abc84303b2f65846157f3e353"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/detailEvaluating.png",
+      "sha256": "397d7607cd7f0e4176b6a4fdb9fc02177fcaf757a3800a9cfdbbc837f82ed118"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/detailGolden.png",
+      "sha256": "6d35c0b4062a2b2b4878dc0bfc21437c0939e7dba554cbd0de34702dde4a566e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/detailProposed.png",
+      "sha256": "a9d9a5bb6dd9237029b5f8745adbc604faede58a24b98923d32124b0f0c297da"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/detailReceived.png",
+      "sha256": "867ddf2e69afd0e956218fb8bbccab3fabd83ceb3e5ab3e359fc81c27ee68faf"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/deviceCard.png",
+      "sha256": "c863ef9f7e5e0bb8561d225eafcd16ed8cada6ccfe7721cc20d5a6abf16996c6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/deviceCard.webp",
+      "sha256": "afc8c69e813c81b35e4f87ace59f2aed9ded1ab7a3bb9e491685d6c6c035c468"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/distance.png",
+      "sha256": "910fc98e03a9d28f444e65529e6fdb9a4796280895124a55f129661208eb0928"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/durationIcon.png",
+      "sha256": "31b1f2dc1a8570779fc64aa82c0e89bd2927e3797afedb3e8b67888f80b25288"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/free.png",
+      "sha256": "15cf8727f82a627280d3a367920856b2853ea2251ea268c5021b1b778d8ce159"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/frequency.png",
+      "sha256": "80fa02108a26f5fe49072904b856da770cf1fe7fe9cee9511efe2ea72c15f5ea"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/gift.png",
+      "sha256": "53fdeaba2f859c8b36d056c20d54a788274b3003c25e80c415c7d2b8c9815714"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/goalIcon.png",
+      "sha256": "224178d6d9b10cf8295a4835012cd24563c91f5a75f3bb59b48434df20416e58"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/guardHeading.png",
+      "sha256": "18e1507cbd6d7cec5872a26a06d57896ea87e8bb2a7337e4b352103245bd0b88"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/guideMax.png",
+      "sha256": "84a27601a5f04e38976a2f53abf844483065a315edfc28b56c488475961c0680"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/guideMax.webp",
+      "sha256": "71e6ad8479aa381c7c15d42d6bdf9cfc60eeab18d0e46ace47421ddc5e78a195"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/guideUltra.png",
+      "sha256": "f1a239432a01bcead876c908b0859674d5eef7e639c828e2eeecbb6871da3fbb"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/guideUltra.webp",
+      "sha256": "0c700e1c3455bfb50447ed6aba7ce3da721092907dbd8b8dced9bc2236bcfb1b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/helloRobot.png",
+      "sha256": "1d8da302aa63b6bfcad8ada889eb36a51f2df28b255ae3f8cb8db2cd6e2a0332"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/helloRobot.webp",
+      "sha256": "7300b06ce02e2b908bef6929cf7b1d3952580f112594dfcdc61626b34eef61b6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/homeAvatar.png",
+      "sha256": "d718f0cda60f7e4c422d2e6b34dddbbdb12899678ba3b02f93c1281f5f095abd"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/homeAvatar.webp",
+      "sha256": "1285ce2d4e1dbe21dc76665ba2bac15221233eb844f1598fbf61c1768d5d64a8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/homeBackground.png",
+      "sha256": "8854a1325263b0f5de1b83331e2d5537189cd9d795a72c4ee6cfd1d3cfaa6a6a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/homeBackground.webp",
+      "sha256": "2a65be073b2da0742fe4ee1320ef1bf263d6c1f3ebb254185c522a3792204e64"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/idea.png",
+      "sha256": "935146a93b3435b6dedf83f737786148657704847d95f0cc89b8471ca3df19bb"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/kidsGardener.png",
+      "sha256": "846522bd2633e1ba67db59cec5f9f701454cc05ff1b806a8112858afa842dead"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/kidsGardener.webp",
+      "sha256": "913b26251a1d5294f829b18671efc78e77df51e2c7d15eb69795b0452729f62b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/kidsLevel.png",
+      "sha256": "06e1337e7d7dfbbf7a94a99dd32a8b5886f82dc88850854dc80b7b2d1d0123c0"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/kidsLevel.webp",
+      "sha256": "e3455862f3a54beb761b3dc09539851a837158b4f284c840313fc0fb57e0c8b2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/kidsRobot.png",
+      "sha256": "f7f762efa5496e4dd7de7adc75eb5eb67d922d043260df21aa55cac9dc3210fc"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/kidsRobot.webp",
+      "sha256": "fdfd381dee3609043f46388697eb1b355056f4109d9343c5b40271a262541cb7"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/movie.png",
+      "sha256": "0632728a61f8ad94f116cd0a75470079c74848c7f72f1aba33f3011ee0ebb27d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navHome.png",
+      "sha256": "d5b12f1e561b0b69f1b61a49898916471e356ff436144a281f4247db08955f69"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navHomeActive.png",
+      "sha256": "428d07c657850990f1bb90712e79c2199146309a5741afea726b92954fd5cda8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navKids.png",
+      "sha256": "cc634c63dbdc40519f9479c2248ca90890ec6774e1bed245a065ee700b40700b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navKidsActive.png",
+      "sha256": "551ad10df54117db1ba7e0ad6d0272797b38ce5ddfbd48001d83dafa99d340bd"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navMine.png",
+      "sha256": "92fa7be17dfa4c47b299951a330d8a97df4c4b5cd53bb3a8da05ce74a44cbc08"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navMineActive.png",
+      "sha256": "da184641f9f9f32383adb8615429ec6839b564e9f1e32261f9d3d172b01c5701"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navRewards.png",
+      "sha256": "d58050d0cea857d9b13de8fdf4d5a67de48ecb1251598c25c6b3e805dc7b202c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navRewardsActive.png",
+      "sha256": "c1a9ae75793c170235616fa22140587a87446f5283eff8086ead7ba5f6dd981c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navWeekly.png",
+      "sha256": "fac3cbfc7b57287d8cd985e04ac7722fb76408c8b3263dce6acc69d269cbac1e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/navWeeklyActive.png",
+      "sha256": "bb3e3e9b832c842372193c197119d7ceba3264d0f92918326a68192ceeedfd04"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/newsBell.png",
+      "sha256": "a4ef65cc639409b17c687434a217a9d5c536271eefe61cb2e4e1215c600ed3e6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/officialMiniCode.png",
+      "sha256": "9c28326bc0c7c065d3d4da531703f366cffe6d62f84909b5af14cde5a5ce5d8d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/officialQr.png",
+      "sha256": "2acb9af9370cf6ea5fed37da0ed56f6c4e587165736fa1e943a1b000aa97f408"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/parentDefaultAvatar.png",
+      "sha256": "096a7164cab506c5773df7ce0f693ad4bd96ab365601490094e76809e48285e9"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/parentDefaultAvatar.webp",
+      "sha256": "5a387ec9da3029fc7fb35cf337224e06ad6cd36570bf0974b99c95e1ddf8e767"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/park.png",
+      "sha256": "b3cd0670068760f5678900e2c843e68d598bcad4af1c703aef71028bd9a5564f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/postureIcon.png",
+      "sha256": "21e67ecff8a8fd0d683cedb23bd8b1d5ed11e143ca276014c6ff9820bb7bc329"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/promiseActive.png",
+      "sha256": "4ab69d6a72e053548e97d38a00ff3d24f35e9f1e95572c85fc9b3f00b81a001a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/promiseHeading.png",
+      "sha256": "fe7b7ac1db50ee112b417643d7f880fae3be1eaa4f67578c0bbad77059584e52"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/promiseHeading.webp",
+      "sha256": "bb72c4ae3ecd012cf44f54f46c1ccf3542ac72431ea524883966b11dce557c3d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/promotionQr.png",
+      "sha256": "513e5d9c29af3a1b6b4387b490a4b74f887c1f8a406c6ddd1fba66b9211061d8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/reading.png",
+      "sha256": "f36c5634e6339ff9b4c691e5a5103911b243dec5c6ac3be8f05fb55dd16c904f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/robot.png",
+      "sha256": "108a9372fcee0e4331ef016d8e2a952c64401dccf5c966e0818dbc38b2473599"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/robot.webp",
+      "sha256": "92c54fde701f6b04728d1b4a280d970a773bb9fc40bf3ca0a535b8cc0e7a7dac"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/shareBrand.png",
+      "sha256": "4532be369b442e1d41fbc32f474900be1fcd6c2e869b49327f0ca5b3ed65c305"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/shareQuote.png",
+      "sha256": "61bbff88f6497c1c7f85a7423ddf7b7d1ebebe4c1040fa0cf13cc433d532a145"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/shareQuote.webp",
+      "sha256": "a573ed2f7b1d6eb6a63342ce469f9c1dfcd6593ada0f1434348f9c4ccf7fbd95"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/shareSave.png",
+      "sha256": "8a4cb0338456f01806e8552f564ff55e556aee37ac384629870f777452e834a8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/shareWechat.png",
+      "sha256": "60c45bfebff75def1df979a79044516c7ba5fbe654480e7a9bb938f4c9330b66"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/sport.png",
+      "sha256": "99cba41c839342cf0592557bbde93d16eb84446566254f415d5f69e895fc0419"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/stampAdopted.png",
+      "sha256": "c463f39c010c088cfc58eac4fd9e1c275f8801191d67bd49cdbfe3554d24fd4f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/stampEvaluating.png",
+      "sha256": "daf7995db13c48523d6bcba514ed5d623bc0369024da2d4eb8b9945b15c0813d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/stampGolden.png",
+      "sha256": "ad3a907a943197f5623f8aaff054ff828a12c529ba82d400491b4f57075c1d52"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/stampReceived.png",
+      "sha256": "df80bacd0c9a652d033bbc37ba4aa7dcd2932dbf46b43ed01b45e0a5a6e1b240"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/taskActive.png",
+      "sha256": "4ab69d6a72e053548e97d38a00ff3d24f35e9f1e95572c85fc9b3f00b81a001a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/taskHeading.png",
+      "sha256": "e1eeff4298985c8106a01422cf9babd9a05a8bea2fbe8a79de29cbb89ba8c06f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/taskHeading.webp",
+      "sha256": "642ba2a542e919a0b832a925d3dad16db6be00f2c455e74902d8b73af603c102"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/taskPending.png",
+      "sha256": "4ab69d6a72e053548e97d38a00ff3d24f35e9f1e95572c85fc9b3f00b81a001a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/temperature.png",
+      "sha256": "d6ea9c2ac3a908fb8818d825565ab89b447b8ae886425af3d00a0af769d57289"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/timelineHeading.png",
+      "sha256": "a67c985926cf5fe9fc22845b7c4b7f262cad485b6b4993c855ea661cc7f22670"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/trendHeading.png",
+      "sha256": "8ee7ce56380323dc1c4f6f44b8143abaeb97b5623e2affab7b346955dda8c422"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/trophy.png",
+      "sha256": "f0584ea26a55683db8baaf433ccc86a1618e9665a4ed2fdf5ccf390439eba69e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/trophy.webp",
+      "sha256": "478a63a8db9e2101b7cc289e7164356dfdc03141701e972e2479d11c73cfa4ad"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/visionDown.png",
+      "sha256": "a190e249800f3a1178048942728ea4a9aa025536e95bb97e46ebfd7d16955710"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/visionStable.png",
+      "sha256": "3c2613a924d3888c5a4d1d82c6f3cf694b0d4ef62fd831627e9c50c8c433fa49"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/visionTrendChart.png",
+      "sha256": "3cbb28319cb67fea243a7b9b9343f07f28db41e26db4c5a5ede1b1652f3a6089"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/visionTrendChart.webp",
+      "sha256": "3f642e2f67e4685d84968afaa435f2f930252af9a75a3170b108c87a60e005cb"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/weeklyHighlight.png",
+      "sha256": "0978e9533e9e74345b5e4066880c49964751217d6fe29b09f787f770a14ec1a2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/weeklyHighlight.webp",
+      "sha256": "34f243cd60e1518349f3c820c85a3fabcfd5dfd77bfd746bdca0d077f244dabf"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/weeklyLabel.png",
+      "sha256": "d8c314d251e7e585481d48fed1659b2072932984a9959cf95a1dc2dd5788a8e0"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/weeklyLabel.webp",
+      "sha256": "71183e42d0e673b880afeaccfe5f9fa0407b65a082d6fdd7c801a73e497e07f1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/weeklyRobot.png",
+      "sha256": "0178621d960160340dadb99632759c9291cf8579e7646ff5bddfa58107829989"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/weeklyRobot.webp",
+      "sha256": "e607ddc6c4878323f011b44174ae94d014929d3c0dc718eab91223f16a606d5b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/assets/xiaokeStamp.png",
+      "sha256": "b09c5e0c8600e426e7debbde2c564a8287721a4cb77e4871926b5254a3269577"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/index.html",
+      "sha256": "6a39a291bef1178be43dba8352570c44c308058d7deaa3927c999303765d9403"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/model.ts",
+      "sha256": "fc445802a7f4928070b33819ef5a2c8bd13448a747372f65e18bf01dc20439b6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/components.tsx",
+      "sha256": "9107c9d8c9181b68b78f5dc151ee7942feac937cd2cc681fb5ee1561a6a3cb2d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/index.config.ts",
+      "sha256": "adffa8290350a49ed35c6b6a794834c501f19e94a04a98aaef433734e1fdcb54"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/index.tsx",
+      "sha256": "74f3e5ebb61d18c1cecc3ae624adac636f218b48753e3ecc9ccfba47e8985ff1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-data.tsx",
+      "sha256": "c2e739c231e8286b786bba4a5034cb63aff71619814556ff3ac11f48f2edc764"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-details.tsx",
+      "sha256": "62c1e2985e518700644e5fc6513411201da679cd8d8ef4ca80600e698647314a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/api.ts",
+      "sha256": "43058715901b76806597d6cea6badb94cfaf81d4490e01144fd08cd218b15f81"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/bleCrypto.ts",
+      "sha256": "df5eb2d9dbf0b2b45f7af52cdd14847fa4c9b5fdfa1c0ca6eb0e50305af0736b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/bleProtocol.ts",
+      "sha256": "67a919a2c89a1c4b2f6f04407d2da3adda743cb64be242a291683bdf3cdc57c6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/bleSession.ts",
+      "sha256": "2f7d2ffdc7eae73d8a67f7f3154a8b3da4c5bc9e39d9e8683941dd709557c958"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/bluetooth.ts",
+      "sha256": "3f63fb27766a75ce1e5c140c8c590fee39136e3bf9ed20704217fe85e7664e76"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/demo.ts",
+      "sha256": "3974a6dec567245467ee139aa7ceb4104c83c1c5374d46d5b8ab6ce8d0f72fae"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/dto.ts",
+      "sha256": "6cb7eb85b1bffc68eada352156ab07e1d7f729d1685b463761db7e33ec98dc0d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/history-api.ts",
+      "sha256": "c5d343082f6d54324dee8ec0ad81e250ed81a1776dfd0dcb4e0422977ebaac9e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-api.ts",
+      "sha256": "0e47a469553f2967d1b2916811becabdb3c89b77331fb91206fe641052a14d37"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-data.ts",
+      "sha256": "4e12203cee063910ca5addb409ee1c5375e8cecdb58d840d86752081ffda6108"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-history.ts",
+      "sha256": "f789a6122c728d85a4f8365cb1a0054c785fded4a56ec5b5c54fc365d1d4c522"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/real-details.ts",
+      "sha256": "8c02ed1146407b2490dbb1b01d32b3c3367c5f1c93528e2a31a078a9439ed878"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/share.h5.ts",
+      "sha256": "a7d2e4028fa7b64b9e12f99fb073379b342c8b7b3374047f30a955be7e37337e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/share.ts",
+      "sha256": "fa6d2c511a98a3eea1ca3d2cdef29174439f7ebc6fe8b6f7b1b712d9688a4940"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/share.weapp.ts",
+      "sha256": "b1188fd3a200ba3c8814be7dbdbb6eaa2e826cb723a072037934396835425107"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/utf8.ts",
+      "sha256": "c3f36df74133e44f9b3beed0fe5a24b3889e0929fe7016acdda1d26591571592"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/services/vision.ts",
+      "sha256": "45f805ea4ab53697bcaf9c3cb8084440c7a6264a7395c2ee598ea214d8394f42"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/src/setupSteps.ts",
+      "sha256": "017afa991cbf44cdf6a14fb624fb638cbaf0e5f8c90aa4522f4d81b1194262ab"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/api.test.ts",
+      "sha256": "22a6f5f2d8ff422accf443d20bd44d0893a66b955e753c3e6a970f9145b2ba8f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/bleCrypto.test.ts",
+      "sha256": "fe386fdb66a9617c171b43940723707f4a1601355d7009b8bfd297e09d0a1209"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/bleProtocol.test.ts",
+      "sha256": "ef65c121b0513ca3986ec90b46a2bfe175b0bacc58f2e3e89057ca2615c0c9a2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/bleSession.test.ts",
+      "sha256": "495b40a44877ca178f02b4425ab9ff75d7d6525668e820652bdfe3584677c2a2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/bluetooth.test.ts",
+      "sha256": "07df7a5a2699b09ddfc773370838aff8cb98f91091e76d806a951c0566739c89"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/live-data.test.ts",
+      "sha256": "ea7e5b69b4ed7d00e076db1b91a0dc73cdeda6143706c14973ca81debe2dcd6f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/live-history.test.ts",
+      "sha256": "a4eb7c2f700a5758a66163bf95dabf2f6a37ea956d1a378485494ba5ced66d2f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/model.test.ts",
+      "sha256": "134971c08e228c5cc9362d39187d10ff8a29d3257cdf1fbc70785d37c35e2fc8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-api-contract.test.ts",
+      "sha256": "ecd2f511969e5dbdcaccc969d06243c6adba27e02372ac3cd773c56ef0f3f3f9"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-details.test.ts",
+      "sha256": "29357d72c9e8d65af65b3f14ea080f3db125386ac224feae07f2371701b08520"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-render.test.tsx",
+      "sha256": "4ba141d52f637c7754b685039a3a75a47479a56e723f80132c2ab3011f011029"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/server.test.ts",
+      "sha256": "7262a29adeec716993d58b545332c6477a0a5d6a7fc94f81937042d4e02f2707"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/setupSteps.test.ts",
+      "sha256": "0da28d414adb1a896db0cd0fffb4d2217dea10805a8fa558cf04575247ae4680"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tests/utf8.test.ts",
+      "sha256": "1f1cd14253a6610c0bc9bed7de6702cc0ca333ba249e31dc750a86671ae41ca7"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/miniapp/tsconfig.json",
+      "sha256": "3a369db897ae70845d80d2ec29410d402921011224d8f21fe2947ebdc36d27ba"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/AIR-DELIVERY.json",
+      "sha256": "b09a7f6332e03148a49d93b42719e01fbe1564c7b087987e34ae77f99a277566"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/AIR-FINAL-DELIVERY.json",
+      "sha256": "ebee885d9deb1b9259b21d1d39093aecae8c35981337807aba87bf674e5df713"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/AIR-MINIAPP-DELIVERY.json",
+      "sha256": "8239da1ee1096d1f27bd7efb7e1770ef85af43e7b91e6d27e4394afb830e3140"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/BROWSER-CHECK.json",
+      "sha256": "754529e60d8cab8269f6f42f32b48b846ea8499da1ba644c76a96eba8925a3df"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/EVIDENCE-PACKAGE.json",
+      "sha256": "f08db2da25886e0399559acef4cee48ced873c9993bfc92e195616edfce90302"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/FINAL-STABILITY.json",
+      "sha256": "15e3669162a2e5a64a25ea2824b89f9f7b73ee053d55f120b91dd518bb7cc1c3"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/MANIFEST.json",
+      "sha256": "6996e550347eee5a65f820bb15c08b566dae7a4bf4f9f0d4b7d4aebc88b64a74"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/MEMORY.md",
+      "sha256": "366acd8ae93bf98e3e80bc60d2bfb039dcc6a608b8a328011c674732c7ab45fa"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/MINI009-COMPATIBILITY.md",
+      "sha256": "f401b36c0579eb205554d4d99bb7943fa5bc27409af49c8af87cc92e79e20a4a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/MINI009-UPSTREAM.json",
+      "sha256": "a2b9a61075ed9bf288fa2f15562b4ff809cac3c152f77890733988fdb4979668"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/MINI009_USAGE_FIX_HANDOFF.md",
+      "sha256": "3a30478f3baafff40975c8971892150e47f4d128214b46d2ff836938adecaebf"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/MINI010_BUILD_READINESS.md",
+      "sha256": "d5e33e68f266752f86ea86c82374cf5b103fac6daad0a3bfd7333725d68efee2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/NODE22-TESTS.json",
+      "sha256": "00c747b895660fdfdba128cd2b791edc72e36eb11b036cb6d95af46689282ae6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/P003_ARK_RECORDS_CLIENT_R1_20261116.md",
+      "sha256": "485956ec304223d7e898828c74389561799f2163fea1b73efdaaa025540d9e4a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/P003_MINI009_TEST_CASES_20261116.md",
+      "sha256": "5d084523dd6c7833cf13f4dba0e7c503061abbb3b3068dba3cefd9616203fd25"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/P003_MINI371_009_PACKAGE_RECEIPT_20261116.md",
+      "sha256": "f6bdb8b88b56d779be0563398c36a5583bee71d3f29c6e1d8fa2d2874964c141"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/PLAN.md",
+      "sha256": "fef6618b1b751c710c0e169b412f59ac15aecc625ba9b33e08e01f4245870eb5"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/POST-RELEASE-PROBE.json",
+      "sha256": "7beb3318e43d273957d1fa7179459844f6f4598d593ccc1f54336c2e2c4af3e5"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/PRE-RELEASE-PROBE.json",
+      "sha256": "d725b6ef72ebfd821f2581a082770c5b122e2994daa6f9ce0ce2c1cd0e80fe7b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/PREFLIGHT.json",
+      "sha256": "93ef0eba13b38757bd4cb3a4ebda820d09eef82b1d207de64c9b174bf8c3eecf"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/RELEASE.json",
+      "sha256": "0e4e717bb81febbff8d874fef89af7c063090434e48c372b780a882367b766c0"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/RETROSPECTIVE.md",
+      "sha256": "508145eef4940096e1013ea2d913bf4e1f361681e8006ad841828cfa6337f08e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/REVIEWED.json",
+      "sha256": "766ac9ba2ade237aa82e026dc5cfc852f16c15632302fc8a4ec1b8991803fd3b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/SKILL-VALIDATION.md",
+      "sha256": "1f8864137cb330438cfa559c0ed90b93abafc8acbfcd69db31ce6615e1b1611c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/STABILITY-PROBE.json",
+      "sha256": "00360e577ecd890907e0c1685323940eb24a995a6610337befddca2ce5403873"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/STABILITY.json",
+      "sha256": "3bfa93e7ec7976497950b7982f6cb75932ccd99fed0d8f759f5fbda67cabbcb1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/USAGE-INVESTIGATION.md",
+      "sha256": "f561291f8b66424cbf9d101e3495175dcc0276aba9ab59bb0305489621bafc4f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/USAGE-SERVER-AUDIT.json",
+      "sha256": "47b2e12e6ba2a33c61d233a18525bcb272c472d0a2ca28d67385517e6849efd3"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/ark-records-r1.request.schema.json",
+      "sha256": "60e67d184eeb1921ed6fafc7a8e59d315a73cb4e8c4b69ea8f297f5ae684a4e4"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/ark-records-r1.response.schema.json",
+      "sha256": "e900018020ab45fb2d7e6be789267541d323df2d8dcfa105b06c2be1aaf38a8c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/browser-check.cjs",
+      "sha256": "3b2649d6fe188e5717b7b8944adbd2e373a3558615a96e3dfcd233061c39c9f8"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/node22-tests.py",
+      "sha256": "dbd032741147980eec0d3a16b0a7707c7fc0adcb11ff0a6c27af79fa9ef93d08"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/probe.mjs",
+      "sha256": "a99578fe64fb76d266bb571151a985c5165a34cbe53cd23dee2ad6b0c4fbe6b0"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/release.py",
+      "sha256": "643f5c5f334003968136b10f81c3e8fcfef0c9c6d7f81efaa67d0a0dff324b48"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/INTEGRATION.md",
+      "sha256": "3a72c6ce14b2fba6ca85076386039ad648b33dc0dfac020d978fdd30aea65cff"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+      "sha256": "5ea7d385deb26c39c2c01abd1062692697f44349afc9a607a39a6dc19441aecf"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/SCHEMA_VALIDATION.json",
+      "sha256": "27a142210c88129e869c0baba236b44cd816db1ee0323f1e080f436c6dec45c1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/SERVER_CONTRACT_R1.md",
+      "sha256": "9685f938fa5818111862d4516b07ae6a15b833c5b88a2c0f2d9b66d04164b20c"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/SUMMARY_COMPLETION_20261116.md",
+      "sha256": "a3aef5f4e7187124b75dea4f2252af899ec6e3820a5b4997c6445d3f19064e38"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/examples.json",
+      "sha256": "7e7a6fba4d85265cb58ea73117d31fba7e83889f323f739b0af2a05551b1782a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/schema.mjs",
+      "sha256": "5a6aab714e9ba35587dd50f4f7074c3d7f3121918db0374567aeb5d91839d8e0"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/AFTER-PROBE.json",
+      "sha256": "c5debba0a1902dcaf4b1a03c53ca3a4ebd30c6e8986d675571f79a132cd5987e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/AIR-DELIVERY-LEGACY-CLARIFICATION.json",
+      "sha256": "537fa5d6c08609a0b74b9d88025cde4d7d9908db2508a024c2451b2943cfe5a1"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/AIR-DELIVERY.json",
+      "sha256": "14387705665a71fa64c5e4884dfcc38c608cb5c3bfde6468052eace4a19a1785"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/BEFORE-PROBE.json",
+      "sha256": "2dfb9a0368f1549426c35f8823e22c4a7406bd9073badd0e498603645b12504b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/DEVICE-AUDIT.json",
+      "sha256": "fa6fde61b66537cc6eddbc9f86e43393c5d3c8fb365f894692470a70b97ff92e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/LEGACY-API.json",
+      "sha256": "ed1098f3074f5e837fc08280a793cbca57417c98b0afc37716ced1044ff9b413"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/LEGACY-DATA-AUDIT.json",
+      "sha256": "63e6231aef9a929ff93815ac7d39510db4c24f3c1ce1874f792419a133d1b3a2"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/MANIFEST.json",
+      "sha256": "97b6e75cda74882a7e3102fc8efd9a4ea466cf89a349b0be124d7f7e9cf736e5"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/MINIAPP-AUDIT.json",
+      "sha256": "0b36b1baaa71232ccca3953a90c39cd08a9a1757e2038404c18f2ba1570fc0ab"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/MINIAPP-BUILD.json",
+      "sha256": "6d95ba2595db9a575c13acf21c9a992f70f2b41ff61746b16240f0b83da28ce3"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/MINIAPP-PACKAGE-MANIFEST.json",
+      "sha256": "e5647d065fa0aa6de41706d9f34cd966c712b495bc793970417868f35b024619"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/MINIAPP-PACKAGE.json",
+      "sha256": "4b40814bf9fddba437ed657c5518be2fb77dbf9d2863810ff7ef7c786756bb2f"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/MINIAPP-SOURCE-SNAPSHOT.json",
+      "sha256": "aa4697df7529ad403414c6f9b86118aa359bc493fc916cc782764c50f40df932"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/NODE22-TESTS.json",
+      "sha256": "7df5d2d9e65e3b38ce1ecdb40b09c4a8f0720895dc39daea62af54d57b6c2bf9"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/PRE-RELEASE-PROBE.json",
+      "sha256": "2adda4c4891b0c835104c3a52d64297a0646818982c212152411b5cc391e7d49"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/PRODUCTION-CHECKS.json",
+      "sha256": "097a5166625d81dad0e58089e227306126a936f367710eeb654eb1b803ce9ef6"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/RELEASE.json",
+      "sha256": "23b52dd54b6f497be077b835ca33cfee5fe955765a3d5a112bcb444e93b6ba8e"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/REVIEW.md",
+      "sha256": "11abad9d0dc041d4f83a41b6dea0c99160a2239aab4614d2ad51dfc3147b3497"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/REVIEWED.json",
+      "sha256": "491191caecc2832d75c9dffb49648e7a08fac6db5555e648187be07e92a12e0b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/STABILITY.json",
+      "sha256": "8970bddbc8b5f7e7053482673712903320d42b3e00d15f0d64dde3856b28b0a7"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/legacy-api-probe.mjs",
+      "sha256": "f2f9ec355c378116613c2836a2e9bae08ecc1e3e0124e640e1eef248a616773b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/node22-tests.py",
+      "sha256": "441e0afed6de122b6eb85d02a488e72f2493ecb713a323d8855b99e98fd5913b"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/production-probe.mjs",
+      "sha256": "86fda448f329025b2d8090925f96d4499a9729abdda34504cc859efcb6b9c5ff"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/summary-20261116/release.py",
+      "sha256": "0c77684d3352305c6af5db3aa7719060b1ebd7f39b0869507cd0bed8b2a9ae7a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/docs/records-r1/validate.mjs",
+      "sha256": "5a15c206824668b5f6f82b908bc40fc29367e2c340585df44d90f086ef42c15a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records-summaries.test.ts",
+      "sha256": "ea3d6632172d31e74dbc386b1bda4f88df999499d3f2b3db1bd4038ba6536f69"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records.test.ts",
+      "sha256": "a4c0af09769fc3bb4d78405208f3edc6498c163dbf6f7c8415e27d20250e1898"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/parent-conversations.test.ts",
+      "sha256": "3b9c413392efc9cebd89c9fcc13167f67884b8d85ff0a384673f5a5af3b2ab9a"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/records-contract.ts",
+      "sha256": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/records-store.ts",
+      "sha256": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/parent-conversations.ts",
+      "sha256": "33e17148525d71c7277ac34ce7104439caa096fc61b518d35da0a78dfa523ba5"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/routes/telemetry.ts",
+      "sha256": "9bb9913ab2f6680ee209a0e15d202bdab83fa0f27382ca73a117761a2fba8759"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/docs/parent-history-20261116/USAGE-INVESTIGATION.md",
+      "sha256": "9474a6b11e68b4d083647a50142298824528f4c5b15e2fbe32511311086bf329"
+    }
+  ]
+}

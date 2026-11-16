@@ -1,0 +1,27 @@
+{
+  "source_commit": "75378716195bda8e7414af97ffd8dbd0b109212b",
+  "build_commit": "006ac68a29447e8bc14fb655206d87bbf1f771a3",
+  "note": "upstream reports package built, no device installation; imported read-only",
+  "files": [
+    {
+      "file": "P003_MINI371_009_PACKAGE_RECEIPT_20261116.md",
+      "sha256": "f6bdb8b88b56d779be0563398c36a5583bee71d3f29c6e1d8fa2d2874964c141"
+    },
+    {
+      "file": "P003_ARK_RECORDS_CLIENT_R1_20261116.md",
+      "sha256": "485956ec304223d7e898828c74389561799f2163fea1b73efdaaa025540d9e4a"
+    },
+    {
+      "file": "P003_MINI009_TEST_CASES_20261116.md",
+      "sha256": "5d084523dd6c7833cf13f4dba0e7c503061abbb3b3068dba3cefd9616203fd25"
+    },
+    {
+      "file": "ark-records-r1.request.schema.json",
+      "sha256": "60e67d184eeb1921ed6fafc7a8e59d315a73cb4e8c4b69ea8f297f5ae684a4e4"
+    },
+    {
+      "file": "ark-records-r1.response.schema.json",
+      "sha256": "e900018020ab45fb2d7e6be789267541d323df2d8dcfa105b06c2be1aaf38a8c"
+    }
+  ]
+}

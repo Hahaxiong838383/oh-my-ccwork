@@ -1,5 +1,7 @@
 # R1 本地联调交接
 
+**摘要修订（2026-11-16 20:57:01 已发布）：两个摘要已按已同步记录实现，不再恒定 policy_pending；当前C新记录仍0条，真实端到端待端侧接入与手机对账。最新回执以 P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md 为准。**
+
 C SN **BJP00326081002000031**，public_id **dev_50b5415662259045**。服务端已于北京时间2026-11-16 20:01:50部署，records仅C机开放；原 owner／凭据／存档／队列不动。安卓和小程序按本说明并行开发/联调；这里没有“安卓已接受”或真机通过结论。
 
 ## 接口
@@ -9,7 +11,7 @@ C SN **BJP00326081002000031**，public_id **dev_50b5415662259045**。服务端�
 |GET|`/v1/device/ark/records/context`|现有 Device Bearer|只读当前有效grant，返回原grant/epoch、not_before、服务器时间和实际limits|
 |POST|`/v1/device/ark/records:batch`|现有 Device Bearer|50条／256KiB body／32KiB单记录；原子记录、逐ID ACK|
 |GET|`/v1/parent/devices/{publicId}/ark/records`|现有家长Bearer|当前owner及当前grant/epoch；分页只读|
-|GET|既有dashboard|现有家长Bearer|增加`data.records`，两个摘要policy_pending，原device/usage/ark不变|
+|GET|既有dashboard|现有家长Bearer|增加`data.records`，两个摘要按已同步记录计算（口径见下文），原device/usage/ark不变|
 
 新增响应与dashboard为 `Cache-Control:no-store`。新能力允许名单默认空；`ARK_RECORDS_SN_ALLOW` 必须同时是原Ark ceiling、有效grant的子集。本次主13已完成部署，显式允许名单仅C；原Ark授权不变，不自动扩容。
 
@@ -42,7 +44,7 @@ context是原授权上下文，不是新凭据。首次成功且版本匹配后�
 
 ParentRecord不含origin_grant_id/epoch/SN/owner。`item_references`是实施细化：每个activated返回pending/resolved；resolved须同save/原归属/sequence，且目标在该分页高水位内。item_changes是原始事实，不修改成当前库存。activation不再次加数量或收入；尚无可靠当前save/tank指针。
 
-`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard两个摘要保持不可用、policy_pending（未开则not_enabled；新记录查询故障为dependency_unavailable且不影响原资产/时长/设备状态）；家族币/星尘null，items=[]。不回退旧normal，gm/unknown在列表明确标记；正常余额和卡库存仍走旧Ark。
+`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard 两个摘要按 SERVER_CONTRACT_R1.md §7 计算：昨日已上报正向领取收入、最近已同步获得整组。符合条件时 available=true/reason=partial_history；没有数据 no_records/null/空数组；未开 not_enabled；新记录故障 dependency_unavailable，不影响原资产/时长/状态。未知时钟导致最新物品 clock_unknown；最新非normal不回退旧normal。正常余额和卡库存仍走旧Ark。不能将当前缸/完整库存/昨日全量收入作为摘要标题。
 
 ## 默认容量／配置
 

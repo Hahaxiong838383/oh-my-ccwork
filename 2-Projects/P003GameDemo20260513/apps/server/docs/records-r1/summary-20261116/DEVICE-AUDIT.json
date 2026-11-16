@@ -1,0 +1,93 @@
+{
+  "checked_at": "2026-11-16T20:48:13.716546+08:00",
+  "scope": "只读端侧证据核查；仅C机 BJP00326081002000031，未连接或操作其他产品设备",
+  "status": "REAL_DEVICE_RECONCILIATION_BLOCKED",
+  "target": {
+    "sn": "BJP00326081002000031",
+    "public_id": "dev_50b5415662259045"
+  },
+  "access": {
+    "studio_adb_devices": [],
+    "air": {
+      "ssh_verified": true,
+      "hostname": "RaymanMacBook-Air.local",
+      "user": "Rayman.Chen",
+      "current_ipv4": "10.9.1.88",
+      "host_key_verification": "StrictHostKeyChecking=yes，复用既知10.9.1.110主机密钥，未新增信任或修改SSH配置",
+      "adb_binary": "/Users/rayman.chen/Library/Android/sdk/platform-tools/adb",
+      "adb_devices": [],
+      "adb_server_started_for_read_only_inventory": true
+    },
+    "requested_document": {
+      "path": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+      "exists": true,
+      "bytes": 11079,
+      "mtime": "2026-11-16T20:33:41+08:00"
+    }
+  },
+  "latest_discovered_device_receipt": {
+    "path": "/Users/rayman.chen/Downloads/P003_真实数据补齐_端侧需求回执_R1_20261116.md",
+    "bytes": 15123,
+    "mtime": "2026-11-16T18:08:31+08:00",
+    "sha256": "8561e02e041630c376a35201ffcd2f48efe4aa0714e6a33364027877823444b7",
+    "stated_status": "需求核查与提议回执；新增记录上报代码尚未开发、未重新测试或上机。不能将mini008视为已实现records R1。",
+    "meaning": "这是18:08回执自述，并非独立访问Windows源码或设备后确认了此刻仍未开发。未发现更晚的端侧实现/安装/业务ACK回执。"
+  },
+  "historical_install_evidence": {
+    "path": "/Users/rayman.chen/Downloads/P003_mini008_服务器联调准备回执_20261111.md",
+    "sha256": "e9a4c32336c208044860393371f2678d956efffb5a8231e6ab59f11f3352dd99",
+    "evidence_kind": "接收会话转述，不是本轮现场回读",
+    "reported_version": "371_mini_008",
+    "version_code": 371,
+    "reported_source_commit": "f083b6e4066c8bbfda43f53e2bd8b8723a9810c0",
+    "reported_apk_sha256": "57ca06637aff8097997e6eb9ef11cd7ef9255c97a940883ddfbbaf975533bf23",
+    "reported_apk_bytes": 85329509,
+    "reported_device_computer": "另一台Windows小程序开发电脑",
+    "reported_receipt_path": "C:\\Users\\Administrator\\Documents\\Codex\\P003\\mini008-prepare-20261111\\INSTALL_RECEIPT.md",
+    "reported_diagnostic_path": "C:\\Users\\Administrator\\Documents\\Codex\\P003\\mini008-prepare-20261111\\device-diagnostics.log",
+    "known_old_telemetry_ack": "2026-11-11 13:35:17.579 CST，snapshot_accepted=true、pending=0，缺完整batch/event ID",
+    "known_old_ark_result": "2026-11-11 13:35:40.260 CST，Ark state 403；随后服务端已补授权，此旧结果不是当前403证据",
+    "known_source_mode": "unknown/null，不能改normal或0制造通过"
+  },
+  "current_live_evidence": {
+    "active_apk_version": null,
+    "runtime_outbox": null,
+    "launcher_pending": null,
+    "record_ids": [],
+    "upload_ack": null,
+    "phone_ui": null
+  },
+  "missing_prerequisites": [
+    "实际连接C机的Windows电脑/端侧开发会话提供可核实的新records实现与安装回执；本轮没有该机器的已知远程入口。",
+    "C机保留原绑定/凭据/存档/队列，使用新合同产生一笔真实业务记录；旧mini008仅状态快照不能产生新records R1。",
+    "逐同一record_id取得Runtime原记录、Launcher durable交接及上传业务ACK、pending变化，再与服务端数据库/API和手机页面对齐。"
+  ],
+  "boundaries": [
+    "未访问产品设备；两台Mac均没有ADB设备。",
+    "未注入业务、改时间/来源、清档、重绑、刷包、重启或清队列。",
+    "未读取或输出token、家长手机号、儿童内容。",
+    "不得将服务端签名探针、synthetic测试或旧Telemetry ACK表述成新records真实上报对账通过。"
+  ],
+  "windows_access_discovery": {
+    "checked": [
+      "Studio ~/.ssh/config",
+      "Air ~/.ssh/config",
+      "Studio shared status/RECENT_EVENTS/memory-items",
+      "Air shared status/RECENT_EVENTS/memory-items",
+      "Air Downloads mini008准备回执、三方最小协议、mini002客户端回执及R1端侧需求回执"
+    ],
+    "c_device_windows_endpoint": null,
+    "other_known_windows_node": {
+      "host": "maxtkf-server",
+      "mesh_ip": "10.10.10.24",
+      "user": "Administrator",
+      "source": "Air mycc/0-System/memory-items.md:1415，2026-08-26家庭Windows节点",
+      "is_c_device_host": "unknown，不能凭Administrator用户名或同为Windows推断",
+      "strict_ssh_from_studio": "未收录host key，严格校验拒绝连接",
+      "strict_ssh_from_air": "未收录host key，严格校验拒绝连接"
+    },
+    "search_boundary": "没有扫描网络、猜IP、接受未知主机密钥或访问家庭Windows内部文件；未发现C机Windows已知远程入口。",
+    "newer_device_receipt_discovered": false,
+    "latest_device_receipt_mtime": "2026-11-16T18:08:31+08:00"
+  }
+}

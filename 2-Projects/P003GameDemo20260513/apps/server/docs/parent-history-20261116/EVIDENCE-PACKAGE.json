@@ -1,0 +1,20 @@
+{
+  "path": "/Users/fu-121/Downloads/P003_C_REALDATA_EVIDENCE_20261116.zip",
+  "bytes": 35258,
+  "sha256": "1cebed03190e8ec15ff07edf1e9ec75bc80e33875080656f01cb93e4b189c7bf",
+  "files": [
+    "PLAN.md",
+    "MANIFEST.json",
+    "NODE22-TESTS.json",
+    "RELEASE.json",
+    "POST-RELEASE-PROBE.json",
+    "STABILITY.json",
+    "BROWSER-CHECK.json",
+    "MINI009-COMPATIBILITY.md",
+    "MINI009-UPSTREAM.json",
+    "P003_MINI371_009_PACKAGE_RECEIPT_20261116.md",
+    "P003_ARK_RECORDS_CLIENT_R1_20261116.md",
+    "P003_MINI009_TEST_CASES_20261116.md",
+    "SERVER_CONTRACT_R1.md"
+  ]
+}

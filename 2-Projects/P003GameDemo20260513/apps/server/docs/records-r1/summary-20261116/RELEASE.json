@@ -1,0 +1,21 @@
+{
+  "started_ms": 1794833818419,
+  "success": true,
+  "manifest_sha256": "97b6e75cda74882a7e3102fc8efd9a4ea466cf89a349b0be124d7f7e9cf736e5",
+  "backup": "/root/p003-records-summary-20261116/source-backup",
+  "before": {
+    "pid": 2203104,
+    "status": "online",
+    "restarts": 4
+  },
+  "after": {
+    "pid": 2209360,
+    "status": "online",
+    "restarts": 5
+  },
+  "env_unchanged": true,
+  "other_processes_unchanged": true,
+  "files": 2,
+  "database_restore": false,
+  "finished_ms": 1794833821433
+}

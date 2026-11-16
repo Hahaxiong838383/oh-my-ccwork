@@ -1,0 +1,156 @@
+{
+  "checked_at": "2026-11-16T21:13:12.771413+08:00",
+  "scope": "只读定位可用小程序源码、前端真实映射和测试入口；未读取不相关对话，未安装或发布客户端",
+  "source_root": "/Users/fu-121/.codex/worktrees/p003-miniapp-joint-20261029/2-Projects/P003GameDemo20260513/apps/miniapp",
+  "source_status": "整个apps/miniapp为既有untracked目录，工作树另有大量未提交server改动；本轮未修改任何既有源码",
+  "source_version_caveat": "这是10月29日已有独立真实模式副本，不证明同事当前体验版的源代码或线上版本；11月2日联调执行单仍要求小程序团队交新版",
+  "entry": {
+    "live": "src/pages/index/index.tsx:50 -> RealDataHome (real-data.tsx)",
+    "demo": "同入口按TARO_APP_DATA_MODE!=live进入DemoIndex；业务数据取demo/model",
+    "available_live_fields": [
+      "device.online",
+      "device.updated_at_ms",
+      "device.present",
+      "device.brightness_level",
+      "device.image_distance_m",
+      "device.image_distance_state"
+    ],
+    "not_connected": [
+      "data.usage",
+      "data.ark",
+      "data.records.yesterday_income",
+      "data.records.latest_items",
+      "GET /v1/parent/devices/{publicId}/ark/records",
+      "真实历史使用时长查询"
+    ],
+    "api_transform": "apiRequest递归snakeToCamel；新增解析需要读取familyCoin、yesterdayIncome、recordId等camelCase，resource_id字符串值不变；库存M-CARD-001键不变"
+  },
+  "demo_only_illustrations": {
+    "index.tsx:26": "weekMinutes固定[45,60,30,65,0,70,50]",
+    "index.tsx:138": "昨日收益硬编码+32",
+    "index.tsx:140": "最新物品硬编码星月云朵灯",
+    "index.tsx:120,269": "RecordsPanel读DemoState.records，无服务端分页",
+    "index.tsx:121": "补勤卡为demo下发次数减使用次数，Math.max(0,...)",
+    "index.tsx:684-701": "HistoryPanel周读固定数组，月按日期构造示例值及0；不可复用这些数值作为真实统计"
+  },
+  "recommended_minimal_change_files": [
+    "src/services/live-api.ts",
+    "src/services/live-data.ts",
+    "src/pages/index/real-data.tsx",
+    "tests/live-data.test.ts",
+    "tests/api.test.ts",
+    "可新建真实历史/流水组件与对应测试，不改DemoIndex及BLE"
+  ],
+  "important_render_boundary": "真实时长、余额、摘要及历史面板须各自判断available；不能被device.updated_at_ms为空或online=false整块隐藏。旧记录应标已上报/历史/更新时间，不显示成实时。",
+  "existing_tests": {
+    "runner": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build_weapp": "TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:weapp",
+    "build_h5": "TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:h5",
+    "dependencies_present": [
+      "node_modules/.bin/vitest",
+      "node_modules/.bin/tsc",
+      "node_modules/.bin/taro"
+    ],
+    "ran_this_audit": false
+  },
+  "test_entry": {
+    "appid": "wx8b0ce82f18ab2f29",
+    "miniprogram_root": "dist/weapp/",
+    "mode": "package scripts显式live；config直接默认demo，不能绕过npm脚本忘配TARO_APP_DATA_MODE",
+    "phone_requirements": [
+      "体验版已上传并设置",
+      "测试成员已加入",
+      "request合法域名https://kidshub-ai.hahaxiong.cc",
+      "真实家长登录并选C public_id"
+    ],
+    "h5_boundary": "现有文档说明H5仅界面验证，独立浏览器CORS未曾完成；构建成功不是手机API通过"
+  },
+  "air": {
+    "latest_r1_client_receipt": "/Users/rayman.chen/Downloads/P003_真实数据补齐_端侧需求回执_R1_20261116.md",
+    "latest_r1_client_receipt_mtime": "2026-11-16T18:08:31+08:00",
+    "later_client_receipt_found": false,
+    "source_zip": "/Users/rayman.chen/Downloads/xiaoke-miniapp-source-2026-10-29.zip",
+    "live_delivery_zip": "/Users/rayman.chen/Downloads/小可小程序-真实数据内测联调包-20261029.zip",
+    "no_project_found_under": [
+      "mycc",
+      "Documents/Codex",
+      "Documents (max5)",
+      "MyAgent (max5)",
+      "work-private",
+      "Downloads (max5,除R1文档包)"
+    ],
+    "windows_c_remote_endpoint": null,
+    "old_r1_extracted_bundle_mtime": "2026-11-16T20:05:56+08:00",
+    "old_r1_zip_mtime": "2026-11-16T20:33:46+08:00",
+    "note": "根agent已通知需同步新合同，避免独立主回执更新而旧压缩包仍policy_pending"
+  },
+  "files": [
+    {
+      "path": "src/pages/index/index.tsx",
+      "bytes": 97279,
+      "sha256": "74f3e5ebb61d18c1cecc3ae624adac636f218b48753e3ecc9ccfba47e8985ff1",
+      "mtime": "2026-10-29T17:27:31.812538+08:00"
+    },
+    {
+      "path": "src/pages/index/real-data.tsx",
+      "bytes": 5789,
+      "sha256": "cfee553a37e07b4e5fba6c5ce899c69cae5384768adbf3a812824efb2b445f75",
+      "mtime": "2026-10-29T17:34:36.048831+08:00"
+    },
+    {
+      "path": "src/services/live-api.ts",
+      "bytes": 2630,
+      "sha256": "f4312476b948a9ba7fa8447dc82cd8084247d21eaccb2d8afdecf09d6280ecc8",
+      "mtime": "2026-10-29T17:26:02.117233+08:00"
+    },
+    {
+      "path": "src/services/live-data.ts",
+      "bytes": 6673,
+      "sha256": "31f62107e235077e5e345bf368f0f76dfb7b6618901cf19e3a91cde7f896265f",
+      "mtime": "2026-10-29T17:34:36.047719+08:00"
+    },
+    {
+      "path": "src/services/api.ts",
+      "bytes": 2211,
+      "sha256": "43058715901b76806597d6cea6badb94cfaf81d4490e01144fd08cd218b15f81",
+      "mtime": "2026-10-29T17:26:02.111839+08:00"
+    },
+    {
+      "path": "src/services/dto.ts",
+      "bytes": 343,
+      "sha256": "6cb7eb85b1bffc68eada352156ab07e1d7f729d1685b463761db7e33ec98dc0d",
+      "mtime": "2026-10-29T17:17:13.149881+08:00"
+    },
+    {
+      "path": "tests/live-data.test.ts",
+      "bytes": 6340,
+      "sha256": "ea7e5b69b4ed7d00e076db1b91a0dc73cdeda6143706c14973ca81debe2dcd6f",
+      "mtime": "2026-10-29T17:34:36.049898+08:00"
+    },
+    {
+      "path": "tests/api.test.ts",
+      "bytes": 5369,
+      "sha256": "22a6f5f2d8ff422accf443d20bd44d0893a66b955e753c3e6a970f9145b2ba8f",
+      "mtime": "2026-10-29T17:29:14.516433+08:00"
+    },
+    {
+      "path": "config/index.ts",
+      "bytes": 1451,
+      "sha256": "30ddebb5b85c0f613ed43e964fe4447dd3c51a560c267883923ec408b60f9aa3",
+      "mtime": "2026-10-29T17:27:31.816087+08:00"
+    },
+    {
+      "path": "package.json",
+      "bytes": 2052,
+      "sha256": "e027b160ff7c23c0c5afe1e8fa4b17ee6c1228f2f9ac04c36c8b8f36724b8d1e",
+      "mtime": "2026-10-29T17:37:37.059720+08:00"
+    },
+    {
+      "path": "project.config.json",
+      "bytes": 931,
+      "sha256": "11dda7afecc5e4494c047db5f807a75a803249060a7fa49d2f75f4bbc68fd9dc",
+      "mtime": "2026-10-29T17:17:13.084692+08:00"
+    }
+  ]
+}

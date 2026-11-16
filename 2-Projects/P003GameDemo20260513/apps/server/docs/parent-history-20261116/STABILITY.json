@@ -1,0 +1,27 @@
+{
+  "at_ms": 1794836235380,
+  "legacy_equal_at_release": [
+    true,
+    true
+  ],
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2214587,
+      "status": "online",
+      "restarts": 6
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1856264,
+      "status": "online",
+      "restarts": 0
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  ]
+}

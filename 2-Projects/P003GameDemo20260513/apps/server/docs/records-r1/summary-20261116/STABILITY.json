@@ -1,0 +1,13 @@
+{
+  "pass": true,
+  "at_ms": 1794834036317,
+  "stable_seconds": 214.9,
+  "state": {
+    "pid": 2209360,
+    "status": "online",
+    "restarts": 5
+  },
+  "sources_exact": true,
+  "record_count": 0,
+  "real_device_e2e": false
+}

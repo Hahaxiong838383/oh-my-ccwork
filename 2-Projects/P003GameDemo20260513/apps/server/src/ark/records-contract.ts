@@ -50,8 +50,9 @@ export function parseBatch(v:unknown){
  return {batch_id:e.data.batch_id,records:e.data.records.map(raw=>({raw,parsed:RecordSchema.safeParse(raw)}))};
 }
 export const emptyCoverage=()=>({kind:'received_records' as const,complete:false as const,reason:'partial_history' as const,min_occurred_at_ms:null as number|null,max_occurred_at_ms:null as number|null,first_received_at_ms:null as number|null,last_received_at_ms:null as number|null});
-export function dashboardRecords(coverage=emptyCoverage(),reason='policy_pending',now=Date.now()){
+export type SummaryItem={item_instance_id:string;item_id:string;item_kind:'tank_component'|'avatar_decoration'|'unknown';quantity:number;state:'pending_activation'|'active'|'unknown';activation_record_id:string|null};
+export function dashboardRecords(coverage=emptyCoverage(),reason='no_records',now=Date.now()){
  return {schema_version:1,coverage,updated_at_ms:coverage.last_received_at_ms,
- yesterday_income:{available:false,reason,date:new Date(now+8*3600000-86400000).toISOString().slice(0,10),timezone:'Asia/Shanghai',source_mode:null,family_coin:null,stardust:null,occurred_from_ms:null,occurred_to_ms:null,received_at_ms:null},
- latest_items:{available:false,reason,source_mode:null,record_id:null,save_id:null,occurred_at_ms:null,received_at_ms:null,items:[]}};
+ yesterday_income:{available:false,reason,date:new Date(now+8*3600000-86400000).toISOString().slice(0,10),timezone:'Asia/Shanghai',source_mode:null as 'normal'|null,family_coin:null as number|null,stardust:null as number|null,occurred_from_ms:null as number|null,occurred_to_ms:null as number|null,received_at_ms:null as number|null},
+ latest_items:{available:false,reason,source_mode:null as 'normal'|null,record_id:null as string|null,save_id:null as string|null,occurred_at_ms:null as number|null,received_at_ms:null as number|null,items:[] as SummaryItem[]}};
 }

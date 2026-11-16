@@ -1,0 +1,177 @@
+{
+  "checked_at_ms": 1794834243546,
+  "sn": "BJP00326081002000031",
+  "counts_are_stored_rows_not_usage_duration": true,
+  "snapshots": {
+    "count": 541,
+    "first_ms": 1793931315258,
+    "last_ms": 1794833584039
+  },
+  "latest_snapshot": [
+    {
+      "snapshot_id": "snap_a9d513d4-c43e-4c36-bb25-5d5d94c29122",
+      "captured_at_ms": 1794833581753,
+      "server_received_ms": 1794833584039,
+      "payload": {
+        "snapshot_id": "snap_a9d513d4-c43e-4c36-bb25-5d5d94c29122",
+        "captured_at_ms": 1794833581753,
+        "lid_open": false,
+        "present": false,
+        "presence_state": "absent",
+        "presence_source": "camera_landmarks",
+        "led_enabled": true,
+        "brightness_level": 1,
+        "color_mode": "cool",
+        "image_distance_m": 2,
+        "image_distance_state": "valid",
+        "volume_percent": 0,
+        "signal_strength": 3,
+        "focus_active": false,
+        "focus_id": null
+      }
+    }
+  ],
+  "telemetry_events": [
+    {
+      "type": "posture_round",
+      "count": 1243,
+      "first_received_ms": 1793933634244,
+      "last_received_ms": 1794814704606
+    },
+    {
+      "type": "presence_transition",
+      "count": 760,
+      "first_received_ms": 1793931315258,
+      "last_received_ms": 1794824576514
+    }
+  ],
+  "daily_totals": {
+    "days": 4,
+    "focus_ms": 0,
+    "reminder_played": 0,
+    "correct_rounds": 2,
+    "deviated_rounds": 1,
+    "no_person_rounds": 1240
+  },
+  "recent_daily": [
+    {
+      "sn": "BJP00326081002000031",
+      "date": "2026-11-16",
+      "focus_ms": 0,
+      "correct_rounds": 1,
+      "deviated_rounds": 1,
+      "no_person_rounds": 0,
+      "failed_rounds": 0,
+      "reminder_played": 0,
+      "reminder_suppressed": 0
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "date": "2026-11-10",
+      "focus_ms": 0,
+      "correct_rounds": 0,
+      "deviated_rounds": 0,
+      "no_person_rounds": 733,
+      "failed_rounds": 0,
+      "reminder_played": 0,
+      "reminder_suppressed": 0
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "date": "2026-11-09",
+      "focus_ms": 0,
+      "correct_rounds": 0,
+      "deviated_rounds": 0,
+      "no_person_rounds": 507,
+      "failed_rounds": 0,
+      "reminder_played": 0,
+      "reminder_suppressed": 0
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "date": "2026-11-06",
+      "focus_ms": 0,
+      "correct_rounds": 1,
+      "deviated_rounds": 0,
+      "no_person_rounds": 0,
+      "failed_rounds": 0,
+      "reminder_played": 0,
+      "reminder_suppressed": 0
+    }
+  ],
+  "conversations": {
+    "messages": 184,
+    "sessions": 1,
+    "first_ms": 1793934682300,
+    "last_ms": 1794823173474
+  },
+  "conversation_roles": [
+    {
+      "role": "assistant",
+      "count": 92
+    },
+    {
+      "role": "user",
+      "count": 92
+    }
+  ],
+  "conversation_days": [
+    {
+      "day": "2026-11-16",
+      "messages": 2,
+      "sessions": 1
+    },
+    {
+      "day": "2026-11-11",
+      "messages": 20,
+      "sessions": 1
+    },
+    {
+      "day": "2026-11-10",
+      "messages": 4,
+      "sessions": 1
+    },
+    {
+      "day": "2026-11-09",
+      "messages": 142,
+      "sessions": 1
+    },
+    {
+      "day": "2026-11-06",
+      "messages": 16,
+      "sessions": 1
+    }
+  ],
+  "device_session_requests": [
+    {
+      "status": "ok",
+      "count": 93,
+      "first_ms": 1793931298893,
+      "last_ms": 1794824559522
+    },
+    {
+      "status": "prefetch",
+      "count": 100,
+      "first_ms": 1793931290184,
+      "last_ms": 1794824567168
+    }
+  ],
+  "r1_records": {
+    "count": 0
+  },
+  "ark_current": [
+    {
+      "received_at_ms": 1794834220957,
+      "source_mode": "unknown",
+      "snapshot_id": "ark-58fc7f6cc77a4117-1010",
+      "captured_at_ms": 1794834210671,
+      "wallets": {
+        "family_coin": null,
+        "stardust": null
+      },
+      "inventory": {
+        "M-CARD-001": 1
+      }
+    }
+  ]
+}

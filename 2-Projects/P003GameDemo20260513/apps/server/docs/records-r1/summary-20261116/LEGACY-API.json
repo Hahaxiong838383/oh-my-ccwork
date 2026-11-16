@@ -1,0 +1,351 @@
+{
+  "at_ms": 1794834327496,
+  "sn": "BJP00326081002000031",
+  "identity": "server_signed_read_only_probe_not_mobile_login",
+  "record_count": 0,
+  "results": [
+    {
+      "base": "http://127.0.0.1:3001",
+      "dashboard_status": 200,
+      "dashboard_cache": "no-store",
+      "records": {
+        "schema_version": 1,
+        "coverage": {
+          "kind": "received_records",
+          "complete": false,
+          "reason": "partial_history",
+          "min_occurred_at_ms": null,
+          "max_occurred_at_ms": null,
+          "first_received_at_ms": null,
+          "last_received_at_ms": null
+        },
+        "updated_at_ms": null,
+        "yesterday_income": {
+          "available": false,
+          "reason": "no_records",
+          "date": "2026-11-15",
+          "timezone": "Asia/Shanghai",
+          "source_mode": null,
+          "family_coin": null,
+          "stardust": null,
+          "occurred_from_ms": null,
+          "occurred_to_ms": null,
+          "received_at_ms": null
+        },
+        "latest_items": {
+          "available": false,
+          "reason": "no_records",
+          "source_mode": null,
+          "record_id": null,
+          "save_id": null,
+          "occurred_at_ms": null,
+          "received_at_ms": null,
+          "items": []
+        }
+      },
+      "page_status": 200,
+      "page_ids": [],
+      "wrong_owner_status": 404,
+      "legacy_sha256": {
+        "ark": "1409340092dfa96227f44804d9ef37e5a7c273bf1dc7e1ec5c8830eda667e0e5",
+        "usage": "bdd91ee0be0030e08b3b124cdf107bab692665b05e4047e5448658dd544f929d",
+        "device": "7854398c659efb7391ac8ede65a08842ea7bd55f29650321b1a4c074228d0ec7",
+        "today": "2a2f22c1428cd350478f6345e9ab2b67ebcebca13832abc436cb0f6772676745",
+        "week": "a2c8e75df5e5a920f1c56bcc516cf503b4434af80e9074073d6faceab3f3de28"
+      },
+      "device": {
+        "updated_at_ms": 1794833584039,
+        "online": false,
+        "lid_open": false,
+        "present": false,
+        "brightness_level": 1,
+        "color_mode": "cool",
+        "image_distance_m": 2,
+        "image_distance_state": "valid"
+      },
+      "usage": {
+        "source": "telemetry.focus_segment",
+        "timezone": "Asia/Shanghai",
+        "today": {
+          "date": "2026-11-16",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        "daily": [
+          {
+            "date": "2026-11-10",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-11",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-12",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-13",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-14",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-15",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-16",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          }
+        ]
+      },
+      "ark": {
+        "available": false,
+        "reason": "non_normal",
+        "source_mode": null,
+        "snapshot_id": null,
+        "captured_at_ms": null,
+        "received_at_ms": null,
+        "wallets": {
+          "family_coin": null,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": null
+        }
+      },
+      "today": {
+        "focus_minutes": 0,
+        "guarded_minutes": 0,
+        "posture_alert_count": 0
+      },
+      "week": {
+        "total_focus_minutes": 0,
+        "daily_average_focus_minutes": 0,
+        "daily": [
+          {
+            "date": "2026-11-10",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-11",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-12",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-13",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-14",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-15",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-16",
+            "focus_minutes": 0
+          }
+        ]
+      }
+    },
+    {
+      "base": "https://kidshub-ai.hahaxiong.cc",
+      "dashboard_status": 200,
+      "dashboard_cache": "no-store",
+      "records": {
+        "schema_version": 1,
+        "coverage": {
+          "kind": "received_records",
+          "complete": false,
+          "reason": "partial_history",
+          "min_occurred_at_ms": null,
+          "max_occurred_at_ms": null,
+          "first_received_at_ms": null,
+          "last_received_at_ms": null
+        },
+        "updated_at_ms": null,
+        "yesterday_income": {
+          "available": false,
+          "reason": "no_records",
+          "date": "2026-11-15",
+          "timezone": "Asia/Shanghai",
+          "source_mode": null,
+          "family_coin": null,
+          "stardust": null,
+          "occurred_from_ms": null,
+          "occurred_to_ms": null,
+          "received_at_ms": null
+        },
+        "latest_items": {
+          "available": false,
+          "reason": "no_records",
+          "source_mode": null,
+          "record_id": null,
+          "save_id": null,
+          "occurred_at_ms": null,
+          "received_at_ms": null,
+          "items": []
+        }
+      },
+      "page_status": 200,
+      "page_ids": [],
+      "wrong_owner_status": 404,
+      "legacy_sha256": {
+        "ark": "1409340092dfa96227f44804d9ef37e5a7c273bf1dc7e1ec5c8830eda667e0e5",
+        "usage": "bdd91ee0be0030e08b3b124cdf107bab692665b05e4047e5448658dd544f929d",
+        "device": "7854398c659efb7391ac8ede65a08842ea7bd55f29650321b1a4c074228d0ec7",
+        "today": "2a2f22c1428cd350478f6345e9ab2b67ebcebca13832abc436cb0f6772676745",
+        "week": "a2c8e75df5e5a920f1c56bcc516cf503b4434af80e9074073d6faceab3f3de28"
+      },
+      "device": {
+        "updated_at_ms": 1794833584039,
+        "online": false,
+        "lid_open": false,
+        "present": false,
+        "brightness_level": 1,
+        "color_mode": "cool",
+        "image_distance_m": 2,
+        "image_distance_state": "valid"
+      },
+      "usage": {
+        "source": "telemetry.focus_segment",
+        "timezone": "Asia/Shanghai",
+        "today": {
+          "date": "2026-11-16",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        "daily": [
+          {
+            "date": "2026-11-10",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-11",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-12",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-13",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-14",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-15",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-16",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          }
+        ]
+      },
+      "ark": {
+        "available": false,
+        "reason": "non_normal",
+        "source_mode": null,
+        "snapshot_id": null,
+        "captured_at_ms": null,
+        "received_at_ms": null,
+        "wallets": {
+          "family_coin": null,
+          "stardust": null
+        },
+        "inventory": {
+          "M-CARD-001": null
+        }
+      },
+      "today": {
+        "focus_minutes": 0,
+        "guarded_minutes": 0,
+        "posture_alert_count": 0
+      },
+      "week": {
+        "total_focus_minutes": 0,
+        "daily_average_focus_minutes": 0,
+        "daily": [
+          {
+            "date": "2026-11-10",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-11",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-12",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-13",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-14",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-15",
+            "focus_minutes": 0
+          },
+          {
+            "date": "2026-11-16",
+            "focus_minutes": 0
+          }
+        ]
+      }
+    }
+  ],
+  "real_device_e2e": false,
+  "room_check": {
+    "at_ms": 1794834327671,
+    "rooms": 0,
+    "participants": 0,
+    "idle": true
+  }
+}

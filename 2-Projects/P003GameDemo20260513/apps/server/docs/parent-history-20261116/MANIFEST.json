@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "path": "src/routes/telemetry.ts",
+      "before_sha256": "2cdf3ebffca78f5c1783dc73bd7bd14bc13ad2e52dbcb8b89de1c09e65e0401f",
+      "after_sha256": "9bb9913ab2f6680ee209a0e15d202bdab83fa0f27382ca73a117761a2fba8759"
+    },
+    {
+      "path": "src/parent-conversations.ts",
+      "before_sha256": null,
+      "after_sha256": "33e17148525d71c7277ac34ce7104439caa096fc61b518d35da0a78dfa523ba5"
+    }
+  ],
+  "scope": "C current binding only; immutable authorized tuple"
+}

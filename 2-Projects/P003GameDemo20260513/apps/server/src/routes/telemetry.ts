@@ -6,6 +6,7 @@ import { deviceRegistryStore } from '../device-registry-store.js';
 import { verifyDeviceCredential } from './device-session.js';
 import { verifyAuthToken } from '../auth-jwt.js';
 import { dashboardArk } from '../ark/dashboard.js';
+import {parentConversationsRoute,parentConversationSummary} from '../parent-conversations.js';
 
 /**
  * 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824 + CC 实施计划）。
@@ -196,15 +197,16 @@ deviceTelemetryRoute.post('/', async (c) => {
 
 // ─────────────────── 家长聚合查询 ───────────────────
 
-export const parentTelemetryRoute = new Hono<{ Variables: { accountId: string } }>();
+export const parentTelemetryRoute = new Hono<{ Variables: { accountId: string; authRole: string } }>();
 
 parentTelemetryRoute.use('*', async (c, next) => {
-  if (c.req.path.endsWith('/ark/records') || c.req.path.endsWith('/dashboard')) c.header('Cache-Control', 'no-store');
+  if (c.req.path.endsWith('/ark/records') || c.req.path.endsWith('/dashboard') || c.req.path.endsWith('/conversations')) c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const auth = await verifyAuthToken(token);
   if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
   c.set('accountId', auth.accountId);
+  c.set('authRole', auth.role);
   await next();
 });
 
@@ -228,6 +230,7 @@ function dateAdd(day: string, deltaDays: number): string {
 }
 
 parentTelemetryRoute.route('/', recordsParentRoute);
+parentTelemetryRoute.route('/', parentConversationsRoute);
 
 parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
   c.header('Cache-Control', 'no-store');
@@ -260,6 +263,7 @@ parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
     data: {
       ark,
       records,
+      conversations: parentConversationSummary(c.req.param('publicId'), c.get('accountId'), c.get('authRole')),
       usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',
         today: usageDaily[usageDaily.length - 1], daily: usageDaily },
       device: {

@@ -1,0 +1,992 @@
+{
+  "created_at": "2026-11-16T21:31:21.930452+08:00",
+  "source_sha256": "45c7682dbe961cc308cb263801fc82f3ee749e43e2cfcf95aa9fce31faeb8848",
+  "mode": "live",
+  "api_base_url": "https://kidshub-ai.hahaxiong.cc",
+  "wechat_uploaded": false,
+  "real_phone_verified": false,
+  "is_c_device_apk": false,
+  "files": [
+    {
+      "path": "xiaoke-miniapp/.gitignore",
+      "bytes": 90,
+      "sha256": "0ccaa7954c714d9a518484ee6aaee6ed132d03d02aaed4bd3b935c9fc4812f18"
+    },
+    {
+      "path": "xiaoke-miniapp/README.md",
+      "bytes": 10537,
+      "sha256": "a85e5bdf738df105012c37ffd83046e2fc0aa4900d3d4bbc9e0fd248fe7d1715"
+    },
+    {
+      "path": "xiaoke-miniapp/config/index.ts",
+      "bytes": 1451,
+      "sha256": "30ddebb5b85c0f613ed43e964fe4447dd3c51a560c267883923ec408b60f9aa3"
+    },
+    {
+      "path": "xiaoke-miniapp/docs/evidence/live-login-h5.json",
+      "bytes": 788,
+      "sha256": "2b9c54fb26fb9ccdcfd5a48116ad8de6e56eacbbb3ae56afa752a4a3f4f21690"
+    },
+    {
+      "path": "xiaoke-miniapp/docs/evidence/live-login-h5.png",
+      "bytes": 44575,
+      "sha256": "4f9b05b3e42040e3cf0a47fdf85776e5bc551e97d896f84b8184453ebe21f5b1"
+    },
+    {
+      "path": "xiaoke-miniapp/docs/小可小程序接口协议.md",
+      "bytes": 21933,
+      "sha256": "2a78b447952788942329b1de189cfb228fbff2a8deafa04cd450d4c5e5470157"
+    },
+    {
+      "path": "xiaoke-miniapp/docs/首轮真实数据联调回复-2026-10-29.md",
+      "bytes": 8166,
+      "sha256": "a143f978fb835ba35e7148d20cb188c249cfd50d2c06b960bba43ccf1f60b794"
+    },
+    {
+      "path": "xiaoke-miniapp/package-lock.json",
+      "bytes": 450681,
+      "sha256": "0562260fe6fbeeeac08f4415b581e33dc5aedfa8668c2dd3122493e461cb0178"
+    },
+    {
+      "path": "xiaoke-miniapp/package.json",
+      "bytes": 2052,
+      "sha256": "e027b160ff7c23c0c5afe1e8fa4b17ee6c1228f2f9ac04c36c8b8f36724b8d1e"
+    },
+    {
+      "path": "xiaoke-miniapp/project.config.json",
+      "bytes": 931,
+      "sha256": "11dda7afecc5e4494c047db5f807a75a803249060a7fa49d2f75f4bbc68fd9dc"
+    },
+    {
+      "path": "xiaoke-miniapp/server/app.ts",
+      "bytes": 2236,
+      "sha256": "555235b7ef5eef0f6bdbc23dd71a099fa85f87b156abd170ed8c89c662b27466"
+    },
+    {
+      "path": "xiaoke-miniapp/server/cache.ts",
+      "bytes": 726,
+      "sha256": "8e9bbac7867a371eb313d383363c2aa6e3cd707fa6537b573217b4ef4ebc23af"
+    },
+    {
+      "path": "xiaoke-miniapp/server/cc-client.ts",
+      "bytes": 3160,
+      "sha256": "f1e5156ba64380c3d72d2d6603171269013fa321bce1de14687dc0c9bed70256"
+    },
+    {
+      "path": "xiaoke-miniapp/server/config.ts",
+      "bytes": 1746,
+      "sha256": "8ff4e4fd74d628e307f9ca56a41791b8aa01e58856b08bd7eb1a1e27b813d048"
+    },
+    {
+      "path": "xiaoke-miniapp/server/index.ts",
+      "bytes": 402,
+      "sha256": "8566b58a05ce6493f9ac3beb5f8afbfa25db5f9629ff1be8fe5948174dd61373"
+    },
+    {
+      "path": "xiaoke-miniapp/server/logger.ts",
+      "bytes": 1070,
+      "sha256": "ae3cce73739849104842d0c652f5d8b923466dc5c37522b9e12ea585fadcb023"
+    },
+    {
+      "path": "xiaoke-miniapp/server/mock-cc.ts",
+      "bytes": 1503,
+      "sha256": "c74232a1a42099099c57990d6f759db01099f868d39646a89ac81ecf34d7cb96"
+    },
+    {
+      "path": "xiaoke-miniapp/server/session.ts",
+      "bytes": 1054,
+      "sha256": "01dd9707d6157689cc5ad526687f2ab161098c82ce283a2ecb4feae991cdbc07"
+    },
+    {
+      "path": "xiaoke-miniapp/server/tsconfig.json",
+      "bytes": 273,
+      "sha256": "64d0b5b5370a94ba7d267c9920a6f491ed666d7dcb7d8a205b153f6f89309f52"
+    },
+    {
+      "path": "xiaoke-miniapp/src/app.config.ts",
+      "bytes": 381,
+      "sha256": "ebf3b471581708fbff36c9ce3c05300972c77477901e2e9538ff63c9b4051013"
+    },
+    {
+      "path": "xiaoke-miniapp/src/app.css",
+      "bytes": 85719,
+      "sha256": "cdcb9c2866c31a6d9b5f1a42ff7f53842a118975ae15c373654ffd9fc7288115"
+    },
+    {
+      "path": "xiaoke-miniapp/src/app.tsx",
+      "bytes": 153,
+      "sha256": "e27dab7b583e8b70a109c3503034731d023e0a34b3257cdc16056c6a0b7b6d5d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/activeIcon.png",
+      "bytes": 1983,
+      "sha256": "93b34e2d2a8e81f598e50401e7c2f4cd52ca013c5537c5567fa7375a29cccc00"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/adviceIcon.png",
+      "bytes": 805,
+      "sha256": "848c4a23b720770cd855cc5b1bd565e44d27fe1be4c18a4ea110bb85c1980359"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/axisControlled.png",
+      "bytes": 4439,
+      "sha256": "7f15a5746f57944033709292bd5cec0a92362e7261f62bb8354b1ef8aa7992b1"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/axisControlled.webp",
+      "bytes": 2658,
+      "sha256": "cf2aa687a8bc8f9aa7f5d488ec4b0fa2761cd01ab4367756fd8b08fcda79a298"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/axisFast.png",
+      "bytes": 4466,
+      "sha256": "e27fb4f2db14f9ff4815fce6a4cade31cf6a0f9233c34c38d91048c35f7c434f"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/axisFast.webp",
+      "bytes": 2760,
+      "sha256": "366421b21398a7b81b878e72971d3a9d44a3de85a6d3ceaa8fc84f6c2c8bee55"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/axisTrendChart.png",
+      "bytes": 40971,
+      "sha256": "735e6a438009405cfd94f2b728d86829f97718994aa515c3647a7b2d8a07bea8"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/axisTrendChart.webp",
+      "bytes": 13400,
+      "sha256": "8245fac7f4a6cfd5bde9c6018289da0d9aa09a9c8625fe759afca436c027e88e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/badgeExpert.png",
+      "bytes": 106551,
+      "sha256": "cb0959ee2e355200d2162d075d36ed9d406059b7143054b1dfd01d5217e7942c"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/badgeExpert.webp",
+      "bytes": 83528,
+      "sha256": "e0641074360fb178019bedfa345df969638d1dd7f5305228b7e485c960d81b24"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/badgePioneer.png",
+      "bytes": 111898,
+      "sha256": "c8c3defe75d5e81907813c99ee5b14b5713fdd9d2e7ea11d7ed4ac196ab7aa3e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/badgePioneer.webp",
+      "bytes": 87636,
+      "sha256": "3ed58e0c9bd029eb357c0bdb19c2bdf74edd729326d892b19ee53cdb8c965834"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/book.png",
+      "bytes": 8724,
+      "sha256": "a3d46d24263ba5f1e0c33391aee8295b237bf1176cde6cb49502a5b6fd39928c"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/brightness.png",
+      "bytes": 761,
+      "sha256": "da59c83b1cae60c81610a89ea17705ca3e08f2d0c3a8fe25c386d1a15e2dae8b"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/coin.png",
+      "bytes": 4062,
+      "sha256": "ac2c84f3a572fc7bb42f66a58e51479d92f5aeac0c7a07f50c472cd671c3d0eb"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/custom.png",
+      "bytes": 1954,
+      "sha256": "4c56ab3e41992a483c9dbc3bc2d1649dc8ec08265074cb1352dec152c384d779"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/customerQr.png",
+      "bytes": 51542,
+      "sha256": "2cbe381c89d549055323c720eb0e06c0586c7f40030640e29ce4c7a854f8c058"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/desk.png",
+      "bytes": 18261,
+      "sha256": "0e37e308e7bb35b8fd82007e8c812f329f0c04167ccdbb35b50d38af6043ffcc"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/desk.webp",
+      "bytes": 13544,
+      "sha256": "5c751e23c0e2254bb0ab1a4cfaece090bec80f34d0277c674abf73a15296aada"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/detailAdopted.png",
+      "bytes": 1134,
+      "sha256": "f70652ec4eac2ce00db5f41a7edb83480767483abc84303b2f65846157f3e353"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/detailEvaluating.png",
+      "bytes": 1103,
+      "sha256": "397d7607cd7f0e4176b6a4fdb9fc02177fcaf757a3800a9cfdbbc837f82ed118"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/detailGolden.png",
+      "bytes": 1228,
+      "sha256": "6d35c0b4062a2b2b4878dc0bfc21437c0939e7dba554cbd0de34702dde4a566e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/detailProposed.png",
+      "bytes": 1071,
+      "sha256": "a9d9a5bb6dd9237029b5f8745adbc604faede58a24b98923d32124b0f0c297da"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/detailReceived.png",
+      "bytes": 1158,
+      "sha256": "867ddf2e69afd0e956218fb8bbccab3fabd83ceb3e5ab3e359fc81c27ee68faf"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/deviceCard.png",
+      "bytes": 7000,
+      "sha256": "c863ef9f7e5e0bb8561d225eafcd16ed8cada6ccfe7721cc20d5a6abf16996c6"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/deviceCard.webp",
+      "bytes": 2558,
+      "sha256": "afc8c69e813c81b35e4f87ace59f2aed9ded1ab7a3bb9e491685d6c6c035c468"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/distance.png",
+      "bytes": 848,
+      "sha256": "910fc98e03a9d28f444e65529e6fdb9a4796280895124a55f129661208eb0928"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/durationIcon.png",
+      "bytes": 3128,
+      "sha256": "31b1f2dc1a8570779fc64aa82c0e89bd2927e3797afedb3e8b67888f80b25288"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/free.png",
+      "bytes": 2569,
+      "sha256": "15cf8727f82a627280d3a367920856b2853ea2251ea268c5021b1b778d8ce159"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/frequency.png",
+      "bytes": 1466,
+      "sha256": "80fa02108a26f5fe49072904b856da770cf1fe7fe9cee9511efe2ea72c15f5ea"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/gift.png",
+      "bytes": 1953,
+      "sha256": "53fdeaba2f859c8b36d056c20d54a788274b3003c25e80c415c7d2b8c9815714"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/goalIcon.png",
+      "bytes": 545,
+      "sha256": "224178d6d9b10cf8295a4835012cd24563c91f5a75f3bb59b48434df20416e58"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/guardHeading.png",
+      "bytes": 1067,
+      "sha256": "18e1507cbd6d7cec5872a26a06d57896ea87e8bb2a7337e4b352103245bd0b88"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/guideMax.png",
+      "bytes": 62166,
+      "sha256": "84a27601a5f04e38976a2f53abf844483065a315edfc28b56c488475961c0680"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/guideMax.webp",
+      "bytes": 20308,
+      "sha256": "71e6ad8479aa381c7c15d42d6bdf9cfc60eeab18d0e46ace47421ddc5e78a195"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/guideUltra.png",
+      "bytes": 62163,
+      "sha256": "f1a239432a01bcead876c908b0859674d5eef7e639c828e2eeecbb6871da3fbb"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/guideUltra.webp",
+      "bytes": 20306,
+      "sha256": "0c700e1c3455bfb50447ed6aba7ce3da721092907dbd8b8dced9bc2236bcfb1b"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/helloRobot.png",
+      "bytes": 52465,
+      "sha256": "1d8da302aa63b6bfcad8ada889eb36a51f2df28b255ae3f8cb8db2cd6e2a0332"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/helloRobot.webp",
+      "bytes": 38820,
+      "sha256": "7300b06ce02e2b908bef6929cf7b1d3952580f112594dfcdc61626b34eef61b6"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/homeAvatar.png",
+      "bytes": 8638,
+      "sha256": "d718f0cda60f7e4c422d2e6b34dddbbdb12899678ba3b02f93c1281f5f095abd"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/homeAvatar.webp",
+      "bytes": 6774,
+      "sha256": "1285ce2d4e1dbe21dc76665ba2bac15221233eb844f1598fbf61c1768d5d64a8"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/homeBackground.png",
+      "bytes": 277406,
+      "sha256": "8854a1325263b0f5de1b83331e2d5537189cd9d795a72c4ee6cfd1d3cfaa6a6a"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/homeBackground.webp",
+      "bytes": 116632,
+      "sha256": "2a65be073b2da0742fe4ee1320ef1bf263d6c1f3ebb254185c522a3792204e64"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/idea.png",
+      "bytes": 1780,
+      "sha256": "935146a93b3435b6dedf83f737786148657704847d95f0cc89b8471ca3df19bb"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/kidsGardener.png",
+      "bytes": 46225,
+      "sha256": "846522bd2633e1ba67db59cec5f9f701454cc05ff1b806a8112858afa842dead"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/kidsGardener.webp",
+      "bytes": 33572,
+      "sha256": "913b26251a1d5294f829b18671efc78e77df51e2c7d15eb69795b0452729f62b"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/kidsLevel.png",
+      "bytes": 17387,
+      "sha256": "06e1337e7d7dfbbf7a94a99dd32a8b5886f82dc88850854dc80b7b2d1d0123c0"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/kidsLevel.webp",
+      "bytes": 14006,
+      "sha256": "e3455862f3a54beb761b3dc09539851a837158b4f284c840313fc0fb57e0c8b2"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/kidsRobot.png",
+      "bytes": 12462,
+      "sha256": "f7f762efa5496e4dd7de7adc75eb5eb67d922d043260df21aa55cac9dc3210fc"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/kidsRobot.webp",
+      "bytes": 9018,
+      "sha256": "fdfd381dee3609043f46388697eb1b355056f4109d9343c5b40271a262541cb7"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/movie.png",
+      "bytes": 2568,
+      "sha256": "0632728a61f8ad94f116cd0a75470079c74848c7f72f1aba33f3011ee0ebb27d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navHome.png",
+      "bytes": 907,
+      "sha256": "d5b12f1e561b0b69f1b61a49898916471e356ff436144a281f4247db08955f69"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navHomeActive.png",
+      "bytes": 899,
+      "sha256": "428d07c657850990f1bb90712e79c2199146309a5741afea726b92954fd5cda8"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navKids.png",
+      "bytes": 802,
+      "sha256": "cc634c63dbdc40519f9479c2248ca90890ec6774e1bed245a065ee700b40700b"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navKidsActive.png",
+      "bytes": 802,
+      "sha256": "551ad10df54117db1ba7e0ad6d0272797b38ce5ddfbd48001d83dafa99d340bd"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navMine.png",
+      "bytes": 933,
+      "sha256": "92fa7be17dfa4c47b299951a330d8a97df4c4b5cd53bb3a8da05ce74a44cbc08"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navMineActive.png",
+      "bytes": 913,
+      "sha256": "da184641f9f9f32383adb8615429ec6839b564e9f1e32261f9d3d172b01c5701"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navRewards.png",
+      "bytes": 687,
+      "sha256": "d58050d0cea857d9b13de8fdf4d5a67de48ecb1251598c25c6b3e805dc7b202c"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navRewardsActive.png",
+      "bytes": 684,
+      "sha256": "c1a9ae75793c170235616fa22140587a87446f5283eff8086ead7ba5f6dd981c"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navWeekly.png",
+      "bytes": 594,
+      "sha256": "fac3cbfc7b57287d8cd985e04ac7722fb76408c8b3263dce6acc69d269cbac1e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/navWeeklyActive.png",
+      "bytes": 594,
+      "sha256": "bb3e3e9b832c842372193c197119d7ceba3264d0f92918326a68192ceeedfd04"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/newsBell.png",
+      "bytes": 704,
+      "sha256": "a4ef65cc639409b17c687434a217a9d5c536271eefe61cb2e4e1215c600ed3e6"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/officialMiniCode.png",
+      "bytes": 45905,
+      "sha256": "9c28326bc0c7c065d3d4da531703f366cffe6d62f84909b5af14cde5a5ce5d8d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/officialQr.png",
+      "bytes": 30322,
+      "sha256": "2acb9af9370cf6ea5fed37da0ed56f6c4e587165736fa1e943a1b000aa97f408"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/parentDefaultAvatar.png",
+      "bytes": 48787,
+      "sha256": "096a7164cab506c5773df7ce0f693ad4bd96ab365601490094e76809e48285e9"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/parentDefaultAvatar.webp",
+      "bytes": 30670,
+      "sha256": "5a387ec9da3029fc7fb35cf337224e06ad6cd36570bf0974b99c95e1ddf8e767"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/park.png",
+      "bytes": 2035,
+      "sha256": "b3cd0670068760f5678900e2c843e68d598bcad4af1c703aef71028bd9a5564f"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/postureIcon.png",
+      "bytes": 2929,
+      "sha256": "21e67ecff8a8fd0d683cedb23bd8b1d5ed11e143ca276014c6ff9820bb7bc329"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/promiseActive.png",
+      "bytes": 2144,
+      "sha256": "4ab69d6a72e053548e97d38a00ff3d24f35e9f1e95572c85fc9b3f00b81a001a"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/promiseHeading.png",
+      "bytes": 33837,
+      "sha256": "fe7b7ac1db50ee112b417643d7f880fae3be1eaa4f67578c0bbad77059584e52"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/promiseHeading.webp",
+      "bytes": 20606,
+      "sha256": "bb72c4ae3ecd012cf44f54f46c1ccf3542ac72431ea524883966b11dce557c3d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/promotionQr.png",
+      "bytes": 29990,
+      "sha256": "513e5d9c29af3a1b6b4387b490a4b74f887c1f8a406c6ddd1fba66b9211061d8"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/reading.png",
+      "bytes": 1731,
+      "sha256": "f36c5634e6339ff9b4c691e5a5103911b243dec5c6ac3be8f05fb55dd16c904f"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/robot.png",
+      "bytes": 21169,
+      "sha256": "108a9372fcee0e4331ef016d8e2a952c64401dccf5c966e0818dbc38b2473599"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/robot.webp",
+      "bytes": 16878,
+      "sha256": "92c54fde701f6b04728d1b4a280d970a773bb9fc40bf3ca0a535b8cc0e7a7dac"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/shareBrand.png",
+      "bytes": 16580,
+      "sha256": "4532be369b442e1d41fbc32f474900be1fcd6c2e869b49327f0ca5b3ed65c305"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/shareQuote.png",
+      "bytes": 29128,
+      "sha256": "61bbff88f6497c1c7f85a7423ddf7b7d1ebebe4c1040fa0cf13cc433d532a145"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/shareQuote.webp",
+      "bytes": 18262,
+      "sha256": "a573ed2f7b1d6eb6a63342ce469f9c1dfcd6593ada0f1434348f9c4ccf7fbd95"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/shareSave.png",
+      "bytes": 4346,
+      "sha256": "8a4cb0338456f01806e8552f564ff55e556aee37ac384629870f777452e834a8"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/shareWechat.png",
+      "bytes": 13370,
+      "sha256": "60c45bfebff75def1df979a79044516c7ba5fbe654480e7a9bb938f4c9330b66"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/sport.png",
+      "bytes": 2282,
+      "sha256": "99cba41c839342cf0592557bbde93d16eb84446566254f415d5f69e895fc0419"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/stampAdopted.png",
+      "bytes": 2024,
+      "sha256": "c463f39c010c088cfc58eac4fd9e1c275f8801191d67bd49cdbfe3554d24fd4f"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/stampEvaluating.png",
+      "bytes": 1792,
+      "sha256": "daf7995db13c48523d6bcba514ed5d623bc0369024da2d4eb8b9945b15c0813d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/stampGolden.png",
+      "bytes": 2106,
+      "sha256": "ad3a907a943197f5623f8aaff054ff828a12c529ba82d400491b4f57075c1d52"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/stampReceived.png",
+      "bytes": 1980,
+      "sha256": "df80bacd0c9a652d033bbc37ba4aa7dcd2932dbf46b43ed01b45e0a5a6e1b240"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/taskActive.png",
+      "bytes": 2144,
+      "sha256": "4ab69d6a72e053548e97d38a00ff3d24f35e9f1e95572c85fc9b3f00b81a001a"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/taskHeading.png",
+      "bytes": 33540,
+      "sha256": "e1eeff4298985c8106a01422cf9babd9a05a8bea2fbe8a79de29cbb89ba8c06f"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/taskHeading.webp",
+      "bytes": 20760,
+      "sha256": "642ba2a542e919a0b832a925d3dad16db6be00f2c455e74902d8b73af603c102"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/taskPending.png",
+      "bytes": 2144,
+      "sha256": "4ab69d6a72e053548e97d38a00ff3d24f35e9f1e95572c85fc9b3f00b81a001a"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/temperature.png",
+      "bytes": 1594,
+      "sha256": "d6ea9c2ac3a908fb8818d825565ab89b447b8ae886425af3d00a0af769d57289"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/timelineHeading.png",
+      "bytes": 1793,
+      "sha256": "a67c985926cf5fe9fc22845b7c4b7f262cad485b6b4993c855ea661cc7f22670"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/trendHeading.png",
+      "bytes": 534,
+      "sha256": "8ee7ce56380323dc1c4f6f44b8143abaeb97b5623e2affab7b346955dda8c422"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/trophy.png",
+      "bytes": 13726,
+      "sha256": "f0584ea26a55683db8baaf433ccc86a1618e9665a4ed2fdf5ccf390439eba69e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/trophy.webp",
+      "bytes": 10788,
+      "sha256": "478a63a8db9e2101b7cc289e7164356dfdc03141701e972e2479d11c73cfa4ad"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/visionDown.png",
+      "bytes": 3330,
+      "sha256": "a190e249800f3a1178048942728ea4a9aa025536e95bb97e46ebfd7d16955710"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/visionStable.png",
+      "bytes": 3661,
+      "sha256": "3c2613a924d3888c5a4d1d82c6f3cf694b0d4ef62fd831627e9c50c8c433fa49"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/visionTrendChart.png",
+      "bytes": 41327,
+      "sha256": "3cbb28319cb67fea243a7b9b9343f07f28db41e26db4c5a5ede1b1652f3a6089"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/visionTrendChart.webp",
+      "bytes": 13644,
+      "sha256": "3f642e2f67e4685d84968afaa435f2f930252af9a75a3170b108c87a60e005cb"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/weeklyHighlight.png",
+      "bytes": 89605,
+      "sha256": "0978e9533e9e74345b5e4066880c49964751217d6fe29b09f787f770a14ec1a2"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/weeklyHighlight.webp",
+      "bytes": 57574,
+      "sha256": "34f243cd60e1518349f3c820c85a3fabcfd5dfd77bfd746bdca0d077f244dabf"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/weeklyLabel.png",
+      "bytes": 20864,
+      "sha256": "d8c314d251e7e585481d48fed1659b2072932984a9959cf95a1dc2dd5788a8e0"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/weeklyLabel.webp",
+      "bytes": 11472,
+      "sha256": "71183e42d0e673b880afeaccfe5f9fa0407b65a082d6fdd7c801a73e497e07f1"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/weeklyRobot.png",
+      "bytes": 36100,
+      "sha256": "0178621d960160340dadb99632759c9291cf8579e7646ff5bddfa58107829989"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/weeklyRobot.webp",
+      "bytes": 26830,
+      "sha256": "e607ddc6c4878323f011b44174ae94d014929d3c0dc718eab91223f16a606d5b"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets/xiaokeStamp.png",
+      "bytes": 20107,
+      "sha256": "b09c5e0c8600e426e7debbde2c564a8287721a4cb77e4871926b5254a3269577"
+    },
+    {
+      "path": "xiaoke-miniapp/src/assets.ts",
+      "bytes": 4947,
+      "sha256": "1519d7dab48f3f21c073f2d089278a240906385dc2657d849a08e412b58550cf"
+    },
+    {
+      "path": "xiaoke-miniapp/src/index.html",
+      "bytes": 366,
+      "sha256": "6a39a291bef1178be43dba8352570c44c308058d7deaa3927c999303765d9403"
+    },
+    {
+      "path": "xiaoke-miniapp/src/model.ts",
+      "bytes": 17908,
+      "sha256": "fc445802a7f4928070b33819ef5a2c8bd13448a747372f65e18bf01dc20439b6"
+    },
+    {
+      "path": "xiaoke-miniapp/src/pages/index/components.tsx",
+      "bytes": 4273,
+      "sha256": "9107c9d8c9181b68b78f5dc151ee7942feac937cd2cc681fb5ee1561a6a3cb2d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/pages/index/index.config.ts",
+      "bytes": 84,
+      "sha256": "adffa8290350a49ed35c6b6a794834c501f19e94a04a98aaef433734e1fdcb54"
+    },
+    {
+      "path": "xiaoke-miniapp/src/pages/index/index.tsx",
+      "bytes": 97279,
+      "sha256": "74f3e5ebb61d18c1cecc3ae624adac636f218b48753e3ecc9ccfba47e8985ff1"
+    },
+    {
+      "path": "xiaoke-miniapp/src/pages/index/real-data.tsx",
+      "bytes": 6072,
+      "sha256": "c2e739c231e8286b786bba4a5034cb63aff71619814556ff3ac11f48f2edc764"
+    },
+    {
+      "path": "xiaoke-miniapp/src/pages/index/real-details.tsx",
+      "bytes": 8576,
+      "sha256": "62c1e2985e518700644e5fc6513411201da679cd8d8ef4ca80600e698647314a"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/api.ts",
+      "bytes": 2211,
+      "sha256": "43058715901b76806597d6cea6badb94cfaf81d4490e01144fd08cd218b15f81"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/bleCrypto.ts",
+      "bytes": 5054,
+      "sha256": "df5eb2d9dbf0b2b45f7af52cdd14847fa4c9b5fdfa1c0ca6eb0e50305af0736b"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/bleProtocol.ts",
+      "bytes": 3737,
+      "sha256": "67a919a2c89a1c4b2f6f04407d2da3adda743cb64be242a291683bdf3cdc57c6"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/bleSession.ts",
+      "bytes": 12923,
+      "sha256": "2f7d2ffdc7eae73d8a67f7f3154a8b3da4c5bc9e39d9e8683941dd709557c958"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/bluetooth.ts",
+      "bytes": 3555,
+      "sha256": "3f63fb27766a75ce1e5c140c8c590fee39136e3bf9ed20704217fe85e7664e76"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/demo.ts",
+      "bytes": 2648,
+      "sha256": "3974a6dec567245467ee139aa7ceb4104c83c1c5374d46d5b8ab6ce8d0f72fae"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/dto.ts",
+      "bytes": 343,
+      "sha256": "6cb7eb85b1bffc68eada352156ab07e1d7f729d1685b463761db7e33ec98dc0d"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/history-api.ts",
+      "bytes": 2806,
+      "sha256": "c5d343082f6d54324dee8ec0ad81e250ed81a1776dfd0dcb4e0422977ebaac9e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/live-api.ts",
+      "bytes": 2811,
+      "sha256": "0e47a469553f2967d1b2916811becabdb3c89b77331fb91206fe641052a14d37"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/live-data.ts",
+      "bytes": 6759,
+      "sha256": "4e12203cee063910ca5addb409ee1c5375e8cecdb58d840d86752081ffda6108"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/live-history.ts",
+      "bytes": 2978,
+      "sha256": "f789a6122c728d85a4f8365cb1a0054c785fded4a56ec5b5c54fc365d1d4c522"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/real-details.ts",
+      "bytes": 3961,
+      "sha256": "8c02ed1146407b2490dbb1b01d32b3c3367c5f1c93528e2a31a078a9439ed878"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/share.h5.ts",
+      "bytes": 3759,
+      "sha256": "a7d2e4028fa7b64b9e12f99fb073379b342c8b7b3374047f30a955be7e37337e"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/share.ts",
+      "bytes": 398,
+      "sha256": "fa6d2c511a98a3eea1ca3d2cdef29174439f7ebc6fe8b6f7b1b712d9688a4940"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/share.weapp.ts",
+      "bytes": 3134,
+      "sha256": "b1188fd3a200ba3c8814be7dbdbb6eaa2e826cb723a072037934396835425107"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/utf8.ts",
+      "bytes": 649,
+      "sha256": "c3f36df74133e44f9b3beed0fe5a24b3889e0929fe7016acdda1d26591571592"
+    },
+    {
+      "path": "xiaoke-miniapp/src/services/vision.ts",
+      "bytes": 986,
+      "sha256": "45f805ea4ab53697bcaf9c3cb8084440c7a6264a7395c2ee598ea214d8394f42"
+    },
+    {
+      "path": "xiaoke-miniapp/src/setupSteps.ts",
+      "bytes": 437,
+      "sha256": "017afa991cbf44cdf6a14fb624fb638cbaf0e5f8c90aa4522f4d81b1194262ab"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/api.test.ts",
+      "bytes": 5369,
+      "sha256": "22a6f5f2d8ff422accf443d20bd44d0893a66b955e753c3e6a970f9145b2ba8f"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/bleCrypto.test.ts",
+      "bytes": 2520,
+      "sha256": "fe386fdb66a9617c171b43940723707f4a1601355d7009b8bfd297e09d0a1209"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/bleProtocol.test.ts",
+      "bytes": 2971,
+      "sha256": "ef65c121b0513ca3986ec90b46a2bfe175b0bacc58f2e3e89057ca2615c0c9a2"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/bleSession.test.ts",
+      "bytes": 1941,
+      "sha256": "495b40a44877ca178f02b4425ab9ff75d7d6525668e820652bdfe3584677c2a2"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/bluetooth.test.ts",
+      "bytes": 751,
+      "sha256": "07df7a5a2699b09ddfc773370838aff8cb98f91091e76d806a951c0566739c89"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/live-data.test.ts",
+      "bytes": 6340,
+      "sha256": "ea7e5b69b4ed7d00e076db1b91a0dc73cdeda6143706c14973ca81debe2dcd6f"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/live-history.test.ts",
+      "bytes": 2515,
+      "sha256": "a4eb7c2f700a5758a66163bf95dabf2f6a37ea956d1a378485494ba5ced66d2f"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/model.test.ts",
+      "bytes": 12242,
+      "sha256": "134971c08e228c5cc9362d39187d10ff8a29d3257cdf1fbc70785d37c35e2fc8"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/real-api-contract.test.ts",
+      "bytes": 3530,
+      "sha256": "ecd2f511969e5dbdcaccc969d06243c6adba27e02372ac3cd773c56ef0f3f3f9"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/real-details.test.ts",
+      "bytes": 2508,
+      "sha256": "29357d72c9e8d65af65b3f14ea080f3db125386ac224feae07f2371701b08520"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/real-render.test.tsx",
+      "bytes": 2018,
+      "sha256": "4ba141d52f637c7754b685039a3a75a47479a56e723f80132c2ab3011f011029"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/server.test.ts",
+      "bytes": 3681,
+      "sha256": "7262a29adeec716993d58b545332c6477a0a5d6a7fc94f81937042d4e02f2707"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/setupSteps.test.ts",
+      "bytes": 559,
+      "sha256": "0da28d414adb1a896db0cd0fffb4d2217dea10805a8fa558cf04575247ae4680"
+    },
+    {
+      "path": "xiaoke-miniapp/tests/utf8.test.ts",
+      "bytes": 500,
+      "sha256": "1f1cd14253a6610c0bc9bed7de6702cc0ca333ba249e31dc750a86671ae41ca7"
+    },
+    {
+      "path": "xiaoke-miniapp/tsconfig.json",
+      "bytes": 530,
+      "sha256": "3a369db897ae70845d80d2ec29410d402921011224d8f21fe2947ebdc36d27ba"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/app-origin.wxss",
+      "bytes": 241938,
+      "sha256": "45a9ab76fb79c9e187b7d4ecd0f06e6bc940ac8571cd527fa695a821a3a939cd"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/app.js",
+      "bytes": 630,
+      "sha256": "0b861acda64fc79985a79c50f0b8d28fbe46a685852d05c32726cb8669c8f0e1"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/app.json",
+      "bytes": 387,
+      "sha256": "596c8a9f26a89d4aa1c757f63fad1156dc819040312754dd57a9d3e0feb6cb9c"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/app.wxss",
+      "bytes": 27,
+      "sha256": "f5c248cb1c700b6cfc2648b2ee399be39618335bbc4e03b2ad2f8de548b0e456"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/babelHelpers.js",
+      "bytes": 631,
+      "sha256": "fbfe8f87d5c015e645ffda5082062dbe5f08422f3b2ad0b4bbad0bff7612f788"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/base.wxml",
+      "bytes": 58649,
+      "sha256": "20c304037d00c6b075419054b73f832ed2399018cad05aaeea9a9e2e06eafbdf"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/common.js",
+      "bytes": 1291238,
+      "sha256": "469072e5f298b7574764534ac60db037c3c0ebe5c38764750fd565d8fefa60f8"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/comp.js",
+      "bytes": 118,
+      "sha256": "59802f674d98fb41daea3492b28c4df63bec5426070ff37b2fbee1c83b9687fb"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/comp.json",
+      "bytes": 108,
+      "sha256": "af05838ce72c4d583b4078c931531d76e80a7bcc31fb57eb46a9baba6cecadd6"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/comp.wxml",
+      "bytes": 140,
+      "sha256": "904495b6e07f81d74f23d713c7f42a7450189f56879e329e5353e18d08201165"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/pages/index/index.js",
+      "bytes": 28322,
+      "sha256": "ecee00f54d3ca859e3baf2031a1069ba18a32c5acef72f880e4b5076243b802e"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/pages/index/index.json",
+      "bytes": 106,
+      "sha256": "4b183b7a21532a847940bc48498458eb476e312a0c79e2b4f00c5f061c3e669c"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/pages/index/index.wxml",
+      "bytes": 80,
+      "sha256": "38b0088b8c33e0f5dd9b2a934df461c91ad48cc818bb5dce849a336fae6e7ff6"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/project.config.json",
+      "bytes": 921,
+      "sha256": "b07ef8052968032dc5fa7409c472e1eacab91ab72413f6b3b068a24a2c9f1a63"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/taro.js",
+      "bytes": 212334,
+      "sha256": "9a7a91df19dafc818f20b28db67e2cea8d747c0597f49f654c413f3fa92e7f24"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/utils.wxs",
+      "bytes": 997,
+      "sha256": "e4ebe8c13a8ed5d58ae32d378f1f1947d51d796a620987d43bfc438631372728"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/weapp/vendors.js",
+      "bytes": 14,
+      "sha256": "77f5eec38c5ef075e11892244ccf9e249d82937e07401398df98319568775a17"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/css/index.31643a5f.css",
+      "bytes": 79709,
+      "sha256": "31643a5ff27d3cbe6b4560debc544143f9b73c9b9ef8a7d6032fe92dbc9a89bd"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/css/vendors.bdf6fb55.css",
+      "bytes": 8339,
+      "sha256": "bdf6fb552b5a1440084a12868f47f7b7358bb7c4e7cb911dbd3e7eb76e6e2b9d"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/index.html",
+      "bytes": 941,
+      "sha256": "a3424b5ad15210bed6329d0284257aa2fffcf14781869cf590ccbe03a9616d5d"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/js/app.47e20758.js",
+      "bytes": 2046,
+      "sha256": "1e7f120f1579fcc6761afef2c145cb2e460b874d4ebcdc9d50adb97ac2da2a79"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/js/common.b93e6ded.js",
+      "bytes": 1290715,
+      "sha256": "9af7d2e91dbb86b22e219a4688f625ca93bc833cb8a8c02124eaf2b93d5daf8a"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/js/index.59815753.js",
+      "bytes": 24509,
+      "sha256": "22909b3cbaed2e6b5c1b44ffdaba95d2ecc08ef83bb386f7f53dc2eafa44c4d8"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/js/vendors.8cb323d1.js",
+      "bytes": 311929,
+      "sha256": "79d85aa08506899c9c03d8e758cd421ea901a4c4c7b15f17c323bf8740c5585b"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/static/images/deviceCard.png",
+      "bytes": 7000,
+      "sha256": "c863ef9f7e5e0bb8561d225eafcd16ed8cada6ccfe7721cc20d5a6abf16996c6"
+    },
+    {
+      "path": "xiaoke-miniapp/dist/h5/static/images/homeBackground.webp",
+      "bytes": 116632,
+      "sha256": "2a65be073b2da0742fe4ee1320ef1bf263d6c1f3ebb254185c522a3792204e64"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3066,
+      "sha256": "bcb3b04adc54b1717b9b86bae136331b33e033741d89edd0c0dd60e0db57111e"
+    }
+  ],
+  "sensitive_file_check": {
+    "prohibited_paths": 0,
+    "high_confidence_secret_matches": 0,
+    "node_modules_included": false,
+    "env_files_included": false
+  }
+}

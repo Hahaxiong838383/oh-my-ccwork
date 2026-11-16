@@ -1,0 +1,73 @@
+{
+  "at_ms": 1794836065280,
+  "pass": true,
+  "harness": "H5 production GET bodies, browser CORS header only",
+  "real_mobile_login": false,
+  "sms_sent": false,
+  "business_writes": false,
+  "history_rendered": 184,
+  "history_pages": 10,
+  "refresh_first_page": 20,
+  "business_records_empty": true,
+  "missing_duration_preserved": true,
+  "logout_cleared": true,
+  "page_errors": [],
+  "requests": [
+    {
+      "path": "/api/profile/bound-devices",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/ark/records",
+      "status": 200
+    }
+  ]
+}

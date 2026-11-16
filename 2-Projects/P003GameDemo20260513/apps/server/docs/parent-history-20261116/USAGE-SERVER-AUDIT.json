@@ -1,0 +1,63 @@
+{
+  "checked_at_ms": 1794835191554,
+  "sn": "BJP00326081002000031",
+  "read_only": true,
+  "snapshot_gates": [
+    {
+      "lid_open": 0,
+      "present": null,
+      "focus_active": 0,
+      "n": 44,
+      "first_received_ms": 1793931607623,
+      "last_received_ms": 1794812402608
+    },
+    {
+      "lid_open": 0,
+      "present": 0,
+      "focus_active": 0,
+      "n": 387,
+      "first_received_ms": 1793931315258,
+      "last_received_ms": 1794833584039
+    },
+    {
+      "lid_open": 0,
+      "present": 1,
+      "focus_active": 0,
+      "n": 110,
+      "first_received_ms": 1793931637765,
+      "last_received_ms": 1794823637403
+    }
+  ],
+  "events": [
+    {
+      "type": "posture_round",
+      "n": 1243
+    },
+    {
+      "type": "presence_transition",
+      "n": 760
+    }
+  ],
+  "last_ota_self_report": {
+    "sn": "BJP00326081002000031",
+    "version_code": 371,
+    "version_name": "371_mini_008",
+    "last_check_at": 1794824970384,
+    "updated_at": 1794824970384
+  },
+  "generation": {
+    "binding_version": 1,
+    "epoch": 2
+  },
+  "retained_log_summary": {
+    "retained_target_lines": 691,
+    "nonzero_acked_lines": 286,
+    "nonzero_rejected_lines": 0
+  },
+  "boundaries": [
+    "No active APK hash readback",
+    "No physical lid observation",
+    "Retained logs only; no assertion about rotated logs",
+    "No child conversation text read"
+  ]
+}

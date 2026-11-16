@@ -144,5 +144,59 @@ export class RecordsStore{
   const last=visible.at(-1),next_cursor=has_more&&last?this.encodeCursor({v:1,scope,filter,water,expires:c?.expires??now+limits().cursor_ttl_ms,last:[last.sort_ms,last.save_id,last.sequence,last.record_id]}):null;
   return {schema_version:1,items,next_cursor,has_more,coverage,updated_at_ms:coverage.last_received_at_ms};
  });}
- dashboard(publicId:string,owner:string){return this.transaction(()=>{let i:Identity;try{i=this.parent(publicId,owner);}catch(e){if(e instanceof RecordsError&&e.status===404)return dashboardRecords(emptyCoverage(),'not_enabled');throw e;}return dashboardRecords(this.coverage(this.where(i,{},this.water())));});}
+ private summaries(where:ReturnType<RecordsStore['where']>,coverage:ReturnType<typeof emptyCoverage>,now:number){
+  const result=dashboardRecords(coverage,'no_records',now);
+  const from=Date.parse(`${result.yesterday_income.date}T00:00:00+08:00`),to=from+86400000;
+  // Aggregate in SQLite: at most one small result crosses into JS, regardless of history size.
+  // An absent positive currency has SUM(NULL)=NULL, never an invented measured zero.
+  const income=this.db.prepare(`SELECT
+   SUM(CASE WHEN json_extract(c.value,'$.resource_id')='family_coin' THEN json_extract(c.value,'$.delta') END) family_coin,
+   SUM(CASE WHEN json_extract(c.value,'$.resource_id')='stardust' THEN json_extract(c.value,'$.delta') END) stardust,
+   MIN(r.sort_ms) occurred_from_ms,MAX(r.sort_ms) occurred_to_ms,MAX(r.received_at_ms) received_at_ms
+   FROM ark_record r JOIN json_each(r.body,'$.resource_changes') c
+   WHERE ${where.sql} AND r.time_status='reported' AND r.sort_ms>=? AND r.sort_ms<?
+    AND r.reason IN ('reward_claim','tank_unlock') AND json_extract(r.body,'$.source_mode')='normal'
+    AND json_extract(c.value,'$.resource_id') IN ('family_coin','stardust') AND json_extract(c.value,'$.delta')>0`)
+   .get(...where.args,from,to) as {family_coin:number|null;stardust:number|null;occurred_from_ms:number|null;occurred_to_ms:number|null;received_at_ms:number|null};
+  for(const value of [income.family_coin,income.stardust])if(value!==null&&!Number.isSafeInteger(value))throw new RecordsError(503,'records_dependency_unavailable');
+  if(income.family_coin!==null||income.stardust!==null)Object.assign(result.yesterday_income,income,{available:true,reason:'partial_history',source_mode:'normal'});
+
+  const hasAcquired="EXISTS(SELECT 1 FROM ark_record_item x WHERE x.sn=r.sn AND x.record_id=r.record_id AND x.operation='acquired')";
+  // Unknown acquisition times cannot be placed before the known candidate, even when received earlier.
+  if(this.db.prepare(`SELECT 1 FROM ark_record r WHERE ${where.sql} AND r.time_status<>'reported' AND ${hasAcquired} LIMIT 1`).get(...where.args)){
+   result.latest_items.reason='clock_unknown';return result;
+  }
+  // Sequence, not a possibly backwards device clock, orders business operations inside a save.
+  // Group once, then use the existing (sn,save_id,sequence) unique index to resolve each save's candidate.
+  const latest=this.db.prepare(`SELECT r.* FROM ark_record r JOIN (
+    SELECT r.sn,r.save_id,MAX(r.sequence) sequence FROM ark_record r WHERE ${where.sql} AND ${hasAcquired}
+    GROUP BY r.sn,r.save_id
+   ) newest ON r.sn=newest.sn AND r.save_id=newest.save_id AND r.sequence=newest.sequence
+   ORDER BY r.sort_ms DESC,r.save_id ASC,r.record_id ASC LIMIT 1`).get(...where.args) as Row|undefined;
+  if(!latest)return result;
+  const record=JSON.parse(latest.body) as BusinessRecord;
+  // Choose the latest acquisition first; source filtering must not resurrect an older normal one.
+  if(record.source_mode!=='normal'){result.latest_items.reason='non_normal';return result;}
+  const acquired=record.item_changes.filter(item=>item.operation==='acquired');
+  // Group activation references once, yielding at most the selected acquisition's 32 instance IDs.
+  // Scope + save + forward sequence make activation a projection of the original instance, not a new gain.
+  const activationRows=acquired.length?this.db.prepare(`SELECT newest.item_instance_id,a.record_id FROM (
+    SELECT x.item_instance_id,MAX(r.sequence) sequence FROM ark_record_item x JOIN ark_record r ON r.sn=x.sn AND r.record_id=x.record_id
+    WHERE ${where.sql} AND x.acquired_record_id=? AND x.operation='activated'
+     AND x.item_instance_id IN (${acquired.map(()=>'?').join(',')}) AND r.save_id=? AND r.sequence>?
+     AND r.time_status='reported' AND r.reason='item_activation' AND json_extract(r.body,'$.source_mode')='normal'
+    GROUP BY x.item_instance_id
+   ) newest JOIN ark_record a ON a.sn=? AND a.save_id=? AND a.sequence=newest.sequence`)
+   .all(...where.args,record.record_id,...acquired.map(x=>x.item_instance_id),record.save_id,record.sequence,latest.sn,record.save_id) as {item_instance_id:string;record_id:string}[]:[];
+  const activations=new Map(activationRows.map(x=>[x.item_instance_id,x.record_id]));
+  const items=acquired.map(item=>({item_instance_id:item.item_instance_id,item_id:item.item_id,item_kind:item.item_kind,quantity:item.quantity,
+   state:activations.has(item.item_instance_id)?'active' as const:item.state,activation_record_id:activations.get(item.item_instance_id)??null}));
+  Object.assign(result.latest_items,{available:true,reason:'partial_history',source_mode:'normal',record_id:record.record_id,
+   save_id:record.save_id,occurred_at_ms:record.occurred_at_ms,received_at_ms:latest.received_at_ms,items});
+  return result;
+ }
+ dashboard(publicId:string,owner:string){return this.transaction(()=>{
+  let i:Identity;try{i=this.parent(publicId,owner);}catch(e){if(e instanceof RecordsError&&e.status===404)return dashboardRecords(emptyCoverage(),'not_enabled');throw e;}
+  const where=this.where(i,{},this.water());return this.summaries(where,this.coverage(where),Date.now());
+ });}
 }

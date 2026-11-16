@@ -1,0 +1,18 @@
+{
+  "created_at": "2026-11-16T21:31:21.930452+08:00",
+  "path": "/Users/fu-121/Downloads/P003_MINIAPP_C_HISTORY_20261116.zip",
+  "bytes": 4861183,
+  "sha256": "d73521682ecbfb86ff08879a1af9fed1d9328f2a4c93ecbe5fc8b9e1e1913639",
+  "source_sha256": "45c7682dbe961cc308cb263801fc82f3ee749e43e2cfcf95aa9fce31faeb8848",
+  "files_count": 196,
+  "contents_manifest_sha256": "e5647d065fa0aa6de41706d9f34cd966c712b495bc793970417868f35b024619",
+  "zip_crc_and_all_file_sha_verified": true,
+  "sensitive_file_check": {
+    "prohibited_paths": 0,
+    "high_confidence_secret_matches": 0,
+    "node_modules_included": false,
+    "env_files_included": false
+  },
+  "air_transferred": false,
+  "main_handoff_modified": false
+}

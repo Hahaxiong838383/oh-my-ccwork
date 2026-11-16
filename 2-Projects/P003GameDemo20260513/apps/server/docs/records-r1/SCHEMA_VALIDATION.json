@@ -1,8 +1,8 @@
 {
   "status": "PASS_LOCAL_SCHEMA_ONLY",
-  "at": "2026-11-16T10:52:09.854Z",
+  "at": "2026-11-16T12:47:25.386Z",
   "runtime": "v24.19.0",
-  "tests": 59,
+  "tests": 60,
   "production_http_tested": false,
   "production_db_written": false,
   "transaction_runtime_tested": false,
@@ -229,6 +229,10 @@
     },
     {
       "name": "未知收入不能补0",
+      "status": "PASS_LOCAL_SCHEMA_ONLY"
+    },
+    {
+      "name": "已上报收入累计可超过单笔上限",
       "status": "PASS_LOCAL_SCHEMA_ONLY"
     },
     {

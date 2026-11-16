@@ -1,5 +1,7 @@
 # P003 真实业务记录：服务端合同 R1
 
+**摘要修订（2026-11-16 20:57:01 已发布）：两个摘要已按已同步记录实现，不再恒定 policy_pending；当前C新记录仍0条，真实端到端待端侧接入与手机对账。最新回执以 P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md 为准。**
+
 版本：`p003.ark.records.r1`，2026-11-16。状态：**服务端已实现并于北京时间2026-11-16 20:01:50部署，仅C机开放；安卓与小程序可据此并行联调，真实端到端尚未验收。** 本文、`schema.mjs`、`examples.json`为本次服务端接口口径；不冒称三方已确认。后续变更须出修订，不能各端原地漂移。
 
 对象：C机 **BJP00326081002000031**，`public_id=dev_50b5415662259045`，保留原owner、凭据、存档、队列。沿现有 Device Bearer / 家长 Bearer，绝不新建 Children、第二钱包、云端发币或远程兑换。
@@ -118,12 +120,12 @@ ParentRecord为原Record去掉origin_grant_id/origin_epoch，加`received_at_ms`
   "coverage": {"kind":"received_records","complete":false,"reason":"partial_history","min_occurred_at_ms":null,"max_occurred_at_ms":null,"first_received_at_ms":null,"last_received_at_ms":null},
   "updated_at_ms": null,
   "yesterday_income": {
-    "available":false,"reason":"policy_pending","date":"2026-11-15",
+    "available":false,"reason":"no_records","date":"2026-11-15",
     "timezone":"Asia/Shanghai","source_mode":null,"family_coin":null,"stardust":null,
     "occurred_from_ms":null,"occurred_to_ms":null,"received_at_ms":null
   },
   "latest_items": {
-    "available":false,"reason":"policy_pending","source_mode":null,"record_id":null,
+    "available":false,"reason":"no_records","source_mode":null,"record_id":null,
     "save_id":null,"occurred_at_ms":null,"received_at_ms":null,"items":[]
   }
 }
@@ -134,9 +136,13 @@ latest_items.items结构为`{item_instance_id,item_id,item_kind,quantity,state,a
 
 记录查询依赖异常时，两个摘要返回dependency_unavailable、available=false、金额null、物品空，updated_at_ms及覆盖时间为空；原device/usage/ark继续独立返回。新分页/上传接口仍返回503，绝不伪造ACK；原Ark依赖异常仍保持dashboard原有503行为。
 
-产品口径确认前上述两个摘要保持policy_pending，不影响底层可靠采集、分页、现有余额/卡库存、色温/姿态映射并行开发。确认后收入建议按真实入账北京时间昨天统计reward_claim/tank_unlock的正向币/星尘行，消费不抵扣，历史补领按真实领取日、logical_day独立。此建议尚非产品批准。
+本轮按用户“补齐两个摘要”要求，采用下面可由现有真实记录支持的口径。API 不再恒定 policy_pending；空数据为 no_records，有已收符合条件的数据为 available=true / partial_history。收益累计为 JSON 安全整数，不受单笔 1e9 上限限制；某币种没有符合条件的收益保持 null。
 
-最新物品不复用next_reward；激活只更新已获实例状态，不增加获得数。R1没有旧物品完整投影，也没有当前save/当前tank可靠指针，故当前缸/全历史“最新”不得冒充已确定。产品如果选择严格“当前缸最新、含旧档”，该摘要必须继续unavailable/legacy_baseline_unknown，补最小基线方案另出R1.1再实现，不静默扩展旧state。可选最小展示为“已同步获得记录”的最新整组；scope确定后再计算；最新候选若为unknown/gm，不得跳过它回退旧normal冒充当前最新，应返回non_normal。
+- **昨日已上报收益**：北京时间昨天真实 occurred_at 的 normal reward_claim/tank_unlock 正向家族币、星尘分别统计；消费不抵扣，补领按领取日，logical_day 独立。occurred_from_ms/to_ms 为符合条件记录的最早/最晚发生时间，received_at_ms 为这些记录最近首次接收时间。无匹配记录不代表昨日真实 0。
+- **最近已同步获得物品**：当前授权可见全部存档、全部缸，含生态缸组件、小可装饰及 pending_activation，同笔多件整组返回；同一 save 先选 acquired 最大 sequence，再跨 save 按可信发生时间、save_id 确定顺序。设备校时回拨不能把同存档旧业务选为最新。不是当前缸、全历史库存或下一奖励预告。任一获得记录时间 unknown/clock_suspect 时保守 clock_unknown；最新候选为 gm/unknown 时 non_normal，不回退旧 normal。
+- **激活**：只投影同 save/原归属/高水位内、序号在获得之后的 normal、reported、item_activation 记录；填 activation_record_id 并变为 active，原数量与原流水不变。latest_items.received_at_ms 为获得记录接收时间，顶层 updated_at_ms 含后续激活到达时间。
+
+完整旧物品、当前 save/tank 指针和全日覆盖证明仍未提供；需此类能力时另补真实基线，不能从余额或到达顺序推断。展示推荐标题“昨日已上报收益”“最近已同步获得”，并提示“仅含已同步记录”。
 
 ## 8. 限流、容量与保留（服务端已生效；端侧队列部分仍待实现验证）
 
@@ -155,11 +161,10 @@ latest_items.items结构为`{item_instance_id,item_id,item_kind,quantity,state,a
 
 上述服务端值已在运行候选997fe832的隔离测试及本次公网context中核实；不等于真实端侧峰值或长期容量验收。context.limits 返回实际生效值；频率、条数、payload、磁盘余量、游标TTL及未来时钟阈值可由服务端配置，非法配置返回503 records_configuration_invalid。协议硬上限50条/256KiB/32KiB保持不变。客户端不得自行调大或按旧文档的10万条/256MiB假定容量。端侧本地队列预算与云端预算分别计量。首轮范围仍只C机；不启用PRnas T3、不换存储系统、不部署新服务。
 
-## 9. 仅两项产品待定
+## 9. 本轮范围与真实验收
 
-1. **昨日收益口径**：是否采用“北京时间昨天实际领取的奖励正收入，家族币/星尘分列；补领计领取日；只称已上报收入，缺测不补0”。世界观已确定金币=家族币、星尘独立、家长兑现约定；不再追问这些既有裁定。缺少全日覆盖时不能保证真实总收入。
-2. **最新物品范围**：当前缸或全部缸；是否包含小可装饰/pending_activation；同笔多件默认整组。若必须含旧档/当前缸，需要真实当前save/tank与旧物品基线，R1此摘要不假装可用。
+两个摘要的本轮实现口径见§7，不再将其列作 policy_pending 开发阻塞。该选择不追认完整历史、当前缸或全日真实总收益已经支持。
 
-坐姿“实际提醒=played”、余额不是收入、补勤卡使用后奖励仍需真实领取、无云端发币均已有依据，技术上直接采用，不增设第三项产品阻塞。
+服务端单测/HTTP隔离验证、生产部署、真实设备上传、手机页面验收四层分开记录，最新结果见 P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md。端侧需要稳定record_id与原context、可靠outbox和逐ID ACK；没有真实上传不能由服务器合成数据补齐验收。
 
 署名：codex（OpenAI）| 2026-11-16

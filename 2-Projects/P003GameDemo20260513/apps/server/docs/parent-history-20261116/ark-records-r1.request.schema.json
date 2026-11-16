@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:p003:ark-records:request:r1",
+  "title": "Candidate R1; disabled until server confirmation",
+  "type": "object", "additionalProperties": false,
+  "required": ["schema_version", "contract_id", "batch_id", "save_id", "coverage_from_ms", "dropped_records", "records"],
+  "properties": {
+    "schema_version": {"const": 1}, "contract_id": {"const": "p003-ark-records-r1"},
+    "batch_id": {"$ref": "#/$defs/id"}, "save_id": {"$ref": "#/$defs/id"},
+    "coverage_from_ms": {"type": "integer", "minimum": 0}, "dropped_records": {"type": "integer", "minimum": 0},
+    "records": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/record"}}
+  },
+  "$defs": {
+    "id": {"type": "string", "pattern": "^[A-Za-z0-9_.:-]{1,96}$"},
+    "record": {
+      "type": "object", "additionalProperties": false,
+      "required": ["record_id", "save_id", "sequence", "occurred_at_ms", "logical_day", "source_mode", "record_kind", "config_revision", "active_ecotank_id", "data"],
+      "properties": {
+        "record_id": {"$ref": "#/$defs/id"}, "save_id": {"$ref": "#/$defs/id"},
+        "sequence": {"type": "integer", "minimum": 1}, "occurred_at_ms": {"type": "integer", "minimum": 0},
+        "logical_day": {"type": ["string", "null"]}, "active_ecotank_id": {"type": ["string", "null"]},
+        "source_mode": {"enum": ["normal", "gm", "unknown"]}, "record_kind": {"enum": ["baseline", "business_commit"]},
+        "config_revision": {"type": "string", "maxLength": 256},
+        "data": {
+          "type": "object", "additionalProperties": false,
+          "properties": {
+            "wallet": {"type": "object", "additionalProperties": {"type": "integer"}},
+            "inventory": {"type": "array", "items": {"type": "object"}},
+            "history_complete_before_baseline": {"const": false},
+            "wallet_changes": {"type": "array", "items": {"type": "object", "required": ["resource_id", "before", "after", "delta"], "additionalProperties": false, "properties": {"resource_id": {"$ref": "#/$defs/id"}, "before": {"type": "integer"}, "after": {"type": "integer"}, "delta": {"type": "integer"}}}},
+            "inventory_changes": {"type": "array", "items": {"type": "object", "required": ["item_id", "before", "after"]}},
+            "grants": {"type": "array", "items": {"type": "object", "required": ["reward_instance_id", "resolved_rewards", "granted_at_ms"]}},
+            "makeup_grants": {"type": "array", "items": {"type": "object", "required": ["tank_id"]}},
+            "makeup_uses": {"type": "array", "items": {"type": "object", "required": ["tank_id", "logical_day", "usage_day_index"]}},
+            "previous_source_mode": {"enum": ["normal", "gm", "unknown"]}
+          }
+        }
+      }
+    }
+  }
+}

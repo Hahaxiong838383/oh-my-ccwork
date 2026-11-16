@@ -1,0 +1,32 @@
+{
+  "runtime": "v22.22.2",
+  "at_ms": 1794835924331,
+  "manifest_sha256": "6996e550347eee5a65f820bb15c08b566dae7a4bf4f9f0d4b7d4aebc88b64a74",
+  "pass": true,
+  "tests": [
+    {
+      "name": "parent-conversations",
+      "exit_code": 0
+    },
+    {
+      "name": "ark-records-summaries",
+      "exit_code": 0
+    },
+    {
+      "name": "ark-records",
+      "exit_code": 0
+    },
+    {
+      "name": "mini008-dashboard",
+      "exit_code": 0
+    },
+    {
+      "name": "telemetry",
+      "exit_code": 0
+    },
+    {
+      "name": "schema",
+      "exit_code": 0
+    }
+  ]
+}
