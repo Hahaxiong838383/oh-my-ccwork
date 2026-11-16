@@ -46,7 +46,47 @@ async function checksum(p) {
   for await (const chunk of fs.createReadStream(p)) hash.update(chunk);
   return hash.digest('hex');
 }
+// Offline copy of the frozen Ark snapshot v1 contract: no npm/runtime install on NAS.
+// Contract equivalence is exercised against snapshotSchema in ark-archive-schema.test.ts.
+const objectKeys=(o,ks)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).sort().join(',')===ks.split(',').sort().join(',');
+const integer=(n,min,max=Number.MAX_SAFE_INTEGER)=>Number.isSafeInteger(n)&&n>=min&&n<=max;
+const arkId=v=>typeof v==='string'&&/^[A-Za-z0-9_.:-]{1,64}$/.test(v);
+const nullable=(v,p)=>v===null||p(v);
+const canonical=v=>v===null||typeof v!=='object'?JSON.stringify(v):Array.isArray(v)?'['+v.map(canonical).join(',')+']':'{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+canonical(v[k])).join(',')+'}';
+export function validArkSnapshot(s){
+ if(!objectKeys(s,'schema_version,snapshot_id,captured_at_ms,boot_id,boot_started_at_ms,sequence,logical_day,config_revision,content_version,source_mode,wallets,inventory,progress'))return false;
+ if(s.schema_version!==1||![s.snapshot_id,s.boot_id,s.config_revision,s.content_version].every(arkId)||![s.captured_at_ms,s.boot_started_at_ms].every(n=>integer(n,1,8e12))||s.boot_started_at_ms>s.captured_at_ms||!integer(s.sequence,1)||!['normal','gm','unknown'].includes(s.source_mode))return false;
+ if(typeof s.logical_day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s.logical_day))return false;
+ const day=Date.parse(s.logical_day+'T00:00:00Z');if(!Number.isFinite(day)||new Date(day).toISOString().slice(0,10)!==s.logical_day)return false;
+ const count=v=>integer(v,0,1e9),p=s.progress,r=p?.next_reward;
+ if(!objectKeys(s.wallets,'family_coin,stardust')||!Object.values(s.wallets).every(v=>nullable(v,count))||!objectKeys(s.inventory,'M-CARD-001')||!nullable(s.inventory['M-CARD-001'],count))return false;
+ if(!objectKeys(p,'timer_state,next_reward,claimable_count')||!['running','paused','stopped','unknown'].includes(p.timer_state)||!nullable(p.claimable_count,count)||!objectKeys(r,'status,kind,item_id,stage_id,remaining_seconds'))return false;
+ if(!['locked','claimable','claimed','day_complete','unknown'].includes(r.status)||!['currency','chest','item','unknown'].includes(r.kind)||!nullable(r.item_id,v=>['C-FAMILY-001','M-CARD-001'].includes(v))||!nullable(r.stage_id,arkId)||!nullable(r.remaining_seconds,v=>integer(v,0,86400)))return false;
+ if(r.status==='locked'&&(r.remaining_seconds===null||r.remaining_seconds===0||r.kind==='unknown'))return false;
+ if(r.status==='claimable'&&(r.remaining_seconds!==0||r.kind==='unknown'||!p.claimable_count))return false;
+ if(['claimed','day_complete','unknown'].includes(r.status)&&r.remaining_seconds!==null)return false;
+ if(r.kind==='currency'&&r.item_id!=='C-FAMILY-001'||r.kind==='item'&&r.item_id!=='M-CARD-001'||['chest','unknown'].includes(r.kind)&&r.item_id!==null)return false;
+ return true;
+}
+function verifyArk(m,payload){
+ // Preserve pre-T3 placeholder packet compatibility; do not label it semantic validation.
+ if(m.source_range.format===undefined)return;
+ const range=m.source_range;
+ if(range.format!=='ark_jsonl'||range.format_version!==1||!integer(range.lines,1,1000)||range.lines!==m.record_count||!integer(range.first_id,1)||!integer(range.last_id,range.first_id)||m.bytes>1024**2)fail('ARK_RANGE');
+ const data=fs.readFileSync(payload);if(data.toString('utf8').includes('\ufffd'))fail('ARK_ENCODING');
+ const text=data.toString('utf8');if(!text.endsWith('\n'))fail('ARK_LINES');const lines=text.slice(0,-1).split('\n');
+ if(lines.length!==m.record_count)fail('ARK_COUNT');
+ let last=0;
+ for(const [i,line] of lines.entries()){
+  let e;try{e=JSON.parse(line);}catch{fail('ARK_JSON');}
+  if(!objectKeys(e,'format_version,record_id,sn,account_id,epoch,grant_id,source_mode,received_at_ms,body_hash,snapshot')||e.format_version!==1||!integer(e.record_id,last+1)||!integer(e.epoch,1)||!integer(e.received_at_ms,1,8e12)||typeof e.sn!=='string'||!/^BJP003\d{14}$/.test(e.sn)||typeof e.account_id!=='string'||!e.account_id||e.account_id.length>128||typeof e.grant_id!=='string'||!e.grant_id||e.grant_id.length>128||!validArkSnapshot(e.snapshot)||e.source_mode!==e.snapshot.source_mode)fail('ARK_ENVELOPE');
+  if(e.body_hash!==createHash('sha256').update(canonical(e.snapshot)).digest('hex'))fail('ARK_BODY_HASH');
+  if(i===0&&e.record_id!==range.first_id)fail('ARK_MAPPING');last=e.record_id;
+ }
+ if(last!==range.last_id)fail('ARK_MAPPING');
+}
 async function verifyRows(m, payload) {
+  if (m.kind === 'ark_checkpoint') { verifyArk(m,payload); return; }
   if (m.kind !== 'analytics_backup') return;
   const tables = m.source_range.tables;
   if (!tables || Array.isArray(tables) || typeof tables !== 'object' || !Object.keys(tables).length || Object.keys(tables).length > 100) fail('INVALID_TABLE_COUNTS');
@@ -146,7 +186,7 @@ export function acknowledge(root, id, receipt) {
       || receipt.archive_id !== id || receipt.sha256 !== m.sha256 || receipt.bytes !== m.bytes || receipt.record_count !== m.record_count
       || !Number.isSafeInteger(receipt.verified_at_ms) || receipt.verified_at_ms < 0) fail('ACK_MISMATCH');
   durableJson(path.join(folder, 'receipt.json'), receipt);
-  durableJson(path.join(root,'receipts',id+'.json'),receipt);
+  durableJson(path.join(root,'receipts',id+'.json'),{...receipt,kind:m.kind});
 }
 function receiptFor(root,m) {
   let file=path.join(packagePath(root,m.archive_id),'receipt.json');
@@ -194,7 +234,7 @@ function deleteTrash(root) {
     const files=fs.readdirSync(folder);
     if(files.some(n=>!['payload.bin','manifest.json','receipt.json','payload.bin-wal','payload.bin-shm'].includes(n)))fail('UNEXPECTED_TRASH_CONTENT');
     const wal=path.join(folder,'payload.bin-wal');if(exists(wal)&&regular(wal).size!==0)fail('UNEXPECTED_ARCHIVE_WAL');
-    if(exists(path.join(folder,'receipt.json')))durableJson(path.join(root,'receipts',id+'.json'),json(path.join(folder,'receipt.json')));
+    if(exists(path.join(folder,'receipt.json')))durableJson(path.join(root,'receipts',id+'.json'),{...json(path.join(folder,'receipt.json')),kind:validate(json(path.join(folder,'manifest.json'))).kind});
     for(const n of files){const p=path.join(folder,n);regular(p);fs.unlinkSync(p);}
     fs.rmdirSync(folder);
   }
@@ -229,6 +269,25 @@ export async function rotateBackups(root,options={}) {
     offsite_age_ms:Math.max(0,(options.nowMs??Date.now())-backups[0].created_at_ms)};
   durableJson(path.join(root,'retention-status.json'),result);return result;
 }
+export async function rotateArk(root,options={}) {
+  setup(root);deleteTrash(root);const now=options.nowMs??Date.now(),removed=[];
+  for(const id of fs.readdirSync(path.join(root,'packages'))){
+    const m=validate(json(path.join(packagePath(root,id),'manifest.json')));
+    if(m.archive_id!==id)fail('MANIFEST_ID_MISMATCH');
+    if(m.kind!=='ark_checkpoint'||m.created_at_ms>=now-90*86400000||!receiptFor(root,m))continue;
+    const folder=packagePath(root,id);fs.renameSync(folder,path.join(root,'trash',id));syncDir(path.join(root,'packages'));syncDir(path.join(root,'trash'));removed.push(id);
+    if(removed.length>=100)break;
+  }
+  deleteTrash(root);
+  // Old acknowledged Ark tombstones are bounded too; never remove a live packet's receipt.
+  let cleaned=0;
+  for(const name of fs.readdirSync(path.join(root,'receipts'))){
+    if(!/^[a-f0-9]{32}\.json$/.test(name))continue;
+    const p=path.join(root,'receipts',name),r=json(p);
+    if(r.kind==='ark_checkpoint'&&integer(r.verified_at_ms,0)&&r.verified_at_ms<now-90*86400000&&!exists(packagePath(root,r.archive_id))){fs.unlinkSync(p);if(++cleaned>=100)break;}
+  }
+  syncDir(path.join(root,'receipts'));const result={removed,cleaned,checked_at_ms:now};durableJson(path.join(root,'ark-retention-status.json'),result);return result;
+}
 export function cycleStatus(root,exit,phase) {
   setup(root);
   if(!Number.isInteger(exit)||exit<0||exit>255||!['list','transfer','rotate','complete'].includes(phase))fail('INVALID_STATUS');
@@ -245,7 +304,7 @@ async function main() {
   } else if (command === 'finalize') console.log(JSON.stringify(await finalize(root, arg)));
   else if (command === 'ack') { acknowledge(root, arg, json(extra)); console.log('ACK_STORED'); }
   else if (command === 'queue') { for(const id of queue(root,arg))console.log(id); }
-  else if (command === 'rotate') console.log(JSON.stringify(await rotateBackups(root)));
+  else if (command === 'rotate') console.log(JSON.stringify({backup:await rotateBackups(root),ark:await rotateArk(root)}));
   else if (command === 'status') console.log(JSON.stringify(cycleStatus(root,Number(arg),extra)));
   else fail('INVALID_COMMAND');
 }

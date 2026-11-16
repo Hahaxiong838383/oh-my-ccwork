@@ -64,10 +64,15 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
     if(kind==='batches')return route.fulfill({json:{ok:true,limit:25,offset:Number(q.get('offset')),items:[{attempt_id:'attempt-1',request_id:'request-1',batch_id:'batch-1',received_at_ms:Date.now(),sent_at_ms:Date.now(),accepted:1,duplicated:0,rejected:0,device_alias:state.mode==='candidate-error'?'设备-fedcba987654':['aliases','alias-race'].includes(state.mode)?'设备-abcdef012345':'设备-012345abcdef',http_status:200,processing_ms:1,sent_received_skew_ms:0,upload_client:{product:'KidsHubAI-VoiceKit',component:'uploader',protocol_version:'1',content_version:'v1'}}]}});
     if(kind==='events')return route.fulfill({json:{ok:true,id_digest:'safe-digest',events:[],settlements:[{attempt_id:'attempt-1',request_id:'request-1',received_at_ms:Date.now(),device_alias:'设备-012345abcdef',outcome:'rejected',reason:'INVALID_SCHEMA'}]}});
     if(kind==='registry')return route.fulfill({json:{ok:true,event_count:57,schema_version:1,items:[{event_name:'g1.reward_granted',group:'reward',properties_schema:{type:'object',description:'<img src=x onerror=alert(1)>'}}]}});
+    if(u.pathname.endsWith('/storage/archive')){
+      const body=req.postDataJSON();state.archivePut=body;
+      if(body.expected_revision!==state.storage.revision)return route.fulfill({status:409,json:{ok:false,error:'STORAGE_POLICY_CONFLICT'}});
+      state.storage={...state.storage,revision:state.storage.revision+1,archive_enabled:body.enabled};return route.fulfill({json:{ok:true,policy:state.storage}});
+    }
     if(kind==='storage'){
       state.storage ||= {version:1,revision:0,target_devices:50,archive_enabled:false};
       if(req.method()==='PUT'){const body=req.postDataJSON();state.storagePut=body;if(body.expected_revision!==state.storage.revision)return route.fulfill({status:409,json:{ok:false,error:'STORAGE_POLICY_CONFLICT'}});state.storage={...state.storage,revision:state.storage.revision+1,target_devices:body.target_devices};return route.fulfill({json:{ok:true,policy:state.storage}});}
-      const reply=()=>route.fulfill({json:{ok:true,policy:state.storage,profile:{analytics_devices:14,ark_devices:0},enabled:{analytics:1,ark:3},ark_capacity:{max_enabled_devices:3,limiting_factors:['not_validated']},archive:{enabled:false,state:'not_implemented'}}});
+      const reply=()=>route.fulfill({json:{ok:true,policy:state.storage,profile:{analytics_devices:14,ark_devices:0},enabled:{analytics:1,ark:3},ark_capacity:{max_enabled_devices:3,limiting_factors:['not_validated']},archive:{enabled:state.storage.archive_enabled,state:state.storage.archive_enabled?'pending':'disabled_draining',pending_records:3,pending_bytes:1000,last_ack_ms:null,last_success_ms:null}}});
       if(state.mode==='storage-delay'){state.releaseStorage=reply;state.pendingReady();return;}return reply();
     }
     if(kind==='control'){
@@ -190,7 +195,11 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
   assert.equal(state.seen.filter(x=>x.path.endsWith('/storage')&&x.method==='PUT').length,putsBefore);checks++;
   state.storage.revision++;await page.getByLabel('规划设备上限').fill('50');await page.getByRole('button',{name:'保存规划配额',exact:true}).click();await page.getByRole('alert').filter({hasText:'配额已被其他窗口修改'}).waitFor();assert.equal(state.storage.target_devices,100);checks++;
   state.errors=state.errors.filter(e=>!e.includes('409 (Conflict)'));await page.getByRole('button',{name:'刷新配额',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anStorage.target===100);
-  assert((await page.locator('.analytics-panel').innerText()).includes('尚未完成规模验证'));assert((await page.locator('.analytics-panel').innerText()).includes('尚未接入'));checks++;
+  assert((await page.locator('.analytics-panel').innerText()).includes('尚未完成规模验证'));assert((await page.locator('.analytics-panel').innerText()).includes('已关闭，继续补送积压'));checks++;
+  const originalControl=JSON.stringify(state.control),originalQuota=state.storage.target_devices;
+  await page.getByRole('button',{name:'开启方舟历史归档',exact:true}).click();await page.getByRole('button',{name:'关闭新增归档',exact:true}).waitFor();
+  assert.equal(state.storage.archive_enabled,true);assert.deepEqual(Object.keys(state.archivePut).sort(),['enabled','expected_revision']);assert.equal(JSON.stringify(state.control),originalControl);assert.equal(state.storage.target_devices,originalQuota);checks++;
+  await page.getByRole('button',{name:'关闭新增归档',exact:true}).click();await page.getByRole('button',{name:'开启方舟历史归档',exact:true}).waitFor();assert.equal(state.storage.archive_enabled,false);assert((await page.locator('.analytics-panel').innerText()).includes('已关闭，继续补送积压'));checks++;
   await page.getByPlaceholder('SN、末8位或设备备注').fill('02000026');await page.getByRole('button',{name:'全选筛选结果',exact:true}).click();await page.getByRole('button',{name:'保存上传设置',exact:true}).click();await page.getByRole('alert').filter({hasText:'超过当前容量上限'}).waitFor();assert.equal(state.control.subjects.length,1);assert.equal(state.errors.filter(e=>e.includes('409 (Conflict)')).length,1);state.errors=state.errors.filter(e=>!e.includes('409 (Conflict)'));checks++;
   await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsControlToggle('BJP00326070803800006',false));await page.getByRole('button',{name:'保存上传设置',exact:true}).click();await page.getByRole('status').filter({hasText:'上传设置已保存'}).waitFor();assert.deepEqual(state.control.subjects,['BJP00326081002000026']);checks++;
   await page.getByRole('button',{name:'关闭全部上传',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anControl.data?.policy.enabled===false);assert.equal(state.control.enabled,false);checks++;

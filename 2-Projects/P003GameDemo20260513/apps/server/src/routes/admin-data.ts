@@ -1,4 +1,5 @@
 import {storageRoute} from '../storage/routes.js';
+import {arkArchiveStatus} from '../ark/archive.js';
 import {arkStore,arkCapacity} from '../ark/service.js';
 import { listeningAdminRoute } from './listening-admin.js';
 import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
@@ -2193,6 +2194,8 @@ adminDataRoute.route('/analytics/storage',storageRoute({
  authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
  read:()=>({policy:configStore.storagePolicy(),profile:configStore.storageProfile(),enabled:storageCounts(),ark_capacity:arkCapacity()}),
  save:input=>{arkStore();return configStore.saveStoragePolicy(input,storageCounts,'admin');},
+ archive:()=>arkArchiveStatus(arkStore().db,configStore.storagePolicy().archive_enabled),
+ saveArchive:input=>configStore.saveStorageArchive(input,'admin'),
 }));
 adminDataRoute.route('/analytics/control',analyticsControlRoute({
   authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},

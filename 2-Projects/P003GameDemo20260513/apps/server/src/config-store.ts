@@ -1,4 +1,4 @@
-import {STORAGE_POLICY_KEY,VERIFIED_PROFILE_KEY,readStoragePolicy,readVerifiedProfile,parseStorageChange} from './storage/policy.js';
+import {STORAGE_POLICY_KEY,VERIFIED_PROFILE_KEY,readStoragePolicy,readVerifiedProfile,parseStorageChange,parseArchiveChange} from './storage/policy.js';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -244,6 +244,15 @@ export class ConfigStore {
       const n=counts();if(p.target_devices<Math.max(n.analytics,n.ark))throw new Error('STORAGE_ENABLED_CONFLICT');
       const next={...old,revision:old.revision+1,target_devices:p.target_devices};
       this.setFlag(STORAGE_POLICY_KEY,JSON.stringify(next),by,'Storage planning quota; no device switch changes');return next;
+    });
+  }
+
+  saveStorageArchive(input:unknown,by:string){
+    const p=parseArchiveChange(input);
+    return this.withStorageAdmission(()=>{
+      const old=this.storagePolicy();if(old.revision!==p.expected_revision)throw new Error('STORAGE_POLICY_CONFLICT');
+      const next={...old,revision:old.revision+1,archive_enabled:p.enabled};
+      this.setFlag(STORAGE_POLICY_KEY,JSON.stringify(next),by,'Ark checkpoint archival only; existing pending records continue draining');return next;
     });
   }
 

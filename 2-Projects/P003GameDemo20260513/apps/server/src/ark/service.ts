@@ -25,7 +25,10 @@ export function arkCapacity(){
 export function arkAuthorizedSubjects(){const a=arkStore();return a.settings().subjects.filter(sn=>{const i=arkService().identity(sn);return !!i&&!!a.grant(i);});}
 export function arkStore():ArkStore{
  if(!store){
-  store=new ArkStore(resolve(process.env.ARK_DB_PATH??'./data/ark.db'),{run:fn=>configStore.withStorageAdmission(fn),limit:()=>arkCapacity().max_enabled_devices});
+  store=new ArkStore(resolve(process.env.ARK_DB_PATH??'./data/ark.db'),{run:fn=>configStore.withStorageAdmission(fn),limit:()=>arkCapacity().max_enabled_devices},()=>{
+   const p=configStore.storagePolicy();const fs=p.archive_enabled?statfsSync(resolve(process.env.ARK_DB_PATH??'./data/ark.db')):null;
+   return {enabled:p.archive_enabled,limitBytes:p.spool_limit_bytes,reserveBytes:4.5*1024**3,freeBytes:fs?Number(fs.bavail)*Number(fs.bsize):0};
+  });
   // Record the old environment seed once; never create grants or device configurations from it.
   configStore.withStorageAdmission(()=>{if(!configStore.getFlag('ark.scope-seed.v1'))configStore.setFlag('ark.scope-seed.v1',JSON.stringify({version:1,legacy_limit:store!.settings().subjects.length,subjects:(process.env.ARK_CONTEXT_SN_ALLOW??'').split(',').map(x=>x.trim()).filter(x=>/^BJP003\d{14}$/.test(x)),migrated_at_ms:Date.now()}),'migration','legacy scope seed only; current grants are authoritative');});
  }return store;

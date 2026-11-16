@@ -23,7 +23,7 @@ export function createArkRoutes(o:Options){
   // Recheck revocation after awaited request body; failing dependency returns 503.
   if(!await verifyDeviceCredential(c.req.header('authorization'),o.secret(),o.acceptsCredential))return c.json({ok:false,error:'invalid_device_credential'},401);
   try{return c.json({ok:true,...o.store().accept(latest,parsed.data,Date.now())});}
-  catch(e){const code=(e as Error).message;if(['stale','conflict','before_grant'].includes(code))return c.json({ok:false,error:code},409);if(code==='clock_invalid')return c.json({ok:false,error:code},400);throw e;}
+  catch(e){const code=(e as Error).message;if(code==='archive_buffer_full'){c.header('Retry-After','60');return c.json({ok:false,error:code},503);}if(['stale','conflict','before_grant'].includes(code))return c.json({ok:false,error:code},409);if(code==='clock_invalid')return c.json({ok:false,error:code},400);throw e;}
  });
  app.use('/admin/*',async(c,next)=>{if(!o.isAdmin(c.req.header('authorization')??''))return c.json({ok:false,error:'admin_required'},403);await next();});
  app.get('/admin/settings',c=>{const settings=o.store().settings();return c.json({ok:true,...settings,scope_ceiling:o.ceiling(),freshness_seconds:30,interface:'admin_ui_and_api',grants:settings.subjects.map(sn=>{const identity=o.runtime().identity(sn),g=identity&&o.store().grant(identity);return {sn,authorized:!!g,not_before_ms:g?.not_before_ms??null};})});});

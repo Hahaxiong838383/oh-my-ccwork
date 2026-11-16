@@ -1453,8 +1453,13 @@
                       <template v-if="anStorage.data">
                         <div class="an-filters" style="margin-top:14px"><label for="storage-target">规划设备上限</label><input id="storage-target" class="an-input" type="number" min="1" max="1000" step="1" v-model.number="anStorage.target" :disabled="anStorage.loading || anStorage.saving"><el-button type="primary" :loading="anStorage.saving" :disabled="anStorage.loading || anStorage.saving || anStorage.target===anStorage.data.policy.target_devices" @click="saveAnalyticsStorage">保存规划配额</el-button><el-button :disabled="anStorage.loading || anStorage.saving" @click="loadAnalyticsStorage">刷新配额</el-button></div>
                         <p class="an-note">允许填写 1–1000 台；这是规划目标，实际新增开启仍受安全容量限制。降低至已开启数量以下会拒绝保存。配额不改变设备上传开关、上传时间或语音并发。</p>
-                        <dl class="an-dl"><dt>埋点已验证规模</dt><dd>{{ anStorage.data.profile.analytics_devices }} 台（合成负载）</dd><dt>方舟已验证规模</dt><dd>{{ anStorage.data.profile.ark_devices ? anStorage.data.profile.ark_devices+' 台' : '尚未完成规模验证，保留现有授权' }}</dd><dt>当前已开启</dt><dd>埋点 {{ anStorage.data.enabled.analytics }} 台 / 方舟 {{ anStorage.data.enabled.ark }} 台</dd><dt>方舟当前安全上限</dt><dd>{{ anStorage.data.ark_capacity.max_enabled_devices }} 台；新增前需完成容量验证</dd><dt>方舟限制原因</dt><dd>{{ storageLimits(anStorage.data.ark_capacity.limiting_factors) }}</dd><dt>PRnas 归档</dt><dd>尚未接入，当前不传输历史数据</dd></dl>
+                        <dl class="an-dl"><dt>埋点已验证规模</dt><dd>{{ anStorage.data.profile.analytics_devices }} 台（合成负载）</dd><dt>方舟已验证规模</dt><dd>{{ anStorage.data.profile.ark_devices ? anStorage.data.profile.ark_devices+' 台' : '尚未完成规模验证，保留现有授权' }}</dd><dt>当前已开启</dt><dd>埋点 {{ anStorage.data.enabled.analytics }} 台 / 方舟 {{ anStorage.data.enabled.ark }} 台</dd><dt>方舟当前安全上限</dt><dd>{{ anStorage.data.ark_capacity.max_enabled_devices }} 台；新增前需完成容量验证</dd><dt>方舟限制原因</dt><dd>{{ storageLimits(anStorage.data.ark_capacity.limiting_factors) }}</dd><dt>方舟历史归档</dt><dd>{{ archiveStateLabel(anStorage.data.archive) }}</dd></dl>
                         <p class="an-note">调整至 50 或 100 台不会自动增加已验证规模，也不会扩大搜索、倾听或上传名单。</p>
+                        <template v-if="anStorage.data.archive">
+                          <div class="an-filters"><el-button :disabled="anStorage.loading || anStorage.saving || anStorage.data.archive.state==='unavailable'" :loading="anStorage.saving" @click="saveArkArchive(!anStorage.data.policy.archive_enabled)">{{ anStorage.data.policy.archive_enabled ? '关闭新增归档' : '开启方舟历史归档' }}</el-button></div>
+                          <dl class="an-dl"><dt>待归档记录 / 正文字节</dt><dd>{{ analyticsNumber(anStorage.data.archive.pending_records) }} / {{ analyticsBytes(anStorage.data.archive.pending_bytes) }}</dd><dt>最早积压时间</dt><dd>{{ analyticsTime(anStorage.data.archive.oldest_pending_ms) }}</dd><dt>最近导出成功</dt><dd>{{ analyticsTime(anStorage.data.archive.last_success_ms) }}</dd><dt>最近 NAS 确认</dt><dd>{{ analyticsTime(anStorage.data.archive.last_ack_ms) }}</dd></dl>
+                          <p class="an-note">仅保存已有授权设备的方舟快照历史：5分钟检查点与资产、领取等关键变化，保留90天。开启不会授权设备或改动埋点上传；关闭后仍补送已接收积压。设备上报与小可问答不等待 NAS；本地缓冲满时新留档请求需重试。NAS 确认时间为空代表尚无确认记录。</p>
+                        </template>
                       </template>
                       <p v-else class="an-note">{{ anStorage.loading ? '正在读取服务端配额…' : '配额暂不可读取，可刷新重试。' }}</p>
                       <el-button v-if="!anStorage.data" :disabled="anStorage.loading" @click="loadAnalyticsStorage">刷新配额</el-button>
@@ -5063,6 +5068,13 @@
         function analyticsControlSelect(on){analyticsControlDevices.value.filter(function(d){return !on||d.status==='active';}).forEach(function(d){analyticsControlToggle(d.sn,on);});}
         function storageLimits(reasons){if(!Array.isArray(reasons))return '等待接收端提供限制原因';var labels={cloud_disk:'云端磁盘空间不足',maintenance_unhealthy:'汇总维护异常或滞后',maintenance_throughput:'维护吞吐尚不足',not_validated:'尚未完成目标规模验证'};return reasons.length?reasons.map(r=>labels[r]||r).join('；'):'满足当前容量检查';}
         function storageError(e){return ({INVALID_STORAGE_POLICY:'请输入 1–1000 的整数台数。',STORAGE_POLICY_CONFLICT:'配额已被其他窗口修改，请刷新配额后再保存。',STORAGE_ENABLED_CONFLICT:'配额不能低于已开启设备数，请先调整设备范围。',STORAGE_UNAVAILABLE:'配额暂不可读取，请重试。'})[e&&e.message]||String(e&&e.message||'保存失败');}
+        function archiveStateLabel(a){return ({disabled:'已关闭',disabled_draining:'已关闭，继续补送积压',pending:'等待归档确认',idle:'已开启，暂无积压',error:'导出异常，已接收记录保留',unavailable:'状态暂不可用'})[a&&a.state]||'状态未知';}
+        async function saveArkArchive(enabled){
+          if(!canManageInvites.value||!anStorage.data||anStorage.loading||anStorage.saving)return;
+          var epoch=authSessionEpoch,token=getToken();anStorage.saving=true;anStorage.error='';anStorage.notice='';
+          try{var j=await deviceApi('/api/admin/analytics/storage/archive',{method:'PUT',body:JSON.stringify({expected_revision:anStorage.data.policy.revision,enabled:enabled})});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'STORAGE_UNAVAILABLE');anStorage.notice=enabled?'方舟历史归档已开启；设备授权和上传配置未改变。':'已停止新增归档；已接收积压继续补送。';anStorage.saving=false;await loadAnalyticsStorage();}
+          catch(e){if(epoch===authSessionEpoch&&token===getToken())anStorage.error=storageError(e);}finally{if(epoch===authSessionEpoch)anStorage.saving=false;}
+        }
         async function loadAnalyticsStorage(){
           if(!canManageInvites.value||anStorage.saving)return;var seq=++anStorage.seq,epoch=authSessionEpoch,token=getToken();anStorage.loading=true;anStorage.error='';
           try{var j=await deviceApi('/api/admin/analytics/storage',{method:'GET'});if(seq!==anStorage.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok||!j.policy)throw new Error(j.error||'STORAGE_UNAVAILABLE');anStorage.data=j;anStorage.target=j.policy.target_devices;}
@@ -8250,7 +8262,7 @@
           analytics: analytics,
           analyticsFilters: analyticsFilters,
           anTier,loadAnalyticsTier,saveAnalyticsTier,createAnalyticsDiagnostic,revokeAnalyticsDiagnostic,
-          storageLimits,anStorage,loadAnalyticsStorage,saveAnalyticsStorage,anControl,anArk,analyticsCapacityBytes,analyticsControlDevices,analyticsControlToggle,analyticsControlSelect,loadAnalyticsControl,saveAnalyticsControl,previewAnalyticsArk,authorizeAnalyticsArk,
+          storageLimits,archiveStateLabel,saveArkArchive,anStorage,loadAnalyticsStorage,saveAnalyticsStorage,anControl,anArk,analyticsCapacityBytes,analyticsControlDevices,analyticsControlToggle,analyticsControlSelect,loadAnalyticsControl,saveAnalyticsControl,previewAnalyticsArk,authorizeAnalyticsArk,
           analyticsTabs: analyticsTabs,
           analyticsGroupDefs: analyticsGroupDefs,
           analyticsNumber: analyticsNumber,
