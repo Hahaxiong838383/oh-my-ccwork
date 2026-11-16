@@ -1,0 +1,41 @@
+{
+  "shared_memory_ignored_by_git": true,
+  "private_recovery": "/Users/fu-121/.local/state/p003-prnas-t4-20261116/MEMORY-WRITE-RECEIPT.json",
+  "files": [
+    {
+      "file": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+      "before_sha256": "60d3025be70c68526b84c3c19555bbb440222c828f266665134092f829ee670b",
+      "candidate_sha256": "0fd06d7b4ae80c8d57bb15289143686153a75e798ec76a6d8c4799bfb8052e6a",
+      "state": "written_and_verified",
+      "after_sha256": "0fd06d7b4ae80c8d57bb15289143686153a75e798ec76a6d8c4799bfb8052e6a"
+    },
+    {
+      "file": "/Users/fu-121/.mycc-global/0-System/status.md",
+      "before_sha256": "9c5cf983be004ae43b487040bfc5ca1d7ddf02aea9d9fec34e48ad5504bd95b8",
+      "candidate_sha256": "53c75afb1372cec808f30648c8f9ea92ed7b9c371252e86d9f3e51d592258140",
+      "state": "written_and_verified",
+      "after_sha256": "53c75afb1372cec808f30648c8f9ea92ed7b9c371252e86d9f3e51d592258140"
+    },
+    {
+      "file": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+      "before_sha256": "da0be9d62d63b50a407cdd6f79586b57ad68c489ee6bcf801bc668712550d41b",
+      "candidate_sha256": "84ed5e0248c7b2cc122e6975b6b1d6db7f4c1de53d3448dfc0bd70f22c398b44",
+      "state": "written_and_verified",
+      "after_sha256": "84ed5e0248c7b2cc122e6975b6b1d6db7f4c1de53d3448dfc0bd70f22c398b44"
+    },
+    {
+      "file": "/Users/fu-121/mycc/.claude/skills/p003-deploy-ops/SKILL.md",
+      "before_sha256": "f737e1ef14551b886f65d711a8e42234def8dcf994a086e45d5d050987af089e",
+      "candidate_sha256": "94c0f42089de61cdb27bb9384dfcc55676fbe69c84e49253d837e2472062c00f",
+      "state": "written_and_verified",
+      "after_sha256": "94c0f42089de61cdb27bb9384dfcc55676fbe69c84e49253d837e2472062c00f"
+    },
+    {
+      "file": "/Users/fu-121/mycc/.claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+      "before_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "candidate_sha256": "b043e6ac2d857be91b6f38eab1ba57821ec232a29fb27e9ba95c7c94b5be8b4f",
+      "state": "written_and_verified",
+      "after_sha256": "b043e6ac2d857be91b6f38eab1ba57821ec232a29fb27e9ba95c7c94b5be8b4f"
+    }
+  ]
+}
