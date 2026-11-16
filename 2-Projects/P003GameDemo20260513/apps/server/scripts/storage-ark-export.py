@@ -131,7 +131,13 @@ def cycle(dbfile,root,now=None):
             db.execute('UPDATE ark_archive_stats SET last_attempt_ms=? WHERE id=1',(now,))
             count={'published':0,'confirmed':0}
             pending=db.execute("SELECT archive_id FROM ark_archive_batch WHERE state!='complete' ORDER BY created_at_ms,archive_id LIMIT ?",(MAX_BATCHES,)).fetchall()
-            for b in pending:count[process_batch(db,spool,work,b['archive_id'])]+=1
+            disk_paused=False
+            for b in pending:
+                try:count[process_batch(db,spool,work,b['archive_id'])]+=1
+                except ValueError as error:
+                    if str(error)!='archive_export_disk_reserve':raise
+                    disk_paused=True  # A later already-confirmed batch can still free disk.
+            if disk_paused:raise ValueError('archive_export_disk_reserve')
             while count['published']+count['confirmed']<MAX_BATCHES:
                 aid=claim(db,now)
                 if aid is None:break

@@ -66,6 +66,21 @@ for(let n=1;n<=Number(process.argv[2]);n++)s.accept(i,{...f,snapshot_id:'s-'+n,b
         with patch.object(self.m.shutil,'disk_usage',return_value=SimpleNamespace(free=1)):
             self.cycle()  # Verified cleanup must still release space when disk is low.
         self.assertEqual(self.sql('SELECT pending_records,reserved_bytes FROM ark_archive_stats'),[(0,0)])
+    def test_low_disk_unpublished_batch_does_not_block_later_verified_cleanup(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        spool=self.m.Spool(self.spool);work=self.spool/'ark-work';work.mkdir()
+        with sqlite3.connect(self.db,isolation_level=None) as db:
+            db.row_factory=sqlite3.Row
+            with patch.object(self.m,'MAX_ROWS',1):
+                first=self.m.claim(db,1);later=self.m.claim(db,2)
+            self.m.process_batch(db,spool,work,later)
+        self.ack(self.manifest())
+        with patch.object(self.m.shutil,'disk_usage',return_value=SimpleNamespace(free=1)):
+            with self.assertRaisesRegex(ValueError,'archive_export_disk_reserve'):self.cycle()
+        self.assertEqual(self.sql("SELECT state FROM ark_archive_batch WHERE archive_id='"+later+"'"),[('complete',)])
+        self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_outbox'),[(2,)])
+        self.cycle();self.assertEqual(len(self.m.Spool(self.spool).list()),2)
     def test_real_sigkill_publish_and_directory_rename_recovers_same_batch(self):
         import sys
         code="""import sys,os,signal,importlib.util
