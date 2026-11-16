@@ -1,0 +1,115 @@
+{
+  "reviewer": "grok",
+  "reviewed_at": "2026-11-16",
+  "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+  "parent": "a4a9ec823e83ad976c968ab3fd83de3d7034eaaf",
+  "prior_pass_candidate": "fe76919cda3a7df4491796844bbb344b0f09bd46",
+  "branch": "codex/p003-mini008-realdata-20261111",
+  "worktree_clean": true,
+  "deployed": false,
+  "production_contacted": false,
+  "device_contacted": false,
+  "messages_sent": false,
+  "commit_or_push": false,
+  "new_worktree": false,
+  "subagents": false,
+  "source_modified": false,
+  "verdict": "PASS_LOCAL",
+  "launch_blocker": false,
+  "release_allowed": false,
+  "code_change_required": false,
+  "isolation_verified": true,
+  "scope": "records dashboard SQL failure isolation only",
+  "diff_files_vs_parent": [
+    "src/ark/records-service.ts",
+    "scripts/ark-records.test.ts",
+    "docs/records-r1/schema.mjs",
+    "docs/records-r1/DASHBOARD_ISOLATION_FIX.md",
+    "docs/records-r1/INTEGRATION.md",
+    "docs/records-r1/SERVER_CONTRACT_R1.md",
+    "docs/records-r1/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md"
+  ],
+  "archive_file_sha256": {
+    "src/ark/records-service.ts": "90e2a237071988931c45b098ebf7df1c97d93d0175784dc594d5e75d5a089ddf",
+    "scripts/ark-records.test.ts": "6ebfed0457840a485147983745d4cc71a3d6cabd774c16f09d74f463d9345b0f",
+    "docs/records-r1/schema.mjs": "e556c1d3b4de2e0bb1971499234307b21e7023e936bcc747e3907b1f6a2e014b"
+  },
+  "node": "/Users/fu-121/.local/node-v24/bin/node",
+  "node_version": "v24.19.0",
+  "new_dependencies_installed": false,
+  "tests": {
+    "ark_records": {
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx --test --test-concurrency=1 scripts/ark-records.test.ts",
+      "cwd": "git-archive/apps/server",
+      "exit": 0,
+      "pass": 32,
+      "fail": 0,
+      "duration_ms": 16680.842,
+      "concurrency": 1,
+      "log": "ark-records-test.log",
+      "log_sha256": "9f052bde4a3006e48a4dc3dba9bf94c501b23f16d30855ea6c13ab28b51f91ab"
+    },
+    "schema": {
+      "command": "/Users/fu-121/.local/node-v24/bin/node --import tsx validate.mjs",
+      "cwd": "grok-review/schema-tmp (copied schema.mjs/validate.mjs/examples.json)",
+      "exit": 0,
+      "pass": 59,
+      "fail": 0,
+      "log": "schema-validate.log",
+      "log_sha256": "5aea8c2c18c46949ac2509991c9ca0adaae986996afd0c28777166fe59cede1b",
+      "repo_examples_rewritten": false
+    },
+    "probe_isolation": {
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx probe-isolation.mts",
+      "exit": 0,
+      "pass": 8,
+      "fail": 0,
+      "log": "probe-isolation.log",
+      "log_sha256": "6af74e7170125cd0192b073842809db224582f208b2fb40473234266485cdde8",
+      "probe_sha256": "8ec70e8f43c3e0591bd3b2839b4155045682ca6c357e709eee2f1a5ab7f4886d",
+      "checks": [
+        "records_sql_failure_preserves_real_ark_wallet_and_null_income",
+        "context_survives_records_table_rename",
+        "parent_page_stays_503_without_ack_payload",
+        "upload_stays_503_without_ack",
+        "wrong_owner_stays_404_during_records_failure",
+        "schema_rejects_fabricated_zero_income",
+        "recovery_retries_original_id_without_losing_committed_row",
+        "legacy_ark_current_failure_still_503"
+      ]
+    }
+  },
+  "isolation": {
+    "records_failure_preserves_ark_usage_device": true,
+    "unknown_amount_stays_null_not_zero": true,
+    "upload_and_page_stay_503_without_ack": true,
+    "wrong_owner_404": true,
+    "legacy_ark_failure_stays_503": true,
+    "recovery_retryable_no_data_loss": true,
+    "production_ark_ceiling_unchanged": true
+  },
+  "prior_evidence_not_reused_as_this_sha": [
+    "/Users/fu-121/.local/state/p003-miniapp-records-r1-20261116/dashboard-isolation-red.log",
+    "/Users/fu-121/.local/state/p003-miniapp-records-r1-20261116/dashboard-isolation-green.log",
+    "/Users/fu-121/.local/state/p003-miniapp-records-r1-20261116/dashboard-isolation-green-final.log"
+  ],
+  "not_verified": [
+    "archive_127",
+    "telemetry_internal_37_as_a_suite",
+    "ark_currency_http_3_voice_routes",
+    "listening_content_tsc",
+    "usage_p50",
+    "main13_linux_node22_isolation_rerun",
+    "production_or_real_device",
+    "android_outbox_parent_ab_phone_page",
+    "two_product_summaries_remain_policy_pending"
+  ],
+  "known_boundaries_out_of_scope": [
+    "legacy telemetry usage remains visible across rebinding by SN",
+    "three pre-existing ark-currency voice route failures",
+    "listening-content.ts GeminiLlmClient.abort type error",
+    "two product summaries remain policy_pending"
+  ],
+  "report": "REPORT.md",
+  "report_sha256": "1800f8762fb1a5b9fb385e7add377306ff85feda76ba769d5c3382b539ba1623"
+}

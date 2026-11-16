@@ -1,0 +1,44 @@
+ISOLATED_EVIDENCE_DIR=/tmp/codeg-acp/2883-faa303a9/ark-records-r1-dm27wR
+✔ context reads existing grant without mutation; closed default and no identity leaks (247.06275ms)
+✔ multi-row commit, immutable replay/key order, ID/sequence/source conflicts and partial ACK (107.072291ms)
+✔ SQLite failure after header/resource insert rolls back all rows; retry original ID works (33.050791ms)
+✔ 48h history, before grant, unknown/future clocks and modes; summaries never synthesize income (55.089208ms)
+✔ bad envelope/duplicate IDs/oversize are zero-write; injection is per-record invalid (55.501ms)
+✔ owner generation changes: A loses entry, B sees empty, old context/cursor cannot cross (67.487666ms)
+✔ auth negatives and revocation prevent even duplicate ACK (46.949ms)
+✔ keyset high-water pins backfill/filter/coverage; refresh includes late records (92.550875ms)
+✔ activation before acquisition resolves only in same save/origin/sequence; no repeat acquisition (57.354041ms)
+✔ capacity and free-disk gates reject new records while duplicates still ACK (82.307209ms)
+[telemetry] batch sn=****0011 snap=- acked=1 dup=0 rejected=0 skew=8ms
+✔ per-SN/global upload rate independent from Telemetry (46.841584ms)
+✔ real second-connection revoke cannot commit between authorization and record COMMIT (528.133333ms)
+✔ lock contention returns 503 without ACK; revoked before write prevents insertion (937.5665ms)
+✔ revocation while HTTP body is incomplete gets rechecked before any write (67.166667ms)
+✔ mid-batch revoked after first commit returns no ACK and preserves committed original (15.171375ms)
+✔ whole batch foreign origin preflight denies before valid first row commits (8.666333ms)
+✔ expired cursor 410; encrypted cursor replay by other parent 404; changing limit invalid (60.257958ms)
+✔ single transaction 32 items accepted, 33 rejected; resource filter retains all rows; separate SN ID isolation (49.983375ms)
+✔ per-SN and global payload capacity; context/hourly upload quotas return 429 (78.449167ms)
+✔ master/scope/disabled/account role gates; newly paired binding version rechecked (48.854292ms)
+✔ invalid/expired device credentials zero-write and forged parent cannot enumerate (19.597125ms)
+✔ unknown and GM records remain labelled; real zero snapshot stays distinct from null records income (53.863583ms)
+✔ unknown-time pagination keyset, save/date filters, pending references pinned by cursor high-water (65.288333ms)
+✔ credential/account/query field fuzz and schema resource directions are rejected (91.541959ms)
+✔ real SQLite FULL during record insertion produces no ACK and preserves header/index atomicity (27.564375ms)
+✔ quota persists in SQLite across an independent service connection reopening (18.725209ms)
+[telemetry] batch sn=****0028 snap=- acked=1 dup=0 rejected=0 skew=4ms
+✔ existing Telemetry historical epoch limitation is recorded, not silently rewritten by R1 (38.68225ms)
+REVIEW_FANOUT {"usage":{"records":1000,"bytes":6103676},"elapsed_ms":82.48349999999846,"rss_before":540606464,"rss_after":540606464,"heap_before":79641928,"heap_after":79898424}
+✔ pending reference fanout stays within bounded memory and lock time (10719.5015ms)
+✔ malformed origin is per-ID invalid_record and never isolates valid peers (44.077459ms)
+✔ unauthenticated new parent responses remain no-store (9.851459ms)
+✔ records-only SQL failure preserves existing dashboard data and never fabricates an ACK (81.346ms)
+✔ late acquisition rejects incompatible save/sequence/item without poisoning original pending reference (57.983542ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 32
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15825.698792

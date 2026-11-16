@@ -1,0 +1,53 @@
+{
+  "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+  "results": [
+    {
+      "sn": "BJP00326081002000031",
+      "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+      "action": "release",
+      "applied": false,
+      "files": 6,
+      "database_modified": false,
+      "service_restarted": false
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+      "action": "release",
+      "applied": true,
+      "files": 6,
+      "database_modified": false,
+      "service_restarted": false
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+      "action": "rollback",
+      "applied": false,
+      "files": 6,
+      "database_modified": false,
+      "service_restarted": false
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+      "action": "rollback",
+      "applied": true,
+      "files": 6,
+      "database_modified": false,
+      "service_restarted": false
+    },
+    {
+      "sn": "BJP00326081002000031",
+      "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+      "action": "rollback",
+      "applied": true,
+      "files": 6,
+      "database_modified": false,
+      "service_restarted": false
+    }
+  ],
+  "foreign_drift_rejected": true,
+  "rc": 1,
+  "initial_harness": "Mac /tmp symlink refused correctly; rerun uses resolved physical temporary path"
+}

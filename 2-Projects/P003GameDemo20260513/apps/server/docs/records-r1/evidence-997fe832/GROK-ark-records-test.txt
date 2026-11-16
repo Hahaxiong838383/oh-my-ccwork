@@ -1,0 +1,44 @@
+ISOLATED_EVIDENCE_DIR=/tmp/ark-records-r1-PAwbd7
+[32m✔ context reads existing grant without mutation; closed default and no identity leaks [90m(303.737875ms)[39m[39m
+[32m✔ multi-row commit, immutable replay/key order, ID/sequence/source conflicts and partial ACK [90m(103.2545ms)[39m[39m
+[32m✔ SQLite failure after header/resource insert rolls back all rows; retry original ID works [90m(35.752542ms)[39m[39m
+[32m✔ 48h history, before grant, unknown/future clocks and modes; summaries never synthesize income [90m(57.974084ms)[39m[39m
+[32m✔ bad envelope/duplicate IDs/oversize are zero-write; injection is per-record invalid [90m(55.093167ms)[39m[39m
+[32m✔ owner generation changes: A loses entry, B sees empty, old context/cursor cannot cross [90m(64.358208ms)[39m[39m
+[32m✔ auth negatives and revocation prevent even duplicate ACK [90m(66.680625ms)[39m[39m
+[32m✔ keyset high-water pins backfill/filter/coverage; refresh includes late records [90m(93.164042ms)[39m[39m
+[32m✔ activation before acquisition resolves only in same save/origin/sequence; no repeat acquisition [90m(62.32725ms)[39m[39m
+[32m✔ capacity and free-disk gates reject new records while duplicates still ACK [90m(66.195542ms)[39m[39m
+[telemetry] batch sn=****0011 snap=- acked=1 dup=0 rejected=0 skew=8ms
+[32m✔ per-SN/global upload rate independent from Telemetry [90m(44.643792ms)[39m[39m
+[32m✔ real second-connection revoke cannot commit between authorization and record COMMIT [90m(602.576458ms)[39m[39m
+[32m✔ lock contention returns 503 without ACK; revoked before write prevents insertion [90m(928.3735ms)[39m[39m
+[32m✔ revocation while HTTP body is incomplete gets rechecked before any write [90m(72.114083ms)[39m[39m
+[32m✔ mid-batch revoked after first commit returns no ACK and preserves committed original [90m(19.920459ms)[39m[39m
+[32m✔ whole batch foreign origin preflight denies before valid first row commits [90m(13.508ms)[39m[39m
+[32m✔ expired cursor 410; encrypted cursor replay by other parent 404; changing limit invalid [90m(52.087167ms)[39m[39m
+[32m✔ single transaction 32 items accepted, 33 rejected; resource filter retains all rows; separate SN ID isolation [90m(98.471375ms)[39m[39m
+[32m✔ per-SN and global payload capacity; context/hourly upload quotas return 429 [90m(41.040917ms)[39m[39m
+[32m✔ master/scope/disabled/account role gates; newly paired binding version rechecked [90m(47.627084ms)[39m[39m
+[32m✔ invalid/expired device credentials zero-write and forged parent cannot enumerate [90m(18.934875ms)[39m[39m
+[32m✔ unknown and GM records remain labelled; real zero snapshot stays distinct from null records income [90m(48.557583ms)[39m[39m
+[32m✔ unknown-time pagination keyset, save/date filters, pending references pinned by cursor high-water [90m(92.92425ms)[39m[39m
+[32m✔ credential/account/query field fuzz and schema resource directions are rejected [90m(87.910875ms)[39m[39m
+[32m✔ real SQLite FULL during record insertion produces no ACK and preserves header/index atomicity [90m(29.815ms)[39m[39m
+[32m✔ quota persists in SQLite across an independent service connection reopening [90m(16.596791ms)[39m[39m
+[telemetry] batch sn=****0028 snap=- acked=1 dup=0 rejected=0 skew=4ms
+[32m✔ existing Telemetry historical epoch limitation is recorded, not silently rewritten by R1 [90m(32.372416ms)[39m[39m
+REVIEW_FANOUT {"usage":{"records":1000,"bytes":6103676},"elapsed_ms":105.21545799999876,"rss_before":551501824,"rss_after":551501824,"heap_before":113563496,"heap_after":113819968}
+[32m✔ pending reference fanout stays within bounded memory and lock time [90m(10662.990042ms)[39m[39m
+[32m✔ malformed origin is per-ID invalid_record and never isolates valid peers [90m(225.688167ms)[39m[39m
+[32m✔ unauthenticated new parent responses remain no-store [90m(13.472709ms)[39m[39m
+[32m✔ records-only SQL failure preserves existing dashboard data and never fabricates an ACK [90m(93.995541ms)[39m[39m
+[32m✔ late acquisition rejects incompatible save/sequence/item without poisoning original pending reference [90m(57.993125ms)[39m[39m
+[34mℹ tests 32[39m
+[34mℹ suites 0[39m
+[34mℹ pass 32[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 16680.842[39m

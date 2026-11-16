@@ -1,6 +1,6 @@
 # P003 真实业务记录：服务端合同 R1
 
-版本：`p003.ark.records.r1`，2026-11-16。状态：**技术合同候选已定稿，供主13复核后冻结和转发；新增接口未实现、未部署，不能开始生产上报。** 附件方向成立，但不能直接以附件当上线合同。本文与 `schema.mjs`、`examples.json` 为同一候选；修改须出修订，不能各端原地漂移。
+版本：`p003.ark.records.r1`，2026-11-16。状态：**服务端已实现并于北京时间2026-11-16 20:01:50部署，仅C机开放；安卓与小程序可据此并行联调，真实端到端尚未验收。** 本文、`schema.mjs`、`examples.json`为本次服务端接口口径；不冒称三方已确认。后续变更须出修订，不能各端原地漂移。
 
 对象：C机 **BJP00326081002000031**，`public_id=dev_50b5415662259045`，保留原owner、凭据、存档、队列。沿现有 Device Bearer / 家长 Bearer，绝不新建 Children、第二钱包、云端发币或远程兑换。
 
@@ -13,11 +13,11 @@
 |使用时长|`data.usage.today` / `data.usage.daily[]`|已上线；真实focus_segment去重、跨日、重叠规则；null不补0，不使用旧`data.today.focus_minutes`回填|
 |姿态|`data.today.posture_alert_count`、`weekly-report.posture_alert_count`|已上线，只计outcome=played；异常轮和冷却抑制不计提醒；该旧计数缺测可返回0，不能据此证明完整覆盖|
 |资产|POST `/v1/device/ark/state`；GET dashboard → `data.ark.wallets.{family_coin,stardust}`、`inventory["M-CARD-001"]`|已上线，严格schema v1；当前normal可读，unknown/gm返回不可用/null，不回退旧normal|
-|新增记录|本合同以下四个接口/增量|**待实现**；不往旧Ark snapshot塞字段，不借Analytics日批做实时流水|
+|新增记录|本合同以下四个接口/增量|**已部署，仅C机开启**；不往旧Ark snapshot塞字段，不借Analytics日批做实时流水|
 
 完整基础URL：`https://kidshub-ai.hahaxiong.cc`。所有新增响应 `Cache-Control: no-store`。旧mini008忽略新增字段、继续旧接口，完全无需重绑。新端必须先GET context成功且包含本合同版本，才开启records发送；404/不支持版本保留本地outbox，不能降级塞进旧state。
 
-## 2. 最终技术路径（候选冻结值）
+## 2. 服务端已实现接口
 
 |方法/路径|认证|请求/响应|
 |---|---|---|
@@ -26,7 +26,7 @@
 |GET `/v1/parent/devices/{publicId}/ark/records`|原家长Bearer|分页只读；见§6|
 |GET 既有 `/v1/parent/devices/{publicId}/dashboard`|原家长Bearer|仅新增 `data.records`，旧device/usage/ark语义不改；见§7|
 
-新records准入为既有Ark有效授权范围的子集：实现计划增加独立records允许名单（默认空=拒绝，首轮仅BJP00326081002000031），不因既有Ark17台已开而自动开放全部设备，不新增管理台或另一grant体系。本轮未创建/修改任何线上开关；部署和启用由主13另行核验。
+新records准入为既有Ark有效授权范围的子集：独立records允许名单（默认空=拒绝，本次显式仅BJP00326081002000031），不因既有Ark17台已开而自动开放全部设备，不新增管理台或另一grant体系。主13已核验六文件发布及单C启用；原Ark范围、grant和epoch保持，未扩大到其他设备。
 
 context不返回SN、家长账号、手机号或token。`origin_grant_id`就是既有grant的UUID，作为上下文标识而不是另一凭据；还必须校验Bearer、scope、active、当前epoch与grant。刷新context只影响之后新产生的记录；不得重标旧记录。正常重启/同一授权下离线可以沿用已持久化context；撤销/换绑/新grant不能沿用旧context。
 
@@ -107,7 +107,7 @@ ParentRecord为原Record去掉origin_grant_id/origin_epoch，加`received_at_ms`
 
 家长分页另返回只读 `item_references` 数组，每个 activated 对应 `{item_instance_id,acquired_record_id,status:"pending|resolved"}`。该字段不得出现在设备上传体中，否则单条返回 `invalid_record`。resolved 要求获得记录与激活记录处于同一 save、原 owner / device account / epoch / grant，获得 sequence 小于激活 sequence，且获得记录在当前分页高水位内。pending 仅表示引用尚未对齐，既不代表库存，也不等于物品状态 pending_activation。引用解析不修改原 item_changes、不新增获得数或收入。
 
-排序固定为可归日的occurred_at_ms DESC（未知/异常排后）、save_id ASC、sequence DESC、record_id ASC；同save的业务前后以sequence为准，不以到达时间改业务顺序。第一页固定服务端ingest高水位，cursor绑定public_id、原owner/epoch/grant、过滤条件和高水位及最后排序键，后页只读≤高水位；新补传不插入既有翻页集合，刷新第一页才纳入。游标不可篡改（现服务认证密钥签名或等价服务端游标），不创建新密钥体系。伪造/改变过滤条件400 invalid_cursor；归属变化先404，不泄露cursor内旧owner。过期cursor 410 cursor_expired，刷新第一页（候选TTL30分钟，非现役能力）。每页重查身份，未登录401，非本家长/禁用/无有效授权一律404。
+排序固定为可归日的occurred_at_ms DESC（未知/异常排后）、save_id ASC、sequence DESC、record_id ASC；同save的业务前后以sequence为准，不以到达时间改业务顺序。第一页固定服务端ingest高水位，cursor绑定public_id、原owner/epoch/grant、过滤条件和高水位及最后排序键，后页只读≤高水位；新补传不插入既有翻页集合，刷新第一页才纳入。游标不可篡改（现服务认证密钥签名或等价服务端游标），不创建新密钥体系。伪造/改变过滤条件400 invalid_cursor；归属变化先404，不泄露cursor内旧owner。过期cursor 410 cursor_expired，刷新第一页（本次生效TTL30分钟，以context.limits为准）。每页重查身份，未登录401，非本家长/禁用/无有效授权一律404。
 
 ## 7. dashboard新增与诚实覆盖
 
@@ -138,9 +138,9 @@ latest_items.items结构为`{item_instance_id,item_id,item_kind,quantity,state,a
 
 最新物品不复用next_reward；激活只更新已获实例状态，不增加获得数。R1没有旧物品完整投影，也没有当前save/当前tank可靠指针，故当前缸/全历史“最新”不得冒充已确定。产品如果选择严格“当前缸最新、含旧档”，该摘要必须继续unavailable/legacy_baseline_unknown，补最小基线方案另出R1.1再实现，不静默扩展旧state。可选最小展示为“已同步获得记录”的最新整组；scope确定后再计算；最新候选若为unknown/gm，不得跳过它回退旧normal冒充当前最新，应返回non_normal。
 
-## 8. 限流、容量与保留（全部为本轮建议实现值，非现役能力）
+## 8. 限流、容量与保留（服务端已生效；端侧队列部分仍待实现验证）
 
-|项|R1候选实现值|理由/满额行为|
+|项|服务端当前值／端侧建议|理由/满额行为|
 |---|---|---|
 |批次/单条|50 Record；UTF-8原始body≤256KiB；单Record规范化JSON≤32KiB|先检查完整信封大小，超过413整批不写；事务不拆碎|
 |资源/物品行|3资源行、32物品行|符合本轮三资源及小批物品；32并非已测真实最大，端侧真实峰值超出须修订|
@@ -153,7 +153,7 @@ latest_items.items结构为`{item_instance_id,item_id,item_kind,quantity,state,a
 |客户端已ACK副本|可清理已ACK的传输副本，Runtime正常业务历史遵循原存档规则|未ACK/隔离/dead-letter无自动TTL，保留原ID与原因|
 |时钟未来阈值|received_at+5分钟以上clock_suspect|仅异常检测建议，不改原occurred_at；统计排除；无24小时回溯限制|
 
-上述服务端默认值已在固定候选 fe76919c 的隔离测试中核实，尚非生产/真实设备容量验收。context.limits 返回实际生效值；频率、条数、payload、磁盘余量、游标TTL及未来时钟阈值可由服务端配置，非法配置返回503 records_configuration_invalid。协议硬上限50条/256KiB/32KiB保持不变。客户端不得自行调大或按旧文档的10万条/256MiB假定容量。端侧本地队列预算与云端预算分别计量。首轮范围仍只C机；不启用PRnas T3、不换存储系统、不部署新服务。
+上述服务端值已在运行候选997fe832的隔离测试及本次公网context中核实；不等于真实端侧峰值或长期容量验收。context.limits 返回实际生效值；频率、条数、payload、磁盘余量、游标TTL及未来时钟阈值可由服务端配置，非法配置返回503 records_configuration_invalid。协议硬上限50条/256KiB/32KiB保持不变。客户端不得自行调大或按旧文档的10万条/256MiB假定容量。端侧本地队列预算与云端预算分别计量。首轮范围仍只C机；不启用PRnas T3、不换存储系统、不部署新服务。
 
 ## 9. 仅两项产品待定
 

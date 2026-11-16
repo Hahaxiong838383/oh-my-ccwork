@@ -1,0 +1,30 @@
+ISOLATED_EVIDENCE_DIR=/tmp/codeg-acp/2883-faa303a9/ark-records-r1-ztndfH
+✖ records-only SQL failure preserves existing dashboard data and never fabricates an ACK (277.339458ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2845.749542
+
+✖ failing tests:
+
+test at scripts/ark-records.test.ts:1:31864
+✖ records-only SQL failure preserves existing dashboard data and never fabricates an ACK (277.339458ms)
+  AssertionError [ERR_ASSERTION]: a new records query failure must not break the existing dashboard
+  
+  503 !== 200
+  
+      at TestContext.<anonymous> (/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records.test.ts:106:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 503,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

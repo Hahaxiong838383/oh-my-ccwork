@@ -1,0 +1,67 @@
+{
+  "sn": "BJP00326081002000031",
+  "candidate": "997fe83243134407237e923ff632fd80edb562fd",
+  "branch": "codex/p003-mini008-realdata-20261111",
+  "created_at": "2026-11-16T18:59:29.761613+08:00",
+  "deployed": false,
+  "files": [
+    {
+      "path": "src/ark/records-contract.ts",
+      "before_sha256": null,
+      "after_sha256": "4c5463b3546c33a9f0fdafa87158796025e0b55dbe0d9ce69ad63df9e750030c",
+      "bytes": 6926,
+      "action": "add"
+    },
+    {
+      "path": "src/ark/records-store.ts",
+      "before_sha256": null,
+      "after_sha256": "dd1c540531defc8cd89c817fcb451db4afca8c48d3a2824270826ddc6de7dbc2",
+      "bytes": 18293,
+      "action": "add"
+    },
+    {
+      "path": "src/ark/records-routes.ts",
+      "before_sha256": null,
+      "after_sha256": "3e5ccd7540c05ed3a6d4653f4e07f7fe47c69661f6a4e275f753306b50da585a",
+      "bytes": 4257,
+      "action": "add"
+    },
+    {
+      "path": "src/ark/records-service.ts",
+      "before_sha256": null,
+      "after_sha256": "90e2a237071988931c45b098ebf7df1c97d93d0175784dc594d5e75d5a089ddf",
+      "bytes": 1558,
+      "action": "add"
+    },
+    {
+      "path": "src/routes/ark.ts",
+      "before_sha256": "e55ee9037b2b849d1e801e82a05dab5ced45e1f0d98a1c2ce9c60f922da7db7d",
+      "after_sha256": "ad6231c2d37781542e2e46438e1bf8777743059bd94ccce2d7014358ff218e10",
+      "bytes": 715,
+      "action": "replace"
+    },
+    {
+      "path": "src/routes/telemetry.ts",
+      "before_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
+      "after_sha256": "2cdf3ebffca78f5c1783dc73bd7bd14bc13ad2e52dbcb8b89de1c09e65e0401f",
+      "bytes": 14976,
+      "action": "replace"
+    }
+  ],
+  "required_unchanged_dependencies": {
+    "src/ark/contracts.ts": "e031487cec7193f2b12e33827902361432f123ca928d38e50b41311559ccd15c",
+    "src/ark/history.ts": "b477919e35370415b4bdeca701af8f629b85ab497bb881bd082980a5e8774e29",
+    "src/ark/service.ts": "af2b36d56283c173a8f4b77978926132d5b3fc7bcb9ef2f572a9fdca58c6f846",
+    "src/ark/store.ts": "08637691485c3450df2ec06f2f241e2f00f11eb11622b274cee4a945ef831f2a",
+    "src/device-registry-store.ts": "eb5a64929b5d386da39034c722b759e201c374207f3d064d73e511d5b6d48a10",
+    "src/device-credential.ts": "c3ba47f768c6f1e61cc540e3271f603ad07eb8ac9b2c3ecb3b237f93b792d038",
+    "src/auth-jwt.ts": "621f9bee6f6886af691e7795473102fecc5b7b6c85ba67875cc8592d61fa67f7",
+    "src/index.ts": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c"
+  },
+  "database_rollback": "keep additive tables, records and dedupe; never restore stale database over received records",
+  "source_baseline_commits": [
+    "959f1d4b",
+    "49ae826e",
+    "9d8dd399"
+  ]
+}

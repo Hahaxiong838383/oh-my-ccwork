@@ -1,6 +1,6 @@
 # R1 本地联调交接
 
-C SN **BJP00326081002000031**，public_id **dev_50b5415662259045**。本地候选实现，未部署；原 owner／凭据／存档／队列不动。主13尚须冻结 DIFF_R1、安排安卓和小程序确认。这里没有“安卓已接受”或真机通过结论。
+C SN **BJP00326081002000031**，public_id **dev_50b5415662259045**。服务端已于北京时间2026-11-16 20:01:50部署，records仅C机开放；原 owner／凭据／存档／队列不动。安卓和小程序按本说明并行开发/联调；这里没有“安卓已接受”或真机通过结论。
 
 ## 接口
 
@@ -11,9 +11,9 @@ C SN **BJP00326081002000031**，public_id **dev_50b5415662259045**。本地候�
 |GET|`/v1/parent/devices/{publicId}/ark/records`|现有家长Bearer|当前owner及当前grant/epoch；分页只读|
 |GET|既有dashboard|现有家长Bearer|增加`data.records`，两个摘要policy_pending，原device/usage/ark不变|
 
-新增响应与dashboard为 `Cache-Control:no-store`。新能力允许名单默认空；`ARK_RECORDS_SN_ALLOW` 必须同时是原Ark ceiling、有效grant的子集。部署和单C启用均归13，本包不改配置、不启动服务。
+新增响应与dashboard为 `Cache-Control:no-store`。新能力允许名单默认空；`ARK_RECORDS_SN_ALLOW` 必须同时是原Ark ceiling、有效grant的子集。本次主13已完成部署，显式允许名单仅C；原Ark授权不变，不自动扩容。
 
-完整字段看 SERVER_CONTRACT_R1.md + DIFF_R1.md；可执行候选schema.mjs、synthetic样例examples.json已含实施细化。原协调目录schema/59例保留为主13此前审核版本，不静默替换。`node docs/records-r1/validate.mjs` 验本目录实施schema；实际服务器HTTP测试在 scripts/ark-records.test.ts。
+完整字段看 SERVER_CONTRACT_R1.md + DIFF_R1.md；可执行schema.mjs、synthetic样例examples.json已含实施细化。原协调目录schema/59例保留为主13此前审核版本，不静默替换。`node docs/records-r1/validate.mjs` 验本目录实施schema；实际服务器HTTP测试在 scripts/ark-records.test.ts。
 
 ## 安卓
 
@@ -64,6 +64,8 @@ ParentRecord不含origin_grant_id/epoch/SN/owner。`item_references`是实施细
 ## 验收边界
 
 本地真实HTTP＋SQLite使用synthetic身份与临时数据库，无生产伪记录。已验证失败回滚、SQLITE_FULL、双连接撤销、body竞态、逐ID ACK、跨代际、稳定分页、容量限流及旧mini008回归。
+
+公网已由服务端临时签名令牌核验context/分页/dashboard 200、错账号404、空批次400；未提交合成业务记录，也不代表手机登录与安卓实际凭据已通过。
 
 未验：Android/Rust业务与outbox同事务、强杀断电、Launcher durable ACK、真实SN/版本回读、手机页面、真实家长A/B公网token、真实focus/normal记录、真实峰值与长期负载。原mini008三方验收保留。旧Telemetry历史只有SN没有epoch，换绑后旧usage仍可能可见（已隔离复现）；本轮未改变或清理旧数据。该问题不影响新records按原归属隔离。
 

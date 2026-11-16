@@ -1,21 +1,52 @@
-# P003 小程序真实数据 R1｜开发与联调回执
+# P003 小程序真实数据 R1｜服务端开发与联调回执
 
-**服务端候选开发与独立隔离验收已完成；尚未部署，真实设备与小程序联调未通过。**
+**服务端开发、Grok独立复审和单C机部署已完成；安卓真实上报→小程序展示仍待双方执行。**
 
-本回执直接回传主会话13，不依赖左侧会话正文是否可见。原开发会话352，Grok独立评审356。固定运行候选 fe76919cda3a7df4491796844bbb344b0f09bd46；合同修正提交 a4a9ec823e83ad976c968ab3fd83de3d7034eaaf，均已推送。
+发布时间：北京时间 2026-11-16 20:01:50。服务：`https://kidshub-ai.hahaxiong.cc`。
+目标：**BJP00326081002000031**（C机），public_id **dev_50b5415662259045**。只开放这台设备的新records接口；原账号、设备凭据、grant、epoch和旧快照链路保留。
+运行源码：`997fe83243134407237e923ff632fd80edb562fd`。原工作树/分支 `codex/p003-mini008-realdata-20261111`；开发352、Grok356/359。回执直接交付主会话13，不依赖左侧正文显示。五台ASR诊断与PRnas T3均未变更。
 
-目标设备：BJP00326081002000031（C机），public_id=dev_50b5415662259045。沿用现有账号、凭据、绑定和授权。
+## 本轮结果
 
-## 开发与自检结果
-- 已实现真实业务记录的授权上下文、批量持久接收、逐ID ACK、幂等重放、原账号代际隔离、家长分页及dashboard记录区。
-- 主实现固定归档127/127、schema59/59；Grok独立真实loopback HTTP/SQLite31/31、schema59/59，并测异常配置、慢body和钱包无副作用。不同套件不重复相加为新总数。
-- 新链路不发币、不改余额，不用快照差值造收益；现有余额、补勤卡库存及使用时长继续原链路。
-- 合同的item_references和容量文字已按实现补齐：每SN/全局默认各10,000条、32MiB，保留8GiB共享盘余量。不是50台容量承诺。
-- Grok指出的dashboard故障隔离待补：记录库异常不应拖垮原资产/使用时长。主13下一阶段优先修复并回归，再推进受控发布。
+| 验证 | 结果与边界 |
+|---|---|
+| 当前Linux Node22隔离 | 记录HTTP/SQLite32/32、原dashboard16/16、Telemetry37/37、schema59/59 |
+| Grok固定归档独立复审 | 32/32、schema59/59、追加钱包/异常隔离8/8；不将重复套件相加成独立样本数 |
+| 公网与本机接口 | context/家长分页/dashboard均200；错账号两读取404；非法空批次400且无ACK |
+| 发布前后兼容 | 原ark、usage、device、today、week字段逐项相同；六文件SHA与固定候选相同 |
+| 稳定性 | 主后台PID 2203104，发布后观察124.3秒同PID、无额外重启；其他PM2服务及Worker保持 |
+| 真实业务记录 | 当前新表0条；没有伪造设备奖励。真实上传成功、设备outbox和手机页面仍待测 |
 
-## 后续并行配合
-安卓可按以下合同实现业务记录/outbox/逐ID结算；小程序可并行实现分页、空态和账号切换缓存清理。开始真实上传前，以主13随后给出的部署回执和开窗结果为准，不把本地开发通过当服务器已开放。
-昨日收益和最新物品两个摘要继续policy_pending；核心采集/分页开发不依赖其产品口径，不能自行把null渲染为0或按余额差计算收入。下一阶段不启动PRnas T3，也不修改五台ASR诊断窗口。
+公网检查使用服务端短期签名测试令牌，只做读取及非法空批次；不是安卓实际凭据/手机登录A/B验收。新记录SQL故障已修复：dashboard原资产、时长、设备状态正常返回，新记录区单独dependency_unavailable；上传和分页503时不伪造ACK。原Ark故障仍保留原503行为。
+
+## 安卓与小程序现在怎么配合
+
+1. 安卓先用C机现有Device Bearer读取context，确认`contract_version=p003.ark.records.r1`并持久保存原context；旧余额与卡库存继续原`/state`，不要塞新字段。
+2. 产生一笔**真实领取或道具使用**，保存不可变record_id/save_id/sequence和原context，与业务事务/outbox可靠交接；合批上传并按accepted/duplicated逐ID清队列。断网、503及不完整响应保留原ID重试。
+3. 小程序用现有登录token及C的public_id读取records分页；同一record_id在安卓ACK、服务器持久记录和页面中对齐。刷新首屏才纳入后续补传；换账号清掉旧cursor及缓存。
+4. 双方回传完整SN、APK/小程序版本、北京时间、batch_id/record_id、HTTP状态、ACK和pending变化；不要发送token或家长手机号。
+5. 错账号404、重复重放不重复计入、离线恢复不丢记录、重启/强杀后outbox保留，由双方按下表完成真实联调。服务端已就绪，无需再次等待接口开发。
+
+| 用例 | 期望 |
+|---|---|
+| C现有凭据context | 200，原授权上下文有效，读取limits；不重绑/重签 |
+| 真实一笔领取及道具使用 | 逐ID accepted，云端记录与端侧完全对应，多资源同笔原子接收 |
+| 原ID重复/断网恢复 | duplicated或首次accepted；不新增奖励、不篡改旧记录 |
+| 改payload重用ID | 逐条冲突拒收，保留原记录，不能换ID绕过 |
+| Launcher/Runtime重启与强杀 | 未ACK保留原ID，逐ID结算，不以HTTP200清整个队列 |
+| 家长读取/翻页/补传 | 自己设备200，同一高水位不跳页；新补传刷新首屏可见 |
+| A/B切账号 | 他人设备404，页面无旧账号缓存数据；需真人手机确认 |
+| 空值与GM | 未知保持null，真实0才显示0；GM不作正常收益 |
+| 旧链路回归 | 设备状态、使用时长、余额、补勤卡库存仍正常 |
+
+**展示边界：** 昨日收益和最新物品两个摘要目前为policy_pending；可先展示已同步业务记录列表，不能把摘要null变成0，也不能自行按余额变化造收入。该两项口径不阻塞可靠采集和分页开发。
+
+**开启范围：** records只C机，没有短时自动关窗，保持用于联调，后续按主13通知关闭；不是扩到ASR五台或全量设备。容量是单C内测预算，不是50台承诺。
+
+## 回滚记录
+
+原源码两文件/新增四文件逐SHA备份：`/root/p003-records-r1-20261116/six-source-backup`；配置及Ark/devices安全快照：`/root/p003-records-r1-20261116/before-production`。
+回滚先停新records接收，保留端侧未ACK队列；只撤本次C允许项和六文件，保留其他配置/凭据。数据库新记录及去重证据保留，禁止整库回灌。发布/回滚/重复回滚及漂移拒绝已隔离验证，不冒充实际生产回滚。
 
 ## 接口
 
@@ -26,9 +57,9 @@
 |GET|`/v1/parent/devices/{publicId}/ark/records`|现有家长Bearer|当前owner及当前grant/epoch；分页只读|
 |GET|既有dashboard|现有家长Bearer|增加`data.records`，两个摘要policy_pending，原device/usage/ark不变|
 
-新增响应与dashboard为 `Cache-Control:no-store`。新能力允许名单默认空；`ARK_RECORDS_SN_ALLOW` 必须同时是原Ark ceiling、有效grant的子集。部署和单C启用均归13，本包不改配置、不启动服务。
+新增响应与dashboard为 `Cache-Control:no-store`。新能力允许名单默认空；`ARK_RECORDS_SN_ALLOW` 必须同时是原Ark ceiling、有效grant的子集。本次主13已完成部署，显式允许名单仅C；原Ark授权不变，不自动扩容。
 
-完整字段看 SERVER_CONTRACT_R1.md + DIFF_R1.md；可执行候选schema.mjs、synthetic样例examples.json已含实施细化。原协调目录schema/59例保留为主13此前审核版本，不静默替换。`node docs/records-r1/validate.mjs` 验本目录实施schema；实际服务器HTTP测试在 scripts/ark-records.test.ts。
+完整字段看 SERVER_CONTRACT_R1.md + DIFF_R1.md；可执行schema.mjs、synthetic样例examples.json已含实施细化。原协调目录schema/59例保留为主13此前审核版本，不静默替换。`node docs/records-r1/validate.mjs` 验本目录实施schema；实际服务器HTTP测试在 scripts/ark-records.test.ts。
 
 ## 安卓
 
@@ -57,7 +88,7 @@ context是原授权上下文，不是新凭据。首次成功且版本匹配后�
 
 ParentRecord不含origin_grant_id/epoch/SN/owner。`item_references`是实施细化：每个activated返回pending/resolved；resolved须同save/原归属/sequence，且目标在该分页高水位内。item_changes是原始事实，不修改成当前库存。activation不再次加数量或收入；尚无可靠当前save/tank指针。
 
-`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard两个摘要保持不可用、policy_pending（未开则not_enabled）；家族币/星尘null，items=[]。不回退旧normal，gm/unknown在列表明确标记；正常余额和卡库存仍走旧Ark。
+`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard两个摘要保持不可用、policy_pending（未开则not_enabled；新记录查询故障为dependency_unavailable且不影响原资产/时长/设备状态）；家族币/星尘null，items=[]。不回退旧normal，gm/unknown在列表明确标记；正常余额和卡库存仍走旧Ark。
 
 ## 默认容量／配置
 
@@ -79,6 +110,8 @@ ParentRecord不含origin_grant_id/epoch/SN/owner。`item_references`是实施细
 ## 验收边界
 
 本地真实HTTP＋SQLite使用synthetic身份与临时数据库，无生产伪记录。已验证失败回滚、SQLITE_FULL、双连接撤销、body竞态、逐ID ACK、跨代际、稳定分页、容量限流及旧mini008回归。
+
+公网已由服务端临时签名令牌核验context/分页/dashboard 200、错账号404、空批次400；未提交合成业务记录，也不代表手机登录与安卓实际凭据已通过。
 
 未验：Android/Rust业务与outbox同事务、强杀断电、Launcher durable ACK、真实SN/版本回读、手机页面、真实家长A/B公网token、真实focus/normal记录、真实峰值与长期负载。原mini008三方验收保留。旧Telemetry历史只有SN没有epoch，换绑后旧usage仍可能可见（已隔离复现）；本轮未改变或清理旧数据。该问题不影响新records按原归属隔离。
 

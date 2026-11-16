@@ -1,0 +1,60 @@
+ISOLATED_EVIDENCE_DIR=/tmp/codeg-acp/2883-faa303a9/ark-records-r1-LjofYf
+✔ context reads existing grant without mutation; closed default and no identity leaks (264.401792ms)
+✔ multi-row commit, immutable replay/key order, ID/sequence/source conflicts and partial ACK (111.383167ms)
+✔ SQLite failure after header/resource insert rolls back all rows; retry original ID works (32.093458ms)
+✔ 48h history, before grant, unknown/future clocks and modes; summaries never synthesize income (55.333375ms)
+✔ bad envelope/duplicate IDs/oversize are zero-write; injection is per-record invalid (54.711667ms)
+✔ owner generation changes: A loses entry, B sees empty, old context/cursor cannot cross (67.112625ms)
+✔ auth negatives and revocation prevent even duplicate ACK (49.536875ms)
+✔ keyset high-water pins backfill/filter/coverage; refresh includes late records (95.748583ms)
+✔ activation before acquisition resolves only in same save/origin/sequence; no repeat acquisition (64.163791ms)
+✔ capacity and free-disk gates reject new records while duplicates still ACK (85.715292ms)
+[telemetry] batch sn=****0011 snap=- acked=1 dup=0 rejected=0 skew=7ms
+✔ per-SN/global upload rate independent from Telemetry (33.438416ms)
+✔ real second-connection revoke cannot commit between authorization and record COMMIT (588.215334ms)
+✔ lock contention returns 503 without ACK; revoked before write prevents insertion (921.006584ms)
+✔ revocation while HTTP body is incomplete gets rechecked before any write (71.332375ms)
+✔ mid-batch revoked after first commit returns no ACK and preserves committed original (20.057875ms)
+✔ whole batch foreign origin preflight denies before valid first row commits (22.5305ms)
+✔ expired cursor 410; encrypted cursor replay by other parent 404; changing limit invalid (69.033875ms)
+✔ single transaction 32 items accepted, 33 rejected; resource filter retains all rows; separate SN ID isolation (62.356625ms)
+✔ per-SN and global payload capacity; context/hourly upload quotas return 429 (93.3875ms)
+✔ master/scope/disabled/account role gates; newly paired binding version rechecked (52.893291ms)
+✔ invalid/expired device credentials zero-write and forged parent cannot enumerate (21.298917ms)
+✔ unknown and GM records remain labelled; real zero snapshot stays distinct from null records income (52.331542ms)
+✔ unknown-time pagination keyset, save/date filters, pending references pinned by cursor high-water (59.840083ms)
+✔ credential/account/query field fuzz and schema resource directions are rejected (90.524709ms)
+✔ real SQLite FULL during record insertion produces no ACK and preserves header/index atomicity (35.003042ms)
+✔ quota persists in SQLite across an independent service connection reopening (20.706167ms)
+[telemetry] batch sn=****0028 snap=- acked=1 dup=0 rejected=0 skew=4ms
+✔ existing Telemetry historical epoch limitation is recorded, not silently rewritten by R1 (64.221083ms)
+REVIEW_FANOUT {"usage":{"records":1000,"bytes":6103676},"elapsed_ms":105.73487499999828,"rss_before":540409856,"rss_after":540409856,"heap_before":79595432,"heap_after":79851920}
+✔ pending reference fanout stays within bounded memory and lock time (10539.917084ms)
+✔ malformed origin is per-ID invalid_record and never isolates valid peers (43.894958ms)
+✔ unauthenticated new parent responses remain no-store (9.573291ms)
+✔ records-only SQL failure preserves existing dashboard data and never fabricates an ACK (73.078708ms)
+✖ late acquisition rejects incompatible save/sequence/item without poisoning original pending reference (4.65275ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 31
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 15814.330417
+
+✖ failing tests:
+
+test at scripts/ark-records.test.ts:1:33611
+✖ late acquisition rejects incompatible save/sequence/item without poisoning original pending reference (4.65275ms)
+  Error: invalid_scope
+      at ArkStore.authorize (/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts:36:55)
+      at fixture (/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records.test.ts:22:355)
+      at TestContext.<anonymous> (/Users/fu-121/.codex/worktrees/p003-mini008-realdata-20261111/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-records.test.ts:121:134)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)
