@@ -67,19 +67,29 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
     if(kind==='storage'){
       state.storage ||= {version:1,revision:0,target_devices:50,archive_enabled:false};
       if(req.method()==='PUT'){const body=req.postDataJSON();state.storagePut=body;if(body.expected_revision!==state.storage.revision)return route.fulfill({status:409,json:{ok:false,error:'STORAGE_POLICY_CONFLICT'}});state.storage={...state.storage,revision:state.storage.revision+1,target_devices:body.target_devices};return route.fulfill({json:{ok:true,policy:state.storage}});}
-      const reply=()=>route.fulfill({json:{ok:true,policy:state.storage,profile:{analytics_devices:14,ark_devices:0},enabled:{analytics:1,ark:3},ark_capacity:{max_enabled_devices:3},archive:{enabled:false,state:'not_implemented'}}});
+      const reply=()=>route.fulfill({json:{ok:true,policy:state.storage,profile:{analytics_devices:14,ark_devices:0},enabled:{analytics:1,ark:3},ark_capacity:{max_enabled_devices:3,limiting_factors:['not_validated']},archive:{enabled:false,state:'not_implemented'}}});
       if(state.mode==='storage-delay'){state.releaseStorage=reply;state.pendingReady();return;}return reply();
     }
     if(kind==='control'){
       if(req.method()==='PUT'){const body=req.postDataJSON();if(body.enabled&&body.subjects.length>1)return route.fulfill({status:409,json:{ok:false,error:'CAPACITY_LIMIT'}});state.control={...body,revision:state.control.revision+1};return route.fulfill({json:{ok:true,policy:state.control}});}
       if(state.mode==='control-delay'){await new Promise(resolve=>{state.releaseControl=resolve;state.pendingReady();});}
-      const valid=state.mode!=='invalid-config';return route.fulfill({json:{ok:true,runtime_available:state.mode!=='control-offline',policy:{...state.control,valid,emergency_gate:{enabled:valid,valid}},devices:['BJP00326070803800006','BJP00326081002000026'].map(sn=>({sn,note:sn.endsWith('26')?'另一台测试机':'已有测试机',status:state.mode==='disabled-selected'&&sn.endsWith('26')?'disabled':'active',upload_allowed:state.mode==='control-offline'?null:state.control.enabled&&state.control.subjects.includes(sn)})),capacity:{target_devices:state.storage?.target_devices||50,target_devices_fit:false,target_devices_bytes:(state.storage?.target_devices||50)*123456789,validated_device_limit:14,horizon_days:30,fact_growth_days:30,max_enabled_devices:1,free_bytes:10641600512,db_bytes:106422272,twenty_devices_fit:false,twenty_devices_bytes:115700000000,daily_events_per_device:9000,maintenance_ok:true,checked_at_ms:Date.now()}}});
+      const valid=state.mode!=='invalid-config';return route.fulfill({json:{ok:true,runtime_available:state.mode!=='control-offline',policy:{...state.control,valid,emergency_gate:{enabled:valid,valid}},devices:['BJP00326070803800006','BJP00326081002000026'].map(sn=>({sn,note:sn.endsWith('26')?'另一台测试机':'已有测试机',status:state.mode==='disabled-selected'&&sn.endsWith('26')?'disabled':'active',upload_allowed:state.mode==='control-offline'?null:state.control.enabled&&state.control.subjects.includes(sn)})),capacity:{limiting_factors:['cloud_disk','not_validated'],target_devices:state.storage?.target_devices||50,target_devices_fit:false,target_devices_bytes:(state.storage?.target_devices||50)*123456789,validated_device_limit:14,horizon_days:30,fact_growth_days:30,max_enabled_devices:1,free_bytes:10641600512,db_bytes:106422272,twenty_devices_fit:false,twenty_devices_bytes:115700000000,daily_events_per_device:9000,maintenance_ok:true,checked_at_ms:Date.now()}}});
     }
     if(kind==='collection-config')return route.fulfill({json:{ok:true,server_gate:{enabled:false,valid:state.mode!=='invalid-config'},allowlist_count:0,global:{event_upload_enabled:false,daily_upload_hour_cst:0},device_defaults:{event_upload_enabled:false,daily_upload_hour_cst:23},items:[]}});
    });
    const page=await context.newPage();page.on('pageerror',e=>state.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')state.errors.push(m.text());});await page.goto(origin);await page.waitForFunction(()=>typeof Vue!=='undefined' && document.querySelector('#app').__vue_app__);
    const compile=await page.evaluate(source=>{const dom=new DOMParser().parseFromString(source,'text/html');const template=dom.querySelector('#app').innerHTML;Vue.compile(template);return template.length;},html);assert(compile>100000);checks++;
    return {context,page,state};
+  }
+  // Storage responses from an ended auth epoch must never populate the next login, even with token reuse.
+  for(const newToken of ['quota-replacement-token','ui-stub-token']){
+    const s=await session('admin');s.state.mode='storage-delay';s.state.loginToken=newToken;
+    const held=new Promise(resolve=>{s.state.pendingReady=resolve;});
+    await s.page.evaluate(()=>{document.querySelector('#app').__vue_app__._container._vnode.component.proxy.loadAnalyticsStorage();});await held;
+    await s.page.evaluate(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.handleDropdown('logout');p.loginForm.username='quota-next-account';p.loginForm.password='stub-password';p.handleLogin();});
+    await s.page.waitForFunction(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;return p.isLoggedIn&&p.currentUser.username==='quota-next-account';});
+    await s.state.releaseStorage();await s.page.waitForTimeout(100);
+    assert.equal(await s.page.evaluate(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anStorage.data),null);assert.deepEqual(s.state.errors,[]);checks++;await s.context.close();
   }
   // Final wave: rejected-only receipts advance batch watermark without event cutoff;
   // dirty zero-summary and missing freshness must not present complete zero counts.
@@ -174,6 +184,12 @@ function overview(q,n=0){return {ok:true,from:q.get('from'),to:q.get('to'),dimen
   await run(()=>{const p=document.querySelector('#app').__vue_app__._container._vnode.component.proxy;p.anControl.hour=22;p.anControl.dirty=true;});
   const uploadBefore=JSON.stringify(state.control);await page.getByLabel('规划设备上限').fill('100');await page.getByRole('button',{name:'保存规划配额',exact:true}).click();await page.getByRole('status').filter({hasText:'规划配额已保存'}).waitFor();assert.equal(state.storage.target_devices,100);assert.equal(await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anControl.hour),22);assert.equal(JSON.stringify(state.control),uploadBefore);assert.deepEqual(Object.keys(state.storagePut).sort(),['expected_revision','target_devices']);checks++;
   await page.getByRole('heading',{name:'存储与设备配额',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:process.env.STORAGE_UI_SCREENSHOT||'/tmp/p003-storage-quota.png',fullPage:false});
+  assert((await page.locator('.analytics-panel').innerText()).includes('云端磁盘空间不足；尚未完成目标规模验证'));checks++;
+  const putsBefore=state.seen.filter(x=>x.path.endsWith('/storage')&&x.method==='PUT').length;
+  for(const invalid of ['0','1.5','1001']){await page.getByLabel('规划设备上限').fill(invalid);await page.getByRole('button',{name:'保存规划配额',exact:true}).click();await page.getByRole('alert').filter({hasText:'请输入 1–1000 的整数台数'}).waitFor();}
+  assert.equal(state.seen.filter(x=>x.path.endsWith('/storage')&&x.method==='PUT').length,putsBefore);checks++;
+  state.storage.revision++;await page.getByLabel('规划设备上限').fill('50');await page.getByRole('button',{name:'保存规划配额',exact:true}).click();await page.getByRole('alert').filter({hasText:'配额已被其他窗口修改'}).waitFor();assert.equal(state.storage.target_devices,100);checks++;
+  state.errors=state.errors.filter(e=>!e.includes('409 (Conflict)'));await page.getByRole('button',{name:'刷新配额',exact:true}).click();await page.waitForFunction(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.anStorage.target===100);
   assert((await page.locator('.analytics-panel').innerText()).includes('尚未完成规模验证'));assert((await page.locator('.analytics-panel').innerText()).includes('尚未接入'));checks++;
   await page.getByPlaceholder('SN、末8位或设备备注').fill('02000026');await page.getByRole('button',{name:'全选筛选结果',exact:true}).click();await page.getByRole('button',{name:'保存上传设置',exact:true}).click();await page.getByRole('alert').filter({hasText:'超过当前容量上限'}).waitFor();assert.equal(state.control.subjects.length,1);assert.equal(state.errors.filter(e=>e.includes('409 (Conflict)')).length,1);state.errors=state.errors.filter(e=>!e.includes('409 (Conflict)'));checks++;
   await run(()=>document.querySelector('#app').__vue_app__._container._vnode.component.proxy.analyticsControlToggle('BJP00326070803800006',false));await page.getByRole('button',{name:'保存上传设置',exact:true}).click();await page.getByRole('status').filter({hasText:'上传设置已保存'}).waitFor();assert.deepEqual(state.control.subjects,['BJP00326081002000026']);checks++;

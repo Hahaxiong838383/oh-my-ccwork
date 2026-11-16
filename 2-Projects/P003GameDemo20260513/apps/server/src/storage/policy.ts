@@ -18,7 +18,13 @@ export function readVerifiedProfile(raw:string|null|undefined):VerifiedProfile{
  if(raw==null)return {version:1,analytics_devices:14,ark_devices:0,evidence:'ANALYTICS_MEMORY.md:14 synthetic subjects / 84000 events (legacy)',candidate:'legacy-20261031',validated_at_ms:0};
  try{const p=JSON.parse(raw);if(p.version!==1||!integer(p.analytics_devices,0,1000)||!integer(p.ark_devices,0,1000)||typeof p.evidence!=='string'||!p.evidence||p.evidence.length>1000||typeof p.candidate!=='string'||!p.candidate||!integer(p.validated_at_ms,1,Number.MAX_SAFE_INTEGER))throw 0;return p;}catch{throw new Error('INVALID_STORAGE_PROFILE');}
 }
-export function arkAdmissionLimit(policy:StoragePolicyV1,profile:VerifiedProfile,currentCount:number){
+export function arkAdmissionLimit(policy:StoragePolicyV1,profile:VerifiedProfile,currentCount:number,legacyLimit=0){
  // Existing grants survive an absent/expired load profile. It authorizes no new expansion.
- return Math.min(policy.target_devices,Math.max(currentCount,profile.ark_devices));
+ return Math.min(policy.target_devices,Math.max(currentCount,legacyLimit,profile.ark_devices));
+}
+
+/** Original authorized scale survives a deliberate stop/restart, without pretending it was load-tested. */
+export function readArkLegacyLimit(raw:string|undefined){
+ if(raw===undefined)return 0;
+ try{const p=JSON.parse(raw);if(p.version!==1||!integer(p.legacy_limit,0,1000))throw 0;return p.legacy_limit as number;}catch{throw new Error('INVALID_ARK_LEGACY_ALLOWANCE');}
 }
