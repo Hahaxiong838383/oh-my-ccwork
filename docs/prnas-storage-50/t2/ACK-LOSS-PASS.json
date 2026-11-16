@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "193d407e789848e39d91d37f79cbc1bd\td13d64430952873dda7144a6242cce8dd28d189027fcd1cfea16ee72b0704e86\t65536\t0\t0\t1\n{\"archive_id\":\"193d407e789848e39d91d37f79cbc1bd\",\"bytes\":65536,\"created_at_ms\":1794798051693,\"kind\":\"transfer_probe\",\"record_count\":1,\"schema_version\":1,\"sha256\":\"d13d64430952873dda7144a6242cce8dd28d189027fcd1cfea16ee72b0704e86\",\"source_range\":{\"case\":\"ack_loss\",\"synthetic\":true}}\nACK_RESPONSE_DISCARDED local_receipt_absent=true\nARCHIVE_TRANSFER id=193d407e789848e39d91d37f79cbc1bd resume_offset=65536 total=65536\n{\"archive_id\":\"193d407e789848e39d91d37f79cbc1bd\",\"bytes\":65536,\"created_at_ms\":1794798051693,\"kind\":\"transfer_probe\",\"record_count\":1,\"schema_version\":1,\"sha256\":\"d13d64430952873dda7144a6242cce8dd28d189027fcd1cfea16ee72b0704e86\",\"source_range\":{\"case\":\"ack_loss\",\"synthetic\":true}}\nACK_STORED\nARCHIVE_VERIFIED id=193d407e789848e39d91d37f79cbc1bd bytes=65536\n",
+  "stderr": ""
+}

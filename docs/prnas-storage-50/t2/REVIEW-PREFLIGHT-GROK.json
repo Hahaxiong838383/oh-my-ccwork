@@ -1,0 +1,107 @@
+{
+  "report": "REVIEW-PREFLIGHT-GROK",
+  "model": "Grok 4.7",
+  "role": "independent_preflight",
+  "verdict": "preflight_constraints",
+  "implementation_pass": false,
+  "nas_pass": false,
+  "production_pass": false,
+  "deployed": false,
+  "t3_through_t6": "out_of_scope",
+  "branch": "codex/p003-prnas-storage-50-20261116",
+  "head": "bef0dea904bc813a9a141b92455e57c898726c16",
+  "worktree_clean_at_review": true,
+  "reviewed_on": "2026-11-16",
+  "actions_not_taken": [
+    "no source edits",
+    "no production or device or NAS operations",
+    "no global network changes",
+    "no subagents",
+    "backup unit tests were read but not executed"
+  ],
+  "local_evidence": {
+    "rsync": "openrsync protocol 29, rsync version 2.6.9 compatible",
+    "append_verify_on_this_host": "unrecognized option",
+    "backup_filename_glob_matches_microsecond_stamp": true,
+    "capacity_backup_peak_copies": 4,
+    "policy_archive_enabled_must_stay_false": true,
+    "nas_rsync_version": "not read; no login to prnas"
+  },
+  "minimal_implementation": [
+    "Publish by same-filesystem directory rename of payload.sqlite3 plus manifest.json after fsync.",
+    "archive_id is internal [0-9a-f]{32}; receipt accepts id, sha256, bytes, record_count only.",
+    "Count the ten analytics tables on the backup connection before close. SHA256 is of the transferred file. No gzip layer in this slice.",
+    "Receipt is one conditional update. Identical retry succeeds and deletes nothing. Mismatch leaves state unchanged.",
+    "Pin published-but-unverified packages outside --keep 2. Do not lower keep to 1. Do not change capacity.ts multiplier 4.",
+    "If an unverified full backup already exists, skip the next full backup and delete nothing. 300 seconds is not a full-backup interval.",
+    "NAS pull uses relative --partial-dir=.rsync-partial and explicit --no-whole-file. Do not use --append, --append-verify, absolute partial-dir, -W, or --delete.",
+    "Do not reuse analytics-offsite-pull.py; it copies .env.analytics and deletes by age.",
+    "Shell keeps analytics-maintenance.lock. analytics-backup.py takes a separate analytics-backup.lock and only then sweeps its own partial names.",
+    "Move the 60s, 90s, and systemd 120s budgets together, cap at 2h, set Restart=no. A 100MiB run does not close the mature-database timeout item.",
+    "Ack is a fixed argv program. Send it only after file and directory fsync. Leave stored archive_enabled false."
+  ],
+  "rsync": {
+    "use": ["-a", "--no-owner", "--no-group", "--partial", "--partial-dir=.rsync-partial", "--no-whole-file"],
+    "avoid": ["--append", "--append-verify", "--whole-file", "absolute --partial-dir", "--delete"],
+    "reason": "append-verify is for shared growing files, conflicts with the partial-dir/inplace family, skips receivers that are not shorter than the source, and is absent from this host's openrsync. Local-to-local rsync implies --whole-file and deletes partial-dir data. Absolute partial-dir has an upstream false-verification loop (RsyncProject/rsync 31fbb17) that this review did not reproduce.",
+    "resume_must_be_remote_shell": true,
+    "independent_sha_required": true
+  },
+  "ack_loss": {
+    "after_nas_fsync_and_rename": "cloud stays published, file remains, next pull sends receipt only",
+    "duplicate_same_body": "stays verified, no delete",
+    "different_hash": "state unchanged"
+  },
+  "sqlite_and_cleanup": {
+    "api": "existing sqlite3 backup API, mode=ro URI, inode-checked partial unlink",
+    "do_not_file_copy_live_db": true,
+    "prune_only_manifested_unpinned": true,
+    "last_backup_success_ms_is_not_nas_verified": true,
+    "sigterm_skips_python_cleanup": true
+  },
+  "likely_missed_tests": [
+    "second transfer literal bytes much smaller than 100MiB after kill past about 40MiB",
+    "reject local-path rsync and -W as resume evidence",
+    "corrupt prefix shorter, equal length, and longer than source; published id absent",
+    "manifest record_count altered while bytes stay the same",
+    "counts taken on the backup connection, recomputed after isolated restore",
+    "ack dropped after fsync; no full retransfer; inode unchanged; duplicate ack does not delete",
+    "kill between sqlite rename and manifest; keep must not evict the previous manifested backup",
+    "SIGKILL partial swept only while analytics-backup.lock is held and only for the tool's own names",
+    "two direct analytics-backup.py processes; loser is busy",
+    "unverified package suppresses the next full backup; 300s must not mean a full backup",
+    "slow progress past 60s retains previous final backup; systemd 120s updated with the other two limits",
+    "failed isolated restore does not shrink 7 daily or 4 weekly; last verified copy remains; weekly is not a symlink",
+    "st_dev mismatch fails before transfer",
+    "committed WAL row present without a checkpoint",
+    "harness aborts when resolved paths are under /opt/p003/server",
+    "archive_enabled true still invalid; capacity multiplier still 4"
+  ],
+  "out_of_slice": [
+    "50 devices",
+    "voice comparison",
+    "production database",
+    "90-day backup timing claim",
+    "T3 checkpoint history",
+    "T4 maintenance throughput",
+    "T5 load acceptance",
+    "T6 deploy"
+  ],
+  "sources": [
+    "docs/superpowers/plans/2026-11-16-p003-prnas-50-devices.md T2 and backup sections",
+    "docs/prnas-storage-50/ROLLBACK.md",
+    "docs/prnas-storage-50/NEXT-TODO.md",
+    "apps/server/scripts/analytics-backup.py",
+    "apps/server/scripts/analytics-backup.test.py",
+    "apps/server/scripts/analytics-maintenance.mjs",
+    "apps/server/scripts/analytics-maintenance.sh",
+    "apps/server/deploy/systemd/p003-analytics-backup.service",
+    "apps/server/deploy/systemd/p003-analytics-backup.timer",
+    "apps/server/deploy/analytics-offsite-pull.py",
+    "apps/server/src/analytics/capacity.ts",
+    "apps/server/src/storage/policy.ts",
+    "apps/server/docs/analytics-server-contract-v1.md backup lock paragraph",
+    ".claude/skills/cross-site-file-transfer/SKILL.md",
+    "https://raw.githubusercontent.com/RsyncProject/rsync/master/rsync.1.md"
+  ]
+}

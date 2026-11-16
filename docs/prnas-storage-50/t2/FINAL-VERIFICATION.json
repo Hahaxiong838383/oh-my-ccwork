@@ -1,0 +1,15 @@
+{
+  "candidate": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+  "runtime_unchanged_from_reviewed_candidate": true,
+  "business_source_unchanged_from_t1": true,
+  "json_files_parsed": 15,
+  "evidence_hashes_verified": 32,
+  "review_hashes_verified": 21,
+  "raw_evidence_copies_exact": 15,
+  "scoped_result_original_metrics_unchanged": true,
+  "final_repeat_separately_verified": true,
+  "credential_scan_findings": [],
+  "git_diff_check": "PASS",
+  "full_t2_complete": false,
+  "validation_note": "Two initial archival-copy assertions treated the derived SCOPED-RESULT as immutable, then omitted its added final-repeat field. Corrected by verifying all original metrics unchanged and the added review/final-repeat fields separately; no runtime defect or edit."
+}

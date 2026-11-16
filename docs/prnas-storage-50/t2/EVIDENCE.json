@@ -1,0 +1,169 @@
+{
+  "candidate": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+  "scope": "T2 transport and resume only; synthetic data on real cloud/NAS",
+  "evidence": {
+    "FIXTURE-RESULT.json": {
+      "sha256": "cef0acd605afa1986acf865b7c4708c72005609bbb2f3b6d71895038a5fef552",
+      "bytes": 957,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/FIXTURE-RESULT.json"
+    },
+    "SMALL-PULL.json": {
+      "sha256": "d082a33dde6718ecb495ffb5ae522e000367336864719d0a9dafa8ba8d067851",
+      "bytes": 496,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/SMALL-PULL.json"
+    },
+    "LARGE-FIRST.json": {
+      "sha256": "f2fadab11df7b3738de3740a41d0d92aa76cdb7c524179b4afb3e35a2771b907",
+      "bytes": 727,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/LARGE-FIRST.json"
+    },
+    "INTERRUPT-PASS.json": {
+      "sha256": "d5474ca64d9f1422e54de469f2ba8bdf5134cf0a57818adcfb1995dce112b47a",
+      "bytes": 272,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/INTERRUPT-PASS.json"
+    },
+    "AFTER-INTERRUPT-SOURCE.json": {
+      "sha256": "211c6543a6868c24ecda1885adb553d9b133355bdac89b09507add4e7b15358b",
+      "bytes": 531,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/AFTER-INTERRUPT-SOURCE.json"
+    },
+    "RESUME-PASS.json": {
+      "sha256": "39eae7849e4e1fb8f59513906279b5b2efc530ebf46b03bd886e3c0730430435",
+      "bytes": 733,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/RESUME-PASS.json"
+    },
+    "NAS-SQLITE-RESTORE.json": {
+      "sha256": "3c9e90a3c6d0ec86a3607d9ac1bb950562246d3056f689019572f763012c8660",
+      "bytes": 1213,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/NAS-SQLITE-RESTORE.json"
+    },
+    "ACK-LOSS-PASS.json": {
+      "sha256": "9db0383e3439bf51e70660d56ad7c83d2154505fb91f26246070ec66047180bc",
+      "bytes": 999,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/ACK-LOSS-PASS.json"
+    },
+    "CORRUPTION-REJECT.json": {
+      "sha256": "66db0812415faefb202e8da38718e8f10f8079532ce897f5cb87802863a999d7",
+      "bytes": 257,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/CORRUPTION-REJECT.json"
+    },
+    "CORRUPTION-SOURCE-SAFE.json": {
+      "sha256": "3aa3a18b02eeeffea34abe6f59afe2d3723de249463f40f660cec4778b9bbadb",
+      "bytes": 155,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/CORRUPTION-SOURCE-SAFE.json"
+    },
+    "CORRUPTION-RETRY-AND-GATEWAY.json": {
+      "sha256": "79bfb994fef9c16bc2e5256ae0a87fec8d30ce259b1859fc1a61d095543a8a85",
+      "bytes": 1029,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/CORRUPTION-RETRY-AND-GATEWAY.json"
+    },
+    "CLOUD-FINAL.json": {
+      "sha256": "32f075e5fd9ed7f50b6d936899b66b7fd088b092fed8cf56d004837dc3dba003",
+      "bytes": 2322,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/CLOUD-FINAL.json"
+    },
+    "NAS-OBSERVATIONS.json": {
+      "sha256": "4b1dfccd8ff2c78e88f3e5046dfcd26e9c3916b30e7d7226d355d1260cc3cae4",
+      "bytes": 1057,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/NAS-OBSERVATIONS.json"
+    },
+    "PRODUCTION-FINAL.json": {
+      "sha256": "97698f8aa81373b54b76bea178797cc330da554bbb31ce74b731b5023fb1fc52",
+      "bytes": 1455,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/PRODUCTION-FINAL.json"
+    },
+    "archive-suite.log": {
+      "sha256": "f56272164c44fa9f28e83a4518a4d5efe7f21b435b165229462739f91e205723",
+      "bytes": 332,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/archive-suite.log"
+    },
+    "existing-backup.log": {
+      "sha256": "931ee622acb24d582aa0e2442389b49137ce32c07e9412d1969bff1cbd11a562",
+      "bytes": 102,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/existing-backup.log"
+    },
+    "t1-storage-regression.log": {
+      "sha256": "d416615f2f1926d9e0ed6e25d4dce76d3eb0d507fbbfda4d3ef5cd03174f271b",
+      "bytes": 1018,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/t1-storage-regression.log"
+    },
+    "archive-red.log": {
+      "sha256": "89de6b89c378ba795f4c7e73b25d4a929efc92cb9399127042121e84afbe1d6e",
+      "bytes": 4514,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/archive-red.log"
+    },
+    "archive-green.log": {
+      "sha256": "f0a234862d644edf876188741399f25dce98e25eb40e8fee8a225ffb96f85161",
+      "bytes": 5863,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/archive-green.log"
+    },
+    "archive-green-canonical.log": {
+      "sha256": "84163a4ec6e33a4d2e417c63f00ef9f3b48aa790841eb0e5043215ec0eb6f793",
+      "bytes": 105,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/archive-green-canonical.log"
+    },
+    "nas-verify-red.log": {
+      "sha256": "e66926ff2bfed1c6bd2d582a68d654bff413b3bc5acbe096c3fa197c7762230d",
+      "bytes": 648,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/nas-verify-red.log"
+    },
+    "nas-fsync-red.log": {
+      "sha256": "80289ac40dffc3a8aee52f8a53cad39a03a7f3c5f37d96a10e97214238e64140",
+      "bytes": 608,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/nas-fsync-red.log"
+    },
+    "nas-fsync-green.log": {
+      "sha256": "828ed9c463faffade5514d6fc6e6f9367aebc95c945b54dc123434ccd3008ebf",
+      "bytes": 111,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/nas-fsync-green.log"
+    },
+    "nas-count-red.log": {
+      "sha256": "974339aca32b082b28d1398dd62bc14d65464445af939ae1a5c80ca8c8e9fcd9",
+      "bytes": 597,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/nas-count-red.log"
+    },
+    "nas-count-green.log": {
+      "sha256": "828ed9c463faffade5514d6fc6e6f9367aebc95c945b54dc123434ccd3008ebf",
+      "bytes": 111,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/nas-count-green.log"
+    },
+    "INTERRUPT-RESULT.json": {
+      "sha256": "644186c40f9d49eb180cf0b6b839863670d7ba94539d194fde3d6569f601fede",
+      "bytes": 227,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/INTERRUPT-RESULT.json"
+    },
+    "INTERRUPT-REAL.json": {
+      "sha256": "54aedf8e3034791359e540a2b807a48a3b0722f3d7c8c79da8bec94a7c46f733",
+      "bytes": 103,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/INTERRUPT-REAL.json"
+    },
+    "FINAL-CANDIDATE-FIXTURE.json": {
+      "sha256": "aecdb28f3a7e10e4e7f1ba79feb7ea12640ddb3690708e1b045f66884107392e",
+      "bytes": 441,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/FINAL-CANDIDATE-FIXTURE.json"
+    },
+    "FINAL-CANDIDATE-RESUME.json": {
+      "sha256": "4641fd1cf1d4ba7d47006c6c7197519cbe3cc6fa17a03ce94ca35489ec71a270",
+      "bytes": 1302,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/FINAL-CANDIDATE-RESUME.json"
+    },
+    "REVIEW-FINAL-GROK.md": {
+      "sha256": "bbb5d56d525bc7b75f8c1f45df7b5d363bce0a0082bdef5e680f9c5c366a6049",
+      "bytes": 6920,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/REVIEW-FINAL-GROK.md"
+    },
+    "REVIEW-FINAL-GROK.json": {
+      "sha256": "8dab7f2092b7aa379dcec585e65a088d13ea9abfaba9d93d27f5efe578612157",
+      "bytes": 5072,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/REVIEW-FINAL-GROK.json"
+    },
+    "grok-negatives/RUN-EXITS.json": {
+      "sha256": "1d3c3b84734053451302127eaf8e6e9ad1669dc75758a399e1dc7b1bd3ff0ce5",
+      "bytes": 118,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t2-20261116/grok-negatives/RUN-EXITS.json"
+    }
+  },
+  "independent_review": "PASS_SCOPED",
+  "review_model_reported": "Grok 4.6",
+  "full_t2_complete": false
+}

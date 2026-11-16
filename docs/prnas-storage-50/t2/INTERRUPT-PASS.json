@@ -1,0 +1,6 @@
+{
+  "at": 1794797757.052202,
+  "exit": 0,
+  "stdout": "before_bytes=34373632 transport_pid=20174 process=ssh\nconcurrent_exit=3\ntransfer_exit=4 after_bytes=34406400\nARCHIVE_TRANSFER id=c38eaf700f7b4612b94c34914e3d8b9a resume_offset=0 total=105811968\n",
+  "stderr": ""
+}

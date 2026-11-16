@@ -1,0 +1,7 @@
+{
+  "start": 1794797823.503765,
+  "end": 1794797834.201941,
+  "exit": 0,
+  "stdout": "ARCHIVE_TRANSFER id=c38eaf700f7b4612b94c34914e3d8b9a resume_offset=34406400 total=105811968\n{\"archive_id\":\"c38eaf700f7b4612b94c34914e3d8b9a\",\"bytes\":105811968,\"created_at_ms\":1794797734063,\"kind\":\"analytics_backup\",\"record_count\":3200,\"schema_version\":1,\"sha256\":\"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\",\"source_range\":{\"sample_sha256\":\"026e5c2453b394ed29f87186d47682f168f79d204d1f83e56e1919b86bca76ce\",\"synthetic\":true,\"tables\":{\"analytics_event\":1600,\"analytics_event_seen\":1600}}}\nACK_STORED\nARCHIVE_VERIFIED id=c38eaf700f7b4612b94c34914e3d8b9a bytes=105811968\n",
+  "stderr": ""
+}

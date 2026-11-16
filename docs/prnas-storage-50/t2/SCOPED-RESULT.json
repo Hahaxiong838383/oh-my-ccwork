@@ -1,0 +1,26 @@
+{
+  "candidate": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+  "large_package_bytes": 105811968,
+  "preserved_bytes": 34406400,
+  "resumed_payload_bytes": 71405568,
+  "saved_fraction": 0.32516548600627104,
+  "resume_elapsed_seconds": 10.69817590713501,
+  "wire_bytes_claimed": false,
+  "accounting": "payload append delta; not network/NIC packet count",
+  "source_kept_before_ack": true,
+  "real_nas_restore_passed": true,
+  "full_t2_complete": false,
+  "production_archive_enabled": false,
+  "fixed_candidate_repeat": {
+    "candidate": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+    "preserved_bytes": 34177024,
+    "resumed_payload_bytes": 71634944,
+    "elapsed_seconds": 14.954848051071167,
+    "nas_runtime_hashes_in_log": true,
+    "sqlite_counts_checked_before_ack": true
+  },
+  "status": "PASS_SCOPED",
+  "independent_review": "PASS_SCOPED",
+  "review_session": 336,
+  "blockers": []
+}

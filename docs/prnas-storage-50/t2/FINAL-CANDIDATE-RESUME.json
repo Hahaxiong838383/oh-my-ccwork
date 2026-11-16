@@ -1,0 +1,8 @@
+{
+  "candidate": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+  "start": 1794799085.381911,
+  "end": 1794799100.336759,
+  "exit": 0,
+  "stdout": "82634cad1ceafd675f5482e4250c5ef77a79071bacfaedded9dd4b9e29c83dfb  /share/CACHEDEV2_DATA/p003-archive/t2-20261116/code/storage-nas-pull.sh\ne33c87d9b06fb7a191a26f14b61ef8ba8ee2195e6d16bf109c6402591c20bdf5  /share/CACHEDEV2_DATA/p003-archive/t2-20261116/code/storage-nas-verify.mjs\nKILLED_TRANSPORT=ssh\nFINAL_CANDIDATE_PARTIAL_BYTES=34177024\nARCHIVE_TRANSFER id=e0fb45fe93404b0eabb6c3e88f4ec5e8 resume_offset=34177024 total=105811968\n{\"archive_id\":\"e0fb45fe93404b0eabb6c3e88f4ec5e8\",\"bytes\":105811968,\"created_at_ms\":1794799001774,\"kind\":\"analytics_backup\",\"record_count\":3200,\"schema_version\":1,\"sha256\":\"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\",\"source_range\":{\"sample_sha256\":\"026e5c2453b394ed29f87186d47682f168f79d204d1f83e56e1919b86bca76ce\",\"synthetic\":true,\"tables\":{\"analytics_event\":1600,\"analytics_event_seen\":1600}}}\nACK_STORED\nARCHIVE_VERIFIED id=e0fb45fe93404b0eabb6c3e88f4ec5e8 bytes=105811968\n",
+  "stderr": "(node:1) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+}

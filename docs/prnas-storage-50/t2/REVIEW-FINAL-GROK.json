@@ -1,0 +1,102 @@
+{
+  "report": "REVIEW-FINAL-GROK",
+  "model": "Grok 4.6",
+  "role": "independent_acceptance",
+  "verdict": "PASS_SCOPED",
+  "full_t2_complete": false,
+  "nas_personally_tested": false,
+  "source_modified": false,
+  "delegated": false,
+  "candidate": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+  "parent": "bef0dea904bc813a9a141b92455e57c898726c16",
+  "branch": "codex/p003-prnas-storage-50-20261116",
+  "reviewed_on": "2026-11-16",
+  "scope_this_round": [
+    "PRnas isolated archive channel",
+    "disconnect/resume of immutable payload via byte offset SSH read",
+    "receipt after local SHA/bytes/row-count/fsync",
+    "fail-closed corruption and mkdir lock"
+  ],
+  "out_of_scope_remaining_t2": [
+    "production archive timer",
+    "daily 7 / weekly 4 rotation",
+    "mature-library 2h backup budget and keep2/unverified pin in the live backup path",
+    "capacity formula / archive_enabled / device scope",
+    "unattended SIGKILL/power residual-lock recovery",
+    "T3-T6"
+  ],
+  "files_reviewed": [
+    "2-Projects/P003GameDemo20260513/apps/server/package.json",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.test.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-pull.sh",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-verify.mjs",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-verify.test.mjs",
+    "docs/prnas-storage-50/t2/IMPLEMENTATION.md"
+  ],
+  "src_pages_diff_vs_parent": [],
+  "commands": {
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "python": "python3",
+    "python_version": "3.12.2",
+    "npm_run_test_archive": {
+      "exit": 0,
+      "python_tests": 7,
+      "nas_verify": "PASS"
+    },
+    "analytics_backup_test_py": {
+      "exit": 0,
+      "tests": 4
+    },
+    "extra_archive_test_py": {
+      "exit": 0,
+      "tests": 8
+    },
+    "extra_nas_verify_mjs": {
+      "exit": 0
+    },
+    "extra_pull_sh": {
+      "exit": 0
+    }
+  },
+  "blockers": [],
+  "lock_findings": {
+    "network_or_normal_signal": "pull.sh EXIT/INT/TERM/HUP trap removes mkdir lock; extra local SIGTERM test released the lock",
+    "ssh_child_killed": "exit 4, lock released; NAS evidence after_bytes=34406400 then resume_offset=34406400",
+    "sigkill_or_power": "fail-closed: leftover .pull.lockdir, next task exit 3 ARCHIVE_PULL_BUSY; controlled cleanup after recorded PIDs are dead. Not unattended. Not a blocker for this slice."
+  },
+  "evidence_sha256": {
+    "evidence": {
+      "FIXTURE-RESULT.json": "cef0acd605afa1986acf865b7c4708c72005609bbb2f3b6d71895038a5fef552",
+      "SMALL-PULL.json": "d082a33dde6718ecb495ffb5ae522e000367336864719d0a9dafa8ba8d067851",
+      "LARGE-FIRST.json": "f2fadab11df7b3738de3740a41d0d92aa76cdb7c524179b4afb3e35a2771b907",
+      "INTERRUPT-PASS.json": "d5474ca64d9f1422e54de469f2ba8bdf5134cf0a57818adcfb1995dce112b47a",
+      "AFTER-INTERRUPT-SOURCE.json": "211c6543a6868c24ecda1885adb553d9b133355bdac89b09507add4e7b15358b",
+      "RESUME-PASS.json": "39eae7849e4e1fb8f59513906279b5b2efc530ebf46b03bd886e3c0730430435",
+      "NAS-SQLITE-RESTORE.json": "3c9e90a3c6d0ec86a3607d9ac1bb950562246d3056f689019572f763012c8660",
+      "ACK-LOSS-PASS.json": "9db0383e3439bf51e70660d56ad7c83d2154505fb91f26246070ec66047180bc",
+      "CORRUPTION-REJECT.json": "66db0812415faefb202e8da38718e8f10f8079532ce897f5cb87802863a999d7",
+      "CORRUPTION-RETRY-AND-GATEWAY.json": "79bfb994fef9c16bc2e5256ae0a87fec8d30ce259b1859fc1a61d095543a8a85",
+      "CORRUPTION-SOURCE-SAFE.json": "3aa3a18b02eeeffea34abe6f59afe2d3723de249463f40f660cec4778b9bbadb",
+      "INTERRUPT-REAL.json": "54aedf8e3034791359e540a2b807a48a3b0722f3d7c8c79da8bec94a7c46f733",
+      "INTERRUPT-RESULT.json": "644186c40f9d49eb180cf0b6b839863670d7ba94539d194fde3d6569f601fede",
+      "FAILURE-FIXTURES.json": "e68297d1930a561e461d72b91dab29970934d690a6fcbbcbaa0b14897d5f8d59",
+      "RESUME-FIXTURE.json": "8200af30efbf9e19072809ae82587c14c0d1607bc48a713e7a938816ebb50136",
+      "PRODUCTION-FINAL.json": "97698f8aa81373b54b76bea178797cc330da554bbb31ce74b731b5023fb1fc52"
+    },
+    "logs": {
+      "official-archive.log": "3cf600cb2edbd31c282c01361c73a0b92eaf81c735d3c9dab7bb90947edebd67",
+      "official-backup.log": "2ea5d6531bdc2cd7e32723c2bdb3f16e75e6a51a076f87a91cede9b1b5eb5706",
+      "extra-archive.log": "9eb1d067734338527e7b7ecba51f5ac01d52f08fcb763eb16e9afc41da4a8dad",
+      "extra-nas-verify.log": "a28ec8719ccc3da1fc3c9f10402dc11b7bbe165e9046327f18c77ac08933951d",
+      "extra-pull.log": "17c82aaf0243c808d021e452b0a4a4cdfc13c29d81cf96776ff57b5f1bc07045"
+    }
+  },
+  "notes": [
+    "100MiB synthetic payload is not production volume or 50-device load.",
+    "LARGE-FIRST completed in ~13.5s and is not a disconnect proof; INTERRUPT-REAL.json is COMPLETED_BEFORE_INJECTION.",
+    "Transport is SSH offset read, not rsync, matching QNAP 3.0.7 / no Python / no flock.",
+    "This acceptance is not a merge, deploy, or timer enablement."
+  ]
+}

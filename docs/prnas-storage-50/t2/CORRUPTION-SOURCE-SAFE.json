@@ -1,0 +1,10 @@
+{
+  "corrupt": {
+    "source_present": true,
+    "receipt_exists": false
+  },
+  "oversize": {
+    "source_present": true,
+    "receipt_exists": false
+  }
+}

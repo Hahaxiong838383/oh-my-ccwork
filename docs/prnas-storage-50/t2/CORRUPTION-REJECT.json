@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "case=corrupt exit=1\nARCHIVE_TRANSFER id=5b2c371f92dc4b0b84e21b4135008370 resume_offset=65536 total=65536\nARCHIVE_VERIFY_FAILED:CHECKSUM_MISMATCH\ncase=oversize exit=1\nARCHIVE_VERIFY_FAILED:PARTIAL_OVERSIZE\n",
+  "stderr": ""
+}

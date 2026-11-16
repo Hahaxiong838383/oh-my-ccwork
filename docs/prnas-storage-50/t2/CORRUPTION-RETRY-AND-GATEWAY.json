@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "ARCHIVE_TRANSFER id=5b2c371f92dc4b0b84e21b4135008370 resume_offset=0 total=65536\n{\"archive_id\":\"5b2c371f92dc4b0b84e21b4135008370\",\"bytes\":65536,\"created_at_ms\":1794798051701,\"kind\":\"transfer_probe\",\"record_count\":1,\"schema_version\":1,\"sha256\":\"d13d64430952873dda7144a6242cce8dd28d189027fcd1cfea16ee72b0704e86\",\"source_range\":{\"case\":\"corrupt\",\"synthetic\":true}}\nACK_STORED\nARCHIVE_VERIFIED id=5b2c371f92dc4b0b84e21b4135008370 bytes=65536\nARCHIVE_TRANSFER id=afff0c0e7caa488aae1b147af104e693 resume_offset=0 total=65536\n{\"archive_id\":\"afff0c0e7caa488aae1b147af104e693\",\"bytes\":65536,\"created_at_ms\":1794798051708,\"kind\":\"transfer_probe\",\"record_count\":1,\"schema_version\":1,\"sha256\":\"d13d64430952873dda7144a6242cce8dd28d189027fcd1cfea16ee72b0704e86\",\"source_range\":{\"case\":\"oversize\",\"synthetic\":true}}\nACK_STORED\nARCHIVE_VERIFIED id=afff0c0e7caa488aae1b147af104e693 bytes=65536\nforbidden_command_exit=1 stdout_bytes=0\n",
+  "stderr": ""
+}
