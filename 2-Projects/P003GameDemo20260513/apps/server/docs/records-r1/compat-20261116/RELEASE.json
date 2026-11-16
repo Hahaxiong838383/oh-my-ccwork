@@ -1,0 +1,30 @@
+{
+  "started_ms": 1794841886368,
+  "success": true,
+  "manifest_sha256": "d2363734b6185b138f8d29c3fa57eba5a762c7a6e013dc2af17c0175ef31b31b",
+  "backup": "/root/p003-records-compat-20261116/source-backup",
+  "before": {
+    "pid": 2214587,
+    "status": "online",
+    "restarts": 6
+  },
+  "files": 7,
+  "database_restore": false,
+  "config": {
+    "sn": "BJP00326081002000031",
+    "revision": "cfg-182",
+    "ark_records": {
+      "enabled": true,
+      "contract_id": "p003-ark-records-r1"
+    }
+  },
+  "after": {
+    "pid": 2227633,
+    "status": "online",
+    "restarts": 7
+  },
+  "other_processes_unchanged": true,
+  "single_C_upload_enabled": true,
+  "real_device_upload_verified": false,
+  "finished_ms": 1794841890514
+}

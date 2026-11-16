@@ -1,0 +1,21 @@
+{
+  "pass": true,
+  "manifest_sha256": "d2363734b6185b138f8d29c3fa57eba5a762c7a6e013dc2af17c0175ef31b31b",
+  "source_commit": "0cb214753cd46dd7acbf54f701c1e84801bce116",
+  "at_ms": 1794841811881,
+  "reviewers": [
+    "android_compat_scope",
+    "miniapp_compat_view"
+  ],
+  "findings_fixed": [
+    "inventory-backed makeup card mapping",
+    "commit wall-clock income date and earliest-sequence dedup",
+    "legacy activation does not infer v1 instance identity"
+  ],
+  "scope": "seven source files; explicit single C; no synthetic production business records",
+  "tests_node24": 199,
+  "tests_node22": 199,
+  "miniapp_tests": 101,
+  "android_jvm_tests": 1889,
+  "existing_type_error": "src/listening-content.ts:29 GeminiLlmClient.abort (unchanged)"
+}

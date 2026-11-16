@@ -1,0 +1,219 @@
+{
+  "started_at_ms": 1794841650829,
+  "node_version": "v22.22.2",
+  "manifest_sha256": "d2363734b6185b138f8d29c3fa57eba5a762c7a6e013dc2af17c0175ef31b31b",
+  "candidate": "/root/p003-records-compat-20261116/candidate",
+  "environment": "isolated synthetic DB paths; no production env loaded",
+  "running": false,
+  "pass": true,
+  "suites": [
+    {
+      "suite": "ark-records-legacy.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/ark-records-legacy.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 21,
+      "passed": 21,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 0.637,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/ark-records-legacy.log",
+      "log_sha256": "607a12d4b158f860a43125685123a05e4d7d249147251cb9d8de81fcf45d8b2a",
+      "pass": true
+    },
+    {
+      "suite": "ark-records-legacy-http.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/ark-records-legacy-http.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 10,
+      "passed": 10,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 3.814,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/ark-records-legacy-http.log",
+      "log_sha256": "253d970ad4cdf9972ce6598b2eccec7eb4a23f524d97806dd9d55d5647a46ef0",
+      "pass": true
+    },
+    {
+      "suite": "ark-records-legacy-config.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/ark-records-legacy-config.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 0.418,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/ark-records-legacy-config.log",
+      "log_sha256": "8c0b0f70ea1bd7b120d388bdf3e7a63671f6120e1514ab20418b3fabb7684954",
+      "pass": true
+    },
+    {
+      "suite": "ark-records-legacy-summaries.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/ark-records-legacy-summaries.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 4.602,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/ark-records-legacy-summaries.log",
+      "log_sha256": "392d00df95bb6d8545464fbe8ea2b165444c55f05a5b7e69c2e2abed6c095600",
+      "pass": true
+    },
+    {
+      "suite": "ark-records.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/ark-records.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 32,
+      "passed": 32,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 12.496,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/ark-records.log",
+      "log_sha256": "2b61ed16d8473a98099099c3b697a0f7dc23b47da9f8c024c13ec628bb6c6283",
+      "pass": true
+    },
+    {
+      "suite": "ark-records-summaries.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/ark-records-summaries.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 4.332,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/ark-records-summaries.log",
+      "log_sha256": "82c41cce192e6fab3d6a4bba1a6e93cc1f8e3eb208795858751e393903d4ff52",
+      "pass": true
+    },
+    {
+      "suite": "device-config.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/device-config.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 36,
+      "passed": 36,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 1.481,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/device-config.log",
+      "log_sha256": "a287aed05d391a5b494641dbe2fe5e50a6ed67c7819edf199499de2932492a90",
+      "pass": true
+    },
+    {
+      "suite": "mini008-dashboard.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/mini008-dashboard.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 16,
+      "passed": 16,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 2.861,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/mini008-dashboard.log",
+      "log_sha256": "5f08d4b4f165f9388f58c7cc43a49d20ef2ef15ae5f075f74e4c062e77e1a256",
+      "pass": true
+    },
+    {
+      "suite": "telemetry.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/telemetry.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 37,
+      "passed": 37,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 2.839,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/telemetry.log",
+      "log_sha256": "21877d6189f9d2e5d9bfc4ca114d30a3ad1bcf814fa0129f99d0fbd38216a6b8",
+      "pass": true
+    },
+    {
+      "suite": "parent-conversations.test.ts",
+      "command": [
+        "/usr/bin/node",
+        "--experimental-sqlite",
+        "--import",
+        "tsx",
+        "scripts/parent-conversations.test.ts"
+      ],
+      "exit_code": 0,
+      "tests": 15,
+      "passed": 15,
+      "failed": 0,
+      "skipped": 0,
+      "timed_out": false,
+      "duration_seconds": 2.883,
+      "log_path": "/root/p003-records-compat-20261116/test-logs/parent-conversations.log",
+      "log_sha256": "bee0bd32ada95a2ec8bc0ff4b1e020b53751ec6e406d1d797b8b8c5c9ac159cd",
+      "pass": true
+    }
+  ],
+  "candidate_matches_manifest": true,
+  "finished_at_ms": 1794841687231,
+  "totals": {
+    "tests": 199,
+    "passed": 199,
+    "failed": 0,
+    "skipped": 0
+  }
+}

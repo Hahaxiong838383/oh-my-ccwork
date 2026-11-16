@@ -1,0 +1,77 @@
+{
+  "at": "2026-11-16T23:24:55.780172",
+  "pass": true,
+  "local_downloads": "/Users/fu-121/Downloads",
+  "air_downloads": "/Users/rayman.chen/Downloads",
+  "air_identity": {
+    "hostname": "RaymanMacBook-Air.local",
+    "user": "Rayman.Chen",
+    "verified_en0_at_delivery": "10.9.1.88",
+    "strict_existing_host_key": true
+  },
+  "local_backup": "/Users/fu-121/.local/state/p003-compat-delivery-20261116-232452",
+  "air_backup": "/Users/rayman.chen/.local/state/p003-compat-delivery-20261116-232452",
+  "local_files": [
+    {
+      "name": "P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+      "sha256": "659f17b8be6938ae9d8d6558d6e1c61db11f2f1bba39b550ca86f884bf06ae1f",
+      "bytes": 26503,
+      "before_sha256": "c906d5de8e34b23d789faeb14d4d2a252bb649bfea1678a81c578882dfb93441",
+      "after_sha256": "659f17b8be6938ae9d8d6558d6e1c61db11f2f1bba39b550ca86f884bf06ae1f"
+    },
+    {
+      "name": "P003_C_COMPAT_JOINT_TEST_20261117.md",
+      "sha256": "372bf7a18a91001bd0cff32569d11a884b761ebab1a11af4ab5012a4013e3ddb",
+      "bytes": 4980,
+      "before_sha256": null,
+      "after_sha256": "372bf7a18a91001bd0cff32569d11a884b761ebab1a11af4ab5012a4013e3ddb"
+    },
+    {
+      "name": "P003_MINIAPP_COMPAT_20261116.zip",
+      "sha256": "99867d8ff0d4b60d96bfc7458eac0b7d8152fb5a5cb304964bca4b9668d2afa9",
+      "bytes": 4864669,
+      "before_sha256": null,
+      "after_sha256": "99867d8ff0d4b60d96bfc7458eac0b7d8152fb5a5cb304964bca4b9668d2afa9"
+    },
+    {
+      "name": "P003_C_USAGE_AND_R1_SCOPE_FIX_MINI009_BASE_20261116.zip",
+      "sha256": "77e6800ca399301a23c4d30eb3aa50955ec3a555a5b54b660aa7f4110325eb6a",
+      "bytes": 8616,
+      "before_sha256": "77e6800ca399301a23c4d30eb3aa50955ec3a555a5b54b660aa7f4110325eb6a",
+      "after_sha256": "77e6800ca399301a23c4d30eb3aa50955ec3a555a5b54b660aa7f4110325eb6a"
+    }
+  ],
+  "air_files": [
+    {
+      "name": "P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+      "sha256": "659f17b8be6938ae9d8d6558d6e1c61db11f2f1bba39b550ca86f884bf06ae1f",
+      "bytes": 26503,
+      "before_sha256": "c906d5de8e34b23d789faeb14d4d2a252bb649bfea1678a81c578882dfb93441",
+      "after_sha256": "659f17b8be6938ae9d8d6558d6e1c61db11f2f1bba39b550ca86f884bf06ae1f"
+    },
+    {
+      "name": "P003_C_COMPAT_JOINT_TEST_20261117.md",
+      "sha256": "372bf7a18a91001bd0cff32569d11a884b761ebab1a11af4ab5012a4013e3ddb",
+      "bytes": 4980,
+      "before_sha256": null,
+      "after_sha256": "372bf7a18a91001bd0cff32569d11a884b761ebab1a11af4ab5012a4013e3ddb"
+    },
+    {
+      "name": "P003_MINIAPP_COMPAT_20261116.zip",
+      "sha256": "99867d8ff0d4b60d96bfc7458eac0b7d8152fb5a5cb304964bca4b9668d2afa9",
+      "bytes": 4864669,
+      "before_sha256": null,
+      "after_sha256": "99867d8ff0d4b60d96bfc7458eac0b7d8152fb5a5cb304964bca4b9668d2afa9"
+    },
+    {
+      "name": "P003_C_USAGE_AND_R1_SCOPE_FIX_MINI009_BASE_20261116.zip",
+      "sha256": "77e6800ca399301a23c4d30eb3aa50955ec3a555a5b54b660aa7f4110325eb6a",
+      "bytes": 8616,
+      "before_sha256": null,
+      "after_sha256": "77e6800ca399301a23c4d30eb3aa50955ec3a555a5b54b660aa7f4110325eb6a"
+    }
+  ],
+  "private_keys_copied": false,
+  "messages_sent": false,
+  "artifact_is_signed_apk": false
+}

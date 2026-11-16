@@ -1,37 +1,38 @@
 # C机小程序真实数据接续入口
 
-状态：2026-11-16归档推送后用户新增要求“按照兼容模式设计，避免过度工程化”。已收敛服务端兼容方案；产品代码尚未实施/部署。下一轮实机测试仍待安排，本轮未安装、开关或生产探针。
+状态：用户明确要求实施兼容、恢复上传、完成联调后等待明天。服务端于2026-11-16 23:11:30上线，C上传配置已开cfg-182；接口集成和线上H5验证通过。实际设备新流水、修复签名APK和微信手机验收待2026-11-17现场。
 
 ## 设备与当前能力
 
-- C SN：`BJP00326081002000031`；public_id：`dev_50b5415662259045`。本轮历史授权binding_version=1、Ark epoch=2；未来须实时核验，禁止按这个旧值补归属。
-- 两个R1摘要及历史对话读取已上线。184条旧消息（孩子92、小可92）、10页与DB逐字段一致；新真实页生产H5展示/刷新/退出通过，微信手机未验。对话数量是对应探针时点，不是永久值。
-- 使用时长focus_segment全历史0；不是实际使用0分钟。mini008/009的Telemetry工作/开盖常量1/1与同源权威4/0冲突；mini009基线源修复已通过1883 JVM、40 Python、Release Kotlin和MCU输入门。未构完整签名APK、未安装、未OTA。
-- mini009构建源`006ac68a29447e8bc14fb655206d87bbf1f771a3`，21:22回执提交`75378716195bda8e7414af97ffd8dbd0b109212b`，原APK回执SHA `bde6b3eff817b10f3abd6e1f0b8f514ef17d44e0283829f9f0c608df9624d3db`，明确未上机。源码修复基于它保留新R1能力，旧008补丁仅对照。
-- mini009当前上传off，但可兼容：同POST精确legacy解析、一张原始表、读时映射与单C明确历史授权；容量/临时故障整批503避开旧retryable ACK问题，Native仅修SN+binding_version稳定scope。取代“端侧先全量对齐v1”方向，兼容实现/上线待做；原Telemetry时长链独立。
+- C SN：`BJP00326081002000031`；public_id：`dev_50b5415662259045`。本轮授权binding_version=1、Ark epoch=2；将来先实时核验，禁止据旧值补归属。
+- 两摘要与历史读取已上线。23:16新版H5读取186条历史、10页无重复、刷新20条、退出清理通过；21:32时184条（92/92）曾与DB逐字段一致。计数随时间变化，不宣称全部历史完整。
+- 兼容采用同POST精确legacy分支、一张原始表、读时投影、单C完整历史授权；临时失败503/429保原ID重试。baseline不算收入或获得，不伪填原origin。仅C配置行改变，其他设备和PM2进程未动。
+- 生产Node22.22.2与本地Node24各199/199；小程序101/101、TypeScript、微信/H5构建通过。新包9个H5文件与本轮实查构建逐字节一致。全仓既有listening-content.ts:29 GeminiLlmClient.abort类型错误仍在。
+- 使用时长缺失：mini008/009精确Telemetry私有1/1枚举与同源权威4/0冲突，原始focus_segment为0，不等于使用0分钟。修复保留全部mini009 R1能力，Android联合提交d569775已推送，JVM1889/1889、Release Kotlin、Python records14通过。
+- C最近自报仍371_mini_008，不等于活动APK SHA回读。当前v1/legacy业务流水均0，usage.available=false/focus_minutes=null。服务器能接且开关已开，不代表设备已R1补传。
+- mini009精确构建基线`006ac68a29447e8bc14fb655206d87bbf1f771a3`；原交付提交`75378716195bda8e7414af97ffd8dbd0b109212b`未改。尚无修复签名APK、安装或OTA；联合交付为源码补丁。
 
 ## 权威文件与产物
 
-- [总回执](../records-r1/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md)：各层状态、接口、摘要口径、真实对账、缺口与回滚。
-- [兼容性核查](MINI009-COMPATIBILITY.md)、[mini009用时补丁交付](MINI009_USAGE_FIX_HANDOFF.md)、[完整构建待办](MINI010_BUILD_READINESS.md)、[复盘](RETROSPECTIVE.md)。
-- [生产历史manifest](MANIFEST.json)、[发布](RELEASE.json)、[真实对账](POST-RELEASE-PROBE.json)、[页面验证](BROWSER-CHECK.json)、[Air最终交付](AIR-FINAL-DELIVERY.json)。摘要的独立manifest在`../records-r1/summary-20261116/`，不要用旧全量回滚覆盖后续历史接口。
-- Air指定总回执：`/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md`，21:54历史版SHA `5ea7d385deb26c39c2c01abd1062692697f44349afc9a607a39a6dc19441aecf`；兼容方案修订版已同步两机Downloads，最新SHA见`AIR-FINAL-DELIVERY.json.compatibility_design_revision`，仓库与两机同字节。后续写入先核漂移、备份、替换、回读。
-- 新小程序ZIP `P003_MINIAPP_C_HISTORY_20261116.zip`，SHA `d73521682ecbfb86ff08879a1af9fed1d9328f2a4c93ecbe5fc8b9e1e1913639`；mini009基线补丁ZIP `P003_C_USAGE_FIX_MINI009_BASE_20261116.zip`，SHA `aea287f1a9be0ab17d7a455bb9d0f7af70faeb3cb703e3e8dae7e0d8e52bdc64`。两机Downloads已核，补丁ZIP不是APK。
+- [总回执](../records-r1/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md)、[11月17日交接](../records-r1/compat-20261116/HANDOFF.md)：当前状态、产物、边界及同ID验收步骤。
+- [兼容性核查](MINI009-COMPATIBILITY.md)、[构建待办](MINI010_BUILD_READINESS.md)、[复盘](RETROSPECTIVE.md)。原历史/摘要证据保留，不用旧整库回滚覆盖新数据。
+- 最新脱敏证据目录`../records-r1/compat-20261116/`：MANIFEST、NODE22-TESTS、RELEASE、POST-RELEASE-PROBE、FINAL-STABILITY、BROWSER-CHECK、DELIVERY。私有生产回滚目录`/root/p003-records-compat-20261116/source-backup`，先关C再恢复本轮源码/环境，绝不整库回灌。
+- 用户指定总回执`/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md`，本机Downloads有同字节镜像；最新摘要见DELIVERY.json。旧21:54及设计版摘要只作历史锚。
+- 当前小程序ZIP `P003_MINIAPP_COMPAT_20261116.zip`，SHA `99867d8ff0d4b60d96bfc7458eac0b7d8152fb5a5cb304964bca4b9668d2afa9`；联合源补丁 `P003_C_USAGE_AND_R1_SCOPE_FIX_MINI009_BASE_20261116.zip`，SHA `77e6800ca399301a23c4d30eb3aa50955ec3a555a5b54b660aa7f4110325eb6a`，不是APK。
 
-## Git归档锚
+## Git与记忆
 
-- mycc业务/首轮知识提交`203b63ad7a9c8f81e4708190be650923b5d34697`已push `codex/p003-mini008-realdata-20261111`并独立ls-remote核同；后续归档元数据提交在同分支，不改变已验源码。
-- Android修复/知识提交`42eaa238a1254e5ac10ff87aaa95c4c57afd75be`已push `codex/mini010-usage-hall-fix-20261116`并核同，原mini009交付分支及主线未改。
-- 共享记忆三文件仅本机外置运行态落盘，私有备份及逐文件摘要回执见[共享记忆回执](SHARED-MEMORY-RECEIPT.json)；没有把其他项目记忆或完整备份推到代码仓。
+- 服务端/小程序功能提交`0cb214753cd46dd7acbf54f701c1e84801bce116`；归档继续同分支`codex/p003-mini008-realdata-20261111`，最终推送摘要以收口回执为准。
+- Android联合修复`d56977517487cd6002ef16cf3ba266af24aac9ca`已push并远端核同，分支`codex/mini010-usage-hall-fix-20261116`；原mini009交付和主线未改。
+- 共享记忆仅本机外置运行态落盘，逐文件私有备份与摘要见[共享记忆回执](SHARED-MEMORY-RECEIPT.json)；不把其他项目记忆和完整备份推到仓库。
 
-## 下一轮实机测试
+## 明天现场
 
-1. 等用户提供/确认C所连接Windows入口及微信测试版本。旧回执只有Windows本地路径，不等于已具备远程入口；不要猜IP或擅访其他Windows。设备网络地址先查共享设备记忆并实时复核。
-2. 核最新mini分支、构建源与序号；后继mini010只是暂拟。完整quick、Rust/Godot/base及签名审包还需完成，不能同名重打009或用主线APK替代。回读C pm path活动APK/SHA/签名/版本并保留回滚字节后再按当轮范围安装。
-3. 保绑定/凭据/存档/未ACK队列。实际开盖MCU4/0、摄像头在位、无配对OTA/时钟阻断，普通使用跨两次60秒并合盖补尾；同event_id核入队→逐ID ACK→DB→usage→手机刷新，不补造历史。
-4. 微信导入新真实构建、确认生产域名/体验版本和当前绑定家长；验184旧历史（以当时真实数量为准）、新消息刷新、日期分页、账号切换清理及错误账号404。旧demo/旧只读状态包不能代替新页面。
-5. R1按最小兼容方案实现服务端接收/投影与Native稳定scope，并验真实fixture/HTTP/SQLite/家长读取后安排单C实测。经明确授权的C旧历史可以接收，标“兼容历史授权、原发生归属未验证”，不伪填原origin；baseline不算收入或获得。
+1. 核C所连Windows/正式构建入口、实际活动APK/SHA及最新mini编号；下一候选010暂拟，不能同名重打009。当前没有已知可用远程入口，不猜IP或访问其他Windows。
+2. 由Android修复分支完成正式签名包，保绑定/凭据/存档/未ACK队列覆盖升级。读取cfg-182，真实领取/获得/激活，同record_id核设备→ACK→DB→家长API→微信页面，重复与离线重放不重计；旧指纹队列先核save，不清空或批量重挂。
+3. 真开盖MCU4/0、摄像头在位、非配对OTA/时钟阻断，普通使用跨两次60秒并合盖补尾，同event_id核focus_segment与usage。旧缺测分钟不推算。
+4. 导入当前小程序包，用真实绑定家长验186及后续历史、日期分页、刷新、换账号和退出；昨日收益次日按真实到账核对，不改时钟造样本。
 
-本轮源码测试、生产发布、浏览器验证与后续真人结果各自留时间和证据；没有现场证据就保持待验。
+本轮交付后等待2026-11-17联调；不自动安装、造业务数据或扩到其他设备。后续明确授权优先于先前等待状态。
 
 署名：codex（OpenAI）| 2026-11-16

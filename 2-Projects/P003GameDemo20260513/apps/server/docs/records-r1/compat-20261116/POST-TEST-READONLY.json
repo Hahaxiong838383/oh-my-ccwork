@@ -1,0 +1,36 @@
+{
+  "at_ms": 1794841719763,
+  "production_mutations": false,
+  "env_matches_preflight": true,
+  "source_matches_preflight": true,
+  "candidate_matches_manifest": true,
+  "config_rows_match_preflight": true,
+  "config_row_count": 49,
+  "processes": {
+    "p003-voice": {
+      "pid": 2214587,
+      "status": "online",
+      "restarts": 6
+    },
+    "kidshub-voice": {
+      "pid": 1856264,
+      "status": "online",
+      "restarts": 0
+    },
+    "p003-analytics": {
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  },
+  "c_reported_version_at_preflight": {
+    "version_code": 371,
+    "version_name": "371_mini_008",
+    "last_check_at": 1794839370690,
+    "updated_at": 1794839370690
+  },
+  "c_records_count_at_preflight": 0,
+  "c_legacy_records_count_at_preflight": 0,
+  "config_baseline_sha256": "a54d56e6c97bfaecce9fb74fb5c410cadab55d140a203858207d14914262c1be",
+  "source_manifest_sha256": "31e119042a1e550b418fdecd97bc669ec29dfdb8a4d5180b8445d1968dae5586"
+}

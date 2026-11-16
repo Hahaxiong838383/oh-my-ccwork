@@ -1,0 +1,104 @@
+{
+  "started_at_ms": 1794842160463,
+  "pass": true,
+  "harness": "fresh live H5; exact production GET response bodies; CORS headers only",
+  "real_mobile_login": false,
+  "sms_sent": false,
+  "business_writes": false,
+  "artifact_manifest_sha256": "b93535ac2b1c6362a70363546a1b53488ba941866f6e98cd3f466e56f177595b",
+  "artifact_files": 9,
+  "local_port": 18744,
+  "fresh_server": true,
+  "dashboard_history_count": 186,
+  "usage_today_available": false,
+  "usage_today_focus_minutes": null,
+  "history_rendered": 186,
+  "history_first_page_total": 186,
+  "history_pages": 10,
+  "pagination_no_duplicates": true,
+  "refresh_first_page": 20,
+  "refresh_total": 186,
+  "business_records_empty": true,
+  "missing_duration_preserved": true,
+  "logout_cleared": true,
+  "session_storage_cleared": true,
+  "page_errors": [],
+  "requests": [
+    {
+      "path": "/api/profile/bound-devices",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations",
+      "status": 200
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/ark/records",
+      "status": 200
+    }
+  ],
+  "non_get_requests": 0,
+  "finished_at_ms": 1794842170957,
+  "own_server_and_browser_closed": true,
+  "delivery_h5_comparison": {
+    "zip_path": "/Users/fu-121/.local/state/p003-miniapp-compat-delivery-20261116/P003_MINIAPP_COMPAT_20261116.zip",
+    "zip_sha256": "99867d8ff0d4b60d96bfc7458eac0b7d8152fb5a5cb304964bca4b9668d2afa9",
+    "h5_member_count": 9,
+    "rebuilt_member_count": 9,
+    "all_h5_members_identical": true,
+    "differences": [],
+    "zip_modified": false
+  },
+  "short_lived_token_removed": true,
+  "fresh_h5_build": {
+    "command": "TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:h5",
+    "exit_code": 0,
+    "build_seconds": 45.77,
+    "log_sha256": "fbed58fcd1455e354c526ac1dca7fce6fa47bb6c9704e82e15295445adaabfcd"
+  },
+  "script_sha256": "433d7eaed72fe1e529f5e0680d0599e9bc4d87c53cb5c4d3bb82ce9629a787e5"
+}

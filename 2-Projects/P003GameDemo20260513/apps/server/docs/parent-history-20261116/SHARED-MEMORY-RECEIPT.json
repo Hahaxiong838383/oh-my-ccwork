@@ -79,5 +79,67 @@
         "lines": 1161
       }
     ]
+  },
+  "compatibility_release_revision": {
+    "at": "2026-11-16T23:25:45.230395",
+    "backup_dir": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545",
+    "atomicity": "hash recheck plus per-file atomic replacement; not multi-file transaction or OS compare-and-swap",
+    "status_md_touched": false,
+    "files": [
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+        "before_sha256": "0fd06d7b4ae80c8d57bb15289143686153a75e798ec76a6d8c4799bfb8052e6a",
+        "candidate_sha256": "e427cb623fbca12def22725e0a45e450a044b72b7be675fab1855240dbb6b273",
+        "before_path": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545/memory-items.md.before",
+        "candidate_path": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545/memory-items.md.candidate",
+        "before_lines": 2741,
+        "lines": 2741,
+        "status": "written_verified",
+        "after_sha256": "e427cb623fbca12def22725e0a45e450a044b72b7be675fab1855240dbb6b273"
+      },
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+        "before_sha256": "84ed5e0248c7b2cc122e6975b6b1d6db7f4c1de53d3448dfc0bd70f22c398b44",
+        "candidate_sha256": "ebe5a25ccdc28914ee80162eaf94de2ff106d72b3a5e677b29aedf75b4b4fab9",
+        "before_path": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545/RECENT_EVENTS.md.before",
+        "candidate_path": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545/RECENT_EVENTS.md.candidate",
+        "before_lines": 79,
+        "lines": 79,
+        "status": "written_verified",
+        "after_sha256": "ebe5a25ccdc28914ee80162eaf94de2ff106d72b3a5e677b29aedf75b4b4fab9"
+      },
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/task-log.md",
+        "before_sha256": "2c2c7e79a14bcd0ccd8496316e9916aea75b3c1a08b350e0033909bc41070105",
+        "candidate_sha256": "e176f6688e6bb1ca8d51b43e8c475214e753d7b2c0b13a4f19b6b785c414110b",
+        "before_path": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545/task-log.md.before",
+        "candidate_path": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545/task-log.md.candidate",
+        "before_lines": 1161,
+        "lines": 1163,
+        "status": "written_verified",
+        "after_sha256": "e176f6688e6bb1ca8d51b43e8c475214e753d7b2c0b13a4f19b6b785c414110b"
+      }
+    ]
+  },
+  "compatibility_release_timestamp_correction": {
+    "at": "2026-11-16T23:26:24.372125",
+    "reason": "Correct hand-entered closeout time to actual 23:25 write time",
+    "backup_dir": "/Users/fu-121/.local/state/p003-compat-memory-20261116-232545",
+    "files": [
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+        "before_sha256": "ebe5a25ccdc28914ee80162eaf94de2ff106d72b3a5e677b29aedf75b4b4fab9",
+        "after_sha256": "91fa68b2b06b8e441ec51651f61b9c75ca2f0338fd132d8ab2eb68f36763330d",
+        "lines": 79,
+        "status": "written_verified"
+      },
+      {
+        "file": "/Users/fu-121/.mycc-global/0-System/task-log.md",
+        "before_sha256": "e176f6688e6bb1ca8d51b43e8c475214e753d7b2c0b13a4f19b6b785c414110b",
+        "after_sha256": "e818efd8ec30de9378cb35f8b48f2d5b766a0619813ad9f79623d2b8d3b2cb52",
+        "lines": 1163,
+        "status": "written_verified"
+      }
+    ]
   }
 }

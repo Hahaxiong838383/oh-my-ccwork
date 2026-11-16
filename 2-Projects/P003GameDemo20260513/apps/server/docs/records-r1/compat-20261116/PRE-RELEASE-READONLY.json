@@ -1,0 +1,23 @@
+{
+  "at_ms": 1794841885797,
+  "production_mutations": false,
+  "health": [
+    {
+      "base": "http://127.0.0.1:3001",
+      "http_status": 200,
+      "status": "ok"
+    },
+    {
+      "base": "https://kidshub-ai.hahaxiong.cc",
+      "http_status": 200,
+      "status": null
+    }
+  ],
+  "room_check": {
+    "at_ms": 1794841886035,
+    "http_status": 200,
+    "rooms": 0,
+    "idle": true,
+    "verified": true
+  }
+}

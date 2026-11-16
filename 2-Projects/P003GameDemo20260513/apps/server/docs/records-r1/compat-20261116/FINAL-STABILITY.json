@@ -1,0 +1,38 @@
+{
+  "at_ms": 1794841996372,
+  "pass": true,
+  "files": {
+    "src/ark/records-store.ts": true,
+    "src/ark/records-routes.ts": true,
+    "src/ark/records-contract.ts": true,
+    "src/ark/records-service.ts": true,
+    "src/ark/records-legacy.ts": true,
+    "src/config-store.ts": true,
+    "src/routes/device-config.ts": true
+  },
+  "configuration_changes": [
+    {
+      "scope": "BJP00326081002000031",
+      "key": "ark_records.enabled"
+    }
+  ],
+  "scope_only_env_change": true,
+  "processes": {
+    "p003-voice": {
+      "pid": 2227633,
+      "status": "online",
+      "restarts": 7
+    },
+    "kidshub-voice": {
+      "pid": 1856264,
+      "status": "online",
+      "restarts": 0
+    },
+    "p003-analytics": {
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  },
+  "synthetic_business_writes": 0
+}

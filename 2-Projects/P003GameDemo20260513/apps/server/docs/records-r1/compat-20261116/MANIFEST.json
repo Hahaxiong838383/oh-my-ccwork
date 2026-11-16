@@ -1,0 +1,109 @@
+{
+  "at_ms": 1794841368974,
+  "base_commit": "4b5e1eb2",
+  "production_root": "/opt/p003/server",
+  "candidate": "/root/p003-records-compat-20261116/candidate",
+  "files": [
+    {
+      "path": "src/ark/records-store.ts",
+      "before_sha256": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd",
+      "after_sha256": "20735e483bd01c0263a0d268dd85a2f72a552669319fa525acb1f53d133391f9"
+    },
+    {
+      "path": "src/ark/records-routes.ts",
+      "before_sha256": "3e5ccd7540c05ed3a6d4653f4e07f7fe47c69661f6a4e275f753306b50da585a",
+      "after_sha256": "0fcf908e1af21b6edfc2db1e62806c0bbad6529dbb6e4116b8bfdb8bd62c6459"
+    },
+    {
+      "path": "src/ark/records-contract.ts",
+      "before_sha256": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123",
+      "after_sha256": "c0669a969d5ff05d588c84aecbf6f2d8efb8de650be064e8c0f6bdf06c0e5685"
+    },
+    {
+      "path": "src/ark/records-service.ts",
+      "before_sha256": "90e2a237071988931c45b098ebf7df1c97d93d0175784dc594d5e75d5a089ddf",
+      "after_sha256": "da7611571277a255404b83eae745087922e0396333de39075601644cf6b949ef"
+    },
+    {
+      "path": "src/ark/records-legacy.ts",
+      "before_sha256": null,
+      "after_sha256": "7808be237a177c19f75ec7c3e27aab336e14af6421550360c17392cfe3934fa0"
+    },
+    {
+      "path": "src/config-store.ts",
+      "before_sha256": "058d0370467e85f621339770fcdf469dbbbad0c4cadecf545247398ba0583c68",
+      "after_sha256": "99cb05706e7a830ca84dee5e77483d47957d481eb76e010aa02f659085c055b7"
+    },
+    {
+      "path": "src/routes/device-config.ts",
+      "before_sha256": "62a654c003a45f91cfd6c308de94386b53eccec127854f44f60f5d3e51c3f7a7",
+      "after_sha256": "53f5d1976fcddccc0d88c3a54dc275c910b6ced1df66b04c794c9664e344034d"
+    }
+  ],
+  "test_files": [
+    {
+      "path": "scripts/ark-records-legacy.test.ts",
+      "sha256": "993ebd106f14eb515de2150b6266fa4570d4b8666ce19e1d1b8789ef17c80798"
+    },
+    {
+      "path": "scripts/ark-records-legacy-http.test.ts",
+      "sha256": "f0ce8e65961216e7390674b6cc48a8682c5a0315fc50438cbeab3a58f848b840"
+    },
+    {
+      "path": "scripts/ark-records-legacy-config.test.ts",
+      "sha256": "fae23be8488a97bd4793ce42e7e6b6e50ddf90fd3104eb2713828062aef38bf0"
+    },
+    {
+      "path": "scripts/ark-records-legacy-summaries.test.ts",
+      "sha256": "d0817f67413d3e4f86d02de4e5ef55e5d984b4570a4db828d5944de4caa6766c"
+    },
+    {
+      "path": "scripts/ark-records.test.ts",
+      "sha256": "a4c0af09769fc3bb4d78405208f3edc6498c163dbf6f7c8415e27d20250e1898"
+    },
+    {
+      "path": "scripts/ark-records-summaries.test.ts",
+      "sha256": "ea3d6632172d31e74dbc386b1bda4f88df999499d3f2b3db1bd4038ba6536f69"
+    },
+    {
+      "path": "scripts/device-config.test.ts",
+      "sha256": "6bfb4f80e5869c55dbf10af97c36c4eb2ac0ffbfc1ac17728dde90bc2d3ae9b1"
+    },
+    {
+      "path": "scripts/mini008-dashboard.test.ts",
+      "sha256": "0cf26be53ee3f8f8e2b33b46eca6c72c61dcb96758d6a479872573d1e1590546"
+    },
+    {
+      "path": "scripts/telemetry.test.ts",
+      "sha256": "9ddaab7df396d5f1651495e65d557ba7cd196f20be8a09fef69f75810596af58"
+    },
+    {
+      "path": "scripts/parent-conversations.test.ts",
+      "sha256": "3b9c413392efc9cebd89c9fcc13167f67884b8d85ff0a384673f5a5af3b2ab9a"
+    },
+    {
+      "path": "scripts/ark-records-race-worker.mts",
+      "sha256": "ea65a337143c735a0e7fa0bb2b343b0d0f39f52bfc732750a46326687ef249a0"
+    },
+    {
+      "path": "scripts/fixtures/ark-records-mini009-runtime.json",
+      "sha256": "a07b4d70b172a1f583b0e36543e70eb38d22c507731cf301228ca6c7a3f91029"
+    },
+    {
+      "path": "docs/records-r1/schema.mjs",
+      "sha256": "5a6aab714e9ba35587dd50f4f7074c3d7f3121918db0374567aeb5d91839d8e0"
+    }
+  ],
+  "suites": [
+    "ark-records-legacy.test.ts",
+    "ark-records-legacy-http.test.ts",
+    "ark-records-legacy-config.test.ts",
+    "ark-records-legacy-summaries.test.ts",
+    "ark-records.test.ts",
+    "ark-records-summaries.test.ts",
+    "device-config.test.ts",
+    "mini008-dashboard.test.ts",
+    "telemetry.test.ts",
+    "parent-conversations.test.ts"
+  ]
+}

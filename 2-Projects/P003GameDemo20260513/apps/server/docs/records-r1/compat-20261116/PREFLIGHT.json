@@ -1,0 +1,69 @@
+{
+  "at_ms": 1794841151919,
+  "base_commit": "4b5e1eb2",
+  "production_root": "/opt/p003/server",
+  "candidate": "/root/p003-records-compat-20261116/candidate",
+  "candidate_state": "production_src_only_waiting_frozen_seven_files",
+  "node_version": "v22.22.2",
+  "disk_free_bytes": 14277017600,
+  "files": {
+    "src/ark/records-store.ts": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd",
+    "src/ark/records-routes.ts": "3e5ccd7540c05ed3a6d4653f4e07f7fe47c69661f6a4e275f753306b50da585a",
+    "src/ark/records-contract.ts": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123",
+    "src/ark/records-service.ts": "90e2a237071988931c45b098ebf7df1c97d93d0175784dc594d5e75d5a089ddf",
+    "src/config-store.ts": "058d0370467e85f621339770fcdf469dbbbad0c4cadecf545247398ba0583c68",
+    "src/routes/device-config.ts": "62a654c003a45f91cfd6c308de94386b53eccec127854f44f60f5d3e51c3f7a7"
+  },
+  "expected_files": {
+    "src/ark/records-store.ts": "896378873b0e2f43c14a8b56939d2181473adf190718b375fd30c4fe831773bd",
+    "src/ark/records-routes.ts": "3e5ccd7540c05ed3a6d4653f4e07f7fe47c69661f6a4e275f753306b50da585a",
+    "src/ark/records-contract.ts": "f16556dc814f6f746f1b33b94e376afa95479952c21f1b7af92b2ed94731f123",
+    "src/ark/records-service.ts": "90e2a237071988931c45b098ebf7df1c97d93d0175784dc594d5e75d5a089ddf",
+    "src/config-store.ts": "058d0370467e85f621339770fcdf469dbbbad0c4cadecf545247398ba0583c68",
+    "src/routes/device-config.ts": "62a654c003a45f91cfd6c308de94386b53eccec127854f44f60f5d3e51c3f7a7"
+  },
+  "source_drift": [],
+  "source_manifest_sha256": "ba0c55af37b490e260fc92281c42fd4d00b6cd0bc61f298d561d05620042f02d",
+  "env_sha256": "b995ff91bff64d70b383bd854b8f879192bf3d8fdd0bbf2215a25201e56981f2",
+  "scope_sha256": "43fd9e6efb960388f8152647e37aa71f1ecdf035a870c82a537470f1fcefd502",
+  "scope_verified": {
+    "sn": "BJP00326081002000031",
+    "public_id": "dev_50b5415662259045",
+    "binding_version": 1,
+    "epoch": 2,
+    "active": true,
+    "roles_valid": true,
+    "account_unique": true
+  },
+  "config_rows_sha256": "228893ebc16ccd857ffb4cb7efec6b8d60519c2c7ee9581bd825e34b91d343f2",
+  "c_config_rows_sha256": "b9b46f2199211f86cf8942e4e552b50c45711d7ec326505a9a4071ae6b5dae21",
+  "other_config_rows_sha256": "e2082a214d9053641056342b25ae8c421b93bd16907020f6e4d4d83c56563dc7",
+  "config_row_count": 49,
+  "c_reported_version": {
+    "version_code": 371,
+    "version_name": "371_mini_008",
+    "last_check_at": 1794839370690,
+    "updated_at": 1794839370690
+  },
+  "c_records_count": 0,
+  "c_legacy_records_count": 0,
+  "legacy_table_exists": false,
+  "processes": {
+    "p003-voice": {
+      "pid": 2214587,
+      "status": "online",
+      "restarts": 6
+    },
+    "kidshub-voice": {
+      "pid": 1856264,
+      "status": "online",
+      "restarts": 0
+    },
+    "p003-analytics": {
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  },
+  "production_mutations": false
+}

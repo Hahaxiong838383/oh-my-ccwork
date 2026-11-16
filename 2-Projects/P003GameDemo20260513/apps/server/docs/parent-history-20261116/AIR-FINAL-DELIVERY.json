@@ -25,5 +25,11 @@
     "backup": "/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md.bak-compat-20261116-223401",
     "previous_sha256": "5ea7d385deb26c39c2c01abd1062692697f44349afc9a607a39a6dc19441aecf",
     "at": "2026-11-16T22:34:01.760382"
+  },
+  "compatibility_release_revision": {
+    "at": "2026-11-16T23:24:55.780172",
+    "receipt": "../records-r1/compat-20261116/DELIVERY.json",
+    "handoff_sha256": "659f17b8be6938ae9d8d6558d6e1c61db11f2f1bba39b550ca86f884bf06ae1f",
+    "both_downloads_verified": true
   }
 }

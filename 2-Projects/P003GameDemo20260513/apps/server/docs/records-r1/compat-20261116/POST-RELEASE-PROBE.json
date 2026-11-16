@@ -1,0 +1,247 @@
+{
+  "at_ms": 1794841890051,
+  "sn": "BJP00326081002000031",
+  "probe": "server_signed_not_device_or_phone",
+  "synthetic_business_writes": 0,
+  "real_device_upload_verified": false,
+  "real_phone_verified": false,
+  "results": [
+    {
+      "base": "http://127.0.0.1:3001",
+      "config_status": 200,
+      "revision": "cfg-182",
+      "ark_records": {
+        "enabled": true,
+        "contract_id": "p003-ark-records-r1"
+      },
+      "dashboard_status": 200,
+      "page_status": 200,
+      "cache": "no-store",
+      "page_count": 0,
+      "records_summary": {
+        "schema_version": 1,
+        "coverage": {
+          "kind": "received_records",
+          "complete": false,
+          "reason": "partial_history",
+          "min_occurred_at_ms": null,
+          "max_occurred_at_ms": null,
+          "first_received_at_ms": null,
+          "last_received_at_ms": null
+        },
+        "updated_at_ms": null,
+        "yesterday_income": {
+          "available": false,
+          "reason": "no_records",
+          "date": "2026-11-15",
+          "timezone": "Asia/Shanghai",
+          "source_mode": null,
+          "family_coin": null,
+          "stardust": null,
+          "occurred_from_ms": null,
+          "occurred_to_ms": null,
+          "received_at_ms": null
+        },
+        "latest_items": {
+          "available": false,
+          "reason": "no_records",
+          "source_mode": null,
+          "record_id": null,
+          "save_id": null,
+          "occurred_at_ms": null,
+          "received_at_ms": null,
+          "items": []
+        }
+      },
+      "history_status": 200,
+      "history_message_count": 186,
+      "usage": {
+        "source": "telemetry.focus_segment",
+        "timezone": "Asia/Shanghai",
+        "today": {
+          "date": "2026-11-16",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        "daily": [
+          {
+            "date": "2026-11-10",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-11",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-12",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-13",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-14",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-15",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-16",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          }
+        ]
+      },
+      "empty_post_status": 400,
+      "empty_post_error": "invalid_envelope",
+      "stale_credential_status": 401,
+      "wrong_parent_status": 404,
+      "original_domains_sha256": {
+        "device": "c58a1519a4ec1628d88c337f057c22562b9614e8eb429d37e1343349433b3e39",
+        "ark": "1409340092dfa96227f44804d9ef37e5a7c273bf1dc7e1ec5c8830eda667e0e5",
+        "usage": "bdd91ee0be0030e08b3b124cdf107bab692665b05e4047e5448658dd544f929d",
+        "today": "2a2f22c1428cd350478f6345e9ab2b67ebcebca13832abc436cb0f6772676745",
+        "week": "a2c8e75df5e5a920f1c56bcc516cf503b4434af80e9074073d6faceab3f3de28",
+        "conversations": "facd059b7259a00b9f53ece787496577b6cb0b31dab1fe10813fa78511a9b795"
+      }
+    },
+    {
+      "base": "https://kidshub-ai.hahaxiong.cc",
+      "config_status": 200,
+      "revision": "cfg-182",
+      "ark_records": {
+        "enabled": true,
+        "contract_id": "p003-ark-records-r1"
+      },
+      "dashboard_status": 200,
+      "page_status": 200,
+      "cache": "no-store",
+      "page_count": 0,
+      "records_summary": {
+        "schema_version": 1,
+        "coverage": {
+          "kind": "received_records",
+          "complete": false,
+          "reason": "partial_history",
+          "min_occurred_at_ms": null,
+          "max_occurred_at_ms": null,
+          "first_received_at_ms": null,
+          "last_received_at_ms": null
+        },
+        "updated_at_ms": null,
+        "yesterday_income": {
+          "available": false,
+          "reason": "no_records",
+          "date": "2026-11-15",
+          "timezone": "Asia/Shanghai",
+          "source_mode": null,
+          "family_coin": null,
+          "stardust": null,
+          "occurred_from_ms": null,
+          "occurred_to_ms": null,
+          "received_at_ms": null
+        },
+        "latest_items": {
+          "available": false,
+          "reason": "no_records",
+          "source_mode": null,
+          "record_id": null,
+          "save_id": null,
+          "occurred_at_ms": null,
+          "received_at_ms": null,
+          "items": []
+        }
+      },
+      "history_status": 200,
+      "history_message_count": 186,
+      "usage": {
+        "source": "telemetry.focus_segment",
+        "timezone": "Asia/Shanghai",
+        "today": {
+          "date": "2026-11-16",
+          "available": false,
+          "focus_minutes": null,
+          "updated_at_ms": null
+        },
+        "daily": [
+          {
+            "date": "2026-11-10",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-11",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-12",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-13",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-14",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-15",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          },
+          {
+            "date": "2026-11-16",
+            "available": false,
+            "focus_minutes": null,
+            "updated_at_ms": null
+          }
+        ]
+      },
+      "empty_post_status": 400,
+      "empty_post_error": "invalid_envelope",
+      "stale_credential_status": 401,
+      "wrong_parent_status": 404,
+      "original_domains_sha256": {
+        "device": "c58a1519a4ec1628d88c337f057c22562b9614e8eb429d37e1343349433b3e39",
+        "ark": "1409340092dfa96227f44804d9ef37e5a7c273bf1dc7e1ec5c8830eda667e0e5",
+        "usage": "bdd91ee0be0030e08b3b124cdf107bab692665b05e4047e5448658dd544f929d",
+        "today": "2a2f22c1428cd350478f6345e9ab2b67ebcebca13832abc436cb0f6772676745",
+        "week": "a2c8e75df5e5a920f1c56bcc516cf503b4434af80e9074073d6faceab3f3de28",
+        "conversations": "facd059b7259a00b9f53ece787496577b6cb0b31dab1fe10813fa78511a9b795"
+      }
+    }
+  ],
+  "record_counts": {
+    "v1": 0,
+    "legacy": 0
+  },
+  "pass": true
+}
