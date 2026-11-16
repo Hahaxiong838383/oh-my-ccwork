@@ -1,0 +1,9 @@
+{
+  "candidate_parent": "579e8a15e28c83a8c68af54103a44b7df1df7195",
+  "pass": true,
+  "total_python_tests": 38,
+  "deployment_simulations": 6,
+  "explicit_rollback_start_failure": "red on 579, green after recovery fix",
+  "real_service_restarted": false,
+  "log_sha256": "ccfc6177a3a4a2388fd10b04d48dbe4cf3613a2e68a2415794e6d443467ddefd"
+}
