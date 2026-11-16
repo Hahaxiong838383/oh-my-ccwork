@@ -35,6 +35,13 @@ class JobTests(unittest.TestCase):
         self.assertEqual(status['last_offsite_backup_ms'],second['created_at_ms'])
         self.assertEqual(self.spool.manifest(first['archive_id']),first,'old manifest serves lost-ACK recovery after payload GC')
         self.assertEqual(self.ack(first)['archive_id'],first['archive_id'])
+    def test_next_cst_day_is_due_even_when_timer_fires_fractionally_earlier(self):
+        day=86400000;first_time=(1800000000000//day)*day-6*3600000+500 # CST 02:00:00.500
+        first=self.runjob(first_time)['manifest'];self.ack(first)
+        next_day=self.runjob(first_time+day-400) # Next day 02:00:00.100
+        self.assertEqual(next_day['state'],'published','24h elapsed gate must not skip an entire scheduled day')
+        self.ack(next_day['manifest'])
+        self.assertEqual(self.runjob(first_time+day+1000)['state'],'not_due')
     def test_crash_after_backup_reuses_snapshot_and_manifest_without_recapture(self):
         real=self.spool.publish_prepared
         with patch.object(self.job.archive.Spool,'publish_prepared',side_effect=RuntimeError('process interrupted')):

@@ -57,7 +57,9 @@ def execute(database,spool,now,reserve_bytes,timeout_seconds):
                 payload=spool.package(m['archive_id'])/'payload.bin'
                 if payload.exists():
                     spool.regular(payload);payload.unlink();archive.sync_dir(payload.parent)
-        if now-latest['created_at_ms']<DAY:return finish('not_due')
+        # Daily timer jitter must not turn a 400ms-early run into a 48h gap.
+        # Match NAS retention's CST calendar day, at most one acknowledged day.
+        if (now+8*3600000)//DAY<=(latest['created_at_ms']+8*3600000)//DAY:return finish('not_due')
     # These names belong solely to this job and are never touched while it is live.
     for p in [source,work/'snapshot.partial']:
         if p.exists() or p.is_symlink():spool.regular(p);p.unlink()
