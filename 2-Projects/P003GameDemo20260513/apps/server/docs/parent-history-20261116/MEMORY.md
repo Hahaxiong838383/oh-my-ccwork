@@ -18,6 +18,12 @@
 - Air指定总回执：`/Users/rayman.chen/Downloads/P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md`，当次SHA `5ea7d385deb26c39c2c01abd1062692697f44349afc9a607a39a6dc19441aecf`；仓库与本机Downloads同字节。后续写入先核漂移、备份、替换、回读。
 - 新小程序ZIP `P003_MINIAPP_C_HISTORY_20261116.zip`，SHA `d73521682ecbfb86ff08879a1af9fed1d9328f2a4c93ecbe5fc8b9e1e1913639`；mini009基线补丁ZIP `P003_C_USAGE_FIX_MINI009_BASE_20261116.zip`，SHA `aea287f1a9be0ab17d7a455bb9d0f7af70faeb3cb703e3e8dae7e0d8e52bdc64`。两机Downloads已核，补丁ZIP不是APK。
 
+## Git归档锚
+
+- mycc业务/首轮知识提交`203b63ad7a9c8f81e4708190be650923b5d34697`已push `codex/p003-mini008-realdata-20261111`并独立ls-remote核同；后续归档元数据提交在同分支，不改变已验源码。
+- Android修复/知识提交`42eaa238a1254e5ac10ff87aaa95c4c57afd75be`已push `codex/mini010-usage-hall-fix-20261116`并核同，原mini009交付分支及主线未改。
+- 共享记忆三文件仅本机外置运行态落盘，私有备份及逐文件摘要回执见[共享记忆回执](SHARED-MEMORY-RECEIPT.json)；没有把其他项目记忆或完整备份推到代码仓。
+
 ## 下一轮实机测试
 
 1. 等用户提供/确认C所连接Windows入口及微信测试版本。旧回执只有Windows本地路径，不等于已具备远程入口；不要猜IP或擅访其他Windows。设备网络地址先查共享设备记忆并实时复核。
