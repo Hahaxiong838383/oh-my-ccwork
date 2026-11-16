@@ -1,0 +1,24 @@
+{
+  "native_id": "01a1e1fd-b4c2-7dd0-8b6f-c745376cb46e",
+  "cwd": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116",
+  "source": "01a12f4d-4458-7af1-85a3-480b2c388d9c",
+  "boundary": "01a1e1bb-dac4-77b3-bb9d-c3a79b1b458d",
+  "title": "P003 PRnas与50台配额｜主13计划历史快照 · 截至2026-11-16",
+  "state": "verified",
+  "turns": 237,
+  "last_turn_id": "01a1e1bb-dac4-77b3-bb9d-c3a79b1b458d",
+  "status": {
+    "type": "idle"
+  },
+  "git_info": {
+    "sha": "25bb3141ceb689fd55f8fe57ebe195df03db866c",
+    "branch": "codex/p003-prnas-storage-50-20261116",
+    "originUrl": "https://github.com/Hahaxiong838383/oh-my-ccwork.git"
+  },
+  "codeg_session_id": 330,
+  "folder_id": 62,
+  "parent_id": null,
+  "visible_in_default_query": true,
+  "turns_total": 19763,
+  "visual_verified": false
+}

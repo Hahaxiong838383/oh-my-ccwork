@@ -1,0 +1,14 @@
+[
+  {
+    "test": "sms-login-hardening",
+    "exit": 0
+  },
+  {
+    "test": "sms-login-http",
+    "exit": 0
+  },
+  {
+    "test": "spug-transport",
+    "exit": 0
+  }
+]

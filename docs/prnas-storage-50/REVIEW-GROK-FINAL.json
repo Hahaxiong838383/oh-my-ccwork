@@ -1,0 +1,50 @@
+{
+  "verdict": "PASS_ISOLATED",
+  "model": "Grok 4.7",
+  "node": "/Users/fu-121/.local/node-v24/bin/node",
+  "node_version": "v24.19.0",
+  "branch": "codex/p003-prnas-storage-50-20261116",
+  "sha": "7fa6ed8b265e3095c70231d930e8041164d2c12a",
+  "parent": "25bb3141ceb689fd55f8fe57ebe195df03db866c",
+  "ancestor_25bb_exit": 0,
+  "range": "25bb3141..7fa6ed8b",
+  "files_changed": 7,
+  "source_modified_by_reviewer": false,
+  "delegated": false,
+  "directed_defect_closed": true,
+  "directed_defect": "3 existing grants, no Ark verified profile, stop-all made currentCount 0 and blocked re-enable",
+  "not_a_50_device_or_production_pass": true,
+  "commands": [
+    {"cwd": "2-Projects/P003GameDemo20260513/apps/server", "command": "npm run test:storage", "exit": 0, "note": "includes storage-legacy-scope: real service, 3 grants, new process restore, immutable env seed, 4th rejected, quota clamp to 2"},
+    {"cwd": "2-Projects/P003GameDemo20260513/apps/server", "command": "ASSET_DIR=/Users/fu-121/.local/state/p003-admin-credential-view-20261109/assets node ../web/scripts/test-analytics-admin-ui.cjs", "exit": 0, "checks": 55},
+    {"cwd": "2-Projects/P003GameDemo20260513/apps/server", "command": "node node_modules/typescript/bin/tsc --noEmit --pretty false --incremental false", "exit": 2, "stdout_sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7", "bytes": 1267, "cmp_baseline_tsc": 0, "error_ts_count": 12},
+    {"cwd": "2-Projects/P003GameDemo20260513/apps/server", "command": "node --experimental-sqlite --import tsx /Users/fu-121/.local/state/p003-prnas-t01-20261116/repro-ark-reenable.mts", "exit": 0, "stdout": "before 1 / after_stop 1 / PASS reenabled original device"}
+  ],
+  "procedure_misses": [
+    {"command": "npm run test:storage from worktree root", "exit": 1, "cause": "missing script"},
+    {"command": "admin UI test from worktree root", "exit": 1, "cause": "resolved ../web outside the repo"},
+    {"command": "tsc from worktree root", "exit": 1, "cause": "not the server project; not compared as the baseline result"}
+  ],
+  "independent_probes": [
+    {"name": "formula", "exit": 0, "result": "legacy 3 + profile 0 + target 1000 = 3; target 2 = 2; profile 14 + legacy 3 + target 50 = 14; malformed legacy flag throws INVALID_ARK_LEGACY_ALLOWANCE"},
+    {"name": "scale", "exit": 0, "result": "env allowlist 10 and 3 grants seeds legacy_limit 3; stop keeps max 3; target 1000 still rejects 4th; validated_devices null; not_validated set"},
+    {"name": "oldseed", "exit": 0, "result": "25bb-shaped flag is not backfilled; arkCapacity and reauthorize-after-stop throw INVALID_ARK_LEGACY_ALLOWANCE; fail closed"}
+  ],
+  "legacy_limit": {
+    "seeded_from": "grant count at first ark.scope-seed.v1 write",
+    "creates_grants": false,
+    "capped_by_target": true,
+    "zero_profile_stays_unverified": true,
+    "disk_gate": "max_enabled_devices is 0 when free bytes are below 4.5GiB, before legacy is applied",
+    "disk_below_4_5gib_executed": false
+  },
+  "inherited_unverified": [
+    "disk below 4.5GiB",
+    "50-device load, NAS, real voice, T2-T6",
+    "production SSH, SMS, devices, switches",
+    "miniprogram, search/listening suites, owner query suites",
+    "four old regression groups in BASELINE-FAILURES.json; not rerun and not fixed here",
+    "workspace typecheck remains the 12 baseline errors"
+  ],
+  "residual": "A database that already has the 25bb seed without legacy_limit is not migrated. Capacity reads throw INVALID_ARK_LEGACY_ALLOWANCE. The fix note says that candidate was not deployed. This review did not check production."
+}

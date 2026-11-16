@@ -1,0 +1,42 @@
+{
+  "capacity": {
+    "ok": true,
+    "free_bytes": 15483240448,
+    "total_bytes": 41882943488,
+    "db_bytes": 111222784,
+    "wal_bytes": 309032,
+    "daily_peak": 614,
+    "sample_devices": 3,
+    "maintenance_ok": true,
+    "checked_at_ms": 1794792978892,
+    "horizon_days": 30,
+    "raw_growth_days": 14,
+    "fact_growth_days": 30,
+    "seen_growth_days": 30,
+    "daily_events_per_device": 6000,
+    "raw_retention_days": 14,
+    "fact_retention_days": 90,
+    "seen_retention": "persistent",
+    "backup_peak_copies": 4,
+    "reserve_bytes": 4294967296,
+    "wal_reserve_bytes": 536870912,
+    "budget_bytes": 10651402240,
+    "bytes_per_device": 1600896004,
+    "storage_limit": 6,
+    "maintenance_limit": 16,
+    "validated_device_limit": 20,
+    "max_enabled_devices": 6,
+    "twenty_devices_bytes": 32017920080,
+    "twenty_devices_fit": false,
+    "model": "20261031-v2-30d",
+    "sample_warning": null
+  },
+  "upload-status": {
+    "enabled": true,
+    "revision": 4,
+    "hour": 23,
+    "effective_enabled": true,
+    "valid": true,
+    "subjects_count": 3
+  }
+}

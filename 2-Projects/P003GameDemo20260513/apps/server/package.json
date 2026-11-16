@@ -35,7 +35,7 @@
     "test:analytics-control": "node --experimental-sqlite --import tsx scripts/analytics-policy.test.ts && node --experimental-sqlite --import tsx scripts/analytics-control-route.test.ts",
     "test:economy-shadow": "node --experimental-sqlite --import tsx scripts/economy-shadow.test.ts && node --experimental-sqlite --import tsx scripts/economy-shadow-storage.test.ts",
     "test:analytics-v375": "node --experimental-sqlite --import tsx scripts/analytics-gzip.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-contract.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-settings.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-ingest.test.ts && node --experimental-sqlite --import tsx scripts/analytics-tier-retention.test.ts && node --experimental-sqlite --import tsx scripts/analytics-v375-http.test.ts",
-    "test:storage": "node --experimental-sqlite --import tsx scripts/storage-policy.test.ts && node --experimental-sqlite --import tsx scripts/storage-http.test.ts && node --experimental-sqlite --import tsx scripts/storage-concurrency.test.ts && node --experimental-sqlite --import tsx scripts/storage-legacy-scope.test.ts"
+    "test:storage": "node --experimental-sqlite --import tsx scripts/storage-policy.test.ts && node --experimental-sqlite --import tsx scripts/storage-http.test.ts && node --experimental-sqlite --import tsx scripts/storage-concurrency.test.ts && node --experimental-sqlite --import tsx scripts/storage-legacy-scope.test.ts && node --experimental-sqlite --import tsx scripts/storage-analytics-boundaries.test.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.0.0",

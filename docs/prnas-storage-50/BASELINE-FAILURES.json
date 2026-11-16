@@ -1,0 +1,62 @@
+[
+  {
+    "test": "search-canary-policy",
+    "candidate_failures": [
+      [
+        "'p003-search-canary-20261021'",
+        "'baseline-first-turn'"
+      ]
+    ],
+    "baseline_failures": [
+      [
+        "'p003-search-canary-20261021'",
+        "'baseline-first-turn'"
+      ]
+    ],
+    "baseline_log_sha256": "13cb25a1ca93a211aa50ed4b6fe24f0d16badd4158720677aeb0ca91778bdf70",
+    "candidate_log_sha256": "6c59dd057816e3d3c87e39b12b68d599237c62350d6cb69937414dfb79a22f02"
+  },
+  {
+    "test": "ble-binding-core",
+    "candidate_failures": [
+      [
+        "null",
+        "1793611500002"
+      ]
+    ],
+    "baseline_failures": [
+      [
+        "null",
+        "1793611500002"
+      ]
+    ],
+    "baseline_log_sha256": "ee2eac8cd4019e7cdeeb681696f64918bae5aa13d8f02662fe449304b839128e",
+    "candidate_log_sha256": "0354cef3025c17c021118c09b55fcc86ca44a85be907ae3b8b2e48856aeaf127"
+  },
+  {
+    "test": "pairing",
+    "candidate_failures": [
+      "FAIL rv-3f status bound 带 binding_outcome got={\"ok\":true,\"state\":\"bound\",\"sn\":\"BJP00326060100000901\",\"public_id\":\"dev_7d1bd2e752f126dc\",\"activated\":false,\"activated_at_ms\":null,\"brain_state\":\"ready\",\"binding_outcome\":\"existing_binding_recovery\"} want={\"ok\":true,\"state\":\"bound\",\"sn\":\"BJP00326060100000901\",\"binding_outcome\":\"existing_binding_recovery\"}",
+      "FAIL rv-8b 开关 0 → confirm 不前置检查且无 relation got={\"s\":409} want={\"s\":200}",
+      "FAIL rv-8c 开关 0 → claim 级门 409 且无 binding_outcome got={\"code\":\"pairing_pending\"} want={\"code\":\"sn_bound_by_other\"}"
+    ],
+    "baseline_failures": [
+      "FAIL rv-3f status bound 带 binding_outcome got={\"ok\":true,\"state\":\"bound\",\"sn\":\"BJP00326060100000901\",\"public_id\":\"dev_3d67d4904d6c4b73\",\"activated\":false,\"activated_at_ms\":null,\"brain_state\":\"ready\",\"binding_outcome\":\"existing_binding_recovery\"} want={\"ok\":true,\"state\":\"bound\",\"sn\":\"BJP00326060100000901\",\"binding_outcome\":\"existing_binding_recovery\"}",
+      "FAIL rv-8b 开关 0 → confirm 不前置检查且无 relation got={\"s\":409} want={\"s\":200}",
+      "FAIL rv-8c 开关 0 → claim 级门 409 且无 binding_outcome got={\"code\":\"pairing_pending\"} want={\"code\":\"sn_bound_by_other\"}"
+    ],
+    "baseline_log_sha256": "34fca8c01624e3c7abe2da5ab4a536d71f65110a9fdcbc6c95362ddc1b7f219e",
+    "candidate_log_sha256": "13ab9b8c4bab5c29f74ec728b9c25750d976c6e2c969d587e56d77767b5a63df"
+  },
+  {
+    "test": "sms-auth",
+    "candidate_failures": [
+      "FAIL bind-8 台账外 404 got=200 want=404"
+    ],
+    "baseline_failures": [
+      "FAIL bind-8 台账外 404 got=200 want=404"
+    ],
+    "baseline_log_sha256": "29a1091f6105ee55558e9dfb6db114c0219e9d78346283a83e714b8081e5bb54",
+    "candidate_log_sha256": "420240fb6bb3ff1569d5c6f923fdc2d57c15701beefab5f2b6b7c2aed04356e7"
+  }
+]

@@ -1,0 +1,45 @@
+{
+  "status": "PASS_HTTP_WRAPPER_STORE_TOP_LEVEL_HISTORY_NOT_BROWSER",
+  "verdicts": [
+    {
+      "mode": "deployed",
+      "shown_sessions": [
+        330
+      ],
+      "empty_folders": [],
+      "store_conversation_count": 78
+    }
+  ],
+  "wire": [
+    {
+      "command": "list_open_folder_details"
+    },
+    {
+      "command": "list_all_folder_details"
+    },
+    {
+      "command": "list_folder_groups",
+      "args": {}
+    },
+    {
+      "command": "list_all_conversations",
+      "args": {
+        "folderIds": null,
+        "agentType": null,
+        "search": null,
+        "sortBy": null,
+        "status": null,
+        "includeChildren": null
+      }
+    }
+  ],
+  "assets": {
+    "3aa7kbh3ru5_c.js": "e617173c8b4aea8360024078894ac98c825e574c0a3cef5f957c1189ece88382",
+    "048tzznh3mzxz.js": "570b3f6474222f3ebd08829907076619d75f8baef92db0eb186393ea6fbc8d07"
+  },
+  "assetUrls": {
+    "3aa7kbh3ru5_c.js": "/_next/static/chunks/3aa7kbh3ru5_c.js",
+    "048tzznh3mzxz.js": "/_next/static/chunks/048tzznh3mzxz.js"
+  },
+  "visual_verified": false
+}

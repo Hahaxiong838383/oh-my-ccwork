@@ -1,0 +1,58 @@
+[
+  {
+    "test": "listening-config-store",
+    "exit": 0
+  },
+  {
+    "test": "listening-policy",
+    "exit": 0
+  },
+  {
+    "test": "listening-authority-store",
+    "exit": 0
+  },
+  {
+    "test": "listening-http-contract",
+    "exit": 0
+  },
+  {
+    "test": "listening-auth",
+    "exit": 0
+  },
+  {
+    "test": "listening-authority",
+    "exit": 0
+  },
+  {
+    "test": "listening-rtc-brain",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-policy",
+    "exit": 1
+  },
+  {
+    "test": "search-routing-store",
+    "exit": 0
+  },
+  {
+    "test": "search-canary-status",
+    "exit": 0
+  },
+  {
+    "test": "ble-binding-core",
+    "exit": 1
+  },
+  {
+    "test": "ble-binding-guards",
+    "exit": 0
+  },
+  {
+    "test": "ble-binding-http",
+    "exit": 0
+  },
+  {
+    "test": "pairing",
+    "exit": 1
+  }
+]

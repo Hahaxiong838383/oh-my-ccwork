@@ -1,0 +1,84 @@
+{
+  "at_ms": 1794794079440,
+  "files": [
+    {
+      "target": "/opt/p003/server/src/analytics/capacity.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/analytics/control-route.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/analytics/device-context.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/analytics/index.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/ark/contracts.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/ark/proxy.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/ark/routes.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/ark/service.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/ark/store.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/config-store.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/index.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/routes/admin-data.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/storage/policy.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/server/src/storage/routes.ts",
+      "unchanged": true
+    },
+    {
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "unchanged": true
+    }
+  ],
+  "all_unchanged": true,
+  "upload_policy": {
+    "revision": 4,
+    "enabled": true,
+    "hour": 23,
+    "count": 3
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2075857,
+      "restarts": 3
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 2075980,
+      "restarts": 2
+    }
+  ]
+}

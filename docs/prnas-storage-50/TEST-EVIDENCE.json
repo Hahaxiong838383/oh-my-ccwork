@@ -1,82 +1,118 @@
 {
-  "baseline-control-adopted.log": {
-    "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
-    "bytes": 386,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/baseline-control-adopted.log"
+  "final_source_candidate": "7fa6ed8b265e3095c70231d930e8041164d2c12a",
+  "logs": {
+    "baseline-tsc.log": {
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "bytes": 1267,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/baseline-tsc.log"
+    },
+    "final-tsc.log": {
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "bytes": 1267,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/final-tsc.log"
+    },
+    "final-storage.log": {
+      "sha256": "848ab40521940c0a252a792b4ed3ba4f7e8555d3122475d32d538d624884d8ba",
+      "bytes": 829,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/final-storage.log"
+    },
+    "final-ark.log": {
+      "sha256": "199d42b2af7b8854ab94ddee0f208c6488deb807217fe8ceac3bdb7a7d0088a6",
+      "bytes": 10898,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/final-ark.log"
+    },
+    "final-ui.log": {
+      "sha256": "93111ea12a33f02b0a787a8cb262c05973fb00c437e4925f68fe1ebe31424869",
+      "bytes": 124,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/final-ui.log"
+    },
+    "test-analytics.log": {
+      "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
+      "bytes": 1949,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics.log"
+    },
+    "test-analytics-capacity.log": {
+      "sha256": "96b623382c82a4567f3291b8741cd8242a3bf6ce2cc85670ea9df08f4ba5bbe5",
+      "bytes": 1086,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics-capacity.log"
+    },
+    "test-analytics-v375.log": {
+      "sha256": "f5bdd9cbd8b187a8607909dc024cda3cc63065595248c44af96cb40d89191ab2",
+      "bytes": 1302,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics-v375.log"
+    },
+    "control-suite.log": {
+      "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
+      "bytes": 386,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/control-suite.log"
+    },
+    "device-config.log": {
+      "sha256": "3c8358a7d358a1da58d2e95d5634f1c0e6e746ec9d7827bb749299ac29d2eb76",
+      "bytes": 831,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/device-config.log"
+    },
+    "storage-red.log": {
+      "sha256": "2ef5af5a6562c435a36cef47c7d4e9a04a413492839422e7a226dfc09aa8b407",
+      "bytes": 1923,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-red.log"
+    },
+    "ui-negative-baseline.log": {
+      "sha256": "29276b62a4288590dce97595d260202e53c64e0b6979a422111c65137814f10e",
+      "bytes": 383,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ui-negative-baseline.log"
+    },
+    "ark-reenable-red.log": {
+      "sha256": "322c60e901da47a7172d72c55e5a8de07035e62743664cae495b08b7bd3a58c1",
+      "bytes": 83,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ark-reenable-red.log"
+    },
+    "ark-reenable-fixed-isolated.log": {
+      "sha256": "e4cd33bd6fa883a59c1956142ca27ce5ef68c54cc7cb1fa1baf7e68467cbc1cd",
+      "bytes": 53,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ark-reenable-fixed-isolated.log"
+    },
+    "ui-red.log": {
+      "sha256": "ffc9bb97218b30ba75029cb3b7a7e58732adb381eefd3cf09aba726530c73cc6",
+      "bytes": 1341,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ui-red.log"
+    },
+    "ark-suite.log": {
+      "sha256": "c0f85f58c0e865ce3f58e04199c0edefcca67da9f8a38c03302aec41b0c059c8",
+      "bytes": 32044,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ark-suite.log"
+    },
+    "analytics-quota-boundaries-versioned.log": {
+      "sha256": "dd4618dd607d2ecec33c1407c27bc7f6d62f4e3a5fb1e39f407272f9c03a5af3",
+      "bytes": 101,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/analytics-quota-boundaries-versioned.log"
+    },
+    "final-docs-tsc.log": {
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "bytes": 1267,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/final-docs-tsc.log"
+    },
+    "REVIEW-GROK-FINAL.md": {
+      "sha256": "7ab75ac6796034eb02729a9a3815b7e51a4f29a0f9edf9505953be69fa63ed1a",
+      "bytes": 5381,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/REVIEW-GROK-FINAL.md"
+    },
+    "REVIEW-GROK-FINAL.json": {
+      "sha256": "800fba3bc8f1c171a60cf19f63fec8024217191723ed6b28e7bf7f78f5969a29",
+      "bytes": 3603,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/REVIEW-GROK-FINAL.json"
+    },
+    "final-integrated-storage.log": {
+      "sha256": "d416615f2f1926d9e0ed6e25d4dce76d3eb0d507fbbfda4d3ef5cd03174f271b",
+      "bytes": 1018,
+      "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/final-integrated-storage.log"
+    }
   },
-  "baseline-tsc.log": {
-    "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
-    "bytes": 1267,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/baseline-tsc.log"
+  "final_review": {
+    "status": "PASS_ISOLATED",
+    "reviewer": "Grok 4.7",
+    "session": 331,
+    "runtime_candidate": "7fa6ed8b265e3095c70231d930e8041164d2c12a",
+    "scope": "T0/T1 only; no production, NAS or 50-device load acceptance"
   },
-  "storage-red.log": {
-    "sha256": "2ef5af5a6562c435a36cef47c7d4e9a04a413492839422e7a226dfc09aa8b407",
-    "bytes": 1923,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-red.log"
-  },
-  "storage-green.log": {
-    "sha256": "5058dd27f5f3bd1b6b334259c5983f4b596c8b66832c42bde79c7dec6ef23de8",
-    "bytes": 115,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-green.log"
-  },
-  "storage-http.log": {
-    "sha256": "7cf8e8a1c87ff96ae1dec01dcc92a86a880bee8662ba8484300846a1eace4140",
-    "bytes": 147,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-http.log"
-  },
-  "storage-race.log": {
-    "sha256": "0c2aa95c7855a5e53804ed7d4ea157641fd0438f22d5d2a686745ead45a585ee",
-    "bytes": 98,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-race.log"
-  },
-  "storage-suite.log": {
-    "sha256": "84b0b949557d3869383fd73939e06d880608e6575e28a29c695b294d13b6fda7",
-    "bytes": 437,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-suite.log"
-  },
-  "control-suite.log": {
-    "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
-    "bytes": 386,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/control-suite.log"
-  },
-  "device-config.log": {
-    "sha256": "3c8358a7d358a1da58d2e95d5634f1c0e6e746ec9d7827bb749299ac29d2eb76",
-    "bytes": 831,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/device-config.log"
-  },
-  "test-analytics.log": {
-    "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
-    "bytes": 1949,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics.log"
-  },
-  "test-analytics-capacity.log": {
-    "sha256": "96b623382c82a4567f3291b8741cd8242a3bf6ce2cc85670ea9df08f4ba5bbe5",
-    "bytes": 1086,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics-capacity.log"
-  },
-  "test-analytics-v375.log": {
-    "sha256": "f5bdd9cbd8b187a8607909dc024cda3cc63065595248c44af96cb40d89191ab2",
-    "bytes": 1302,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics-v375.log"
-  },
-  "ark-suite-fixed.log": {
-    "sha256": "669d163a059dffdcfc231b7ab279d8213ccb12c0a349144ea0906f6bc832998d",
-    "bytes": 10882,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ark-suite-fixed.log"
-  },
-  "ui-negative-baseline.log": {
-    "sha256": "29276b62a4288590dce97595d260202e53c64e0b6979a422111c65137814f10e",
-    "bytes": 383,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ui-negative-baseline.log"
-  },
-  "ui-final.log": {
-    "sha256": "d63debc2c2e9099bec79257b5445a0b58621f5e046af8ddb0cbed024abb03dbf",
-    "bytes": 124,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ui-final.log"
-  },
-  "t1-tsc.log": {
-    "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
-    "bytes": 1267,
-    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/t1-tsc.log"
-  }
+  "post_review_changes": "Documentation and portable synthetic Analytics boundary test only; runtime sources/admin unchanged."
 }
