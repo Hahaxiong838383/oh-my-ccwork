@@ -6,7 +6,7 @@ SCRIPT = pathlib.Path(__file__).parents[1] / 'scripts/asr_diagnostic_env.py'
 spec = importlib.util.spec_from_file_location('diagnostic_env', SCRIPT)
 m = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(m)
-SNS = ['BJP00326111699999901', 'BJP00326111699999902', 'BJP00326111699999903']
+SNS = [f'BJP003261116999999{i:02d}' for i in range(1, 6)]
 ALLOW = b'P003_ASR_DIAGNOSTICS_SN_ALLOW'
 UNTIL = b'P003_ASR_DIAGNOSTICS_UNTIL_MS'
 

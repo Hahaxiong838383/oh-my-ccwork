@@ -1,0 +1,14 @@
+{
+  "authorized_at": "2026-11-16",
+  "device_sns": [
+    "BJP00326070803800006",
+    "BJP00326081002000026",
+    "BJP00326081002000031",
+    "BJP00326060100100004",
+    "BJP00326081002000038"
+  ],
+  "source": "user explicitly named all five tails in current turn",
+  "diagnostics_only": true,
+  "feature_allowlists_unchanged": true,
+  "duration_days": 7
+}

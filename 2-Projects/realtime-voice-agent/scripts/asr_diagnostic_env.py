@@ -50,9 +50,9 @@ def replace(content, desired):
 
 def enable(content, sns, until_ms, *, now_ms=None):
     now_ms = int(time.time()*1000) if now_ms is None else now_ms
-    if (len(sns) != 3 or len(set(sns)) != 3 or
+    if (len(sns) != 5 or len(set(sns)) != 5 or
             any(not isinstance(sn, str) or not re.fullmatch(r'BJP003\d{14}', sn) for sn in sns)):
-        raise ValueError('three distinct full device SNs required')
+        raise ValueError('five distinct full device SNs required')
     if type(until_ms) is not int or until_ms <= now_ms:
         raise ValueError('future millisecond deadline required')
     if content and not content.endswith(b'\n'):

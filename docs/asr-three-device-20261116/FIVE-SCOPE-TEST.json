@@ -1,0 +1,15 @@
+{
+  "runtime_source_commit": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "source_file_sha256": "8890d81429726a9fb412f9141442d58b272fb64fe6e9b1467118659ad7862ea1",
+  "extracted_function_sha256": "1d4361fc0ffb6b3fa631ef31adf0e6e99b8348c5df5d31766a0133c743dd2ca5",
+  "assertions": 11,
+  "five_devices": [
+    "BJP00326070803800006",
+    "BJP00326081002000026",
+    "BJP00326081002000031",
+    "BJP00326060100100004",
+    "BJP00326081002000038"
+  ],
+  "test": "Exact Rust function compiled separately, not a new Worker build or physical test",
+  "exit_code": 0
+}
