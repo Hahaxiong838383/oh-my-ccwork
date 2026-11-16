@@ -97,4 +97,29 @@ test('pending reference fanout stays within bounded memory and lock time',async(
 
 test('malformed origin is per-ID invalid_record and never isolates valid peers',async()=>{const f=await fixture();for(const [i,patch] of [{origin_grant_id:'bogus'},{origin_epoch:0}].entries()){const result=await post(f,[record(f,'good-origin-'+i,i+1),record(f,'bad-origin-'+i,i+100,patch)]);ack(result,['good-origin-'+i]);assert.deepEqual(result.body.data.rejected,[{record_id:'bad-origin-'+i,reason:'invalid_record',retryable:false}]);}assert.equal(count(f.sn),2);});
 test('unauthenticated new parent responses remain no-store',async()=>{const f=await fixture();const r=await req(`/v1/parent/devices/${f.pub}/ark/records`,'');assert.equal(r.status,401);assert.equal(r.headers.get('cache-control'),'no-store');});
+test('records-only SQL failure preserves existing dashboard data and never fabricates an ACK',async(t)=>{
+ const f=await fixture();ack(await post(f,[record(f)]),['r1']);
+ t.after(()=>{db.prepare('DELETE FROM ark_grant WHERE sn=?').run(f.sn);for(const key of ['ARK_CONTEXT_SN_ALLOW','ARK_RECORDS_SN_ALLOW'])process.env[key]=(process.env[key]??'').split(',').filter(sn=>sn!==f.sn).join(',');});
+ const baseline=await dash(f);assert.equal(baseline.status,200);
+ db.exec('ALTER TABLE ark_record RENAME TO ark_record_unavailable');
+ try{
+  const degraded=await req(`/v1/parent/devices/${f.pub}/dashboard`,f.parent);
+  assert.equal(degraded.status,200,'a new records query failure must not break the existing dashboard');
+  assert.equal(degraded.headers.get('cache-control'),'no-store');
+  for(const key of ['ark','usage','device','today','week'])assert.deepEqual(degraded.body.data[key],baseline.body.data[key],key);
+  const r=degraded.body.data.records;
+  contract.DashboardRecordsSchema.parse(r);
+  assert.equal(r.yesterday_income.reason,'dependency_unavailable');assert.equal(r.latest_items.reason,'dependency_unavailable');
+  assert.equal(r.yesterday_income.available,false);assert.equal(r.yesterday_income.family_coin,null);assert.equal(r.yesterday_income.stardust,null);
+  assert.equal(r.updated_at_ms,null);assert.equal(r.coverage.complete,false);assert.equal(r.coverage.last_received_at_ms,null);assert.deepEqual(r.latest_items.items,[]);
+  assert.equal((await page(f)).status,503);
+  const upload=await post(f,[record(f,'during-failure',2)]);assert.equal(upload.status,503);assert.equal(upload.body.data,undefined);
+  assert.equal((await req(`/v1/parent/devices/${f.pub}/dashboard`,await jwt({accountId:'wrong-owner',role:'parent'},true))).status,404);
+ }finally{db.exec('ALTER TABLE ark_record_unavailable RENAME TO ark_record');}
+ assert.equal(count(f.sn),1);assert.equal((await dash(f)).body.data.records.yesterday_income.reason,'policy_pending');
+ ack(await post(f,[record(f,'during-failure',2)]),['during-failure']);
+ db.exec('ALTER TABLE ark_current RENAME TO ark_current_unavailable');
+ try{assert.equal((await dash(f)).status,503,'an existing Ark dependency failure must remain visible');}
+ finally{db.exec('ALTER TABLE ark_current_unavailable RENAME TO ark_current');}
+});
 test('late acquisition rejects incompatible save/sequence/item without poisoning original pending reference',async()=>{const f=await fixture();const activation=record(f,'waiting',2,{reason:'item_activation',resource_changes:[],item_changes:[{operation:'activated',item_instance_id:'item-target',acquired_record_id:'target',state:'active'}]});ack(await post(f,[activation]),['waiting']);for(const patch of [{save_id:'other-save'},{sequence:3},{item_changes:[]}]){const candidate=record(f,'target',1,patch);rejected(await post(f,[candidate]),'item_reference_conflict');}ack(await post(f,[record(f,'target',1)]),['target']);assert.equal((await page(f)).body.data.items.find((r:any)=>r.record_id==='waiting').item_references[0].status,'resolved');});

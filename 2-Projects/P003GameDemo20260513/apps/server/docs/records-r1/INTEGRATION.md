@@ -42,7 +42,7 @@ context是原授权上下文，不是新凭据。首次成功且版本匹配后�
 
 ParentRecord不含origin_grant_id/epoch/SN/owner。`item_references`是实施细化：每个activated返回pending/resolved；resolved须同save/原归属/sequence，且目标在该分页高水位内。item_changes是原始事实，不修改成当前库存。activation不再次加数量或收入；尚无可靠当前save/tank指针。
 
-`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard两个摘要保持不可用、policy_pending（未开则not_enabled）；家族币/星尘null，items=[]。不回退旧normal，gm/unknown在列表明确标记；正常余额和卡库存仍走旧Ark。
+`coverage.complete=false`恒定；范围只描述当前过滤集合已收到记录。无记录四个边界和updated_at_ms均null；不能把没收到当真实0。dashboard两个摘要保持不可用、policy_pending（未开则not_enabled；新记录查询故障为dependency_unavailable且不影响原资产/时长/设备状态）；家族币/星尘null，items=[]。不回退旧normal，gm/unknown在列表明确标记；正常余额和卡库存仍走旧Ark。
 
 ## 默认容量／配置
 

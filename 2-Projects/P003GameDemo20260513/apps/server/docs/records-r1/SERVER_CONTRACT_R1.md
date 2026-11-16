@@ -130,7 +130,9 @@ ParentRecord为原Record去掉origin_grant_id/origin_epoch，加`received_at_ms`
 ```
 latest_items.items结构为`{item_instance_id,item_id,item_kind,quantity,state,activation_record_id}`，最后一项为可确认的后续激活记录ID或null；引用未齐/冲突不伪造active。两个摘要source_mode只能normal或null，available=true必须normal。
 
-新摘要reason允许`policy_pending|no_records|non_normal|partial_history|clock_unknown|save_unknown|legacy_baseline_unknown|not_enabled|identity_mismatch|null`。没有记录updated_at_ms=null；有记录为此可见集合最近首次接收时间。只有normal且已知可用时刻的数据可用于日期统计。覆盖仅表示已收到记录，`complete=false`为R1常量；不实现日闭合水位或完整历史基线。因此没有匹配收入记录返回null，不自动给“昨日真实0”；存在已收正向收入可给**已上报部分合计**，reason=partial_history，不能标昨日完整收入。三种资源不合并。
+新摘要reason允许`policy_pending|no_records|non_normal|partial_history|clock_unknown|save_unknown|legacy_baseline_unknown|not_enabled|identity_mismatch|dependency_unavailable|null`。没有记录updated_at_ms=null；有记录为此可见集合最近首次接收时间。只有normal且已知可用时刻的数据可用于日期统计。覆盖仅表示已收到记录，`complete=false`为R1常量；不实现日闭合水位或完整历史基线。因此没有匹配收入记录返回null，不自动给“昨日真实0”；存在已收正向收入可给**已上报部分合计**，reason=partial_history，不能标昨日完整收入。三种资源不合并。
+
+记录查询依赖异常时，两个摘要返回dependency_unavailable、available=false、金额null、物品空，updated_at_ms及覆盖时间为空；原device/usage/ark继续独立返回。新分页/上传接口仍返回503，绝不伪造ACK；原Ark依赖异常仍保持dashboard原有503行为。
 
 产品口径确认前上述两个摘要保持policy_pending，不影响底层可靠采集、分页、现有余额/卡库存、色温/姿态映射并行开发。确认后收入建议按真实入账北京时间昨天统计reward_claim/tank_unlock的正向币/星尘行，消费不抵扣，历史补领按真实领取日、logical_day独立。此建议尚非产品批准。
 

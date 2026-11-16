@@ -17,5 +17,6 @@ export const recordsParentRoute=createRecordsParentRoutes(options);
 export function recordsDashboard(publicId:string,owner:string){
  const dev=deviceRegistryStore.getByPublicId(publicId);
  if(!dev||dev.parent_account_id!==owner||!recordsAllowed(dev.sn))return dashboardRecords(emptyCoverage(),'not_enabled');
- return recordsStore().dashboard(publicId,owner);
+ try { return recordsStore().dashboard(publicId,owner); }
+ catch { return dashboardRecords(emptyCoverage(),'dependency_unavailable'); }
 }
