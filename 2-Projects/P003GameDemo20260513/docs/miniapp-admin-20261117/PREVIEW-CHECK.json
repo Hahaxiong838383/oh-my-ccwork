@@ -1,0 +1,26 @@
+{
+  "at": "2026-11-16T23:39:03.243Z",
+  "pass": true,
+  "scope": "offline design prototype only; no production interaction",
+  "checks": [
+    "search by sample phone",
+    "missing duration not zero",
+    "six detail tabs",
+    "cancel preserves binding",
+    "return preserves filter",
+    "baseline filter",
+    "history append",
+    "confirmed mock unbind clears prior details",
+    "390px viewport no page overflow",
+    "zero script errors and external requests"
+  ],
+  "errors": [],
+  "external_requests": [],
+  "screenshot_directory": "output/playwright/miniapp-admin-20261117",
+  "final_confirmation_identity_check": {
+    "at": "2026-11-16T23:39:54.600Z",
+    "pass": true,
+    "public_id_displayed": true,
+    "cancel_preserves_binding": true
+  }
+}

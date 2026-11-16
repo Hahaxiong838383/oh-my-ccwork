@@ -1,0 +1,105 @@
+{
+  "at": "2026-11-17T07:40:31.486184",
+  "scope": "planning documents and offline prototype; no production calls or binding changes",
+  "local_directory": "/Users/fu-121/Downloads/P003_MINIAPP_ADMIN_PREVIEW_20261117",
+  "air_directory": "/Users/rayman.chen/Downloads/P003_MINIAPP_ADMIN_PREVIEW_20261117",
+  "zip": {
+    "name": "P003_MINIAPP_ADMIN_PREVIEW_20261117.zip",
+    "bytes": 1004872,
+    "sha256": "573e5f6a89801a984b5df13c4a8fc88d679b5b27f11b7bbeecb3ca874f754e33"
+  },
+  "both_downloads_verified": true,
+  "files": [
+    {
+      "file": "01-device-list.png",
+      "bytes": 186420,
+      "sha256": "eb708dfa910b5deeb686805594a973bf4f2ac9042cfe5ae14c905e9bd8be99e7"
+    },
+    {
+      "file": "02-device-detail.png",
+      "bytes": 218299,
+      "sha256": "ae7b2ea81a6cbe2f6927ed5515657312fa65b587537d012f87d61db1999a79e5"
+    },
+    {
+      "file": "03-unbind-confirm.png",
+      "bytes": 240935,
+      "sha256": "c691ef5e93593daeb082e4af09f66f3eab906a443b1d305a0d301f5518647985"
+    },
+    {
+      "file": "04-normal-data-example.png",
+      "bytes": 194124,
+      "sha256": "c3f7d5dfeed1a1fe09f2b3323db7f8da586946ccdc00a2c0d2e0154e49bee5d7"
+    },
+    {
+      "file": "05-mobile-detail.png",
+      "bytes": 178421,
+      "sha256": "f45b988bb564019f07ab88e23741d278c6aa427762a190b22aefcbbe010d0096"
+    },
+    {
+      "file": "PLAN.md",
+      "bytes": 14913,
+      "sha256": "afab972a44f9967990e59d273a1c4afcb062262f7453302fc80e0f8f638bd4b5"
+    },
+    {
+      "file": "PREVIEW-CHECK.json",
+      "bytes": 760,
+      "sha256": "3858ece1a672009bb9433257c016140e74c286c4d739c8a3d613c1b091e5a0d2"
+    },
+    {
+      "file": "README.md",
+      "bytes": 684,
+      "sha256": "6ff04a983c54160c920aaeb4bf0b1514b013dd3d3d23638bd87e4a136f41785a"
+    },
+    {
+      "file": "preview.html",
+      "bytes": 35470,
+      "sha256": "147bd168ca847e90c6424f860d3b267c23e1ce7e7efae4122ae25809cfd25340"
+    }
+  ],
+  "air_verified_files": [
+    {
+      "file": "01-device-list.png",
+      "sha256": "eb708dfa910b5deeb686805594a973bf4f2ac9042cfe5ae14c905e9bd8be99e7"
+    },
+    {
+      "file": "02-device-detail.png",
+      "sha256": "ae7b2ea81a6cbe2f6927ed5515657312fa65b587537d012f87d61db1999a79e5"
+    },
+    {
+      "file": "03-unbind-confirm.png",
+      "sha256": "c691ef5e93593daeb082e4af09f66f3eab906a443b1d305a0d301f5518647985"
+    },
+    {
+      "file": "04-normal-data-example.png",
+      "sha256": "c3f7d5dfeed1a1fe09f2b3323db7f8da586946ccdc00a2c0d2e0154e49bee5d7"
+    },
+    {
+      "file": "05-mobile-detail.png",
+      "sha256": "f45b988bb564019f07ab88e23741d278c6aa427762a190b22aefcbbe010d0096"
+    },
+    {
+      "file": "PLAN.md",
+      "sha256": "afab972a44f9967990e59d273a1c4afcb062262f7453302fc80e0f8f638bd4b5"
+    },
+    {
+      "file": "PREVIEW-CHECK.json",
+      "sha256": "3858ece1a672009bb9433257c016140e74c286c4d739c8a3d613c1b091e5a0d2"
+    },
+    {
+      "file": "README.md",
+      "sha256": "6ff04a983c54160c920aaeb4bf0b1514b013dd3d3d23638bd87e4a136f41785a"
+    },
+    {
+      "file": "preview.html",
+      "sha256": "147bd168ca847e90c6424f860d3b267c23e1ce7e7efae4122ae25809cfd25340"
+    },
+    {
+      "file": "SHA256.json",
+      "sha256": "dacdcdfd829dbb2a98b2a04852edc32c0059b55c4778a179a0c238d9bb1393b9"
+    },
+    {
+      "file": "../P003_MINIAPP_ADMIN_PREVIEW_20261117.zip",
+      "sha256": "573e5f6a89801a984b5df13c4a8fc88d679b5b27f11b7bbeecb3ca874f754e33"
+    }
+  ]
+}
