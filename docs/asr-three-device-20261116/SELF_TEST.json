@@ -1,0 +1,34 @@
+{
+  "source_sha": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "baseline": "f5b2fd61916022a67c32dfbd5c3fd33ca5c2829a",
+  "artifact": {
+    "binary": "/home/hahaxiong83/local/p003-asr-three-device-20261116/main/candidate/2-Projects/realtime-voice-agent/rust-worker/voice-rust-worker.asr-three",
+    "sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+    "bytes": 76399176
+  },
+  "tests_source_equal_release": true,
+  "rust": {
+    "pass": 616,
+    "fail": 0,
+    "ignored": 2
+  },
+  "receipt_pass": 19,
+  "historical_negative": true,
+  "deployed": false,
+  "sn_scope_confirmed": false,
+  "original_no_final": "unlocated",
+  "evidence_sha256": {
+    "worker-final-all.log": "b44736fe00f3c77d2fd3904875f4672a15967a02cfb29d8d7880978134dcd514",
+    "worker-final-release.log": "bf66e6418e36628f273ed5d86eaf1eceb9e35a277739cb63b3fb7a3cb8e41ebb",
+    "source-final-all.json": "5f0b291f40a5746e679f7b0fc7781190ed6872b882a321a525b3ec887c9d67b6",
+    "source-final-release.json": "5f0b291f40a5746e679f7b0fc7781190ed6872b882a321a525b3ec887c9d67b6",
+    "receipt-final-green.log": "899892e2594934277080bcaa2a70a3db8deed5bef4650c715af411a66f20fd5f",
+    "receipt-delivery-red.log": "45e3e5cdc045b333486161d45e03d1a4a57f4a3122e7ef37dc5cfc5ef41f8d84",
+    "HISTORICAL-NEGATIVE-FINAL.json": "7290a9b4550b73bcf4ddaeb168e9f513b2d8ebcca4358519a89557be2c38e426",
+    "CODE-REVIEW-GROK.json": "5d5d1db024b366a0c759cbb4e0523682efd040ff8efb29b575a940d1365ca380",
+    "NO_PRODUCTION_CHANGE.json": "c27266bfda01e777377d9961d50fa0a3c8124b649952039499371428209e0d32",
+    "FINAL-REVIEW-GROK.json": "10836eef32dbfedb49156de4f251d698063fb58f1fd791e131cdfadd1961838d"
+  },
+  "independent_review": "PASS_LOCAL_ISOLATION",
+  "independent_cli_cases": 13
+}
