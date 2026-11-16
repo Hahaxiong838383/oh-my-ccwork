@@ -127,6 +127,12 @@
       "production_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
       "local_sha256": "c6a825e012b586ca145ac0ea098ddd907ee2776f330f60d592afd301ecbab181",
       "same": true
+    },
+    {
+      "path": "src/xiaoke-kb.ts",
+      "source_commit": "d34955cd16189b90ee3b1d69c6ceba4793faa182",
+      "production_sha256": "d45c317a4081b5fe1d061a80496a308a607b3438182986343a46d6e361ebb586",
+      "local_before_sha256": "8e641da717a845c8b615717343e5999e168e35bad28f6430225a2a746dba0689"
     }
   ]
 }
