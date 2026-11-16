@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"start_exit\": 0, \"properties\": \"Restart=no\\nTimeoutStartUSec=2h 1min\\nResult=success\\nNRestarts=0\\nExecMainStatus=0\\nKillMode=control-group\\nLoadState=loaded\\nFragmentPath=/run/systemd/system/p003-t2-isolated-backup-final-20261116.service\\n\", \"state\": {\"budget_seconds\": 300, \"checked_at_ms\": 1794805743345, \"last_offsite_backup_ms\": null, \"manifest\": {\"archive_id\": \"90f93ee55cc44e9c8b5de17a9af7b4dc\", \"bytes\": 105811968, \"created_at_ms\": 1794805743345, \"kind\": \"analytics_backup\", \"record_count\": 3200, \"schema_version\": 1, \"sha256\": \"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\", \"source_range\": {\"backup_started_at_ms\": 1794805743345, \"tables\": {\"analytics_event\": 1600, \"analytics_event_seen\": 1600}}}, \"offsite_age_ms\": null, \"oldest_pending_ms\": 1794805743345, \"pending_bytes\": 105811968, \"state\": \"published\"}, \"scope\": \"isolated no timer\"}\n",
+  "stderr": ""
+}

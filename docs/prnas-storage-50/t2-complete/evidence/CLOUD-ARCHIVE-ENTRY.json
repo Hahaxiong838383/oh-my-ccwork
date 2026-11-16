@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"missing_config_exit\": 1, \"legacy_created\": false, \"archive_entry_exit\": 0, \"state\": \"published\", \"watermark_matches_capture\": true, \"scope\": \"isolated candidate real shell/node/python/sqlite\"}\n",
+  "stderr": ""
+}

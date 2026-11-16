@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"flock_available\": true, \"executable\": \"/usr/local/bin/python\", \"runtime\": \"2.7.18 (default, Aug 27 2025, 08:23:16) \\n[GCC 4.9.2]\"}\nPASS native Python2.7 kernel mutex acquired/busy3/released\n",
+  "stderr": "ARCHIVE_JOB_BUSY\n"
+}

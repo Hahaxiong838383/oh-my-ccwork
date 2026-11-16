@@ -1,0 +1,22 @@
+{
+  "runtime_candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "status": "T3_READY_AS_PLAN_NOT_IMPLEMENTED",
+  "files": {
+    "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/docs/prnas-storage-50/t2-complete/T3_HANDOFF.md": {
+      "sha256": "7379c549618417e76c0cc98a7fd6c1f57611e93ad3a8687dc90ac5f5ccbb1cdd",
+      "bytes": 10098
+    },
+    "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/docs/prnas-storage-50/t2-complete/T3_REVIEW_RESOLUTION.md": {
+      "sha256": "71aa0b39e73b3d9225da3cd5c6f47a72b92d6fdf39022c7ced3c8d944ad60d84",
+      "bytes": 1693
+    },
+    "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/T3-PLAN-REVIEW-GROK.md": {
+      "sha256": "e9fdbd5b0caf218590f5654aff1902537a32ea0cd71633900b0e7474df5e952e",
+      "bytes": 16199
+    },
+    "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/T2-MATURE-PERFORMANCE-REVIEW-GROK.md": {
+      "sha256": "968f9327649d9c582fef509736d3ee1c32599a5994ae62bc422f5ea219c1bac2",
+      "bytes": 13794
+    }
+  }
+}

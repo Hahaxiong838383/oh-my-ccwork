@@ -1,0 +1,132 @@
+[
+  {
+    "type": "table",
+    "name": "analytics_batch",
+    "sql": "CREATE TABLE analytics_batch (\n        attempt_id TEXT PRIMARY KEY, request_id TEXT NOT NULL, batch_id TEXT NOT NULL, device_key TEXT NOT NULL,\n        received_at_ms INTEGER NOT NULL, sent_at_ms INTEGER NOT NULL, client_json TEXT NOT NULL,\n        accepted INTEGER NOT NULL, duplicated INTEGER NOT NULL, rejected INTEGER NOT NULL,\n        http_status INTEGER NOT NULL, processing_ms INTEGER NOT NULL)"
+  },
+  {
+    "type": "table",
+    "name": "analytics_day",
+    "sql": "CREATE TABLE analytics_day (dimension TEXT NOT NULL,day TEXT NOT NULL,summary_json TEXT NOT NULL,updated_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_device_day",
+    "sql": "CREATE TABLE analytics_device_day (dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,event_count INTEGER NOT NULL,session_count INTEGER NOT NULL,last_received_at_ms INTEGER NOT NULL,summary_json TEXT NOT NULL, PRIMARY KEY(dimension,day,device_key))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_diagnostic_usage",
+    "sql": "CREATE TABLE analytics_diagnostic_usage (\n   request_id TEXT NOT NULL,device_key TEXT NOT NULL,accepted INTEGER NOT NULL,\n   PRIMARY KEY(request_id,device_key))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_dirty_day",
+    "sql": "CREATE TABLE analytics_dirty_day (dimension TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY(dimension,day))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_event",
+    "sql": "CREATE TABLE analytics_event (\n        device_key TEXT NOT NULL, client_event_id TEXT NOT NULL, event_name TEXT NOT NULL,\n        occurred_at_ms INTEGER NOT NULL, received_at_ms INTEGER NOT NULL, session_id TEXT NOT NULL,\n        sequence INTEGER NOT NULL, priority TEXT NOT NULL, context_json TEXT NOT NULL, properties_json TEXT NOT NULL,\n        batch_attempt_id TEXT NOT NULL, occurred_day TEXT, received_day TEXT NOT NULL, clock_suspicious INTEGER NOT NULL,\n        PRIMARY KEY(device_key,client_event_id))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_event_seen",
+    "sql": "CREATE TABLE analytics_event_seen (\n        device_key TEXT NOT NULL, id_digest TEXT NOT NULL, event_hash TEXT NOT NULL, first_received_at_ms INTEGER NOT NULL,\n        PRIMARY KEY(device_key,id_digest))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_meta",
+    "sql": "CREATE TABLE analytics_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL)"
+  },
+  {
+    "type": "table",
+    "name": "analytics_rollup_fact",
+    "sql": "CREATE TABLE analytics_rollup_fact (\n dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,id_digest TEXT NOT NULL,\n event_name TEXT NOT NULL,session_digest TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,semantic_json TEXT NOT NULL,\n received_at_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day,device_key,received_at_ms,id_digest))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_rollup_retry",
+    "sql": "CREATE TABLE analytics_rollup_retry (dimension TEXT NOT NULL,day TEXT NOT NULL,last_attempt_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_settlement",
+    "sql": "CREATE TABLE analytics_settlement (\n        attempt_id TEXT NOT NULL, id_digest TEXT NOT NULL, outcome TEXT NOT NULL, reason TEXT,\n        PRIMARY KEY(attempt_id,id_digest))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_tier_day",
+    "sql": "CREATE TABLE analytics_tier_day (\n   day TEXT NOT NULL,device_key TEXT NOT NULL,tier TEXT NOT NULL,source_event_name TEXT NOT NULL,\n   records INTEGER NOT NULL,source_events INTEGER NOT NULL,payload_bytes INTEGER NOT NULL,\n   PRIMARY KEY(day,device_key,tier,source_event_name))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_tier_event",
+    "sql": "CREATE TABLE analytics_tier_event (\n   device_key TEXT NOT NULL,client_event_id TEXT NOT NULL,event_name TEXT NOT NULL,\n   occurred_at_ms INTEGER NOT NULL,received_at_ms INTEGER NOT NULL,session_id TEXT NOT NULL,\n   sequence INTEGER NOT NULL,priority TEXT NOT NULL,context_json TEXT NOT NULL,properties_json TEXT NOT NULL,\n   batch_attempt_id TEXT NOT NULL,occurred_day TEXT,received_day TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,\n   tier TEXT NOT NULL,source_event_name TEXT NOT NULL,source_event_count INTEGER NOT NULL,diagnostic_request_id TEXT,\n   PRIMARY KEY(device_key,client_event_id))"
+  },
+  {
+    "type": "table",
+    "name": "analytics_transport",
+    "sql": "CREATE TABLE analytics_transport (\n    attempt_id TEXT PRIMARY KEY,encoding TEXT NOT NULL,wire_bytes INTEGER NOT NULL,inflated_bytes INTEGER NOT NULL)"
+  },
+  {
+    "type": "table",
+    "name": "analytics_transport_day",
+    "sql": "CREATE TABLE analytics_transport_day (\n    day TEXT NOT NULL,device_key TEXT NOT NULL,encoding TEXT NOT NULL,requests INTEGER NOT NULL,\n    wire_bytes INTEGER NOT NULL,inflated_bytes INTEGER NOT NULL,PRIMARY KEY(day,device_key,encoding))"
+  },
+  {
+    "type": "index",
+    "name": "analytics_ark_device_event_received",
+    "sql": "CREATE INDEX analytics_ark_device_event_received ON analytics_event(device_key,event_name,received_at_ms DESC,occurred_at_ms DESC)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_ark_device_received",
+    "sql": "CREATE INDEX analytics_ark_device_received ON analytics_event(device_key,received_at_ms DESC,occurred_at_ms DESC)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_batch_received",
+    "sql": "CREATE INDEX analytics_batch_received ON analytics_batch(received_at_ms)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_batch_request",
+    "sql": "CREATE INDEX analytics_batch_request ON analytics_batch(request_id,received_at_ms)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_event_client_received",
+    "sql": "CREATE INDEX analytics_event_client_received ON analytics_event(client_event_id,received_at_ms)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_event_days",
+    "sql": "CREATE INDEX analytics_event_days ON analytics_event(occurred_day,received_day)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_event_received",
+    "sql": "CREATE INDEX analytics_event_received ON analytics_event(received_at_ms)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_settlement_id",
+    "sql": "CREATE INDEX analytics_settlement_id ON analytics_settlement(id_digest)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_tier_device_received",
+    "sql": "CREATE INDEX analytics_tier_device_received ON analytics_tier_event(device_key,received_at_ms)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_tier_expiry",
+    "sql": "CREATE INDEX analytics_tier_expiry ON analytics_tier_event(tier,received_at_ms)"
+  },
+  {
+    "type": "index",
+    "name": "analytics_tier_id_received",
+    "sql": "CREATE INDEX analytics_tier_id_received ON analytics_tier_event(client_event_id,received_at_ms)"
+  }
+]

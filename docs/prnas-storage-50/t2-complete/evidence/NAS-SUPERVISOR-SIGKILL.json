@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "KILLED_GUARD_EXIT=137\nORPHAN_WRITER_LOCK_EXIT=3\nARCHIVE_TRANSFER id=ae13ec4287d04d9bbb080d3c42f2ae59 resume_offset=105811968 total=105811968\n{\"archive_id\":\"ae13ec4287d04d9bbb080d3c42f2ae59\",\"bytes\":105811968,\"created_at_ms\":1794804937309,\"kind\":\"analytics_backup\",\"record_count\":3200,\"schema_version\":1,\"sha256\":\"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\",\"source_range\":{\"synthetic\":true,\"tables\":{\"analytics_event\":1600,\"analytics_event_seen\":1600},\"test\":\"supervisor-sigkill\"}}\nACK_STORED\nARCHIVE_VERIFIED id=ae13ec4287d04d9bbb080d3c42f2ae59 bytes=105811968\n",
+  "stderr": "sh: line 15: 29897 Killed                  \"$base/code/pull\" ae13ec4287d04d9bbb080d3c42f2ae59 > \"$base/tests/supervisor-first.log\" 2>&1\n(node:1) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+}

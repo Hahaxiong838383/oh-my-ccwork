@@ -1,0 +1,9 @@
+{
+  "candidate": "4354512d1258107cb539767d80edc75ba1e03124",
+  "findings_fixed": [
+    "old-ready capture watermark",
+    "NAS volume env mandatory before lock",
+    "mature exact row counts use interruptible sequential table scan"
+  ],
+  "evidence_policy": "SHA-suffixed JSON is immutable evidence; unsuffixed NAS-CANDIDATE-CYCLE/CLOUD-CANDIDATE-CODE are rolling snapshots and supersede original 457 measurements. Original NOT_ACCEPTED report preserved. Do not use current unsuffixed hashes to assert old SHA runtime."
+}

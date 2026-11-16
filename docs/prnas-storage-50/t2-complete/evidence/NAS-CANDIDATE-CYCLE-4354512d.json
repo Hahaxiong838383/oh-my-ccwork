@@ -1,0 +1,19 @@
+{
+  "exit": 0,
+  "stdout": "{\"kept\":[\"ae13ec4287d04d9bbb080d3c42f2ae59\"],\"removed\":[],\"restore\":{\"archive_id\":\"ae13ec4287d04d9bbb080d3c42f2ae59\",\"sha256\":\"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\",\"bytes\":105811968,\"record_count\":3200,\"integrity_check\":\"ok\"},\"last_offsite_backup_ms\":1794804937309,\"offsite_age_ms\":2604188}\n{\"last_attempt_ms\":1794807542060,\"exit\":0,\"phase\":\"complete\",\"last_success_ms\":1794807542060,\"connection\":\"connected\"}\n",
+  "stderr": "",
+  "uploaded_sha256": {
+    "storage-lock.py": "d185c9bf108a9fb0476d275c797d73e61606f6c2b8db5a7a69ce982083f54fb2",
+    "storage-lock.test.py": "5539a2f59a1c0ac2567415ff0bdcdb5edebe0eb00f2f2f6c9da630f3ed26edef",
+    "storage-nas-pull.sh": "b1cc9d804d342f1ad739c0d3c1fb0379833f998d92c83289c4d52e5653895602",
+    "storage-nas-transfer.sh": "d9fa3c8ec0a2b94784c9b18e8da7657253c1f1d0ffd39716cef2be02689445d0",
+    "storage-nas-cycle.sh": "be1cfbbfe89fdc281b4cb57d3b5c9038d89f654099d279e8afd92077804fd1d2",
+    "storage-nas-cycle-body.sh": "6a66b4705f9577b93f2d687c67a991545859557cda4d50da15de103332ee07eb",
+    "storage-nas-verify.mjs": "c2028fecac834adbae196fcb3460b25bf1069a0160ec29f693d13c6ebba11e09",
+    "storage-nas-verify-container.sh": "52c0f2ed4af21c62400c03a185d4b6a11035d0a072ab35b827fd9ab1538660a7",
+    "storage-backup-job.py": "377cca0129f2bce589c432d57ba7b1afd2853e21e75b81f519a18b80cfb456e6",
+    "storage-backup-job.test.py": "fe0b531424ecc3ea287271afd47f3b9d93cd58ba431071832a7cda223239ca55",
+    "analytics-backup.py": "28a018c89259187ea0e1d90e37e3f838daf5a903ecc3ee5bbd518b87ee031e2b",
+    "storage-archive.py": "d782dd5708cdeb0ed12629d8b3e6535306b9839da2917921527966cb2185e8fe"
+  }
+}

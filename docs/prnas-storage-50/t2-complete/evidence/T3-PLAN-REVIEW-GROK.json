@@ -1,0 +1,140 @@
+{
+  "review": "T3 handoff plan review",
+  "model": "Grok 4.7",
+  "verdict": "T3_READY_AS_PLAN",
+  "design_blockers": [],
+  "normative_wording_required": true,
+  "t3_implemented": false,
+  "t2_b5_pass": false,
+  "production_pass": false,
+  "t2_full_rereview": false,
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "head": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "worktree_dirty_unreviewed": [
+    "docs/prnas-storage-50/t2-complete/ROLLBACK.md"
+  ],
+  "source_modified_by_this_review": false,
+  "deployed": false,
+  "external_messages_sent": false,
+  "shared_memory_modified": false,
+  "report_md_sha256": "e9fdbd5b0caf218590f5654aff1902537a32ea0cd71633900b0e7474df5e952e",
+  "report_md_bytes": 16199,
+  "items": [
+    {
+      "id": 1,
+      "topic": "same-transaction current+outbox and idempotency",
+      "correct": "partial",
+      "summary": "BEGIN IMMEDIATE and the duplicate return are the right boundary. Conditional outbox insert, pre-read archive flag, no snapshot_id unique index."
+    },
+    {
+      "id": 2,
+      "topic": "capacity 503 does not change latest",
+      "correct": "partial",
+      "summary": "Reject only archivable inserts above spool_limit_bytes with archive_buffer_full 503. Keep STORAGE_CAPACITY_LIMIT as 409. NAS full does not itself 503 the device."
+    },
+    {
+      "id": 3,
+      "topic": "5min and critical-change predicate",
+      "correct": "incorrect_until_single_predicate",
+      "summary": "One predicate against the previous outbox row. Interval uses accept now. timer_state is not an independent trigger."
+    },
+    {
+      "id": 4,
+      "topic": "owner epoch GM",
+      "correct": "partial",
+      "summary": "Denormalize sn, account_id, epoch, grant_id, source_mode. Do not cascade-delete outbox. No GM auth service and no device history route."
+    },
+    {
+      "id": 5,
+      "topic": "durable batch map and ACK loss",
+      "correct": "incorrect_if_publish_or_remains",
+      "summary": "Use publish_prepared only, with an immutable manifest persisted before the call. Clear bodies only after the exact receipt. Keep replay columns."
+    },
+    {
+      "id": 6,
+      "topic": "JSONL and NAS reuse",
+      "correct": "partial",
+      "summary": "Opt-in ark_jsonl checks. Legacy ark packages stay hash/bytes only. Fixed 90-day ACK GC is T3; 180-day capacity stays T4. Do not change SSH list."
+    },
+    {
+      "id": 7,
+      "topic": "archive disabled compatibility",
+      "correct": "partial",
+      "summary": "Separate CAS for archive_enabled. Existing PUT and the disabled GET body stay as they are."
+    }
+  ],
+  "files": [
+    {
+      "sha256": "9b9792498e26b95b6179e6389393437f83bae284b01a45d5a2ec11bf9adf465b",
+      "bytes": 5760,
+      "read": "full",
+      "path": "docs/prnas-storage-50/t2-complete/T3_HANDOFF.md"
+    },
+    {
+      "sha256": "6d6dd979f261d067d75d2351cf13d031e4192a3374e35d61fb3b61563f7ba310",
+      "bytes": 6385,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts"
+    },
+    {
+      "sha256": "1913f8ef4b18ea9dd732f2049263e7ab732335315f8292d26cb7b7490e20496f",
+      "bytes": 5796,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/contracts.ts"
+    },
+    {
+      "sha256": "4c309a2602fb02d705e884b9f5c70453ed21aa5c21affb38c1bab468f668a118",
+      "bytes": 4697,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/ark/routes.ts"
+    },
+    {
+      "sha256": "b7f4c6fd7845aa01bcb274628e079e06958959577a282fd74a417a844560aa1c",
+      "bytes": 3088,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/storage/policy.ts"
+    },
+    {
+      "sha256": "5e67b76ed20e9d882ffb52715a1c04ac41bde70dfd7bea8fcf32254ad61a920b",
+      "bytes": 1386,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/storage/routes.ts"
+    },
+    {
+      "sha256": "d782dd5708cdeb0ed12629d8b3e6535306b9839da2917921527966cb2185e8fe",
+      "bytes": 11569,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.py"
+    },
+    {
+      "sha256": "c2028fecac834adbae196fcb3460b25bf1069a0160ec29f693d13c6ebba11e09",
+      "bytes": 15029,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-verify.mjs"
+    },
+    {
+      "sha256": "5e61efcb141ca6831b4ee64d8e88b1374d6b338c9c0548db1ced7c2b596d20db",
+      "bytes": 6936,
+      "read": "lines 1-80",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.py"
+    },
+    {
+      "sha256": "77dabe972a3209ea9bf721f770348f2b9a8c35c4246c3a80eb74cbbd29530306",
+      "bytes": 3661,
+      "read": "lines 1-40",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-retention.test.mjs"
+    },
+    {
+      "sha256": "a603f3c3e8ee39a720ac1a0df182437b80f92c8c1909bb744dacb73c9d4515d5",
+      "bytes": 27169,
+      "read": "lines 210-259",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/config-store.ts"
+    },
+    {
+      "sha256": "bd846770e376ec0b61162c69ffa7691a208f52502eaadae57ddd4666e566926d",
+      "bytes": 5165,
+      "read": "lines 30-43",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/contracts.ts"
+    }
+  ]
+}

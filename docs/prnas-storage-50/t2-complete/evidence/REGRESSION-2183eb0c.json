@@ -1,0 +1,17 @@
+{
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "results": [
+    {
+      "script": "test:archive-complete",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/test-archive-complete-2183eb0c.log",
+      "sha256": "51ad42a601bf957f0cd4f2df4b46566e09e1f50e5081c4caa70bea6a9fce2f45"
+    },
+    {
+      "script": "test:analytics",
+      "exit": 0,
+      "log": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/test-analytics-2183eb0c.log",
+      "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6"
+    }
+  ]
+}

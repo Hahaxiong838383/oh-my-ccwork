@@ -1,0 +1,84 @@
+{
+  "review": "2183eb0c daily-boundary incremental recheck vs 4354512d",
+  "model": "Grok 4.7",
+  "verdict": "PASS_CODE_2183_B5_PENDING",
+  "t2_closed": false,
+  "production_release": false,
+  "b5": "pending_not_rechecked",
+  "code_blockers": [],
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "baseline": "4354512d1258107cb539767d80edc75ba1e03124",
+  "baseline_prior_verdict": "PASS_CODE_WITH_B5_PENDING",
+  "head_clean": true,
+  "source_modified": false,
+  "deployed": false,
+  "external_messages_sent": false,
+  "repo_diff_paths": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.test.py",
+    "docs/prnas-storage-50/t2-complete/IMPLEMENTATION.md"
+  ],
+  "apps_server_files": 544,
+  "apps_server_blob_changed": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.test.py"
+  ],
+  "runtime_same_as_435_except_backup_job": true,
+  "sha256": {
+    "storage-backup-job.py_218": "5e61efcb141ca6831b4ee64d8e88b1374d6b338c9c0548db1ced7c2b596d20db",
+    "storage-backup-job.py_435": "377cca0129f2bce589c432d57ba7b1afd2853e21e75b81f519a18b80cfb456e6",
+    "storage-backup-job.test.py_218": "3b81b134c0b98bd24d67c919761a82bd75d9a3711805d71213cdee3a3f80b295",
+    "analytics-maintenance.mjs": "9c0fa35fb5b788bb257636251547b2d11fe04f931fb26d8a5fa06c64018f68e3",
+    "storage-lock.py": "d185c9bf108a9fb0476d275c797d73e61606f6c2b8db5a7a69ce982083f54fb2",
+    "storage-nas-verify.mjs": "c2028fecac834adbae196fcb3460b25bf1069a0160ec29f693d13c6ebba11e09",
+    "storage-mature-fixture.py": "65b337a1f155bf7c9551e5f7a3fd85bb6bc3fbb43ffe90300d29317fff668d8e"
+  },
+  "git_blobs": {
+    "job_218": "0fca30d06934e33dbe61dd5ff3a76273d56cc533",
+    "test_218": "2a06a3f865bb7eb871b7ae5f9bbf07a1173cd77b",
+    "job_435": "ee893fceffed6412ae6df9445c5f7d05f8abf3ef"
+  },
+  "archive": {
+    "command": "git archive --format=tar 2183eb0cb843812582b5ca8adeac11ac1dd1d903 2-Projects/P003GameDemo20260513/apps/server",
+    "exit": 0,
+    "bytes": 12759040,
+    "extract": "/tmp/p003-grok-daily-2183eb0c/2-Projects/P003GameDemo20260513/apps/server",
+    "extract_matches_git_blob": true
+  },
+  "author_regression_logs_hash_match": {
+    "reexecuted": false,
+    "test:archive-complete": "51ad42a601bf957f0cd4f2df4b46566e09e1f50e5081c4caa70bea6a9fce2f45",
+    "test:analytics": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6"
+  },
+  "python": "/opt/anaconda3/bin/python3",
+  "python_version": "3.12.2",
+  "sqlite": "3.46.0",
+  "tests": {
+    "command": "/opt/anaconda3/bin/python3 scripts/storage-backup-job.test.py",
+    "cwd": "/tmp/p003-grok-daily-2183eb0c/2-Projects/P003GameDemo20260513/apps/server",
+    "started_utc": "2026-11-16T06:12:30Z",
+    "exit": 0,
+    "summary": "Ran 7 tests in 0.496s OK"
+  },
+  "cst_probe_new": {
+    "command": "/opt/anaconda3/bin/python3 /tmp/p003-daily-cst-probe.py <218 archive>/scripts/storage-backup-job.py new",
+    "started_utc": "2026-11-16T06:12:32Z",
+    "exit": 0,
+    "same_cst_day_no_repeat": {"plus_20h": "not_due", "end_23:59:59.999": "not_due", "packages": 1, "cst_day": 20833},
+    "next_cst_day_400ms_early": {"state": "published", "packages": 2, "elapsed_ms": 86399600, "ms": 1800036000100, "cst_day": 20834, "clock": "02:00:00.100", "created_at_ms": 1800036000100},
+    "previous_unacked_still_waits": {"state": "waiting_for_nas", "packages": 1, "oldest_pending_ms": 1799949600500}
+  },
+  "negative_control": {
+    "script_blob": "ee893fceffed6412ae6df9445c5f7d05f8abf3ef",
+    "test_file": "218 storage-backup-job.test.py",
+    "command": "/opt/anaconda3/bin/python3 scripts/storage-backup-job.test.py",
+    "started_utc": "2026-11-16T06:12:31Z",
+    "exit": 1,
+    "summary": "Ran 7 tests in 0.447s FAILED (failures=1)",
+    "failure": "test_next_cst_day_is_due_even_when_timer_fires_fractionally_earlier: not_due != published",
+    "probe_old_exit": 0,
+    "probe_old_early_400ms": {"state": "not_due", "packages": 1},
+    "probe_old_same_day": "not_due",
+    "probe_old_unacked": "waiting_for_nas"
+  }
+}

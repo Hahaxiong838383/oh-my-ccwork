@@ -1,0 +1,298 @@
+{
+  "status": "PASS_T2_ISOLATED",
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "production_release": false,
+  "t3": "READY_AS_PLAN_NOT_IMPLEMENTED",
+  "files": [
+    {
+      "file": "evidence/CLOUD-ARCHIVE-ENTRY.json",
+      "bytes": 259,
+      "sha256": "1a4bfdcf2910f3977f60089913e4ba7760388a7a3f3fd87cf5622b4da1b31a03"
+    },
+    {
+      "file": "evidence/CLOUD-CANDIDATE-CODE-4354512d.json",
+      "bytes": 335,
+      "sha256": "afce22dbab3bd20f8a74ec31c86ceb0c4897751a9ec8c8c5be3adccbfbe989ce"
+    },
+    {
+      "file": "evidence/CLOUD-JOB-2183eb0c.json",
+      "bytes": 1459,
+      "sha256": "443c4e13f69d819b597bb86b825b7eca23315dc27c6167b38913f617b47d7251"
+    },
+    {
+      "file": "evidence/COUNT-BENCHMARK-READBACK.json",
+      "bytes": 851,
+      "sha256": "177f69404a95e2bcebb4d5742b889ee95907c843140dc2684e9df9ecad111686"
+    },
+    {
+      "file": "evidence/COUNT-BENCHMARK-REVERSED.json",
+      "bytes": 490,
+      "sha256": "d5e2d54615d10e29e48a82466a694886c9a93124ec6ac8dc1d2e628718627584"
+    },
+    {
+      "file": "evidence/FINAL-READY-2183eb0c.json",
+      "bytes": 3858,
+      "sha256": "3555971abb34b083027064aa9996462cdafb5fb90c0691ea549474bc3b4d5bd7"
+    },
+    {
+      "file": "evidence/FIXED-CANDIDATE-NOTES.json",
+      "bytes": 521,
+      "sha256": "b6ad5c05c3357eb8c334dccd789c76493955302cff1aaa106993f81dbdab770d"
+    },
+    {
+      "file": "evidence/LINUX-MAINTENANCE-LOCK.json",
+      "bytes": 133,
+      "sha256": "3d18d43717cc6bf5bfa1df805a6c3ddfd024a84bb8ad00a04e5d01f87c68a491"
+    },
+    {
+      "file": "evidence/MATURE-ACCEPTANCE.json",
+      "bytes": 20942,
+      "sha256": "a084369aec3b2fc78c5d765cb7169bf549f1f86859a83f7b4fba8a466bf6ac29"
+    },
+    {
+      "file": "evidence/MATURE-FINAL-PACKET-2183eb0c.json",
+      "bytes": 41553,
+      "sha256": "992a44e0a0a3586cf2499077a57fb2c14a8fce8c33943af52009e8025e9809e8"
+    },
+    {
+      "file": "evidence/MATURE-FINAL-START.json",
+      "bytes": 264,
+      "sha256": "e06be8a134cdd0f2c8574f73b30903efbd83c2bf87ee6abd3e9bb2a111fd295e"
+    },
+    {
+      "file": "evidence/MATURE-RUNTIME-EXACT-2183eb0c.json",
+      "bytes": 623,
+      "sha256": "0f90389ddce9ca168d8c6f3244cac8c6a626112597b0e974bcc5854d6137b418"
+    },
+    {
+      "file": "evidence/MATURE-SOURCE-ACK-RUNNER-FIRST-FAIL.json",
+      "bytes": 212,
+      "sha256": "cff3dfc38daa5deec8c15c6b6a0d1027b7134cf629b2a1df2fe1ae513ae6f567"
+    },
+    {
+      "file": "evidence/MATURE-SOURCE-ACK-RUNNER.json",
+      "bytes": 638,
+      "sha256": "1dafc690156d3c2b520c86f8db7e8c80cd8cb4bfc37cac1d4ca2e642e84f082f"
+    },
+    {
+      "file": "evidence/MATURE-SOURCE-ACK.json",
+      "bytes": 512,
+      "sha256": "909536d391508263f77bf565eb7b7f18134ba17dfacce86570b8323ca1f05223"
+    },
+    {
+      "file": "evidence/NAS-CANDIDATE-CYCLE-4354512d.json",
+      "bytes": 1728,
+      "sha256": "ebaae59ffeaadd5519c1aa4ed5fce7c8535b61bf0ec3de7046f8c17f5e0107e0"
+    },
+    {
+      "file": "evidence/NAS-CONTAINER-RESTART-LOCK.json",
+      "bytes": 412,
+      "sha256": "9a5251bb1ce5d001a1d291d199cdac92c2a5aff15d326414f06995404087877b"
+    },
+    {
+      "file": "evidence/NAS-CYCLE-RECOVERED.json",
+      "bytes": 2179,
+      "sha256": "aa8a6d15b2ade105f83c9325c4f7c30c0c71bcb16b12322a41c840065f00f645"
+    },
+    {
+      "file": "evidence/NAS-FIRST-CYCLE.json",
+      "bytes": 4611,
+      "sha256": "7181af07f7350cc48cba695c8cb6c8a8eb3abd24edea47745841f84cf6fcfc86"
+    },
+    {
+      "file": "evidence/NAS-KILL-BODY-RESUME.json",
+      "bytes": 934,
+      "sha256": "19eb57ca27ef28ee1686c98364525385ad5a205667d38654e4261911b18b8cb5"
+    },
+    {
+      "file": "evidence/NAS-OFFLINE-RECOVERY.json",
+      "bytes": 1077,
+      "sha256": "ab1eb0ef597cf730385f57d0d731921cda803e15c7a73cfe5323a70802836053"
+    },
+    {
+      "file": "evidence/NAS-PYTHON27-EXACT.json",
+      "bytes": 270,
+      "sha256": "a517be8dec04860b6f31c6a80bc5886b6141fbe4d632735de15a3c6c0d285c4f"
+    },
+    {
+      "file": "evidence/NAS-SUPERVISOR-SIGKILL.json",
+      "bytes": 979,
+      "sha256": "fb50c75172cc95284cfe0f817165760761cdf6b2dca6041951748270521b42a1"
+    },
+    {
+      "file": "evidence/NAS-VOLUME-4354512d.json",
+      "bytes": 240,
+      "sha256": "16f01bbd055c4b45420af239d464515d12ff1073a912a9af8d270a6db150c74e"
+    },
+    {
+      "file": "evidence/PRODUCTION-FIXTURE-SCHEMA-COMPARISON.json",
+      "bytes": 191,
+      "sha256": "b0a77b47209b258e91966f447f2445627f0486d6649e8228109110145cafc0dd"
+    },
+    {
+      "file": "evidence/PRODUCTION-GUARD-FINAL-2183eb0c.json",
+      "bytes": 5746,
+      "sha256": "e5982731ed6a96e244f0ff900dc5b8b3434d753a02ac68cc0c32de379a6fac36"
+    },
+    {
+      "file": "evidence/REGRESSION-2183eb0c.json",
+      "bytes": 594,
+      "sha256": "2100a3b092e506ea90e69adddb1fa930071f363c09875f653b7f3fdfcf2bc373"
+    },
+    {
+      "file": "evidence/REVIEW-CANDIDATE-GROK.json",
+      "bytes": 8185,
+      "sha256": "1c0592a81da717e87a52cdf5eddc6aa5a1caa10161d67be26405fe9ecac70b29"
+    },
+    {
+      "file": "evidence/REVIEW-CANDIDATE-GROK.md",
+      "bytes": 16782,
+      "sha256": "87eb30d7761748939a15ff10222cbf35d72b9ce0946a03a651d0fcf6826b20d1"
+    },
+    {
+      "file": "evidence/REVIEW-CLOSEOUT-GROK.json",
+      "bytes": 2969,
+      "sha256": "4f48a7629c842d3de65e3c15451579d88362fa87092600a4080c4d9ec3708ee7"
+    },
+    {
+      "file": "evidence/REVIEW-CLOSEOUT-GROK.md",
+      "bytes": 10175,
+      "sha256": "d11aa5e31a9f901353eaee95a58def54c8d2696562e4d624825fb38d288bcd46"
+    },
+    {
+      "file": "evidence/REVIEW-DAILY-GROK.json",
+      "bytes": 4181,
+      "sha256": "7c59650b247fb560e95336214aa1d79e28cec865e897875607df802fa986b4e3"
+    },
+    {
+      "file": "evidence/REVIEW-DAILY-GROK.md",
+      "bytes": 3341,
+      "sha256": "2c2942bf9bc5e47b549fbb6fc1c76c209b137fbc1d76d7da37ac9617d68b77c2"
+    },
+    {
+      "file": "evidence/REVIEW-FIXED-GROK.json",
+      "bytes": 11167,
+      "sha256": "79936e7e1d93fa59fce0992b16e168ecee673e82364fcd440b0c8812595c3e50"
+    },
+    {
+      "file": "evidence/REVIEW-FIXED-GROK.md",
+      "bytes": 14137,
+      "sha256": "4b75d542e7e8332a1df4b3575f004bdb6878e274471dea2ac445e5c6d4eaaa40"
+    },
+    {
+      "file": "evidence/SYSTEMD-EXACT-PROPERTIES-PASS.json",
+      "bytes": 987,
+      "sha256": "b3b725e2206b556476adc27ae878e9931db3dc9154e5bebc66ac68ce51663012"
+    },
+    {
+      "file": "evidence/T2-MATURE-PERFORMANCE-REVIEW-GROK.json",
+      "bytes": 7850,
+      "sha256": "181f78c92248b0dc1959c77b0fac52940c354ad4cc84b6e9c8dcbbe0ac19c5af"
+    },
+    {
+      "file": "evidence/T2-MATURE-PERFORMANCE-REVIEW-GROK.md",
+      "bytes": 13794,
+      "sha256": "968f9327649d9c582fef509736d3ee1c32599a5994ae62bc422f5ea219c1bac2"
+    },
+    {
+      "file": "evidence/T3-PLAN-FINAL-INDEX.json",
+      "bytes": 1025,
+      "sha256": "725a5317240aaa84a684a7fc58056c2191d2259f99186116b0e673604240f1af"
+    },
+    {
+      "file": "evidence/T3-PLAN-REVIEW-GROK.json",
+      "bytes": 5320,
+      "sha256": "8894e04b49a5e103421f116ff116db3b614baa73c785e982f870eeceafb12a15"
+    },
+    {
+      "file": "evidence/T3-PLAN-REVIEW-GROK.md",
+      "bytes": 16199,
+      "sha256": "e9fdbd5b0caf218590f5654aff1902537a32ea0cd71633900b0e7474df5e952e"
+    },
+    {
+      "file": "evidence/capture-watermark-green.log",
+      "bytes": 103,
+      "sha256": "c7ba29de66a432f28cd50f90f7ee7b78b234ba481e01a50971051c632877a991"
+    },
+    {
+      "file": "evidence/capture-watermark-red.log",
+      "bytes": 801,
+      "sha256": "93e5b3cd31aed1ca7626baa65e64677fef445e9f60b943ffeb935875e711f889"
+    },
+    {
+      "file": "evidence/count-deadline-proof.log",
+      "bytes": 309,
+      "sha256": "43641a1cf1e80cbc370ae1c0199ef1f658192bc7773a14a4cbedc5843545c40e"
+    },
+    {
+      "file": "evidence/daily-jitter-green.log",
+      "bytes": 685,
+      "sha256": "041551e65cef7520ef4317ad77b6a60d6de7b9ffe8e1758cf5124ff87a91c522"
+    },
+    {
+      "file": "evidence/daily-jitter-red.log",
+      "bytes": 1445,
+      "sha256": "75625c74cb3ea125ec573137a78abb2cf36a627b14c50dbc850ac4be25bbadd2"
+    },
+    {
+      "file": "evidence/mature-50x6000x90.progress.json",
+      "bytes": 851,
+      "sha256": "0b77aeb8bee8f3c304f72f72284dcb6ccd3acee74b7e242306827698ce109f02"
+    },
+    {
+      "file": "evidence/mature-backup.stderr.log",
+      "bytes": 8306,
+      "sha256": "6be3bcb57ae819acb15706b0110b55e5214d8b23a8bb17f5470905b191fd44aa"
+    },
+    {
+      "file": "evidence/mature-backup.stdout.log",
+      "bytes": 965,
+      "sha256": "3e9f0d640fd6ae58b8e4adb2ba88059b1582aa45187930210f06b52dc4bc56c3"
+    },
+    {
+      "file": "evidence/mature-nas.stderr.log",
+      "bytes": 166,
+      "sha256": "28d534a6cab0f302a1fb9f9c516ea7fdf49320d29aafc7d7b6caaabb9b34102f"
+    },
+    {
+      "file": "evidence/mature-nas.stdout.log",
+      "bytes": 326,
+      "sha256": "3523e0715a576b68d799186a572c824a4ef6150f80068c1b34eab18e53ebc786"
+    },
+    {
+      "file": "evidence/mature-schema.json",
+      "bytes": 6932,
+      "sha256": "531b57452f7f0d815d430a37996dbbe05beccff303a96724b5bc65ceba1f5dbb"
+    },
+    {
+      "file": "evidence/mature_acceptance.py",
+      "bytes": 5525,
+      "sha256": "858c78e986ee6a4d65b8e688ba7cf558b82ca3ed4e8dcae393031866c908bc6a"
+    },
+    {
+      "file": "evidence/mature_ack_close.py",
+      "bytes": 1626,
+      "sha256": "e8e1e6b6797b6c386d94dc6b9e48b1d1561e668ed908f111faac5b0c37f6b84c"
+    },
+    {
+      "file": "evidence/nas-required-volume-green.log",
+      "bytes": 104,
+      "sha256": "2e3f6bfb4d163290c5146c726a766bafaba6ecb600450b82425b94eb19c1f5b3"
+    },
+    {
+      "file": "evidence/nas-required-volume-red.log",
+      "bytes": 892,
+      "sha256": "d0b523f6dc8b9601ca79c00e915cd7d4545521506c09210b9cbbc40600e76c26"
+    },
+    {
+      "file": "evidence/test-analytics-2183eb0c.log",
+      "bytes": 1949,
+      "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6"
+    },
+    {
+      "file": "evidence/test-archive-complete-2183eb0c.log",
+      "bytes": 1718,
+      "sha256": "51ad42a601bf957f0cd4f2df4b46566e09e1f50e5081c4caa70bea6a9fce2f45"
+    }
+  ]
+}

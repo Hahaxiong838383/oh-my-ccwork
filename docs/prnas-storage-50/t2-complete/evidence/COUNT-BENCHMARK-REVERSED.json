@@ -1,0 +1,16 @@
+[
+  {
+    "query": "SELECT count(1) FROM analytics_event_seen NOT INDEXED",
+    "elapsed_s": 18.60159501247108,
+    "exit": 0,
+    "stdout": "[[3, 0, 0, \"SCAN analytics_event_seen\"]]\n27000000\n",
+    "stderr": ""
+  },
+  {
+    "query": "SELECT count(*) FROM analytics_event_seen",
+    "elapsed_s": 157.78246598877013,
+    "exit": 0,
+    "stdout": "[[4, 0, 0, \"SCAN analytics_event_seen USING COVERING INDEX sqlite_autoindex_analytics_event_seen_1\"]]\n27000000\n",
+    "stderr": ""
+  }
+]

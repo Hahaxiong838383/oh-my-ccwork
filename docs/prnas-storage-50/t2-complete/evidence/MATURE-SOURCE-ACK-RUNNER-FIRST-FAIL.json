@@ -1,0 +1,6 @@
+{
+  "exit": 2,
+  "stdout": "",
+  "stderr": "python3: can't open file '/app/timeout': [Errno 2] No such file or directory\n",
+  "helper_sha256": "e8e1e6b6797b6c386d94dc6b9e48b1d1561e668ed908f111faac5b0c37f6b84c"
+}

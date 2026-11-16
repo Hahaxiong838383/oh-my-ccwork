@@ -1,0 +1,12 @@
+{
+  "names_equal": true,
+  "normalized_sql_equal": true,
+  "differences": [],
+  "fact_primary_key": [
+    "dimension",
+    "day",
+    "device_key",
+    "received_at_ms",
+    "id_digest"
+  ]
+}

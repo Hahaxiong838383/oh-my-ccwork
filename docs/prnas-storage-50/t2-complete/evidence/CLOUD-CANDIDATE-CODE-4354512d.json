@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"storage-backup-job.py\": \"377cca0129f2bce589c432d57ba7b1afd2853e21e75b81f519a18b80cfb456e6\", \"analytics-backup.py\": \"28a018c89259187ea0e1d90e37e3f838daf5a903ecc3ee5bbd518b87ee031e2b\", \"storage-archive.py\": \"d782dd5708cdeb0ed12629d8b3e6535306b9839da2917921527966cb2185e8fe\"}\n",
+  "stderr": ""
+}

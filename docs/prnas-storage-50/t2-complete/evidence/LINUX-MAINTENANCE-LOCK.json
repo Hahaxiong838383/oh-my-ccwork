@@ -1,0 +1,1 @@
+{"exit": 0, "stdout": "PASS: real flock contention: rollup explicit skip; backup bounded wait then nonzero timeout\n", "stderr": ""}

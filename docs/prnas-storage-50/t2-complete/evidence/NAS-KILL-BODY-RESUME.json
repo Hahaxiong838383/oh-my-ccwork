@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "SSH_P80e713d0d678424382fe737effb69d3a=28523 BODY_P80e713d0d678424382fe737effb69d3a=27244\nFIRST_EXIT=137 CONCURRENT_EXIT=3 PARTIAL_BYTES=3309568\nARCHIVE_TRANSFER id=80e713d0d678424382fe737effb69d3a resume_offset=3309568 total=105811968\n{\"archive_id\":\"80e713d0d678424382fe737effb69d3a\",\"bytes\":105811968,\"created_at_ms\":1794804563424,\"kind\":\"analytics_backup\",\"record_count\":3200,\"schema_version\":1,\"sha256\":\"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\",\"source_range\":{\"synthetic\":true,\"tables\":{\"analytics_event\":1600,\"analytics_event_seen\":1600},\"test\":\"t2-kill-body-restart\"}}\nACK_STORED\nARCHIVE_VERIFIED id=80e713d0d678424382fe737effb69d3a bytes=105811968\n",
+  "stderr": "(node:1) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+}

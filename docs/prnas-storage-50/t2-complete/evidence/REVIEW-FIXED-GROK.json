@@ -1,0 +1,232 @@
+{
+  "review": "T2 fixed-candidate incremental recheck",
+  "model": "Grok 4.7",
+  "verdict": "PASS_CODE_WITH_B5_PENDING",
+  "code_blockers": [],
+  "t2_closed": false,
+  "production_takeover": false,
+  "b5": "pending",
+  "candidate": "4354512d1258107cb539767d80edc75ba1e03124",
+  "previous_candidate": "457ed5ae1349ba6c1795ed66750075792bc72156",
+  "previous_candidate_is_ancestor": true,
+  "commits_since_previous": [
+    "6daf1b348c57665a46d4d4d1554c97b15c6e7a02",
+    "4354512d1258107cb539767d80edc75ba1e03124"
+  ],
+  "diff_stat_vs_previous": "9 files, +93 / -20",
+  "head_at_review_start": "4354512d1258107cb539767d80edc75ba1e03124",
+  "head_during_archive_run": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "later_head_reviewed": false,
+  "later_head_subject": "fix(p003): prevent daily backup gaps from timer jitter",
+  "later_head_note": "Changes storage-backup-job not_due from a 24h elapsed gate to a CST calendar day. The archive run used git archive of 4354512d and did not follow this commit.",
+  "source_modified": false,
+  "deployed": false,
+  "external_messages_sent": false,
+  "prior_reports_preserved": [
+    "REVIEW-CANDIDATE-GROK.md",
+    "REVIEW-CANDIDATE-GROK.json"
+  ],
+  "tests": {
+    "tree": "git archive 4354512d1258107cb539767d80edc75ba1e03124 2-Projects/P003GameDemo20260513/apps/server",
+    "archive_bytes": 12759040,
+    "archive_exit": 0,
+    "extract_dir": "/tmp/p003-grok-t2-4354512d/2-Projects/P003GameDemo20260513/apps/server",
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "npm_version": "11.17.0",
+    "suite_python": "/opt/anaconda3/bin/python3",
+    "suite_python_version": "3.12.2",
+    "suite_sqlite": "3.46.0",
+    "maintenance_python": "/usr/bin/python3",
+    "maintenance_python_version": "3.9.6",
+    "maintenance_sqlite": "3.51.0",
+    "command": "PATH=/Users/fu-121/.local/node-v24/bin:$PATH npm run test:archive-complete",
+    "started_utc": "2026-11-16T05:55:47Z",
+    "elapsed_s": 13.12,
+    "exit": 0,
+    "counts": [
+      {"command": "scripts/storage-archive.test.py", "result": "7 tests OK", "seconds": 0.135},
+      {"command": "scripts/storage-nas-verify.test.mjs", "result": "PASS"},
+      {"command": "scripts/storage-lock.test.py", "result": "6 tests OK", "seconds": 4.216},
+      {"command": "scripts/storage-backup-job.test.py", "result": "6 tests OK", "seconds": 0.392},
+      {"command": "scripts/analytics-backup.test.py", "result": "7 tests OK", "seconds": 0.161},
+      {"command": "scripts/storage-nas-retention.test.mjs", "result": "PASS"},
+      {"command": "scripts/storage-maintenance-integration.test.mjs", "result": "PASS; asserts capture-time equality and three-day ready recovery"}
+    ]
+  },
+  "hash_checks": {
+    "comparisons": 45,
+    "mismatches": 0,
+    "sources": [
+      "CANDIDATE-4354512d.json",
+      "NAS-CANDIDATE-CYCLE-4354512d.json uploaded_sha256",
+      "CLOUD-CANDIDATE-CODE-4354512d.json",
+      "MATURE-FIXED-CANDIDATE-START.json storage-mature-fixture.py and mature_acceptance.py"
+    ],
+    "files": {
+      "scripts/analytics-maintenance.mjs": "9c0fa35fb5b788bb257636251547b2d11fe04f931fb26d8a5fa06c64018f68e3",
+      "scripts/storage-lock.py": "d185c9bf108a9fb0476d275c797d73e61606f6c2b8db5a7a69ce982083f54fb2",
+      "scripts/storage-backup-job.py": "377cca0129f2bce589c432d57ba7b1afd2853e21e75b81f519a18b80cfb456e6",
+      "scripts/storage-nas-verify.mjs": "c2028fecac834adbae196fcb3460b25bf1069a0160ec29f693d13c6ebba11e09",
+      "scripts/storage-mature-fixture.py": "65b337a1f155bf7c9551e5f7a3fd85bb6bc3fbb43ffe90300d29317fff668d8e"
+    }
+  },
+  "closed_issues": [
+    {
+      "id": 1,
+      "previous_severity": "blocker",
+      "status": "closed_on_4354512d",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-maintenance.mjs:28",
+      "summary": "Archive publish now stores manifest.created_at_ms. A three-day ready.json keeps that capture time.",
+      "green": {
+        "exit": 0,
+        "publish_created_at_ms": 1794808561356,
+        "publish_watermark": 1794808561356,
+        "publish_delta_ms": 0,
+        "publish_abs_from_probe_now_ms": 65,
+        "recovery_created_at_ms": 1794549361421,
+        "recovery_watermark": 1794549361421,
+        "recovery_delta_from_capture_ms": 0,
+        "recovery_abs_from_probe_now_ms": 259200414
+      },
+      "red_old_blob": {
+        "blob": "457ed5ae1349ba6c1795ed66750075792bc72156:analytics-maintenance.mjs",
+        "exit": 3,
+        "publish_created_at_ms": 1794808566658,
+        "publish_watermark": 1794808566711,
+        "publish_delta_ms": 53,
+        "recovery_created_at_ms": 1794549366733,
+        "recovery_watermark": 1794808567107,
+        "recovery_delta_from_capture_ms": 259200374,
+        "recovery_abs_from_probe_now_ms": 19
+      }
+    },
+    {
+      "id": 2,
+      "previous_severity": "major",
+      "status": "closed_on_4354512d",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-lock.py:16",
+      "summary": "Marker and volume ID are required before os.open. Both NAS shell entries leave no lock file when those variables are absent.",
+      "python": "/usr/bin/python3",
+      "python_version": "3.9.6",
+      "cases": [
+        {"name": "neither", "exit": 2, "lock_created": false},
+        {"name": "id_only", "exit": 2, "lock_created": false},
+        {"name": "marker_only", "exit": 2, "lock_created": false},
+        {"name": "missing_marker_file", "exit": 2, "stderr": "ARCHIVE_LOCK_FAILED", "lock_created": false},
+        {"name": "wrong_contents", "exit": 2, "lock_created": false},
+        {"name": "valid", "exit": 0, "lock_created": true},
+        {"name": "storage-nas-cycle.sh without volume env", "exit": 2, "lock_created": false},
+        {"name": "storage-nas-pull.sh without volume env", "exit": 2, "lock_created": false}
+      ],
+      "red_old_blob": {
+        "blob": "457ed5ae1349ba6c1795ed66750075792bc72156:storage-lock.py",
+        "command": "/usr/bin/python3 scripts/storage-lock.test.py",
+        "exit": 1,
+        "result": "6 tests, 1 failure: test_nas_entries_require_volume_config_before_creating_lock; lock file was created"
+      }
+    }
+  ],
+  "count_equivalence": {
+    "sql": "SELECT count(1) FROM \"<table>\" NOT INDEXED",
+    "call_sites": [
+      "scripts/storage-backup-job.py",
+      "scripts/storage-nas-verify.mjs",
+      "scripts/storage-mature-fixture.py",
+      "D/mature_acceptance.py"
+    ],
+    "query_ingest_index_definitions_changed": false,
+    "budget_formula": "min(7200, max(300, ceil(180 + 2 * size / 16777216)))",
+    "budget_formula_changed": false,
+    "nas_verify_cache_kib": 131072,
+    "author_benchmark_reexecuted": false,
+    "author_benchmark": [
+      {"file": "COUNT-BENCHMARK-READBACK.json", "query": "SELECT count(*) FROM analytics_event_seen", "elapsed_s": 164.49936864711344, "rows": 27000000, "plan": "SCAN analytics_event_seen USING COVERING INDEX sqlite_autoindex_analytics_event_seen_1"},
+      {"file": "COUNT-BENCHMARK-READBACK.json", "query": "SELECT count(1) FROM analytics_event_seen NOT INDEXED", "elapsed_s": 18.99098933674395, "rows": 27000000, "plan": "SCAN analytics_event_seen"},
+      {"file": "COUNT-BENCHMARK-REVERSED.json", "query": "SELECT count(1) FROM analytics_event_seen NOT INDEXED", "elapsed_s": 18.60159501247108, "rows": 27000000, "plan": "SCAN analytics_event_seen"},
+      {"file": "COUNT-BENCHMARK-REVERSED.json", "query": "SELECT count(*) FROM analytics_event_seen", "elapsed_s": 157.78246598877013, "rows": 27000000, "plan": "SCAN analytics_event_seen USING COVERING INDEX sqlite_autoindex_analytics_event_seen_1"}
+    ],
+    "os_cache_dropped": false,
+    "fact_table_54m_timed": false,
+    "local_probe": {
+      "sqlite": "3.51.0",
+      "rows": 8000,
+      "count_star": 8000,
+      "count_1_not_indexed": 8000,
+      "count_nullable_column": 6400,
+      "count1_progress_interrupt": "interrupted",
+      "count1_callbacks_before_interrupt": 1,
+      "count_star_callbacks": 0,
+      "count_star_interrupted": false
+    },
+    "backup_job_count_shares_copy_deadline": true,
+    "nas_verify_sqlite_progress_handler": false
+  },
+  "resume": {
+    "flag": "--resume",
+    "defaults": {"devices": 50, "events_per_day": 6000, "days": 90},
+    "local_probe_scale": {"devices": 1, "events_per_day": 10000, "days": 1},
+    "schema": "D/mature-schema.json",
+    "schema_bytes": 6932,
+    "exit": 0,
+    "guards": {
+      "complete_resume_same_counts": true,
+      "exists_without_resume": "FileExistsError",
+      "scale_mismatch": "fixture_resume_scale_mismatch",
+      "count_mismatch": "fixture_resume_count_mismatch",
+      "schema_mismatch": "fixture_resume_schema_mismatch"
+    },
+    "live_snapshot": {
+      "file": "MATURE-PROGRESS-14.json",
+      "file_mtime_local": "2026-11-16 13:54 +0800",
+      "phase": "generate",
+      "table": "analytics_rollup_fact",
+      "rows": 34680000,
+      "total": 54000000,
+      "devices": 50,
+      "events_per_day": 6000,
+      "days": 90,
+      "started_at_s": 1794803943.1209075,
+      "bytes": 26780467200
+    },
+    "sqlite_tmpdir": {
+      "pragma_temp_store": "FILE",
+      "runner": "D/restart_mature_fixed.py",
+      "env": "SQLITE_TMPDIR=/data/tmp",
+      "tmpfs": "/tmp:size=128m",
+      "data_volume": "/share/CACHEDEV2_DATA/p003-archive/t2-complete-20261116/mature:/data",
+      "mkdir_data_tmp_in_runner": false
+    },
+    "fixture_cache_kib": 524288,
+    "container_memory": "768m"
+  },
+  "nas_python27": {
+    "file": "NAS-PYTHON27-EXACT.json",
+    "exit": 0,
+    "executable": "/usr/local/bin/python",
+    "runtime": "2.7.18 (default, Aug 27 2025, 08:23:16)",
+    "result": "flock acquired/busy3/released",
+    "missing_marker_case_in_this_file": false
+  },
+  "nas_volume_summary": {
+    "file": "NAS-VOLUME-4354512d.json",
+    "exit": 0,
+    "stdout_claims": "Python27 valid guard and missing-env refused; six Linux tests",
+    "unittest": "Ran 6 tests OK",
+    "independently_rerun_on_nas_python27": false
+  },
+  "container_ids_are_not_script_fingerprints": true,
+  "b5_evidence": {
+    "MATURE-ACCEPTANCE.json": false,
+    "latest_progress": "MATURE-PROGRESS-14.json",
+    "phase": "generate"
+  },
+  "remaining": [
+    "B5 not run: 90-day Backup API plus NAS verify/restore has no MATURE-ACCEPTANCE.json. T2 remains open and production remains unswitched.",
+    "2183eb0cb843812582b5ca8adeac11ac1dd1d903 was committed during this recheck and was not archived or tested.",
+    "The 27,000,000-row benchmark covers analytics_event_seen only. analytics_rollup_fact at 54,000,000 rows was not in those four timings.",
+    "NAS verify count(1) has no sqlite progress handler. The backup job does, and a local probe showed count(1) NOT INDEXED is interruptible while count(*) emitted zero callbacks. The suite has no test that drives the backup-job count phase into its deadline.",
+    "SQLITE_TMPDIR=/data/tmp is set by the runner; that script does not mkdir the directory. Fixture cache is 512MiB inside a 768MiB cgroup. Index build has not appeared in the progress snapshots.",
+    "Python 2.7.18 evidence is the flock acquire/busy/release path. The missing-marker failure was rechecked locally on CPython 3.9.6."
+  ]
+}

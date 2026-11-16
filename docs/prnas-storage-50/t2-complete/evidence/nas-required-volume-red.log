@@ -1,0 +1,13 @@
+....F.
+======================================================================
+FAIL: test_nas_entries_require_volume_config_before_creating_lock (__main__.LockTests.test_nas_entries_require_volume_config_before_creating_lock)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-lock.test.py", line 15, in test_nas_entries_require_volume_config_before_creating_lock
+    self.assertFalse((root/lock).exists(),'NAS entry must reject absent volume configuration before acquiring a lock')
+AssertionError: True is not false : NAS entry must reject absent volume configuration before acquiring a lock
+
+----------------------------------------------------------------------
+Ran 6 tests in 4.099s
+
+FAILED (failures=1)

@@ -1,0 +1,548 @@
+{
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "scope": "synthetic actual-row-count mature backup/restore on PRnas; NOT cloud ingestion benchmark",
+  "started_at_s": 1794808877.1151574,
+  "phase": "complete",
+  "fixture": {
+    "synthetic": true,
+    "devices": 50,
+    "events_per_day": 6000,
+    "days": 90,
+    "started_at_s": 1794803943.1209075,
+    "phase": "complete",
+    "table": "analytics_transport",
+    "rows": 21000,
+    "total": 21000,
+    "elapsed_s": 6343.6633949279785,
+    "bytes": 44871368704,
+    "counts": {
+      "analytics_batch": 21000,
+      "analytics_day": 0,
+      "analytics_device_day": 0,
+      "analytics_diagnostic_usage": 0,
+      "analytics_dirty_day": 0,
+      "analytics_event": 4200000,
+      "analytics_event_seen": 27000000,
+      "analytics_meta": 0,
+      "analytics_rollup_fact": 54000000,
+      "analytics_rollup_retry": 0,
+      "analytics_settlement": 4200000,
+      "analytics_tier_day": 0,
+      "analytics_tier_event": 2,
+      "analytics_transport": 21000,
+      "analytics_transport_day": 0
+    },
+    "sample_sha256": "334322c727fc1ca1f0dc6e9b44edcef921a6f94b4fb8ec991e1752a5b8c1ccb9",
+    "schema_sha256": "531b57452f7f0d815d430a37996dbbe05beccff303a96724b5bc65ceba1f5dbb"
+  },
+  "source_bytes": 44871368704,
+  "source_check": {
+    "schema": [
+      [
+        "index",
+        "analytics_ark_device_event_received",
+        "CREATE INDEX analytics_ark_device_event_received ON analytics_event(device_key,event_name,received_at_ms DESC,occurred_at_ms DESC)"
+      ],
+      [
+        "index",
+        "analytics_ark_device_received",
+        "CREATE INDEX analytics_ark_device_received ON analytics_event(device_key,received_at_ms DESC,occurred_at_ms DESC)"
+      ],
+      [
+        "index",
+        "analytics_batch_received",
+        "CREATE INDEX analytics_batch_received ON analytics_batch(received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_batch_request",
+        "CREATE INDEX analytics_batch_request ON analytics_batch(request_id,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_event_client_received",
+        "CREATE INDEX analytics_event_client_received ON analytics_event(client_event_id,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_event_days",
+        "CREATE INDEX analytics_event_days ON analytics_event(occurred_day,received_day)"
+      ],
+      [
+        "index",
+        "analytics_event_received",
+        "CREATE INDEX analytics_event_received ON analytics_event(received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_settlement_id",
+        "CREATE INDEX analytics_settlement_id ON analytics_settlement(id_digest)"
+      ],
+      [
+        "index",
+        "analytics_tier_device_received",
+        "CREATE INDEX analytics_tier_device_received ON analytics_tier_event(device_key,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_tier_expiry",
+        "CREATE INDEX analytics_tier_expiry ON analytics_tier_event(tier,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_tier_id_received",
+        "CREATE INDEX analytics_tier_id_received ON analytics_tier_event(client_event_id,received_at_ms)"
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_batch_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_device_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_diagnostic_usage_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_dirty_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_event_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_event_seen_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_meta_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_rollup_fact_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_rollup_retry_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_settlement_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_tier_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_tier_event_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_transport_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_transport_day_1",
+        null
+      ],
+      [
+        "table",
+        "analytics_batch",
+        "CREATE TABLE analytics_batch (\n        attempt_id TEXT PRIMARY KEY, request_id TEXT NOT NULL, batch_id TEXT NOT NULL, device_key TEXT NOT NULL,\n        received_at_ms INTEGER NOT NULL, sent_at_ms INTEGER NOT NULL, client_json TEXT NOT NULL,\n        accepted INTEGER NOT NULL, duplicated INTEGER NOT NULL, rejected INTEGER NOT NULL,\n        http_status INTEGER NOT NULL, processing_ms INTEGER NOT NULL)"
+      ],
+      [
+        "table",
+        "analytics_day",
+        "CREATE TABLE analytics_day (dimension TEXT NOT NULL,day TEXT NOT NULL,summary_json TEXT NOT NULL,updated_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day))"
+      ],
+      [
+        "table",
+        "analytics_device_day",
+        "CREATE TABLE analytics_device_day (dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,event_count INTEGER NOT NULL,session_count INTEGER NOT NULL,last_received_at_ms INTEGER NOT NULL,summary_json TEXT NOT NULL, PRIMARY KEY(dimension,day,device_key))"
+      ],
+      [
+        "table",
+        "analytics_diagnostic_usage",
+        "CREATE TABLE analytics_diagnostic_usage (\n   request_id TEXT NOT NULL,device_key TEXT NOT NULL,accepted INTEGER NOT NULL,\n   PRIMARY KEY(request_id,device_key))"
+      ],
+      [
+        "table",
+        "analytics_dirty_day",
+        "CREATE TABLE analytics_dirty_day (dimension TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY(dimension,day))"
+      ],
+      [
+        "table",
+        "analytics_event",
+        "CREATE TABLE analytics_event (\n        device_key TEXT NOT NULL, client_event_id TEXT NOT NULL, event_name TEXT NOT NULL,\n        occurred_at_ms INTEGER NOT NULL, received_at_ms INTEGER NOT NULL, session_id TEXT NOT NULL,\n        sequence INTEGER NOT NULL, priority TEXT NOT NULL, context_json TEXT NOT NULL, properties_json TEXT NOT NULL,\n        batch_attempt_id TEXT NOT NULL, occurred_day TEXT, received_day TEXT NOT NULL, clock_suspicious INTEGER NOT NULL,\n        PRIMARY KEY(device_key,client_event_id))"
+      ],
+      [
+        "table",
+        "analytics_event_seen",
+        "CREATE TABLE analytics_event_seen (\n        device_key TEXT NOT NULL, id_digest TEXT NOT NULL, event_hash TEXT NOT NULL, first_received_at_ms INTEGER NOT NULL,\n        PRIMARY KEY(device_key,id_digest))"
+      ],
+      [
+        "table",
+        "analytics_meta",
+        "CREATE TABLE analytics_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL)"
+      ],
+      [
+        "table",
+        "analytics_rollup_fact",
+        "CREATE TABLE analytics_rollup_fact (\n dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,id_digest TEXT NOT NULL,\n event_name TEXT NOT NULL,session_digest TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,semantic_json TEXT NOT NULL,\n received_at_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day,device_key,received_at_ms,id_digest))"
+      ],
+      [
+        "table",
+        "analytics_rollup_retry",
+        "CREATE TABLE analytics_rollup_retry (dimension TEXT NOT NULL,day TEXT NOT NULL,last_attempt_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day))"
+      ],
+      [
+        "table",
+        "analytics_settlement",
+        "CREATE TABLE analytics_settlement (\n        attempt_id TEXT NOT NULL, id_digest TEXT NOT NULL, outcome TEXT NOT NULL, reason TEXT,\n        PRIMARY KEY(attempt_id,id_digest))"
+      ],
+      [
+        "table",
+        "analytics_tier_day",
+        "CREATE TABLE analytics_tier_day (\n   day TEXT NOT NULL,device_key TEXT NOT NULL,tier TEXT NOT NULL,source_event_name TEXT NOT NULL,\n   records INTEGER NOT NULL,source_events INTEGER NOT NULL,payload_bytes INTEGER NOT NULL,\n   PRIMARY KEY(day,device_key,tier,source_event_name))"
+      ],
+      [
+        "table",
+        "analytics_tier_event",
+        "CREATE TABLE analytics_tier_event (\n   device_key TEXT NOT NULL,client_event_id TEXT NOT NULL,event_name TEXT NOT NULL,\n   occurred_at_ms INTEGER NOT NULL,received_at_ms INTEGER NOT NULL,session_id TEXT NOT NULL,\n   sequence INTEGER NOT NULL,priority TEXT NOT NULL,context_json TEXT NOT NULL,properties_json TEXT NOT NULL,\n   batch_attempt_id TEXT NOT NULL,occurred_day TEXT,received_day TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,\n   tier TEXT NOT NULL,source_event_name TEXT NOT NULL,source_event_count INTEGER NOT NULL,diagnostic_request_id TEXT,\n   PRIMARY KEY(device_key,client_event_id))"
+      ],
+      [
+        "table",
+        "analytics_transport",
+        "CREATE TABLE analytics_transport (\n    attempt_id TEXT PRIMARY KEY,encoding TEXT NOT NULL,wire_bytes INTEGER NOT NULL,inflated_bytes INTEGER NOT NULL)"
+      ],
+      [
+        "table",
+        "analytics_transport_day",
+        "CREATE TABLE analytics_transport_day (\n    day TEXT NOT NULL,device_key TEXT NOT NULL,encoding TEXT NOT NULL,requests INTEGER NOT NULL,\n    wire_bytes INTEGER NOT NULL,inflated_bytes INTEGER NOT NULL,PRIMARY KEY(day,device_key,encoding))"
+      ]
+    ],
+    "counts": {
+      "analytics_batch": 21000,
+      "analytics_day": 0,
+      "analytics_device_day": 0,
+      "analytics_diagnostic_usage": 0,
+      "analytics_dirty_day": 0,
+      "analytics_event": 4200000,
+      "analytics_event_seen": 27000000,
+      "analytics_meta": 0,
+      "analytics_rollup_fact": 54000000,
+      "analytics_rollup_retry": 0,
+      "analytics_settlement": 4200000,
+      "analytics_tier_day": 0,
+      "analytics_tier_event": 2,
+      "analytics_transport": 21000,
+      "analytics_transport_day": 0
+    },
+    "devices": 50,
+    "sample_sha256": "a447e347286fc5b0ba515aaa18a161a3141f848ebaa1e641d4faade4eb0fbc18"
+  },
+  "backup_exit": 0,
+  "backup_elapsed_s": 3256.3188243675977,
+  "manifest": {
+    "archive_id": "d452ddf47bfb40d29a67586f341ab4a4",
+    "bytes": 44871368704,
+    "created_at_ms": 1794810392898,
+    "kind": "analytics_backup",
+    "record_count": 89442002,
+    "schema_version": 1,
+    "sha256": "720a6b3fc7db7976d72315607519a330393211eb09f92b2e3cc67ce6e43dd05b",
+    "source_range": {
+      "backup_started_at_ms": 1794810392898,
+      "tables": {
+        "analytics_batch": 21000,
+        "analytics_day": 0,
+        "analytics_device_day": 0,
+        "analytics_diagnostic_usage": 0,
+        "analytics_dirty_day": 0,
+        "analytics_event": 4200000,
+        "analytics_event_seen": 27000000,
+        "analytics_meta": 0,
+        "analytics_rollup_fact": 54000000,
+        "analytics_rollup_retry": 0,
+        "analytics_settlement": 4200000,
+        "analytics_tier_day": 0,
+        "analytics_tier_event": 2,
+        "analytics_transport": 21000,
+        "analytics_transport_day": 0
+      }
+    }
+  },
+  "budget_seconds": 5530,
+  "pipeline_MiB_per_s": 13.141425696640951,
+  "nas_exit": 0,
+  "nas_verify_restore_elapsed_s": 4216.2073188032955,
+  "result": "PASS",
+  "nas_result": {
+    "kept": [
+      "d452ddf47bfb40d29a67586f341ab4a4"
+    ],
+    "removed": [],
+    "restore": {
+      "archive_id": "d452ddf47bfb40d29a67586f341ab4a4",
+      "sha256": "720a6b3fc7db7976d72315607519a330393211eb09f92b2e3cc67ce6e43dd05b",
+      "bytes": 44871368704,
+      "record_count": 89442002,
+      "integrity_check": "ok"
+    },
+    "last_offsite_backup_ms": 1794810392898,
+    "offsite_age_ms": 7472348
+  },
+  "restored_check": {
+    "schema": [
+      [
+        "index",
+        "analytics_ark_device_event_received",
+        "CREATE INDEX analytics_ark_device_event_received ON analytics_event(device_key,event_name,received_at_ms DESC,occurred_at_ms DESC)"
+      ],
+      [
+        "index",
+        "analytics_ark_device_received",
+        "CREATE INDEX analytics_ark_device_received ON analytics_event(device_key,received_at_ms DESC,occurred_at_ms DESC)"
+      ],
+      [
+        "index",
+        "analytics_batch_received",
+        "CREATE INDEX analytics_batch_received ON analytics_batch(received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_batch_request",
+        "CREATE INDEX analytics_batch_request ON analytics_batch(request_id,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_event_client_received",
+        "CREATE INDEX analytics_event_client_received ON analytics_event(client_event_id,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_event_days",
+        "CREATE INDEX analytics_event_days ON analytics_event(occurred_day,received_day)"
+      ],
+      [
+        "index",
+        "analytics_event_received",
+        "CREATE INDEX analytics_event_received ON analytics_event(received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_settlement_id",
+        "CREATE INDEX analytics_settlement_id ON analytics_settlement(id_digest)"
+      ],
+      [
+        "index",
+        "analytics_tier_device_received",
+        "CREATE INDEX analytics_tier_device_received ON analytics_tier_event(device_key,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_tier_expiry",
+        "CREATE INDEX analytics_tier_expiry ON analytics_tier_event(tier,received_at_ms)"
+      ],
+      [
+        "index",
+        "analytics_tier_id_received",
+        "CREATE INDEX analytics_tier_id_received ON analytics_tier_event(client_event_id,received_at_ms)"
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_batch_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_device_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_diagnostic_usage_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_dirty_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_event_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_event_seen_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_meta_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_rollup_fact_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_rollup_retry_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_settlement_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_tier_day_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_tier_event_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_transport_1",
+        null
+      ],
+      [
+        "index",
+        "sqlite_autoindex_analytics_transport_day_1",
+        null
+      ],
+      [
+        "table",
+        "analytics_batch",
+        "CREATE TABLE analytics_batch (\n        attempt_id TEXT PRIMARY KEY, request_id TEXT NOT NULL, batch_id TEXT NOT NULL, device_key TEXT NOT NULL,\n        received_at_ms INTEGER NOT NULL, sent_at_ms INTEGER NOT NULL, client_json TEXT NOT NULL,\n        accepted INTEGER NOT NULL, duplicated INTEGER NOT NULL, rejected INTEGER NOT NULL,\n        http_status INTEGER NOT NULL, processing_ms INTEGER NOT NULL)"
+      ],
+      [
+        "table",
+        "analytics_day",
+        "CREATE TABLE analytics_day (dimension TEXT NOT NULL,day TEXT NOT NULL,summary_json TEXT NOT NULL,updated_at_ms INTEGER NOT NULL, PRIMARY KEY(dimension,day))"
+      ],
+      [
+        "table",
+        "analytics_device_day",
+        "CREATE TABLE analytics_device_day (dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,event_count INTEGER NOT NULL,session_count INTEGER NOT NULL,last_received_at_ms INTEGER NOT NULL,summary_json TEXT NOT NULL, PRIMARY KEY(dimension,day,device_key))"
+      ],
+      [
+        "table",
+        "analytics_diagnostic_usage",
+        "CREATE TABLE analytics_diagnostic_usage (\n   request_id TEXT NOT NULL,device_key TEXT NOT NULL,accepted INTEGER NOT NULL,\n   PRIMARY KEY(request_id,device_key))"
+      ],
+      [
+        "table",
+        "analytics_dirty_day",
+        "CREATE TABLE analytics_dirty_day (dimension TEXT NOT NULL, day TEXT NOT NULL, PRIMARY KEY(dimension,day))"
+      ],
+      [
+        "table",
+        "analytics_event",
+        "CREATE TABLE analytics_event (\n        device_key TEXT NOT NULL, client_event_id TEXT NOT NULL, event_name TEXT NOT NULL,\n        occurred_at_ms INTEGER NOT NULL, received_at_ms INTEGER NOT NULL, session_id TEXT NOT NULL,\n        sequence INTEGER NOT NULL, priority TEXT NOT NULL, context_json TEXT NOT NULL, properties_json TEXT NOT NULL,\n        batch_attempt_id TEXT NOT NULL, occurred_day TEXT, received_day TEXT NOT NULL, clock_suspicious INTEGER NOT NULL,\n        PRIMARY KEY(device_key,client_event_id))"
+      ],
+      [
+        "table",
+        "analytics_event_seen",
+        "CREATE TABLE analytics_event_seen (\n        device_key TEXT NOT NULL, id_digest TEXT NOT NULL, event_hash TEXT NOT NULL, first_received_at_ms INTEGER NOT NULL,\n        PRIMARY KEY(device_key,id_digest))"
+      ],
+      [
+        "table",
+        "analytics_meta",
+        "CREATE TABLE analytics_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL)"
+      ],
+      [
+        "table",
+        "analytics_rollup_fact",
+        "CREATE TABLE analytics_rollup_fact (\n dimension TEXT NOT NULL,day TEXT NOT NULL,device_key TEXT NOT NULL,id_digest TEXT NOT NULL,\n event_name TEXT NOT NULL,session_digest TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,semantic_json TEXT NOT NULL,\n received_at_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day,device_key,received_at_ms,id_digest))"
+      ],
+      [
+        "table",
+        "analytics_rollup_retry",
+        "CREATE TABLE analytics_rollup_retry (dimension TEXT NOT NULL,day TEXT NOT NULL,last_attempt_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day))"
+      ],
+      [
+        "table",
+        "analytics_settlement",
+        "CREATE TABLE analytics_settlement (\n        attempt_id TEXT NOT NULL, id_digest TEXT NOT NULL, outcome TEXT NOT NULL, reason TEXT,\n        PRIMARY KEY(attempt_id,id_digest))"
+      ],
+      [
+        "table",
+        "analytics_tier_day",
+        "CREATE TABLE analytics_tier_day (\n   day TEXT NOT NULL,device_key TEXT NOT NULL,tier TEXT NOT NULL,source_event_name TEXT NOT NULL,\n   records INTEGER NOT NULL,source_events INTEGER NOT NULL,payload_bytes INTEGER NOT NULL,\n   PRIMARY KEY(day,device_key,tier,source_event_name))"
+      ],
+      [
+        "table",
+        "analytics_tier_event",
+        "CREATE TABLE analytics_tier_event (\n   device_key TEXT NOT NULL,client_event_id TEXT NOT NULL,event_name TEXT NOT NULL,\n   occurred_at_ms INTEGER NOT NULL,received_at_ms INTEGER NOT NULL,session_id TEXT NOT NULL,\n   sequence INTEGER NOT NULL,priority TEXT NOT NULL,context_json TEXT NOT NULL,properties_json TEXT NOT NULL,\n   batch_attempt_id TEXT NOT NULL,occurred_day TEXT,received_day TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,\n   tier TEXT NOT NULL,source_event_name TEXT NOT NULL,source_event_count INTEGER NOT NULL,diagnostic_request_id TEXT,\n   PRIMARY KEY(device_key,client_event_id))"
+      ],
+      [
+        "table",
+        "analytics_transport",
+        "CREATE TABLE analytics_transport (\n    attempt_id TEXT PRIMARY KEY,encoding TEXT NOT NULL,wire_bytes INTEGER NOT NULL,inflated_bytes INTEGER NOT NULL)"
+      ],
+      [
+        "table",
+        "analytics_transport_day",
+        "CREATE TABLE analytics_transport_day (\n    day TEXT NOT NULL,device_key TEXT NOT NULL,encoding TEXT NOT NULL,requests INTEGER NOT NULL,\n    wire_bytes INTEGER NOT NULL,inflated_bytes INTEGER NOT NULL,PRIMARY KEY(day,device_key,encoding))"
+      ]
+    ],
+    "counts": {
+      "analytics_batch": 21000,
+      "analytics_day": 0,
+      "analytics_device_day": 0,
+      "analytics_diagnostic_usage": 0,
+      "analytics_dirty_day": 0,
+      "analytics_event": 4200000,
+      "analytics_event_seen": 27000000,
+      "analytics_meta": 0,
+      "analytics_rollup_fact": 54000000,
+      "analytics_rollup_retry": 0,
+      "analytics_settlement": 4200000,
+      "analytics_tier_day": 0,
+      "analytics_tier_event": 2,
+      "analytics_transport": 21000,
+      "analytics_transport_day": 0
+    },
+    "devices": 50,
+    "sample_sha256": "a447e347286fc5b0ba515aaa18a161a3141f848ebaa1e641d4faade4eb0fbc18"
+  },
+  "elapsed_s": 9076.415034532547,
+  "maxrss_child_kib": 214516
+}

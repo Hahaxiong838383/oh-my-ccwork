@@ -1,0 +1,6 @@
+{
+  "at_s": 1794812439.7618308,
+  "exit": 0,
+  "stdout": "{\"syscall\": \"17 0x5 0x919ea58 0x1000 0x17ce5000 0x7fa11009c018 0x8bd 0x7ffeb0100928 0x7fa110ec83c3\\n\", \"at\": 1794812439.152699, \"io\": \"rchar: 89398580598\\nwchar: 44871378754\\nsyscr: 21868262\\nsyscw: 10955005\\nread_bytes: 176888348672\\nwrite_bytes: 44871700480\\ncancelled_write_bytes: 0\\n\"}\n3.40.1\n{\"node\":\"v22.19.0\",\"sqlite\":{\"version\":\"3.50.4\"}}\n",
+  "stderr": "(node:15) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+}

@@ -16,7 +16,7 @@
 2. 按固定候选逐文件发布归档脚本及service，保留before SHA；准备受限SSH list/meta/read/ack和已验证host key，复用专用key，不输出或传群。服务私有配置不得提交Git。
 3. 停原单个backup timer，等待该服务结束。创建仅含绝对路径的私有`.env.archive`（ANALYTICS_ARCHIVE_ROOT），安装`p003-analytics-backup.archive.conf.example`对应drop-in。`analytics-archive-maintenance.sh`要求该变量，缺失立即失败，不能静默走keep2。不得另建第二个并行全库备份timer。
 4. 云端一次手动oneshot，观察building→published；只有NAS确认后才是异地恢复点。备份单独锁，不占rollup锁；Python≤7200秒，Node7220秒，service7260秒（含20秒锁等待）；Restart=no，失败下次调度重试。
-5. NAS准备私有wrapper导出ARCHIVE_ROOT/CODE_ROOT/SSH_CONFIG/SSH_TARGET/PYTHON、卷marker+ID、Docker绝对路径及镜像sha256。wrapper调用storage-nas-cycle.sh；verify调用storage-nas-verify-container.sh。调度每5分钟即可，循环单包传输；20包批次上限，忙则exit3，禁止并发叠加。
+5. NAS准备私有wrapper，准确变量名为`ARCHIVE_ROOT`、`ARCHIVE_CODE_ROOT`、`ARCHIVE_VERIFY`、`ARCHIVE_SSH_CONFIG`、`ARCHIVE_SSH_TARGET`、`ARCHIVE_PYTHON`、`ARCHIVE_VOLUME_MARKER`、`ARCHIVE_VOLUME_ID`、`ARCHIVE_DOCKER`、`ARCHIVE_NODE_IMAGE`。本NAS的监督解释器是`ARCHIVE_PYTHON=/usr/local/bin/python`；其余路径、专用SSH别名和镜像SHA在T6逐项回读，不使用省略前缀的变量名。wrapper调用storage-nas-cycle.sh；ARCHIVE_VERIFY指向调用storage-nas-verify-container.sh的私有可执行wrapper。调度每5分钟即可，循环单包传输；20包批次上限，忙则exit3，禁止并发叠加。
 6. 真实一个包归档、断线续传、隔离恢复通过后，再恢复原云端每日backup timer及NAS项目自己的调度项。NAS调度安装和重启持久性按该机QTS实际方式验证，不改其他项目crontab。
 7. 日常显示backup-status.json、cycle-status.json、retention-status.json；最后成功应按备份捕获时间，断线持续增加实际年龄。健康链路RPO目标24小时；断线不承诺24小时。未知保持null。
 

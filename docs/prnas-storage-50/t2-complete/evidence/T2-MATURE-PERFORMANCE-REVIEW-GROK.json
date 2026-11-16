@@ -1,0 +1,212 @@
+{
+  "review": "T2 mature B5 performance read-only review",
+  "model": "Grok 4.6",
+  "verdict": "COPY_STATUS_STALE_DURING_INTEGRITY_SCAN",
+  "t2_b5_pass": false,
+  "implementation_changed": false,
+  "hard_cap_changed": false,
+  "deadlock_claimed": false,
+  "mature_fixture_replaced": false,
+  "production_pass": false,
+  "ssh": false,
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "head": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "budget_seconds": 5530,
+  "hard_cap_seconds": {
+    "backup_job": 7200,
+    "acceptance_backup_wrapper": 7260,
+    "acceptance_nas_wrapper": 7200
+  },
+  "last_observed_progress": {
+    "phase": "copy",
+    "remaining_pages": 30892,
+    "total_pages": 10954924,
+    "state": "building"
+  },
+  "last_monitor": "MATURE-MONITOR-1794811708.json",
+  "over_budget_at_last_evidence": false,
+  "change_implementation_now": false,
+  "new_t3_blockers": [],
+  "t3_implemented": false,
+  "report_md_sha256": "968f9327649d9c582fef509736d3ee1c32599a5994ae62bc422f5ea219c1bac2",
+  "report_md_bytes": 13794,
+  "proven": [
+    "15 tables, 89442002 rows, 44871368704 source bytes; total_pages*4096 equals snapshot.partial size",
+    "write_bytes/wchar/syscw frozen across probes 2-4 while rchar/syscr/read_bytes increase",
+    "pread64 fd5 snapshot.partial 4096-byte pages; process D, RSS ~157MiB/512MiB",
+    "status still copy remaining 30892 more than 5s throttle after target file complete",
+    "backup progress callback and set_progress_handler are separate channels",
+    "container python image installed libsqlite3-0 3.40.1-2+deb12u2; 3.40.1 OP_IntegrityCk calls sqlite3BtreeIntegrityCheck with no btree xProgress",
+    "NAS finalize verifyRows then restoreCheck verifyRows on a copy of the same SHA bytes",
+    "acceptance backup timeout 7260 and NAS timeout 7200 are sequential, not shared",
+    "business scripts match candidate 2183eb0c blobs"
+  ],
+  "inferred": [
+    "Backup API copy finished; remaining 30892 is throttled stale copy status; process is in OP_IntegrityCk btree scan",
+    "3.40.1 progress handler does not run until IntegrityCk returns; inner 5530s deadline cannot abort during that opcode",
+    "rchar rate is a sample, not a remaining-time forecast; linear scale from 504MB trial is invalid at 0.3% cache ratio",
+    "container sqlite_version() was not probed live"
+  ],
+  "minimal_later_opt_if_budget_fails": {
+    "do": "skip restoreCheck.verifyRows when dest SHA equals already-finalized payload SHA on the same Node engine",
+    "keep": [
+      "size",
+      "SHA vs manifest",
+      "finalize.verifyRows",
+      "cloud _copy_checked integrity",
+      "7200 cap",
+      "full integrity_check not quick_check"
+    ],
+    "anti_examples": [
+      "SHA mismatch after copy",
+      "size-only compare",
+      "reuse Python 3.40.1 ok as Node verifyRows",
+      "skip first NAS finalize verifyRows",
+      "skip cloud dest integrity_check",
+      "payload mutated or nonempty WAL after finalize",
+      "manifest identity/count/tables not the verified set",
+      "quick_check, sampling, mmap, or cgroup >512MiB",
+      "treat skip as B5 pass or fixture replacement",
+      "writable hardlink shared with immutable payload"
+    ]
+  },
+  "t3_convergence": {
+    "reviewed_worktree_handoff_sha256": "7379c549618417e76c0cc98a7fd6c1f57611e93ad3a8687dc90ac5f5ccbb1cdd",
+    "candidate_handoff_sha256": "9b9792498e26b95b6179e6389393437f83bae284b01a45d5a2ec11bf9adf465b",
+    "resolution_sha256": "71aa0b39e73b3d9225da3cd5c6f47a72b92d6fdf39022c7ced3c8d944ad60d84",
+    "reasonable": true,
+    "new_blockers": []
+  },
+  "local_sqlite_experiment": {
+    "sqlite_version": "3.46.0",
+    "rows": 8000,
+    "bytes": 790528,
+    "integrity_n1_calls": 80238,
+    "count_n1_calls": 24010,
+    "has_IntegrityCk_opcode": true,
+    "not_container_3_40_1": true
+  },
+  "files": [
+    {
+      "sha256": "28a018c89259187ea0e1d90e37e3f838daf5a903ecc3ee5bbd518b87ee031e2b",
+      "bytes": 6989,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-backup.py",
+      "matches_candidate": true
+    },
+    {
+      "sha256": "5e61efcb141ca6831b4ee64d8e88b1374d6b338c9c0548db1ced7c2b596d20db",
+      "bytes": 6936,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.py",
+      "matches_candidate": true
+    },
+    {
+      "sha256": "c2028fecac834adbae196fcb3460b25bf1069a0160ec29f693d13c6ebba11e09",
+      "bytes": 15029,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-verify.mjs",
+      "matches_candidate": true
+    },
+    {
+      "sha256": "d782dd5708cdeb0ed12629d8b3e6535306b9839da2917921527966cb2185e8fe",
+      "bytes": 11569,
+      "read": "full",
+      "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.py",
+      "matches_candidate": true
+    },
+    {
+      "sha256": "7379c549618417e76c0cc98a7fd6c1f57611e93ad3a8687dc90ac5f5ccbb1cdd",
+      "bytes": 10098,
+      "read": "full",
+      "path": "docs/prnas-storage-50/t2-complete/T3_HANDOFF.md",
+      "matches_candidate": false,
+      "note": "worktree 实施定稿"
+    },
+    {
+      "sha256": "9b9792498e26b95b6179e6389393437f83bae284b01a45d5a2ec11bf9adf465b",
+      "bytes": 5760,
+      "read": "full",
+      "path": "docs/prnas-storage-50/t2-complete/T3_HANDOFF.md@2183eb0c"
+    },
+    {
+      "sha256": "71aa0b39e73b3d9225da3cd5c6f47a72b92d6fdf39022c7ced3c8d944ad60d84",
+      "bytes": 1693,
+      "read": "full",
+      "path": "docs/prnas-storage-50/t2-complete/T3_REVIEW_RESOLUTION.md",
+      "untracked": true
+    },
+    {
+      "sha256": "aa11f8d98425be21dd6f09435f9a75a80683d27368cf9f2c2a816759b9afade9",
+      "bytes": 1697,
+      "read": "full",
+      "path": "D/MATURE-BACKUP-IO-PROBE-1.json"
+    },
+    {
+      "sha256": "8136281efe55b0ca61514d79b004d282bad7517d4c9576b5f4df7e9ea7a19e99",
+      "bytes": 1089,
+      "read": "full",
+      "path": "D/MATURE-BACKUP-IO-PROBE-2.json"
+    },
+    {
+      "sha256": "b61af5aea1a47e83a2757b4a21a5e46297901dfbc8cf0c426a3dd5ca35f682d3",
+      "bytes": 775,
+      "read": "full",
+      "path": "D/MATURE-BACKUP-IO-PROBE-3.json"
+    },
+    {
+      "sha256": "765258ecb6d594d273700d03858ad2d906b6c1336207194de0ed10e8b826691b",
+      "bytes": 663,
+      "read": "full",
+      "path": "D/MATURE-BACKUP-IO-PROBE-4.json"
+    },
+    {
+      "sha256": "ed2ded4e8ac82bc0d583d6262584af7ac5454bf7231d442ef72b82f54a56f5b2",
+      "bytes": 11360,
+      "read": "full",
+      "path": "D/MATURE-STATUS-1794810448.json"
+    },
+    {
+      "sha256": "cdbf5283a7dd686c036e50993d8ea65301fadb536ce3c763a794d7c4f3069d86",
+      "bytes": 11277,
+      "read": "full",
+      "path": "D/MATURE-MONITOR-1794811708.json"
+    },
+    {
+      "sha256": "eb8b02cfc14db983821c8f1cb1349e91a9d96c2be16aa8ba8713bd13c0b05c30",
+      "bytes": 283,
+      "read": "full",
+      "path": "D/MATURE-ACCEPTANCE-2183eb0c-START.json"
+    },
+    {
+      "sha256": "443c4e13f69d819b597bb86b825b7eca23315dc27c6167b38913f617b47d7251",
+      "bytes": 1459,
+      "read": "full",
+      "path": "D/CLOUD-JOB-2183eb0c.json"
+    },
+    {
+      "sha256": "177f69404a95e2bcebb4d5742b889ee95907c843140dc2684e9df9ecad111686",
+      "bytes": 851,
+      "read": "full",
+      "path": "D/COUNT-BENCHMARK-READBACK.json"
+    },
+    {
+      "sha256": "7b9bf60c0d99fa291280187820b0d61ac82c7abf17a34a7be7ad3a8400d2f849",
+      "bytes": 11689,
+      "read": "full",
+      "path": "D/PYTHON-IMAGE-BUILD-LOCAL.json"
+    },
+    {
+      "sha256": "858c78e986ee6a4d65b8e688ba7cf558b82ca3ed4e8dcae393031866c908bc6a",
+      "bytes": 5525,
+      "read": "full",
+      "path": "D/mature_acceptance.py"
+    },
+    {
+      "sha256": "e9fdbd5b0caf218590f5654aff1902537a32ea0cd71633900b0e7474df5e952e",
+      "bytes": 16199,
+      "read": "full",
+      "path": "D/T3-PLAN-REVIEW-GROK.md"
+    }
+  ]
+}

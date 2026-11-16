@@ -1,0 +1,84 @@
+{
+  "status": "READY",
+  "result": "PASS",
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "at_ms": 1794818480348,
+  "files": [
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/MATURE-FINAL-PACKET-2183eb0c.json",
+      "sha256": "992a44e0a0a3586cf2499077a57fb2c14a8fce8c33943af52009e8025e9809e8",
+      "bytes": 41553
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/MATURE-ACCEPTANCE.json",
+      "sha256": "a084369aec3b2fc78c5d765cb7169bf549f1f86859a83f7b4fba8a466bf6ac29",
+      "bytes": 20942
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/MATURE-SOURCE-ACK.json",
+      "sha256": "909536d391508263f77bf565eb7b7f18134ba17dfacce86570b8323ca1f05223",
+      "bytes": 512
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/MATURE-SOURCE-ACK-RUNNER.json",
+      "sha256": "1dafc690156d3c2b520c86f8db7e8c80cd8cb4bfc37cac1d4ca2e642e84f082f",
+      "bytes": 638
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/MATURE-SOURCE-ACK-RUNNER-FIRST-FAIL.json",
+      "sha256": "cff3dfc38daa5deec8c15c6b6a0d1027b7134cf629b2a1df2fe1ae513ae6f567",
+      "bytes": 212
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/MATURE-RUNTIME-EXACT-2183eb0c.json",
+      "sha256": "0f90389ddce9ca168d8c6f3244cac8c6a626112597b0e974bcc5854d6137b418",
+      "bytes": 623
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/PRODUCTION-GUARD-FINAL-2183eb0c.json",
+      "sha256": "e5982731ed6a96e244f0ff900dc5b8b3434d753a02ac68cc0c32de379a6fac36",
+      "bytes": 5746
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/REGRESSION-2183eb0c.json",
+      "sha256": "2100a3b092e506ea90e69adddb1fa930071f363c09875f653b7f3fdfcf2bc373",
+      "bytes": 594
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/CLOUD-JOB-2183eb0c.json",
+      "sha256": "443c4e13f69d819b597bb86b825b7eca23315dc27c6167b38913f617b47d7251",
+      "bytes": 1459
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/mature_acceptance.py",
+      "sha256": "858c78e986ee6a4d65b8e688ba7cf558b82ca3ed4e8dcae393031866c908bc6a",
+      "bytes": 5525
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/mature_ack_close.py",
+      "sha256": "e8e1e6b6797b6c386d94dc6b9e48b1d1561e668ed908f111faac5b0c37f6b84c",
+      "bytes": 1626
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/mature-schema.json",
+      "sha256": "531b57452f7f0d815d430a37996dbbe05beccff303a96724b5bc65ceba1f5dbb",
+      "bytes": 6932
+    },
+    {
+      "path": "/Users/fu-121/.local/state/p003-prnas-t2-complete-20261116/T3-PLAN-FINAL-INDEX.json",
+      "sha256": "725a5317240aaa84a684a7fc58056c2191d2259f99186116b0e673604240f1af",
+      "bytes": 1025
+    }
+  ],
+  "code_changed_since_candidate": false,
+  "production_changed": false,
+  "t2_scope": "software_and_isolated_real_NAS",
+  "t3": "READY_AS_PLAN_NOT_IMPLEMENTED",
+  "production_release": false,
+  "notes": [
+    "100MiB real SSH interrupted/resumed; 44.871GB mature package uses NAS-local hardlink into incoming and a genuine independent restore copy, not 45GB WAN transfer",
+    "No shared NAS physical power cut, no production timer install/reboot test, no 50 real devices/mixed cloud load/24h soak",
+    "ACK helper first invocation mistakenly retained Docker image Python entrypoint, exited before running helper; fixed test command with explicit timeout entrypoint, no runtime source change; first failure preserved",
+    "Source acknowledgement is isolated local Spool.ack exact-tuple closure; the 100MiB test covers real restricted SSH ACK"
+  ]
+}

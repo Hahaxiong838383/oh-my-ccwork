@@ -1,0 +1,221 @@
+{
+  "review": "T2 candidate acceptance",
+  "model": "Grok 4.7",
+  "model_note": "Session identity from the system prompt. No separate build hash was visible.",
+  "verdict": "NOT_ACCEPTED",
+  "accepted": false,
+  "t2_closed": false,
+  "production_takeover": false,
+  "candidate": "457ed5ae1349ba6c1795ed66750075792bc72156",
+  "baseline": "ac476d3c55d6d708bc49536ba4348870541419b0",
+  "baseline_is_ancestor": true,
+  "diff_stat": "27 files, +915 / -77, one commit",
+  "head_at_review_start": "457ed5ae1349ba6c1795ed66750075792bc72156",
+  "head_observed_later": "6daf1b348c57665a46d4d4d1554c97b15c6e7a02",
+  "later_head_reviewed": false,
+  "worktree_at_report_write": [
+    "M 2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.py",
+    "M 2-Projects/P003GameDemo20260513/apps/server/scripts/storage-lock.py",
+    "M 2-Projects/P003GameDemo20260513/apps/server/scripts/storage-lock.test.py",
+    "M 2-Projects/P003GameDemo20260513/apps/server/scripts/storage-mature-fixture.py",
+    "M 2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-verify.mjs"
+  ],
+  "uncommitted_drift_executed": false,
+  "transport_candidate_not_redone": "845d8cfa3e1d3a24d872a611d81e9e90467768c8",
+  "tests": {
+    "tree": "git archive 457ed5ae1349ba6c1795ed66750075792bc72156",
+    "archive_maintenance_sha256": "91b600d941e23be1d619bdb94e74a7b59564d417a4a82b90a22330ac7447045f",
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "npm_version": "11.17.0",
+    "suite_python": "/opt/anaconda3/bin/python3",
+    "suite_python_version": "3.12.2",
+    "maintenance_python": "/usr/bin/python3",
+    "maintenance_python_version": "3.9.6",
+    "command": "npm run test:archive-complete",
+    "cwd": "/tmp/p003-grok-t2-457ed5ae/2-Projects/P003GameDemo20260513/apps/server",
+    "started_utc": "2026-11-16T05:25:47Z",
+    "exit": 0,
+    "counts": [
+      {
+        "command": "scripts/storage-archive.test.py",
+        "result": "7 tests OK",
+        "seconds": 0.144
+      },
+      {
+        "command": "scripts/storage-nas-verify.test.mjs",
+        "result": "PASS"
+      },
+      {
+        "command": "scripts/storage-lock.test.py",
+        "result": "5 tests OK",
+        "seconds": 3.669
+      },
+      {
+        "command": "scripts/storage-backup-job.test.py",
+        "result": "6 tests OK",
+        "seconds": 0.393
+      },
+      {
+        "command": "scripts/analytics-backup.test.py",
+        "result": "7 tests OK",
+        "seconds": 0.159
+      },
+      {
+        "command": "scripts/storage-nas-retention.test.mjs",
+        "result": "PASS"
+      },
+      {
+        "command": "scripts/storage-maintenance-integration.test.mjs",
+        "result": "PASS; does not assert capture-time equality"
+      }
+    ]
+  },
+  "extra_commands": [
+    {
+      "command": "analytics-archive-maintenance.sh with ANALYTICS_ARCHIVE_ROOT unset",
+      "exit": 1
+    },
+    {
+      "command": "analytics-archive-maintenance.sh with relative ANALYTICS_ARCHIVE_ROOT",
+      "exit": 2
+    },
+    {
+      "command": "storage-lock.py on canonical path without volume env",
+      "exit": 0,
+      "lock_created": true
+    },
+    {
+      "command": "storage-lock.py with volume env and missing marker",
+      "exit": 2,
+      "lock_created": false
+    },
+    {
+      "command": "storage-lock.py with volume env and wrong marker",
+      "exit": 2,
+      "lock_created": false
+    }
+  ],
+  "issues": [
+    {
+      "id": 1,
+      "severity": "blocker",
+      "status": "open",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-maintenance.mjs:28",
+      "summary": "Archive publish stamps last_backup_success_ms with Date.now(), so replaying an old ready.json resets backup age to now.",
+      "reproduction": {
+        "publish_created_at_ms": 1794806880367,
+        "publish_watermark": 1794806880414,
+        "publish_delta_ms": 47,
+        "recovery_manifest_created_at_ms": 1794547680443,
+        "recovery_watermark": 1794806880837,
+        "recovery_delta_from_capture_ms": 259200394,
+        "recovery_abs_from_now_ms": 17,
+        "last_offsite_backup_ms": null,
+        "legacy_keep2_dir_created": false
+      },
+      "fix": "In archive mode store result.manifest.created_at_ms. Add a three-day ready.json assertion. Keep2 may keep Date.now()."
+    },
+    {
+      "id": 2,
+      "severity": "major",
+      "status": "open",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-lock.py:16",
+      "summary": "Volume marker checks run only when ARCHIVE_VOLUME_MARKER or ARCHIVE_VOLUME_ID is set. cycle.sh and pull.sh do not require them, so a canonical archive root without those variables creates the lock.",
+      "fix": "Require both absolute variables before the NAS shell entries call the lock program, or make the lock program fail closed when they are absent. Close this before T6 cron installation."
+    }
+  ],
+  "nas_candidate_blob_hashes_match": true,
+  "nas_code_hashes_json_is_stale": true,
+  "gates": {
+    "B1": "suite_pass_watermark_fail",
+    "B2": "pass_suite",
+    "B3": "pass_suite_mocked_disk",
+    "B4": "formula_and_isolated_systemd_pass_mature_wall_clock_pending",
+    "B5": "not_run",
+    "N1": "pass_suite_and_independent_indexes",
+    "N2": "pass_suite",
+    "N3": "local_suite_pass_nas_process_kill_not_host_reboot",
+    "N4": "fail_when_volume_env_absent",
+    "W1": "code_ready_production_not_switched"
+  },
+  "budget": {
+    "rate_bytes_s": 16777216,
+    "rate_note": "source constant, not a measured mature-fixture rate",
+    "model_one_copy_bytes": 48206400000,
+    "model_budget_seconds": 5927,
+    "three_full_reads_seconds_at_constant": 8620,
+    "sample_105811968_budget_seconds": 300,
+    "layers_seconds": {
+      "python": 7200,
+      "spawnSync": 7220,
+      "systemd": 7260,
+      "flock_wait": 20
+    },
+    "restart": "no",
+    "uncontended_sleep_0_05_added_per_page": false
+  },
+  "rotation_independent_check": {
+    "origin": "2026-11-16T04:00:00Z",
+    "kept_indexes": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      8,
+      15
+    ],
+    "kept_count": 9
+  },
+  "unchanged": {
+    "capacity_ts": true,
+    "policy_ts": true,
+    "backup_peak_copies": 4,
+    "archive_enabled": false,
+    "archive_interval_sec": 300
+  },
+  "nas_evidence_scope": {
+    "candidate_cycle_exit": 0,
+    "bytes": 105811968,
+    "rows": 3200,
+    "sha256": "fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75",
+    "fraction_of_model_one_copy": 0.0021949775963357562,
+    "supervisor_sigkill_exit": 137,
+    "second_lock_exit": 3,
+    "body_kill_partial_bytes": 3309568,
+    "body_resume_total_bytes": 105811968,
+    "first_cycle_error": "ARCHIVE_VERIFY_FAILED:UNEXPECTED_TRASH_CONTENT",
+    "hardware_power_loss_tested": false,
+    "host_reboot_tested": false,
+    "python2_7_string_found_in_evidence": false
+  },
+  "mature": {
+    "pass": false,
+    "latest_progress_file": "MATURE-PROGRESS-10.json",
+    "phase": "generate",
+    "table": "analytics_rollup_fact",
+    "rows": 20260000,
+    "total": 54000000,
+    "bytes": 19842736128,
+    "container_started_at": "2026-11-16T05:21:11Z",
+    "seen_last_explicit_rows": 17950000,
+    "seen_completion_record": false,
+    "backup_api_run": false,
+    "isolated_restore_run": false,
+    "acceptance_file": null
+  },
+  "pending": {
+    "T3": "Do not start implementation from this SHA as an accepted base. Boundary doc is present; shouldArchive and appendArkArchive are not implemented.",
+    "T4": "90/180 day capacity, measured copy count, and the four-copy coefficient stay unchanged.",
+    "T5": "50-device daily batch, mixed ark/backup/maintenance, and at least 50 voice rounds are not done.",
+    "T6": "Archive drop-in, timer switch, and NAS cron are not installed.",
+    "B5": "Wait for main session 13 MATURE-ACCEPTANCE.json. Do not treat generation progress as pass.",
+    "budget_measurement": "16MiB/s remains a source constant until the mature file is timed."
+  },
+  "source_modified_by_this_review": false,
+  "report_markdown": "REVIEW-CANDIDATE-GROK.md",
+  "worktree_note": "Dirty set observed after the report file was first written. Not part of the candidate and not executed."
+}

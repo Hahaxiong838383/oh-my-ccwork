@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"last_attempt_ms\":1794805836379,\"exit\":0,\"phase\":\"complete\",\"last_success_ms\":1794805836379,\"connection\":\"connected\"}\n{\"last_attempt_ms\":1794805838676,\"exit\":0,\"phase\":\"complete\",\"last_success_ms\":1794805838676,\"connection\":\"connected\"}\nPASS verifier inner lock survived detached client, released after container SIGKILL and restart\n",
+  "stderr": ""
+}

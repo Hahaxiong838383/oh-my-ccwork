@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"last_attempt_ms\":1794804688466,\"exit\":255,\"phase\":\"list\",\"last_success_ms\":1794804484700,\"connection\":\"unreachable\"}\nOFFLINE_EXIT=255\n{\"last_attempt_ms\":1794804688466,\"exit\":255,\"phase\":\"list\",\"last_success_ms\":1794804484700,\"connection\":\"unreachable\"}\n{\"kept\":[\"80e713d0d678424382fe737effb69d3a\"],\"removed\":[\"e0fb45fe93404b0eabb6c3e88f4ec5e8\"],\"restore\":{\"archive_id\":\"80e713d0d678424382fe737effb69d3a\",\"sha256\":\"fdfe8c7f717170673cb9173ed433e822e7ee8e7238f698f9e4ae991d136b1a75\",\"bytes\":105811968,\"record_count\":3200,\"integrity_check\":\"ok\"},\"last_offsite_backup_ms\":1794804563424,\"offsite_age_ms\":129611}\n{\"last_attempt_ms\":1794804693835,\"exit\":0,\"phase\":\"complete\",\"last_success_ms\":1794804693835,\"connection\":\"connected\"}\n",
+  "stderr": "ssh: connect to host 127.0.0.1 port 1: Connection refused\n(node:1) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n"
+}

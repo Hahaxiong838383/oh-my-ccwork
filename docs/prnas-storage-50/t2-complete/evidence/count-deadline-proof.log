@@ -1,0 +1,3 @@
+{"phase": "copy", "remaining_pages": 0, "total_pages": 2}
+{"phase": "copy", "remaining_pages": 0, "total_pages": 38}
+{"result": "PASS", "candidate": "4354512d1258107cb539767d80edc75ba1e03124", "real_count_rows": 20001, "count_interrupted": true, "previous_complete_preserved": true, "no_new_published": true}

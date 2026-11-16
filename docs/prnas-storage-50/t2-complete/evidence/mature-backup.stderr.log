@@ -1,0 +1,154 @@
+{"phase": "copy", "remaining_pages": 10954668, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 10635436, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 10320812, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 10020012, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 9750188, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 9459116, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 9138092, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 8831404, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 8515244, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 8219564, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 7919788, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 7621548, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 7303852, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 6991788, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 6709676, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 6380204, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 6056876, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 5713068, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 5411756, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 5090476, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 4786860, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 4475564, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 4276908, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 3968940, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 3638444, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 3314092, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 3000492, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 2742188, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 2450092, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 2190508, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 1885100, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 1585324, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 1291948, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 989612, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 701100, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 423852, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 291244, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 175020, "total_pages": 10954924}
+{"phase": "copy", "remaining_pages": 30892, "total_pages": 10954924}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "integrity_check"}
+{"phase": "count_rows", "table": "analytics_batch"}
+{"phase": "count_rows", "table": "analytics_event"}
+{"phase": "count_rows", "table": "analytics_event"}
+{"phase": "count_rows", "table": "analytics_event_seen"}
+{"phase": "count_rows", "table": "analytics_event_seen"}
+{"phase": "count_rows", "table": "analytics_event_seen"}
+{"phase": "count_rows", "table": "analytics_event_seen"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_rollup_fact"}
+{"phase": "count_rows", "table": "analytics_settlement"}
+{"phase": "checksum", "bytes_done": 1833959424, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 4564451328, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 7283408896, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 10008657920, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 12716081152, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 15386804224, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 18013487104, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 20612907008, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 23277338624, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 25926041600, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 28564258816, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 31220301824, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 33921433600, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 36576428032, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 39290142720, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 42013294592, "bytes_total": 44871368704}
+{"phase": "checksum", "bytes_done": 44848644096, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 2607808512, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 5299503104, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 8063549440, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 10805575680, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 13548650496, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 16200499200, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 18773704704, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 21389901824, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 24056430592, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 26674724864, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 29274144768, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 31944867840, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 34684796928, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 37347131392, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 40049311744, "bytes_total": 44871368704}
+{"phase": "publish_checksum", "bytes_done": 42780852224, "bytes_total": 44871368704}

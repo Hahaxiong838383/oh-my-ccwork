@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "[\n  {\n    \"query\": \"SELECT count(*) FROM analytics_event_seen\",\n    \"elapsed_s\": 164.49936864711344,\n    \"exit\": 0,\n    \"stdout\": \"[[4, 0, 0, \\\"SCAN analytics_event_seen USING COVERING INDEX sqlite_autoindex_analytics_event_seen_1\\\"]]\\n27000000\\n\",\n    \"stderr\": \"\"\n  },\n  {\n    \"query\": \"SELECT count(1) FROM analytics_event_seen NOT INDEXED\",\n    \"elapsed_s\": 18.99098933674395,\n    \"exit\": 0,\n    \"stdout\": \"[[3, 0, 0, \\\"SCAN analytics_event_seen\\\"]]\\n27000000\\n\",\n    \"stderr\": \"\"\n  }\n]{\"Status\":\"exited\",\"Running\":false,\"Paused\":false,\"Restarting\":false,\"OOMKilled\":false,\"Dead\":false,\"Pid\":0,\"ExitCode\":0,\"Error\":\"\",\"StartedAt\":\"2026-11-16T05:31:12.213783358Z\",\"FinishedAt\":\"2026-11-16T05:34:15.974272358Z\"}\n",
+  "stderr": ""
+}

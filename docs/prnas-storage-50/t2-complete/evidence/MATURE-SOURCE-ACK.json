@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "candidate": "2183eb0cb843812582b5ca8adeac11ac1dd1d903",
+  "source_ack_tuple_matches_nas": true,
+  "repeat_ack_identical": true,
+  "packages_before": 1,
+  "packages_after": 1,
+  "state": {
+    "checked_at_ms": 1794818443813,
+    "last_offsite_backup_ms": 1794810392898,
+    "offsite_age_ms": 8050915,
+    "pending_bytes": 0,
+    "oldest_pending_ms": null,
+    "state": "not_due"
+  },
+  "scope": "isolated mature package acknowledgement; real SSH transport tested separately with 100MiB"
+}

@@ -1,0 +1,25 @@
+{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+.{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+.{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+F{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+.{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+.{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+.{"phase": "copy", "remaining_pages": 0, "total_pages": 5}
+.
+======================================================================
+FAIL: test_next_cst_day_is_due_even_when_timer_fires_fractionally_earlier (__main__.JobTests.test_next_cst_day_is_due_even_when_timer_fires_fractionally_earlier)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-backup-job.test.py", line 42, in test_next_cst_day_is_due_even_when_timer_fires_fractionally_earlier
+    self.assertEqual(next_day['state'],'published','24h elapsed gate must not skip an entire scheduled day')
+AssertionError: 'not_due' != 'published'
+- not_due
++ published
+ : 24h elapsed gate must not skip an entire scheduled day
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.514s
+
+FAILED (failures=1)
