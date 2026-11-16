@@ -1,3 +1,4 @@
+import {recordsParentRoute,recordsDashboard} from '../ark/records-service.js';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { telemetryStore, dayOf } from '../telemetry-store.js';
@@ -225,7 +226,10 @@ function dateAdd(day: string, deltaDays: number): string {
     .slice(0, 10);
 }
 
+parentTelemetryRoute.route('/', recordsParentRoute);
+
 parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
+  c.header('Cache-Control', 'no-store');
   if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
   const dev = ownedDevice(c.req.param('publicId'), c.get('accountId'));
   if (!dev) return c.json({ ok: false, error: 'not_found' }, 404);
@@ -244,7 +248,8 @@ parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
 
   const usageDaily = telemetryStore.usageRange(dev.sn, weekFrom, today);
   let ark: ReturnType<typeof dashboardArk>;
-  try { ark = dashboardArk(dev.sn); }
+  let records: ReturnType<typeof recordsDashboard>;
+  try { ark = dashboardArk(dev.sn); records = recordsDashboard(c.req.param('publicId'), c.get('accountId')); }
   catch { return c.json({ ok: false, error: 'dashboard_dependency_unavailable' }, 503); }
   const currentOwner = ownedDevice(c.req.param('publicId'), c.get('accountId'));
   if (!currentOwner || currentOwner.sn !== dev.sn) return c.json({ ok: false, error: 'not_found' }, 404);
@@ -253,6 +258,7 @@ parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
     ok: true,
     data: {
       ark,
+      records,
       usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',
         today: usageDaily[usageDaily.length - 1], daily: usageDaily },
       device: {
