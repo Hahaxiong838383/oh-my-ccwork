@@ -1,0 +1,18 @@
+{
+  "path": "/root/p003-asr-three-device-20261116/worker-candidate",
+  "sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+  "bytes": 76399176,
+  "dependencies_found": true,
+  "source_commit": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "compressed_sha256": "53db7d553046abf02973545e5b5fe2cdd461afbe7942d9ff6648a70cbd176f33",
+  "compressed_bytes": 28513188,
+  "chunks": 28,
+  "downloaded_chunks": 28,
+  "uploaded_chunks": 28,
+  "elapsed_s": 111.05,
+  "preflight": {
+    "host": "voice-worker-hk2",
+    "free_bytes": 50363133952
+  },
+  "deployed": false
+}
