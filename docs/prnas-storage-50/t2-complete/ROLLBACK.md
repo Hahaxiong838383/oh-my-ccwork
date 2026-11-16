@@ -6,7 +6,7 @@
 
 ## 隔离任务停止与回退
 
-1. 只停止本任务p003-t2-mature-20261116及p003-t2-isolated-backup-*；禁止按全局python/node/ssh进程名杀进程。
+1. 按本轮证据记录的精确容器/单元ID停止本任务。当前成熟库生成容器为`p003-t2-mature-fixed-20261116`，验收容器为`p003-t2-mature-acceptance-final-20261116`；旧`p003-t2-mature-20261116`等是已停止的历史测试。云端隔离服务只操作本轮`p003-t2-isolated-backup-*`的已核具体单元，禁止按全局python/node/ssh进程名杀进程或重启整个NAS。
 2. 保留PRnas t2-complete-20261116与云archive-t2-20261116的spool、manifest/receipt、partial、测试日志。候选代码替换前的副本在云隔离目录rollback-t2-complete。恢复源码需检查目标仍为本候选hash；漂移则停止覆盖。
 3. 源码采用反向提交或另树检出回滚标签，不reset其他会话、不删除工作树。测试镜像暂存供复验，不自动全局prune镜像/卷。
 4. 未确认payload、Ark包、业务DB及永久seen一律不删。恢复演练只写新隔离路径，不能回灌线上库。
