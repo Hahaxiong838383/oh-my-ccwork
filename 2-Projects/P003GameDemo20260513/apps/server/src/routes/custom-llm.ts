@@ -33,6 +33,7 @@ import { buildKnowledgeRecall,answerArkResourceUse } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
 import { getPromptOverride } from '../rtc-prompt-override.js';
+import {resolveClock,answerClock} from '../tools/clock-query.js';
 
 /**
  * 火山 RTC 实时对话「CustomLLM」回调端点（docs/34 D 方案）。
@@ -119,6 +120,24 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 吐槽模式（docs/37）：前端点「我要吐槽」arm 过 → 本轮一次性消费走吐槽（落反馈库 + 吐槽人格回应）。
   // 吐槽优先：不走 onboarding 引导、不召回世界观，专注接住孩子的吐槽。
   const isFeedback = authContext ? consumeFeedbackArmed(authContext.accountId) : false;
+  const clock = process.env.P003_CLOCK_ENABLED !== '0' && !overridePrompt && !isFeedback && workerAuth?.role === 'device' && authContext?.role === 'device'
+    ? resolveClock(userText,rawHistory.filter(t=>t.role==='user').map(t=>t.content)) : null;
+  if(clock){
+    // Capture time when producing the reply, never reuse historical answer digits.
+    const now=Date.now(),answer=answerClock(clock,now),id=`chatcmpl-clock-${now}-${Math.random().toString(36).slice(2,8)}`;
+    console.info('[clock-direct]',JSON.stringify({response_id:id,room:c.req.query('room'),kind:clock.kind,iana:clock.kind==='clock'?clock.iana:undefined,at_ms:now}));
+    return streamSSE(c,async stream=>{
+      if(stream.aborted||c.req.raw.signal.aborted)return;
+      const chunk=(delta:Record<string,unknown>,finish:string|null)=>JSON.stringify({id,object:'chat.completion.chunk',created:Math.floor(now/1000),model:body.model??'xiaoke-ark',choices:[{index:0,delta,finish_reason:finish}]});
+      await stream.writeSSE({data:chunk({role:'assistant',content:answer},null)});
+      await stream.writeSSE({data:chunk({},'stop')});
+      if(stream.aborted||c.req.raw.signal.aborted)return;
+      try{
+        for(const [role,text] of [['user',userText],['assistant',answer]] as const)conversationStore.add({account_id:authContext!.accountId,session_id:'rtc',role,text,memory_excluded:true});
+      }catch{/* Audit failure does not interrupt speech. Clock facts never become profile memory. */}
+      await stream.writeSSE({data:'[DONE]'});
+    });
+  }
   const staticArkAnswer = !overridePrompt && !isFeedback && workerAuth?.role==='device' && authContext?.role==='device' ? answerArkResourceUse(userText,rawHistory) : null;
   const directArkQuestion = Boolean(staticArkAnswer) || arkDirectReplyAllowed(workerAuth,c.req.query('room')??'',Boolean(overridePrompt),isFeedback) && answerArk(userText,undefined,rawHistory)!==null;
   // 语音调档 S1 快路（Phase A，2026-09-03）：仅设备账号真实轮；命中即处置（observe 只记 / execute 切档）——

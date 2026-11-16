@@ -1,0 +1,404 @@
+{
+  "frozen_now_ms": 1794872324023,
+  "frozen_note": "Assertions use this unix ms. Implementers must inject now_ms; do not call Date.now() in tests.",
+  "frozen_parts": {
+    "Asia/Shanghai": {
+      "year": 2026,
+      "month": 11,
+      "day": 17,
+      "weekday": "星期二",
+      "hour": 7,
+      "minute": 38,
+      "period": "早上"
+    },
+    "America/New_York": {
+      "year": 2026,
+      "month": 11,
+      "day": 16,
+      "weekday": "星期一",
+      "hour": 18,
+      "minute": 38,
+      "period": "傍晚"
+    },
+    "America/Los_Angeles": {
+      "year": 2026,
+      "month": 11,
+      "day": 16,
+      "weekday": "星期一",
+      "hour": 15,
+      "minute": 38,
+      "period": "下午"
+    },
+    "America/Chicago": {
+      "year": 2026,
+      "month": 11,
+      "day": 16,
+      "weekday": "星期一",
+      "hour": 17,
+      "minute": 38,
+      "period": "下午"
+    }
+  },
+  "cases": [
+    {
+      "id": "H01",
+      "origin": "historical",
+      "text": "现在几点了",
+      "source_row": "U01331",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。",
+      "assert_not": [
+        "search_web",
+        "fetch_page",
+        "weather"
+      ]
+    },
+    {
+      "id": "H02",
+      "origin": "historical",
+      "text": "现在几点",
+      "source_row": "U01787",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。",
+      "assert_not": [
+        "search_web"
+      ]
+    },
+    {
+      "id": "H03",
+      "origin": "historical",
+      "text": "现在才几点啊就跟我说晚安",
+      "source_row": "U00279",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。",
+      "note": "Rhetorical but still a clock ask. Speak time. Do not invent that it is late."
+    },
+    {
+      "id": "H04",
+      "origin": "historical",
+      "text": "今天是周几",
+      "source_row": "U00153",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "weekday"
+      },
+      "expected_spoken": "今天是星期二。"
+    },
+    {
+      "id": "H05",
+      "origin": "historical",
+      "text": "今天是几号呀",
+      "source_row": "U06830",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "date"
+      },
+      "expected_spoken": "今天是2026年11月17日，星期二。"
+    },
+    {
+      "id": "H06",
+      "origin": "historical",
+      "text": "那是几号",
+      "source_row": "U00193",
+      "expected_route": "clarify_date",
+      "expected_slots": {},
+      "expected_spoken": null,
+      "expected_clarify": "你是想问今天几号，还是刚才说的那件事的日期？",
+      "note": "Do not guess today."
+    },
+    {
+      "id": "N01",
+      "origin": "historical",
+      "text": "对然后我跟他说我说你看一下这是什么时间做的事",
+      "source": "stop-corpus",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock",
+        "search_web"
+      ]
+    },
+    {
+      "id": "N02",
+      "origin": "historical",
+      "text": "下周呢就所以那咱定个时间吧今天下午几点咱们就是",
+      "source_row": "U05620",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "N03",
+      "origin": "historical",
+      "text": "倒计时剩余30秒",
+      "source_row": "U05374",
+      "expected_route": "not_clock",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "N04",
+      "origin": "historical",
+      "text": "我离下一个宝箱还需要多久？",
+      "source_row": "U01601",
+      "expected_route": "not_clock",
+      "assert_not": [
+        "clock"
+      ],
+      "note": "Ark/duration, existing routers."
+    },
+    {
+      "id": "N05",
+      "origin": "historical",
+      "text": "导航啊统一的倒计时啊一些这个",
+      "source_row": "U04965",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "S01",
+      "origin": "synthetic",
+      "text": "几点钟了",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。"
+    },
+    {
+      "id": "S02",
+      "origin": "synthetic",
+      "text": "都几点了",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。"
+    },
+    {
+      "id": "S03",
+      "origin": "synthetic",
+      "text": "现在什么时间",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。"
+    },
+    {
+      "id": "S04",
+      "origin": "synthetic",
+      "text": "小可现在几点了呢",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。",
+      "note": "Address + particle ASR variant."
+    },
+    {
+      "id": "S05",
+      "origin": "synthetic",
+      "text": "北京时间",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京"
+      },
+      "expected_spoken": "现在是北京时间早上七点三十八分。"
+    },
+    {
+      "id": "S06",
+      "origin": "synthetic",
+      "text": "上海现在几点",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "上海"
+      },
+      "expected_spoken": "上海现在是早上七点三十八分。",
+      "note": "Same zone as Beijing."
+    },
+    {
+      "id": "S07",
+      "origin": "synthetic",
+      "text": "纽约现在几点",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "expected_spoken": "纽约现在是傍晚六点三十八分，星期一。"
+    },
+    {
+      "id": "S08",
+      "origin": "synthetic",
+      "text": "美国时间",
+      "expected_route": "clarify_timezone",
+      "expected_slots": {
+        "candidates": [
+          "America/New_York",
+          "America/Chicago",
+          "America/Denver",
+          "America/Los_Angeles"
+        ]
+      },
+      "expected_spoken": null,
+      "expected_clarify": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？",
+      "assert_not": [
+        "clock_execute"
+      ]
+    },
+    {
+      "id": "S09",
+      "origin": "synthetic",
+      "text": "美国现在几点",
+      "expected_route": "clarify_timezone",
+      "expected_clarify": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？"
+    },
+    {
+      "id": "S10",
+      "origin": "synthetic",
+      "context": [
+        "美国时间"
+      ],
+      "text": "纽约",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      }
+    },
+    {
+      "id": "S11",
+      "origin": "synthetic",
+      "context": [
+        "现在几点了"
+      ],
+      "text": "那纽约呢",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      }
+    },
+    {
+      "id": "S12",
+      "origin": "synthetic",
+      "context": [
+        "现在几点了"
+      ],
+      "text": "那美国呢",
+      "expected_route": "clarify_timezone"
+    },
+    {
+      "id": "S13",
+      "origin": "synthetic",
+      "text": "不要报时",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "S14",
+      "origin": "synthetic",
+      "text": "他说现在几点了",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "S15",
+      "origin": "synthetic",
+      "text": "定个闹钟七点叫我",
+      "expected_route": "unsupported_alarm",
+      "assert_not": [
+        "clock"
+      ],
+      "expected_spoken": "闹钟还不会帮你定，你可以让爸爸妈妈在手机上设。"
+    },
+    {
+      "id": "S16",
+      "origin": "synthetic",
+      "text": "五分钟后提醒我",
+      "expected_route": "unsupported_alarm",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "S17",
+      "origin": "synthetic",
+      "text": "一年有多少天",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock"
+      ]
+    },
+    {
+      "id": "S18",
+      "origin": "synthetic",
+      "text": "现在几点了天气怎么样",
+      "expected_route": "weather",
+      "assert_not": [
+        "clock"
+      ],
+      "note": "Weather topic wins. Do not dual-fire."
+    },
+    {
+      "id": "S19",
+      "origin": "synthetic",
+      "text": "帮我查现在几点",
+      "expected_route": "clock",
+      "expected_slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time"
+      },
+      "assert_not": [
+        "search_web"
+      ],
+      "note": "Explicit 查 still clock, not public search."
+    },
+    {
+      "id": "S20",
+      "origin": "synthetic",
+      "text": "几点",
+      "expected_route": "chat",
+      "assert_not": [
+        "clock"
+      ],
+      "note": "Too short. Do not guess."
+    }
+  ]
+}
