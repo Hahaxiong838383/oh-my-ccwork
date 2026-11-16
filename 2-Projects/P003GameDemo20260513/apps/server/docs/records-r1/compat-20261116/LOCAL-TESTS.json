@@ -1,0 +1,191 @@
+{
+  "runtime": "v24.19.0",
+  "at_ms": 1794841338359,
+  "tests": [
+    {
+      "name": "ark-records-legacy",
+      "exit_code": 0,
+      "elapsed_s": 0.81,
+      "tests": 21,
+      "pass": 21,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ark-records-legacy-http",
+      "exit_code": 0,
+      "elapsed_s": 3.58,
+      "tests": 10,
+      "pass": 10,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ark-records-legacy-config",
+      "exit_code": 0,
+      "elapsed_s": 0.6,
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ark-records-legacy-summaries",
+      "exit_code": 0,
+      "elapsed_s": 4.11,
+      "tests": 16,
+      "pass": 16,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ark-records",
+      "exit_code": 0,
+      "elapsed_s": 12.94,
+      "tests": 32,
+      "pass": 32,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "ark-records-summaries",
+      "exit_code": 0,
+      "elapsed_s": 8.52,
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "device-config",
+      "exit_code": 0,
+      "elapsed_s": 1.61,
+      "pass": 36,
+      "fail": 0
+    },
+    {
+      "name": "mini008-dashboard",
+      "exit_code": 0,
+      "elapsed_s": 2.82,
+      "tests": 16,
+      "pass": 16,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "name": "telemetry",
+      "exit_code": 0,
+      "elapsed_s": 1.01,
+      "pass": 37,
+      "fail": 0
+    },
+    {
+      "name": "parent-conversations",
+      "exit_code": 0,
+      "elapsed_s": 1.33,
+      "tests": 15,
+      "pass": 15,
+      "fail": 0,
+      "skipped": 0
+    }
+  ],
+  "pass": true,
+  "files": {
+    "src/ark/records-legacy.ts": "7808be237a177c19f75ec7c3e27aab336e14af6421550360c17392cfe3934fa0",
+    "src/ark/records-store.ts": "20735e483bd01c0263a0d268dd85a2f72a552669319fa525acb1f53d133391f9",
+    "src/ark/records-contract.ts": "c0669a969d5ff05d588c84aecbf6f2d8efb8de650be064e8c0f6bdf06c0e5685",
+    "src/ark/records-routes.ts": "0fcf908e1af21b6edfc2db1e62806c0bbad6529dbb6e4116b8bfdb8bd62c6459",
+    "src/ark/records-service.ts": "da7611571277a255404b83eae745087922e0396333de39075601644cf6b949ef",
+    "src/config-store.ts": "99cb05706e7a830ca84dee5e77483d47957d481eb76e010aa02f659085c055b7",
+    "src/routes/device-config.ts": "53f5d1976fcddccc0d88c3a54dc275c910b6ced1df66b04c794c9664e344034d"
+  },
+  "initial_run": {
+    "runtime": "v24.19.0",
+    "at_ms": 1794841049177,
+    "tests": [
+      {
+        "name": "ark-records-legacy",
+        "exit_code": 0,
+        "elapsed_s": 0.67,
+        "tests": 20,
+        "pass": 20,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "ark-records-legacy-http",
+        "exit_code": 0,
+        "elapsed_s": 2.87,
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "ark-records-legacy-config",
+        "exit_code": 0,
+        "elapsed_s": 0.55,
+        "tests": 1,
+        "pass": 1,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "ark-records-legacy-summaries",
+        "exit_code": 0,
+        "elapsed_s": 2.39,
+        "tests": 11,
+        "pass": 11,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "ark-records",
+        "exit_code": 0,
+        "elapsed_s": 18.21,
+        "tests": 32,
+        "pass": 32,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "ark-records-summaries",
+        "exit_code": 0,
+        "elapsed_s": 11.46,
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "device-config",
+        "exit_code": 1,
+        "elapsed_s": 2.01
+      },
+      {
+        "name": "mini008-dashboard",
+        "exit_code": 0,
+        "elapsed_s": 2.9,
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skipped": 0
+      },
+      {
+        "name": "telemetry",
+        "exit_code": 0,
+        "elapsed_s": 2.62
+      },
+      {
+        "name": "parent-conversations",
+        "exit_code": 0,
+        "elapsed_s": 2.75,
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      }
+    ],
+    "pass": false
+  }
+}

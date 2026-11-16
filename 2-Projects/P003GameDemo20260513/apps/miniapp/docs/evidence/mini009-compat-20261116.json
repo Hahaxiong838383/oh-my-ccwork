@@ -1,0 +1,67 @@
+{
+  "at": "2026-11-16T22:46:26.080546+08:00",
+  "scope": "mini009 legacy records display only",
+  "api_base": "https://kidshub-ai.hahaxiong.cc",
+  "changes": [
+    "baseline dedicated balances/inventory; null remains unknown; baseline deltas never displayed as gains",
+    "legacy unknown business reason displays business change; known reward reason retained",
+    "inventory state changes displayed without a second acquisition",
+    "optional legacy metadata preserves existing v1 responses"
+  ],
+  "source_sha256": {
+    "src/services/history-api.ts": "dd59ea4ef666f91ea1b97f12ecf7db99295f5b9530bd63eea3da0465c8c5dc48",
+    "src/pages/index/real-details.tsx": "58b0493fdc81e91be999a9df3e82a10f9c57c9bc9a48051b38a10326d9284ed3",
+    "tests/real-api-contract.test.ts": "d23d87407edd715b80ae34a416e1474a768c896d9c01ba3a30313cfa1874bb20",
+    "tests/real-render.test.tsx": "910101dbb6b1a517973f5b97fe0ddf95dd53cb34af7ae00f12d7e8b231451f9f"
+  },
+  "verification": {
+    "tdd_red": {
+      "tests": "real-render.test.tsx + real-api-contract.test.ts",
+      "passed": 7,
+      "failed": 3,
+      "failures": [
+        "baseline title/assets absent",
+        "mixed legacy transaction shown as unknown reason",
+        "inventory state change absent"
+      ]
+    },
+    "targeted_green": {
+      "passed": 10,
+      "failed": 0
+    },
+    "all_tests": {
+      "command": "npm test",
+      "files_passed": 14,
+      "passed": 101,
+      "failed": 0
+    },
+    "typecheck": {
+      "command": "npm run typecheck",
+      "exit_code": 0
+    },
+    "build_h5": {
+      "command": "TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:h5",
+      "exit_code": 0,
+      "folder": "dist/h5",
+      "files": 9,
+      "bytes": 1843083,
+      "manifest_sha256": "eb04be85a0671f2631171a0d5a8cf42bf84b6c87995359690b5e179a5fbd6c44",
+      "production_api_found": true
+    },
+    "build_weapp": {
+      "command": "TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:weapp",
+      "exit_code": 0,
+      "folder": "dist/weapp",
+      "files": 17,
+      "bytes": 1838126,
+      "manifest_sha256": "8316558bd56f2aa35434c5c91963fecd906d91037c8769c74aae1d11a0fdd954",
+      "production_api_found": true
+    }
+  },
+  "boundaries": {
+    "fixtures": "synthetic isolated tests; no production record upload",
+    "wechat_published": false,
+    "phone_verified": false,
+    "server_projection_end_to_end": "parent task will verify after integration"
+  }
+}

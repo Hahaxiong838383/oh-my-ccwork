@@ -18,6 +18,13 @@ describe('真实snake_case合同经微信传输层映射',()=>{
   vi.mocked(Taro.request).mockResolvedValue(response({schema_version:1,items:[{record_id:'r1',save_id:'s1',sequence:2,source_mode:'normal',reason:'resource_spend',occurred_at_ms:null,time_status:'unknown',received_at_ms:1794830000000,resource_changes:[{resource_id:'family_coin',delta:-2}],item_changes:[]}],next_cursor:null,has_more:false}));
   const p=await getBusinessPage('dev_c',{limit:20});expect(p.items[0]).toMatchObject({recordId:'r1',occurredAtMs:null,resourceChanges:[{resourceId:'family_coin',delta:-2}]});
  });
+ it('兼容基线与状态变更穿过snake_case映射，缺失资产保持未知',async()=>{
+  const core={save_id:'save',source_mode:'unknown',reason:'unknown',occurred_at_ms:null,time_status:'unknown',received_at_ms:1794830000000,format:'p003-ark-records-r1',authorization_source:'legacy_explicit_scope',origin_verified:false,resource_changes:[],item_changes:[]};
+  vi.mocked(Taro.request).mockResolvedValue(response({schema_version:1,items:[{...core,record_id:'save:1',sequence:1,record_kind:'baseline',baseline:{wallets:{family_coin:0,stardust:null,'M-CARD-001':1},items:[{item_id:'tank-part',quantity:2,state:'pending_activation',item_kind:'tank_component'}]}},{...core,record_id:'save:2',sequence:2,record_kind:'business_commit',inventory_state_changes:[{item_id:'tank-part',from_state:'pending_activation',to_state:'active',quantity:2}]}],next_cursor:null,has_more:false}));
+  const p=await getBusinessPage('dev_c',{limit:20});
+  expect(p.items[0]).toMatchObject({recordKind:'baseline',authorizationSource:'legacy_explicit_scope',originVerified:false,baseline:{wallets:{familyCoin:0,stardust:null,'M-CARD-001':1},items:[{itemId:'tank-part',quantity:2,state:'pending_activation'}]}});
+  expect(p.items[1]).toMatchObject({recordKind:'business_commit',inventoryStateChanges:[{itemId:'tank-part',fromState:'pending_activation',toState:'active',quantity:2}]});
+ });
  it('缺cursor或非法计数的200响应不能伪装为空历史',async()=>{
   vi.mocked(Taro.request).mockResolvedValue(response({schema_version:1,items:[],has_more:true,next_cursor:null,message_count:0,user_message_count:0,assistant_message_count:0}));await expect(getConversationPage('dev_c',{limit:20})).rejects.toMatchObject({status:502});
  });

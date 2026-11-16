@@ -5,6 +5,7 @@ import { validateDeviceSn } from '../device-sn.js';
 import { configStore, CONFIG_KEYS, invalidValueMessage } from '../config-store.js';
 import {TIER_CONFIG_KEYS} from '../analytics/tier-settings.js';
 import {UPLOAD_POLICY_KEY} from '../analytics/upload-policy.js';
+import {legacyUploadConfigAllowed} from '../ark/records-service.js';
 
 /**
  * 设备运行配置（联调合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + cc 回执冻结）。
@@ -75,7 +76,11 @@ deviceConfigRoute.get('/', async (c) => {
     }
   }
   configStore.expireAnalyticsDiagnosticRequests(sn);
-  return c.json(configStore.effectiveSnapshot(sn));
+  const snapshot=configStore.effectiveSnapshot(sn);
+  const records=snapshot.ark_records as {enabled:boolean;contract_id:string}|undefined;
+  // The transport switch alone never grants access to old history after rebind/revocation.
+  if(records?.enabled&&!legacyUploadConfigAllowed(sn))snapshot.ark_records={...records,enabled:false};
+  return c.json(snapshot);
 });
 
 // ─────────────────────────── admin ───────────────────────────

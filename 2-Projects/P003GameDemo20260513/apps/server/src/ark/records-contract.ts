@@ -25,7 +25,7 @@ export const RecordSchema=z.object({record_id:id,save_id:id,sequence:seq,origin_
  if(r.reason==='gm_adjustment'&&r.source_mode!=='gm')bad('gm_source_required');
  if(r.item_changes.some(x=>x.operation==='activated'&&x.acquired_record_id===r.record_id))bad('self_acquisition_reference');
 });
-export const QuerySchema=z.object({limit:z.coerce.number().int().min(1).max(50).default(20),cursor:z.string().min(1).max(2048).optional(),save_id:id.optional(),resource_id:resourceId.optional(),from_day:day.optional(),to_day:day.optional()}).strict().refine(q=>!q.from_day||!q.to_day||q.from_day<=q.to_day,'invalid_day_range');
+export const QuerySchema=z.object({limit:z.coerce.number().int().min(1).max(50).default(20),cursor:z.string().min(1).max(2048).optional(),save_id:z.string().min(1).max(96).regex(/^[A-Za-z0-9_.:-]+$/).optional(),resource_id:resourceId.optional(),from_day:day.optional(),to_day:day.optional()}).strict().refine(q=>!q.from_day||!q.to_day||q.from_day<=q.to_day,'invalid_day_range');
 
 export type BusinessRecord=z.infer<typeof RecordSchema>;
 export type RecordQuery=z.infer<typeof QuerySchema>;

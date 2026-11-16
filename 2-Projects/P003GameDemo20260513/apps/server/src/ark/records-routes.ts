@@ -4,6 +4,7 @@ import {verifyDeviceCredential} from '../device-credential.js';
 import {verifyAuthToken} from '../auth-jwt.js';
 import {readBoundedJson,ArkHttpError} from './http.js';
 import {parseBatch,QuerySchema,OriginSchema,RecordsError,limits} from './records-contract.js';
+import {LEGACY_CONTRACT,parseLegacyBatch} from './records-legacy.js';
 import type {RecordsStore,Credential} from './records-store.js';
 type Options={store:()=>RecordsStore;secret:()=>string};
 /** This router is mounted on the existing device Ark route, without changing /state. */
@@ -18,7 +19,19 @@ export function createRecordsDeviceRoutes(o:Options){
  app.post('/records:batch',async c=>{
   const credential=await authenticate(c.req.header('authorization'));
   let body:unknown;try{body=await readBoundedJson(c.req.raw,limits().max_batch_bytes);}catch(e){if(e instanceof ArkHttpError)throw new RecordsError(e.status===413?413:e.status===408?503:400,e.status===413?'batch_too_large':e.status===408?'records_dependency_unavailable':'invalid_json');throw e;}
-  const b=parseBatch(body),store=o.store();
+  const store=o.store();
+  if(body&&typeof body==='object'&&'contract_id' in body){
+   if(body.contract_id!==LEGACY_CONTRACT)throw new RecordsError(400,'unsupported_contract');
+   const b=parseLegacyBatch(body),scope=store.preflightLegacy(credential,b.save_id);
+   const accepted_record_ids:string[]=[],duplicated_record_ids:string[]=[],rejected:{record_id:string;reason:string}[]=[];
+   for(const {raw,parsed} of b.records){
+    if(!parsed.success){rejected.push({record_id:raw.record_id,reason:'invalid_record'});continue;}
+    const result=store.acceptLegacy(credential,scope,b,parsed.data);
+    if(result==='accepted')accepted_record_ids.push(raw.record_id);else if(result==='duplicate')duplicated_record_ids.push(raw.record_id);else rejected.push({record_id:raw.record_id,reason:result});
+   }
+   return c.json({ok:true,data:{schema_version:1,batch_id:b.batch_id,accepted_record_ids,duplicated_record_ids,rejected,server_received_ms:Date.now()}});
+  }
+  const b=parseBatch(body);
   // Check all well-formed origins, even for a record whose other fields are invalid.
   // Missing/ill-typed origin is a per-ID schema error; a valid foreign origin denies the whole batch.
   const origins=b.records.map(x=>x.raw).filter(r=>OriginSchema.safeParse(r).success).map(r=>({origin_grant_id:r.origin_grant_id,origin_epoch:r.origin_epoch}));
@@ -30,7 +43,7 @@ export function createRecordsDeviceRoutes(o:Options){
   }
   return c.json({ok:true,data:{schema_version:1,batch_id:b.batch_id,accepted_record_ids,duplicated_record_ids,rejected,server_received_ms:Date.now()}});
  });
- app.onError((e,c)=>{const error=e instanceof RecordsError?e:new RecordsError(503,'records_dependency_unavailable');if(error.status===429)c.header('Retry-After','60');if(error.status===403)c.header('Retry-After','900');return c.json({ok:false,error:error.message},error.status);});return app;
+ app.onError((e,c)=>{const error=e instanceof RecordsError?e:new RecordsError(503,'records_dependency_unavailable');if(error.status===429)c.header('Retry-After','60');if(error.status===403)c.header('Retry-After','900');if(error.status===503)c.header('Retry-After',error.message==='capacity_exceeded'?'900':'60');return c.json({ok:false,error:error.message},error.status);});return app;
 }
 export function createRecordsParentRoutes(o:Options){
  const app=new Hono();app.use('*',async(c,next)=>{c.header('Cache-Control','no-store');await next();});

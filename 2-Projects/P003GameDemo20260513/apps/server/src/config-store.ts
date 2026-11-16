@@ -62,6 +62,14 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     label: '每日上传时间（北京时间）', unit: 'hour', hint: '设备常驻时约五分钟检查一次，积压可能立即补传', min: 0, max: 23,
   },
   ...TIER_CONFIG_KEYS,
+  'ark_records.enabled': {
+    builtinDefault:false,validate:v=>typeof v==='boolean',label:'业务流水上传',unit:'bool',
+    hint:'仅明确设置的单机下发；服务端仍核固定历史授权范围',min:0,max:1,
+  },
+  'ark_records.contract_id': {
+    builtinDefault:'p003-ark-records-r1',validate:v=>v==='p003-ark-records-r1',label:'业务流水兼容格式',unit:'text',
+    hint:'mini009已知格式；不是现役origin协议别名',min:0,max:0,
+  },
   // 本地人格音频保底刷新（2026-09-03 川哥定）：触发式重生成之外，超过 N 天没出新套就主动重生成一次（哪怕变化很小）。
   // 只有 server 每日批读它（local-audio-generator），设备不需要 → serverOnly。
   'local_audio.refresh_days': {
@@ -345,6 +353,7 @@ export class ConfigStore {
   /** 保存值（scope=(global) 或 SN）。校验失败返回 null，成功返回新 rev。 */
   setValue(scope: string, key: string, value: unknown): number | null {
     const spec = CONFIG_KEYS[key];
+    if(scope===GLOBAL_SCOPE&&key.startsWith('ark_records.'))return null;
     if (!spec || !spec.validate(value)) return null;
     const rev = this.nextSeq();
     this.db
@@ -404,6 +413,8 @@ export class ConfigStore {
     };
     for (const [key, spec] of Object.entries(CONFIG_KEYS)) {
       if (spec.serverOnly) continue; // 设备快照只含设备合同键
+      // No implicit all-device rollout. A missing/tombstoned per-SN switch stays absent.
+      if(key.startsWith('ark_records.')&&(!snByKey.has('ark_records.enabled')||snByKey.get('ark_records.enabled')!.value_json==='null'))continue;
       let value: unknown = spec.builtinDefault;
       const g = globalByKey.get(key);
       if (g) {

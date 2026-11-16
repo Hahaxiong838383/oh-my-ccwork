@@ -11,7 +11,26 @@ const reasonLabel:Record<string,string>={reward_claim:'领取奖励',tank_unlock
 const resourceLabel:Record<string,string>={family_coin:'家族币',stardust:'星尘','M-CARD-001':'补勤卡'};
 
 export function ConversationRow({item}:{item:ConversationItem}){return <View className="live-history-entry"><Text className="row-title">{item.role==='user'?'孩子':'小可'}</Text><Text className="small-note">{time(item.ts)}</Text><Text className="live-history-content" selectable>{item.text}</Text></View>;}
-export function BusinessRow({item}:{item:BusinessItem}){return <View className="live-history-entry"><Text className="row-title">{reasonLabel[item.reason]||'业务记录'}{item.sourceMode!=='normal'?` · ${item.sourceMode==='gm'?'测试来源':'来源未知'}`:''}</Text><Text className="small-note">{item.timeStatus==='reported'?time(item.occurredAtMs):'发生时间待确认'}</Text>{item.resourceChanges.map(x=><Text className="live-history-content" key={x.resourceId}>{resourceLabel[x.resourceId]||x.resourceId}：{x.delta>0?'+':''}{x.delta}</Text>)}{item.itemChanges.map(x=><Text className="live-history-content" key={x.itemInstanceId}>{x.operation==='activated'?'激活':'获得'} · {x.itemId||x.itemInstanceId}{x.quantity!==undefined?` × ${x.quantity}`:''} · {itemState(x.state)}</Text>)}<Text className="small-note live-record-id" selectable>记录 {item.recordId}</Text></View>;}
+export function BusinessRow({item}:{item:BusinessItem}){
+ const legacy=item.format==='p003-ark-records-r1',baseline=legacy&&item.recordKind==='baseline';
+ const title=baseline?'历史基线':legacy&&item.reason==='unknown'?'业务变更':reasonLabel[item.reason]||'业务记录';
+ return <View className="live-history-entry">
+  <Text className="row-title">{title}{item.sourceMode!=='normal'?` · ${item.sourceMode==='gm'?'测试来源':'来源未知'}`:''}</Text>
+  <Text className="small-note">{item.timeStatus==='reported'?time(item.occurredAtMs):'发生时间待确认'}</Text>
+  {baseline?<>
+   <Text className="small-note">接入时已有状态，不计入新增收益或新获得。</Text>
+   {item.baseline?<>
+    {([['familyCoin','家族币'],['stardust','星尘'],['M-CARD-001','补勤卡']] as const).map(([key,label])=><Text className="live-history-content" key={key}>{label}：{item.baseline!.wallets[key]??'未知'}</Text>)}
+    {item.baseline.items.map(x=><Text className="live-history-content" key={x.itemId}>已有 · {x.itemId} × {x.quantity??'数量未知'} · {itemState(x.state)}</Text>)}
+   </>:<Text className="small-note">暂无基线资产数据</Text>}
+  </>:<>
+   {item.resourceChanges.map(x=><Text className="live-history-content" key={x.resourceId}>{resourceLabel[x.resourceId]||x.resourceId}：{x.delta>0?'+':''}{x.delta}</Text>)}
+   {item.itemChanges.map(x=><Text className="live-history-content" key={x.itemInstanceId}>{x.operation==='activated'?'激活':x.operation==='acquired'?'获得':'状态变化'} · {x.itemId||x.itemInstanceId}{x.quantity!==undefined?` × ${x.quantity}`:''} · {itemState(x.state)}</Text>)}
+   {item.inventoryStateChanges?.map(x=><Text className="live-history-content" key={`state:${x.itemId}`}>状态变化 · {x.itemId} · {itemState(x.fromState)} → {itemState(x.toState)}</Text>)}
+  </>}
+  <Text className="small-note live-record-id" selectable>记录 {item.recordId}</Text>
+ </View>;
+}
 
 function HistoryViewer({publicId,kind,onAccessLost}:{publicId:string;kind:'conversations'|'records';onAccessLost:(status:number)=>void}){
  const [controller]=useState(()=>new HistoryController<ConversationItem|BusinessItem>((q:HistoryQuery):Promise<HistoryPage<ConversationItem|BusinessItem>>=>kind==='conversations'?getConversationPage(publicId,q):getBusinessPage(publicId,q),onAccessLost));
