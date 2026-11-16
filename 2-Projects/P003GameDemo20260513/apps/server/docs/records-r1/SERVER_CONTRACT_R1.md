@@ -105,6 +105,8 @@ coverage四个时间字段表示当前授权可见且符合过滤/高水位的**
 
 ParentRecord为原Record去掉origin_grant_id/origin_epoch，加`received_at_ms`、`time_status:"reported|unknown|clock_suspect"`；保留source_mode，gm/unknown可显示为明确异常/测试来源，不能混入normal总计。item_changes仅是发生当时事实；R1列表不声称完整当前物品库存。
 
+家长分页另返回只读 `item_references` 数组，每个 activated 对应 `{item_instance_id,acquired_record_id,status:"pending|resolved"}`。该字段不得出现在设备上传体中，否则单条返回 `invalid_record`。resolved 要求获得记录与激活记录处于同一 save、原 owner / device account / epoch / grant，获得 sequence 小于激活 sequence，且获得记录在当前分页高水位内。pending 仅表示引用尚未对齐，既不代表库存，也不等于物品状态 pending_activation。引用解析不修改原 item_changes、不新增获得数或收入。
+
 排序固定为可归日的occurred_at_ms DESC（未知/异常排后）、save_id ASC、sequence DESC、record_id ASC；同save的业务前后以sequence为准，不以到达时间改业务顺序。第一页固定服务端ingest高水位，cursor绑定public_id、原owner/epoch/grant、过滤条件和高水位及最后排序键，后页只读≤高水位；新补传不插入既有翻页集合，刷新第一页才纳入。游标不可篡改（现服务认证密钥签名或等价服务端游标），不创建新密钥体系。伪造/改变过滤条件400 invalid_cursor；归属变化先404，不泄露cursor内旧owner。过期cursor 410 cursor_expired，刷新第一页（候选TTL30分钟，非现役能力）。每页重查身份，未登录401，非本家长/禁用/无有效授权一律404。
 
 ## 7. dashboard新增与诚实覆盖
@@ -143,12 +145,13 @@ latest_items.items结构为`{item_instance_id,item_id,item_kind,quantity,state,a
 |上传频率|每SN 6批/分钟、120批/小时，至少30秒合批；context 6次/分钟|全局records另限12批/分钟、240批/小时；均独立于Telemetry/Ark配额，429 Retry-After60；10,000积压至少200批约100分钟且受小时窗限制，不能承诺瞬间清空|
 |本地待确认＋隔离记录|10,000条或64MiB先到者告警（两层副本分别计量）|90%高水位加速有节制补传/告警；容量满停止成功接纳新outbox交接，Runtime保留原业务记录，不能删除最旧/合并latest-only|
 |磁盘无法可靠提交|新资源业务事务失败并回滚，已有存档/记录不动|不能先改余额再丢流水；仅影响该业务提交，IO在后台，不卡住语音/设置/OTA；失败提示沿现有事务失败通道|
-|云端单SN|100,000条或256MiB规范化记录payload先到者拒新记录|已知duplicate仍可ACK；capacity_exceeded可重试，不自动驱逐老记录。索引/SQLite额外开销另监控；上限需实际压测|
+|云端每SN及全局|默认分别10,000条或32MiB规范化记录payload，任一上限先到者拒新记录|单C内测预算，不是50台预算；已知duplicate仍可ACK；capacity_exceeded可重试，不自动驱逐老记录。索引/SQLite额外开销另监控|
+|云端共享盘余量|默认至少8GiB，并预留本条写入余量|与条数/payload预算共同限制准入；不把共享盘全部容量承诺给本功能|
 |云端保留|R1单C内测不自动TTL删除记录/去重键|达到容量先拒新并告警，不能无限增长；后续保留策略另审，删除须保幂等证据且另获授权|
 |客户端已ACK副本|可清理已ACK的传输副本，Runtime正常业务历史遵循原存档规则|未ACK/隔离/dead-letter无自动TTL，保留原ID与原因|
 |时钟未来阈值|received_at+5分钟以上clock_suspect|仅异常检测建议，不改原occurred_at；统计排除；无24小时回溯限制|
 
-这些数值需要端侧峰值/磁盘及服务器容量验收后才能称已实现。context响应limits必须返回最终生效上限；不支持自动调大以绕过合同。首轮范围仍只C机；不启用PRnas T3、不换存储系统、不部署新服务。
+上述服务端默认值已在固定候选 fe76919c 的隔离测试中核实，尚非生产/真实设备容量验收。context.limits 返回实际生效值；频率、条数、payload、磁盘余量、游标TTL及未来时钟阈值可由服务端配置，非法配置返回503 records_configuration_invalid。协议硬上限50条/256KiB/32KiB保持不变。客户端不得自行调大或按旧文档的10万条/256MiB假定容量。端侧本地队列预算与云端预算分别计量。首轮范围仍只C机；不启用PRnas T3、不换存储系统、不部署新服务。
 
 ## 9. 仅两项产品待定
 

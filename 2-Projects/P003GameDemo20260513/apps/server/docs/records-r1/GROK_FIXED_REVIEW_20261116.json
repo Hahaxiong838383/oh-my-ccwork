@@ -1,0 +1,108 @@
+{
+  "reviewer": "grok",
+  "reviewed_at": "2026-11-16",
+  "candidate": "fe76919cda3a7df4491796844bbb344b0f09bd46",
+  "branch": "codex/p003-mini008-realdata-20261111",
+  "parents": {
+    "fe76919c": "0af91808c3d909ecebb18d72033ef1a98275cafe",
+    "0af91808": "9d8dd399b22f5a66f54ef268c05217972fec59e6",
+    "9d8dd399": "49ae826efd4a58d1d457dde6a7ff03f6b20e9037",
+    "49ae826e": "959f1d4be8fcaf57bff2cb1e50f05fde0b267175",
+    "959f1d4b": "89bca270912a8c53e2cb1ae22d04696abcc9663d"
+  },
+  "worktree_clean": true,
+  "deployed": false,
+  "production_contacted": false,
+  "device_contacted": false,
+  "messages_sent": false,
+  "commit_or_push": false,
+  "verdict": "PASS_LOCAL",
+  "release_allowed": false,
+  "prose_contract_frozen": false,
+  "client_accepted": false,
+  "code_change_required": false,
+  "sn": "BJP00326081002000031",
+  "release_files": 6,
+  "release_manifest_after_hashes_match": true,
+  "required_unchanged_dependencies_match": true,
+  "local_production_source_before_hashes_match": true,
+  "diff_assessment": {
+    "item_references": {
+      "necessary": true,
+      "compatible_with_device_proposal": true,
+      "upload_accepted": false,
+      "parent_read_only": true,
+      "pending_is_inventory": false
+    },
+    "dynamic_limits": {
+      "necessary": true,
+      "compatible_with_device_proposal": true,
+      "effective_per_sn_records": 10000,
+      "effective_per_sn_payload_bytes": 33554432,
+      "effective_global_records": 10000,
+      "effective_min_free_disk_bytes": 8589934592,
+      "prose_section_8_says": "100000 records or 256MiB",
+      "prose_must_be_updated_before_freeze": true,
+      "do_not_raise_code_to_prose": true
+    }
+  },
+  "freeze_doc_fixes": [
+    "SERVER_CONTRACT_R1.md section 8 cloud cap must state 10000 records and 32MiB per SN and global, plus 8GiB free-disk floor; context.limits remains authoritative.",
+    "SERVER_CONTRACT_R1.md section 6 ParentRecord must add item_references pending|resolved and distinguish it from pending_activation and from current inventory."
+  ],
+  "optional_before_single_c_enable": [
+    "Separate recordsDashboard failures from data.ark and data.usage once ARK_RECORDS_SN_ALLOW includes the C SN."
+  ],
+  "tests": {
+    "node": "/Users/fu-121/.local/node-v24/bin/node",
+    "node_version": "v24.19.0",
+    "new_dependencies_installed": false,
+    "ark_records_http": {
+      "pass": 31,
+      "fail": 0,
+      "duration_ms": 16595.310958,
+      "concurrency": 1,
+      "log": "ark-records-test.log"
+    },
+    "schema": {
+      "pass": 59,
+      "fail": 0,
+      "log": "schema-validate.log",
+      "repo_examples_rewritten": false
+    },
+    "probe": {
+      "exit": 0,
+      "log": "probe-gaps.log",
+      "checks": [
+        "default_limits",
+        "no_wallet_side_effect",
+        "invalid_limit_fail_closed",
+        "slow_body_timeout_503"
+      ]
+    },
+    "fanout_sample": {
+      "records": 1000,
+      "items_per_record": 32,
+      "elapsed_ms": 106.670625,
+      "heap_before": 113310808,
+      "heap_after": 113567408
+    },
+    "not_rerun": [
+      "archive_127",
+      "telemetry_internal_37_as_a_suite",
+      "ark_currency_http_3",
+      "listening_content_tsc",
+      "usage_p50"
+    ]
+  },
+  "known_boundaries_kept": [
+    "legacy telemetry usage remains visible across rebinding by SN",
+    "three pre-existing ark-currency voice route failures",
+    "listening-content.ts GeminiLlmClient.abort type error",
+    "usage p50 about 141ms was not remeasured",
+    "android outbox, device, phone page, and real parent A/B remain unverified",
+    "two product summaries remain policy_pending"
+  ],
+  "parallel_client_ok": true,
+  "report_sha256": "98f9ae8206820e9a7782b6870b8dc11d967edb720038f8ec071d4aa3f64617dc"
+}
