@@ -8,7 +8,7 @@ import type {ArkIdentity} from './identity.js';
 export type ArkGrant=ArkIdentity&{grant_id:string;not_before_ms:number};
 export class ArkStore{
  readonly db:DatabaseSync;
- constructor(path:string){mkdirSync(dirname(path),{recursive:true,mode:0o700});this.db=new DatabaseSync(path);chmodSync(path,0o600);this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15;
+ constructor(path:string,private admission?:{run:<T>(fn:()=>T)=>T;limit:()=>number}){mkdirSync(dirname(path),{recursive:true,mode:0o700});this.db=new DatabaseSync(path);chmodSync(path,0o600);this.db.exec(`PRAGMA journal_mode=WAL; PRAGMA busy_timeout=15;
  CREATE TABLE IF NOT EXISTS ark_settings(id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL);
  INSERT OR IGNORE INTO ark_settings(id,enabled) VALUES(1,0);
  CREATE TABLE IF NOT EXISTS ark_grant(sn TEXT PRIMARY KEY,account_id TEXT NOT NULL,epoch INTEGER NOT NULL,grant_id TEXT NOT NULL,not_before_ms INTEGER NOT NULL);
@@ -17,9 +17,11 @@ export class ArkStore{
  close(){this.db.close();}
  settings(){const row=this.db.prepare('SELECT enabled,revision FROM ark_settings WHERE id=1').get() as {enabled:number;revision:number};return {enabled:!!row.enabled,revision:row.revision,subjects:(this.db.prepare('SELECT sn FROM ark_grant ORDER BY sn').all() as {sn:string}[]).map(x=>x.sn)};}
  configure(enabled:boolean,identities:ArkIdentity[],now:number,expectedRevision?:number){
-  if(identities.length>32||new Set(identities.map(i=>i.sn)).size!==identities.length)throw new Error('invalid_scope');
-  this.db.exec('BEGIN IMMEDIATE');try{
+  if(identities.length>1000||new Set(identities.map(i=>i.sn)).size!==identities.length)throw new Error('invalid_scope');
+  return this.mutate(()=>{this.db.exec('BEGIN IMMEDIATE');try{
    if(expectedRevision!==undefined&&this.settings().revision!==expectedRevision)throw new Error('settings_conflict');
+   const previous=this.settings();
+   if(enabled&&(!previous.enabled||identities.some(i=>!previous.subjects.includes(i.sn)))&&identities.length>(this.admission?.limit()??1000))throw new Error('STORAGE_CAPACITY_LIMIT');
    const keep=new Map((enabled?identities:[]).map(i=>[i.sn,i]));
    for(const old of this.db.prepare('SELECT * FROM ark_grant').all() as ArkGrant[]){
     const next=keep.get(old.sn);
@@ -27,19 +29,21 @@ export class ArkStore{
    }
    if(enabled)for(const i of identities)this.db.prepare('INSERT OR IGNORE INTO ark_grant VALUES(?,?,?,?,?)').run(i.sn,i.account_id,i.epoch,randomUUID(),now);
    this.db.prepare('UPDATE ark_settings SET enabled=?,revision=revision+1 WHERE id=1').run(enabled?1:0);this.db.exec('COMMIT');
-  }catch(e){this.db.exec('ROLLBACK');throw e;}
+  }catch(e){this.db.exec('ROLLBACK');throw e;}});
  }
+ private mutate<T>(fn:()=>T):T{return this.admission?this.admission.run(fn):fn();}
  /** Atomic one-device grant: never reauthorizes another stale identity from an admin's old list. */
- authorize(i:ArkIdentity,now:number){
-  this.db.exec('BEGIN IMMEDIATE');try{
+ authorize(i:ArkIdentity,now:number,expectedRevision?:number){
+  return this.mutate(()=>{this.db.exec('BEGIN IMMEDIATE');try{
+   if(expectedRevision!==undefined&&this.settings().revision!==expectedRevision)throw new Error('settings_conflict');
    const old=this.db.prepare('SELECT * FROM ark_grant WHERE sn=?').get(i.sn) as ArkGrant|undefined;
-   if(!old&&this.settings().subjects.length>=32)throw new Error('invalid_scope');
+   if(!old&&this.settings().subjects.length>=(this.admission?.limit()??1000))throw new Error('STORAGE_CAPACITY_LIMIT');
    if(!old||old.account_id!==i.account_id||old.epoch!==i.epoch){
     this.db.prepare('DELETE FROM ark_current WHERE sn=?').run(i.sn);
     this.db.prepare('INSERT INTO ark_grant VALUES(?,?,?,?,?) ON CONFLICT(sn) DO UPDATE SET account_id=excluded.account_id,epoch=excluded.epoch,grant_id=excluded.grant_id,not_before_ms=excluded.not_before_ms').run(i.sn,i.account_id,i.epoch,randomUUID(),now);
    }
    this.db.exec('UPDATE ark_settings SET enabled=1,revision=revision+1 WHERE id=1;COMMIT');
-  }catch(e){this.db.exec('ROLLBACK');throw e;}
+  }catch(e){this.db.exec('ROLLBACK');throw e;}});
  }
  grant(i:ArkIdentity):ArkGrant|null{
   if(!this.settings().enabled)return null;

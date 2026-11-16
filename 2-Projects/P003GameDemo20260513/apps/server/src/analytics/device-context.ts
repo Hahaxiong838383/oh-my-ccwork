@@ -1,3 +1,4 @@
+import {STORAGE_POLICY_KEY,VERIFIED_PROFILE_KEY,readStoragePolicy,readVerifiedProfile} from '../storage/policy.js';
 import {readArkIdentity} from '../ark/identity.js';
 import { createHmac } from 'node:crypto';
 import { dirname,join,isAbsolute } from 'node:path';
@@ -46,6 +47,10 @@ export class AnalyticsDeviceReader {
       return {binding,revokedThroughSec:row.not_before_sec};
     });
   }
+  storageControls(){return this.read(this.options.configPath,db=>{
+    const get=(key:string)=>(db.prepare('SELECT value FROM runtime_flag WHERE key=?').get(key) as {value:string}|undefined)?.value;
+    db.exec('BEGIN');try{const value={policy:readStoragePolicy(get(STORAGE_POLICY_KEY)),profile:readVerifiedProfile(get(VERIFIED_PROFILE_KEY))};db.exec('COMMIT');return value;}catch(e){db.exec('ROLLBACK');throw e;}
+  });}
   uploadPolicy(){return this.read(this.options.configPath,db=>{
     const row=db.prepare('SELECT value FROM runtime_flag WHERE key=?').get(UPLOAD_POLICY_KEY) as {value:string}|undefined;
     return row?parseUploadPolicy(row.value):null;

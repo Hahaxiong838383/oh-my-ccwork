@@ -1,0 +1,128 @@
+{
+  "at_ms": 1794792337703,
+  "scopes": {
+    "main": {
+      "ARK_CONTEXT_SN_ALLOW": {
+        "count": 17,
+        "sha256": "c1d947fc57540a35de2fd212b6e9b5f9e02b7cf8d922823061f2a9a9d45a04a7"
+      },
+      "ARK_FACTS_PROXY_SN_ALLOW": {
+        "count": 3,
+        "sha256": "58896b300b09200b2a11a0c33f0b7db1b034087dfbc1cc22174598c0b7098f29"
+      }
+    },
+    "search": {},
+    "listening": {}
+  },
+  "config_unchanged": true,
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2075857,
+      "status": "online",
+      "restarts": 3
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  ],
+  "legacy_grants_within_env_seed": true,
+  "main_port_source": "deployed env/PM2",
+  "main_port": "3001",
+  "health_http_probe": [
+    {
+      "status": 200,
+      "ms": 24.342
+    },
+    {
+      "status": 200,
+      "ms": 1.129
+    },
+    {
+      "status": 200,
+      "ms": 0.45
+    },
+    {
+      "status": 200,
+      "ms": 0.467
+    },
+    {
+      "status": 200,
+      "ms": 0.424
+    },
+    {
+      "status": 200,
+      "ms": 0.403
+    },
+    {
+      "status": 200,
+      "ms": 0.395
+    },
+    {
+      "status": 200,
+      "ms": 0.448
+    },
+    {
+      "status": 200,
+      "ms": 0.393
+    },
+    {
+      "status": 200,
+      "ms": 0.425
+    },
+    {
+      "status": 200,
+      "ms": 0.5
+    },
+    {
+      "status": 200,
+      "ms": 0.524
+    },
+    {
+      "status": 200,
+      "ms": 0.418
+    },
+    {
+      "status": 200,
+      "ms": 0.414
+    },
+    {
+      "status": 200,
+      "ms": 0.402
+    },
+    {
+      "status": 200,
+      "ms": 0.436
+    },
+    {
+      "status": 200,
+      "ms": 0.395
+    },
+    {
+      "status": 200,
+      "ms": 0.386
+    },
+    {
+      "status": 200,
+      "ms": 0.453
+    },
+    {
+      "status": 200,
+      "ms": 0.56
+    }
+  ],
+  "mount": {
+    "filesystems": [
+      {
+        "target": "/",
+        "source": "/dev/vda3",
+        "fstype": "ext4",
+        "options": "rw,relatime"
+      }
+    ]
+  },
+  "io_pressure": "some avg10=0.00 avg60=0.00 avg300=0.00 total=9378737055\nfull avg10=0.00 avg60=0.00 avg300=0.00 total=8203885834\n"
+}

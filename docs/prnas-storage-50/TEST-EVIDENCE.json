@@ -1,0 +1,82 @@
+{
+  "baseline-control-adopted.log": {
+    "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
+    "bytes": 386,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/baseline-control-adopted.log"
+  },
+  "baseline-tsc.log": {
+    "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "bytes": 1267,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/baseline-tsc.log"
+  },
+  "storage-red.log": {
+    "sha256": "2ef5af5a6562c435a36cef47c7d4e9a04a413492839422e7a226dfc09aa8b407",
+    "bytes": 1923,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-red.log"
+  },
+  "storage-green.log": {
+    "sha256": "5058dd27f5f3bd1b6b334259c5983f4b596c8b66832c42bde79c7dec6ef23de8",
+    "bytes": 115,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-green.log"
+  },
+  "storage-http.log": {
+    "sha256": "7cf8e8a1c87ff96ae1dec01dcc92a86a880bee8662ba8484300846a1eace4140",
+    "bytes": 147,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-http.log"
+  },
+  "storage-race.log": {
+    "sha256": "0c2aa95c7855a5e53804ed7d4ea157641fd0438f22d5d2a686745ead45a585ee",
+    "bytes": 98,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-race.log"
+  },
+  "storage-suite.log": {
+    "sha256": "84b0b949557d3869383fd73939e06d880608e6575e28a29c695b294d13b6fda7",
+    "bytes": 437,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/storage-suite.log"
+  },
+  "control-suite.log": {
+    "sha256": "8d2cad846302c05048b7836396d6561521b1614249d11f82c86733761af8eaf2",
+    "bytes": 386,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/control-suite.log"
+  },
+  "device-config.log": {
+    "sha256": "3c8358a7d358a1da58d2e95d5634f1c0e6e746ec9d7827bb749299ac29d2eb76",
+    "bytes": 831,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/device-config.log"
+  },
+  "test-analytics.log": {
+    "sha256": "66c570c3cfb1a06218ce6c25fd116cd70f4925352a2c4d3139ddf741041afaa6",
+    "bytes": 1949,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics.log"
+  },
+  "test-analytics-capacity.log": {
+    "sha256": "96b623382c82a4567f3291b8741cd8242a3bf6ce2cc85670ea9df08f4ba5bbe5",
+    "bytes": 1086,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics-capacity.log"
+  },
+  "test-analytics-v375.log": {
+    "sha256": "f5bdd9cbd8b187a8607909dc024cda3cc63065595248c44af96cb40d89191ab2",
+    "bytes": 1302,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/test-analytics-v375.log"
+  },
+  "ark-suite-fixed.log": {
+    "sha256": "669d163a059dffdcfc231b7ab279d8213ccb12c0a349144ea0906f6bc832998d",
+    "bytes": 10882,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ark-suite-fixed.log"
+  },
+  "ui-negative-baseline.log": {
+    "sha256": "29276b62a4288590dce97595d260202e53c64e0b6979a422111c65137814f10e",
+    "bytes": 383,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ui-negative-baseline.log"
+  },
+  "ui-final.log": {
+    "sha256": "d63debc2c2e9099bec79257b5445a0b58621f5e046af8ddb0cbed024abb03dbf",
+    "bytes": 124,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/ui-final.log"
+  },
+  "t1-tsc.log": {
+    "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+    "bytes": 1267,
+    "private_path": "/Users/fu-121/.local/state/p003-prnas-t01-20261116/t1-tsc.log"
+  }
+}

@@ -1,6 +1,6 @@
 import {arkRoute} from './routes/ark.js';
 import {arkFactsRoute} from './ark/proxy.js';
-import {arkService} from './ark/service.js';
+import {arkAuthorizedSubjects,arkService} from './ark/service.js';
 import { serve } from '@hono/node-server';
 import {getConnInfo} from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -48,7 +48,7 @@ const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.use('/internal/ark-facts',async(c,next)=>{if(!['127.0.0.1','::ffff:127.0.0.1','::1'].includes(getConnInfo(c).remote.address??''))return c.json({ok:false},404);await next();});
-app.route('/internal/ark-facts',arkFactsRoute({secret:()=>process.env.ARK_FACTS_PROXY_SECRET??'',allowed:()=> (process.env.ARK_FACTS_PROXY_SN_ALLOW??'').split(',').filter(Boolean),facts:sn=>arkService().preview(sn)}));
+app.route('/internal/ark-facts',arkFactsRoute({secret:()=>process.env.ARK_FACTS_PROXY_SECRET??'',allowed:arkAuthorizedSubjects,facts:sn=>arkService().preview(sn)}));
 app.route('/api/auth', authRoute);
 app.route('/api/auth', inviteAuthRoute);
 app.route('/api/auth', smsAuthRoute);

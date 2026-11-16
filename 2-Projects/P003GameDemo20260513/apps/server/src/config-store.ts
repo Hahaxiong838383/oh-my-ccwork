@@ -1,3 +1,4 @@
+import {STORAGE_POLICY_KEY,VERIFIED_PROFILE_KEY,readStoragePolicy,readVerifiedProfile,parseStorageChange} from './storage/policy.js';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
@@ -143,7 +144,7 @@ export class ConfigStore {
   constructor(dbPath = resolveDbPath()) {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
-    this.db.exec('PRAGMA journal_mode = WAL;');
+    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout=250;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS device_config (
         scope TEXT NOT NULL,
@@ -229,14 +230,37 @@ export class ConfigStore {
     return flag?parseUploadPolicy(flag.value):null;
   }
 
+  storagePolicy(){return readStoragePolicy(this.getFlag(STORAGE_POLICY_KEY)?.value);}
+  storageProfile(){return readVerifiedProfile(this.getFlag(VERIFIED_PROFILE_KEY)?.value);}
+  /** Common lock order is config -> Ark. No awaited work while holding this admission lock. */
+  withStorageAdmission<T>(fn:()=>T):T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try{const value=fn();this.db.exec('COMMIT');return value;}catch(e){this.db.exec('ROLLBACK');throw e;}
+  }
+  saveStoragePolicy(input:unknown,counts:()=>{analytics:number;ark:number},by:string){
+    const p=parseStorageChange(input);
+    return this.withStorageAdmission(()=>{
+      const old=this.storagePolicy();if(old.revision!==p.expected_revision)throw new Error('STORAGE_POLICY_CONFLICT');
+      const n=counts();if(p.target_devices<Math.max(n.analytics,n.ark))throw new Error('STORAGE_ENABLED_CONFLICT');
+      const next={...old,revision:old.revision+1,target_devices:p.target_devices};
+      this.setFlag(STORAGE_POLICY_KEY,JSON.stringify(next),by,'Storage planning quota; no device switch changes');return next;
+    });
+  }
+
   /** One transaction owns enrollment, device snapshots and their monotonically increasing revisions. */
-  saveAnalyticsPolicy(input:ReturnType<typeof parseUploadChange>,activeSubjects:readonly string[],by:string):UploadPolicy {
+  saveAnalyticsPolicy(input:ReturnType<typeof parseUploadChange>,activeSubjects:readonly string[],by:string,admission?:{revision:number;limit:number;checked_at_ms:number}):UploadPolicy {
     const p=parseUploadChange(input),active=new Set(activeSubjects);
     if(p.subjects.some(s=>!active.has(s)))throw new Error('DEVICE_NOT_ACTIVE');
     this.db.exec('BEGIN IMMEDIATE');
     try {
       const old=this.analyticsPolicy();
       if((old?.revision??0)!==p.expected_revision)throw new Error('POLICY_CONFLICT');
+      if(p.enabled&&(!old?.enabled||p.subjects.some(sn=>!old.subjects.includes(sn)))){
+        const quota=this.storagePolicy();
+        if(admission&&(admission.revision!==quota.revision||admission.checked_at_ms<Date.now()-120_000))throw new Error('STORAGE_POLICY_CONFLICT');
+        const limit=Math.min(quota.target_devices,this.storageProfile().analytics_devices,admission?.limit??1000);
+        if(p.subjects.length>limit)throw new Error('CAPACITY_LIMIT');
+      }
       // A single writer entry also prevents inherited defaults enabling future registrations.
       const scope=new Set([...activeSubjects,...(old?.subjects??[])]);
       this.setGlobal('analytics.event_upload_enabled',false);

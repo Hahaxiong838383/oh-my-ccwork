@@ -26,10 +26,10 @@ export function arkFactsRoute(o:{secret:()=>string;allowed:()=>string[];facts:(s
 }
 export class ArkFactsProxy{
  private pending=0;
- constructor(private o:{url:string;secret:string;allowed:()=>string[];fetchImpl?:typeof fetch}){}
+ constructor(private o:{url:string;secret:string;allowed?:()=>string[];fetchImpl?:typeof fetch}){}
  async context(sn:string):Promise<ArkReadResult>{
   let url:URL;try{url=new URL(this.o.url);}catch{return {prompt:''};}
-  if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.username||url.password||this.o.secret.length<32||!this.o.allowed().includes(sn)||this.pending>=8)return {prompt:''};
+  if(url.protocol!=='http:'||url.hostname!=='127.0.0.1'||url.username||url.password||this.o.secret.length<32||(!/^BJP003\d{14}$/.test(sn)||(this.o.allowed&&!this.o.allowed().includes(sn)))||this.pending>=8)return {prompt:''};
   const started=performance.now(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),150);this.pending++;
   try{
    const result=await Promise.race([(async()=>{
@@ -40,7 +40,7 @@ export class ArkFactsProxy{
     if(v.facts_v1!==undefined){const f=wireFactsSchema.safeParse(v.facts_v1);if(!f.success||f.data.subject!==sn)return {prompt:''};return {prompt:v.prompt,facts_v1:f.data};}
     return {prompt:v.prompt};
    })(),new Promise<ArkReadResult>(resolve=>controller.signal.addEventListener('abort',()=>resolve({prompt:''}),{once:true}))]);
-   return performance.now()-started<=150&&this.o.allowed().includes(sn)?result:{prompt:''};
+   return performance.now()-started<=150&&(!this.o.allowed||this.o.allowed().includes(sn))?result:{prompt:''};
   }catch{return {prompt:''};}finally{clearTimeout(timer);controller.abort();this.pending--;}
  }
 }

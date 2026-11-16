@@ -26,7 +26,7 @@ export const historySchema=z.object({ok:z.literal(true),status:z.enum(['availabl
 export type ArkHistory=z.infer<typeof historySchema>;
 export const unknownHistory=(reason:ArkHistory['reason']='no_trusted_events'):ArkHistory=>({ok:true,status:'unknown',reason,wallets:{family_coin:null,stardust:null},inventory:{'M-CARD-001':null}});
 export const historyRequestSchema=z.object({subject:SN,account_id:z.string().min(1).max(128),epoch:z.number().int().min(1),not_before_ms:timestamp}).strict();
-export const settingsSchema=z.object({enabled:z.boolean(),subjects:z.array(SN).max(32).refine(a=>new Set(a).size===a.length),expected_revision:z.number().int().nonnegative()}).strict();
+export const settingsSchema=z.object({enabled:z.boolean(),subjects:z.array(SN).max(1000).refine(a=>new Set(a).size===a.length),expected_revision:z.number().int().nonnegative()}).strict();
 export const cstDay=(ms:number)=>new Date(ms+8*3600000).toISOString().slice(0,10);
 
 /** Authority-resolved facts only. This is not a raw client snapshot transport. */

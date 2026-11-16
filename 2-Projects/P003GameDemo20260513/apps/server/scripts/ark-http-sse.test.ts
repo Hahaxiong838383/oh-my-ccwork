@@ -15,6 +15,8 @@ const {deviceRegistryStore:devices}=await import('../src/device-registry-store.j
 const {accountStore}=await import('../src/account-store.js');
 const {profileStore}=await import('../src/profile-store.js');
 const {arkService,arkStore}=await import('../src/ark/service.js');
+const {configStore}=await import('../src/config-store.js');
+configStore.setFlag('storage.verified-profile.v1',JSON.stringify({version:1,analytics_devices:14,ark_devices:2,evidence:'SYNTHETIC-HTTP-FIXTURE',candidate:'test',validated_at_ms:Date.now()}),'test');
 const {arkRoute}=await import('../src/routes/ark.js');
 const {customLlmRoute}=await import('../src/routes/custom-llm.js');
 const {authRoute}=await import('../src/routes/auth.js');
@@ -46,13 +48,13 @@ const headers={Authorization:'Bearer '+await jwt(),'Content-Type':'application/j
 const request=(path:string,body:unknown,extra:Record<string,string>={})=>fetch(origin+path,{method:'POST',headers:{...headers,...extra},body:typeof body==='string'?body:JSON.stringify(body)});
 const sample=()=>{const now=Date.now();return {schema_version:1,snapshot_id:'http-fixture',captured_at_ms:now,boot_id:'boot-http',boot_started_at_ms:now-60000,sequence:1,logical_day:new Date(now+8*3600000).toISOString().slice(0,10),config_revision:'fixture-rules',content_version:'fixture-content',source_mode:'normal',wallets:{family_coin:0,stardust:null},inventory:{'M-CARD-001':null},progress:{timer_state:'running',next_reward:{status:'locked',kind:'currency',item_id:'C-FAMILY-001',stage_id:'stage-fixture',remaining_seconds:121},claimable_count:0}};};
 let admin='';
-test('real HTTP: default closed, admin authorization and fixed scope ceiling',async()=>{
+test('real HTTP: default closed, admin authorization and active identity scope',async()=>{
  assert.equal((await request('/ark/state',sample())).status,403);assert.equal((await fetch(origin+'/ark/admin/settings',{headers})).status,403);
  process.env.STUDIO_USER='test-admin';process.env.STUDIO_PASS='local-test';admin=(await (await request('/auth/login',{username:'test-admin',password:'local-test'})).json()).token;assert.ok(admin);
  process.env.STUDIO_EDITOR_USERS='fixture-editor';process.env.STUDIO_EDITOR_PASS='local-test';
  for(const username of ['fixture-editor','guest']){const token=(await (await request('/auth/login',{username,password:username==='guest'?'123456':'local-test'})).json()).token;assert.ok(token);for(const method of ['GET','PUT'])assert.equal((await fetch(origin+'/ark/admin/settings',{method,headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},...(method==='PUT'?{body:JSON.stringify({enabled:true,subjects:[SN]})}:{})})).status,403);}
  assert.equal((await (await fetch(origin+'/ark/admin/settings',{headers:{Authorization:'Bearer '+admin}})).json()).enabled,false);
- for(const [subjects,status]of [[[SN2],400],[[SN],200]]as const)assert.equal((await fetch(origin+'/ark/admin/settings',{method:'PUT',headers:{Authorization:'Bearer '+admin,'Content-Type':'application/json'},body:JSON.stringify({enabled:true,subjects,expected_revision:0})})).status,status);
+ for(const [subjects,status]of [[['BJP00399999999999903'],400],[[SN],200]]as const)assert.equal((await fetch(origin+'/ark/admin/settings',{method:'PUT',headers:{Authorization:'Bearer '+admin,'Content-Type':'application/json'},body:JSON.stringify({enabled:true,subjects,expected_revision:0})})).status,status);
 });
 test('real HTTP: Bearer isolation, byte limit, schema, duplicate timestamp, conflict, stale and rate limit',async()=>{
  assert.equal((await request('/ark/state',sample(),{Authorization:'Bearer invalid'})).status,401);assert.equal((await request('/ark/state',sample(),{Authorization:'Bearer '+await jwt(SN2)})).status,403);

@@ -1446,6 +1446,19 @@
                     </template>
                   </template>
                   <template v-if="analytics.tab==='config'">
+                    <div class="kh-card an-card" style="margin-bottom:16px">
+                      <div class="an-section-head"><h2>存储与设备配额</h2><span class="an-muted">保存配额不会开启设备</span></div>
+                      <div v-if="anStorage.error" class="an-status an-error" role="alert">{{ anStorage.error }}</div>
+                      <div v-if="anStorage.notice" class="an-status" role="status">{{ anStorage.notice }}</div>
+                      <template v-if="anStorage.data">
+                        <div class="an-filters" style="margin-top:14px"><label for="storage-target">规划设备上限</label><input id="storage-target" class="an-input" type="number" min="1" max="1000" step="1" v-model.number="anStorage.target" :disabled="anStorage.loading || anStorage.saving"><el-button type="primary" :loading="anStorage.saving" :disabled="anStorage.loading || anStorage.saving || anStorage.target===anStorage.data.policy.target_devices" @click="saveAnalyticsStorage">保存规划配额</el-button><el-button :disabled="anStorage.loading || anStorage.saving" @click="loadAnalyticsStorage">刷新配额</el-button></div>
+                        <p class="an-note">允许填写 1–1000 台；这是规划目标，实际新增开启仍受安全容量限制。降低至已开启数量以下会拒绝保存。配额不改变设备上传开关、上传时间或语音并发。</p>
+                        <dl class="an-dl"><dt>埋点已验证规模</dt><dd>{{ anStorage.data.profile.analytics_devices }} 台（合成负载）</dd><dt>方舟已验证规模</dt><dd>{{ anStorage.data.profile.ark_devices ? anStorage.data.profile.ark_devices+' 台' : '尚未完成规模验证，保留现有授权' }}</dd><dt>当前已开启</dt><dd>埋点 {{ anStorage.data.enabled.analytics }} 台 / 方舟 {{ anStorage.data.enabled.ark }} 台</dd><dt>方舟当前安全上限</dt><dd>{{ anStorage.data.ark_capacity.max_enabled_devices }} 台；新增前需完成容量验证</dd><dt>PRnas 归档</dt><dd>尚未接入，当前不传输历史数据</dd></dl>
+                        <p class="an-note">调整至 50 或 100 台不会自动增加已验证规模，也不会扩大搜索、倾听或上传名单。</p>
+                      </template>
+                      <p v-else class="an-note">{{ anStorage.loading ? '正在读取服务端配额…' : '配额暂不可读取，可刷新重试。' }}</p>
+                      <el-button v-if="!anStorage.data" :disabled="anStorage.loading" @click="loadAnalyticsStorage">刷新配额</el-button>
+                    </div>
                     <div v-if="anControl.error" class="an-status an-error" role="alert">{{ anControl.error }}</div>
                     <div v-if="anControl.notice" class="an-status" role="status">{{ anControl.notice }}</div>
                     <div v-if="anControl.loading" class="an-status">正在读取上传管理…</div>
@@ -1460,7 +1473,7 @@
                           <p class="an-note">保存后云端准入立即更新；设备通常在启动、恢复网络或约30分钟轮询时获取配置。首次开启可能补传积压。关闭保留端侧队列和已入库数据，正在提交的批次可正常结算。</p>
                         </div>
                         <div class="kh-card an-card"><h2>容量与分批上传</h2>
-                          <template v-if="anControl.data.capacity"><div v-if="anControl.data.runtime_available && anControl.data.devices.filter(d=>d.upload_allowed).length > anControl.data.capacity.max_enabled_devices" class="an-status an-error">现有上传设备已超过最新安全预算，新增开启已限制；现有设备未自动停传，请减少范围或扩容。</div><dl class="an-dl"><dt>当前安全开启上限</dt><dd><strong>{{ anControl.data.capacity.max_enabled_devices }} 台</strong></dd><dt>磁盘可用 / 当前事件库</dt><dd>{{ analyticsCapacityBytes(anControl.data.capacity.free_bytes) }} / {{ analyticsCapacityBytes(anControl.data.capacity.db_bytes) }}</dd><dt>20台是否满足当前预算</dt><dd>{{ anControl.data.capacity.twenty_devices_fit ? '满足预算，仍需观察真实到账' : '不满足，请先扩容或减少开启数量' }}</dd><dt>20台预计存储预算</dt><dd>{{ analyticsCapacityBytes(anControl.data.capacity.twenty_devices_bytes) }}</dd><dt>每设备每日测算事件</dt><dd>{{ analyticsNumber(anControl.data.capacity.daily_events_per_device) }} 条</dd><dt>汇总维护</dt><dd>{{ anControl.data.capacity.maintenance_ok ? '近期完成' : '异常或滞后，暂停新增开启' }}</dd></dl>
+                          <template v-if="anControl.data.capacity"><div v-if="anControl.data.runtime_available && anControl.data.devices.filter(d=>d.upload_allowed).length > anControl.data.capacity.max_enabled_devices" class="an-status an-error">现有上传设备已超过最新安全预算，新增开启已限制；现有设备未自动停传，请减少范围或扩容。</div><dl class="an-dl"><dt>当前安全开启上限</dt><dd><strong>{{ anControl.data.capacity.max_enabled_devices }} 台</strong></dd><dt>磁盘可用 / 当前事件库</dt><dd>{{ analyticsCapacityBytes(anControl.data.capacity.free_bytes) }} / {{ analyticsCapacityBytes(anControl.data.capacity.db_bytes) }}</dd><dt>{{ anControl.data.capacity.target_devices || '未知' }}台是否满足当前预算</dt><dd>{{ anControl.data.capacity.target_devices_fit === true ? '满足预算，仍需观察真实到账' : anControl.data.capacity.target_devices_fit === false ? '不满足，请先扩容或减少开启数量' : '待接收端返回规划预算' }}</dd><dt>规划设备预计存储预算</dt><dd>{{ analyticsCapacityBytes(anControl.data.capacity.target_devices_bytes) }}</dd><dt>每设备每日测算事件</dt><dd>{{ analyticsNumber(anControl.data.capacity.daily_events_per_device) }} 条</dd><dt>汇总维护</dt><dd>{{ anControl.data.capacity.maintenance_ok ? '近期完成' : '异常或滞后，暂停新增开启' }}</dd></dl>
                           <p class="an-note">按未来{{ anControl.data.capacity.horizon_days }}天新增数据保守预测，含索引及最多4份在线库/备份副本。原始记录仍保留14天，事实仍保留90天（本期计{{ anControl.data.capacity.fact_growth_days }}天新增），去重记录持续保留；已有数据占用已从可用空间扣除。另留4 GiB底线和512 MiB余量，容量随剩余磁盘更新，建议每周复评。{{ anControl.data.capacity.sample_warning || '' }}<br>测算时间：{{ analyticsTime(anControl.data.capacity.checked_at_ms) }}</p></template>
                           <div v-else class="an-status an-error">容量暂不可确认，暂停新增开启；关闭上传仍可操作。</div>
                           <p class="an-note">每批最多200条 / 2 MiB，独立写入线程串行落盘；忙时返回退避时间，设备保留未确认数据再重试。端侧须串行分批，不能用并发补传冲击服务。</p>
@@ -5025,6 +5038,7 @@
         var analyticsTabs = [{k:'overview',l:'概览'},{k:'batches',l:'上传批次'},{k:'events',l:'事件对账'},{k:'registry',l:'事件目录'},{k:'config',l:'上传管理'},{k:'tiering',l:'分层与按需'}];
         var analyticsGroupDefs = [{k:'activity',l:'设备与会话',hint:'设备键 / 应用会话去重'}, {k:'g1_flow',l:'G1 主流程',hint:'主流程语义事件计数'}, {k:'logical_day_ecotank',l:'逻辑日与生态缸',hint:'逻辑日、进度与生态缸'}, {k:'rewards_makeup',l:'奖励与补签',hint:'实际发奖与奖励实例'}, {k:'settings',l:'设置使用',hint:'设置相关事件计数'}, {k:'voice_state',l:'语音状态',hint:'KidsHubAI-VoiceKit 状态事件'}, {k:'command_failures',l:'命令失败',hint:'按命令与受控错误分组'}];
         var anControl=reactive({data:null,loading:false,saving:false,error:'',notice:'',query:'',filter:'all',subjects:[],enabled:false,hour:23,dirty:false,seq:0});
+        var anStorage=reactive({data:null,target:50,loading:false,saving:false,error:'',notice:'',seq:0});
         var anArk=reactive({sn:'',loading:false,saving:false,error:'',prompt:'',seq:0});
         var anTier=reactive({sn:'',data:null,draft:{},loading:false,saving:false,error:'',notice:'',seq:0,minutes:60,maxEvents:100,lookback:3,allowed:[]});
         function analyticsTierError(e){return ({POLICY_CONFLICT:'配置已更新，请重新读取再保存。',DEVICE_UPLOAD_NOT_ENABLED:'该设备未获准上传，请先核对上传管理。',ANALYTICS_UNAVAILABLE:'接收服务暂不可用，不能新增开启。',INVALID_TIER_SETTINGS:'配置不合法：本轮周期固定7天，请核对各项范围。',INVALID_DIAGNOSTIC_REQUEST:'请求参数不合法，请核对事件、有效期和限额。',TIERING_NOT_ENABLED:'请先保存本地分层与周期聚合双开关。',DIAGNOSTIC_REQUEST_LIMIT:'该设备24小时内请求次数已达上限。'})[e&&e.message]||String(e&&e.message||'操作失败');}
@@ -5047,9 +5061,28 @@
         var analyticsControlDevices=computed(function(){return ((anControl.data||{}).devices||[]).filter(function(d){var match=(d.sn+' '+d.note).toLowerCase().includes(anControl.query.trim().toLowerCase());return match&&(anControl.filter==='all'||anControl.filter==='allowed'&&d.upload_allowed||anControl.filter==='closed'&&!d.upload_allowed||anControl.filter==='selected'&&anControl.subjects.includes(d.sn)||anControl.filter==='disabled'&&d.status!=='active');});});
         function analyticsControlToggle(sn,on){if(anControl.saving||anControl.loading)return;anControl.subjects=anControl.subjects.filter(function(s){return s!==sn;});if(on)anControl.subjects.push(sn);anControl.dirty=true;}
         function analyticsControlSelect(on){analyticsControlDevices.value.filter(function(d){return !on||d.status==='active';}).forEach(function(d){analyticsControlToggle(d.sn,on);});}
-        function analyticsControlError(e){return ({CAPACITY_LIMIT:'选择数量超过当前容量上限，请减少设备或先扩容。',CAPACITY_UNAVAILABLE:'容量暂不可确认，新增开启已阻止；关闭仍可操作。',POLICY_CONFLICT:'配置已被其他窗口修改，请重新读取后再保存。',DEVICE_NOT_ACTIVE:'部分设备已停用或移除，请刷新列表。',ANALYTICS_CONTROL_UNAVAILABLE:'上传管理暂不可用，请刷新重试。',POLICY_SAVE_FAILED:'保存失败，配置未提交，请重新读取确认。'})[e&&e.message]||String(e&&e.message||'操作失败');}
+        function storageError(e){return ({INVALID_STORAGE_POLICY:'请输入 1–1000 的整数台数。',STORAGE_POLICY_CONFLICT:'配额已被其他窗口修改，请刷新配额后再保存。',STORAGE_ENABLED_CONFLICT:'配额不能低于已开启设备数，请先调整设备范围。',STORAGE_UNAVAILABLE:'配额暂不可读取，请重试。'})[e&&e.message]||String(e&&e.message||'保存失败');}
+        async function loadAnalyticsStorage(){
+          if(!canManageInvites.value||anStorage.saving)return;var seq=++anStorage.seq,epoch=authSessionEpoch,token=getToken();anStorage.loading=true;anStorage.error='';
+          try{var j=await deviceApi('/api/admin/analytics/storage',{method:'GET'});if(seq!==anStorage.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok||!j.policy)throw new Error(j.error||'STORAGE_UNAVAILABLE');anStorage.data=j;anStorage.target=j.policy.target_devices;}
+          catch(e){if(seq===anStorage.seq&&epoch===authSessionEpoch&&token===getToken()){anStorage.error=storageError(e);anStorage.data=null;}}finally{if(seq===anStorage.seq)anStorage.loading=false;}
+        }
+        async function refreshAnalyticsCapacity(){
+          var epoch=authSessionEpoch,token=getToken(),seq=anControl.seq;
+          try{var j=await deviceApi('/api/admin/analytics/control',{method:'GET'});if(epoch===authSessionEpoch&&token===getToken()&&seq===anControl.seq&&anControl.data)anControl.data.capacity=j.ok?j.capacity:null;}
+          catch(e){if(epoch===authSessionEpoch&&token===getToken()&&seq===anControl.seq&&anControl.data)anControl.data.capacity=null;}
+        }
+        async function saveAnalyticsStorage(){
+          if(!canManageInvites.value||!anStorage.data||anStorage.loading||anStorage.saving)return;
+          if(!Number.isInteger(anStorage.target)||anStorage.target<1||anStorage.target>1000){anStorage.error=storageError({message:'INVALID_STORAGE_POLICY'});return;}
+          var epoch=authSessionEpoch,token=getToken();anStorage.saving=true;anStorage.error='';anStorage.notice='';
+          try{var j=await deviceApi('/api/admin/analytics/storage',{method:'PUT',body:JSON.stringify({expected_revision:anStorage.data.policy.revision,target_devices:anStorage.target})});if(epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'STORAGE_UNAVAILABLE');anStorage.notice='规划配额已保存；设备开关和上传时间未改变。';anStorage.saving=false;await loadAnalyticsStorage();await refreshAnalyticsCapacity();}
+          catch(e){if(epoch===authSessionEpoch&&token===getToken())anStorage.error=storageError(e);}finally{if(epoch===authSessionEpoch)anStorage.saving=false;}
+        }
+        watch([isLoggedIn,canManageInvites],function(){if(!isLoggedIn.value||!canManageInvites.value){anStorage.seq++;anStorage.data=null;anStorage.loading=false;anStorage.saving=false;anStorage.error='';anStorage.notice='';anStorage.target=50;}});
+        function analyticsControlError(e){return ({STORAGE_POLICY_CONFLICT:'规划配额已变化，请重新读取上传设置。',CAPACITY_LIMIT:'选择数量超过当前容量上限，请减少设备或先扩容。',CAPACITY_UNAVAILABLE:'容量暂不可确认，新增开启已阻止；关闭仍可操作。',POLICY_CONFLICT:'配置已被其他窗口修改，请重新读取后再保存。',DEVICE_NOT_ACTIVE:'部分设备已停用或移除，请刷新列表。',ANALYTICS_CONTROL_UNAVAILABLE:'上传管理暂不可用，请刷新重试。',POLICY_SAVE_FAILED:'保存失败，配置未提交，请重新读取确认。'})[e&&e.message]||String(e&&e.message||'操作失败');}
         async function loadAnalyticsControl(){
-          if(!canManageInvites.value||anControl.saving)return;var seq=++anControl.seq,epoch=authSessionEpoch,token=getToken();anControl.loading=true;anControl.error='';
+          if(!canManageInvites.value||anControl.saving)return;void loadAnalyticsStorage();var seq=++anControl.seq,epoch=authSessionEpoch,token=getToken();anControl.loading=true;anControl.error='';
           try{var j=await deviceApi('/api/admin/analytics/control',{method:'GET'});if(seq!==anControl.seq||epoch!==authSessionEpoch||token!==getToken())return;if(!j.ok)throw new Error(j.error||'ANALYTICS_CONTROL_UNAVAILABLE');anControl.data=j;anControl.subjects=j.policy.subjects.slice();anControl.enabled=j.policy.enabled;anControl.hour=j.policy.hour;anControl.dirty=false;}
           catch(e){if(seq===anControl.seq&&epoch===authSessionEpoch){anControl.error=analyticsControlError(e);anControl.data=null;}}finally{if(seq===anControl.seq)anControl.loading=false;}
         }
@@ -8216,7 +8249,7 @@
           analytics: analytics,
           analyticsFilters: analyticsFilters,
           anTier,loadAnalyticsTier,saveAnalyticsTier,createAnalyticsDiagnostic,revokeAnalyticsDiagnostic,
-          anControl,anArk,analyticsCapacityBytes,analyticsControlDevices,analyticsControlToggle,analyticsControlSelect,loadAnalyticsControl,saveAnalyticsControl,previewAnalyticsArk,authorizeAnalyticsArk,
+          anStorage,loadAnalyticsStorage,saveAnalyticsStorage,anControl,anArk,analyticsCapacityBytes,analyticsControlDevices,analyticsControlToggle,analyticsControlSelect,loadAnalyticsControl,saveAnalyticsControl,previewAnalyticsArk,authorizeAnalyticsArk,
           analyticsTabs: analyticsTabs,
           analyticsGroupDefs: analyticsGroupDefs,
           analyticsNumber: analyticsNumber,
