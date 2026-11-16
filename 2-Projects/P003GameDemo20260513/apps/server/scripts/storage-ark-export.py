@@ -4,7 +4,7 @@
 Uses the existing T2 spool and forced-command transport. No device, owner, grant,
 wallet or current-state mutation. Disabling new checkpoints still drains old ones.
 """
-import argparse,fcntl,hashlib,importlib.util,json,os,sqlite3,time,uuid
+import argparse,fcntl,hashlib,importlib.util,json,os,shutil,sqlite3,time,uuid
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 spec=importlib.util.spec_from_file_location('ark_spool',HERE/'storage-archive.py')
@@ -13,6 +13,7 @@ Spool=archive.Spool
 MAX_ROWS=1000
 MAX_BYTES=1024*1024
 MAX_BATCHES=20
+DISK_RESERVE_BYTES=9*1024**3//2
 DAY=86400000
 
 def transaction(db,fn):
@@ -78,6 +79,11 @@ def process_batch(db,spool,work,aid):
             db.execute('UPDATE ark_archive_stats SET last_ack_ms=MAX(COALESCE(last_ack_ms,0),?) WHERE id=1',(receipt['verified_at_ms'],))
         transaction(db,finish);return 'confirmed'
     final=spool.package(aid)/'payload.bin';pending=spool.root/'pending'/aid/'payload.bin';source=work/(aid+'.jsonl')
+    # Other processes may consume disk after HTTP acceptance. Stop new file writes,
+    # retain the immutable DB mapping, and allow the verified cleanup branch above.
+    # publish_prepared renames on the same volume, so at most one payload is new.
+    if not final.exists() and shutil.disk_usage(spool.root).free<DISK_RESERVE_BYTES+len(payload)+65536:
+        raise ValueError('archive_export_disk_reserve')
     if not final.exists() and not pending.exists():
         if source.exists() or source.is_symlink():
             if spool.regular(source).st_size!=len(payload) or archive.sha(source)!=m['sha256']:raise ValueError('archive_work_changed')

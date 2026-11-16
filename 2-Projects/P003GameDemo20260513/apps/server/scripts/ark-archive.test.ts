@@ -40,6 +40,15 @@ test('full buffer rolls back latest and history but does not block duplicate or 
 test('actual local free-space reserve is enforced without contacting NAS',()=>{const f=fixture();try{
  f.policy.freeBytes=f.policy.reserveBytes;assert.throws(()=>f.store.accept(identity,snapshot(),NOW),/archive_buffer_full/);assert.equal(f.store.current(identity),null);assert.equal(rows(f.store).length,0);
 }finally{f.done();}});
+test('free disk also reserves the accumulated queue, not only the arriving row',()=>{const f=fixture();try{
+ f.store.accept(identity,snapshot(),NOW);const cost=rows(f.store)[0].reserved_bytes;
+ f.policy.freeBytes=f.policy.reserveBytes+cost+100;
+ const next=snapshot(2,NOW+1,{wallets:{family_coin:1,stardust:null}});
+ assert.throws(()=>f.store.accept(identity,next,NOW+1),/archive_buffer_full/);
+ assert.equal(rows(f.store).length,1);assert.equal(f.store.current(identity)?.snapshot.sequence,1);
+ f.policy.freeBytes=f.policy.reserveBytes+cost*2+100;
+ assert.equal(f.store.accept(identity,next,NOW+1).status,'accepted');assert.equal(rows(f.store).length,2);
+}finally{f.done();}});
 test('archive disabled preserves old acceptance and does not discard already accepted history',()=>{const f=fixture();try{
  f.store.accept(identity,snapshot(),NOW);f.policy.enabled=false;f.policy.freeBytes=0;f.store.accept(identity,snapshot(2,NOW+1,{wallets:{family_coin:6,stardust:1}}),NOW+1);assert.equal(rows(f.store).length,1);assert.equal(f.store.current(identity)?.snapshot.wallets.family_coin,6);
 }finally{f.done();}});

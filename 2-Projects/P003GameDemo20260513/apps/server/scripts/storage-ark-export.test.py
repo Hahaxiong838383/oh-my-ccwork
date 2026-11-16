@@ -55,6 +55,17 @@ for(let n=1;n<=Number(process.argv[2]);n++)s.accept(i,{...f,snapshot_id:'s-'+n,b
         try:
             with self.assertRaises(BlockingIOError):self.cycle()
         finally:f.close()
+    def test_disk_consumed_after_accept_pauses_export_without_losing_rows(self):
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        with patch.object(self.m.shutil,'disk_usage',return_value=SimpleNamespace(free=1)):
+            with self.assertRaisesRegex(ValueError,'archive_export_disk_reserve'):self.cycle()
+        self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_outbox')[0][0],3)
+        self.assertEqual(self.m.Spool(self.spool).list(),[])
+        self.cycle();m=self.manifest();self.ack(m)
+        with patch.object(self.m.shutil,'disk_usage',return_value=SimpleNamespace(free=1)):
+            self.cycle()  # Verified cleanup must still release space when disk is low.
+        self.assertEqual(self.sql('SELECT pending_records,reserved_bytes FROM ark_archive_stats'),[(0,0)])
     def test_real_sigkill_publish_and_directory_rename_recovers_same_batch(self):
         import sys
         code="""import sys,os,signal,importlib.util

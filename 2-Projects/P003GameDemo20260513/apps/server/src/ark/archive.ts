@@ -35,7 +35,9 @@ export function appendArkCheckpoint(db:DatabaseSync,g:ArkGrant,s:ArkSnapshot,now
  const envelope=canonicalJson({format_version:1,record_id:seq,sn:g.sn,account_id:g.account_id,epoch:g.epoch,grant_id:g.grant_id,source_mode:s.source_mode,received_at_ms:now,body_hash:archiveHash(canonicalJson(s)),snapshot:s});
  const bytes=Buffer.byteLength(envelope+'\n'),reserved=archiveReservation(bytes);
  const stats=db.prepare('SELECT reserved_bytes FROM ark_archive_stats WHERE id=1').get() as {reserved_bytes:number};
- if(![p.limitBytes,p.reserveBytes,p.freeBytes].every(n=>Number.isSafeInteger(n)&&n>=0)||stats.reserved_bytes+reserved>p.limitBytes||p.freeBytes<p.reserveBytes+reserved)throw new Error('archive_buffer_full');
+ // Conservatively reserve all outstanding bodies even if part is already on disk.
+ // Checking only this row would let queued future exports consume the safety reserve.
+ if(![p.limitBytes,p.reserveBytes,p.freeBytes].every(n=>Number.isSafeInteger(n)&&n>=0)||stats.reserved_bytes+reserved>p.limitBytes||p.freeBytes<p.reserveBytes+stats.reserved_bytes+reserved)throw new Error('archive_buffer_full');
  db.prepare('INSERT INTO ark_archive_outbox(id,grant_id,received_at_ms,envelope,bytes,reserved_bytes) VALUES(?,?,?,?,?,?)').run(seq,g.grant_id,now,envelope,bytes,reserved);
  db.prepare('INSERT INTO ark_archive_baseline VALUES(?,?,?) ON CONFLICT(grant_id) DO UPDATE SET signature=excluded.signature,received_at_ms=excluded.received_at_ms').run(g.grant_id,sig,now);
 }
