@@ -1,0 +1,10 @@
+✔ mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (2397.141041ms)
+✔ reproduce actor37 all-event rejection; synthetic IDs pass the unchanged privacy contract (63.034542ms)
+ℹ tests 2
+ℹ suites 0
+ℹ pass 2
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2855.793

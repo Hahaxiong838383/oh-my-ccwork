@@ -1,0 +1,1 @@
+{"batch": [{"attempt_id": "b2645484-b896-4a5c-978f-789ff060c4a2", "request_id": "load-t5-17-1794949895955-37-0-2", "accepted": 0, "duplicated": 0, "rejected": 200, "http_status": 200, "received_at_ms": 1794949908388}], "settlement": [{"outcome": "rejected", "reason": "invalid_event", "n": 200}], "scope": "READONLY_IMMUTABLE_STOPPED_NAS_FIXTURE"}
