@@ -15,7 +15,7 @@ function addDaily(store:AnalyticsStore,dimension:string,day:string,id:string){
  store.db.prepare('INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)').run(dimension,day,'device',id,'app.bridge_ready','session',0,'{}',now);
  store.db.prepare('INSERT INTO analytics_day VALUES (?,?,?,?)').run(dimension,day,'{}',now);
  store.db.prepare('INSERT INTO analytics_device_day VALUES (?,?,?,?,?,?,?)').run(dimension,day,'device',1,1,now,'{}');
- store.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run(dimension,day);
+ store.db.prepare('INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)').run(dimension,day);
  store.db.prepare('INSERT INTO analytics_rollup_retry VALUES (?,?,?)').run(dimension,day,now);
 }
 function addRaw(store:AnalyticsStore,id:string){

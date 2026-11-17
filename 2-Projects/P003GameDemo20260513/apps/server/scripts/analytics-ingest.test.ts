@@ -45,5 +45,5 @@ const reopened=new AnalyticsStore(join(dir,'analytics.db'));
 const reopenedPrepare=reopened.db.prepare.bind(reopened.db);let reopenedCount=0;
 reopened.db.prepare=((sql:string)=>{reopenedCount++;return reopenedPrepare(sql);}) as typeof reopened.db.prepare;
 assert.deepEqual(settleAnalyticsBatch(reopened,ctx,batch([B]),'after-restart').duplicated_event_ids,['B']);
-assert.equal(reopenedCount,13,'每个连接仅首次准备13条固定语句（含分层及压缩统计）');
+assert.equal(reopenedCount,12,'每个连接仅首次准备12条固定语句（dirty由fact触发器原子维护）');
 reopened.close();rmSync(dir,{recursive:true,force:true});console.log('analytics ingest: PASS (exact ACK, transaction rollback, dedupe TTL/restart, safe receipts)');

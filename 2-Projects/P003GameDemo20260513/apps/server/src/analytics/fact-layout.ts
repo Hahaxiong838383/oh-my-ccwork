@@ -1,4 +1,5 @@
 import type {DatabaseSync} from 'node:sqlite';
+import {ROLLUP_FACT_TRIGGERS} from './rollup-progress.js';
 
 const columns=['dimension','day','device_key','id_digest','event_name','session_digest','clock_suspicious','semantic_json','received_at_ms'] as const;
 const oldKey=['dimension','day','device_key','id_digest'];
@@ -31,7 +32,9 @@ export function migrateFactLayout(db:DatabaseSync):{changed:boolean;rows:number;
   const rows=Number(db.prepare('SELECT count(*) n FROM analytics_rollup_fact').get()!.n);
   if(layout==='received-first-v2'){db.exec('COMMIT');return {changed:false,rows,layout};}
   // Rebuilding must not silently discard an independently added index or trigger.
-  if(db.prepare('PRAGMA index_list(analytics_rollup_fact)').all().some(i=>i.origin!=='pk')||db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' AND tbl_name='analytics_rollup_fact' LIMIT 1").get())throw new Error('ANALYTICS_FACT_LAYOUT_UNSUPPORTED');
+  const triggers=db.prepare("SELECT name,sql FROM sqlite_schema WHERE type='trigger' AND tbl_name='analytics_rollup_fact'").all() as {name:string;sql:string}[];
+  const canonical=(sql:string)=>sql.replace(/\s+/g,' ').trim();
+  if(db.prepare('PRAGMA index_list(analytics_rollup_fact)').all().some(i=>i.origin!=='pk')||triggers.some(t=>!(t.name in ROLLUP_FACT_TRIGGERS)||canonical(t.sql)!==canonical(ROLLUP_FACT_TRIGGERS[t.name as keyof typeof ROLLUP_FACT_TRIGGERS])))throw new Error('ANALYTICS_FACT_LAYOUT_UNSUPPORTED');
   db.exec(`CREATE TABLE analytics_rollup_fact_next (${FACT_TABLE_COLUMNS})`);
   db.exec(`INSERT INTO analytics_rollup_fact_next(rowid,${columns.join(',')}) SELECT rowid,${columns.join(',')} FROM analytics_rollup_fact`);
   const copied=Number(db.prepare('SELECT count(*) n FROM analytics_rollup_fact_next').get()!.n);
@@ -41,6 +44,7 @@ export function migrateFactLayout(db:DatabaseSync):{changed:boolean;rows:number;
   if(copied!==rows||mismatch)throw new Error('ANALYTICS_FACT_COPY_MISMATCH');
   db.exec('DROP TABLE analytics_rollup_fact');
   db.exec('ALTER TABLE analytics_rollup_fact_next RENAME TO analytics_rollup_fact');
+  for(const trigger of triggers)db.exec(trigger.sql);
   db.exec('COMMIT');return {changed:true,rows,layout:'received-first-v2'};
  }catch(error){try{db.exec('ROLLBACK');}catch{}throw error;}
 }

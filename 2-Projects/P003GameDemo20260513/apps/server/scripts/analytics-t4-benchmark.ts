@@ -27,8 +27,8 @@ if(mode==='prepare'){
   if(i%200===0)batch.run(attempt,attempt,attempt,device,rawTime,rawTime,'{}',200,0,0,200,1);
   settle.run(attempt,id,'accepted',null);seen.run(device,id,'f'.repeat(64),rawTime);
  }});if(base%10000===0)s.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');}
- s.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('received',day);
- s.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('occurred',day);
+ s.db.prepare('INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)').run('received',day);
+ s.db.prepare('INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)').run('occurred',day);
  s.db.exec('PRAGMA wal_checkpoint(TRUNCATE)');s.close();writeFileSync(join(root,'PREPARED.json'),JSON.stringify({facts:1200000,raw:300000,seen:300000}));console.log(JSON.stringify({synthetic:true,facts:1200000,raw:300000,seen:300000,settlements:300000,batches:1500,bytes:statSync(path).size,build_ms:performance.now()-start}));
 }else if(mode==='maintenance'){
  const s=new AnalyticsStore(path);const tx:number[]=[],writes:number[]=[];let began:number|undefined;

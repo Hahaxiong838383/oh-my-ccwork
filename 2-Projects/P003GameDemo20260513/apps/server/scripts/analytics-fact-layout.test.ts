@@ -4,6 +4,7 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {spawnSync} from 'node:child_process';
+import {initRollupProgress} from '../src/analytics/rollup-progress.js';
 import {AnalyticsStore,DAY_MS,cstDay} from '../src/analytics/store.js';
 import {settleAnalyticsBatch} from '../src/analytics/ingest.js';
 import {validateAnalyticsBatch} from '../src/analytics/contracts.js';
@@ -21,7 +22,7 @@ const oldDDL=`CREATE TABLE analytics_rollup_fact (
  event_name TEXT NOT NULL,session_digest TEXT NOT NULL,clock_suspicious INTEGER NOT NULL,semantic_json TEXT NOT NULL,
  received_at_ms INTEGER NOT NULL,PRIMARY KEY(dimension,day,device_key,id_digest))`;
 const path=join(dir,'old.db'),store=new AnalyticsStore(path),now=Date.now(),old=now-20*DAY_MS;
-store.db.exec('DROP TABLE analytics_rollup_fact');store.db.exec(oldDDL);
+store.db.exec('DROP TABLE analytics_rollup_fact');store.db.exec(oldDDL);initRollupProgress(store.db);
 const ev=(id:string,time=old,extra={})=>({schema_version:1,client_event_id:id,event_name:'app.session_started',occurred_at_ms:time,session_id:'s1',sequence:1,priority:'normal',context:{},properties:{platform:'Android',entry_mode:'launcher'},...extra});
 const send=(events:any[],received:number,device='a')=>settleAnalyticsBatch(store,{deviceKey:device,active:true,uploadEnabled:true,uploadHourCst:0},validateAnalyticsBatch({schema_version:1,batch_id:'layout-test',sent_at_ms:received,client:{},events}),'layout-test',received);
 const A=ev('A'),B=ev('B');send([A,B],old);send([ev('C')],old+1,'b');send([ev('late',old)],now);
@@ -79,7 +80,7 @@ reopened.close();
 // Deterministic failure ranking must not depend on physical fact insertion order.
 const tie=new AnalyticsStore(join(dir,'ties.db'));
 for(let i=101;i>=0;i--)tie.db.prepare('INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)').run('received',cstDay(now),'d',String(101-i).padStart(3,'0'),'g1.command_failed','s',0,JSON.stringify({command:'cmd'+String(i).padStart(3,'0'),error_code:'E'}),now+101-i);
-tie.db.prepare('INSERT INTO analytics_dirty_day VALUES (?,?)').run('received',cstDay(now));rollupDirtyDays(tie,now);
+tie.db.prepare('INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)').run('received',cstDay(now));rollupDirtyDays(tie,now);
 const ranked=JSON.parse(String(tie.db.prepare('SELECT summary_json FROM analytics_day').get()!.summary_json)).groups.command_failures;
 assert.equal(ranked.length,100);assert.equal(ranked[0].command,'cmd000');assert.equal(ranked[99].command,'cmd099');tie.close();
 

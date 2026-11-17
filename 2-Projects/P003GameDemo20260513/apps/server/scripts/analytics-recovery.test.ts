@@ -8,7 +8,7 @@ import {SignJWT} from 'jose';
 import {AnalyticsStore} from '../src/analytics/store.js';
 
 const dir=mkdtempSync(join(tmpdir(),'analytics-recovery-'));
-const children:ChildProcess[]=[];
+const children:ChildProcess[]=[];let activePort=0;
 const source=(name:string)=>new URL('../src/'+name,import.meta.url).href;
 const control=join(dir,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
 const worker=join(dir,'delayed-commit.mjs');
@@ -33,14 +33,14 @@ import {startAnalyticsServer} from ${JSON.stringify(source('analytics/index.ts')
 import {pathToFileURL} from 'node:url';
 const store=new AnalyticsStore(process.env.TEST_DB!);
 const writer=new AnalyticsWriter(store.path,process.env.TEST_DELAY==='1'?{workerUrl:pathToFileURL(${JSON.stringify(worker)}),jobTimeoutMs:30,closeTimeoutMs:Number(process.env.TEST_CLOSE_MS??30000)}:{});
-const service=startAnalyticsServer({store,writer,reader:{readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'recovery-synthetic',active:true,uploadEnabled:true,uploadHourCst:0})},authSecret:'recovery-test-only',internalSecret:'recovery-internal-only',controlPath:${JSON.stringify(control)},allowSubjects:['recovery-synthetic'],diskFreeBytes:()=>20*1024**3},3306);
-const timer=setInterval(()=>{if(writer.ready&&service.checkpointer.status().last_success_ms!==null){clearInterval(timer);process.send?.({ready:true});}},10);timer.unref();`);
+const service=startAnalyticsServer({store,writer,reader:{readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'recovery-synthetic',active:true,uploadEnabled:true,uploadHourCst:0})},authSecret:'recovery-test-only',internalSecret:'recovery-internal-only',controlPath:${JSON.stringify(control)},allowSubjects:['recovery-synthetic'],diskFreeBytes:()=>20*1024**3},0);
+const timer=setInterval(()=>{if(writer.ready&&service.checkpointer.status().last_success_ms!==null){clearInterval(timer);process.send?.({ready:true,port:service.server.address().port});}},10);timer.unref();`);
 async function start(db:string,slow:boolean,closeMs=30000){
  const child=spawn(process.execPath,['--import','tsx',entry],{cwd:process.cwd(),env:{...process.env,TEST_DB:db,TEST_DELAY:slow?'1':'0',TEST_CLOSE_MS:String(closeMs)},stdio:['ignore','pipe','pipe','ipc']});children.push(child);
  let logs='';child.stdout!.on('data',b=>logs+=b);child.stderr!.on('data',b=>logs+=b);
  await new Promise<void>((resolve,reject)=>{
   const timer=setTimeout(()=>reject(new Error('server startup timed out: '+logs)),10000);
-  child.on('message',m=>{if((m as {ready?:boolean}).ready){clearTimeout(timer);resolve();}});
+  child.on('message',m=>{if((m as {ready?:boolean}).ready){activePort=Number((m as {port:number}).port);clearTimeout(timer);resolve();}});
   child.once('exit',code=>{clearTimeout(timer);reject(new Error('server exited during startup: '+code+' '+logs));});
  });
  return child;
@@ -49,7 +49,7 @@ async function until(predicate:()=>boolean,timeout=3000){const deadline=Date.now
 const token=await new SignJWT({kind:'p003-device'}).setSubject('recovery-synthetic').setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode('recovery-test-only'));
 const stamp=Date.now();
 const batch=(id:string)=>({schema_version:1,batch_id:id,sent_at_ms:stamp,client:{},events:[0,1].map(i=>({schema_version:1,client_event_id:id+'-'+i,event_name:'app.bridge_ready',occurred_at_ms:stamp,session_id:'recovery-test',sequence:i,priority:'normal',context:{},properties:{}}))});
-const post=(body:unknown)=>fetch('http://127.0.0.1:3306/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':'recovery-test-request'},body:JSON.stringify(body),signal:AbortSignal.timeout(2000)});
+const post=(body:unknown)=>fetch('http://127.0.0.1:'+activePort+'/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':'recovery-test-request'},body:JSON.stringify(body),signal:AbortSignal.timeout(2000)});
 try{
  for(const [name,closeMs]of [['late-commit',30000],['late-after-close-timeout',40]]as const){
   const db=join(dir,name+'.db'),body=batch(name),child=await start(db,true,closeMs);

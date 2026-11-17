@@ -53,7 +53,7 @@ export function settleAnalyticsBatch(store:AnalyticsStore,context:AnalyticsDevic
       if(typeof event.properties.reward_instance_id==='string')semantic.reward_instance_digest=digest(event.properties.reward_instance_id);
       for(const [dimension,day] of [['received',receivedDay],['occurred',occurredDay]])if(day&&tier==='raw'){
         statements.fact.run(dimension!,day,context.deviceKey,idHash,event.event_name,digest(event.session_id),occurredDay===null?1:0,canonicalJson(semantic),receivedAt);
-        statements.dirty.run(dimension!,day);
+        // The fact trigger marks dirty and advances its source revision atomically.
       }
       ack.accepted_event_ids.push(id);settlements.push({id,outcome:'accepted',reason:null});
     }

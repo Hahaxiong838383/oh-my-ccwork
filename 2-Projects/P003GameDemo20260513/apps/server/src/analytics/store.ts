@@ -5,12 +5,12 @@ import {configureAnalyticsWriter} from './sqlite-policy.mjs';
 import {FACT_TABLE_COLUMNS} from './fact-layout.js';
 import {initAnalyticsTransport} from './transport.js';
 import {initAnalyticsTiers} from './tiers.js';
+import {initRollupProgress} from './rollup-progress.js';
 const INGEST_SQL={
  seen:'SELECT event_hash FROM analytics_event_seen WHERE device_key=? AND id_digest=?',
  event:'INSERT INTO analytics_event VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
  remember:'INSERT INTO analytics_event_seen VALUES (?,?,?,?)',
  fact:'INSERT INTO analytics_rollup_fact VALUES (?,?,?,?,?,?,?,?,?)',
- dirty:'INSERT OR IGNORE INTO analytics_dirty_day VALUES (?,?)',
  batch:'INSERT INTO analytics_batch VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
  settlement:'INSERT INTO analytics_settlement VALUES (?,?,?,?)',
  tierEvent:'INSERT INTO analytics_tier_event VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
@@ -72,6 +72,7 @@ export class AnalyticsStore {
       CREATE TABLE IF NOT EXISTS analytics_meta (key TEXT PRIMARY KEY,value TEXT NOT NULL);
     `);
     if(!(this.db.prepare('PRAGMA table_info(analytics_device_day)').all() as {name:string}[]).some(r=>r.name==='summary_json'))this.db.exec("ALTER TABLE analytics_device_day ADD COLUMN summary_json TEXT NOT NULL DEFAULT '{}'");
+    initRollupProgress(this.db);
     initAnalyticsTransport(this.db);
     initAnalyticsTiers(this.db);
   }
@@ -87,7 +88,7 @@ export class AnalyticsStore {
     catch(error){try{this.db.exec('ROLLBACK');}catch{}throw error;}
   }
   get ingest():IngestStatements{
-    // Thirteen fixed statements per connection; no cache of arbitrary/dynamic queries.
+    // Twelve fixed statements per connection; no cache of arbitrary/dynamic queries.
     return this.ingestStatements??=Object.freeze(Object.fromEntries(Object.entries(INGEST_SQL).map(([key,sql])=>[key,this.db.prepare(sql)])) as IngestStatements);
   }
   close(){this.db.close();}
