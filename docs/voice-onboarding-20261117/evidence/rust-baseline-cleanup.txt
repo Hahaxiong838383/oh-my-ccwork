@@ -1,0 +1,33 @@
+warning: method `chat` is never used
+   --> src/llm.rs:642:18
+    |
+590 | impl Llm {
+    | -------- method in this implementation
+...
+642 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.11s
+     Running unittests src/main.rs (2-Projects/realtime-voice-agent/rust-worker/target/debug/build/voice-rust-worker/38f59fa62e4a216d/out/voice_rust_worker-38f59fa62e4a216d)
+
+running 1 test
+test room_cleanup::tests::business_intent_requires_healthy_retry_and_survives_job_drop ... FAILED
+
+failures:
+
+---- room_cleanup::tests::business_intent_requires_healthy_retry_and_survives_job_drop stdout ----
+
+thread 'room_cleanup::tests::business_intent_requires_healthy_retry_and_survives_job_drop' (280097408) panicked at src/room_cleanup.rs:151:120:
+called `Result::unwrap()` on an `Err` value: No such file or directory (os error 2)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    room_cleanup::tests::business_intent_requires_healthy_retry_and_survives_job_drop
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 617 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`

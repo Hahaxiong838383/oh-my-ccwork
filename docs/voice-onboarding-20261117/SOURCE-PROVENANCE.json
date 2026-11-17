@@ -1,0 +1,29 @@
+{
+  "checked_at": "2026-11-17T03:18:51.176145+00:00",
+  "brain_baseline": "18a230754941ad9781db4d39e5a12a9622fc7349",
+  "contract_commit": "4ae598cd0c04c6d22467063fa48e0d70ab055459",
+  "worker_baseline": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+  "worker_source_files": 99,
+  "worker_changes_from_baseline": [
+    "src/control.rs",
+    "src/job.rs",
+    "src/main.rs",
+    "src/pipeline.rs"
+  ],
+  "live_main_sha256": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+  "live_verification": "read-only hostname voice-worker-hk2; MainPID=1478835; sha256 matches RELEASE-main.json and STAGED-CANDIDATE.json",
+  "source_release_manifest": "codex/p003-asr-three-device-20261116:docs/asr-three-device-20261116/STAGED-CANDIDATE.json",
+  "listening_pool": "different release c7e70e77; not replaced or built by this candidate",
+  "production_write": false,
+  "worker_new_files": [
+    "src/voice_onboarding.rs",
+    "src/voice_onboarding_tests.rs",
+    "tools/onboarding-entry-tests/Cargo.lock",
+    "tools/onboarding-entry-tests/Cargo.toml",
+    "tools/onboarding-entry-tests/src/lib.rs"
+  ],
+  "worker_unchanged_baseline_files": 95,
+  "candidate_git_rule": "包含此文件的最终候选 commit；最终会话正文记录并以 git ls-remote 核对，不在文件内自引用 commit SHA。",
+  "implementation_commit": "1cf9428e19ce482e6b9958821837c9a845e2572f",
+  "isolated_test_dependencies": "npm ci from unchanged apps/server/package-lock.json in .voice-onboarding-build/server-locked-deps"
+}

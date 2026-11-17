@@ -1,0 +1,32 @@
+[device-session] ok sn=<synthetic-sn> room=sn-<synthetic-sn>-1794886436 session=19469d76-3d36-459b-bdc2-5f4e6dc491e2 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=23
+[device-session] ok sn=<synthetic-sn> room=sn-<synthetic-sn>-1794886437 session=24e673d7-5d16-483d-b6b4-b04224532fc5 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=11
+[device-session] ok sn=<synthetic-sn> room=sn-<synthetic-sn>-1794886438 session=4ebe129b-98ad-430a-b29a-94efb1558f91 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=- selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=7
+✖ actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata (167.12375ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1603.19475
+
+✖ failing tests:
+
+test at scripts/voice-onboarding-session.test.ts:1:1982
+✖ actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata (167.12375ms)
+  AssertionError [ERR_ASSERTION]: ordinary new session revokes previous lesson
+
+  0 !== 1
+
+      at TestContext.<anonymous> ($WORKTREE/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-session.test.ts:33:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 0,
+    expected: 1,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

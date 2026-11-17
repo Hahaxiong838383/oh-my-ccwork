@@ -1,0 +1,16 @@
+{
+  "command": "read-only sha256sum current deployed sources",
+  "exit": 0,
+  "remote_hashes": [
+    "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c  src/index.ts",
+    "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b  src/routes/device-session.ts",
+    "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e  src/profile-store.ts",
+    "c0eaee6600eccb819d641173610c6f139a25d204586814b4b85a6c7348872ed7  src/device-registry-store.ts"
+  ],
+  "baseline_hashes": {
+    "src/index.ts": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+    "src/routes/device-session.ts": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b",
+    "src/profile-store.ts": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e",
+    "src/device-registry-store.ts": "c0eaee6600eccb819d641173610c6f139a25d204586814b4b85a6c7348872ed7"
+  }
+}

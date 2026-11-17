@@ -1,0 +1,1 @@
+src/listening-content.ts(29,133): error TS2339: Property 'abort' does not exist on type 'GeminiLlmClient'.

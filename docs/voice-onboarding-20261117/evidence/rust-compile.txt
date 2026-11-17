@@ -1,0 +1,156 @@
+   Compiling webrtc-sys v0.3.42
+   Compiling libwebrtc v0.3.45
+   Compiling livekit v0.8.3
+   Compiling voice-rust-worker v0.1.0 ($WORKTREE/2-Projects/realtime-voice-agent/rust-worker)
+warning: function `canon_transcript` is never used
+  --> examples/../src/textproc.rs:15:8
+   |
+15 | pub fn canon_transcript(s: &str) -> String {
+   |        ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: constant `DEFAULT_INTERRUPT_HOTWORDS` is never used
+  --> examples/../src/textproc.rs:41:11
+   |
+41 | pub const DEFAULT_INTERRUPT_HOTWORDS: &str = "停,停停,停下,停一下,等等,等一下,别说了,别说,闭嘴,安静";
+   |           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `is_wake_only` is never used
+  --> examples/../src/textproc.rs:52:8
+   |
+52 | pub fn is_wake_only(text: &str) -> bool {
+   |        ^^^^^^^^^^^^
+
+warning: constant `DEFAULT_EXIT_HOTWORDS` is never used
+  --> examples/../src/textproc.rs:59:11
+   |
+59 | pub const DEFAULT_EXIT_HOTWORDS: &str =
+   |           ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `parse_hotwords` is never used
+  --> examples/../src/textproc.rs:72:8
+   |
+72 | pub fn parse_hotwords(raw: Option<&str>) -> HashSet<String> {
+   |        ^^^^^^^^^^^^^^
+
+warning: function `is_turn_stop` is never used
+   --> examples/../src/textproc.rs:128:8
+    |
+128 | pub fn is_turn_stop(hotwords: &HashSet<String>, text: &str) -> bool {
+    |        ^^^^^^^^^^^^
+
+warning: function `session_exit_speculation_blocked` is never used
+   --> examples/../src/textproc.rs:136:8
+    |
+136 | pub fn session_exit_speculation_blocked(hotwords: &HashSet<String>, text: &str, tail_match: bool) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> examples/../src/textproc.rs:305:8
+    |
+305 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `exit_reply_kind` is never used
+   --> examples/../src/textproc.rs:350:8
+    |
+350 | pub fn exit_reply_kind(text: &str) -> &'static str {
+    |        ^^^^^^^^^^^^^^^
+
+warning: function `strip_stage_directions` is never used
+   --> examples/../src/textproc.rs:368:8
+    |
+368 | pub fn strip_stage_directions(text: &str) -> String {
+    |        ^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `local_audio_echo_hit` is never used
+   --> examples/../src/textproc.rs:408:8
+    |
+408 | pub fn local_audio_echo_hit<'a>(commit_norm: &str, bank: &'a [(String, String)]) -> Option<&'a str> {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `opening_echo_verdict` is never used
+   --> examples/../src/textproc.rs:437:8
+    |
+437 | pub fn opening_echo_verdict<'a>(
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: function `opening_echo_with_search_ack` is never used
+   --> examples/../src/textproc.rs:454:8
+    |
+454 | pub fn opening_echo_with_search_ack<'a>(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `lcs_char_ratio` is never used
+   --> examples/../src/textproc.rs:466:8
+    |
+466 | pub fn lcs_char_ratio(needle: &str, hay: &str) -> f32 {
+    |        ^^^^^^^^^^^^^^
+
+warning: constant `LOCAL_AUDIO_OVERLAP_LCS` is never used
+   --> examples/../src/textproc.rs:492:11
+    |
+492 | pub const LOCAL_AUDIO_OVERLAP_LCS: f32 = 0.3;
+    |           ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `local_audio_echo_overlap_hit` is never used
+   --> examples/../src/textproc.rs:494:8
+    |
+494 | pub fn local_audio_echo_overlap_hit<'a>(commit_norm: &str, bank: &'a [(String, String)]) -> Option<(&'a str, f32)> {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `opening_overlap_decision` is never used
+   --> examples/../src/textproc.rs:507:8
+    |
+507 | pub fn opening_overlap_decision<'a>(
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `overlap_vadless_qualifies` is never used
+   --> examples/../src/textproc.rs:529:8
+    |
+529 | pub fn overlap_vadless_qualifies(vad_onset_seen_before_commit: bool) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `room_unix_secs` is never used
+   --> examples/../src/textproc.rs:534:8
+    |
+534 | pub fn room_unix_secs(room_name: &str) -> Option<i64> {
+    |        ^^^^^^^^^^^^^^
+
+warning: function `opening_overlap_deadline_ms` is never used
+   --> examples/../src/textproc.rs:543:8
+    |
+543 | pub fn opening_overlap_deadline_ms(room_secs: i64, greeting_max_ms: u64) -> i64 {
+    |        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `possible_prefix` is never used
+   --> examples/../src/stop_variants.rs:200:8
+    |
+200 | pub fn possible_prefix(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^
+
+warning: field `dns_path` is never read
+  --> examples/../src/voice_connect.rs:71:85
+   |
+71 | pub struct Connected { pub socket: TcpStream, pub dns_ms: u64, pub tcp_ms: u64, pub dns_path: &'static str }
+   |            --------- field in this struct                                           ^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `voice-rust-worker` (example "session-close-audit") generated 21 warnings
+warning: `voice-rust-worker` (example "dns_probe") generated 1 warning
+warning: method `chat` is never used
+   --> src/llm.rs:642:18
+    |
+590 | impl Llm {
+    | -------- method in this implementation
+...
+642 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5m 49s
+  Executable unittests src/main.rs (2-Projects/realtime-voice-agent/rust-worker/target/debug/build/voice-rust-worker/38f59fa62e4a216d/out/voice_rust_worker-38f59fa62e4a216d)

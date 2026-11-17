@@ -1,0 +1,78 @@
+   Compiling voice-rust-worker v0.1.0 ($WORKTREE/.voice-onboarding-build/rust-baseline/2-Projects/realtime-voice-agent/rust-worker)
+warning: method `chat` is never used
+   --> src/llm.rs:642:18
+    |
+590 | impl Llm {
+    | -------- method in this implementation
+...
+642 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 38s
+     Running unittests src/main.rs (2-Projects/realtime-voice-agent/rust-worker/target/debug/build/voice-rust-worker/38f59fa62e4a216d/out/voice_rust_worker-38f59fa62e4a216d)
+
+running 25 tests
+test voice_connect::tests::candidate_fallback_cname_ttl_and_diagnostics_stay_on_own_resolver ... ok
+test voice_connect::tests::cname_additional_ipv6_remains_usable ... ok
+test voice_connect::tests::cname_answer_preserves_the_shortest_answer_ttl ... ok
+test voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses ... FAILED
+test voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber ... FAILED
+test voice_connect::tests::diagnostic_error_classification_cannot_echo_untrusted_error_text ... ok
+test voice_connect::tests::diagnostic_records_dns_cancellation_without_claiming_resolver_timeout ... ok
+test voice_connect::tests::diagnostic_records_real_negative_dns_rcode_and_never_starts_tcp ... ok
+test voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection ... FAILED
+test voice_connect::tests::multihop_and_zero_ttl_additional_results_are_requeried ... ok
+test voice_connect::tests::r16_a_success_does_not_wait_for_missing_aaaa_and_obeys_ttl ... ok
+test voice_connect::tests::r16_dns_dial_cancellation_is_bounded ... ok
+test voice_connect::tests::r16_ipv6_and_alternate_address_remain_available ... ok
+test voice_connect::tests::r26_cancellation_releases_hedge_capacity ... ok
+test voice_connect::tests::r26_failed_upstream_preserves_primary_and_full_limit_never_queues ... ok
+test voice_connect::tests::r26_fallback_connects_ipv6_when_primary_dns_is_silent ... ok
+test voice_connect::tests::r26_fast_primary_does_not_query_upstream_and_cache_obeys_ttl ... ok
+test voice_connect::tests::r26_only_known_tts_opt_in_and_managed_upstream_config_are_allowed ... ok
+test voice_connect::tests::r26_slow_stub_uses_independent_upstream_before_dns_timeout ... ok
+test voice_connect::tests::r27_both_resolvers_silent_cancelled_by_shared_deadline ... ok
+test voice_connect::tests::r27_cname_fallback_evicts_additional_cache_and_preserves_path ... ok
+test voice_connect::tests::r27_fast_negative_answer_does_not_trigger_positive_fallback ... ok
+test voice_connect::tests::r27_fast_transport_failure_is_explicit_and_does_not_expand_retries ... ok
+test voice_connect::tests::r27_silent_system_dns_uses_healthy_fallback_to_reach_tcp ... ok
+test voice_connect::tests::recursive_lookup_owner_and_cached_original_owner_both_work ... ok
+
+failures:
+
+---- voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses stdout ----
+
+thread 'voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses' (280094999) panicked at src/voice_connect.rs:505:91:
+called `Result::unwrap()` on an `Err` value: Os { code: 49, kind: AddrNotAvailable, message: "Can't assign requested address" }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber stdout ----
+
+thread 'voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber' (280095000) panicked at src/voice_connect.rs:313:9:
+assertion `left == right` failed: started loser must be recorded: 2026-11-17T03:46:18.348605Z  INFO voice_connection{provider="diagnostic_test" connect_id=701}: voice_rust_worker::voice_connect: voice tcp address timing family="A" stage="tcp" outcome="connected" reason="none" io_kind=None elapsed_ms=0 address_index=1 peer=Some(127.0.0.1:65305)
+2026-11-17T03:46:18.349136Z  INFO voice_connection{provider="diagnostic_test" connect_id=701}: voice_rust_worker::voice_connect: voice tcp address timing family="A" stage="tcp" outcome="cancelled" reason="owner_dropped" io_kind=None elapsed_ms=252 address_index=0 peer=Some(127.0.0.2:65305)
+2026-11-17T03:46:18.349252Z  INFO voice_connection{provider="diagnostic_test" connect_id=701}: voice_rust_worker::voice_connect: voice tcp address timing family="A" stage="stagger" outcome="cancelled" reason="owner_dropped" io_kind=None elapsed_ms=253 address_index=2 peer=Some(127.0.0.1:65305)
+
+  left: 2
+ right: 1
+
+---- voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection stdout ----
+
+thread 'voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection' (280095006) panicked at src/voice_connect.rs:287:9:
+failed address reason was lost: 2026-11-17T03:46:18.514839Z  INFO voice_connection{provider="diagnostic_test" connect_id=701}: voice_rust_worker::voice_connect: voice dns family timing resolver_path="system_resolver" family="A" outcome="resolved" reason="none" io_kind=None dns_ms=2 address_count=2
+2026-11-17T03:46:18.573282Z  INFO voice_connection{provider="diagnostic_test" connect_id=701}: voice_rust_worker::voice_connect: voice dns family timing resolver_path="system_resolver" family="AAAA" outcome="failed" reason="nodata" dns_rcode=0 io_kind=None dns_ms=2
+2026-11-17T03:46:18.767652Z  INFO voice_connection{provider="diagnostic_test" connect_id=701}: voice_rust_worker::voice_connect: voice tcp address timing family="A" stage="tcp" outcome="connected" reason="none" io_kind=None elapsed_ms=0 address_index=1 peer=Some(127.0.0.1:65308)
+
+
+
+failures:
+    voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses
+    voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber
+    voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection
+
+test result: FAILED. 22 passed; 3 failed; 0 ignored; 0 measured; 593 filtered out; finished in 8.68s
+
+error: test failed, to rerun pass `--bin voice-rust-worker`

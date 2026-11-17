@@ -1,0 +1,65 @@
+   Compiling voice-rust-worker v0.1.0 ($WORKTREE/2-Projects/realtime-voice-agent/rust-worker)
+warning: method `is_some` is never used
+  --> src/say_defer.rs:30:12
+   |
+ 9 | impl DeferredSay {
+   | ---------------- method in this implementation
+...
+30 |     pub fn is_some(&self) -> bool {
+   |            ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `valid_base` is never used
+  --> src/search_canary.rs:21:8
+   |
+21 | pub fn valid_base(s: &str) -> bool { s.trim_end_matches('/') == BASE }
+   |        ^^^^^^^^^^
+
+warning: function `enabled` is never used
+   --> src/search_tasks.rs:238:8
+    |
+238 | pub fn enabled(enabled: &str, allowlist: &str, room: &str) -> bool {
+    |        ^^^^^^^
+
+warning: method `remaining` is never used
+  --> src/search_progress.rs:14:8
+   |
+10 | impl SearchProgress {
+   | ------------------- method in this implementation
+...
+14 | pub fn remaining(&self,complete:usize)->String{self.sentences.iter().skip(complete).cloned().collect()}
+   |        ^^^^^^^^^
+
+warning: method `chat` is never used
+   --> src/llm.rs:642:18
+    |
+590 | impl Llm {
+    | -------- method in this implementation
+...
+642 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+
+warning: method `is_on` is never used
+  --> src/backchannel.rs:84:12
+   |
+53 | impl BackchannelCfg {
+   | ------------------- method in this implementation
+...
+84 |     pub fn is_on(&self) -> bool {
+   |            ^^^^^
+
+warning: function `run_asr_stream` is never used
+   --> src/stt_volc.rs:232:14
+    |
+232 | pub async fn run_asr_stream(
+    |              ^^^^^^^^^^^^^^
+
+warning: function `is_session_exit_tail` is never used
+   --> src/textproc.rs:305:8
+    |
+305 | pub fn is_session_exit_tail(text: &str) -> bool {
+    |        ^^^^^^^^^^^^^^^^^^^^
+
+warning: `voice-rust-worker` (bin "voice-rust-worker") generated 8 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 18.33s

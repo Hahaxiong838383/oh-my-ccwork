@@ -1,0 +1,165 @@
+{
+  "status": "local_development_and_selfcheck_complete_joint_acceptance_pending",
+  "checked_at": "2026-11-17T03:57:15.176071+00:00",
+  "implementation_commit": "1cf9428e19ce482e6b9958821837c9a845e2572f",
+  "candidate_commit": "最终候选包含本文件；完整SHA及远端核同见当前真实会话最终正文",
+  "contract_sha256": "f33522f45fd8d52cdd3c08759e0a894c65d296a1d2e7170ff19b2a827dbce679",
+  "environment": {
+    "os": "macOS arm64",
+    "node": "v22.23.5",
+    "rust": "1.100.0 (stable aarch64-apple-darwin)",
+    "brain_dependencies": "npm ci using unchanged repository package-lock.json; no production .env",
+    "brain_lock_sha256": "5a8faee611938a153d2c929566cade3833e1325440a9c7cf075af404fa6ac8a2",
+    "rust_dependencies": "original Cargo.lock unchanged; --locked",
+    "fixture": "temporary synthetic SQLite databases and loopback HTTP; no real device/provider"
+  },
+  "checks": [
+    {
+      "name": "Brain新增（HTTP/SQLite、现有记忆读取、真实session HTTP）",
+      "passed": 20,
+      "failed": 0,
+      "evidence": "evidence/brain-http-sqlite.txt"
+    },
+    {
+      "name": "原device-session回归",
+      "passed": 45,
+      "failed": 0,
+      "evidence": "evidence/brain-session-regression.txt"
+    },
+    {
+      "name": "原onboarding-extractor/exit-intent/memory-extract回归",
+      "passed": [
+        25,
+        58,
+        15
+      ],
+      "failed": 0,
+      "evidence": "evidence/brain-existing-regression.txt"
+    },
+    {
+      "name": "Worker控制入口+状态机+真实Brain HTTP/SQLite",
+      "passed": 38,
+      "failed": 0,
+      "detail": "24个原control测试+14个教学测试；其中2个为Rust到Node真实HTTP/SQLite端到端和取消竞态",
+      "evidence": "evidence/worker-entry.txt"
+    },
+    {
+      "name": "完整Rust编译",
+      "result": "passed",
+      "evidence": "evidence/rust-compile.txt"
+    },
+    {
+      "name": "完整Rust测试（并行及串行各一次）",
+      "passed": 626,
+      "failed": 4,
+      "ignored": 2,
+      "result": "not_all_green; all 4 failures reproduced on original Rust baseline",
+      "evidence": [
+        "evidence/rust-full-parallel.txt",
+        "evidence/rust-full-serial.txt",
+        "evidence/rust-final-locked.txt"
+      ],
+      "final_locked_node_dependencies_verified": true,
+      "final_onboarding_test_names": [
+        "voice_onboarding::tests::cancel_before_deferred_begin_prevents_late_lesson_start",
+        "voice_onboarding::tests::duplicates_conflicts_and_old_audio_never_replay",
+        "voice_onboarding::tests::entry_parser_and_trust_fences",
+        "voice_onboarding::tests::every_phase_can_finish_or_cancel_without_waiting_for_audio",
+        "voice_onboarding::tests::full_missing_flow_all_questions_then_exit_and_strict_revisions",
+        "voice_onboarding::tests::input_gate_keeps_exit_but_drops_playback_answers_and_late_asr",
+        "voice_onboarding::tests::known_profile_exit_and_normal_chat_keep_room",
+        "voice_onboarding::tests::no_answer_until_audio_complete_and_saved_only_after_brain",
+        "voice_onboarding::tests::quiet_failed_audio_decline_and_listening_exclusion",
+        "voice_onboarding::tests::refuse_failure_and_cancel_reject_late_saved_reply",
+        "voice_onboarding::tests::retired_audio_and_old_revision_do_not_advance",
+        "voice_onboarding::tests::ttl_is_fixed_and_cancel_invalidates_late_save",
+        "voice_onboarding::tests::worker_control_transport_to_real_brain_http_and_sqlite",
+        "voice_onboarding::tests::cancellation_during_actual_http_does_not_commit_late_answer"
+      ]
+    },
+    {
+      "name": "完整TypeScript检查",
+      "result": "failed_same_single_baseline_error",
+      "error": "src/listening-content.ts(29,133): TS2339 Property 'abort' does not exist on type 'GeminiLlmClient'.",
+      "evidence": [
+        "evidence/typescript-candidate.txt",
+        "evidence/typescript-baseline.txt"
+      ]
+    }
+  ],
+  "baseline_failure_reproduction": {
+    "rust_source_commit": "262dfe9c0a7bc9c44769670e0312bcb66cb32671",
+    "room_cleanup::tests::business_intent_requires_healthy_retry_and_survives_job_drop": "原基线同样ENOENT；源码读取Linux /proc/self/stat，macOS不存在",
+    "voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses": "原基线同样AddrNotAvailable；本机未配置127.0.0.2别名",
+    "voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber": "原基线同样取消数2而非1；127.0.0.2连接语义不同",
+    "voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection": "原基线同样没有ConnectionRefused；127.0.0.2连接语义不同",
+    "evidence": [
+      "evidence/rust-baseline-network.txt",
+      "evidence/rust-baseline-cleanup.txt"
+    ],
+    "brain_source_commit": "18a230754941ad9781db4d39e5a12a9622fc7349",
+    "baseline_tests_modified": false,
+    "system_network_modified": false
+  },
+  "verified_local_matrix": [
+    "全知/部分/全缺；按绑定孩子条件选题；父档案已知跳过；多孩子拒绝猜测",
+    "年龄自然回答以整数年数+观察时间保存，生日不推算；普通聊天复用年龄",
+    "性别/称呼自然语句；拒绝立即撤销；模糊/确认词不写；真实SQLite触发器写失败不saved",
+    "换绑、签发到begin之间变更、档案变更、旧revision、并发同revision拒绝第二次提交",
+    "request_id重放/异内容冲突；跨trace/身份校验；RTC grant不足以单独写资料",
+    "新普通会话撤销旧课；提前唤醒等待时cancel/finish阻止迟到begin",
+    "audio_complete之前拒资料答案；旧token/重复token不推进；7cue选择，不创建远端TTS",
+    "180秒固定截止（注入时钟边界测试，非真机等待）；超时/取消拒迟到saved",
+    "quiet_exit/complete_exit；waiting_exit继续聊转normal_chat且不生成关房动作",
+    "任意教学阶段finish/cancel及退出优先门；倾听/搜索不签教学；普通无能力路径旁路",
+    "实际Rust入口→BrainHTTP→SQLite提交→saved；实际HTTP答题已到达但事务延迟时cancel先提交阻止写入"
+  ],
+  "not_verified": [
+    "真实RTC房间、当前participant SID信任交付、网络丢包/乱序与9秒端侧无应答恢复",
+    "Android v398实际7cue播放/音频完成/游戏暂停恢复/倾听互斥/早唤醒首句不吞",
+    "真实ASR供应商握手、送帧、final语义、回声消除、退出cue碎片不误关房及真实听感",
+    "真实TTS/PCM/ready/普通退出全链路；现役真实Worker JWT服务账号兼容性",
+    "Linux生产目标构建及四个基线平台测试；生产运行时、部署、开窗与真实记忆对账",
+    "跨SQLite数据库进程强杀/掉电故障原子性；cancel晚于已完成提交时不撤销已存事实"
+  ],
+  "artifacts": {
+    "local_debug_binary": {
+      "path": "2-Projects/realtime-voice-agent/rust-worker/target/debug/voice-rust-worker",
+      "platform": "Mach-O arm64 macOS only",
+      "sha256": "4f3c12ac6edf41bb0c27b18825e4f956766ac5cca7c42ec68167c697d029bfa3",
+      "bytes": 130193168,
+      "command": "cargo rustc --locked --manifest-path 2-Projects/realtime-voice-agent/rust-worker/Cargo.toml --bin voice-rust-worker -- -C link-arg=-ObjC",
+      "executed_or_deployed": false
+    }
+  },
+  "constraints": {
+    "delegated": false,
+    "production_write": false,
+    "deployment": false,
+    "restart": false,
+    "real_profile_write": false,
+    "sms_sent": false,
+    "real_device_triggered": false,
+    "linux_release_artifact": false
+  },
+  "evidence_redaction": "绝对工作树路径替换为$WORKTREE；日志中的合成SN替换为<synthetic-sn>；未保存任何JWT或grant原文；仅移除行尾空格和多余尾部空行。",
+  "evidence_sha256": {
+    "brain-existing-regression.txt": "a67f0adc145552b49e0dbcc61524736d3c179e7511160c9792556f3c2636c695",
+    "brain-http-sqlite.txt": "acf243f866a258df390ad4218103cb9b2fcb24c902f467342706643715527ebb",
+    "brain-session-regression.txt": "6c2bd121fae8faf26c8d1944ead3948e9d4b922bbceee584aa347e9dd643e6c6",
+    "red-cancel-before-begin.txt": "7021ebe9cbc2c04241487a64643d3b4bdd4c33530ccbf55c24fd8be3af350af7",
+    "red-new-session-revocation.txt": "775a6ed2fe84feee80ce4cc27881fa8abd08b7ff6112ed25f126146d38e1f00b",
+    "red-preserve-known-age.txt": "bf39ef2adf291a941987ecede7aff022ff05b4f51f17bda9a10d09303aec9e0f",
+    "rust-baseline-cleanup.txt": "962461960810fde47b7d05bbde0007aec9656498adc5c37083e7b447387a4300",
+    "rust-baseline-network.txt": "0986743da45c2de534f35714adaa62d5fa746fd79d530c687067ec06f273d8b3",
+    "rust-candidate-build.txt": "1c3e77cd3e45bec9144bdb6082818a0b8a30c74bc8e470833ae5b3d547598e15",
+    "rust-compile.txt": "dc34126d06f5eccfa9306268ac08eec35b7961c625afb0d1f316e80deb5aa6c9",
+    "rust-final-locked.txt": "8a1a572cd697fa819267ec79b635951f1fd1ffe33a03c899304d15443beb6b15",
+    "rust-full-parallel.txt": "5bf63ce7a6cdad47cc7a75eb706db5c6ba8185903c3ab1f9e2d6d22e3e935a24",
+    "rust-full-serial.txt": "c6eef00957b5fe056b4e5c2a23b07a0a73d7acca95bbd17e9d5961814505deea",
+    "typescript-baseline.txt": "1e1bfc72ecb3e28e002a1ff4d4463813394ee6a5ed9b4ba48437176f07704288",
+    "typescript-candidate.txt": "1e1bfc72ecb3e28e002a1ff4d4463813394ee6a5ed9b4ba48437176f07704288",
+    "worker-entry.txt": "c5fc6a8034533c58c69b86d53c4375956a44f8e8d90d135766844e30282f2d8d"
+  },
+  "build_cache_audit": "基线对照共用target曾覆盖同名crate测试产物；最终触发候选源码重新编译，明确核到全部14个教学测试与626/4/2总数。下次基线必须使用独立CARGO_TARGET_DIR。"
+}

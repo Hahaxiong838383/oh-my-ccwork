@@ -1,0 +1,19 @@
+
+onboarding-extractor.test: 25 passed, 0 failed
+(node:71514) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+exit-intent.test: 58 passed, 0 failed
+(node:71273) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[memory] 改名候选被门拒: value="子贤" reason=no_intent
+[memory] 改名候选被门拒: value="小明" reason=evidence_not_in_user_text
+[memory] 改名候选被门拒: value="小明" reason=evidence_not_in_user_text
+[memory] 改名候选被门拒: value="小红" reason=no_intent
+[memory] 改名候选被门拒: value="妈妈" reason=invalid_name
+[memory] 改名候选被门拒: value="你" reason=invalid_name
+[memory] 改名候选被门拒: value="小可" reason=invalid_name
+[memory] 改名候选被门拒: value="川哥" reason=same_as_current
+[memory] 改名候选被门拒: value="小明" reason=evidence_not_in_user_text
+
+memory-extract tests: pass=15 fail=0

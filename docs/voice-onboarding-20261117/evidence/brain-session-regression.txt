@@ -1,0 +1,51 @@
+(node:71441) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  合法 SN 返回 200 且 claims 与响应一致
+[device-session] filler policy unavailable; legacy worker fallback
+  ok  衔接配置读取异常不阻断票据；设备不能伪造策略
+  ok  ADB serial 返回 400
+  ok  BJ000000000000000000 返回 400
+  ok  非法日期 <synthetic-sn> 返回 400
+  ok  流水号 00000000 返回 400
+  ok  validateDeviceSn 正/负锚
+  ok  缺鉴权返回 401
+  ok  SN 与凭据不匹配返回 403
+  ok  白名单外 SN 返回 403
+  ok  自检函数对坏 token 必须 throw
+  ok  token agents metadata 携带 trace_id 与 session_id
+  ok  自检函数对 metadata trace 不符必须 throw
+  ok  两次 session 的 session_id 与 room 均不同
+  ok  prefetch 返回 warming 且无 token
+  ok  超频返回 429
+  ok  LiveKit 凭据未配返回 503
+  ok  坏 JSON 返回 400
+  ok  日志敏感扫描（含正锚）
+  ok  B23 名单内且声明 → 签 contract，metadata 三字段同源
+  ok  B23 名单内但客户端未声明（v261 老客户端）→ 旧路径，metadata 无三键
+  ok  B23 声明了但不在名单 / 名单为空 → 旧路径
+  ok  B23 supports 畸形值被忽略，不影响签发
+  ok  B23 自检：contract 与 metadata 不同源必 throw（负锚）
+  ok  B29 ①目标 SN + supports + 有派单目标 → v1 合同 ∧ 派给新 agent（响应/JWT/自检三处同值）
+  ok  B29 ②同 SN 无 supports → contract null ∧ 仍派旧 agent
+  ok  B29 ③非名单合法 SN + supports → contract null ∧ 仍派旧 agent
+  ok  B29 ④fail-closed：名单内 + supports 但未配派单目标 → 拒签新能力，退回旧路径旧 agent
+  ok  B29 负锚：响应 expected_agent_name 与 JWT 不符必 throw（证明自检真在对撞而非恒绿）
+  ok  B84 capability：名单外的准入设备 + 双 supports → 签 contract、派 firstturn agent（OTA 即用，零人工名单）
+  ok  B84 capability：只声明 oneshot_first_turn_v1、缺 local_receipt_v1 → 旧路径（两项能力缺一不签）
+  ok  B84 capability：老客户端无 supports → 旧路径、旧 agent、metadata 无三键（全量开关不得强派 ordered）
+  ok  B84 capability：缺派单目标 → fail-closed 旧路径（B29 第三条件不因策略放宽）
+  ok  B84 off：名单内 + 双 supports + 有 agent → 一律不签（全局暂停 = 回滚开关）
+  ok  B84 策略值非法 → 按 allowlist 处理并告警：名单外不签、名单内照签
+  ok  B84 默认（未设策略）= allowlist：名单外 + 双 supports 不签（与今天生产行为逐字一致）
+  ok  B84 日志脱敏：supports 里塞 token 样的串只打成 ?，敏感扫描仍零命中
+[device-session] ONESHOT_FIRST_TURN_POLICY="garbage" 非法，按 allowlist 处理（合法值 allowlist|capability|off）
+  ok  B84 纯函数矩阵：normalizeFirstTurnPolicy / firstTurnEligibleBy
+  ok  B89 覆盖 off 压过 env capability：名单外+双 supports 不签，日志 policy_src=override
+  ok  B89 覆盖 capability 压过 env 未设：名单外+双 supports 照签
+  ok  B89 清除覆盖后回落 env：env=off 则不签
+  ok  B89 非法覆盖值（手工改库）被忽略并告警：按 env 走、绝不放宽
+  ok  B91 policy=off：响应 contract 键显式存在且为 JSON null（不是缺键）
+  ok  B91 capability 下旧端（无 supports）：contract 键显式 null + 普通票据
+  ok  搜索灰度：完整SN、首句合同、JWT派单、到期回退
+
+45 passed / 0 failed
