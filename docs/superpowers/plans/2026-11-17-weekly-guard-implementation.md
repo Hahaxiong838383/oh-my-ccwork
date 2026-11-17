@@ -30,24 +30,26 @@
 
 ## Task 1: 日周纯计算
 
-- [ ] 新建 apps/server/src/weekly-calculation.ts：导出合法日期/周一起点和 buildWeeklyCalculation；读取原始事件与可选补充日结果，无I/O。
-- [ ] scripts/weekly-calculation.test.ts：先复现默认周二、连续边界、跨日/去重、估算隔离、空态，再通过对应实现。
+- [x] 新建 apps/server/src/weekly-calculation.ts：导出合法日期/周一起点和 buildWeeklyCalculation；读取原始事件与可选补充日结果，无I/O。
+- [x] scripts/weekly-calculation.test.ts：先复现默认周二、连续边界、跨日/去重、估算隔离、空态，再通过对应实现。
 
 ## Task 2: 持久化、授权、发布和接口
 
-- [ ] 新建 weekly-report-store.ts/weekly-report.ts：保存按授权范围隔离的每日证据及周版本；保持历史、修订幂等、22点发布与定时/启动补跑。
-- [ ] 原 routes/telemetry.ts weekly GET保留原字段，在data.report增加新结果；routes/miniapp-admin.ts新增同源weekly GET；index.ts启动轻量定时器。
-- [ ] scripts/weekly-report.test.ts：真实SQLite/HTTP权限、补传/清理、重启、定时及兼容；已有telemetry/history/admin回归。
+- [x] 新建 weekly-report-store.ts/weekly-report-service.ts：保存按授权范围隔离的每日证据及周版本；保持历史、修订幂等、22点发布与定时/启动补跑。
+- [x] 原 routes/telemetry.ts weekly GET保留原字段，在data.report增加新结果；routes/miniapp-admin.ts新增同源weekly GET；index.ts启动轻量定时器。
+- [x] scripts/weekly-report-store.test.ts + scripts/weekly-report-service.test.ts：真实SQLite/HTTP权限、补传/清理、重启、定时及兼容；已有telemetry/history/admin回归。
 
 ## Task 3: 后台和小程序
 
-- [ ] 后台新增周报预览标签、切周、三项指标、真实/补充/每日证据和版本/空态；保持现有导航、解绑确认、隐藏对话。
+- [x] 后台新增周报预览标签、切周、三项指标、真实/补充/每日证据和版本/空态；保持现有导航、解绑确认、隐藏对话。
 - [ ] 定位现役小程序仓库并接同一GET结果；切设备/退出/刷新时使迟到响应失效；不可只改DemoIndex。
 - [ ] 两端构建/浏览器fixture及生产原字节响应验证，原有字段和功能不回退。
 
 ## Task 4: 交叉验收、发布、交付
 
-- [ ] Grok设计复核（task_id=4cb6c562-bed3-4d41-8c2f-6e3f0cc54af7）与完成源码的独立交叉测试，逐项修复后复测。
-- [ ] 生产源码对撞、基于现役基线隔离Node22回归、备份、空闲发布，真实家长A/C与后台逐字段核对。
-- [ ] 人话总结、接口有数据/无数据/错误样例、逐项验收矩阵及交付文档，commit/push远端核同。
+- [x] Grok设计复核（task_id=4cb6c562-bed3-4d41-8c2f-6e3f0cc54af7）与完成源码的独立交叉测试，逐项修复后复测。
+- [x] 生产源码对撞、基于现役基线隔离Node22回归、备份、空闲发布，真实家长A/C与后台逐字段核对。
+- [x] 人话总结、接口有数据/无数据/错误样例、逐项验收矩阵及交付文档，commit/push远端核同。
 - [ ] 仅全部目标证据成立才完成goal；现役客户端/真实验证缺失不能标整体完成。
+
+执行状态（2026-11-17 21:28）：服务端/后台已上线并核真实C机；参考小程序133测试与双构建通过；Grok源码审查54测试+3反例通过。现役LiveApp源码在本机/Air限定范围未找到，手机接线与实机验收未完成，goal保持未完成。回执见2-Projects/P003GameDemo20260513/docs/weekly-guard-20261117/README.md。

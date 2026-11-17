@@ -1,0 +1,841 @@
+{
+  "pass": true,
+  "read_at_ms": 1794921296054,
+  "parent_A_confirmed": true,
+  "original_binding_unchanged": true,
+  "device": "C",
+  "sn_suffix": "0031",
+  "business_writes": 0,
+  "derived_report_storage": true,
+  "base": "http://127.0.0.1:3005",
+  "responses": [
+    {
+      "label": "parent_current",
+      "http_status": 200,
+      "path": "/v1/parent/devices/:public_id/weekly-report?timezone=Asia/Shanghai&week_start=2026-11-16",
+      "request_id": "weekly-verify-parent_current-1794921295606",
+      "read_at_ms": 1794921295771,
+      "cache_control": "no-store",
+      "json": {
+        "ok": true,
+        "data": {
+          "week_start": "2026-11-16",
+          "eye_health_rate": 7,
+          "guarded_minutes": 196,
+          "posture_alert_count": 8,
+          "percentile": null,
+          "highlights": [],
+          "data_quality": {
+            "valid_posture_rounds": 28,
+            "missing_hours": null
+          },
+          "report": {
+            "calculation_version": "weekly_guard_v1",
+            "timezone": "Asia/Shanghai",
+            "week_start": "2026-11-16",
+            "week_end": "2026-11-22",
+            "metrics": {
+              "posture_reminders": {
+                "available": true,
+                "reason": "partial_history",
+                "value": 8,
+                "reference_max": 672,
+                "above_reference_max": false,
+                "updated_at_ms": 1794915065038
+              },
+              "usage": {
+                "available": true,
+                "reason": "partial_history",
+                "total_seconds": 11743.13,
+                "daily_average_seconds": 1677.59,
+                "denominator_days": 7,
+                "source": "telemetry.focus_segment",
+                "supplemental_seconds": 2146.6100000000015,
+                "combined_seconds": 13889.74,
+                "updated_at_ms": 1794917129124
+              },
+              "active_days": {
+                "available": true,
+                "reason": "partial_history",
+                "value": 1,
+                "threshold_seconds": 300,
+                "updated_at_ms": 1794917129124
+              }
+            },
+            "daily": [
+              {
+                "date": "2026-11-16",
+                "observed_seconds": null,
+                "supplemental_seconds": 1416.532,
+                "combined_seconds": 1416.532,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": 1794824576514,
+                "reason": "partial_history"
+              },
+              {
+                "date": "2026-11-17",
+                "observed_seconds": 11743.13,
+                "supplemental_seconds": 730.0780000000013,
+                "combined_seconds": 12473.208,
+                "longest_continuous_seconds": 715.516,
+                "active": true,
+                "posture_count": 8,
+                "posture_available": true,
+                "usage_available": true,
+                "updated_at_ms": 1794917129124,
+                "reason": "partial_history"
+              },
+              {
+                "date": "2026-11-18",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-19",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-20",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-21",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-22",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              }
+            ],
+            "coverage": {
+              "complete": false,
+              "reason": "partial_history",
+              "observed_days": 1,
+              "missing_dates": [
+                "2026-11-16"
+              ],
+              "pending_dates": [
+                "2026-11-18",
+                "2026-11-19",
+                "2026-11-20",
+                "2026-11-21",
+                "2026-11-22"
+              ],
+              "invalid_event_count": 0,
+              "invalid_event_reasons": {},
+              "supplemental_available": true
+            },
+            "source_updated_at_ms": 1794917129124,
+            "report_id": "wr_03e1a2632418876d6d7fd9dd",
+            "status": "collecting",
+            "revision": 2,
+            "published_at_ms": null,
+            "updated_at_ms": 1794921295651,
+            "generated_at_ms": 1794921295651,
+            "scheduled_publish_at_ms": 1795356000000,
+            "period_end_ms": 1795363200000,
+            "data_cutoff_at_ms": 1794921295651,
+            "scope": {
+              "kind": "device",
+              "public_id": "dev_50b5415662259045"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "admin_current",
+      "http_status": 200,
+      "path": "/api/admin/devices/:sn/miniapp/weekly-report?timezone=Asia/Shanghai&week_start=2026-11-16",
+      "request_id": "weekly-verify-admin_current-1794921295780",
+      "read_at_ms": 1794921295843,
+      "cache_control": "no-store",
+      "json": {
+        "ok": true,
+        "data": {
+          "week_start": "2026-11-16",
+          "eye_health_rate": 7,
+          "guarded_minutes": 196,
+          "posture_alert_count": 8,
+          "percentile": null,
+          "highlights": [],
+          "data_quality": {
+            "valid_posture_rounds": 28,
+            "missing_hours": null
+          },
+          "report": {
+            "calculation_version": "weekly_guard_v1",
+            "timezone": "Asia/Shanghai",
+            "week_start": "2026-11-16",
+            "week_end": "2026-11-22",
+            "metrics": {
+              "posture_reminders": {
+                "available": true,
+                "reason": "partial_history",
+                "value": 8,
+                "reference_max": 672,
+                "above_reference_max": false,
+                "updated_at_ms": 1794915065038
+              },
+              "usage": {
+                "available": true,
+                "reason": "partial_history",
+                "total_seconds": 11743.13,
+                "daily_average_seconds": 1677.59,
+                "denominator_days": 7,
+                "source": "telemetry.focus_segment",
+                "supplemental_seconds": 2146.6100000000015,
+                "combined_seconds": 13889.74,
+                "updated_at_ms": 1794917129124
+              },
+              "active_days": {
+                "available": true,
+                "reason": "partial_history",
+                "value": 1,
+                "threshold_seconds": 300,
+                "updated_at_ms": 1794917129124
+              }
+            },
+            "daily": [
+              {
+                "date": "2026-11-16",
+                "observed_seconds": null,
+                "supplemental_seconds": 1416.532,
+                "combined_seconds": 1416.532,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": 1794824576514,
+                "reason": "partial_history"
+              },
+              {
+                "date": "2026-11-17",
+                "observed_seconds": 11743.13,
+                "supplemental_seconds": 730.0780000000013,
+                "combined_seconds": 12473.208,
+                "longest_continuous_seconds": 715.516,
+                "active": true,
+                "posture_count": 8,
+                "posture_available": true,
+                "usage_available": true,
+                "updated_at_ms": 1794917129124,
+                "reason": "partial_history"
+              },
+              {
+                "date": "2026-11-18",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-19",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-20",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-21",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-22",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              }
+            ],
+            "coverage": {
+              "complete": false,
+              "reason": "partial_history",
+              "observed_days": 1,
+              "missing_dates": [
+                "2026-11-16"
+              ],
+              "pending_dates": [
+                "2026-11-18",
+                "2026-11-19",
+                "2026-11-20",
+                "2026-11-21",
+                "2026-11-22"
+              ],
+              "invalid_event_count": 0,
+              "invalid_event_reasons": {},
+              "supplemental_available": true
+            },
+            "source_updated_at_ms": 1794917129124,
+            "report_id": "wr_03e1a2632418876d6d7fd9dd",
+            "status": "collecting",
+            "revision": 2,
+            "published_at_ms": null,
+            "updated_at_ms": 1794921295651,
+            "generated_at_ms": 1794921295651,
+            "scheduled_publish_at_ms": 1795356000000,
+            "period_end_ms": 1795363200000,
+            "data_cutoff_at_ms": 1794921295651,
+            "scope": {
+              "kind": "device",
+              "public_id": "dev_50b5415662259045"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "default",
+      "http_status": 200,
+      "path": "/v1/parent/devices/:public_id/weekly-report",
+      "request_id": "weekly-verify-default-1794921295844",
+      "read_at_ms": 1794921295963,
+      "cache_control": "no-store",
+      "json": {
+        "ok": true,
+        "data": {
+          "week_start": "2026-11-16",
+          "eye_health_rate": 7,
+          "guarded_minutes": 196,
+          "posture_alert_count": 8,
+          "percentile": null,
+          "highlights": [],
+          "data_quality": {
+            "valid_posture_rounds": 28,
+            "missing_hours": null
+          },
+          "report": {
+            "calculation_version": "weekly_guard_v1",
+            "timezone": "Asia/Shanghai",
+            "week_start": "2026-11-16",
+            "week_end": "2026-11-22",
+            "metrics": {
+              "posture_reminders": {
+                "available": true,
+                "reason": "partial_history",
+                "value": 8,
+                "reference_max": 672,
+                "above_reference_max": false,
+                "updated_at_ms": 1794915065038
+              },
+              "usage": {
+                "available": true,
+                "reason": "partial_history",
+                "total_seconds": 11743.13,
+                "daily_average_seconds": 1677.59,
+                "denominator_days": 7,
+                "source": "telemetry.focus_segment",
+                "supplemental_seconds": 2146.6100000000015,
+                "combined_seconds": 13889.74,
+                "updated_at_ms": 1794917129124
+              },
+              "active_days": {
+                "available": true,
+                "reason": "partial_history",
+                "value": 1,
+                "threshold_seconds": 300,
+                "updated_at_ms": 1794917129124
+              }
+            },
+            "daily": [
+              {
+                "date": "2026-11-16",
+                "observed_seconds": null,
+                "supplemental_seconds": 1416.532,
+                "combined_seconds": 1416.532,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": 1794824576514,
+                "reason": "partial_history"
+              },
+              {
+                "date": "2026-11-17",
+                "observed_seconds": 11743.13,
+                "supplemental_seconds": 730.0780000000013,
+                "combined_seconds": 12473.208,
+                "longest_continuous_seconds": 715.516,
+                "active": true,
+                "posture_count": 8,
+                "posture_available": true,
+                "usage_available": true,
+                "updated_at_ms": 1794917129124,
+                "reason": "partial_history"
+              },
+              {
+                "date": "2026-11-18",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-19",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-20",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-21",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              },
+              {
+                "date": "2026-11-22",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "pending"
+              }
+            ],
+            "coverage": {
+              "complete": false,
+              "reason": "partial_history",
+              "observed_days": 1,
+              "missing_dates": [
+                "2026-11-16"
+              ],
+              "pending_dates": [
+                "2026-11-18",
+                "2026-11-19",
+                "2026-11-20",
+                "2026-11-21",
+                "2026-11-22"
+              ],
+              "invalid_event_count": 0,
+              "invalid_event_reasons": {},
+              "supplemental_available": true
+            },
+            "source_updated_at_ms": 1794917129124,
+            "report_id": "wr_03e1a2632418876d6d7fd9dd",
+            "status": "collecting",
+            "revision": 2,
+            "published_at_ms": null,
+            "updated_at_ms": 1794921295651,
+            "generated_at_ms": 1794921295651,
+            "scheduled_publish_at_ms": 1795356000000,
+            "period_end_ms": 1795363200000,
+            "data_cutoff_at_ms": 1794921295651,
+            "scope": {
+              "kind": "device",
+              "public_id": "dev_50b5415662259045"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "empty_week",
+      "http_status": 200,
+      "path": "/v1/parent/devices/:public_id/weekly-report?week_start=2026-10-26",
+      "request_id": "weekly-verify-empty_week-1794921295963",
+      "read_at_ms": 1794921296036,
+      "cache_control": "no-store",
+      "json": {
+        "ok": true,
+        "data": {
+          "week_start": "2026-10-26",
+          "eye_health_rate": null,
+          "guarded_minutes": 0,
+          "posture_alert_count": 0,
+          "percentile": null,
+          "highlights": [],
+          "data_quality": {
+            "valid_posture_rounds": 0,
+            "missing_hours": null
+          },
+          "report": {
+            "calculation_version": "weekly_guard_v1",
+            "timezone": "Asia/Shanghai",
+            "week_start": "2026-10-26",
+            "week_end": "2026-11-01",
+            "metrics": {
+              "posture_reminders": {
+                "available": false,
+                "reason": "no_reminder_events",
+                "value": null,
+                "reference_max": 672,
+                "above_reference_max": false,
+                "updated_at_ms": null
+              },
+              "usage": {
+                "available": false,
+                "reason": "no_focus_segments",
+                "total_seconds": null,
+                "daily_average_seconds": null,
+                "denominator_days": 7,
+                "source": "telemetry.focus_segment",
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "updated_at_ms": null
+              },
+              "active_days": {
+                "available": false,
+                "reason": "no_focus_segments",
+                "value": null,
+                "threshold_seconds": 300,
+                "updated_at_ms": null
+              }
+            },
+            "daily": [
+              {
+                "date": "2026-10-26",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              },
+              {
+                "date": "2026-10-27",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              },
+              {
+                "date": "2026-10-28",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              },
+              {
+                "date": "2026-10-29",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              },
+              {
+                "date": "2026-10-30",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              },
+              {
+                "date": "2026-10-31",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              },
+              {
+                "date": "2026-11-01",
+                "observed_seconds": null,
+                "supplemental_seconds": null,
+                "combined_seconds": null,
+                "longest_continuous_seconds": null,
+                "active": null,
+                "posture_count": null,
+                "posture_available": false,
+                "usage_available": false,
+                "updated_at_ms": null,
+                "reason": "no_observations"
+              }
+            ],
+            "coverage": {
+              "complete": false,
+              "reason": "partial_history",
+              "observed_days": 0,
+              "missing_dates": [
+                "2026-10-26",
+                "2026-10-27",
+                "2026-10-28",
+                "2026-10-29",
+                "2026-10-30",
+                "2026-10-31",
+                "2026-11-01"
+              ],
+              "pending_dates": [],
+              "invalid_event_count": 0,
+              "invalid_event_reasons": {},
+              "supplemental_available": true
+            },
+            "source_updated_at_ms": null,
+            "report_id": "wr_0519a1076e61aea1134430f5",
+            "status": "revised",
+            "revision": 2,
+            "published_at_ms": 1794920766478,
+            "updated_at_ms": 1794921295966,
+            "generated_at_ms": 1794921295966,
+            "scheduled_publish_at_ms": 1793541600000,
+            "period_end_ms": 1793548800000,
+            "data_cutoff_at_ms": 1793548800000,
+            "scope": {
+              "kind": "device",
+              "public_id": "dev_50b5415662259045"
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "bad_date",
+      "http_status": 400,
+      "path": "/v1/parent/devices/:public_id/weekly-report?week_start=2026-02-30",
+      "request_id": "weekly-verify-bad_date-1794921296036",
+      "read_at_ms": 1794921296039,
+      "cache_control": "no-store",
+      "json": {
+        "ok": false,
+        "error": "bad_request"
+      }
+    },
+    {
+      "label": "bad_timezone",
+      "http_status": 400,
+      "path": "/v1/parent/devices/:public_id/weekly-report?timezone=UTC",
+      "request_id": "weekly-verify-bad_timezone-1794921296039",
+      "read_at_ms": 1794921296041,
+      "cache_control": "no-store",
+      "json": {
+        "ok": false,
+        "error": "invalid_timezone",
+        "message": "P0 仅支持 Asia/Shanghai"
+      }
+    },
+    {
+      "label": "no_auth",
+      "http_status": 401,
+      "path": "/v1/parent/devices/:public_id/weekly-report",
+      "request_id": "weekly-verify-no_auth-1794921296041",
+      "read_at_ms": 1794921296043,
+      "cache_control": "no-store",
+      "json": {
+        "ok": false,
+        "error": "unauthorized"
+      }
+    },
+    {
+      "label": "other_parent",
+      "http_status": 404,
+      "path": "/v1/parent/devices/:public_id/weekly-report",
+      "request_id": "weekly-verify-other_parent-1794921296044",
+      "read_at_ms": 1794921296047,
+      "cache_control": "no-store",
+      "json": {
+        "ok": false,
+        "error": "not_found"
+      }
+    }
+  ],
+  "independent_raw_calculation": {
+    "observed_seconds": 11743.13,
+    "played": 8,
+    "verified_active_days": 1,
+    "daily": [
+      {
+        "date": "2026-11-16",
+        "observed_seconds": null,
+        "longest_continuous_seconds": null,
+        "active": null
+      },
+      {
+        "date": "2026-11-17",
+        "observed_seconds": 11743.13,
+        "longest_continuous_seconds": 715.516,
+        "active": true
+      },
+      {
+        "date": "2026-11-18",
+        "observed_seconds": null,
+        "longest_continuous_seconds": null,
+        "active": null
+      },
+      {
+        "date": "2026-11-19",
+        "observed_seconds": null,
+        "longest_continuous_seconds": null,
+        "active": null
+      },
+      {
+        "date": "2026-11-20",
+        "observed_seconds": null,
+        "longest_continuous_seconds": null,
+        "active": null
+      },
+      {
+        "date": "2026-11-21",
+        "observed_seconds": null,
+        "longest_continuous_seconds": null,
+        "active": null
+      },
+      {
+        "date": "2026-11-22",
+        "observed_seconds": null,
+        "longest_continuous_seconds": null,
+        "active": null
+      }
+    ]
+  },
+  "admin_parent_equal": true,
+  "raw_api_equal": true
+}

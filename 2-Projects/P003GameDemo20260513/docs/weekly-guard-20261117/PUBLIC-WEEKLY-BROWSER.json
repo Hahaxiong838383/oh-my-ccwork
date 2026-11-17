@@ -1,0 +1,297 @@
+{
+  "at_ms": 1794921916559,
+  "pass": true,
+  "public_html": true,
+  "business_writes": 0,
+  "auth_requests": 0,
+  "session_check_requests": 1,
+  "blocked_non_read_requests": 0,
+  "page_errors": 0,
+  "reads": [
+    {
+      "path": "/api/admin/devices/:sn/miniapp/dashboard",
+      "week_start": null,
+      "status": 200,
+      "at_ms": 1794921928894
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/weekly-report",
+      "week_start": "2026-11-16",
+      "status": 200,
+      "at_ms": 1794921930474
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/weekly-report",
+      "week_start": "2026-11-16",
+      "status": 200,
+      "at_ms": 1794921932383
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/weekly-report",
+      "week_start": "2026-10-26",
+      "status": 200,
+      "at_ms": 1794921933259
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/weekly-report",
+      "week_start": "2026-11-16",
+      "status": 200,
+      "at_ms": 1794921934574
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/dashboard",
+      "week_start": null,
+      "status": 200,
+      "at_ms": 1794921938005
+    }
+  ],
+  "reports": {
+    "current": {
+      "checked_at_ms": 1794921931319,
+      "week_start": "2026-11-16",
+      "week_end": "2026-11-22",
+      "status": "collecting",
+      "revision": 1,
+      "published_at_ms": null,
+      "updated_at_ms": 1794921876713,
+      "data_cutoff_at_ms": 1794921876713,
+      "posture": {
+        "available": true,
+        "value": 8,
+        "reason": "partial_history",
+        "reference_max": 672,
+        "above_reference_max": false
+      },
+      "usage": {
+        "available": true,
+        "total_seconds": 11743.13,
+        "supplemental_seconds": 2146.6100000000015,
+        "combined_seconds": 13889.74,
+        "daily_average_seconds": 1677.59,
+        "denominator_days": 7,
+        "reason": "partial_history"
+      },
+      "active": {
+        "available": true,
+        "value": 1,
+        "reason": "partial_history"
+      },
+      "daily_rows": 7,
+      "daily_dates": [
+        "2026-11-16",
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-20",
+        "2026-11-21",
+        "2026-11-22"
+      ],
+      "coverage_reason": "partial_history",
+      "same_response_metrics_match": true,
+      "same_response_daily_match": true,
+      "null_and_zero_distinct": true
+    },
+    "refreshed": {
+      "checked_at_ms": 1794921932803,
+      "week_start": "2026-11-16",
+      "week_end": "2026-11-22",
+      "status": "collecting",
+      "revision": 1,
+      "published_at_ms": null,
+      "updated_at_ms": 1794921876713,
+      "data_cutoff_at_ms": 1794921876713,
+      "posture": {
+        "available": true,
+        "value": 8,
+        "reason": "partial_history",
+        "reference_max": 672,
+        "above_reference_max": false
+      },
+      "usage": {
+        "available": true,
+        "total_seconds": 11743.13,
+        "supplemental_seconds": 2146.6100000000015,
+        "combined_seconds": 13889.74,
+        "daily_average_seconds": 1677.59,
+        "denominator_days": 7,
+        "reason": "partial_history"
+      },
+      "active": {
+        "available": true,
+        "value": 1,
+        "reason": "partial_history"
+      },
+      "daily_rows": 7,
+      "daily_dates": [
+        "2026-11-16",
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-20",
+        "2026-11-21",
+        "2026-11-22"
+      ],
+      "coverage_reason": "partial_history",
+      "same_response_metrics_match": true,
+      "same_response_daily_match": true,
+      "null_and_zero_distinct": true
+    },
+    "empty_history": {
+      "checked_at_ms": 1794921933677,
+      "week_start": "2026-10-26",
+      "week_end": "2026-11-01",
+      "status": "published",
+      "revision": 1,
+      "published_at_ms": 1794921877928,
+      "updated_at_ms": 1794921877928,
+      "data_cutoff_at_ms": 1793548800000,
+      "posture": {
+        "available": false,
+        "value": null,
+        "reason": "no_reminder_events",
+        "reference_max": 672,
+        "above_reference_max": false
+      },
+      "usage": {
+        "available": false,
+        "total_seconds": null,
+        "supplemental_seconds": null,
+        "combined_seconds": null,
+        "daily_average_seconds": null,
+        "denominator_days": 7,
+        "reason": "no_focus_segments"
+      },
+      "active": {
+        "available": false,
+        "value": null,
+        "reason": "no_focus_segments"
+      },
+      "daily_rows": 7,
+      "daily_dates": [
+        "2026-10-26",
+        "2026-10-27",
+        "2026-10-28",
+        "2026-10-29",
+        "2026-10-30",
+        "2026-10-31",
+        "2026-11-01"
+      ],
+      "coverage_reason": "partial_history",
+      "same_response_metrics_match": true,
+      "same_response_daily_match": true,
+      "null_and_zero_distinct": true
+    },
+    "returned_current": {
+      "checked_at_ms": 1794921934940,
+      "week_start": "2026-11-16",
+      "week_end": "2026-11-22",
+      "status": "collecting",
+      "revision": 1,
+      "published_at_ms": null,
+      "updated_at_ms": 1794921876713,
+      "data_cutoff_at_ms": 1794921876713,
+      "posture": {
+        "available": true,
+        "value": 8,
+        "reason": "partial_history",
+        "reference_max": 672,
+        "above_reference_max": false
+      },
+      "usage": {
+        "available": true,
+        "total_seconds": 11743.13,
+        "supplemental_seconds": 2146.6100000000015,
+        "combined_seconds": 13889.74,
+        "daily_average_seconds": 1677.59,
+        "denominator_days": 7,
+        "reason": "partial_history"
+      },
+      "active": {
+        "available": true,
+        "value": 1,
+        "reason": "partial_history"
+      },
+      "daily_rows": 7,
+      "daily_dates": [
+        "2026-11-16",
+        "2026-11-17",
+        "2026-11-18",
+        "2026-11-19",
+        "2026-11-20",
+        "2026-11-21",
+        "2026-11-22"
+      ],
+      "coverage_reason": "partial_history",
+      "same_response_metrics_match": true,
+      "same_response_daily_match": true,
+      "null_and_zero_distinct": true
+    }
+  },
+  "posture": {
+    "before": {
+      "date": "2026-11-17",
+      "today_available": true,
+      "today_played_count": 8,
+      "history_available": true,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "after_switching": {
+      "date": "2026-11-17",
+      "today_available": true,
+      "today_played_count": 8,
+      "history_available": true,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "after_refresh": {
+      "date": "2026-11-17",
+      "today_available": true,
+      "today_played_count": 8,
+      "history_available": true,
+      "history_played_count": 8,
+      "matches_same_response": true
+    }
+  },
+  "top_posture_summary": {
+    "before": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "weekly_current": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "weekly_refreshed": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "weekly_empty_history": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "weekly_returned_current": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "after_switching": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    },
+    "after_refresh": {
+      "today_played_count": 8,
+      "history_played_count": 8,
+      "matches_same_response": true
+    }
+  },
+  "empty_history_not_zero": true,
+  "weekly_region_screenshot": "PUBLIC-WEEKLY-REGION.png",
+  "conversation_requests": 0,
+  "completed_at_ms": 1794921938194
+}

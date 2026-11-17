@@ -1,0 +1,92 @@
+{
+  "steps": [
+    {
+      "step": "tests",
+      "command": [
+        "npm",
+        "test",
+        "--",
+        "--threads=false"
+      ],
+      "started_at": "2026-11-17T13:13:50.870371+00:00",
+      "completed_at": "2026-11-17T13:13:56.071532+00:00",
+      "exit_code": 0,
+      "log": "tests.log"
+    },
+    {
+      "step": "typecheck",
+      "command": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "started_at": "2026-11-17T13:13:56.076239+00:00",
+      "completed_at": "2026-11-17T13:14:05.362040+00:00",
+      "exit_code": 0,
+      "log": "typecheck.log"
+    },
+    {
+      "step": "h5",
+      "command": [
+        "npm",
+        "run",
+        "build:h5"
+      ],
+      "started_at": "2026-11-17T13:14:05.367031+00:00",
+      "completed_at": "2026-11-17T13:15:04.390422+00:00",
+      "exit_code": 0,
+      "log": "h5.log"
+    },
+    {
+      "step": "weapp",
+      "command": [
+        "npm",
+        "run",
+        "build:weapp"
+      ],
+      "started_at": "2026-11-17T13:15:04.396322+00:00",
+      "completed_at": "2026-11-17T13:15:26.712924+00:00",
+      "exit_code": 0,
+      "log": "weapp.log"
+    }
+  ],
+  "api_base_url": "https://kidshub-ai.hahaxiong.cc",
+  "business_writes": 0,
+  "wechat_uploaded": false,
+  "passed_tests": 133,
+  "passed_test_files": 16,
+  "node_version": "v24.19.0",
+  "final_frozen_validation": true,
+  "completed_at": "2026-11-17T13:15:44.793634+00:00",
+  "artifact_manifest": "ARTIFACT-SHA256.json",
+  "artifact_manifest_sha256": "3b0e1abbbe914cc5ab606299a390a4bc5806ddc6a5c69441cab37ca946c10e5c",
+  "artifact_files": 26,
+  "all_exit_zero": true,
+  "known_non_failure_diagnostics": [
+    "BLE隔离测试预期写入中断",
+    "weapp Generated an empty chunk: vendors"
+  ],
+  "logs": [
+    {
+      "name": "h5.log",
+      "bytes": 909,
+      "sha256": "fd52ee7169c00aebf5c93b3d0fe55535f79f1ced9f97aef7814c416a041d5a7f"
+    },
+    {
+      "name": "tests.log",
+      "bytes": 1316,
+      "sha256": "1357930f8827b63aeee5b49990d4317db33a4bb70822852f21b81c5cf6347e9b"
+    },
+    {
+      "name": "typecheck.log",
+      "bytes": 50,
+      "sha256": "2a5b415af4368706e24ee169a624ea8a5fb3a41893da4fb2273d8c1c0a33691f"
+    },
+    {
+      "name": "weapp.log",
+      "bytes": 1242,
+      "sha256": "effd028d7330de278de6401542160f3a436c0cb8f694f67db63c7ec06d9e6ce1"
+    }
+  ],
+  "possible_sensitive_log_pattern": false
+}

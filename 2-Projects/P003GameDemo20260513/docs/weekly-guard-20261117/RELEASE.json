@@ -1,0 +1,40 @@
+{
+  "started_ms": 1794921874716,
+  "success": true,
+  "manifest_sha256": "1156f7bd8bc4f13660108ed0cf09ce5f09dfce5c14f438a6df688e1c63c48be1",
+  "before": {
+    "p003-voice": {
+      "pid": 2369553,
+      "status": "online",
+      "restarts": 16
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "files": 8,
+  "database_restore": false,
+  "real_unbind_performed": false,
+  "after": {
+    "p003-voice": {
+      "pid": 2399213,
+      "status": "online",
+      "restarts": 17
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "other_processes_unchanged": true,
+  "bindings_unchanged": true,
+  "environment_changes": [],
+  "database_changes": [
+    "new derived weekly-reports.db only"
+  ],
+  "upload_contract_changes": [],
+  "finished_ms": 1794921878073
+}

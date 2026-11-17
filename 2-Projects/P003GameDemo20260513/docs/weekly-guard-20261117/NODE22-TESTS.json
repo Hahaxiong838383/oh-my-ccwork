@@ -1,0 +1,44 @@
+{
+  "started_ms": 1794921224029,
+  "pass": true,
+  "node_version": "v22.22.2",
+  "tests": [
+    {
+      "name": "weekly-calculation",
+      "returncode": 0,
+      "log_sha256": "b5aa9dabe8595e0687b1da1367b70cae3a877df337914e129a3fed34918c84cc"
+    },
+    {
+      "name": "weekly-report-store",
+      "returncode": 0,
+      "log_sha256": "42880579f1bfb3beb935c7285831f21ad9b18b7afdd6c7b67b660b0f32cc8998"
+    },
+    {
+      "name": "weekly-report-service",
+      "returncode": 0,
+      "log_sha256": "0bbe481d4d029023a2ef415b6d8b2f8101e781abfcca4eef1e43f6113a5f53b4"
+    },
+    {
+      "name": "telemetry",
+      "returncode": 0,
+      "log_sha256": "6bdb3ae5ae70f5604b5a45483073a67c16d400cc20fa70f2508828c922a6870d"
+    },
+    {
+      "name": "miniapp-admin",
+      "returncode": 0,
+      "log_sha256": "3857d55e90c639ef5e31b443191e898ef82f455f4b6dd641a456b11a774d5031"
+    },
+    {
+      "name": "history-dashboard",
+      "returncode": 0,
+      "log_sha256": "def65a9d72a11c6e7b99629580bc7effe0ea291728073e83a2c888442e190bfc"
+    },
+    {
+      "name": "history-usage",
+      "returncode": 0,
+      "log_sha256": "65798ffd000ef7e84e48a886cabcaf824c8d6593f5985cc95d9b330addcc4130"
+    }
+  ],
+  "manifest_sha256": "1156f7bd8bc4f13660108ed0cf09ce5f09dfce5c14f438a6df688e1c63c48be1",
+  "finished_ms": 1794921233160
+}

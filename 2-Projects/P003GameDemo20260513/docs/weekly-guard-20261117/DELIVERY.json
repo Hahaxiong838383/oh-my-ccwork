@@ -1,0 +1,27 @@
+{
+  "code_commit": "972f27d2650170bda0021577e3b639738dd4bc33",
+  "server_deployed": true,
+  "admin_browser_verified": true,
+  "parent_A_C_raw_api_admin_equal": true,
+  "grok_design_task": "4cb6c562-bed3-4d41-8c2f-6e3f0cc54af7",
+  "grok_implementation_task": "4be2b67c-d2a4-4de6-b372-44d9df7ff2d7",
+  "grok_implementation_completed": true,
+  "grok_tests": 54,
+  "grok_counterexamples": 3,
+  "grok_p0_p1_reproduced": 0,
+  "reference_client_tests": 133,
+  "actual_client_source_found": false,
+  "actual_phone_verified": false,
+  "goal_complete": false,
+  "staging_stopped": true,
+  "derived_db_quick_check": "ok",
+  "derived_report_rows": 34,
+  "derived_daily_rows": 238,
+  "derived_evidence_rows": 3448,
+  "delivery_zip_sha256": "24d37c6cea1a21adc55e6ab9198a3b045eda3088c0d9ec520b73eccf77db8292",
+  "delivery_zip_bytes": 198050,
+  "downloads_locations": [
+    "/Users/fu-121/Downloads",
+    "/Users/rayman.chen/Downloads"
+  ]
+}

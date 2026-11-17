@@ -1,0 +1,52 @@
+{
+  "files": [
+    {
+      "target": "/opt/p003/server/src/weekly-calculation.ts",
+      "candidate": "candidate/src/weekly-calculation.ts",
+      "before_sha256": null,
+      "after_sha256": "ee1d211d10af7631fadceffb39cec5df86814e41380641ab5fa530987adf72ae"
+    },
+    {
+      "target": "/opt/p003/server/src/weekly-report-store.ts",
+      "candidate": "candidate/src/weekly-report-store.ts",
+      "before_sha256": null,
+      "after_sha256": "49643954d5f07eb5cd9cdac6178cc4fd7b88cb1b920fc7eb0e813091947676f2"
+    },
+    {
+      "target": "/opt/p003/server/src/weekly-report-service.ts",
+      "candidate": "candidate/src/weekly-report-service.ts",
+      "before_sha256": null,
+      "after_sha256": "ec96accaa21ea8b51753716b81f92dac9d5c4d46beeac18ebbe866f988dbf5f5"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/telemetry.ts",
+      "candidate": "candidate/src/routes/telemetry.ts",
+      "before_sha256": "6863c588d36ee50065a209fca8d1280425b667cea57c2a59a0a190e4d12b6bca",
+      "after_sha256": "7a16f1fc7962e2210bf04fb63cad96d109627f12f9f2a7d6e57cf140ae84856a"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/miniapp-admin.ts",
+      "candidate": "candidate/src/routes/miniapp-admin.ts",
+      "before_sha256": "91a4a6dba76804abe85cc7d0d9e06cfaf12dd78d71ff7a5d9a47abd76a24ed68",
+      "after_sha256": "449c99af2a70fe734d5cde220a5674e45835146672b5f37e1968faedb771243d"
+    },
+    {
+      "target": "/opt/p003/server/src/index.ts",
+      "candidate": "candidate/src/index.ts",
+      "before_sha256": "9f768a0048557378d7bbd05fe524ad47bb5bbf87c57b524760637d3e86b68d17",
+      "after_sha256": "7f0985e1870c18f6844095c875acb774a387ab3a469f2646b18cad47461ba5c3"
+    },
+    {
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "candidate": "candidate/admin/index.html",
+      "before_sha256": "fc509cedacd83b66bce0e59666fae2c862dbfcad1368357443fe31f929e0b98d",
+      "after_sha256": "db76d5eb047e8fc9f73ada6eedcc01d4879c585434e0309e23df0f0225522d0b"
+    },
+    {
+      "target": "/opt/p003/server/src/history-usage.ts",
+      "candidate": "candidate/src/history-usage.ts",
+      "before_sha256": "fba53fac143f363a9f1b02d231a81655bfd3598a8eb09fe36356adb0b26700b4",
+      "after_sha256": "8f16b10027d824951be9691ea2d1df6b58cc5b1d85bd4845f8bf12d9646941c9"
+    }
+  ]
+}
