@@ -1,0 +1,19 @@
+# 语音上游故障取证
+
+`network_watch.py` 是独立被动记录器，不加入RTC、不播放/合成语音、不改DNS与应用配置。Linux运行需要CAP_NET_RAW。先核脚本SHA与目标机真值，再在受控目录执行：
+
+```sh
+python3 network_watch.py --seconds 86400 --output /root/p003-transport-diagnostic-20261105/watch
+```
+
+最长24小时。`status.json`记录线程状态、入/出方向计数和到期时间。只有固定讯飞域名的DNS、对应IP的TCP包头以及Worker日志白名单字段会保存；不存DNS任意正文、TLS负载、音频或用户转写。遇DNS≥1000ms、TCP≥900ms、TLS/WS≥1500ms/超时、接收等待或欠载≥1000ms，保存前45/后15秒元数据。最多6份事件，每份最多8000条，旧事件轮转；`tail.json`也最多8000条。SIGTERM可结束并落尾记录。
+
+`tcp_out`与`tcp_in`必须都非零才能声称双向抓取；只用ETH_P_IP的旧短探针漏出站，不能拿它确认SYN/ACK或重传。日志中的欠载仍可能包含已知的暂停计数边界，应与pause/resume对齐。
+
+`tools/tts-transport-probe`是另一项主动实验：使用进程环境内的既有讯飞凭据，默认4轮，每轮旧connector/现役显式connector/既有异步解析各一次，轮次上限12。会消耗少量真实TTS配额，仅在内存消费合成音频，不播放、不接触设备。输出不含凭据、签名URL或音频，只含时序、地址和音频块长度。
+
+构建与测试使用现有隔离Cargo缓存，不在生产安装编译器。结果的“ok”只证明该次调用，不代表历史故障根治。
+
+记录包含PID、匿名room_ref以及连接分配/请求发送/首PCM事件，便于关联connect_id。事件coverage列出实际覆盖与截断；peer没有匹配TCP记录时先判取证缺口。接收、channel和PCM间隔各自触发，不把背压自动当网络故障。仅IPv4，无TLS解密或TCP_INFO；first_underrun_ms等未白名单字段需读原journal，不根据汇总伪造逐次等待时间。
+
+2026-11-06诊断v3补齐TCP选项（仅SACK范围、时间戳、窗口缩放等数值，不保存未知选项原文），并累计Linux PACKET_STATISTICS重置式计数。`capture_kernel_drops`是本抓包socket接收范围内的丢弃，含未被业务过滤保存的包，不是某条TTS连接的丢包数；0也不能证明链路无丢包。每份incident/tail保存计数快照。5个元数据/脱敏测试和真实Linux双向TCP smoke已验证，主Worker不需重启。当前受控v3与v2原到期时间相同，11/6 22:27:05 CST止；v2尾记录保留。

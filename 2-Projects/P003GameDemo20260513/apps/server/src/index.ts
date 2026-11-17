@@ -1,3 +1,5 @@
+import { createVoiceOnboardingRoute } from './routes/voice-onboarding.js';
+import { getVoiceOnboardingStore } from './voice-onboarding-runtime.js';
 import {arkRoute} from './routes/ark.js';
 import {arkFactsRoute} from './ark/proxy.js';
 import {arkService} from './ark/service.js';
@@ -86,6 +88,7 @@ app.route('/v1/device/provisioning', deviceProvisioningRoute);
 app.route('/v1', customLlmRoute);
 // Default-off independent background jobs; ordinary chat never awaits these requests.
 app.route('/v1/internal/search-tasks', searchTaskRoute);
+app.route('/v1/internal/voice-onboarding', createVoiceOnboardingRoute(getVoiceOnboardingStore));
 app.route('/v1/internal/listening', createLazyListeningRoute(()=>createListeningRoute(getListeningAuthority(), {generate:generateListeningContent,personality:readListeningPersonality})));
 
 // admin 静态兜底（本地 dev 同源 E2E 用；生产 nginx 直接 serve public/admin，不会走到这里）。

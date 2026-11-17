@@ -1,3 +1,4 @@
+import { issueVoiceOnboarding } from '../voice-onboarding-runtime.js';
 import { buildFillerPolicy } from '../filler-policy.js';
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
@@ -367,6 +368,8 @@ deviceSessionRoute.post('/session', async (c) => {
     agent:agentName,supports,source:canary.canary?'search_canary':'normal',expires_at_ms:expSec*1000,
     source_cutoff_ms:canary.canary?canary.expiresAtMs:expSec*1000,credential:c.req.header('authorization')??''});
 
+  const voiceOnboarding = issueVoiceOnboarding({sn:sn as string,agent:agentName,supports,normal:!canary.canary,listening:Boolean(listening),session_id:sessionId,trace_id:traceId,room:roomName,expires_at_ms:expSec*1000});
+
   // ConfigStore's zero sentinel is omitted from snapshots. Only an explicit
   // global/SN policy can therefore reach the signed worker metadata. Never
   // accept this authority from body.voice_idle or a client control packet.
@@ -399,6 +402,7 @@ deviceSessionRoute.post('/session', async (c) => {
             filler_policy: fillerPolicyFor(sn),
             ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
             ...(listening ? { listening } : {}),
+            ...(voiceOnboarding ? { voice_onboarding: voiceOnboarding } : {}),
             ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),
             // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
             ...(contract
@@ -426,6 +430,7 @@ deviceSessionRoute.post('/session', async (c) => {
     session_id: sessionId,
     expires_at_ms: expSec * 1000,
     expected_agent_name: agentName,
+    ...(voiceOnboarding ? {voice_onboarding_contract:{version:1,capability:'voice_onboarding_v1'}} : {}),
     ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,

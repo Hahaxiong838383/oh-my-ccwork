@@ -363,3 +363,7 @@ AGENTS.md.bak.*
 # 跨机共享语义未确认——若 openspace 需要同一 ID 跟随仓库,删掉这行即可。
 **/.skill_id
 5-Archive/worktree-snapshots/*.bundle
+
+# P003 v398 isolated build/test dependencies
+.voice-onboarding-build/
+.voice-onboarding-test-deps/
