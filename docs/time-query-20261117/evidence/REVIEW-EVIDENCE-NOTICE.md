@@ -1,0 +1,1 @@
+主13于2026-11-17T00:19:46.262015+00:00误执行了review-3d1d031c/tools/independent-module.ts。工具实际import当前工作树，并写out/module.json，尽管head硬编码3d1d031c。该文件不得作固定3d候选的独立验收证据；当前结果另存ROOT-ADAPTIVE-MODULE-NOT-FIXED.json供补漏。最终必须git archive固定新候选到独立目录后修改工具import为归档，独立重跑，不依赖可变工作树。

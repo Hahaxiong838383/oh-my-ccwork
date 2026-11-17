@@ -1,0 +1,112 @@
+[
+  {
+    "pool": 0,
+    "test": "clock-query",
+    "exit": 0
+  },
+  {
+    "pool": 0,
+    "test": "clock-http",
+    "exit": 0
+  },
+  {
+    "pool": 0,
+    "test": "clock-search-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 0,
+    "test": "search-tasks",
+    "exit": 0
+  },
+  {
+    "pool": 0,
+    "test": "search-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 0,
+    "test": "search-weather-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "clock-query",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "clock-http",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "clock-search-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "search-tasks",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "search-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "search-weather-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "search-weather-fallback-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 1,
+    "test": "search-location-fallback-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "clock-query",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "clock-http",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "clock-search-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "search-tasks",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "search-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "search-weather-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "search-weather-fallback-runtime",
+    "exit": 0
+  },
+  {
+    "pool": 2,
+    "test": "search-location-fallback-runtime",
+    "exit": 0
+  }
+]

@@ -1,0 +1,74 @@
+[
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/routes/custom-llm.ts",
+    "before_sha256": "b746a1a1495f7ad86b43f924e6d82f88bf9ddbeeebe4604fff245a2b1d7e8a45",
+    "after_sha256": "a5d3d4a35605471093767f3084fd612a2e2e7eff8b6cb8889ef8c76b4a7efa8a"
+  },
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/tools/search-runtime.ts",
+    "before_sha256": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+    "after_sha256": "527166d163eb4644a8d27153090a13d286854fcface65ff77504143f360904eb"
+  },
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/tools/search-tasks.ts",
+    "before_sha256": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+    "after_sha256": "70996afa362b44c9aa02feb1c24757b0e3e236240c3e00765055891e35f370bf"
+  },
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/tools/clock-query.ts",
+    "before_sha256": null,
+    "after_sha256": "7d29b955744f24ba7fc824f59888127433676b479ed2ed70093e65901dd9aea2"
+  },
+  {
+    "pool": "/opt/p003/search-canary-20261021/brain",
+    "path": "src/routes/custom-llm.ts",
+    "before_sha256": "2d59db6569bee0547fa1a3f784a3728c3bd3b8d35955e2d78b8e0e206ab851e7",
+    "after_sha256": "f0d96eb12e032fb73bc57029019781ac999a6c4583154607a2389d7693458fce"
+  },
+  {
+    "pool": "/opt/p003/search-canary-20261021/brain",
+    "path": "src/tools/search-runtime.ts",
+    "before_sha256": "3ab46713a968a48bd5ac2a98e4aa5c34fd7d2e306bbbbc3fb949250c7eb73275",
+    "after_sha256": "aa42bce32aa94c31a967d3ecb664125a88da5ca79ca9e4261e5583740c756395"
+  },
+  {
+    "pool": "/opt/p003/search-canary-20261021/brain",
+    "path": "src/tools/search-tasks.ts",
+    "before_sha256": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144",
+    "after_sha256": "2f669982f98875ff23c51a0451428e417c57ad8871fa48f88753422690e5cf22"
+  },
+  {
+    "pool": "/opt/p003/search-canary-20261021/brain",
+    "path": "src/tools/clock-query.ts",
+    "before_sha256": null,
+    "after_sha256": "7d29b955744f24ba7fc824f59888127433676b479ed2ed70093e65901dd9aea2"
+  },
+  {
+    "pool": "/opt/p003/listening-canary-20261030/brain",
+    "path": "src/routes/custom-llm.ts",
+    "before_sha256": "43444283cc7f1e9e27e8871be46e823722f89625728689cbed06a7eca9187e1e",
+    "after_sha256": "7ba66668cfdbd546e5a6f9a757e5f264d4d019f7daca5b59288561de4ffe1db2"
+  },
+  {
+    "pool": "/opt/p003/listening-canary-20261030/brain",
+    "path": "src/tools/search-runtime.ts",
+    "before_sha256": "ee2340592e59a3d914e605e803040f340a0a32ee0c33054343d51caa367e732b",
+    "after_sha256": "071c755103656a6758c2273ee8ec3a5c3d4b11b0d068839ac791cac387b442c7"
+  },
+  {
+    "pool": "/opt/p003/listening-canary-20261030/brain",
+    "path": "src/tools/search-tasks.ts",
+    "before_sha256": "8fec4a783faea5a33e6c66ce039015b308a81cd3e5a7623e1a74d751144bb144",
+    "after_sha256": "2f669982f98875ff23c51a0451428e417c57ad8871fa48f88753422690e5cf22"
+  },
+  {
+    "pool": "/opt/p003/listening-canary-20261030/brain",
+    "path": "src/tools/clock-query.ts",
+    "before_sha256": null,
+    "after_sha256": "7d29b955744f24ba7fc824f59888127433676b479ed2ed70093e65901dd9aea2"
+  }
+]

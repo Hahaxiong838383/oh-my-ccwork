@@ -1,0 +1,42 @@
+[
+  {
+    "test": "clock-query",
+    "exit": 0
+  },
+  {
+    "test": "clock-http",
+    "exit": 0
+  },
+  {
+    "test": "clock-search-runtime",
+    "exit": 0
+  },
+  {
+    "test": "search-tasks",
+    "exit": 0
+  },
+  {
+    "test": "search-runtime",
+    "exit": 0
+  },
+  {
+    "test": "search-weather-runtime",
+    "exit": 0
+  },
+  {
+    "test": "search-weather-fallback-runtime",
+    "exit": 1
+  },
+  {
+    "test": "search-location-fallback-runtime",
+    "exit": 1
+  },
+  {
+    "test": "search-resume",
+    "exit": 0
+  },
+  {
+    "test": "ark-currency-http",
+    "exit": 0
+  }
+]

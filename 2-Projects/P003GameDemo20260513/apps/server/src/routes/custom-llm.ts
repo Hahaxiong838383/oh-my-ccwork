@@ -33,7 +33,7 @@ import { buildKnowledgeRecall,answerArkResourceUse } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
 import { getPromptOverride } from '../rtc-prompt-override.js';
-import {resolveClock,answerClock} from '../tools/clock-query.js';
+import {resolveClock,answerClock,stripClockTurns} from '../tools/clock-query.js';
 
 /**
  * 火山 RTC 实时对话「CustomLLM」回调端点（docs/34 D 方案）。
@@ -95,7 +95,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: extractText(m.content) }));
 
   const dynamicArk = isArkStateQuestion(userText) || isArkFollowup(userText,rawHistory);
-  const history = unfinishedUtterance(userText) ? [] : stripArkDynamicTurns(rawHistory);
+  const history = unfinishedUtterance(userText) ? [] : stripArkDynamicTurns(stripClockTurns(rawHistory));
 
   // 复用与 WS pipeline 同一个大脑：内置世界观 + AI 安全基座 + 课程护栏 + AI 启蒙门控 + 尾部人设锚点。
   curriculumKG.load();

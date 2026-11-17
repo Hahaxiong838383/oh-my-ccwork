@@ -1,3 +1,4 @@
+import {resolveClock,answerClock} from './clock-query.js';
 import { readResumeAuthority } from './search-resume-scope.js';
 import { searchDialogueInstruction } from './search-dialogue-context.js';
 import { timingSafeEqual } from 'node:crypto';
@@ -57,7 +58,7 @@ export function getSearchTasks(): SearchTasks | null {
       resumeEnabled:()=>process.env.SEARCH_RESUME_V1==='1',
       resumeScope:o=>readResumeAuthority(process.env.SEARCH_RESUME_AUTHORITY_DB_PATH,o.subject,deviceRegistryStore.get(o.subject)?.account_id??null),
       windowDeadline:()=>process.env.SEARCH_CANARY_ROOT?Number(configStore.getFlag('p003.search.canary.expires_at_ms')?.value)||0:Infinity,
-      canSubmit: r => Boolean(r?.weather_enabled&&(r.weather||r.baidu_weather_enabled&&r.place_weather||r.auto_location_enabled&&r.auto_weather))||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
+      canSubmit: (r,query) => Boolean(process.env.P003_CLOCK_ENABLED!=='0'&&query&&resolveClock(query))||Boolean(r?.weather_enabled&&(r.weather||r.baidu_weather_enabled&&r.place_weather||r.auto_location_enabled&&r.auto_weather))||availability.available(), dbPath: process.env.SEARCH_TASK_DB_PATH!, enabled: () => searchSettings().enabled,
       resolveRouting:(owner,claim)=>{
         const snapshot=getSearchRoutingStore()?.resolve(owner.subject,claim.version);if(!snapshot)throw new Error('routing_version_unknown');
         if(!['builtin-explicit','builtin-control','weather-city-followup','builtin-fallback'].includes(claim.rule_id)&&!snapshot.config.rules.some(r=>r.id===claim.rule_id&&r.enabled))throw new Error('routing_version_scope');
@@ -69,6 +70,15 @@ export function getSearchTasks(): SearchTasks | null {
       execute: async (query, signal, owner) => {
         const record = deviceRegistryStore.get(owner.subject);
         if (!record?.account_id || record.status !== 'active') throw new Error('device_unavailable');
+        const clock=process.env.P003_CLOCK_ENABLED!=='0'?resolveClock(query):null;
+        if(clock){
+          signal.throwIfAborted();const observed_at_ms=Date.now();
+          // Explicit searches retain existing background scheduling/cancellation. Say
+          // query-time rather than present-time, so delayed playback/replay cannot lie.
+          const text=answerClock(clock,observed_at_ms).replace('现在','查询时').replace('今天','查询当天');
+          return {text,sources:[],clock:{observed_at_ms,...(clock.kind==='clock'?{iana:clock.iana}:{})}};
+        }
+
         if(owner.routing?.weather_enabled&&owner.routing.auto_location_enabled&&owner.routing.auto_weather){
           const location=await getDeviceLocationStore()?.wait(owner.subject,owner.session,signal);signal.throwIfAborted();
           if(location?.state!=='ready') {console.info('[search-location]',JSON.stringify({task_id:owner.id,outcome:location?.state??'unknown',reason:location?.reason??'location_no_session'}));return {text:'暂时没能根据设备网络确定所在城市，这次先不报天气，稍后可以再试。',sources:[]};}
