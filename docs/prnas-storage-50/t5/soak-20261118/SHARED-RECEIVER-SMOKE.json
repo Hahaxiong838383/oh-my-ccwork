@@ -1,0 +1,96 @@
+{
+  "scope": "MAC_SHARED_RECEIVER_FUNCTIONAL_SMOKE_NOT_LINUX_PREFLIGHT_OR_24H",
+  "node": "24.19.0",
+  "python": "3.11.9",
+  "sqlite_python": "3.45.1",
+  "integrity": {
+    "batches": 50,
+    "events_accepted": 10000,
+    "events_duplicated": 0,
+    "events_acknowledged": 10000,
+    "unique_acknowledged_events": 10000,
+    "expected_events": 10000,
+    "expected_batches": 50,
+    "counts": {
+      "events": 10000,
+      "seen": 10000,
+      "batches": 50
+    },
+    "database_before": {
+      "events": 0,
+      "seen": 0,
+      "batches": 0
+    },
+    "database_delta": {
+      "events": 10000,
+      "seen": 10000,
+      "batches": 50
+    },
+    "database_run_events": 10000,
+    "database_canonical_matches": 10000,
+    "database_seen_matches": 10000,
+    "database_integrity": true,
+    "complete": true
+  },
+  "acks": {
+    "attempts": 165,
+    "successes": 50,
+    "statuses": {
+      "200": 50,
+      "503": 115
+    },
+    "p95": 90.12350000000151,
+    "p99": 328.36337499999996,
+    "all_actors_finished": true,
+    "raw_file": "requests.jsonl",
+    "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+  },
+  "dirty_days": 0,
+  "maintenance_error": null,
+  "query": {
+    "cycles": 8,
+    "failed_cycles": 0,
+    "samples": 400,
+    "p99_ms": 26.77208299999984,
+    "span_ms": 31112,
+    "max_cycle_gap_ms": 5002,
+    "invalid": 0,
+    "receiver_requests": 400,
+    "query_overlapped_maintenance": true,
+    "scope": "persistent ArkRuntime -> SAME Analytics receiver HTTP handling uploads; changing per-device assets"
+  },
+  "ark_accepted": 450,
+  "maintenance_overlapped_daily": true,
+  "backup_overlapped_daily": true,
+  "full_t5_pass": false,
+  "evidence": {
+    "RESULT.json": {
+      "sha256": "7063332b0183ff0c03b955b425f517bb1105b3cc87a5158e64499afeee924313",
+      "bytes": 82471
+    },
+    "SOAK-QUERY-RESULT.json": {
+      "sha256": "3b3992c9c3dbdd3cc619320860f3b9fe18adcbad87a56a31b41bb4e42ef53650",
+      "bytes": 333
+    },
+    "SOAK-RESULT.json": {
+      "sha256": "2b1eeacfc6777203dcd9639a7506d0761a20a47a067fd158d63c3bd043dced9c",
+      "bytes": 4610
+    },
+    "shared-query.startup.json": {
+      "sha256": "d15cf30451c2b668bf0c8a52def043fc62beedc2bb3f9b6f0fffb358102cac4b",
+      "bytes": 155
+    },
+    "shared-reader.jsonl": {
+      "sha256": "d1e94d148e8d1e5018e5831c3ebef101a95b1f980ef101789e6ce4dbd3cf33af",
+      "bytes": 63796
+    },
+    "requests.jsonl": {
+      "sha256": "64f1eea98272bedacc392b2e3f4649e0752b28a757b6bd6712c78680ad257a3b",
+      "bytes": 33668
+    },
+    "completed.jsonl": {
+      "sha256": "9f295f13ff8ea41746b611e0e2dff3890272a4908feb046464ae6867abd50afa",
+      "bytes": 341030
+    }
+  }
+}

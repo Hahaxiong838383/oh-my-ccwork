@@ -1,4 +1,4 @@
-import importlib.util,json,os,sqlite3,subprocess,tempfile,unittest
+import importlib.util,json,os,sqlite3,subprocess,tempfile,unittest,threading,time,sys
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 def load(name,file):
@@ -55,6 +55,43 @@ for(let n=1;n<=Number(process.argv[2]);n++)s.accept(i,{...f,snapshot_id:'s-'+n,b
         try:
             with self.assertRaises(BlockingIOError):self.cycle()
         finally:f.close()
+    def hold_writer(self,release):
+        self.m.Spool(self.spool)  # Finish filesystem bootstrap before timing the DB lock.
+        held=threading.Event()
+        def writer():
+            with sqlite3.connect(self.db,isolation_level=None) as db:
+                db.execute('BEGIN IMMEDIATE');held.set();release.wait(3);db.rollback()
+        thread=threading.Thread(target=writer);thread.start();self.assertTrue(held.wait(2));return thread
+    @unittest.skipUnless(sys.platform=='linux','real SQLite busy deadlines require the Linux deployment runtime')
+    def test_transient_writer_lock_exports_once_without_lengthening_sqlite_timeout(self):
+        from unittest.mock import patch
+        release=threading.Event();thread=self.hold_writer(release);original=sqlite3.connect;timing=[];timers=[]
+        def connect(*a,**k):
+            db=original(*a,**k);timing.append(time.monotonic());timer=threading.Timer(.35,release.set);timers.append(timer);timer.start();return db
+        try:
+            with patch.object(self.m.sqlite3,'connect',connect):result=self.cycle()
+        finally:release.set();thread.join();[timer.cancel() for timer in timers]
+        self.assertGreaterEqual(time.monotonic()-timing[0],.3);self.assertLess(time.monotonic()-timing[0],1.5)
+        self.assertGreater(result['busy_retries'],0);self.assertEqual(result['sqlite_busy_timeout_ms'],100)
+        self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_batch'),[(1,)])
+        m=self.manifest();self.assertEqual(m['record_count'],3);self.ack(m);self.cycle()
+        self.assertEqual(self.sql('SELECT pending_records,reserved_bytes FROM ark_archive_stats'),[(0,0)])
+    @unittest.skipUnless(sys.platform=='linux','real SQLite busy deadlines require the Linux deployment runtime')
+    def test_persistent_writer_lock_stops_bounded_and_preserves_pending(self):
+        release=threading.Event();thread=self.hold_writer(release);start=time.monotonic()
+        try:
+            with self.assertRaises(sqlite3.OperationalError) as caught:self.cycle()
+            self.assertEqual(caught.exception.sqlite_errorcode&255,sqlite3.SQLITE_BUSY)
+            self.assertLess(time.monotonic()-start,1.5)
+        finally:release.set();thread.join()
+        self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_outbox'),[(3,)])
+        self.assertEqual(self.m.Spool(self.spool).list(),[])
+        self.cycle();self.assertEqual(self.manifest()['record_count'],3)
+    def test_non_busy_sqlite_error_is_not_retried(self):
+        with self.m.ExportConnection(':memory:',isolation_level=None) as db:
+            with self.assertRaises(sqlite3.OperationalError) as caught:db.execute('SELECT * FROM missing_table')
+            self.assertEqual(caught.exception.sqlite_errorcode,sqlite3.SQLITE_ERROR)
+            self.assertEqual(db.busy_retries,0)
     def test_disk_consumed_after_accept_pauses_export_without_losing_rows(self):
         from unittest.mock import patch
         from types import SimpleNamespace

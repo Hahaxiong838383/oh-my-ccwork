@@ -1,0 +1,98 @@
+{
+  "review": "query-topology-b5bb1cbf-20261118",
+  "at": "2026-11-18T02:30:41+08:00",
+  "readonly": true,
+  "ssh": false,
+  "started_other_agents": false,
+  "changed_business_src": false,
+  "ran_load": false,
+  "verdict": "agree_with_conditions",
+  "head": "b5bb1cbf562aad44b46fed9753541c3f73f9c3a4",
+  "runtime_src": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "src_diff_since_runtime": "empty",
+  "closer_to_live_topology": true,
+  "observed_lock_is_test_ddl": true,
+  "product_query_path_exonerated_for_this_symptom": true,
+  "preflight_not_accepted": true,
+  "cold_start_failures_not_reclassified": true,
+  "incident": {
+    "run_started_ms": 1794939104414,
+    "query_id": "mixed-query-1794939406717",
+    "offset_ms": 302303,
+    "matches_first_maintenance_plus_300s": true,
+    "local_child_stderr": "absent",
+    "parent_fatal_in_observation": "Ark export failed",
+    "observation": "/Users/fu-121/.local/state/p003-t5-soak-20261118/REAL-CADENCE-OBSERVED-1794939720243.json",
+    "successful_query_results_seen_before_death": 2
+  },
+  "live_path": {
+    "persistent_store": "src/ark/service.ts arkStore()",
+    "query": "ArkRuntime.preview -> POST /internal/analytics/ark-summary",
+    "history_db": "AnalyticsStore.readArkHistory",
+    "same_http_app": "startAnalyticsServer / createAnalyticsApp",
+    "production_ark_auth": "AnalyticsDeviceReader read-only short connection busy_timeout 15, no DDL",
+    "deadline_ms": 120,
+    "history_accept_ms": 125,
+    "warmup": "once in src/index.ts; degraded does not cancel later requests"
+  },
+  "test_path_now": {
+    "every_300s": "new query process plus forked reader",
+    "both_construct_arkstore": true,
+    "reader_also_constructs_analytics_store": true,
+    "queries_hit_forked_reader": true,
+    "constructor_before_preview": "scripts/storage-ark-query-load.ts:16",
+    "ddl": "src/ark/store.ts constructor PRAGMA/CREATE/INSERT plus installArkArchive",
+    "busy_timeout_ms": 15
+  },
+  "proposal": {
+    "resident_query_child": true,
+    "init_before_producer": true,
+    "hit_same_ingest_ark_summary": true,
+    "no_extra_reader": true,
+    "no_per_cycle_ddl": true,
+    "ipc_batch_50": true,
+    "count_first_sample_errors_exits": true,
+    "keep_120_125_p99_ack_overlap": true,
+    "src_unchanged": true,
+    "degraded_warmup_still_runs_measured_queries": true
+  },
+  "conditions": [
+    "arkDeviceKey must equal the ingest sha256(sn); do not use the production HMAC in this synthetic db",
+    "readArkAuthorization reads the parent grant and must not authorize or throw",
+    "one ArkStore constructor in the child, before produceArk; IPC must not construct again",
+    "warmup rows stay out of the sample jsonl; degraded warmup does not skip the batch",
+    "missing result json, short batch, IPC rejection, and child exit all increment failed_cycles",
+    "do not require X-T5-Service-Ms; the real app does not set it",
+    "do not relax P99<=100 if sharing the ingest app slows queries",
+    "export exit and ark-export stderr remain a separate check; this change does not absorb Ark export failed",
+    "resident child counts against the same 0.5cpu/768MiB cgroup; record memory.events max and oom",
+    "continuous_ark coin oracle can pass on snapshot alone; key equality is mandatory",
+    "ACCELERATED-QUERY-FAILURES and other restart/DDL failures stay failed"
+  ],
+  "not_covered_product_edges": [
+    "second ArkStore DDL while the writer is in BEGIN IMMEDIATE",
+    "AnalyticsDeviceReader 15ms read-only open mapped to dependency unavailable",
+    "storage-ark-export.py sqlite timeout 0.1s overlapping live ark writes"
+  ],
+  "files_to_change": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-query-load.ts"
+  ],
+  "files_not_to_change": [
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/service.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/runtime.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/index.ts"
+  ],
+  "gates_unchanged": {
+    "preview_deadline_ms": 120,
+    "history_accept_ms": 125,
+    "p99_ms_max": 100,
+    "ack_p95_ms_max": 500,
+    "ack_p99_ms_max": 2000,
+    "preflight_samples_min": 150,
+    "preflight_span_ms_min": 540000,
+    "preflight_max_gap_ms": 600000,
+    "overlap": "maintenance_overlapped_daily and backup_overlapped_daily against first ACK"
+  }
+}

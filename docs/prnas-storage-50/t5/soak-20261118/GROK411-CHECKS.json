@@ -1,0 +1,152 @@
+{
+  "review": "t5-preflight-delta",
+  "verdict": "NO_BLOCKER",
+  "preflight_run": "UNVERIFIED",
+  "full_day_24h": "UNVERIFIED",
+  "accelerated_b3_30k": "REMAINS_FAIL_NOT_REMEASURED",
+  "head": "b5bb1cbf562aad44b46fed9753541c3f73f9c3a4",
+  "base": "b3f77dbb1c62acbde8daa8ca10d827e6da252485",
+  "runtime_src": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "head_equals_worktree": true,
+  "worktree_clean": false,
+  "runtime_src_diff_empty": true,
+  "commit_subject": "test(storage): preserve failed query evidence and preflight actual mixed cadence",
+  "script_diff": {
+    "files": 3,
+    "insertions": 16,
+    "deletions": 10
+  },
+  "blobs": {
+    "b5_storage-soak-schedule.ts": "ab41d7412203dcb3adefb1db1d8013f54581ef78",
+    "b3_storage-soak-schedule.ts": "eda6141d44579f5e3d35a9fe5dfc948bc6bb189f",
+    "b5_storage-soak-schedule.test.ts": "6a76cdf15a82c67f6b2d1ea0760d4d46c028dd77",
+    "b5_storage-capacity-load.ts": "54f35fbea18576ce7cb9e870978d3250f954d3ac"
+  },
+  "spec": {
+    "devices": 50,
+    "events_per_device": 6000,
+    "batch": 200,
+    "deadline_ms": 3600000,
+    "duration_ms_at_least": 600000,
+    "daily_delay_ms": 20000,
+    "ark_interval_ms": 50000,
+    "maintenance_interval_ms": 300000,
+    "monitor_interval_ms": 5000,
+    "ack_p95_max_ms": 500,
+    "ack_p99_max_ms": 2000,
+    "query_p99_max_ms": 100,
+    "failed_child_processes_counted": true,
+    "preflight_query_samples_min": 150,
+    "preflight_query_span_min_ms": 540000,
+    "full_day_duration_ms": 86400000,
+    "full_day_query_samples_min": 10000,
+    "full_day_query_span_min_ms": 85800000,
+    "full_t5_pass_hardcoded": false
+  },
+  "blockers": [],
+  "residuals": [
+    {
+      "id": "corrupt-query-json-skips-failed-cycles",
+      "blocking": false,
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts",
+      "line": 64,
+      "detail": "JSON.parse runs inside the push argument. A non-zero child with a missing or valid result file is recorded before the exit assert. A present but corrupt result file throws before push, so failed_cycles omits it. maintenanceError still fails the run later."
+    },
+    {
+      "id": "unit-test-omits-monitor-and-preflight-flag",
+      "blocking": false,
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-soak-schedule.test.ts",
+      "line": 11,
+      "detail": "Committed test locks duration, ark, maintenance and daily delay. It does not assert monitorIntervalMs===5000 or preflight===true. Independent execution of soakPlan confirmed both."
+    },
+    {
+      "id": "span-gate-needs-early-query",
+      "blocking": false,
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts",
+      "line": 154,
+      "detail": "A first query at 300000ms and a last query just after 600000ms spans about 300000ms and fails >=540000. The post-first-ACK maintain supplies the early query only when arkRounds>0. Missing it fails closed. First-round Ark latency was not measured."
+    },
+    {
+      "id": "sample-floor-is-three-cycles",
+      "blocking": false,
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts",
+      "line": 154,
+      "detail": "50 devices times T5_QUERY_ROUNDS=1 is 50 samples per complete jsonl. The >=150 gate needs three such cycles. Static schedule has the ACK cycle, the 300s cycle, the 600s cycle and a final maintain. No query child was started."
+    }
+  ],
+  "unverified": [
+    "formal 50x6000 preflight run currently in progress; not read and not started here",
+    "24h soak, NAS drain, and resource-quota measurement",
+    "storage-capacity-load.ts integration execution",
+    "runtime maintenance overlap and published backup overlap",
+    "PREFLIGHT-PLAN-CHECKS.json functional smoke (samples 18, span_ms 17521) replay",
+    "GROK409 outage archive re-verification",
+    "execution on Node 24.19.0"
+  ],
+  "checks": [
+    {
+      "id": "head-and-ancestors",
+      "result": "pass",
+      "method": "git",
+      "detail": "HEAD is b5bb1cbf562aad44b46fed9753541c3f73f9c3a4. b3 and runtime src are ancestors. Script worktree diff against HEAD is empty."
+    },
+    {
+      "id": "runtime-src-unchanged",
+      "result": "pass",
+      "method": "git diff --name-only and --stat",
+      "detail": "apps/server/src from b1ce23aecf2a699c55f81942c76ee05ca48fa5f1 to b5 is empty. b3..b5 does not touch it."
+    },
+    {
+      "id": "schedule-unit-test",
+      "result": "pass",
+      "method": "executed",
+      "command": "node --import tsx scripts/storage-soak-schedule.test.ts",
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "node": "v22.14.0",
+      "exit_code": 0,
+      "stdout": "PASS CST 23:00 scheduling, exact real-day duration, smoke never full-day"
+    },
+    {
+      "id": "schedule-negatives",
+      "result": "pass",
+      "method": "executed-import-of-b5-soakPlan",
+      "node": "v22.14.0",
+      "exit_code": 0,
+      "detail": "Preflight at 01:00, 12:00, 23:00 and 23:30 is fullDay false, preflight true, 600000, daily 20000, ark 50000, maintenance 300000, monitor 5000. Values true/0/empty do not enable it. Pairwise and triple flags throw choose one test scope. NaN, 0 and negative now throw. Full day keeps 86400000, monitor 5000, ark 50000, maintenance 300000, and CST delays 22h/0/23.5h. Smoke stays 17000/2000/2000/5000/1000 with both flags false."
+    },
+    {
+      "id": "ack-operator",
+      "result": "pass",
+      "method": "executed-operator-replica",
+      "detail": "Source token is p95!<=500 && p99!<=2000, a TypeScript non-null assertion plus <=. Replica rejects p95 502 with p99 1732, rejects p99 2001, and accepts 500/2000. Not a load run."
+    },
+    {
+      "id": "query-and-failed-cycle-predicates",
+      "result": "pass",
+      "method": "static-source-plus-replica",
+      "detail": "Replica of the inlined predicates: failed exit 1 and null count as failed_cycles; 150/0/100/540000/600000 passes; 149 samples, p99 100.001, invalid 1, and span 539999 fail. Full-day span floor remains 86400000-600000. capacity-load.ts was not executed."
+    },
+    {
+      "id": "full-day-resource-bit-closed-for-short-runs",
+      "result": "pass",
+      "method": "static",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-resources.ts",
+      "line": 66,
+      "detail": "local_resource_gate requires requiredMs>=86400000 and elapsed>=requiredMs. The harness still calls summary(86400000). A 600000ms run cannot set that bit. File is outside this delta."
+    }
+  ],
+  "not_done": [
+    "no production or online config changes",
+    "no long soak started",
+    "no main-tree edits",
+    "no repeat of the b3 schedule-fix audit"
+  ],
+  "worktree_clean_at_script_check": true,
+  "reviewed_scripts_match_head_after_tests": true,
+  "unrelated_worktree_dirt": {
+    "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.test.py",
+    "stat": "+31/-1",
+    "authored_by_this_review": false,
+    "reverted": false
+  }
+}

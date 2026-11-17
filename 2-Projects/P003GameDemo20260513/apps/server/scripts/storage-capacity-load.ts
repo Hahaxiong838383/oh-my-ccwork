@@ -20,6 +20,7 @@ import {createLoadHealthRecorder} from './storage-load-health.js';
 import {createStreamingAccounting,analyseRequests,readJsonl} from './storage-load-ledger.js';
 import {linuxResources,createResourceRecorder} from './storage-load-resources.js';
 import {soakPlan} from './storage-soak-schedule.js';
+import {startSharedQuery} from './storage-shared-query-client.js';
 
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
 assert.ok(['run','client'].includes(mode),'run|client');
@@ -33,7 +34,7 @@ if(mode==='run'){
  assert.ok(!existsSync(root),'never reuse or overwrite a run');mkdirSync(root,{recursive:true,mode:0o700});assert.equal(realpathSync(root),root,'resolve parent symlinks first');
  const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',rollup_prefix_index:process.env.T5_ROLLUP_PREFIX_INDEX==='1',synthetic:true,started_ms:Date.now()};
  if(soak?.fullDay||soak?.preflight)assert(config.devices===50&&config.events===6000&&config.batch===200&&config.deadline_ms===3600000&&config.maintenance&&config.backup&&config.ark_history_indexes&&config.rollup_prefix_index&&!config.covering_index,'real cadence requires fixed 50x6000 workload, 1h daily deadline and candidate indexes');
- Object.assign(config,{soak,continuous_ark:!!soak});
+ Object.assign(config,{soak,continuous_ark:!!soak,receiver_pid:process.pid});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  process.env.DEVICES_DB_PATH=join(root,'devices.db');
  const subjects=Array.from({length:config.devices},(_,i)=>'BJP003999999'+String(i+1).padStart(8,'0'));
@@ -49,17 +50,24 @@ if(mode==='run'){
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
  writeFileSync(join(root,'control.json'),'{"enabled":true}',{mode:0o600});
  const deadline=Date.now()+30000;while(!writer.ready){assert.ok(Date.now()<deadline,'writer readiness timeout');await sleep(10);}checkpointer.start();
- const reader={readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:hash(sn),active:subjects.includes(sn),uploadEnabled:true,uploadHourCst:23})};
+ const reader={arkDeviceKey:hash,readArkAuthorization:(sn:string)=>{const id=identities.find(i=>i.sn===sn),g=id&&ark.grant(id);return id&&g?{...id,not_before_ms:g.not_before_ms}:null;},readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:hash(sn),active:subjects.includes(sn),uploadEnabled:true,uploadHourCst:23})};
  const app=createAnalyticsApp({store,writer,reader,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
  app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>({identity:(sn:string)=>identities.find(i=>i.sn===sn)??null} as any),secret:()=>secret,ceiling:()=>subjects,acceptsCredential:()=>true,isAdmin:()=>false}));
- const server=serve({fetch:app.fetch,hostname:'127.0.0.1',port:0});if(!server.listening)await once(server,'listening');
+ const server=serve({fetch:async request=>{const start=performance.now(),receivedAt=Date.now(),response=await app.fetch(request);if(new URL(request.url).pathname==='/internal/analytics/ark-summary'){
+  const ms=performance.now()-start;response.headers.set('X-T5-Service-Ms',String(ms));response.headers.set('X-T5-Receiver-Pid',String(process.pid));
+  appendFileSync(join(root,'shared-reader.jsonl'),JSON.stringify({received_at_ms:receivedAt,done_at_ms:Date.now(),query_id:request.headers.get('X-T5-Query-Id'),ms,status:response.status,receiver_pid:process.pid})+'\n');
+ }return response;},hostname:'127.0.0.1',port:0});if(!server.listening)await once(server,'listening');
  const tokens=await Promise.all(subjects.map(sn=>new SignJWT({kind:'p003-device'}).setSubject(sn).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('48h').sign(new TextEncoder().encode(secret))));
  writeFileSync(join(root,'client-private.json'),JSON.stringify({url:'http://127.0.0.1:'+(server.address() as any).port,tokens}),{mode:0o600});
  const resources=createResourceRecorder(),maintenance:any[]=[],health=createLoadHealthRecorder(sample=>appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n')),children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;let maintenanceError:unknown;
  const launch=(args:string[],name:string,env=process.env)=>new Promise<number|null>(done=>{const p=spawn(args[0],args.slice(1),{cwd:process.cwd(),env,stdio:['ignore','pipe','pipe']});children.add(p);p.stdout.on('data',x=>appendFileSync(join(root,name+'.stdout'),x));p.stderr.on('data',x=>appendFileSync(join(root,name+'.stderr'),x));p.once('error',e=>appendFileSync(join(root,name+'.stderr'),e.message));p.once('close',code=>{children.delete(p);done(code);});});
+ let queryService:Awaited<ReturnType<typeof startSharedQuery>>|undefined;
+ if(soak)try{queryService=await startSharedQuery(root,'http://127.0.0.1:'+(server.address()as any).port,secret);}catch(error){
+  writeFileSync(join(root,'FAILURE.json'),JSON.stringify({stage:'query_service_start',error:String(error)}));server.closeAllConnections();server.close();await writer.close();await checkpointer.stop();ark.close();store.close();throw error;
+ }
  const queryReports:any[]=[];
  const maintain=async()=>{if(maintaining)return;maintaining=true;const start=Date.now();try{
-  const queryName='mixed-query-'+start,query=soak&&arkRounds>0?launch([process.execPath,'--import','tsx','scripts/storage-ark-query-load.ts',root,queryName],queryName,{...process.env,T5_QUERY_ROUNDS:'1',T5_QUERY_OBSERVE:'1'}):null;
+  const queryName='mixed-query-'+start,query=soak&&arkRounds>0?queryService!.query(queryName).catch(error=>{appendFileSync(join(root,queryName+'.stderr'),String(error));return 1;}):null;
   const code=await launch([process.execPath,'--import','tsx','scripts/analytics-rollup.ts'],'maintenance-'+start,{...process.env,ANALYTICS_DB_PATH:path}),rollupDone=Date.now();
   if(query){const exit=await query;queryReports.push({start,done:Date.now(),name:queryName,exit,result:existsSync(join(root,queryName+'.json'))?JSON.parse(readFileSync(join(root,queryName+'.json'),'utf8')):null});assert.equal(exit,0,'mixed Ark reader failed');}
   const summaries=[];for await(const row of readJsonl(join(root,'maintenance-'+start+'.stdout')))summaries.push(row);assert.equal(summaries.length,1,'one maintenance report required');maintenance.push({start,done:Date.now(),rollup_done:rollupDone,code,report:summaries[0]});
@@ -147,16 +155,19 @@ if(mode==='run'){
    const querySamples:any[]=[];for(const report of queryReports)if(existsSync(join(root,report.name+'.jsonl')))for await(const row of readJsonl(join(root,report.name+'.jsonl'))){assert(querySamples.length<25000,'bounded query evidence');querySamples.push(row);}
    const queryTimes=querySamples.map(x=>x.ms).sort((a,b)=>a-b),queryP99=queryTimes.length?queryTimes[Math.min(queryTimes.length-1,Math.floor(queryTimes.length*.99))]:null;
    const querySpan=queryReports.length>1?queryReports.at(-1).start-queryReports[0].start:0,maxQueryGap=queryReports.slice(1).reduce((m,r,i)=>Math.max(m,r.start-queryReports[i].start),0);
-   const queryEvidence={cycles:queryReports.length,failed_cycles:queryReports.filter(r=>r.exit!==0).length,samples:querySamples.length,p99_ms:queryP99,span_ms:querySpan,max_cycle_gap_ms:maxQueryGap,invalid:querySamples.filter(x=>!x.correct||x.status!==200||!x.body_complete).length,scope:'actual ArkRuntime -> separate Analytics reader HTTP; changing per-device assets'};
+   const receiverRows:any[]=[];if(existsSync(join(root,'shared-reader.jsonl')))for await(const row of readJsonl(join(root,'shared-reader.jsonl')))receiverRows.push(row);
+   const queryOverlap=receiverRows.some(q=>maintenance.some(m=>m.report?.work_started_at_ms<=q.done_at_ms&&m.report?.work_finished_at_ms>=q.received_at_ms));
+   const queryEvidence={cycles:queryReports.length,failed_cycles:queryReports.filter(r=>r.exit!==0).length,samples:querySamples.length,p99_ms:queryP99,span_ms:querySpan,max_cycle_gap_ms:maxQueryGap,invalid:querySamples.filter(x=>!x.correct||x.status!==200||!x.body_complete||x.receiver_pid!==process.pid).length,receiver_requests:receiverRows.length,query_overlapped_maintenance:queryOverlap,scope:'persistent ArkRuntime -> SAME Analytics receiver HTTP handling uploads; changing per-device assets'};
    writeFileSync(join(root,'SOAK-QUERY-RESULT.json'),JSON.stringify(queryEvidence,null,2));
    assert(queryEvidence.failed_cycles===0,'all query cycles including failed children must be accounted');
+   assert(queryEvidence.receiver_requests===queryEvidence.samples,'every measured query must hit the actual ingestion receiver');
    if(soak.fullDay)assert(queryEvidence.samples>=10000&&queryEvidence.invalid===0&&queryP99!==null&&queryP99<=100&&querySpan>=86400000-600000&&maxQueryGap<=600000,'full-day Ark query coverage/latency required');
    else if(soak.preflight)assert(queryEvidence.samples>=150&&queryEvidence.invalid===0&&queryP99!==null&&queryP99<=100&&querySpan>=540000&&maxQueryGap<=600000,'real-cadence preflight query gate');
    else assert(queryEvidence.samples>0&&queryEvidence.invalid===0,'smoke requires actual Ark queries');
    const evidence={full_day_requested:soak.fullDay,elapsed_ms:performance.now()-runMono,plan:soak,daily_started_ms:dailyStarted,daily_finished_ms:dailyFinished,first_ack_ms:firstAckMs,first_request_ms:firstRequest,last_request_ms:lastRequest,ark_rounds:arkRounds,ark_accepted:arkRounds*config.devices,archive_cycles:archiveReports,archive_stats:ark.db.prepare('SELECT * FROM ark_archive_stats').get(),maintenance_overlapped_daily:maintenance.some(m=>m.start<=lastRequest&&m.rollup_done>=firstRequest),backup_overlapped_daily:archiveReports.some(m=>m.backupReport?.state==='published'&&m.backupStarted<=lastRequest&&m.backupFinished>=firstRequest),resource_gate:result.resources.local_resource_gate,full_t5_pass:false};
    writeFileSync(join(root,'SOAK-RESULT.json'),JSON.stringify(evidence,null,2));assert(arkRounds>0);
    if(soak.fullDay){assert(evidence.elapsed_ms>=86400000);assert(result.resources.local_resource_gate,'real-day resource gate failed');}
-   if(soak.fullDay||soak.preflight)assert(evidence.maintenance_overlapped_daily&&evidence.backup_overlapped_daily,'mixed overlap required');
+   if(soak.fullDay||soak.preflight)assert(evidence.maintenance_overlapped_daily&&evidence.backup_overlapped_daily&&queryOverlap,'actual mixed overlap required');
   }
   assert.equal(code,0);assert.ok(integrity.complete);assert.ok(arkRows.every(x=>x.correct));assert.ok(evidenceConsistent&&requests.all_actors_finished,'request evidence completeness');assert.ok(requests.successes&&result.acks.p95!<=500&&result.acks.p99!<=2000,'ACK latency gate');
   if(config.maintenance){assert.equal(maintenanceError,undefined,'maintenance evidence failed');assert.ok(maintenance.every(r=>r.code===0&&!r.report?.rollup_error&&!r.report?.prune_error),'maintenance process failed');assert.equal(dirty,0);}if(config.backup&&!soak)assert.equal(backupCode,0,'backup must really run');
@@ -164,6 +175,7 @@ if(mode==='run'){
   clearInterval(timer);if(maintenanceTimer)clearInterval(maintenanceTimer);if(firstMaintenance)clearTimeout(firstMaintenance);if(backupTimer)clearTimeout(backupTimer);
   soakStop=true;await arkPromise;await archivePromise;
   while(monitoring)await sleep(10);
+  try{await queryService?.stop();}catch(error){writeFileSync(join(root,'QUERY-STOP-FAILURE.json'),JSON.stringify({error:String(error)}));process.exitCode=1;}
   for(const p of children)p.kill('SIGTERM');server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await writer.close();await checkpointer.stop();ark.close();store.close();
  }
 }else{

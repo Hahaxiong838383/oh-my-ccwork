@@ -15,6 +15,28 @@ MAX_BYTES=1024*1024
 MAX_BATCHES=20
 DISK_RESERVE_BYTES=9*1024**3//2
 DAY=86400000
+BUSY_RETRY_SECONDS=1.0
+
+class ExportConnection(sqlite3.Connection):
+    """Background-only BUSY retry; one shared budget, no repeated cycle or payload work."""
+    def __init__(self,*args,**kwargs):
+        super().__init__(*args,**kwargs)
+        self.busy_remaining=BUSY_RETRY_SECONDS
+        self.busy_retries=0
+    def retry(self,operation):
+        while True:
+            started=time.monotonic()
+            try:return operation()
+            except sqlite3.OperationalError as error:
+                self.busy_remaining-=time.monotonic()-started
+                if getattr(error,'sqlite_errorcode',0)&255!=sqlite3.SQLITE_BUSY or self.busy_remaining<=0:raise
+                self.busy_retries+=1
+                started=time.monotonic();time.sleep(min(.025,self.busy_remaining))
+                self.busy_remaining-=time.monotonic()-started
+    def execute(self,*args,**kwargs):
+        return self.retry(lambda:super(ExportConnection,self).execute(*args,**kwargs))
+    def commit(self):
+        return self.retry(lambda:super(ExportConnection,self).commit())
 
 def transaction(db,fn):
     db.execute('BEGIN IMMEDIATE')
@@ -123,7 +145,7 @@ def cycle(dbfile,root,now=None):
     try:
         fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         dbfile=Path(dbfile).resolve(strict=True)
-        db=sqlite3.connect('file:'+str(dbfile)+'?mode=rw',uri=True,timeout=.1,isolation_level=None);db.row_factory=sqlite3.Row
+        db=sqlite3.connect('file:'+str(dbfile)+'?mode=rw',uri=True,timeout=.1,isolation_level=None,factory=ExportConnection);db.row_factory=sqlite3.Row
         work=spool.root/'ark-work'
         if work.is_symlink():raise ValueError('archive_work_symlink')
         work.mkdir(exist_ok=True,mode=0o700)
@@ -144,10 +166,13 @@ def cycle(dbfile,root,now=None):
                 count[process_batch(db,spool,work,aid)]+=1
             prune_metadata(db,spool,now)
             db.execute('UPDATE ark_archive_stats SET last_success_ms=?,last_error=NULL WHERE id=1',(now,))
+            count.update(busy_retries=db.busy_retries,sqlite_busy_timeout_ms=db.execute('PRAGMA busy_timeout').fetchone()[0])
             return count
         except BaseException:
             if db.in_transaction:db.rollback()
-            db.execute("UPDATE ark_archive_stats SET last_error='export_failed' WHERE id=1")
+            # A second locked status write must not mask the original error/code.
+            try:db.execute("UPDATE ark_archive_stats SET last_error='export_failed' WHERE id=1")
+            except sqlite3.Error:pass
             raise
         finally:db.close()
     finally:os.close(fd)
@@ -155,4 +180,4 @@ def cycle(dbfile,root,now=None):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--db',required=True,type=Path);p.add_argument('--root',required=True,type=Path);a=p.parse_args()
     try:print(json.dumps(cycle(a.db,a.root)))
-    except Exception as e:print('ARK_EXPORT_FAILED:'+type(e).__name__,file=__import__('sys').stderr);raise SystemExit(1)
+    except Exception as e:print('ARK_EXPORT_FAILED:'+type(e).__name__+':'+str(getattr(e,'sqlite_errorname','NON_SQLITE')),file=__import__('sys').stderr);raise SystemExit(1)
