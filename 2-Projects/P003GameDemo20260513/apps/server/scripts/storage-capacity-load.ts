@@ -54,8 +54,11 @@ if(mode==='run'){
  assert.equal(store.db.prepare('PRAGMA query_only').get()!.query_only,genericReaderDiagnostic?0:1);
  assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,genericReaderDiagnostic?-65536:-8192);
  Object.assign(config,{reader_query_only:!genericReaderDiagnostic,reader_cache_kib:genericReaderDiagnostic?65536:8192,generic_reader_diagnostic:genericReaderDiagnostic});
+ const earlyReclaim=process.env.T5_DIAGNOSTIC_WAL_RECLAIM==='64MiB';
+ if(process.env.T5_DIAGNOSTIC_WAL_RECLAIM!==undefined)assert(earlyReclaim&&process.env.T5_PROFILE_SQL==='1'&&soak?.preflight,'WAL target experiment requires a profiled diagnostic preflight');
+ Object.assign(config,{checkpoint_reclaim_target_bytes:earlyReclaim?64*1024**2:256*1024**2,writer_wal_hard_limit_bytes:256*1024**2});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
- const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run)});
+ const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run),...(earlyReclaim?{walMaxBytes:64*1024**2}:{})});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
  writeFileSync(join(root,'control.json'),'{"enabled":true}',{mode:0o600});
