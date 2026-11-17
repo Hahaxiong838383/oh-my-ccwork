@@ -1,0 +1,3 @@
+module 0/96 failed; invalid_iana=invalid_clock_request; copy_accepted=city-hk,city-tp
+COPY city-hk	weekday_copy actual=香港现在是早上七点三十八分，星期二。 expected=香港现在是早上七点三十八分。
+COPY city-tp	weekday_copy actual=台北现在是早上七点三十八分，星期二。 expected=台北现在是早上七点三十八分。

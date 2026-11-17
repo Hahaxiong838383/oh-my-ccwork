@@ -1,0 +1,102 @@
+{
+  "head": "d8bf6ff1a2c2a554a735887d54fa54aa66d50698",
+  "import_root": "/Users/fu-121/.local/state/p003-time-query-20261117/review-d8bf6ff1/tree/2-Projects/P003GameDemo20260513/apps/server/src",
+  "clock_status": 200,
+  "clock_spoken": "现在是北京时间早上八点三十七分。",
+  "clock_model_calls": 0,
+  "clock_facts_calls": 0,
+  "clock_rows": [
+    {
+      "role": "assistant",
+      "memory_excluded": true,
+      "text": "现在是北京时间早上八点三十七分。"
+    },
+    {
+      "role": "user",
+      "memory_excluded": true,
+      "text": "现在几点了"
+    }
+  ],
+  "profile_after_clock": {
+    "interests": [],
+    "personality_notes": "",
+    "recent_emotion": "",
+    "game_progress": []
+  },
+  "next_status": 200,
+  "next_spoken": "模型回退",
+  "turn_extract_count": 1,
+  "turn_extract_saw_dino": true,
+  "turn_extract_leaked_clock": false,
+  "turn_extract_prompts": [
+    "已知画像：昵称=测试，兴趣=无，方舟进展=无\n已知不喜欢（relikes 只填这里面孩子【本轮】改口说喜欢的）：无\n已知未兑现约定（resolved_promise_ids 只能从这些编号选）：无\n\n对话数据：\n\"\"\"\n孩子【本轮】: 我最喜欢恐龙\n小可: 模型回退\n\"\"\""
+  ],
+  "profile_after_next": {
+    "interests": [
+      "恐龙"
+    ],
+    "personality_notes": "",
+    "recent_emotion": "",
+    "game_progress": []
+  },
+  "memory_items_after_next": [],
+  "idle_row_flags": [
+    {
+      "role": "user",
+      "memory_excluded": true,
+      "text": "现在几点了"
+    },
+    {
+      "role": "assistant",
+      "memory_excluded": true,
+      "text": "现在是北京时间早上八点三十七分。"
+    },
+    {
+      "role": "user",
+      "memory_excluded": false,
+      "text": "我最喜欢恐龙"
+    },
+    {
+      "role": "assistant",
+      "memory_excluded": false,
+      "text": "模型回退"
+    }
+  ],
+  "idle_extract_count": 1,
+  "idle_extract_leaked_clock": false,
+  "idle_extract_has_dino": true,
+  "idle_extract_prompts": [
+    "已知画像：昵称=测试，兴趣=恐龙，方舟进展=无\n已知不喜欢（relikes 只填这里面孩子【本轮】改口说喜欢的）：无\n已知未兑现约定（resolved_promise_ids 只能从这些编号选）：无\n\n对话数据：\n\"\"\"\n孩子【本轮】: 我最喜欢恐龙\n小可: 模型回退\n\"\"\""
+  ],
+  "profile_after_idle": {
+    "interests": [
+      "恐龙"
+    ],
+    "personality_notes": "",
+    "recent_emotion": "",
+    "game_progress": []
+  },
+  "help_spoken": "现在是北京时间早上八点三十七分。",
+  "help_model_calls": 0,
+  "help_facts_calls": 0,
+  "profile_final": {
+    "interests": [
+      "恐龙"
+    ],
+    "personality_notes": "",
+    "recent_emotion": "",
+    "game_progress": []
+  },
+  "memory_items_final": [],
+  "checks": {
+    "clock_local_sse": true,
+    "clock_rows_excluded": true,
+    "profile_untouched_by_clock_turn": true,
+    "turn_prompt_has_dino_not_clock": true,
+    "idle_prompt_has_dino_not_clock": true,
+    "profile_keeps_dino_not_clock": true,
+    "memory_items_have_no_clock": true,
+    "help_search_phrase_local": true
+  },
+  "pass": true
+}

@@ -1,0 +1,38 @@
+[memory] extract scheduler mode=turn allowlist=""
+[curriculum-kg] 加载失败（降级为不注入）: ENOENT: no such file or directory, open '/tmp/ark-currency-http-wQR2Ms/absent/nodes.json'
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459645-w2j9cj","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875459645}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459744-2v85bp","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875459744}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459756-aw7en9","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875459756}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459769-ep6krd","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875459769}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459782-4enydd","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"America/New_York","at_ms":1794875459782}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459795-m51qng","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875459795}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459808-fbdsk4","room":"sn-BJP00399999999999901-123","kind":"clarify_timezone","at_ms":1794875459808}
+[clock-direct] {"response_id":"chatcmpl-clock-1794875459822-hpzuhl","room":"sn-BJP00399999999999901-123","kind":"clock","iana":"America/New_York","at_ms":1794875459822}
+[32m✔ clock uses authenticated real HTTP SSE with zero upstream or Ark requests [90m(269.603084ms)[39m[39m
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[32m✔ later ordinary prompt excludes stale clock answers from memory input [90m(47.423458ms)[39m[39m
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 匿名（无 token）
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[32m✔ clock preserves disabled flag, anonymous/parent and non-clock model behavior [90m(164.565291ms)[39m[39m
+[34mℹ tests 3[39m
+[34mℹ suites 0[39m
+[34mℹ pass 3[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 506.406541[39m

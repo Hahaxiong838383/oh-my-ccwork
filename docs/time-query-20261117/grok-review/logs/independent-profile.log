@@ -1,0 +1,31 @@
+[memory] extract scheduler mode=turn allowlist=""
+[curriculum-kg] 加载失败（降级为不注入）: ENOENT: no such file or directory, open '/tmp/clock-profile-mK5294/absent/nodes.json'
+[clock-direct] {"response_id":"chatcmpl-clock-1794875852892-l5trj7","room":"sn-BJP00399999999999801-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875852892}
+[custom-llm] 记忆注入 account=device-BJP00399999999999801 [kb]
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[memory] account=device-BJP00399999999999801 画像更新: interests
+[memory] account=device-BJP00399999999999801 画像更新: interests
+[clock-direct] {"response_id":"chatcmpl-clock-1794875853889-4chxxn","room":"sn-BJP00399999999999801-123","kind":"clock","iana":"Asia/Shanghai","at_ms":1794875853889}
+{
+  "pass": true,
+  "checks": {
+    "clock_local_sse": true,
+    "clock_rows_excluded": true,
+    "profile_untouched_by_clock_turn": true,
+    "turn_prompt_has_dino_not_clock": true,
+    "idle_prompt_has_dino_not_clock": true,
+    "profile_keeps_dino_not_clock": true,
+    "memory_items_have_no_clock": true,
+    "help_search_phrase_local": true
+  },
+  "clock_spoken": "现在是北京时间早上八点三十七分。",
+  "help_spoken": "现在是北京时间早上八点三十七分。",
+  "profile": {
+    "interests": [
+      "恐龙"
+    ],
+    "personality_notes": "",
+    "recent_emotion": "",
+    "game_progress": []
+  }
+}

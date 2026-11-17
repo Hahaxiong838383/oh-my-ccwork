@@ -1,0 +1,88 @@
+[32m✔ H01: 现在几点了 [90m(54.35575ms)[39m[39m
+[32m✔ H02: 现在几点 [90m(3.679667ms)[39m[39m
+[32m✔ H03: 现在才几点啊就跟我说晚安 [90m(0.55425ms)[39m[39m
+[32m✔ H04: 今天是周几 [90m(0.542875ms)[39m[39m
+[32m✔ H05: 今天是几号呀 [90m(0.606458ms)[39m[39m
+[32m✔ H06: 那是几号 [90m(0.241ms)[39m[39m
+[32m✔ N01: 对然后我跟他说我说你看一下这是什么时间做的事 [90m(0.213542ms)[39m[39m
+[32m✔ N02: 下周呢就所以那咱定个时间吧今天下午几点咱们就是 [90m(0.224459ms)[39m[39m
+[32m✔ N03: 倒计时剩余30秒 [90m(0.250583ms)[39m[39m
+[32m✔ N04: 我离下一个宝箱还需要多久？ [90m(0.431083ms)[39m[39m
+[32m✔ N05: 导航啊统一的倒计时啊一些这个 [90m(0.216875ms)[39m[39m
+[32m✔ S01: 几点钟了 [90m(0.526375ms)[39m[39m
+[32m✔ S02: 都几点了 [90m(0.463041ms)[39m[39m
+[32m✔ S03: 现在什么时间 [90m(0.534334ms)[39m[39m
+[32m✔ S04: 小可现在几点了呢 [90m(0.48075ms)[39m[39m
+[32m✔ S05: 北京时间 [90m(0.863833ms)[39m[39m
+[32m✔ S06: 上海现在几点 [90m(0.453959ms)[39m[39m
+[32m✔ S07: 纽约现在几点 [90m(0.558625ms)[39m[39m
+[32m✔ S08: 美国时间 [90m(0.197625ms)[39m[39m
+[32m✔ S09: 美国现在几点 [90m(0.153209ms)[39m[39m
+[32m✔ S10: 纽约 [90m(1.781708ms)[39m[39m
+[32m✔ S11: 那纽约呢 [90m(1.77125ms)[39m[39m
+[32m✔ S12: 那美国呢 [90m(0.24075ms)[39m[39m
+[32m✔ S13: 不要报时 [90m(0.178917ms)[39m[39m
+[32m✔ S14: 他说现在几点了 [90m(0.138709ms)[39m[39m
+[32m✔ S15: 定个闹钟七点叫我 [90m(0.150916ms)[39m[39m
+[32m✔ S16: 五分钟后提醒我 [90m(0.198542ms)[39m[39m
+[32m✔ S17: 一年有多少天 [90m(0.137834ms)[39m[39m
+[32m✔ S18: 现在几点了天气怎么样 [90m(0.153875ms)[39m[39m
+[32m✔ S19: 帮我查现在几点 [90m(0.465709ms)[39m[39m
+[32m✔ S20: 几点 [90m(0.149041ms)[39m[39m
+[32m✔ negative 北京现在几点开门 [90m(0.228292ms)[39m[39m
+[32m✔ negative 现在几点上课 [90m(0.139375ms)[39m[39m
+[32m✔ negative 几点开始下雨 [90m(0.158833ms)[39m[39m
+[32m✔ negative 我今天用了多久 [90m(0.153333ms)[39m[39m
+[32m✔ negative 今日奖励还差几分钟 [90m(0.138042ms)[39m[39m
+[32m✔ negative 我现在有几点积分 [90m(0.13225ms)[39m[39m
+[32m✔ negative 你说现在几点了是什么意思 [90m(0.144458ms)[39m[39m
+[32m✔ negative 告诉我现在几点开会 [90m(0.17175ms)[39m[39m
+[32m✔ negative 不要告诉我现在几点 [90m(0.163375ms)[39m[39m
+[32m✔ negative 纽约有什么好玩的 [90m(0.13625ms)[39m[39m
+[32m✔ negative 北京时间是什么意思 [90m(0.106917ms)[39m[39m
+[32m✔ unknown timezone does not default to Beijing [90m(0.183958ms)[39m[39m
+[32m✔ unrelated latest turn clears implicit followup [90m(0.209458ms)[39m[39m
+[32m✔ midnight and cross-date [90m(1.122167ms)[39m[39m
+[32m✔ DST uses IANA rules [90m(0.699541ms)[39m[39m
+[32m✔ RTC history drops clock answers and timezone followups, preserves personal narrative [90m(1.493833ms)[39m[39m
+[32m✔ natural variant 我想知道现在几点 [90m(0.190917ms)[39m[39m
+[32m✔ natural variant 能告诉我现在几点吗 [90m(0.126667ms)[39m[39m
+[32m✔ natural variant 麻烦问一下现在几点了 [90m(0.142125ms)[39m[39m
+[32m✔ natural variant 查一下北京时间 [90m(0.120666ms)[39m[39m
+[32m✔ natural variant 现在几点几分 [90m(0.121625ms)[39m[39m
+[32m✔ natural variant 现在纽约几点 [90m(0.111792ms)[39m[39m
+[32m✔ natural variant 北京时间现在几点 [90m(0.119542ms)[39m[39m
+[32m✔ natural variant 北京那边现在几点了 [90m(0.116625ms)[39m[39m
+[32m✔ natural variant 现在几點了 [90m(0.156375ms)[39m[39m
+[32m✔ quoted or narrative 告诉我一个故事现在几点 [90m(0.151916ms)[39m[39m
+[32m✔ quoted or narrative 如果现在几点了你会怎么说 [90m(0.185083ms)[39m[39m
+[32m✔ quoted or narrative 比如现在几点了 [90m(0.115166ms)[39m[39m
+[32m✔ quoted or narrative “现在几点了” [90m(0.124208ms)[39m[39m
+[32m✔ quoted or narrative 他说现在几点了 [90m(0.113333ms)[39m[39m
+[32m✔ quoted or narrative 现在几点了是什么意思 [90m(0.113459ms)[39m[39m
+[32m✔ current time phrase 现在的时间 [90m(0.226ms)[39m[39m
+[32m✔ current time phrase 当前时间 [90m(0.284583ms)[39m[39m
+[32m✔ current time phrase 此刻的时间 [90m(0.186625ms)[39m[39m
+[32m✔ current time phrase 现在时间是多少 [90m(0.233084ms)[39m[39m
+[32m✔ current time phrase 请告诉我当前的时间 [90m(0.161167ms)[39m[39m
+[32m✔ review natural 今天的日期 [90m(0.190666ms)[39m[39m
+[32m✔ review natural 今天是不是周末 [90m(0.158042ms)[39m[39m
+[32m✔ review natural 帮我看现在几点 [90m(0.243708ms)[39m[39m
+[32m✔ review natural 现在才几点呢就跟我说晚安 [90m(0.112791ms)[39m[39m
+[32m✔ review natural 北京市现在几点 [90m(0.155208ms)[39m[39m
+[32m✔ review natural 纽约市现在几点 [90m(0.123042ms)[39m[39m
+[32m✔ review narrative 妈妈说现在几点了 [90m(0.154875ms)[39m[39m
+[32m✔ review narrative 爸爸说现在几点了 [90m(0.111375ms)[39m[39m
+[32m✔ review narrative 老师说现在几点 [90m(0.107791ms)[39m[39m
+[32m✔ review narrative 这是什么时间 [90m(0.100583ms)[39m[39m
+[32m✔ review narrative 昨天几点了 [90m(0.108292ms)[39m[39m
+[32m✔ review narrative 明天几点 [90m(0.110458ms)[39m[39m
+[32m✔ city clarification preserves date question [90m(0.700542ms)[39m[39m
+[34mℹ tests 80[39m
+[34mℹ suites 0[39m
+[34mℹ pass 80[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 127.489167[39m

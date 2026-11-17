@@ -1,0 +1,65 @@
+{
+  "verdict": "PASS_ISOLATED",
+  "candidate": "d8bf6ff1a2c2a554a735887d54fa54aa66d50698",
+  "runtime_parent": "0cd08d4ffcc5107b090432d251ab58473a6c4a66",
+  "node": "v24.19.0",
+  "node_path": "/Users/fu-121/.local/node-v24/bin/node",
+  "archive": "/Users/fu-121/.local/state/p003-time-query-20261117/review-d8bf6ff1/tree",
+  "production_verified": false,
+  "device_verified": false,
+  "deployed": false,
+  "source_modified": false,
+  "old_candidate_3d1d031c_used_as_evidence": false,
+  "checks": {
+    "clock_query_80": {
+      "pass": 80,
+      "fail": 0
+    },
+    "clock_http_sse": {
+      "pass": 3,
+      "fail": 0,
+      "upstream_on_clock": 0
+    },
+    "clock_search_runtime": {
+      "pass": true,
+      "clock_fetch_count": 0,
+      "explicit_rule": "builtin-explicit"
+    },
+    "independent_96": {
+      "total": 96,
+      "failed": 0,
+      "copy_accepted": [
+        "city-hk",
+        "city-tp"
+      ]
+    },
+    "profile_filter": {
+      "pass": true,
+      "interests_final": [
+        "恐龙"
+      ],
+      "turn_prompt_leaked_clock": false,
+      "idle_prompt_leaked_clock": false
+    },
+    "pool_overlay_12": {
+      "files": 12,
+      "manifest_matches_archive": true,
+      "manifest_sha256": "c3e8413479daee25dd18858d247c85a3d7ec3b63bef00357a6a4411b8e3d1d7a"
+    }
+  },
+  "logs_sha256": {
+    "logs/clock-query.log": "0cec4eae179c3c3308ff804c6bc43694fb043c0bf35b8d4a7b1bc571b3df9c51",
+    "logs/clock-http.log": "e128199e81ea902638fd6c66474ea29f6de04216207f067604a24e65d1089a6e",
+    "logs/clock-search-runtime.log": "aa1dae52fbd40f248d407c6e18b4b40fa7375d3efa4c04912bc5451f6d413f1d",
+    "logs/independent-module.log": "818872f871e9d287bc2ce537eb49c0795c53552d627a23e3465fe31319b6c085",
+    "logs/independent-profile.log": "73071a94e16a5e738197538851dab91057b0f47ed85f55b6edc9f501234a1ab0",
+    "out/module.json": "78d3fca0c9b3df0b3e289b6c5d5e6fb46f451aae09ea979b58626c5c0ed80f7e",
+    "out/profile.json": "456763ab1b8937741596f91b2daef8d87aa53bf018ad7f7621da669545cf68e9"
+  },
+  "notes": [
+    "HK and Taipei spoken lines add 星期二 at 07:38; counted as accurate copy, not a time error.",
+    "Pool group reruns were not repeated. Mirror bytes match the archived POOL-MANIFEST after hashes, whose POOL-TESTS.json exits are 0.",
+    "Baseline search-weather-fallback-runtime and search-location-fallback-runtime failures on d8bd447c were left unchanged.",
+    "Worktree HEAD later moved to 84ffd339 with docs-only commits. Those commits were not the review target."
+  ]
+}

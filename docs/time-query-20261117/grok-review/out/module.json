@@ -1,0 +1,1736 @@
+{
+  "tool": "independent-module",
+  "head": "d8bf6ff1a2c2a554a735887d54fa54aa66d50698",
+  "import": "/Users/fu-121/.local/state/p003-time-query-20261117/review-d8bf6ff1/tree/2-Projects/P003GameDemo20260513/apps/server/src/tools/clock-query.ts",
+  "frozen_now_ms": 1794872324023,
+  "invalid_iana": "invalid_clock_request",
+  "total": 96,
+  "failed": 0,
+  "copy_accepted": [
+    {
+      "id": "city-hk",
+      "notes": [
+        "weekday_copy actual=香港现在是早上七点三十八分，星期二。 expected=香港现在是早上七点三十八分。"
+      ],
+      "spoken": "香港现在是早上七点三十八分，星期二。"
+    },
+    {
+      "id": "city-tp",
+      "notes": [
+        "weekday_copy actual=台北现在是早上七点三十八分，星期二。 expected=台北现在是早上七点三十八分。"
+      ],
+      "spoken": "台北现在是早上七点三十八分，星期二。"
+    }
+  ],
+  "rows": [
+    {
+      "id": "nat-la",
+      "group": "natural",
+      "text": "现在几点啦",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-zhong",
+      "group": "natural",
+      "text": "现在几点钟了",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-zhehui",
+      "group": "natural",
+      "text": "这会儿几点了",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-cici",
+      "group": "natural",
+      "text": "此刻几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-addr",
+      "group": "natural",
+      "text": "小可小可，现在几点？",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-shike",
+      "group": "natural",
+      "text": "请问现在什么时刻",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-trad",
+      "group": "natural",
+      "text": "现在几點了",
+      "context": [],
+      "now": null,
+      "note": "lexicon ASR variant",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-baoshi",
+      "group": "natural",
+      "text": "报个时",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-yijing",
+      "group": "natural",
+      "text": "已经几点了呀",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-dou",
+      "group": "natural",
+      "text": "都几点啦",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-de-time",
+      "group": "natural",
+      "text": "现在的时间",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-dangqian",
+      "group": "natural",
+      "text": "当前时间",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-jintian-date-de",
+      "group": "natural",
+      "text": "今天的日期",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "date",
+        "place_label": "北京时间"
+      },
+      "spoken": "今天是2026年11月17日，星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-weekend",
+      "group": "natural",
+      "text": "今天是不是周末",
+      "context": [],
+      "now": 1794872324023,
+      "note": "Tuesday; must not claim the day is the weekend",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "weekday",
+        "place_label": "北京时间"
+      },
+      "spoken": "今天是星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-libai",
+      "group": "natural",
+      "text": "今天礼拜几",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "weekday",
+        "place_label": "北京时间"
+      },
+      "spoken": "今天是星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-help-look",
+      "group": "natural",
+      "text": "帮我看看现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-help-kan",
+      "group": "natural",
+      "text": "帮我看现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "nat-search-form",
+      "group": "natural",
+      "text": "帮我查现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "module stays clock; worker path is a separate runtime check",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-1",
+      "group": "historical",
+      "text": "现在几点了",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-2",
+      "group": "historical",
+      "text": "现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-3",
+      "group": "historical",
+      "text": "现在才几点啊就跟我说晚安",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-3b",
+      "group": "historical",
+      "text": "现在才几点呢就跟我说晚安",
+      "context": [],
+      "now": null,
+      "note": "particle 呢 near the historical sentence",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-4",
+      "group": "historical",
+      "text": "今天是周几",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "weekday",
+        "place_label": "北京时间"
+      },
+      "spoken": "今天是星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-5",
+      "group": "historical",
+      "text": "今天是几号呀",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "date",
+        "place_label": "北京时间"
+      },
+      "spoken": "今天是2026年11月17日，星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "hist-6",
+      "group": "historical",
+      "text": "那是几号",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clarify_date",
+      "slots": {},
+      "spoken": "你是想问今天几号，还是刚才说的那件事的日期？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-mom",
+      "group": "negative",
+      "text": "妈妈说现在几点了",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-dad",
+      "group": "negative",
+      "text": "爸爸说现在几点了",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-teacher",
+      "group": "negative",
+      "text": "老师说现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-if",
+      "group": "negative",
+      "text": "如果现在几点了",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-if-help",
+      "group": "negative",
+      "text": "如果帮我查现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-this-time",
+      "group": "negative",
+      "text": "这是什么时间",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-yesterday",
+      "group": "negative",
+      "text": "昨天几点了",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-tomorrow",
+      "group": "negative",
+      "text": "明天几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-quote",
+      "group": "negative",
+      "text": "他说现在几点了",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-dont",
+      "group": "negative",
+      "text": "不要报时",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-dont-tell",
+      "group": "negative",
+      "text": "别告诉我现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-if-long",
+      "group": "negative",
+      "text": "如果现在几点了怎么办",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-door",
+      "group": "negative",
+      "text": "北京现在几点开门",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-class",
+      "group": "negative",
+      "text": "现在几点上课",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-alarm",
+      "group": "negative",
+      "text": "定个闹钟七点叫我",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-timer",
+      "group": "negative",
+      "text": "倒计时三分钟",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-remind",
+      "group": "negative",
+      "text": "五分钟后提醒我",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-chest",
+      "group": "negative",
+      "text": "我离下一个宝箱还需要多久",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-usage",
+      "group": "negative",
+      "text": "我今天用了多久",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-weather",
+      "group": "negative",
+      "text": "现在几点了天气怎么样",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-short",
+      "group": "negative",
+      "text": "几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-meaning",
+      "group": "negative",
+      "text": "北京时间是什么意思",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-year",
+      "group": "negative",
+      "text": "一年有多少天",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-narrative",
+      "group": "negative",
+      "text": "对然后我跟他说我说你看一下这是什么时间做的事",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-schedule",
+      "group": "negative",
+      "text": "下周呢就所以那咱定个时间吧今天下午几点咱们就是",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-sleep",
+      "group": "negative",
+      "text": "现在几点睡觉比较好",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "neg-meeting",
+      "group": "negative",
+      "text": "今天下午几点开会",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-sh",
+      "group": "city",
+      "text": "上海现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "上海"
+      },
+      "spoken": "上海现在是早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-bj",
+      "group": "city",
+      "text": "北京现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-bj-shi",
+      "group": "city",
+      "text": "北京市现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "北京时间"
+      },
+      "spoken": "现在是北京时间早上七点三十八分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-ny-shi",
+      "group": "city",
+      "text": "纽约市现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是傍晚六点三十八分，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-hk",
+      "group": "city",
+      "text": "香港现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Hong_Kong",
+        "requested": "time",
+        "place_label": "香港"
+      },
+      "spoken": "香港现在是早上七点三十八分，星期二。",
+      "error": null,
+      "copy_notes": [
+        "weekday_copy actual=香港现在是早上七点三十八分，星期二。 expected=香港现在是早上七点三十八分。"
+      ],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-tp",
+      "group": "city",
+      "text": "台北现在几点",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Taipei",
+        "requested": "time",
+        "place_label": "台北"
+      },
+      "spoken": "台北现在是早上七点三十八分，星期二。",
+      "error": null,
+      "copy_notes": [
+        "weekday_copy actual=台北现在是早上七点三十八分，星期二。 expected=台北现在是早上七点三十八分。"
+      ],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-tyo",
+      "group": "city",
+      "text": "东京今天几号",
+      "context": [],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Tokyo",
+        "requested": "date",
+        "place_label": "东京"
+      },
+      "spoken": "东京当地今天是2026年11月17日，星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-us",
+      "group": "city",
+      "text": "美国现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clarify_timezone",
+      "slots": {
+        "place": "美国"
+      },
+      "spoken": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-ca",
+      "group": "city",
+      "text": "加拿大现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clarify_timezone",
+      "slots": {
+        "place": "加拿大"
+      },
+      "spoken": "加拿大的时间需要先确认城市，你想问哪个城市？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-au",
+      "group": "city",
+      "text": "澳大利亚今天星期几",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clarify_timezone",
+      "slots": {
+        "place": "澳大利亚"
+      },
+      "spoken": "澳大利亚的时间需要先确认城市，你想问哪个城市？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-mars",
+      "group": "city",
+      "text": "火星现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clarify_timezone",
+      "slots": {
+        "place": "火星"
+      },
+      "spoken": "火星的时间需要先确认城市，你想问哪个城市？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-both",
+      "group": "city",
+      "text": "纽约和伦敦现在几点",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": "clarify_timezone",
+      "slots": {
+        "place": "纽约和伦敦"
+      },
+      "spoken": "纽约和伦敦的时间需要先确认城市，你想问哪个城市？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "city-delhi",
+      "group": "city",
+      "text": "新德里现在几点",
+      "context": [],
+      "now": 1794852000000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Kolkata",
+        "requested": "time",
+        "place_label": "新德里"
+      },
+      "spoken": "新德里现在是晚上十一点三十分，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-sh-mid",
+      "group": "crossday",
+      "text": "上海现在几点",
+      "context": [],
+      "now": 1794844800000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "上海"
+      },
+      "spoken": "上海现在是凌晨零点整。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-sh-before",
+      "group": "crossday",
+      "text": "上海现在几点",
+      "context": [],
+      "now": 1794844740000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "time",
+        "place_label": "上海"
+      },
+      "spoken": "上海现在是晚上十一点五十九分。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-sh-date",
+      "group": "crossday",
+      "text": "今天几号",
+      "context": [],
+      "now": 1794844800000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Shanghai",
+        "requested": "date",
+        "place_label": "北京时间"
+      },
+      "spoken": "今天是2026年11月17日，星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-ny-time",
+      "group": "crossday",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1794844800000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是上午十一点整，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-ny-date",
+      "group": "crossday",
+      "text": "纽约今天几号",
+      "context": [],
+      "now": 1794844800000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "date",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约当地今天是2026年11月16日，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-ny-week",
+      "group": "crossday",
+      "text": "纽约今天星期几",
+      "context": [],
+      "now": 1794844800000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "weekday",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约当地今天是星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-akl-date",
+      "group": "crossday",
+      "text": "奥克兰今天几号",
+      "context": [],
+      "now": 1794830400000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Pacific/Auckland",
+        "requested": "date",
+        "place_label": "奥克兰"
+      },
+      "spoken": "奥克兰当地今天是2026年11月17日，星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "x-hnl-date",
+      "group": "crossday",
+      "text": "夏威夷今天几号",
+      "context": [],
+      "now": 1794830400000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Pacific/Honolulu",
+        "requested": "date",
+        "place_label": "夏威夷"
+      },
+      "spoken": "夏威夷当地今天是2026年11月16日，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-ny-jul",
+      "group": "dst",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1782921600000,
+      "note": "EDT UTC-4",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是中午十二点整，星期三。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-ny-jan",
+      "group": "dst",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1767286800000,
+      "note": "EST UTC-5",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是中午十二点整，星期四。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-ny-spring-before",
+      "group": "dst",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1772951400000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是凌晨一点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-ny-spring-after",
+      "group": "dst",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1772955000000,
+      "note": "2am does not exist",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是凌晨三点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-ny-fall-1",
+      "group": "dst",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1793511000000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是凌晨一点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-ny-fall-2",
+      "group": "dst",
+      "text": "纽约现在几点",
+      "context": [],
+      "now": 1793514600000,
+      "note": "second 1:30 after fold",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是凌晨一点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-lon-before",
+      "group": "dst",
+      "text": "伦敦现在几点",
+      "context": [],
+      "now": 1774744200000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Europe/London",
+        "requested": "time",
+        "place_label": "伦敦"
+      },
+      "spoken": "伦敦现在是凌晨零点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-lon-after",
+      "group": "dst",
+      "text": "伦敦现在几点",
+      "context": [],
+      "now": 1774746000000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Europe/London",
+        "requested": "time",
+        "place_label": "伦敦"
+      },
+      "spoken": "伦敦现在是凌晨两点整，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-lon-fall-1",
+      "group": "dst",
+      "text": "伦敦现在几点",
+      "context": [],
+      "now": 1792888200000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Europe/London",
+        "requested": "time",
+        "place_label": "伦敦"
+      },
+      "spoken": "伦敦现在是凌晨一点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-lon-fall-2",
+      "group": "dst",
+      "text": "伦敦现在几点",
+      "context": [],
+      "now": 1792891800000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Europe/London",
+        "requested": "time",
+        "place_label": "伦敦"
+      },
+      "spoken": "伦敦现在是凌晨一点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-syd-summer",
+      "group": "dst",
+      "text": "悉尼现在几点",
+      "context": [],
+      "now": 1768442400000,
+      "note": "AEDT UTC+11",
+      "route": "clock",
+      "slots": {
+        "iana": "Australia/Sydney",
+        "requested": "time",
+        "place_label": "悉尼"
+      },
+      "spoken": "悉尼现在是下午一点整，星期四。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-syd-winter",
+      "group": "dst",
+      "text": "悉尼现在几点",
+      "context": [],
+      "now": 1784080800000,
+      "note": "AEST UTC+10",
+      "route": "clock",
+      "slots": {
+        "iana": "Australia/Sydney",
+        "requested": "time",
+        "place_label": "悉尼"
+      },
+      "spoken": "悉尼现在是中午十二点整，星期三。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-syd-spring-before",
+      "group": "dst",
+      "text": "悉尼现在几点",
+      "context": [],
+      "now": 1791041400000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Australia/Sydney",
+        "requested": "time",
+        "place_label": "悉尼"
+      },
+      "spoken": "悉尼现在是凌晨一点三十分，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "dst-syd-spring-after",
+      "group": "dst",
+      "text": "悉尼现在几点",
+      "context": [],
+      "now": 1791043200000,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Australia/Sydney",
+        "requested": "time",
+        "place_label": "悉尼"
+      },
+      "spoken": "悉尼现在是凌晨三点整，星期日。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-ny",
+      "group": "context",
+      "text": "那纽约呢",
+      "context": [
+        "现在几点了"
+      ],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "time",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约现在是傍晚六点三十八分，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-us",
+      "group": "context",
+      "text": "那美国呢",
+      "context": [
+        "现在几点了"
+      ],
+      "now": null,
+      "note": "",
+      "route": "clarify_timezone",
+      "slots": {
+        "place": "美国"
+      },
+      "spoken": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-clear",
+      "group": "context",
+      "text": "那纽约呢",
+      "context": [
+        "现在几点了",
+        "金币有什么用"
+      ],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-bare",
+      "group": "context",
+      "text": "那纽约呢",
+      "context": [],
+      "now": null,
+      "note": "",
+      "route": null,
+      "slots": {},
+      "spoken": null,
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-week-tyo",
+      "group": "context",
+      "text": "那东京呢",
+      "context": [
+        "今天是周几"
+      ],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "Asia/Tokyo",
+        "requested": "weekday",
+        "place_label": "东京"
+      },
+      "spoken": "东京当地今天是星期二。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-date-la",
+      "group": "context",
+      "text": "那洛杉矶呢",
+      "context": [
+        "今天几号"
+      ],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/Los_Angeles",
+        "requested": "date",
+        "place_label": "洛杉矶"
+      },
+      "spoken": "洛杉矶当地今天是2026年11月16日，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-us-city",
+      "group": "context",
+      "text": "芝加哥",
+      "context": [
+        "美国时间"
+      ],
+      "now": 1794872324023,
+      "note": "",
+      "route": "clock",
+      "slots": {
+        "iana": "America/Chicago",
+        "requested": "time",
+        "place_label": "芝加哥"
+      },
+      "spoken": "芝加哥现在是下午五点三十八分，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-us-date",
+      "group": "context",
+      "text": "纽约",
+      "context": [
+        "美国今天几号"
+      ],
+      "now": 1794872324023,
+      "note": "follow-up must keep date, not switch to time",
+      "route": "clock",
+      "slots": {
+        "iana": "America/New_York",
+        "requested": "date",
+        "place_label": "纽约"
+      },
+      "spoken": "纽约当地今天是2026年11月16日，星期一。",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    },
+    {
+      "id": "ctx-date-word",
+      "group": "context",
+      "text": "那是几号",
+      "context": [
+        "今天是周几"
+      ],
+      "now": null,
+      "note": "",
+      "route": "clarify_date",
+      "slots": {},
+      "spoken": "你是想问今天几号，还是刚才说的那件事的日期？",
+      "error": null,
+      "copy_notes": [],
+      "pass": true,
+      "mismatches": []
+    }
+  ]
+}
