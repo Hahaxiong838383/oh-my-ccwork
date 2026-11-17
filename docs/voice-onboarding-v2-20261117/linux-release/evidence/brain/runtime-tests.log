@@ -1,0 +1,205 @@
+TAP version 13
+# (node:2335479) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: saved age remains year-precision through existing memory reader
+ok 1 - saved age remains year-precision through existing memory reader
+  ---
+  duration_ms: 53.238263
+  type: 'test'
+  ...
+# [persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: ordinary chat reads observed age and does not demand a fabricated birthday
+ok 2 - ordinary chat reads observed age and does not demand a fabricated birthday
+  ---
+  duration_ms: 215.912738
+  type: 'test'
+  ...
+# Subtest: ordinary basic-field enrichment preserves known age; copying a child profile clears old age
+ok 3 - ordinary basic-field enrichment preserves known age; copying a child profile clears old age
+  ---
+  duration_ms: 9.552553
+  type: 'test'
+  ...
+# (node:2335497) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899624 session=aac4a325-84e5-403f-a936-0ef1960a134a trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=20
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899625 session=f75c1cec-2e56-4975-811a-d0c1ba486df2 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=20
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899626 session=939e9517-3201-4b73-9b4a-94a8fd7fdc73 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v2 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=7
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899627 session=16daf6ce-b40d-4f37-87f6-475d5f821466 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v2 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=15
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899628 session=f854781e-b00c-4b05-972a-fa517df3338b trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1|voice_onboarding_v2 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=18
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899629 session=85bd6fff-e249-40fa-b81f-483e22e1f07c trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=- selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=13
+# Subtest: actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata
+ok 4 - actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata
+  ---
+  duration_ms: 189.664719
+  type: 'test'
+  ...
+# (node:2335528) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: v2 fixed questions, independent memory outcome, exact replay; no question/cue chosen by server
+ok 5 - v2 fixed questions, independent memory outcome, exact replay; no question/cue chosen by server
+  ---
+  duration_ms: 461.445066
+  type: 'test'
+  ...
+# Subtest: known profile never suppresses the three questions or overwrites existing fields
+ok 6 - known profile never suppresses the three questions or overwrites existing fields
+  ---
+  duration_ms: 288.832542
+  type: 'test'
+  ...
+# Subtest: all silent, declined and unrecognized progress only on client commands; old answer cannot save
+ok 7 - all silent, declined and unrecognized progress only on client commands; old answer cannot save
+  ---
+  duration_ms: 263.018234
+  type: 'test'
+  ...
+# Subtest: valid answer with actual SQLite write failure remains accepted/failed and next question works
+ok 8 - valid answer with actual SQLite write failure remains accepted/failed and next question works
+  ---
+  duration_ms: 277.26843
+  type: 'test'
+  ...
+# Subtest: playback, forged worker, old lesson/trace, revision, duplicate different request and simulation cannot save
+ok 9 - playback, forged worker, old lesson/trace, revision, duplicate different request and simulation cannot save
+  ---
+  duration_ms: 154.714601
+  type: 'test'
+  ...
+# Subtest: rebinding and 180s expiration refuse writes; cancel before begin fences late requests
+ok 10 - rebinding and 180s expiration refuse writes; cancel before begin fences late requests
+  ---
+  duration_ms: 132.438408
+  type: 'test'
+  ...
+# Subtest: cancel before begin and finish at any question release server authority without a profile write
+ok 11 - cancel before begin and finish at any question release server authority without a profile write
+  ---
+  duration_ms: 96.525829
+  type: 'test'
+  ...
+# Subtest: all three silent questions finish without inventing any profile fact
+ok 12 - all three silent questions finish without inventing any profile fact
+  ---
+  duration_ms: 245.657868
+  type: 'test'
+  ...
+# Subtest: SQLite ignored update is not reported saved
+ok 13 - SQLite ignored update is not reported saved
+  ---
+  duration_ms: 145.177324
+  type: 'test'
+  ...
+# (node:2335546) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: nickname clarification and refusal never become a child's saved name
+ok 14 - nickname clarification and refusal never become a child's saved name
+  ---
+  duration_ms: 2852.728377
+  type: 'test'
+  ...
+# Subtest: real HTTP/SQLite: natural age commits without invented birthday; replay is idempotent
+ok 15 - real HTTP/SQLite: natural age commits without invented birthday; replay is idempotent
+  ---
+  duration_ms: 169.685941
+  type: 'test'
+  ...
+# Subtest: all known fields skipped, never overwrite
+ok 16 - all known fields skipped, never overwrite
+  ---
+  duration_ms: 102.442471
+  type: 'test'
+  ...
+# Subtest: concurrent rebinding invalidates frozen child
+ok 17 - concurrent rebinding invalidates frozen child
+  ---
+  duration_ms: 113.737204
+  type: 'test'
+  ...
+# Subtest: unclear/refusal never save; cross trace rejected; hard TTL never renews
+ok 18 - unclear/refusal never save; cross trace rejected; hard TTL never renews
+  ---
+  duration_ms: 127.435015
+  type: 'test'
+  ...
+# Subtest: actual SQLite trigger failure never reports saved; transaction rolls back
+ok 19 - actual SQLite trigger failure never reports saved; transaction rolls back
+  ---
+  duration_ms: 107.281673
+  type: 'test'
+  ...
+# Subtest: profile changed concurrently, multiple children, partial knowledge and cancel fence
+ok 20 - profile changed concurrently, multiple children, partial knowledge and cancel fence
+  ---
+  duration_ms: 129.396199
+  type: 'test'
+  ...
+# Subtest: issue-to-begin binding change rejects authorization
+ok 21 - issue-to-begin binding change rejects authorization
+  ---
+  duration_ms: 87.19738
+  type: 'test'
+  ...
+# Subtest: partial -> natural gender and nickname; stale revision, wrong field, missing token
+ok 22 - partial -> natural gender and nickname; stale revision, wrong field, missing token
+  ---
+  duration_ms: 155.567741
+  type: 'test'
+  ...
+# Subtest: multiple children never guessed; parent known fields skipped
+ok 23 - multiple children never guessed; parent known fields skipped
+  ---
+  duration_ms: 118.034991
+  type: 'test'
+  ...
+# Subtest: optional capability is default off; listening/search/unknown agent/client cannot get grant
+ok 24 - optional capability is default off; listening/search/unknown agent/client cannot get grant
+  ---
+  duration_ms: 0.470904
+  type: 'test'
+  ...
+# Subtest: RTC metadata grant alone cannot authorize direct profile writes
+ok 25 - RTC metadata grant alone cannot authorize direct profile writes
+  ---
+  duration_ms: 84.490335
+  type: 'test'
+  ...
+# Subtest: ambiguous confirmations and instruction-like nicknames cannot become profile facts
+ok 26 - ambiguous confirmations and instruction-like nicknames cannot become profile facts
+  ---
+  duration_ms: 0.885499
+  type: 'test'
+  ...
+# Subtest: decline closes Brain write authorization immediately
+ok 27 - decline closes Brain write authorization immediately
+  ---
+  duration_ms: 117.656476
+  type: 'test'
+  ...
+# Subtest: a newly issued session invalidates old lesson writes
+ok 28 - a newly issued session invalidates old lesson writes
+  ---
+  duration_ms: 105.134389
+  type: 'test'
+  ...
+# Subtest: unknown placeholder gender and invalid age strings are missing, not known facts
+ok 29 - unknown placeholder gender and invalid age strings are missing, not known facts
+  ---
+  duration_ms: 97.481985
+  type: 'test'
+  ...
+# Subtest: two simultaneous HTTP answers with the same revision commit only once
+ok 30 - two simultaneous HTTP answers with the same revision commit only once
+  ---
+  duration_ms: 119.565544
+  type: 'test'
+  ...
+1..30
+# tests 30
+# suites 0
+# pass 30
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10543.834167

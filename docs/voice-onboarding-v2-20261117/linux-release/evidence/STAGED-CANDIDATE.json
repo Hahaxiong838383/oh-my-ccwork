@@ -1,0 +1,18 @@
+{
+  "path": "/root/p003-onboarding-release-20261117/worker-candidate",
+  "sha256": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+  "bytes": 76502720,
+  "dependencies_found": true,
+  "source_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+  "compressed_sha256": "25a8f1a901244349f4bb0b4d6bf84a9eb2490acdd7c5346ac683a3d54cba7fa8",
+  "compressed_bytes": 28554018,
+  "chunks": 28,
+  "downloaded_chunks": 28,
+  "uploaded_chunks": 28,
+  "elapsed_s": 44.38,
+  "preflight": {
+    "host": "voice-worker-hk2",
+    "free_bytes": 49843552256
+  },
+  "deployed": false
+}

@@ -1,0 +1,20 @@
+{
+  "files": 8,
+  "checks": [
+    {
+      "label": "runtime",
+      "node": "v22.22.2",
+      "exit": 0,
+      "log": "/opt/p003/onboarding-release-20261117/runtime-tests.log",
+      "sha256": "76e1b6f54057881c25ebb5ff91b6f0cc2efc24d83328ceaef71e05c53d1ce434"
+    },
+    {
+      "label": "node24",
+      "node": "v24.19.0",
+      "exit": 0,
+      "log": "/opt/p003/onboarding-release-20261117/node24-tests.log",
+      "sha256": "7c8ea1c198da6602c752ea40436bfd5529988c51daacfa373ff5d5bc9527f0a1"
+    }
+  ],
+  "production_mutated": false
+}

@@ -1,0 +1,334 @@
+{
+  "status": "DEPLOYED_GATES_OFF_APK_NOT_RUN",
+  "worker": {
+    "before": {
+      "MainPID": "1478835",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "started_ms": 1794900870881,
+    "old_sha": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+    "new_sha": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+    "backup": "/root/p003-onboarding-release-20261117/worker-before",
+    "source_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+    "runtime_commit": "42df1d0320aec5338c9d1be2c11de6e514966944",
+    "other_before": {
+      "p003-listening-worker": {
+        "MainPID": "1478920",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      },
+      "p003-search-worker": {
+        "MainPID": "815854",
+        "NRestarts": "0",
+        "ActiveState": "active"
+      }
+    },
+    "success": true,
+    "after": {
+      "MainPID": "1693659",
+      "NRestarts": "0",
+      "ActiveState": "active"
+    },
+    "disk_sha": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+    "process_sha": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+    "env_unchanged": true,
+    "other_pools_unchanged": true,
+    "finished_ms": 1794900876521
+  },
+  "brain": {
+    "before": {
+      "p003-voice": {
+        "pid": 2296337,
+        "status": "online",
+        "restarts": 11,
+        "cwd": "/opt/p003/server"
+      },
+      "kidshub-voice": {
+        "pid": 1856264,
+        "status": "online",
+        "restarts": 0,
+        "cwd": "/opt/kidshub-personal/server"
+      },
+      "p003-analytics": {
+        "pid": 2296315,
+        "status": "online",
+        "restarts": 3,
+        "cwd": "/opt/p003/server"
+      }
+    },
+    "source_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+    "runtime_commit": "42df1d0320aec5338c9d1be2c11de6e514966944",
+    "started_ms": 1794900894715,
+    "backup": "/opt/p003/onboarding-release-20261117/brain-before",
+    "dbbackups": [
+      {
+        "name": "devices.db",
+        "bytes": 2609152,
+        "sha256": "e1712d98fffe49207f687394e8d39a021118c84c2cad15625992998ecfd9402d"
+      },
+      {
+        "name": "profile.db",
+        "bytes": 5099520,
+        "sha256": "742c6e6dcc1efa2ef5f035ba980c97e0006053c60df4cc359c8d9795d62cdfe2"
+      }
+    ],
+    "gates_enabled": false,
+    "files": [
+      {
+        "path": "src/index.ts",
+        "before": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+        "after": "9f768a0048557378d7bbd05fe524ad47bb5bbf87c57b524760637d3e86b68d17"
+      },
+      {
+        "path": "src/profile-store.ts",
+        "before": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e",
+        "after": "c15b3a93f9025a12d62caa3af42257e87116001f441aa75e729947c8144771f2"
+      },
+      {
+        "path": "src/prompt-orchestrator.ts",
+        "before": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f",
+        "after": "73c2faeb9b5c0fba660e80462ac1d0b2b57874ba36bab73433ea2b63072e957e"
+      },
+      {
+        "path": "src/routes/device-session.ts",
+        "before": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b",
+        "after": "60aed4c5e42a3e58b763a33ee6f09ff668a834807f9d259dc5746ddb69a2b91b"
+      },
+      {
+        "path": "src/routes/voice-onboarding.ts",
+        "before": null,
+        "after": "fd5ecadcfb3c2bf1ebce17e6da81a0d5ddd3b19bbe887851966d301808c54d5a"
+      },
+      {
+        "path": "src/voice-onboarding-runtime.ts",
+        "before": null,
+        "after": "7fbea56de3c168ca1aef0088b1b64cd68562cb6fc300eb0243728c2e50456c92"
+      },
+      {
+        "path": "src/voice-onboarding-store.ts",
+        "before": null,
+        "after": "93a8d064acd8f0b20ba43c4a4fd4bd3425bc4e60d1a51188c8feb5eade6a578f"
+      },
+      {
+        "path": "src/voice-onboarding-v2.ts",
+        "before": null,
+        "after": "6744bdbc316d025e20f7e79f6ea72849854e1355433af9010d273c109cd29443"
+      }
+    ],
+    "success": true,
+    "after": {
+      "pm": {
+        "p003-voice": {
+          "pid": 2339448,
+          "status": "online",
+          "restarts": 12,
+          "cwd": "/opt/p003/server"
+        },
+        "kidshub-voice": {
+          "pid": 1856264,
+          "status": "online",
+          "restarts": 0,
+          "cwd": "/opt/kidshub-personal/server"
+        },
+        "p003-analytics": {
+          "pid": 2296315,
+          "status": "online",
+          "restarts": 3,
+          "cwd": "/opt/p003/server"
+        }
+      },
+      "health": {
+        "status": 200,
+        "body": {
+          "status": "ok"
+        }
+      },
+      "analytics_ready": {
+        "status": 200,
+        "ready": true
+      },
+      "unauthorized_route": {
+        "status": 403,
+        "body": {
+          "error": "worker_unauthorized",
+          "memory_write": "none"
+        }
+      }
+    },
+    "other_files_unchanged": true,
+    "other_processes_unchanged": true,
+    "env_unchanged": true,
+    "finished_ms": 1794900898911
+  },
+  "service_identity": {
+    "before_env_sha256": "5d1c227d9bf9ad90d669b5ad71379c6586dc20f845b1691c7372f8943019c8fa",
+    "after_env_sha256": "397e5606d659b124fcbf6f15c7157a038ba38a4ebd5a61e6edf8a5c4817c59c5",
+    "key": "VOICE_ONBOARDING_WORKER_ACCOUNTS",
+    "value_sha256": "5b54ab7e9d83d1446f76f9a61a14dc535800eaf4b14b93f398767cc4de8ee3a2",
+    "existing_search_and_ark_identity_equal": true,
+    "identity_count": 1,
+    "gates_enabled": false,
+    "started_ms": 1794901401846,
+    "before_pm": {
+      "p003-voice": {
+        "pid": 2341004,
+        "status": "online",
+        "restarts": 13
+      },
+      "kidshub-voice": {
+        "pid": 1856264,
+        "status": "online",
+        "restarts": 0
+      },
+      "p003-analytics": {
+        "pid": 2296315,
+        "status": "online",
+        "restarts": 3
+      }
+    },
+    "backup": "/opt/p003/onboarding-release-20261117/brain-service-identity-before.env",
+    "success": true,
+    "after_pm": {
+      "p003-voice": {
+        "pid": 2342902,
+        "status": "online",
+        "restarts": 14
+      },
+      "kidshub-voice": {
+        "pid": 1856264,
+        "status": "online",
+        "restarts": 0
+      },
+      "p003-analytics": {
+        "pid": 2296315,
+        "status": "online",
+        "restarts": 3
+      }
+    },
+    "all_source_unchanged": true,
+    "finished_ms": 1794901404894
+  },
+  "source_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+  "runtime_commit": "42df1d0320aec5338c9d1be2c11de6e514966944",
+  "worker_postflight": {
+    "at_ms": 1794901632841,
+    "units": {
+      "voice-worker-rust": {
+        "MainPID": "1693659",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95"
+      },
+      "p003-listening-worker": {
+        "MainPID": "1478920",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "c7e70e77e4600e09b02f885101a17e8e7cea0e9635bc430d456b88081b6289d5"
+      },
+      "p003-search-worker": {
+        "MainPID": "815854",
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "sha256": "c7bec7df92c47136fd0c91e5c2b4ed59c918ffa7158cdfb3a63415fa1e221b25"
+      }
+    },
+    "stable_ms": 756320,
+    "brain_auth_probe": {
+      "status": 400,
+      "body": {
+        "error": "invalid_request",
+        "memory_write": "none"
+      },
+      "elapsed_ms": 110.388
+    },
+    "registration_count": 1,
+    "panic_count": 0,
+    "success": true
+  },
+  "brain_postflight": {
+    "at_ms": 1794901632734,
+    "services": {
+      "p003-voice": {
+        "pid": 2342902,
+        "status": "online",
+        "restarts": 14,
+        "cwd": "/opt/p003/server"
+      },
+      "kidshub-voice": {
+        "pid": 1856264,
+        "status": "online",
+        "restarts": 0,
+        "cwd": "/opt/kidshub-personal/server"
+      },
+      "p003-analytics": {
+        "pid": 2296315,
+        "status": "online",
+        "restarts": 3,
+        "cwd": "/opt/p003/server"
+      }
+    },
+    "stable_ms": 227840,
+    "health": {
+      "status": 200,
+      "body": {
+        "status": "ok"
+      }
+    },
+    "analytics_ready": {
+      "status": 200,
+      "ready": true,
+      "storage_ready": true
+    },
+    "success": true,
+    "other_sources_match_audited_session360_release": true,
+    "environment_unchanged_since_identity_fix": true
+  },
+  "session360_concurrent_release": {
+    "src/miniapp-dashboard.ts": {
+      "sha256": "aae33f44eab5640a8861ae9888e1d8b4be1537585d72de6238c3c4e3b1abba32",
+      "matches_session360": true
+    },
+    "src/ark/dashboard.ts": {
+      "sha256": "5fa0559812af45ec2b5629acc9e54dd19e1d4c2e5035b77b542837205fcf9f9b",
+      "matches_session360": true
+    },
+    "src/ark/records-store.ts": {
+      "sha256": "1ee95fc9dc9b9e16a622f3b96053857857ce648bddce8f555b339c21d0bf4311",
+      "matches_session360": true
+    },
+    "src/ark/records-contract.ts": {
+      "sha256": "595075f3a78ea60d48ed71511528e6abb8ce9e1b104073bf1102829681c87910",
+      "matches_session360": true
+    },
+    "src/ark/records-legacy.ts": {
+      "sha256": "cdf0bda728e1f75941d4787d3357db7a7f3097723cd5dbcbbe8885e4f9459825",
+      "matches_session360": true
+    }
+  },
+  "not_tested": [
+    "new APK and artifact hash",
+    "real Android lesson audio",
+    "real grant issuance and device application",
+    "real profile commits through full SDK->ASR teaching flow"
+  ],
+  "preflight_deferrals": [
+    "first Worker apply was rejected before mutation by cleanup health assertion; fresh health then passed",
+    "first service-identity config apply was rejected before mutation on concurrent Brain PID change; 5 source files independently matched session360, preserved"
+  ],
+  "teaching_gates": {
+    "master_enabled": false,
+    "v2_enabled": false,
+    "worker_account_count": 1,
+    "pm2_cached_master_enabled": false,
+    "pm2_cached_v2_enabled": false,
+    "session_table_exists": false,
+    "open_onboarding_sessions": 0
+  },
+  "service_identity_probe_history": {
+    "before_config_status": 403,
+    "after_config_status": 400,
+    "after_config_error": "invalid_request",
+    "meaning": "Existing main Worker identity authenticated; empty body was rejected before any store access. Not a lesson/DB write proof."
+  }
+}

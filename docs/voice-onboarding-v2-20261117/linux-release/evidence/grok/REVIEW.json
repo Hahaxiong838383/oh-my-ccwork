@@ -1,0 +1,242 @@
+{
+  "reviewer": "grok",
+  "date": "2026-11-17",
+  "mode": "read_only_release_review",
+  "ssh": false,
+  "deployed_by_reviewer": false,
+  "config_modified": false,
+  "business_code_modified": false,
+  "verdict": "no_release_blocker",
+  "release_blocked": false,
+  "scope": "empty-room main worker binary replace, brain 8-file replace, both teaching gates remain off",
+  "apk": {
+    "result": "NOT_RUN",
+    "pass": false
+  },
+  "device_038": {
+    "sn": "BJP00326070803800006",
+    "self_reported_version": "v400",
+    "result": "NOT_A_V2_TARGET",
+    "pass": false,
+    "reason": "listening pool window is enabled for this SN; normal-pool teaching grant requires normal and not listening"
+  },
+  "teaching_acoustic_loop": {
+    "result": "NOT_RUN",
+    "pass": false
+  },
+  "identity": {
+    "source_head": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+    "runtime_commit": "42df1d0320aec5338c9d1be2c11de6e514966944",
+    "runtime_is_ancestor_of_head": true,
+    "brain_base": "18a230754941ad9781db4d39e5a12a9622fc7349",
+    "worktree_head_matches_source": true,
+    "untracked_not_in_candidate": [
+      "docs/voice-onboarding-v2-20261117/linux-release/"
+    ]
+  },
+  "blockers": [],
+  "non_blockers": [
+    {
+      "id": "brain-restart-has-no-room-gate",
+      "severity": "non_blocking",
+      "file": "deploy-brain.py",
+      "summary": "pm2 restart of p003-voice does not check ListRooms. Run it in the same empty-room window as the worker replace."
+    },
+    {
+      "id": "src-count-is-216-not-360",
+      "severity": "non_blocking",
+      "file": "brain-precheck-brain.py.output.json",
+      "summary": "Live src snapshot has 220 files. 4 existing targets are replaced, 216 others are hash-locked, 4 new files are absent today. The script locks all non-manifest src files. It does not lock paths outside src/."
+    },
+    {
+      "id": "sqlite-backup-count-not-required",
+      "severity": "non_blocking",
+      "file": "deploy-brain.py",
+      "summary": "Missing database files are skipped. Treat apply as backup-complete only when dbbackups lists both devices.db and profile.db after quick_check. Full database restore is hardcoded off."
+    },
+    {
+      "id": "worker-rollback-requires-active-new",
+      "severity": "non_blocking",
+      "file": "deploy-worker.py",
+      "summary": "The rollback subcommand requires ActiveState active and both disk and process hashes equal to the new binary. In-script apply failures restore the old binary. A killed script or a later failed unit needs a manual copy from worker-before/binary and systemctl start."
+    },
+    {
+      "id": "worker-rollback-assert-can-skip-start",
+      "severity": "non_blocking",
+      "file": "deploy-worker.py",
+      "summary": "If the just-written binary is not the new hash, the exception path asserts and does not call start(OLD). The old bytes remain in worker-before/binary."
+    },
+    {
+      "id": "other-pools-checked-by-pid-not-hash",
+      "severity": "non_blocking",
+      "file": "deploy-worker.py",
+      "summary": "Listening and search units are compared by MainPID, NRestarts, and ActiveState. The deployer does not write those binaries."
+    },
+    {
+      "id": "403-does-not-prove-gates-off",
+      "severity": "non_blocking",
+      "file": "deploy-brain.py",
+      "summary": "The post-restart 403 proves the unauthenticated v2 route does not write. An enabled gate returns the same 403 without a worker JWT. Gate evidence is the .env.local parse, flags {}, and the code requiring the exact value 1."
+    },
+    {
+      "id": "env-parser-narrower-than-node",
+      "severity": "non_blocking",
+      "file": "deploy-brain.py",
+      "summary": "The deployer does not accept an export prefix or inline comments, and it does not read the pm2 process environment. The live file parse currently has no VOICE_ONBOARDING_* entries. Node --env-file will not override an already-set pm2 variable."
+    },
+    {
+      "id": "sigkill-can-leave-a-partial-brain-tree",
+      "severity": "non_blocking",
+      "file": "deploy-brain.py",
+      "summary": "Python exceptions restore all 8 files. SIGKILL mid-loop makes the rollback subcommand refuse because not every file is at after. Recover from brain-before."
+    },
+    {
+      "id": "umask-shrinks-replaced-modes",
+      "severity": "non_blocking",
+      "file": "deploy-brain.py",
+      "summary": "umask 077 writes source as 0600 and the worker binary as 0700. Safe when the deploy user is the service user. Worker path and pm2-root point at root. The check output does not print uid."
+    }
+  ],
+  "checks": {
+    "worker_check": {
+      "exit": 0,
+      "idle": true,
+      "no_runtime_mutation": true
+    },
+    "brain_check": {
+      "exit": 0,
+      "files": 8,
+      "gates_off": true,
+      "no_runtime_mutation": true,
+      "port": 3001,
+      "precheck_flags": {}
+    },
+    "linux_brain": {
+      "source": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+      "node": "v24.19.0",
+      "pass": 30,
+      "fail": 0
+    },
+    "linux_worker": {
+      "source": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+      "passed": 639,
+      "failed": 0,
+      "ignored": 2,
+      "ignored_tests": [
+        "stt_volc::tests::diagnostic_live_synthetic_wav",
+        "rtc_business_probe::actual_job_silence_and_first_turn_handoff"
+      ]
+    },
+    "brain_stage": {
+      "production_mutated": false,
+      "runs": [
+        {
+          "label": "runtime",
+          "node": "v22.22.2",
+          "exit": 0
+        },
+        {
+          "label": "node24",
+          "node": "v24.19.0",
+          "exit": 0
+        }
+      ],
+      "pass_count_in_this_json": false
+    },
+    "sdk_normal": {
+      "passed": true,
+      "rounds": 1,
+      "pool": "main",
+      "case": "normal",
+      "android": false,
+      "teaching_acoustic_loop": false,
+      "production_unchanged": true,
+      "candidate_sha256": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+      "production_main_sha256_after": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69"
+    },
+    "staged_candidate_deployed": false,
+    "ota_precheck": {
+      "release_rows": 5,
+      "max_version_code": 367,
+      "max_version_name": "1.2.2-canary.353",
+      "contains_version_400": false
+    }
+  },
+  "sha256": {
+    "worker_binary_old": "d37a39633ed8e7766e35744baf0b78ca2fbc12777a91b9a89f166029748c1c69",
+    "worker_binary_new": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+    "worker_candidate_compressed": "25a8f1a901244349f4bb0b4d6bf84a9eb2490acdd7c5346ac683a3d54cba7fa8",
+    "listening_binary": "c7e70e77e4600e09b02f885101a17e8e7cea0e9635bc430d456b88081b6289d5",
+    "search_binary": "c7bec7df92c47136fd0c91e5c2b4ed59c918ffa7158cdfb3a63415fa1e221b25",
+    "worker_env_pinned_by_script": "a79735aa99122d8497040eec6d6babf32f6e43348619a269288371ad80ab3346",
+    "worker_unit_pinned_by_script": "fc4d00bc4d4a5fcdbdcfd2feed4e0ed658fa447d68904fd6951e725b3731c7d0",
+    "brain_files": [
+      {
+        "path": "src/index.ts",
+        "before": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+        "after": "9f768a0048557378d7bbd05fe524ad47bb5bbf87c57b524760637d3e86b68d17",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/profile-store.ts",
+        "before": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e",
+        "after": "c15b3a93f9025a12d62caa3af42257e87116001f441aa75e729947c8144771f2",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/prompt-orchestrator.ts",
+        "before": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f",
+        "after": "73c2faeb9b5c0fba660e80462ac1d0b2b57874ba36bab73433ea2b63072e957e",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/routes/device-session.ts",
+        "before": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b",
+        "after": "60aed4c5e42a3e58b763a33ee6f09ff668a834807f9d259dc5746ddb69a2b91b",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/routes/voice-onboarding.ts",
+        "before": null,
+        "after": "fd5ecadcfb3c2bf1ebce17e6da81a0d5ddd3b19bbe887851966d301808c54d5a",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/voice-onboarding-runtime.ts",
+        "before": null,
+        "after": "7fbea56de3c168ca1aef0088b1b64cd68562cb6fc300eb0243728c2e50456c92",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/voice-onboarding-store.ts",
+        "before": null,
+        "after": "93a8d064acd8f0b20ba43c4a4fd4bd3425bc4e60d1a51188c8feb5eade6a578f",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      },
+      {
+        "path": "src/voice-onboarding-v2.ts",
+        "before": null,
+        "after": "6744bdbc316d025e20f7e79f6ea72849854e1355433af9010d273c109cd29443",
+        "worktree_matches_after": true,
+        "base_commit_matches_before": true
+      }
+    ],
+    "review_inputs": {
+      "deploy-worker.py": "6d7f7eacfe094a165f6aa1e4ea8604e9659a309ac60fd6c65ec17e9eae626756",
+      "deploy-brain.py": "6340485279b6f9d315ca326dccfac8294700ca3bd2c439f80466fb82828094c3",
+      "BRAIN-MANIFEST.json": "6e400d825a5d45ea0daf451cd023a7f31523cc473bc9e52ecad4baf0cf0b0967",
+      "STAGED-CANDIDATE.json": "ef51191ecd54d8f73706fbd47937ece4d78d3bffbb71a4f08b14d4d76ade0eaf",
+      "sdk-normal.json": "e47a7b8068e051861590bec3f496575482e0b9095e2eada8166a09d20d455ac0",
+      "brain-stage-tests.json": "a526c60b61fb199a71666f881ece2f8ff81328a737353f6be3f1d92e8f3d7531",
+      "linux-tests.log": "61c6f0c7a3038cfcc877b71850c558b27da068d46e067b4df3842bb27fde0195",
+      "LINUX-TESTS.json": "f06442cf5714deb0df060c6747187d2aab286f8af99ac7b07d9a4a3b292dc424"
+    }
+  }
+}

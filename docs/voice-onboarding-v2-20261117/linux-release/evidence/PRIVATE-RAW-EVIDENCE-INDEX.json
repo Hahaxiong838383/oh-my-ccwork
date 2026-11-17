@@ -1,0 +1,68 @@
+[
+  {
+    "path": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/LINUX-TESTS.json",
+    "sha256": "f06442cf5714deb0df060c6747187d2aab286f8af99ac7b07d9a4a3b292dc424",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/build/LINUX-TESTS.json",
+    "bytes": 906
+  },
+  {
+    "path": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/worker-full.log",
+    "sha256": "b7c214b022c8b7ca15d87c7c90e74504a2aac829eb4fb015a956aa3d11ec7454",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/build/worker-full.log",
+    "bytes": 58066
+  },
+  {
+    "path": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/brain-tests.log",
+    "sha256": "d97091e27ad1d39c3fa3e3dc161ffe2d5f114835df2adff5baa275fb191aaa0e",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/build/brain-tests.log",
+    "bytes": 5509
+  },
+  {
+    "path": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/npm-ci.log",
+    "sha256": "49c0f1787833e330367ebc165d73e37b3cb24fb463c55a3fcc79b209263f4193",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/build/npm-ci.log",
+    "bytes": 747
+  },
+  {
+    "path": "/opt/p003/onboarding-release-20261117/STAGE-TESTS.json",
+    "sha256": "25e187fe55f34db8a75459ca87cb6263cbe2e9566d58ef95016a32ee68f7f1f6",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/brain/STAGE-TESTS.json",
+    "bytes": 537
+  },
+  {
+    "path": "/opt/p003/onboarding-release-20261117/runtime-tests.log",
+    "sha256": "76e1b6f54057881c25ebb5ff91b6f0cc2efc24d83328ceaef71e05c53d1ce434",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/brain/runtime-tests.log",
+    "bytes": 10066
+  },
+  {
+    "path": "/opt/p003/onboarding-release-20261117/node24-tests.log",
+    "sha256": "7c8ea1c198da6602c752ea40436bfd5529988c51daacfa373ff5d5bc9527f0a1",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/brain/node24-tests.log",
+    "bytes": 5503
+  },
+  {
+    "path": "/root/p003-onboarding-release-20261117/isolated-1794899482850315163/main-normal/result.json",
+    "sha256": "a16ea1c9c5e98c053db6a772ae7c8d2350bf999a2e1a28acac8ff6aef8cf043b",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/worker/result.json",
+    "bytes": 40825
+  },
+  {
+    "path": "/root/p003-onboarding-release-20261117/isolated-1794899482850315163/main-normal/cleanup.json",
+    "sha256": "bdcad3610be180cebc7c0296e41e86edcd7c07bd9374d158f6f8395a918c3699",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/worker/cleanup.json",
+    "bytes": 248
+  },
+  {
+    "path": "/root/p003-onboarding-release-20261117/isolated-1794899482850315163/main-normal/worker.log",
+    "sha256": "914979b37c16344b28918e83c7ff2b9a97649a202fe45eb27394a391acae406f",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/worker/worker.log",
+    "bytes": 119632
+  },
+  {
+    "path": "/root/p003-onboarding-release-20261117/isolated-1794899482850315163/main-normal/probe.log",
+    "sha256": "c6995b0fc67df76354be474234efc939c264f4432cfc6387cfc389a82a1e81c4",
+    "local": "/Users/fu-121/.local/state/p003-onboarding-release-20261117/raw-evidence/worker/probe.log",
+    "bytes": 78
+  }
+]

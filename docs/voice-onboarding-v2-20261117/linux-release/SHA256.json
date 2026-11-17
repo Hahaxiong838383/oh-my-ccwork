@@ -1,0 +1,177 @@
+[
+  {
+    "path": "OPS_RELEASE_ROLLBACK.md",
+    "bytes": 3947,
+    "sha256": "36e086dd1f547a3ca34153d626c206f2244c6211c13ed6dccde764bae5d13eea"
+  },
+  {
+    "path": "P003_语音教学V2_Linux发布与新版APK联调_20261117.md",
+    "bytes": 10333,
+    "sha256": "7c72256ac199cd9a4c8a39e16ad43652286f673c346f896c65bc85765bf79d70"
+  },
+  {
+    "path": "evidence/BRAIN-MANIFEST.json",
+    "bytes": 1730,
+    "sha256": "6e400d825a5d45ea0daf451cd023a7f31523cc473bc9e52ecad4baf0cf0b0967"
+  },
+  {
+    "path": "evidence/PRIVATE-RAW-EVIDENCE-INDEX.json",
+    "bytes": 3452,
+    "sha256": "9398c295e5f2432709120c48b0cf230160766d2d98d48df722269298e83907d0"
+  },
+  {
+    "path": "evidence/PRODUCTION-RESULT.json",
+    "bytes": 10216,
+    "sha256": "c60652bcb185e3bed00d4e90af63d353efb54c07aca5dca468e7221995236bef"
+  },
+  {
+    "path": "evidence/STAGED-CANDIDATE.json",
+    "bytes": 583,
+    "sha256": "ef51191ecd54d8f73706fbd47937ece4d78d3bffbb71a4f08b14d4d76ade0eaf"
+  },
+  {
+    "path": "evidence/brain/STAGE-TESTS.json",
+    "bytes": 537,
+    "sha256": "25e187fe55f34db8a75459ca87cb6263cbe2e9566d58ef95016a32ee68f7f1f6"
+  },
+  {
+    "path": "evidence/brain/node24-tests.log",
+    "bytes": 5503,
+    "sha256": "7c8ea1c198da6602c752ea40436bfd5529988c51daacfa373ff5d5bc9527f0a1"
+  },
+  {
+    "path": "evidence/brain/runtime-tests.log",
+    "bytes": 10066,
+    "sha256": "76e1b6f54057881c25ebb5ff91b6f0cc2efc24d83328ceaef71e05c53d1ce434"
+  },
+  {
+    "path": "evidence/brain-pm2-flags.json",
+    "bytes": 29,
+    "sha256": "60f9cb25c8a91916d2f4a9c634db70e35e6035a79a3e7a16503c81bb8ac7ec15"
+  },
+  {
+    "path": "evidence/brain-postflight-final.json",
+    "bytes": 612,
+    "sha256": "9e274a7083ab43978b0df9cb470d9c77f56b6f300221f3fd582623d6f80885bf"
+  },
+  {
+    "path": "evidence/brain-stage-tests.json",
+    "bytes": 446,
+    "sha256": "a526c60b61fb199a71666f881ece2f8ff81328a737353f6be3f1d92e8f3d7531"
+  },
+  {
+    "path": "evidence/build/LINUX-TESTS.json",
+    "bytes": 906,
+    "sha256": "f06442cf5714deb0df060c6747187d2aab286f8af99ac7b07d9a4a3b292dc424"
+  },
+  {
+    "path": "evidence/build/brain-tests.log",
+    "bytes": 5509,
+    "sha256": "d97091e27ad1d39c3fa3e3dc161ffe2d5f114835df2adff5baa275fb191aaa0e"
+  },
+  {
+    "path": "evidence/build/npm-ci.log",
+    "bytes": 747,
+    "sha256": "49c0f1787833e330367ebc165d73e37b3cb24fb463c55a3fcc79b209263f4193"
+  },
+  {
+    "path": "evidence/build/worker-full.log",
+    "bytes": 58066,
+    "sha256": "b7c214b022c8b7ca15d87c7c90e74504a2aac829eb4fb015a956aa3d11ec7454"
+  },
+  {
+    "path": "evidence/grok/IDENTITY-DELTA.md",
+    "bytes": 912,
+    "sha256": "ec6f3b842e50e35a824bcaf1f0a56fe1e91f80dbd9e9a6b8fe659e6dc81b16de"
+  },
+  {
+    "path": "evidence/grok/REVIEW.json",
+    "bytes": 10040,
+    "sha256": "dda6467e0baf40c2561a83398fb83385143cc33276b382133c042560ae2cee47"
+  },
+  {
+    "path": "evidence/grok/REVIEW.md",
+    "bytes": 8300,
+    "sha256": "c25809efe56000a1c57686582fde5149fe45036cba8f67255e219302613688d7"
+  },
+  {
+    "path": "evidence/release-window-jobs.json",
+    "bytes": 274,
+    "sha256": "bfc8dcb5089b36bfce64ddd2b22c9cf5c71c04d05d95eb6cb5687e2d1ce963d1"
+  },
+  {
+    "path": "evidence/sdk/cleanup.json",
+    "bytes": 248,
+    "sha256": "bdcad3610be180cebc7c0296e41e86edcd7c07bd9374d158f6f8395a918c3699"
+  },
+  {
+    "path": "evidence/sdk/result.json",
+    "bytes": 40825,
+    "sha256": "a16ea1c9c5e98c053db6a772ae7c8d2350bf999a2e1a28acac8ff6aef8cf043b"
+  },
+  {
+    "path": "evidence/service-identity-apply.json",
+    "bytes": 1036,
+    "sha256": "3b2e7114318bb86b83e65ba1c98b00c52a3b2f6dae1ec752b981a1d5fb3d9e7e"
+  },
+  {
+    "path": "evidence/service-identity-tests.json",
+    "bytes": 1016,
+    "sha256": "3f85bb55fb2d7e3f0ac89b9092a2b44f5392eba27bfced56463b8118fd8bebf5"
+  },
+  {
+    "path": "evidence/session360-concurrent-release.json",
+    "bytes": 681,
+    "sha256": "a67d352668c33886d208648ede97e9c845a4169b69e19fdcb5cdbf386f3cbb08"
+  },
+  {
+    "path": "evidence/source-onboarding-v2-release.json",
+    "bytes": 8498,
+    "sha256": "8f87cce894c428fb8515dff0dbaff756eb3949f4f22897a9be94d4a553abbee6"
+  },
+  {
+    "path": "evidence/teaching-gates-final.json",
+    "bytes": 204,
+    "sha256": "d1fd662f08f26055cd7e0016c2666455dd31bd7b7e283213764f603a28155e33"
+  },
+  {
+    "path": "evidence/worker-apply-attempt1.json",
+    "bytes": 877,
+    "sha256": "4549dac4b32aa6d74f48b91e7c38754338e227cd0f092205de31d0cdc9952c82"
+  },
+  {
+    "path": "evidence/worker-postflight-final.json",
+    "bytes": 741,
+    "sha256": "1c1f17f9d471f0c52a959101bcfa8c2dea840eb071f8e3351c68c10219569233"
+  },
+  {
+    "path": "ops/configure-service-identity.py",
+    "bytes": 3314,
+    "sha256": "c6f2817a964db19e5022b3a8a33b6dbbec065810135e6b8f8cbcbe3f17a84860"
+  },
+  {
+    "path": "ops/deploy-brain.py",
+    "bytes": 6262,
+    "sha256": "6340485279b6f9d315ca326dccfac8294700ca3bd2c439f80466fb82828094c3"
+  },
+  {
+    "path": "ops/deploy-worker.py",
+    "bytes": 5728,
+    "sha256": "6d7f7eacfe094a165f6aa1e4ea8604e9659a309ac60fd6c65ec17e9eae626756"
+  },
+  {
+    "path": "ops/postflight-brain.py",
+    "bytes": 2252,
+    "sha256": "4a56f26526c42c148c5b5f7c57ead28056f662ba292b203e0494cd59bb748792"
+  },
+  {
+    "path": "ops/postflight-worker.py",
+    "bytes": 2415,
+    "sha256": "5549f828ab98bc15ea896af9fcf866fec3fb4282c582633d7ce215d61d6b1450"
+  },
+  {
+    "path": "ops/rollback-service-identity.py",
+    "bytes": 1713,
+    "sha256": "786face0ff9692167644164831cb15f712b2e1d503c61beb4aa1a221a80ae4d6"
+  }
+]

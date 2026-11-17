@@ -1,0 +1,47 @@
+{
+  "base": "18a230754941ad9781db4d39e5a12a9622fc7349",
+  "source_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+  "runtime_commit": "42df1d0320aec5338c9d1be2c11de6e514966944",
+  "files": [
+    {
+      "path": "src/index.ts",
+      "before": "859bc88d08295e73796c2c285b0ba753496b7973ab8f7118704c3cb6ddcfb47c",
+      "after": "9f768a0048557378d7bbd05fe524ad47bb5bbf87c57b524760637d3e86b68d17"
+    },
+    {
+      "path": "src/profile-store.ts",
+      "before": "3e7ec584a8c3a84b129230afa0f3ab58776c7950f825e93468a77f001258fd4e",
+      "after": "c15b3a93f9025a12d62caa3af42257e87116001f441aa75e729947c8144771f2"
+    },
+    {
+      "path": "src/prompt-orchestrator.ts",
+      "before": "e734beaa8a63a6c041de89dcec8a61f54dbe91fa056e300f1a952e326830697f",
+      "after": "73c2faeb9b5c0fba660e80462ac1d0b2b57874ba36bab73433ea2b63072e957e"
+    },
+    {
+      "path": "src/routes/device-session.ts",
+      "before": "08453e2f4182b10a317ae78104bd2ee225ea44e06eb3e9343dd77f6a3247120b",
+      "after": "60aed4c5e42a3e58b763a33ee6f09ff668a834807f9d259dc5746ddb69a2b91b"
+    },
+    {
+      "path": "src/routes/voice-onboarding.ts",
+      "before": null,
+      "after": "fd5ecadcfb3c2bf1ebce17e6da81a0d5ddd3b19bbe887851966d301808c54d5a"
+    },
+    {
+      "path": "src/voice-onboarding-runtime.ts",
+      "before": null,
+      "after": "7fbea56de3c168ca1aef0088b1b64cd68562cb6fc300eb0243728c2e50456c92"
+    },
+    {
+      "path": "src/voice-onboarding-store.ts",
+      "before": null,
+      "after": "93a8d064acd8f0b20ba43c4a4fd4bd3425bc4e60d1a51188c8feb5eade6a578f"
+    },
+    {
+      "path": "src/voice-onboarding-v2.ts",
+      "before": null,
+      "after": "6744bdbc316d025e20f7e79f6ea72849854e1355433af9010d273c109cd29443"
+    }
+  ]
+}

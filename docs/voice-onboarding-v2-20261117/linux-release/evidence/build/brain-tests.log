@@ -1,0 +1,45 @@
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+✔ saved age remains year-precision through existing memory reader (73.238412ms)
+✔ ordinary chat reads observed age and does not demand a fabricated birthday (320.729288ms)
+✔ ordinary basic-field enrichment preserves known age; copying a child profile clears old age (20.207597ms)
+[device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899079 session=70d49868-a6eb-46a0-ba19-f26a47ef77b0 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=7
+[device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899080 session=e693605f-8ba1-4826-b596-ca350c5dbd48 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=45
+[device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899081 session=d732b588-878a-4f99-8336-69c1a42a1d90 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v2 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=11
+[device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899082 session=c4c0e8f2-8c25-4616-b646-aa8b613c6e63 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v2 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=9
+[device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899083 session=c7ec496b-6bbd-47c0-b809-865f20832433 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1|voice_onboarding_v2 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=19
+[device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794899084 session=0c5a0678-c7e8-4cb3-a7ba-0e6d7ab7a867 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=- selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=12
+✔ actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata (186.693512ms)
+✔ v2 fixed questions, independent memory outcome, exact replay; no question/cue chosen by server (920.60577ms)
+✔ known profile never suppresses the three questions or overwrites existing fields (696.85326ms)
+✔ all silent, declined and unrecognized progress only on client commands; old answer cannot save (597.005934ms)
+✔ valid answer with actual SQLite write failure remains accepted/failed and next question works (542.976778ms)
+✔ playback, forged worker, old lesson/trace, revision, duplicate different request and simulation cannot save (444.159696ms)
+✔ rebinding and 180s expiration refuse writes; cancel before begin fences late requests (377.055164ms)
+✔ cancel before begin and finish at any question release server authority without a profile write (272.853649ms)
+✔ all three silent questions finish without inventing any profile fact (616.796665ms)
+✔ SQLite ignored update is not reported saved (360.411221ms)
+✔ nickname clarification and refusal never become a child's saved name (6139.027518ms)
+✔ real HTTP/SQLite: natural age commits without invented birthday; replay is idempotent (214.196009ms)
+✔ all known fields skipped, never overwrite (171.188317ms)
+✔ concurrent rebinding invalidates frozen child (173.277084ms)
+✔ unclear/refusal never save; cross trace rejected; hard TTL never renews (210.420058ms)
+✔ actual SQLite trigger failure never reports saved; transaction rolls back (175.290549ms)
+✔ profile changed concurrently, multiple children, partial knowledge and cancel fence (209.493199ms)
+✔ issue-to-begin binding change rejects authorization (159.30549ms)
+✔ partial -> natural gender and nickname; stale revision, wrong field, missing token (246.34697ms)
+✔ multiple children never guessed; parent known fields skipped (203.677867ms)
+✔ optional capability is default off; listening/search/unknown agent/client cannot get grant (0.324043ms)
+✔ RTC metadata grant alone cannot authorize direct profile writes (138.216467ms)
+✔ ambiguous confirmations and instruction-like nicknames cannot become profile facts (0.625434ms)
+✔ decline closes Brain write authorization immediately (182.612159ms)
+✔ a newly issued session invalidates old lesson writes (184.779563ms)
+✔ unknown placeholder gender and invalid age strings are missing, not known facts (169.831741ms)
+✔ two simultaneous HTTP answers with the same revision commit only once (200.255853ms)
+ℹ tests 30
+ℹ suites 0
+ℹ pass 30
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 9051.138943
