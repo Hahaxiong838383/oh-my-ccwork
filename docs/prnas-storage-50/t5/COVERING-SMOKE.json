@@ -1,0 +1,111 @@
+{
+  "stage": "T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE",
+  "synthetic": true,
+  "config": {
+    "devices": 2,
+    "events": 601,
+    "batch": 200,
+    "seed": 17,
+    "deadline_ms": 3600000,
+    "maintenance": true,
+    "backup": true,
+    "covering_index": true,
+    "synthetic": true,
+    "started_ms": 1794875866465
+  },
+  "node": "v24.19.0",
+  "platform": "darwin",
+  "client_exit": 0,
+  "integrity": {
+    "batches": 8,
+    "events_accepted": 1202,
+    "events_duplicated": 0,
+    "events_acknowledged": 1202,
+    "unique_acknowledged_events": 1202,
+    "expected_events": 1202,
+    "expected_batches": 8,
+    "counts": {
+      "events": 1202,
+      "seen": 1202,
+      "batches": 8
+    },
+    "database_before": {
+      "events": 0,
+      "seen": 0,
+      "batches": 0
+    },
+    "database_delta": {
+      "events": 1202,
+      "seen": 1202,
+      "batches": 8
+    },
+    "database_run_events": 1202,
+    "database_unique_event_ids": 1202,
+    "database_acknowledged_matches": 1202,
+    "database_seen_matches": 1202,
+    "database_integrity": true,
+    "complete": true
+  },
+  "ark": [
+    {
+      "actor": 0,
+      "correct": true,
+      "source_mode": "normal"
+    },
+    {
+      "actor": 1,
+      "correct": true,
+      "source_mode": "normal"
+    }
+  ],
+  "maintenance": [
+    {
+      "start": 1794875868637,
+      "done": 1794875868965,
+      "code": 0
+    },
+    {
+      "start": 1794875880366,
+      "done": 1794875880754,
+      "code": 0
+    }
+  ],
+  "backup_exit": 0,
+  "checkpoint": {
+    "enabled": true,
+    "running": false,
+    "worker_pid": null,
+    "interval_ms": 10000,
+    "timeout_ms": 30000,
+    "stale_after_ms": 60000,
+    "last_attempt_ms": 1794875876624,
+    "last_completed_ms": 1794875877039,
+    "last_success_ms": 1794875877039,
+    "last_result": {
+      "ok": true,
+      "sqlite_version": "3.53.3",
+      "busy": 0,
+      "log_frames": 1533,
+      "checkpointed_frames": 1533,
+      "duration_ms": 31.79291699999999,
+      "reclaimed": false,
+      "reclaim_busy": false
+    },
+    "last_error": null,
+    "failures": 0,
+    "timeouts": 0,
+    "stale": false,
+    "stalled": false
+  },
+  "dirty_days": 0,
+  "acks": {
+    "p95": 167.63929199999984,
+    "p99": 167.63929199999984,
+    "attempts": 9,
+    "statuses": {
+      "200": 8,
+      "503": 1
+    }
+  },
+  "duration_ms": 13379
+}

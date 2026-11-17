@@ -1,0 +1,12 @@
+{
+  "block_devices": {
+    "exit": 0,
+    "stdout": "{\n   \"blockdevices\": [\n      {\n         \"name\": \"vda\",\n         \"size\": 42949672960,\n         \"type\": \"disk\",\n         \"mountpoints\": [\n             null\n         ],\n         \"rota\": true,\n         \"children\": [\n            {\n               \"name\": \"vda1\",\n               \"size\": 1048576,\n               \"type\": \"part\",\n               \"mountpoints\": [\n                   null\n               ],\n               \"rota\": true\n            },{\n               \"name\": \"vda2\",\n               \"size\": 209715200,\n               \"type\": \"part\",\n               \"mountpoints\": [\n                   \"/boot/efi\"\n               ],\n               \"rota\": true\n            },{\n               \"name\": \"vda3\",\n               \"size\": 42737843712,\n               \"type\": \"part\",\n               \"mountpoints\": [\n                   \"/\"\n               ],\n               \"rota\": true\n            }\n         ]\n      }\n   ]\n}\n",
+    "stderr": ""
+  },
+  "filesystems": {
+    "exit": 0,
+    "stdout": "Filesystem     Type   1B-blocks        Used   Available Use% Mounted on\n/dev/vda3      ext4 41882943488 27630088192 12317118464  70% /\n/dev/vda3      ext4 41882943488 27630088192 12317118464  70% /\n",
+    "stderr": ""
+  }
+}

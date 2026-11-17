@@ -25,3 +25,5 @@ Ruling：复用createLoadAccounting精确ID/seen对账，accepted与duplicated�
 最新冲突复核：会话360于本次回读已恢复in_progress；HEAD仍53239abe，正在未提交地修改device-registry/pairing/parent-conversations/admin-data/profile/telemetry及admin/index.html，并新增miniapp-dashboard/miniapp-admin与测试。PRnas树未修改这些现有业务文件；T4后台admin/index.html与其后续成果存在集成重叠，T6须逐段合并，不整文件覆盖。当前阶段未操作其工作树。
 
 压测/分析结束只读复核：7项受保护线上文件SHA未变，3个PM2进程PID/重启次数/online与开工一致，剩余12,340,690,944B。证据POSTLOAD-PRODUCTION-GUARD.json。没有将未通过的统计实验或容量配置部署生产。
+
+覆盖索引实验：复制合成库，原表及生产不改；同等缓存处理原查询前/后47.392/47.394秒，cover occurred/received4.620/4.517秒，全部30万结果SHA相同。索引新增178,515,968B（60万facts）；真实原版rollup无需代码修改即可由优化器选cover，两维合计7.394秒、dirty0、100设备日每个6000，raw/seen/facts前后完全一致。读取优化有证据，但写入/TTL/成熟空间与混合耐久尚待。负载工具仅新增T5_COVERING_INDEX=1实验开关，在新建合成空库且writer启动前建索引；未增加任何生产启动迁移。2×601、部分批ACK/Ark/维护/备份smoke通过，1次503按合同重试。下一轮50×6000带cover混合负载待运行。
