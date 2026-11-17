@@ -36,8 +36,17 @@ wxdt-cli islogin
 里面有登录二维码，**微信扫码即登录**。登录态落在挂载卷
 `/data/home-studio/wxdt-ide/config/.config/wechat-devtools/`，容器重建不丢。
 
-容器规格：Xvfb 1920x1080 + openbox（可拖窗/最大化）+ selkies（h264/jpeg 编码），
-实测内存约 500MB、CPU 空闲 2%。IDE 目录以**只读**方式挂入，容器不改你的安装。
+容器规格：Xvfb 2048x1536（`WXDT_IDE_SCREEN_W/H` 可调）+ openbox（可拖窗/最大化）
++ selkies（h264/jpeg 编码）+ **映射宿主 `/dev/dri` 走 GPU**（不映射会 IDE 整窗白屏，
+见 PITFALLS 2.5e），实测内存约 500MB–1.1GB。IDE 目录以**只读**方式挂入，容器不改你的安装。
+
+界面语言：中文。由**启动进程时注入** `LANGUAGE/LANG/LC_ALL=zh_CN.UTF-8` + `--lang zh` 实现
+（不塞容器 env，实测塞进去会白屏，见 PITFALLS 2.5f）。
+
+网络：容器内**不带** `http_proxy` 等变量，走 docker bridge 直连；实测 `servicewechat.com`、
+`mp.weixin.qq.com` 等小程序相关域名全部解析到国内 IP、connect 20–45ms。
+宿主虽有全局 `http_proxy=127.0.0.1:10808`，但 xray 按 `geoip:cn` 把国内流量直连，
+带代理 env 测出口 IP 同样是 120.244.92.4（北京移动）。**小程序链路没有走代理节点。**
 
 ### 0.2 登录态保活（已固化）
 

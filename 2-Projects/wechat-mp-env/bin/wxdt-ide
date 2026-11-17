@@ -62,15 +62,22 @@ ensure_container() {
   [[ -d "$APP" ]] || die "找不到 IDE 目录：$APP（先跑 scripts/install-devtools.sh）"
   mkdir -p "$CFGDIR"
   local p; p="$(pw)"
+  # 有 GPU 就映射进去：没有 /dev/dri 时 Xvfb 只能软件渲染，Electron 会白屏
+  local gpu=()
+  [[ -e /dev/dri ]] && gpu=(--device /dev/dri)
   docker run -d --name "$NAME" --restart unless-stopped \
     -p "$HOSTIP:$PORT:3001" \
     -e CUSTOM_USER=hahaxiong83 -e PASSWORD="$p" \
     -e TITLE='WX DevTools' -e PUID="$(id -u)" -e PGID="$(id -g)" \
     -e TZ=Asia/Shanghai -e LC_ALL=zh_CN.UTF-8 \
-    -e MAX_RES="$MAXRES" -e DISABLE_DRI3=true \
+    -e SELKIES_MANUAL_WIDTH="${WXDT_IDE_SCREEN_W:-2048}" \
+    -e SELKIES_MANUAL_HEIGHT="${WXDT_IDE_SCREEN_H:-1536}" \
+    -e MAX_RES="$MAXRES" -e DISABLE_DRI3=false \
+    -e DRINODE=/dev/dri/renderD128 \
     -e AUTO_START_WECHAT=false -e AUTO_START_QQ=false \
     -e SELKIES_ENCODER=x264enc,jpeg \
     -v "$APP:/opt/wxdt:ro" -v "$CFGDIR:/config" \
+    "${gpu[@]}" \
     "$IMG" >/dev/null || die "创建容器失败"
   echo "[*] 容器已创建，等 Xvfb 就绪…"
   for _ in $(seq 1 40); do
@@ -82,7 +89,9 @@ ensure_container() {
 ensure_ide() {
   container_running || die "容器未运行：wxdt-ide up"
   if ide_running; then echo "[=] IDE 已在运行"; return; fi
-  docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config "$NAME" /opt/wxdt/bin/bin/wechat-devtools || die "启动 IDE 失败"
+  docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config \
+    -e LANG=zh_CN.UTF-8 -e LANGUAGE=zh_CN.UTF-8 -e LC_ALL=zh_CN.UTF-8 \
+    "$NAME" /opt/wxdt/bin/bin/wechat-devtools --lang zh || die "启动 IDE 失败"
   echo "[*] IDE 启动中…"
   for _ in $(seq 1 40); do
     docker exec "$NAME" sh -c 'pgrep -f "[r]esources/app" >/dev/null' 2>/dev/null && { echo "[✓] IDE 已就绪"; return; }
@@ -193,7 +202,9 @@ cmd_ensure() {
       echo "[$(date '+%F %T')] Xvfb 未就绪，等容器自恢复"; acted=1
     elif ! ide_running; then
       echo "[$(date '+%F %T')] IDE 不在跑，拉起"
-      docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config "$NAME" /opt/wxdt/bin/bin/wechat-devtools
+      docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config \
+        -e LANG=zh_CN.UTF-8 -e LANGUAGE=zh_CN.UTF-8 -e LC_ALL=zh_CN.UTF-8 \
+        "$NAME" /opt/wxdt/bin/bin/wechat-devtools --lang zh
       acted=1
     fi
   fi

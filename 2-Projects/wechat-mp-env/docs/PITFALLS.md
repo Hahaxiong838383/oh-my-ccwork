@@ -67,6 +67,45 @@
   `hostname-pid` / `/tmp/...` socket；异常退出后残留（本机实测残留指向 `/tmp/codeg-acp/...`）。
 - 处置：`rm -f ~/.config/wechat-devtools/Singleton{Cookie,Lock,Socket}`。`bin/wxdt-doctor` 的 [1b] 段会自动检出。
 
+### 2.5e IDE 白屏（整窗纯白，但不是黑屏也不是报错）
+三个独立原因，按命中率排：
+
+1. **容器没映射 `/dev/dri`（最常见）**
+   - 现象：IDE 窗口存在、进程正常、日志无错误，但截图/浏览器里整窗纯白。
+   - 根因：Xvfb 拿不到 GPU 设备 → 只能软件渲染 → Electron 画不出内容。
+   - 判据：`docker exec wxdt-ide ls /dev/dri` 报 No such file；`pgrep -a -x Xvfb` 里没有
+     `-vfbdevice /dev/dri/renderD128`。
+   - 处置：`docker run` 加 `--device /dev/dri`，并设 `DRINODE=/dev/dri/renderD128`、
+     `DISABLE_DRI3=false`（`bin/wxdt-ide` 已内置，宿主有 `/dev/dri` 才加）。
+   - **只开 Xvfb 这个不够**：宿主/容器都要有 render 节点；对照可用的 `wechat-selkies`
+     容器，它也是映射了 `/dev/dri`。
+
+2. **selkies 初始分辨率太小，装不下 IDE 记住的窗口**
+   - 现象：同上（纯白），但 `/dev/dri` 正常。
+   - 根因：selkies 默认把虚拟屏压到 1024x768，而 IDE 会记住上次的窗口尺寸（如 1960x1200），
+     窗口比屏大 → 内容画在屏幕外。
+   - 判据：`xdotool getwindowgeometry <id>` 的宽高 > `xrandr` 的 current。
+   - 处置：`SELKIES_MANUAL_WIDTH=2048 SELKIES_MANUAL_HEIGHT=1536`（`bin/wxdt-ide` 默认已设，
+     可用 `WXDT_IDE_SCREEN_W/H` 覆盖），重建容器。**必须在容器创建时给，事后 `xrandr` 改
+     分辨率 IDE 不会重绘，照样白。**
+
+3. **跨容器的 GPU 缓存损坏**
+   - 处置：删 `app/GPUCache`、`app/Code Cache`、`app/DawnCache`、`app/DawnGraphiteCache`、
+     `app/GrShaderCache`、`app/ShaderCache` 再起 IDE。不要动 `app/WeappLocalData`（登录态）。
+
+### 2.5f 界面语言不是中文
+- 容器里有 `zh_CN.utf8` 不代表界面会中文：**GUI 程序的语言由 `LANGUAGE` 决定，它优先级高于
+  `LANG`/`LC_ALL`**。镜像默认 `LANGUAGE=en_US.UTF-8`，只加 `LC_ALL=zh_CN.UTF-8` 没用。
+- 但**把 LANGUAGE 塞进容器 env 重建容器后，IDE 出现过持续白屏**（原因未完全定位，疑似与
+  中文 locale 下的字体/渲染路径有关）。当前做法：容器 env 保持镜像默认，**启动 IDE 时按进程注入**：
+  ```bash
+  docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config \
+    -e LANG=zh_CN.UTF-8 -e LANGUAGE=zh_CN.UTF-8 -e LC_ALL=zh_CN.UTF-8 \
+    wxdt-ide /opt/wxdt/bin/bin/wechat-devtools --lang zh
+  ```
+  `bin/wxdt-ide` 已内置。验收看 `ps aux | grep chrome_crashpad`/network service 的 `--lang=zh-CN`，
+  或直接看界面：菜单应是「微信开发者工具 / 小程序模式 / 预览 / 真机调试 / 上传」。
+
 ### 2.5d 浏览器版 IDE「连不上」= Xvfb 虚拟屏太小（真踩过）
 - **现象**：浏览器打开 `wxdt-ide` 的地址，输完账号密码后一直转圈 / 黑屏 / 反复重连，容器日志刷
   `Rate limited: reconnecting too quickly`。
