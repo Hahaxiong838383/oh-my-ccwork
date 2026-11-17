@@ -1,16 +1,23 @@
 /** Test-only persistent Brain reader. Uses the SAME HTTP receiver as the load. */
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync,appendFileSync,existsSync,realpathSync} from 'node:fs';
+import {readFileSync,writeFileSync,appendFileSync,existsSync,realpathSync,statfsSync} from 'node:fs';
 import {resolve,join} from 'node:path';
+import {once} from 'node:events';
+import {serve} from '@hono/node-server';
+import {Hono} from 'hono';
 const root=resolve(process.argv[2]??'');
 assert(root.includes('/p003-t5-')&&!root.includes('/server/data')&&realpathSync(root)===root);
 const config=JSON.parse(readFileSync(join(root,'config.json'),'utf8'));assert(config.synthetic&&config.continuous_ark);
 for(const domain of ['ACCOUNTS','DEVICES','PROFILE','CONFIG','CONVERSATION','FEEDBACK','ARK'])process.env[domain+'_DB_PATH']=join(root,domain.toLowerCase()+'.db');
-const [{ArkStore},{ArkRuntime},{warmArkHistory}]=await Promise.all([import('../src/ark/store.js'),import('../src/ark/runtime.js'),import('../src/ark/warmup.js')]);
+const [{ArkStore},{ArkRuntime},{warmArkHistory},{createArkRoutes}]=await Promise.all([import('../src/ark/store.js'),import('../src/ark/runtime.js'),import('../src/ark/warmup.js'),import('../src/ark/routes.js')]);
 // Open once before the producer starts, like the persistent production service.
-const ark=new ArkStore(join(root,'ark.db'));
+const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
+const accept=ark.accept.bind(ark);ark.accept=(...args)=>{try{return accept(...args);}catch(error){
+ const e=error as {name?:string;code?:string;errcode?:number};
+ appendFileSync(join(root,'ark-accept-errors.jsonl'),JSON.stringify({at_ms:Date.now(),pid:process.pid,name:e.name??null,code:e.code??null,sqlite_code:e.errcode??null})+'\n');throw error;
+}};
 const ids=Array.from({length:config.devices},(_,i)=>({sn:'BJP003999999'+String(i+1).padStart(8,'0'),account_id:'t5-synthetic-'+i,epoch:1}));
-let runtime:InstanceType<typeof ArkRuntime>|undefined,observation:any={},busy=false;
+let runtime:InstanceType<typeof ArkRuntime>|undefined,observation:any={},busy=false,server:ReturnType<typeof serve>|undefined;
 async function cycle(name:string){
  assert.match(name,/^[a-z0-9-]{1,60}$/);assert(runtime);
  const file=join(root,name+'.jsonl'),resultFile=join(root,name+'.json');assert(!existsSync(file)&&!existsSync(resultFile));
@@ -46,9 +53,17 @@ process.on('message',async(message:any)=>{
     if(!r.body)return r;
     return new Response(r.body.pipeThrough(new TransformStream({transform(chunk,controller){controller.enqueue(chunk);},flush(){target.body_complete=true;target.body_ms=performance.now()-start;}})),{status:r.status,headers:r.headers});
    }});
-   process.send?.({id,exit:0});
+   // The production Brain owns Ark POST/current; Analytics owns raw history.
+   // Reuse this existing child so the test has the same two event loops and
+   // counts all of them against the original shared resource budget.
+   const app=new Hono();app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>runtime!,secret:()=>message.secret,ceiling:()=>ids.map(i=>i.sn),acceptsCredential:()=>true,isAdmin:()=>false}));
+   server=serve({hostname:'127.0.0.1',port:0,fetch:async request=>{const r=await app.fetch(request);r.headers.set('X-T5-Brain-Pid',String(process.pid));return r;}});
+   if(!server.listening)await once(server,'listening');
+   const arkUrl='http://127.0.0.1:'+(server.address()as any).port+'/t5/ark/state';
+   writeFileSync(join(root,'brain-topology.json'),JSON.stringify({brain_pid:process.pid,receiver_pid:config.receiver_pid,ark_url:arkUrl,scope:'same-existing-child-same-test-cgroup'}));
+   process.send?.({id,exit:0,brain_pid:process.pid,ark_url:arkUrl});
   }else if(message.type==='query')process.send?.({id,exit:await cycle(message.name)});
-  else if(message.type==='stop'){ark.close();process.send?.({id,exit:0});process.disconnect();}
+  else if(message.type==='stop'){if(server){server.closeAllConnections();await new Promise<void>(r=>server!.close(()=>r()));}ark.close();process.send?.({id,exit:0});process.disconnect();}
   else throw Error('invalid_query_message');
  }catch(error){process.send?.({id,error:String(error)});}finally{busy=false;}
 });

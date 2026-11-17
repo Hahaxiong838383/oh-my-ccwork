@@ -1,0 +1,12 @@
+{
+  "cycles": 6,
+  "failed_cycles": 0,
+  "samples": 18,
+  "p99_ms": 29.67679199999975,
+  "span_ms": 16336,
+  "max_cycle_gap_ms": 5002,
+  "invalid": 0,
+  "receiver_requests": 18,
+  "query_overlapped_maintenance": false,
+  "scope": "persistent ArkRuntime -> SAME Analytics receiver HTTP handling uploads; changing per-device assets"
+}

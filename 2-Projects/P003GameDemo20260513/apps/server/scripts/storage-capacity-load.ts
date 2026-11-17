@@ -22,6 +22,7 @@ import {linuxResources,createResourceRecorder} from './storage-load-resources.js
 import {soakPlan} from './storage-soak-schedule.js';
 import {startSharedQuery} from './storage-shared-query-client.js';
 import {sqlProfiler} from './storage-sql-profile.js';
+import {startArkProducer} from './storage-ark-producer.js';
 
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
 assert.ok(['run','client'].includes(mode),'run|client');
@@ -76,11 +77,12 @@ if(mode==='run'){
   appendFileSync(join(root,'ark-accept-errors.jsonl'),JSON.stringify({at_ms:Date.now(),name:e.name??null,code:e.code??null,sqlite_code:e.errcode??null})+'\n');throw error;
  }};
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
+ if(soak)ark.db.exec('PRAGMA query_only=ON'); // Only the existing Brain child accepts snapshots.
  writeFileSync(join(root,'control.json'),'{"enabled":true}',{mode:0o600});
  const deadline=Date.now()+30000;while(!writer.ready){assert.ok(Date.now()<deadline,'writer readiness timeout');await sleep(10);}checkpointer.start();
  const reader={arkDeviceKey:hash,readArkAuthorization:(sn:string)=>{const id=identities.find(i=>i.sn===sn),g=id&&ark.grant(id);return id&&g?{...id,not_before_ms:g.not_before_ms}:null;},readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:hash(sn),active:subjects.includes(sn),uploadEnabled:true,uploadHourCst:23})};
  const app=createAnalyticsApp({store,writer,reader,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
- app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>({identity:(sn:string)=>identities.find(i=>i.sn===sn)??null} as any),secret:()=>secret,ceiling:()=>subjects,acceptsCredential:()=>true,isAdmin:()=>false}));
+ if(!soak)app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>({identity:(sn:string)=>identities.find(i=>i.sn===sn)??null} as any),secret:()=>secret,ceiling:()=>subjects,acceptsCredential:()=>true,isAdmin:()=>false}));
  const profile=process.env.T5_PROFILE_SQL==='1'?sqlProfiler([{name:'analytics',db:store.db},{name:'ark',db:ark.db}],sample=>appendFileSync(join(root,'sql-query-profile.jsonl'),JSON.stringify(sample)+'\n')):null;
  const server=serve({fetch:async request=>{const respond=async()=>{const start=performance.now(),receivedAt=Date.now(),response=await app.fetch(request);if(new URL(request.url).pathname==='/internal/analytics/ark-summary'){
   const ms=performance.now()-start;response.headers.set('X-T5-Service-Ms',String(ms));response.headers.set('X-T5-Receiver-Pid',String(process.pid));
@@ -126,23 +128,12 @@ if(mode==='run'){
   const report={began,done:Date.now(),exportExit,backupExit,backupReport,backupStarted,backupFinished};archiveReports.push(report);appendFileSync(join(root,'archive-cycles.jsonl'),JSON.stringify(report)+'\n');
   }finally{archiving=false;}
  }
- async function produceArk(){
-  const sample=JSON.parse(readFileSync(new URL('../../../docs/ark-brain-20261031/snapshot-v1.example.json',import.meta.url),'utf8'));
-  for(let round=0;!soakStop&&performance.now()-runMono<soak!.durationMs;round++){
-   const due=runMono+round*soak!.arkIntervalMs;while(!soakStop&&performance.now()<due)await sleep(Math.min(1000,due-performance.now()));
-   if(soakStop||performance.now()-runMono>=soak!.durationMs)break;
-   for(const [actor,token]of tokens.entries()){
-    const now=Date.now(),snapshot={...sample,snapshot_id:`soak-${config.started_ms}-${actor}-${round}`,boot_id:`soak-${config.started_ms}`,boot_started_at_ms:config.started_ms-1,captured_at_ms:now,sequence:round+1,logical_day:new Date(now+8*3600000).toISOString().slice(0,10),source_mode:'normal',wallets:{family_coin:round+actor,stardust:null},inventory:{'M-CARD-001':actor%4}};
-    const began=performance.now(),r=await fetch('http://127.0.0.1:'+(server.address()as any).port+'/t5/ark/state',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(5000)}),body=await r.json();
-    appendFileSync(join(root,'ark-continuous.jsonl'),JSON.stringify({at_ms:now,actor,round,snapshot_id:snapshot.snapshot_id,status:r.status,body,ms:performance.now()-began})+'\n');assert.equal(r.status,200);assert.equal(body.status,'accepted');
-   }arkRounds++;
-  }
- }
  async function archiveLoop(){
   while(!soakStop&&performance.now()-runMono<soak!.durationMs){await archiveCycle();const next=performance.now()+soak!.maintenanceIntervalMs;while(!soakStop&&performance.now()<next&&performance.now()-runMono<soak!.durationMs)await sleep(1000);}
  }
  await monitor();runMono=performance.now();
- const arkPromise=soak?produceArk().catch(e=>{soakError??=e;}):null;
+ const arkProducer=soak?startArkProducer({root,url:queryService!.arkUrl,brainPid:queryService!.brainPid,tokens,startedMs:config.started_ms,durationMs:soak.durationMs,intervalMs:soak.arkIntervalMs},n=>{arkRounds=n;}):null;
+ const arkPromise=arkProducer?.promise.catch(e=>{soakError??=e;})??null;
  const archivePromise=soak?archiveLoop().catch(e=>{soakError??=e;}):null;
  try{
   if(soak)while(performance.now()-runMono<soak.dailyDelayMs){if(soakError)throw soakError;if(monitorError)throw monitorError;await sleep(1000);}
@@ -159,7 +150,7 @@ if(mode==='run'){
   const code=await clientTask;dailyFinished=Date.now();
   if(soak){
    while(performance.now()-runMono<soak.durationMs){if(soakError)throw soakError;if(monitorError)throw monitorError;await sleep(1000);}
-   soakStop=true;await arkPromise;await archivePromise;if(soakError)throw soakError;
+   soakStop=true;arkProducer?.stop();await arkPromise;await archivePromise;if(soakError)throw soakError;
    await archiveCycle();
    if(soak.fullDay){
     const drainDeadline=performance.now()+3600000;
@@ -208,7 +199,7 @@ if(mode==='run'){
   if(config.maintenance){assert.equal(maintenanceError,undefined,'maintenance evidence failed');assert.ok(maintenance.every(r=>r.code===0&&!r.report?.rollup_error&&!r.report?.prune_error),'maintenance process failed');assert.equal(dirty,0);}if(config.backup&&!soak)assert.equal(backupCode,0,'backup must really run');
  }catch(error){writeFileSync(join(root,'FAILURE.json'),JSON.stringify({stage:'run',error:String(error),synthetic:true}));throw error;}finally{
   clearInterval(timer);if(maintenanceTimer)clearInterval(maintenanceTimer);if(firstMaintenance)clearTimeout(firstMaintenance);if(backupTimer)clearTimeout(backupTimer);
-  soakStop=true;await arkPromise;await archivePromise;
+  soakStop=true;arkProducer?.stop();await arkPromise;await archivePromise;
   while(monitoring)await sleep(10);
   try{await queryService?.stop();}catch(error){writeFileSync(join(root,'QUERY-STOP-FAILURE.json'),JSON.stringify({error:String(error)}));process.exitCode=1;}
   for(const p of children)p.kill('SIGTERM');server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await writer.close();await checkpointer.stop();ark.close();store.close();

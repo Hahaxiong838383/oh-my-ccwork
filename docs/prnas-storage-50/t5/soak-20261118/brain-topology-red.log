@@ -1,0 +1,19 @@
+✖ mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (469.156958ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2695.172
+
+✖ failing tests:
+
+test at scripts/storage-brain-topology.test.ts:1:592
+✖ mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (469.156958ms)
+  Error: query service exited 1/null
+      at ChildProcess.<anonymous> (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-shared-query-client.ts:13:15)
+      at Object.onceWrapper (node:events:631:26)
+      at ChildProcess.emit (node:events:509:28)
+      at ChildProcess._handle.onexit (node:internal/child_process:295:12)

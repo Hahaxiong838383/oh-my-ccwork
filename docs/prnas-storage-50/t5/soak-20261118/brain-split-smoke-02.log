@@ -1,0 +1,1 @@
+{"root":"/Users/fu-121/.local/state/p003-t5-soak-20261118/p003-t5-brain-split-smoke-02","complete":true,"acks":{"attempts":5,"successes":3,"statuses":{"200":3,"503":2},"p95":136.5485,"p99":136.5485,"all_actors_finished":true,"raw_file":"requests.jsonl","method":"exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"},"ark_correct":3,"seconds":7.584}

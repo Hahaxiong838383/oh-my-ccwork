@@ -1,0 +1,31 @@
+✖ mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (582.462334ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1163.093625
+
+✖ failing tests:
+
+test at scripts/storage-brain-topology.test.ts:1:616
+✖ mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (582.462334ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 30054
+  
+      at TestContext.<anonymous> (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-brain-topology.test.ts:24:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 30054,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,110 @@
+{
+  "review": "topology-9a5ac270-20261118",
+  "at": "2026-11-18T05:39:59+0800",
+  "readonly": true,
+  "ssh": false,
+  "started_other_agents": false,
+  "changed_business_src": false,
+  "ran_load": false,
+  "head": "9a5ac270dca8e63b16eec83fe7d599500e33fe32",
+  "line_source": "git show HEAD",
+  "worktree_script_drift_ignored": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-shared-query-client.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-shared-query-service.ts"
+  ],
+  "evidence": "/Users/fu-121/.local/state/p003-t5-soak-20261118/sched-cadence-evidence-9a5ac270",
+  "verdict": "move_ark_http_onto_existing_brain_child",
+  "harness_ark_http_matches_production": false,
+  "analytics_history_on_receiver_matches_production": true,
+  "endpoint_move_necessary": true,
+  "issuer_must_leave_receiver_loop": true,
+  "endpoint_move_alone_sufficient": false,
+  "new_process_allowed": false,
+  "new_cgroup_allowed": false,
+  "relax_gates": false,
+  "history_cold_read_still_failing": true,
+  "export_write_lock_still_failing": true,
+  "foreground_is_query_only_8mib": true,
+  "generic_64mib_is_current_foreground": false,
+  "production": {
+    "ark_http": "src/index.ts:69 app.route('/v1/device/ark', arkRoute)",
+    "ark_factory": "src/routes/ark.ts:5-7 createArkRoutes",
+    "brain_store_runtime": "src/ark/service.ts:26-40",
+    "history_client": "src/ark/runtime.ts:29-35 abort budget 120ms, accept if elapsed<=125",
+    "analytics_listen": "src/analytics/index.ts:154-166 startAnalyticsServer 127.0.0.1:3006|3306",
+    "analytics_foreground_pragma": "src/analytics/index.ts:163 query_only=ON cache_size=-8192",
+    "analytics_routes": "src/analytics/index.ts:75-84 ark-summary and :103 events:batch",
+    "pm2_entry": "deploy/analytics-start.ts:1-8",
+    "local_online_audit": [
+      "docs/P003_ANALYTICS_SERVER_JOINT_RECEIPT_20261014.json pm2 p003-voice pid 2817417 and p003-analytics pid 3084873",
+      "docs/P003_ANALYTICS_SERVER_DEPLOY_RECEIPT_20261013.md voice 3001, analytics 3006",
+      "docs/analytics-server-contract-v1.md:5 bind 127.0.0.1:3006"
+    ],
+    "port_note": "src/index.ts:48 defaults PORT to 8787; 3001 is the receipt's deployed PORT"
+  },
+  "harness_head": {
+    "mount": "scripts/storage-capacity-load.ts:83 app.route('/t5/ark', createArkRoutes) on createAnalyticsApp",
+    "single_serve": "scripts/storage-capacity-load.ts:88",
+    "post_issuer": "scripts/storage-capacity-load.ts:136-137 fetch own /t5/ark/state and assert status 200",
+    "brain_child": "scripts/storage-shared-query-service.ts:9-11 ArkStore+ArkRuntime, :49 configure has no listen",
+    "fork": "scripts/storage-shared-query-client.ts:6 same cgroup, no second systemd unit",
+    "pids": {"brain": 2499940, "receiver": 2499903},
+    "cgroup": {"cpu_quota": "50%", "memory_max": "768M", "memory_peak_bytes": 652963840}
+  },
+  "incident": {
+    "history_request_id": "mixed-query-1794950174754-0",
+    "history_request_wall_ms": 926.866808,
+    "history_request_cpu_ms": 9.612,
+    "history_request_start_ms": 1794950175205,
+    "history_request_end_ms": 1794950176132,
+    "longest_statement_wall_ms": 579.989523,
+    "statement_bytes": [45056, 135168],
+    "ark_post_queued": {"at_ms": 1794950175202, "actor": 1, "round": 6, "status": 200, "ms": 2183.638},
+    "ark_post_503": {"at_ms": 1794950177386, "actor": 2, "round": 6, "status": 503, "ms": 578.715, "error": "ark_dependency_unavailable"},
+    "sqlite_busy_at_ms": [1794950177843, 1794950177880],
+    "sqlite_code": 5,
+    "export": {"began_ms": 1794950176162, "done_ms": 1794950178358, "exit": 0, "busy_retries": 1, "published": 3},
+    "process_death": "AssertionError 503 !== 200 at storage-capacity-load.ts:137",
+    "query_assert_line_200_reached": false
+  },
+  "history_gate_evidence": {
+    "samples": 150,
+    "transport_failures": 20,
+    "failures_in_cycle": "mixed-query-1794950174754 actors 0-19 status null",
+    "client_ms_min": 119.741,
+    "client_ms_max": 148.271,
+    "cycle_p99_ms": [45.976395, 42.126529, 148.271438],
+    "cycle3_pass": false,
+    "gates_kept": {"abort_ms": 120, "accept_ms": 125, "preflight_p99_ms": 100, "preflight_samples": 150}
+  },
+  "foreground_cache": {
+    "config_reader_query_only": true,
+    "config_reader_cache_kib": 8192,
+    "config_generic_reader_diagnostic": false,
+    "start_env_has_T5_DIAGNOSTIC_GENERIC_READER": false,
+    "wal_reclaim_env": "T5_DIAGNOSTIC_WAL_RECLAIM=64MiB",
+    "checkpoint_reclaim_target_bytes": 67108864,
+    "writer_wal_hard_limit_bytes": 268435456,
+    "maintenance_cache_kib": 8192,
+    "anchors": {
+      "harness_foreground": "scripts/storage-capacity-load.ts:61-64",
+      "wal_target_not_pager": "scripts/storage-capacity-load.ts:65-67",
+      "production_http": "src/analytics/index.ts:163",
+      "constructor_64mib": "src/analytics/store.ts:39-40",
+      "writer_thread_64mib": "src/analytics/writer-thread.ts:21-23"
+    },
+    "stale_summaries": [
+      "review-history-cold/REVIEW.md lines 26 and 66 call 64MiB the foreground to keep",
+      "review-shared-failure/REVIEW.md line 120 calls the harness HTTP pager 64MiB"
+    ]
+  },
+  "limits": [
+    "no live PM2 probe; 3001 comes from the 2026-10-13/14 receipts",
+    "926.866808ms is request wall_ms, not one SQL statement",
+    "preflight assert at storage-capacity-load.ts:200 did not run; cycle JSON already records 20/150 and p99 148.271",
+    "no evidence that the export 503 disappears after the event loops are split",
+    "uncommitted worktree edits to the three harness scripts were not reviewed",
+    "synthetic readArkAuthorization still uses the parent ArkStore grant"
+  ]
+}
