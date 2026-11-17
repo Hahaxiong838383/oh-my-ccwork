@@ -1,0 +1,364 @@
+{
+  "verdict": "FRESH_50x12000_MIXED_RECOMPUTED",
+  "scope": "fresh 50x12000 mixed load only",
+  "not_full_t5": true,
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "worktree_head": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "worktree_archive_paths_clean": true,
+  "worktree_dirty_outside_archive": [
+    "docs/prnas-storage-50/NEXT-TODO.md",
+    "docs/prnas-storage-50/t5/STATUS.md",
+    "docs/prnas-storage-50/t5/fix-d13-20261117/IMPLEMENTATION.md",
+    "docs/prnas-storage-50/t5/convergence-20261117/RESULT.md",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/CONTENTION-FULL-VERIFIED.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/FINAL-DB-PRESERVED.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/GROK-400-REVIEW.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/GROK-400-REVIEW.md",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/GROK-401-REVIEW.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/GROK-401-REVIEW.md",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/LOCAL-FINAL-RESTORE.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/contention-extra-tests.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/contention-full-bundle-verified.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/contention-postflight-source.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/grok400-root-verified.json",
+    "docs/prnas-storage-50/t5/convergence-20261117/evidence/grok401-root-verified.json"
+  ],
+  "worktree_note": "Uncommitted docs/prnas-storage-50 files were already present. This audit did not edit or revert them. git archive reads the commit object, not the dirty docs.",
+  "interpreter": "python 3.12.2",
+  "load_node": "v24.19.0",
+  "archive_sha256": "2cea9894faeb9cdb604075353feb93a6d84a52054cd2735b50fff927625a5ea1",
+  "archive_sha256_recorded": "2cea9894faeb9cdb604075353feb93a6d84a52054cd2735b50fff927625a5ea1",
+  "source_files": 577,
+  "source_file_mismatches": [],
+  "bundle_files": 23,
+  "bundle_sha256": "5fc4a63c5ff4418acfb699cbcdea8e6586a1c81417241d95eede70db93b1d229",
+  "bundle_bytes": 1856204,
+  "requests": {
+    "attempts": 10688,
+    "http_200": 3000,
+    "http_503": 7688,
+    "identity": "10688 = 3000 of HTTP 200 + 7688 of HTTP 503",
+    "errors": {
+      "ANALYTICS_OVERLOADED": 7134,
+      "ANALYTICS_WAL_PRESSURE": 554
+    },
+    "actors": 50,
+    "final_offset_each": 12000,
+    "order_breaks": 0,
+    "successes_with_prior_503": 1858
+  },
+  "ack_ms": {
+    "p95": 247.1212499999965,
+    "p99": 603.44571,
+    "p95_rounded_3dp": 247.121,
+    "p99_rounded_3dp": 603.446,
+    "method": "sorted ascending, index min(n-1, floor(n*p)), n=3000, no exclusions"
+  },
+  "batch_elapsed_ms_including_retries": {
+    "p95": 65724.13926299993,
+    "p99": 109617.44435,
+    "max": 199724.14884499996,
+    "samples": 3000
+  },
+  "upload_duration_ms_recorded": 1166390,
+  "upload_duration_basis": "client-result.json duration_ms and full-50x12000.log seconds 1166.39. requests.jsonl has no wall clock. Last progress sample is 2998 batches at elapsed 1162746 ms; completion is inside the next 20s sample.",
+  "acks": {
+    "copies": 3000,
+    "accepted": 600000,
+    "duplicated": 0,
+    "rejected": 0,
+    "unique_ids": 600000,
+    "prefix": "load-t5-17-1794929362353"
+  },
+  "tool_recorded_db_match": {
+    "source": "fixture/RESULT.json integrity, written by storage-capacity-load.ts during the run",
+    "database_canonical_matches": 600000,
+    "database_seen_matches": 600000,
+    "this_audit_queried_cloud_db": false,
+    "small_table_agrees_at_aggregate": true
+  },
+  "summaries": {
+    "dimensions": {
+      "received": 600000,
+      "occurred": 600000
+    },
+    "device_rows": 100,
+    "device_event_count": 12000,
+    "device_dimensions": {
+      "received": 50,
+      "occurred": 50
+    },
+    "distinct": 200,
+    "distinct_kinds": {
+      "occurred:reward": 50,
+      "occurred:session": 50,
+      "received:reward": 50,
+      "received:session": 50
+    },
+    "dirty_rows": 0,
+    "source_rows": 100,
+    "stage_rows": 100,
+    "meta": {
+      "last_rollup_attempt_ms": "1794930529066",
+      "last_rollup_status": "complete",
+      "last_rollup_failed_days": "0",
+      "last_rollup_remaining_dirty_days": "0",
+      "last_rollup_success_ms": "1794930529066",
+      "last_rollup_partial_ms": "1794930261259"
+    },
+    "last_received": 1794930526680,
+    "exported_production_ready": true,
+    "exported_process_names": [
+      "p003-voice",
+      "kidshub-voice",
+      "p003-analytics"
+    ]
+  },
+  "maintenance": [
+    {
+      "file": "maintenance-1794929362534.stdout",
+      "start": 1794929362534,
+      "partial": false,
+      "ok": true,
+      "remaining_dirty_days": 0,
+      "rebuilt_days": 0,
+      "failed_days": 0
+    },
+    {
+      "file": "maintenance-1794929660535.stdout",
+      "start": 1794929660535,
+      "partial": true,
+      "ok": false,
+      "remaining_dirty_days": 2,
+      "rebuilt_days": 0,
+      "failed_days": 2
+    },
+    {
+      "file": "maintenance-1794929960535.stdout",
+      "start": 1794929960535,
+      "partial": true,
+      "ok": false,
+      "remaining_dirty_days": 1,
+      "rebuilt_days": 1,
+      "failed_days": 1
+    },
+    {
+      "file": "maintenance-1794930260534.stdout",
+      "start": 1794930260534,
+      "partial": true,
+      "ok": false,
+      "remaining_dirty_days": 2,
+      "rebuilt_days": 0,
+      "failed_days": 2
+    },
+    {
+      "file": "maintenance-1794930528756.stdout",
+      "start": 1794930528756,
+      "partial": false,
+      "ok": true,
+      "remaining_dirty_days": 0,
+      "rebuilt_days": 2,
+      "failed_days": 0
+    }
+  ],
+  "backup": {
+    "analytics_event": 200,
+    "analytics_event_seen": 200,
+    "analytics_dirty_day_at_backup": 2,
+    "record_count": 1069,
+    "state": "published",
+    "last_offsite_backup_ms": null,
+    "is_final_nas_restore": false
+  },
+  "guard": {
+    "samples": 252,
+    "all_production_ready": true,
+    "min_free_bytes": 5524566016,
+    "floor_5gib_bytes": 5368709120,
+    "ready_means_voice_ab": false
+  },
+  "unit": {
+    "exec_main_status": 0,
+    "result": "success",
+    "client_exit": 0,
+    "guard_stop": null
+  },
+  "claim_file": "evidence/CONTENTION-FULL-VERIFIED.json",
+  "claim_used_as_pass_basis": false,
+  "claim_checks": {
+    "accepted": true,
+    "duplicated": true,
+    "rejected": true,
+    "attempts": true,
+    "status_200": true,
+    "status_503": true,
+    "ack_p95_exact": true,
+    "ack_p99_exact": true,
+    "ack_p95_rounded_3dp": true,
+    "ack_p99_rounded_3dp": true,
+    "client_duration_ms": true,
+    "batch_p95": true,
+    "batch_p99": true,
+    "batch_max": true,
+    "guard_samples": true,
+    "min_free": true,
+    "candidate": true,
+    "bundle": true
+  },
+  "log_sha256": [
+    {
+      "path": "fixture/maintenance-1794929362534.stdout",
+      "bytes": 302,
+      "sha256": "247934901c985503a9bac6d240428e6d3051c283474073cd3cb69ae855701c6e",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/backup.stderr",
+      "bytes": 60,
+      "sha256": "d7c90394c67572d508503732139fd62198ec38b5cbb50ab7cce6cf5f7151d887",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/backup.stdout",
+      "bytes": 1023,
+      "sha256": "da67559c065afb5514eaaf612e3983830efd5f54cb31f32c78b2ea96b58b0369",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/client-result.json",
+      "bytes": 5110,
+      "sha256": "f68579680adf23ca4708e3e5f1f050a98e0c2f99dc35ac104448abfc875393b7",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/maintenance-1794929660535.stdout",
+      "bytes": 440,
+      "sha256": "2ed651fd6745f59a9de4a96bd03fd4dfad6c73fb04745ce0d3fef129742034b8",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/completed.jsonl",
+      "bytes": 21454780,
+      "sha256": "fd18de93016e7117bfc5bd677daa20e65816b4a1a53d5a7132dcf1f5419ba764",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/maintenance-1794929960535.stdout",
+      "bytes": 369,
+      "sha256": "b4db33d779c2beed5efacfd8886cceeda8c8759bb0b39019a7052ece297bbda1",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/maintenance-1794930260534.stdout",
+      "bytes": 440,
+      "sha256": "25dc592157aabd333b3905789d7176a42aa59587e12c1f28db12530ecf7d447f",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/client.stdout",
+      "bytes": 4567,
+      "sha256": "509f91f897af396e1428305a0cb4f4134ec2008b1e036b78a16e6b5f74d85e99",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/maintenance-1794930528756.stdout",
+      "bytes": 302,
+      "sha256": "d9adfded0fbcf74269b155574a1db49d6045e52aa883ae92e2d43710cc9edb34",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/config.json",
+      "bytes": 275,
+      "sha256": "ce2413ea3510622dcdecfccda6e8fe4d2b97b03e05f64f9475700251add0dac4",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/health.jsonl",
+      "bytes": 1508780,
+      "sha256": "2177d77b929a506f4d8ef2e680e9f6d07ca3486ff659cefc8a4e6b98ae246d6a",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/RESULT.json",
+      "bytes": 475727,
+      "sha256": "22a0fefc35e51e2b9ddff31f85b7a842663590d822675a8b5f66c3ab2e6fb675",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/requests.jsonl",
+      "bytes": 1642567,
+      "sha256": "dea01fa13bbbe8f68cf9bee6c6146bf472fe098a3b4c5f9b9a26f4f4fbfeadd4",
+      "manifest_match": true
+    },
+    {
+      "path": "fixture/resources.jsonl",
+      "bytes": 579275,
+      "sha256": "f2e0e51ccd16bdc31a7f4424776ce3a9b2e9e45e03aed901f4b4039d29ab5781",
+      "manifest_match": true
+    },
+    {
+      "path": "control/FULL-DONE.json",
+      "bytes": 509972,
+      "sha256": "23c71df4ce8340f99bd832c0fbc22c178b5153f0363cbdeec8413790303db148",
+      "manifest_match": true
+    },
+    {
+      "path": "control/FULL-START.json",
+      "bytes": 1273,
+      "sha256": "e1d83c24b3f113eb1dc2f438f55ce304fafb268a62bddf0051676f4f9f807c08",
+      "manifest_match": true
+    },
+    {
+      "path": "control/SOURCE-VERIFIED.json",
+      "bytes": 84499,
+      "sha256": "db4fa0e2d4f42b7898a85c40573f37b5146c48947b2991e906a85e0fc2a34d4e",
+      "manifest_match": true
+    },
+    {
+      "path": "control/TEST-SPACE-RECLAIMED.json",
+      "bytes": 1093,
+      "sha256": "23396dc1391cd7d042dd95156fe1c25451b3915cbfcb9af8d3d2cc3759499010",
+      "manifest_match": true
+    },
+    {
+      "path": "control/CANDIDATE.json",
+      "bytes": 143,
+      "sha256": "da31a31f33f8599cbcf3e46508260f2e7eccb7361514a7deb2e99f353b9314b9",
+      "manifest_match": true
+    },
+    {
+      "path": "control/full-guard.jsonl",
+      "bytes": 19404,
+      "sha256": "0e07ba3f3a5c4e1670a485f2b0c365498c9ca8c7dad090632c968ae5eaa7df29",
+      "manifest_match": true
+    },
+    {
+      "path": "control/full-50x12000.log",
+      "bytes": 374,
+      "sha256": "f525f476659d396ab413884e16da568f756b74d3afc89a29652f27915948f18e",
+      "manifest_match": true
+    },
+    {
+      "path": "control/full-driver.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "manifest_match": true
+    }
+  ],
+  "evidence_sha256": {
+    "evidence/contention-full-bundle-verified.json": "31b4cfeade40ac9c843d075358dda18b3711534990c8c147becde9a4185e0534",
+    "evidence/contention-full-summaries.json": "6a383d9d4788d1a3f8a1e749562ea1bfa260e8464eb18983906b80bbaa70a3b6",
+    "evidence/600k-expected-summary.json": "8b3c3147155cbe4152986633bbc937fc9e597e3b7dc99cbe835a243440863cc2",
+    "evidence/CONTENTION-FULL-VERIFIED.json": "fdefe18e6d22e71c6c66a843a76a289a6fc5d3ce8475040d23a6cd8226196ea3",
+    "contention-full-evidence.tar.gz": "5fc4a63c5ff4418acfb699cbcdea8e6586a1c81417241d95eede70db93b1d229"
+  },
+  "blockers": [],
+  "out_of_scope": [
+    "mature90d",
+    "1h_disconnect",
+    "24h_soak",
+    "voice_AB",
+    "final_600k_NAS_restore",
+    "full_T5"
+  ]
+}

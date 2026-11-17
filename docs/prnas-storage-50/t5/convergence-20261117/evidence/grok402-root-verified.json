@@ -1,0 +1,10 @@
+{
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "verdict": "FRESH_50x12000_MIXED_RECOMPUTED",
+  "verified_input_files": 23,
+  "review_md_sha256": "604b3e755bbc43a8bd39cd989075dc02f4c66052882371595e188b898e8763b5",
+  "review_json_sha256": "de7c21787f1b83d05d898277d93068140e0fa1b8ac452083139f50efd25adb27",
+  "input_manifest_sha256": "31b4cfeade40ac9c843d075358dda18b3711534990c8c147becde9a4185e0534",
+  "verified_at": "2026-11-18T00:02:47.023684+08:00",
+  "full_t5_pass": false
+}
