@@ -55,10 +55,14 @@ Downloads 与实际 Codeg uploads 位于 `/Users/fu-121/Library/Application Supp
 - `uploads/new-1794806644203-u9z1sp/P003_mini010_小程序请求服务端排查回执_20261117.md` 仍明确引用现役 `liveHomeView`。
 - `uploads/conv-27-codex-37/xiaoke-miniapp-source-2026-10-29.zip` 无上述标记；10月29日快照早于11月10日现役改造。
 
-没有读取凭据、SSH、修改外部仓源码或向微信平台上传。
+本前端实现没有读取凭据、修改外部仓源码或向微信平台上传。后续由主任务经既有严格SSH只读核对Air主项目、两个P003工作树、Downloads及60个相关ZIP，仍未找到现役标记；未复制凭据或修改远端源码。
+
+进一步只读核对Git层：43个已注册P003工作树共用同一Git库；156个本地分支/远端引用归为40棵不同P003项目树，均无上述文件或源码符号。当前账号匹配的3个GitHub P003仓库默认分支均为HTML项目，无小程序路径或package.json。检查范围及提交见[源码查找回执](../../../docs/weekly-guard-20261117/CLIENT-SOURCE-SEARCH.json)。另通过只读API对比当前主仓106个真实远端分支：43个P003相关head均已覆盖，本地没有漏掉新的相关head；新main逐层确认无miniapp子树。未fetch或clone。上述结果只证明本次可访问范围没有找到源码，不代表现役源码不存在。
 
 ## 验证
 
-新增合同/日期/生命周期9项、渲染6项，均先验证失败后实现。首次全套128项、TypeScript、live H5/weapp构建已通过；补空报告/依赖保留语义后同源周报12项、类型检查与H5/weapp双构建也均通过（API为生产HTTPS，只构建，没有上传）。参考值提示及22点首版文案增量后，最新周报15项和类型检查通过，最终构建待整体冻结后统一执行。weapp保留既有空vendors chunk提示；BLE测试保留预期“写入测试中断”诊断，无失败。传输测试使用隔离 fixture，浏览器/实机或生产业务数据验证另行记录，不把 fixture 数字当作C机真实统计。
+新增合同/日期/生命周期9项、渲染6项，均先验证失败后实现。最终冻结验证已于2026-11-17 21:13:50—21:15:26（北京时间）完成：全套133/133、TypeScript、live H5及live weapp构建均退出0。包括空report清旧值、依赖保留提示、672参考警告和22点首版标注；没有“待构建”项。产物共26个，SHA清单已保存。
+
+[最终验证记录](../../../docs/weekly-guard-20261117/FRONTEND-VALIDATION.json) · [产物SHA清单](../../../docs/weekly-guard-20261117/FRONTEND-ARTIFACT-SHA256.json)。weapp保留既有空vendors chunk提示；BLE测试保留预期诊断，无失败。这里证明的是本仓参考页面构建和测试；没有上传微信，也未验证现役LiveApp手机页面。后端与Worker后台的生产验收另见主回执，不能代替真实手机接线。
 
 署名：codex（OpenAI）| 2026-11-17

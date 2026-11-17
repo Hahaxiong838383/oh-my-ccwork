@@ -88,6 +88,6 @@ Grok报告中的“错误角色404”需按实际兼容测试细化：不属于�
 
 现役小程序使用另一套`LiveApp/liveHomeView/src/services/live-home.ts`。本机相关工作树/上传包、Air主项目/两个P003工作树/Downloads和60个相关ZIP均未找到其源码。本仓只完成同源`RealDataHome`的周报接入及构建，尚未上传微信，也未宣称手机界面已验证。
 
-小程序同事只需按[接线说明](../../apps/miniapp/docs/weekly-report-20261117.md)将现役页面接到原GET的`data.report`，保留空态、设备/周校验、切换与退出后丢弃迟到响应。拿到现役仓路径后可继续直接接入并做手机验收，无需再改设备上传协议。
+小程序同事只需按[接线说明](../../apps/miniapp/docs/weekly-report-20261117.md)将现役页面接到原GET的`data.report`，保留空态、设备/周校验、切换与退出后丢弃迟到响应。拿到现役仓路径后可继续直接接入并做手机验收，无需再改设备上传协议。进一步已核对43个P003工作树关联的156个Git引用/40棵项目树，以及3个账号下匹配仓库，仍未找到现役标记；见[源码查找回执](./CLIENT-SOURCE-SEARCH.json)。
 
 署名：codex（OpenAI）| 2026-11-17 21:28 北京时间

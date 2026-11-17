@@ -1,0 +1,46 @@
+{
+  "checked_at_beijing": "2026-11-17T21:36:19.304604+08:00",
+  "required_markers": [
+    "src/services/live-home.ts",
+    "LiveApp",
+    "liveHomeView"
+  ],
+  "result": "not_found_in_accessible_scope",
+  "actual_client_verified": false,
+  "local_git": {
+    "registered_p003_worktrees": 43,
+    "heads_and_remote_refs": 156,
+    "distinct_p003_trees": 40,
+    "matching_source_files_or_symbols": 0
+  },
+  "github_default_branches": [
+    {
+      "repo": "Hahaxiong838383/p003-prototype",
+      "branch": "main",
+      "commit": "b84746705cd05601418db58d4e9348ead3c9df89"
+    },
+    {
+      "repo": "Hahaxiong838383/P003GAME",
+      "branch": "main",
+      "commit": "7ec8ff632a810797d35f4296beb188fb57d1433d"
+    },
+    {
+      "repo": "Hahaxiong838383/P003_GAME",
+      "branch": "main",
+      "commit": "9fc09b699e8dccff987de581227395f91ff35104"
+    }
+  ],
+  "github_result": "HTML projects; no miniapp paths or package.json; complete recursive trees",
+  "operations": "existing Git objects and read-only GitHub API; no clone/fetch/source mutation",
+  "needed_input": "repository URL or actual local source directory for the current miniapp",
+  "origin_live_refs": {
+    "repo": "Hahaxiong838383/oh-my-ccwork",
+    "total_branches": 106,
+    "p003_related_heads": 43,
+    "p003_related_heads_already_in_local_objects": 43,
+    "new_p003_related_heads": 0,
+    "new_main_commit": "b0803515ce6d9fe412e7d71f3a4870264cd103da",
+    "new_main_result": "P003/apps has no miniapp subtree",
+    "fetched_or_cloned": false
+  }
+}
