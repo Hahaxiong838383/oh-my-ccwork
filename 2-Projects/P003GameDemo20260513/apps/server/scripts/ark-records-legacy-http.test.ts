@@ -11,6 +11,7 @@ import {serve} from '@hono/node-server';
 import {SignJWT} from 'jose';
 import {RecordsStore} from '../src/ark/records-store.js';
 import {canonical} from '../src/ark/records-contract.js';
+import {DashboardRecordsSchema,RecentActivitySchema} from '../docs/records-r1/schema.mjs';
 
 process.env.AUTH_JWT_SECRET='isolated-legacy-http-only';
 const {createRecordsDeviceRoutes,createRecordsParentRoutes}=await import('../src/ark/records-routes.js');
@@ -150,4 +151,32 @@ test('inventory-backed makeup card delta is visible and filterable, without a ne
  const r=record(2,{data:{wallet_changes:[],inventory_changes:[{item_id:item.item_id,before:item,after:{...item,quantity:1}}],grants:[],makeup_grants:[],makeup_uses:[{tank_id:null,logical_day:'2026-11-14',usage_day_index:1}],previous_source_mode:'normal'}});
  assert.deepEqual((await f.post(batch([r]))).body.data.accepted_record_ids,[r.record_id]);
  const p=await f.page('?resource_id=M-CARD-001');assert.equal(p.status,200);assert.equal(p.body.data.items.length,1);assert.equal(p.body.data.items[0].resource_changes[0].delta,-1);assert.deepEqual(p.body.data.items[0].item_changes,[]);
+});
+
+test('acknowledged GM reward and historical target day immediately reach recent activity without normal income',async t=>{
+ const f=await fixture(t),at=yesterday(),item={item_id:'PART-TEST',kind:'ecotank_part',quantity:2,tank_id:'tank-test',layer:'base',status:'pending_activation',acquired_at_ms:at};
+ const grant={reward_instance_id:'reward-history',source_kind:'daily_gift',source_id:'gift-history',logical_day:'2026-10-03',resolved_rewards:[{kind:'currency',item_id:'C-FAMILY-001',quantity:7,tank_id:null,layer:null}],status:'granted',config_revision:'test',granted_at_ms:at};
+ const r=record(2,{source_mode:'gm',logical_day:'2026-10-12',data:{...record().data,grants:[grant],inventory_changes:[{item_id:item.item_id,before:null,after:item}],makeup_grants:[{tank_id:'tank-test'}],makeup_uses:[{tank_id:'tank-test',logical_day:'2026-10-02',usage_day_index:3}],previous_source_mode:'unknown'}});
+ const uploaded=await f.post(batch([r]));assert.equal(uploaded.status,200);assert.deepEqual(uploaded.body.data.accepted_record_ids,[r.record_id]);
+ const d=f.store.dashboard(f.scope.public_id,f.scope.parent_account_id),page=(await f.page()).body.data;
+ assert.equal(d.recent_activity.available,true);assert.equal(d.recent_activity.source,'ark_records');assert.deepEqual(d.recent_activity.items,page.items);
+ DashboardRecordsSchema.parse(d);const {recent_activity,...oldReadShape}=d;DashboardRecordsSchema.parse(oldReadShape);
+ for(const bad of [{...recent_activity,source:'unknown'},{...recent_activity,items:[{...page.items[0],origin_grant_id:f.scope.grant_id}]},{...recent_activity,items:[{...page.items[0],grants:'invalid'}]},{...recent_activity,next_cursor:'unexpected'},{...recent_activity,available:false},{...recent_activity,items:Array(21).fill(page.items[0])}])assert.equal(RecentActivitySchema.safeParse(bad).success,false);
+ const projected=d.recent_activity.items[0] as any;
+ assert.equal(projected.source_mode,'gm');assert.equal(projected.logical_day,'2026-10-12');assert.equal(projected.grants[0].logical_day,'2026-10-03');
+ assert.deepEqual(projected.grants,[grant]);assert.deepEqual(projected.inventory_changes,r.data.inventory_changes);
+ assert.deepEqual(projected.makeup_grants,r.data.makeup_grants);assert.deepEqual(projected.makeup_uses,r.data.makeup_uses);
+ assert.equal(d.yesterday_income.available,false);assert.equal(d.yesterday_income.family_coin,null);assert.equal(d.latest_items.reason,'non_normal');
+ await f.post(batch([r]));assert.equal(f.store.dashboard(f.scope.public_id,f.scope.parent_account_id).recent_activity.items.length,1);
+ delete process.env.ARK_RECORDS_LEGACY_SCOPE_JSON;assert.equal(f.store.dashboard(f.scope.public_id,f.scope.parent_account_id).recent_activity.items.length,0);
+});
+
+test('dashboard recent activity cursor continues the existing records page without duplicate or new-arrival leakage',async t=>{
+ const f=await fixture(t),records=Array.from({length:21},(_,i)=>record(i+1));
+ for(let start=0;start<records.length;start+=16)assert.equal((await f.post(batch(records.slice(start,start+16)))).status,200);
+ const recent=f.store.dashboard(f.scope.public_id,f.scope.parent_account_id).recent_activity;
+ assert.equal(recent.items.length,20);assert.equal(recent.limit,20);assert.equal(recent.has_more,true);assert.ok(recent.next_cursor);
+ await f.post(batch([record(22)]));
+ const next=await f.page('?limit=20&cursor='+encodeURIComponent(recent.next_cursor!));assert.equal(next.status,200);assert.equal(next.body.data.items.length,1);assert.equal(next.body.data.items[0].record_id,'save-legacy:1');assert.equal(next.body.data.has_more,false);
+ assert.equal((f.store.dashboard(f.scope.public_id,f.scope.parent_account_id).recent_activity.items[0] as any).record_id,'save-legacy:22');
 });

@@ -1,12 +1,9 @@
 import {ApiError,apiRequest} from './api';
 import type {HistoryPage,HistoryQuery} from './live-history';
 import { observation, type Observation } from './observations';
+import { businessItem, type BusinessItem } from './business-record';
+export type { BusinessItem } from './business-record';
 export type ConversationItem={id:string;role:'user'|'assistant';text:string;ts:number};
-export type BusinessItem={recordId:string;saveId:string;sequence:number;sourceMode:string;reason:string;occurredAtMs:number|null;receivedAtMs:number;timeStatus:string;resourceChanges:{resourceId:string;delta:number}[];itemChanges:{operation:string;itemInstanceId:string;itemId?:string;quantity?:number;state:string}[];
- format?:string;recordKind?:'baseline'|'business_commit';authorizationSource?:string;originVerified?:boolean;
- baseline?:{wallets:{familyCoin:number|null;stardust:number|null;'M-CARD-001':number|null};items:{itemId:string;quantity:number|null;state:string;itemKind?:string}[]};
- inventoryStateChanges?:{itemId:string;fromState:string;toState:string;quantity:number|null}[];
-};
 const object=(v:unknown):Record<string,any>=>{if(!v||typeof v!=='object'||Array.isArray(v))throw new ApiError(502,{error:'invalid_history'});return v as Record<string,any>;};
 function params(q:HistoryQuery){const values:Record<string,string>={limit:String(q.limit)};if(q.cursor)values.cursor=q.cursor;if(q.fromDay)values.from_day=q.fromDay;if(q.toDay)values.to_day=q.toDay;if(q.kind)values.kind=q.kind;return Object.entries(values).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');}
 async function getPage(publicId:string,kind:string,q:HistoryQuery){const result=object(await apiRequest(`/v1/parent/devices/${encodeURIComponent(publicId)}/${kind}?${params(q)}`));const d=object(result.data);if(result.ok!==true||d.schemaVersion!==1||!Array.isArray(d.items)||typeof d.hasMore!=='boolean'||!(d.nextCursor===null||typeof d.nextCursor==='string')||(d.hasMore&&!d.nextCursor))throw new ApiError(502,{error:'invalid_history'});return d;}
@@ -15,7 +12,7 @@ export async function getConversationPage(publicId:string,q:HistoryQuery):Promis
  for(const k of ['messageCount','userMessageCount','assistantMessageCount'])if(!Number.isSafeInteger(d[k])||d[k]<0)throw new ApiError(502,{error:'invalid_history_count'});return {items,nextCursor:d.nextCursor,hasMore:d.hasMore,messageCount:d.messageCount,userMessageCount:d.userMessageCount,assistantMessageCount:d.assistantMessageCount,historyComplete:false};
 }
 export async function getBusinessPage(publicId:string,q:HistoryQuery):Promise<HistoryPage<BusinessItem>>{
- const d=await getPage(publicId,'ark/records',q);const items=d.items.map((v:unknown)=>{const r=object(v);if(typeof r.recordId!=='string'||typeof r.saveId!=='string'||!Number.isSafeInteger(r.sequence)||!Array.isArray(r.resourceChanges)||!Array.isArray(r.itemChanges))throw new ApiError(502,{error:'invalid_record'});return r as BusinessItem;});return {items,nextCursor:d.nextCursor,hasMore:d.hasMore,historyComplete:false};
+ const d=await getPage(publicId,'ark/records',q);return {items:d.items.map(businessItem),nextCursor:d.nextCursor,hasMore:d.hasMore,historyComplete:false};
 }
 export async function getObservationPage(publicId:string,q:HistoryQuery):Promise<HistoryPage<Observation>>{
  const d=await getPage(publicId,'observations',q);return {items:d.items.map(observation),nextCursor:d.nextCursor,hasMore:d.hasMore,historyComplete:false};

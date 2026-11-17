@@ -79,6 +79,9 @@ export default function RealDataHome() {
               {view.availability === 'stale' && <Text className="notice">近期未收到上报，以下为上次记录。</Text>}
               <View className="live-metrics">
                 <View><Text className="metric-label">亮度</Text><Text className="live-metric-value">{view.brightness}</Text></View>
+                <View><Text className="metric-label">灯光</Text><Text className="live-metric-value">{view.lighting}</Text></View>
+                <View><Text className="metric-label">色温</Text><Text className="live-metric-value">{view.colorMode}</Text></View>
+                <View><Text className="metric-label">使用计时</Text><Text className="live-metric-value">{view.focus}</Text></View>
                 <View><Text className="metric-label">在位状态</Text><Text className="live-metric-value">{view.presence}</Text></View>
                 <View><Text className="metric-label">视距</Text><Text className="live-metric-value">{view.distance}</Text></View>
               </View>

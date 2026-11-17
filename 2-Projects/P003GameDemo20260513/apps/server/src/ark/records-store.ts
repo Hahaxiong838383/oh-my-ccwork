@@ -208,7 +208,9 @@ export class RecordsStore{
   const c=this.db.prepare(`SELECT MIN(started) coverage_from_ms,SUM(dropped) dropped_records FROM (SELECT save_id,MIN(coverage_from_ms) started,MAX(dropped_records) dropped FROM ark_record_legacy r WHERE ${legacy.sql} GROUP BY save_id)`).get(...legacy.args) as any;
   return b.last_received_at_ms===null?result:{...result,coverage_from_ms:c.coverage_from_ms,dropped_records:c.dropped_records??0};
  }
- page(publicId:string,owner:string,q:RecordQuery){return this.authorizedRead(publicId,owner,i=>{
+ page(publicId:string,owner:string,q:RecordQuery){return this.authorizedRead(publicId,owner,i=>this.pageForIdentity(i,q));}
+ /** Shared projection keeps the dashboard's recent page within the same authorization snapshot. */
+ private pageForIdentity(i:Identity,q:RecordQuery){
   const {cursor,limit,...filters}=q,filter=canonical({limit,...filters}),scope=this.scope(i),now=Date.now();
   const c=cursor?this.decodeCursor(cursor):null;
   if(c&&(c.scope!==scope||c.filter!==filter))throw new RecordsError(400,'invalid_cursor');if(c&&c.expires<=now)throw new RecordsError(410,'cursor_expired');
@@ -222,7 +224,7 @@ export class RecordsStore{
    const {origin_grant_id,origin_epoch,...r}=JSON.parse(row.body) as BusinessRecord;return {...r,received_at_ms:row.received_at_ms,time_status:row.time_status,item_references:r.item_changes.filter(x=>x.operation==='activated').map(x=>{if(x.operation!=='activated')throw Error('unreachable');const a=this.record(i.sn,x.acquired_record_id);return {item_instance_id:x.item_instance_id,acquired_record_id:x.acquired_record_id,status:a&&a.ingest_id<=water&&this.referenceMatches(i,JSON.parse(row.body),a,x.item_instance_id)?'resolved':'pending'};})};});
   const last=visible.at(-1),next_cursor=has_more&&last?this.encodeCursor({v:1,scope,filter,water,legacy_water,expires:c?.expires??now+limits().cursor_ttl_ms,last:[last.sort_ms,last.save_id,last.sequence,last.record_id]}):null;
   return {schema_version:1,items,next_cursor,has_more,coverage,updated_at_ms:coverage.last_received_at_ms};
- });}
+ }
  private summaries(where:ReturnType<RecordsStore['where']>,legacy:ReturnType<RecordsStore['legacyWhere']>,coverage:ReturnType<typeof emptyCoverage>,now:number){
   const result=dashboardRecords(coverage,'no_records',now);
   const from=Date.parse(`${result.yesterday_income.date}T00:00:00+08:00`),to=from+86400000;
@@ -320,7 +322,10 @@ export class RecordsStore{
  dashboard(publicId:string,owner:string){
   try{return this.authorizedRead(publicId,owner,i=>{
    const where=this.where(i,{},this.water()),legacy=this.legacyWhere(i,{},this.legacyWater());
-   return this.summaries(where,legacy,this.mergedCoverage(where,legacy),Date.now());
+   const result=this.summaries(where,legacy,this.mergedCoverage(where,legacy),Date.now());
+   const recent=this.pageForIdentity(i,{limit:20});
+   return {...result,recent_activity:{...recent,source:'ark_records' as const,available:recent.items.length>0,
+    reason:recent.items.length?'partial_history':'no_records',limit:20}};
   });}catch(e){if(e instanceof RecordsError&&e.status===404)return dashboardRecords(emptyCoverage(),'not_enabled');throw e;}
  }
 }

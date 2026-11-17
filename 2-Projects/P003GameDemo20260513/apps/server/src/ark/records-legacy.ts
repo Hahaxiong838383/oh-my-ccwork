@@ -162,6 +162,9 @@ export type LegacyDisplayRecord={
  resource_conflicts:string[];
  unmapped_resource_changes:z.infer<typeof walletChange>[];
  inventory_state_changes:{item_id:string;from_state:string;to_state:string;quantity:number}[];
+ // Preserved business facts for history readers; these never imply normal income.
+ grants:Commit['data']['grants'];inventory_changes:Commit['data']['inventory_changes'];
+ makeup_grants:Commit['data']['makeup_grants'];makeup_uses:Commit['data']['makeup_uses'];
  baseline?:{wallets:{family_coin:number|null;stardust:number|null;'M-CARD-001':number|null};items:{item_id:string;quantity:number;state:string;item_kind:ItemKind}[]};
 };
 export function projectLegacyRecord(record:LegacyRecord):LegacyDisplayRecord {
@@ -171,7 +174,8 @@ export function projectLegacyRecord(record:LegacyRecord):LegacyDisplayRecord {
   reason:'unknown',business_source_id:null,tank_id:record.active_ecotank_id,stage_id:null,
   format:LEGACY_CONTRACT,contract_id:LEGACY_CONTRACT,record_kind:record.record_kind,
   authorization_source:'legacy_explicit_scope',origin_verified:false,config_revision:record.config_revision,
-  resource_changes:[],item_changes:[],resource_conflicts:[],unmapped_resource_changes:[],inventory_state_changes:[]};
+  resource_changes:[],item_changes:[],resource_conflicts:[],unmapped_resource_changes:[],inventory_state_changes:[],
+  grants:[],inventory_changes:[],makeup_grants:[],makeup_uses:[]};
  if(record.record_kind==='baseline'){
   const inventoryCard=record.data.inventory.find(x=>x.item_id==='M-CARD-001')?.quantity;
   const walletCard=record.data.wallet['M-CARD-001'];
@@ -181,6 +185,8 @@ export function projectLegacyRecord(record:LegacyRecord):LegacyDisplayRecord {
    'M-CARD-001':conflict?null:inventoryCard??walletCard??null},items:record.data.inventory.filter(x=>x.item_id!=='M-CARD-001').map(x=>({item_id:x.item_id,quantity:x.quantity,state:x.status,item_kind:itemKind(x.kind)}))};
   return result;
  }
+ result.grants=record.data.grants;result.inventory_changes=record.data.inventory_changes;
+ result.makeup_grants=record.data.makeup_grants;result.makeup_uses=record.data.makeup_uses;
  const inventoryCard=record.data.inventory_changes.find(x=>x.item_id==='M-CARD-001');
  for(const change of record.data.wallet_changes){
   if(inventoryCard&&change.resource_id==='M-CARD-001')continue;

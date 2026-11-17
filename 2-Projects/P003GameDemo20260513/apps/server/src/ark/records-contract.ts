@@ -53,6 +53,7 @@ export const emptyCoverage=()=>({kind:'received_records' as const,complete:false
 export type SummaryItem={item_instance_id:string;item_id:string;item_kind:'tank_component'|'avatar_decoration'|'unknown';quantity:number;state:'pending_activation'|'active'|'unknown';activation_record_id:string|null};
 export function dashboardRecords(coverage=emptyCoverage(),reason='no_records',now=Date.now()){
  return {schema_version:1,coverage,updated_at_ms:coverage.last_received_at_ms,
+ recent_activity:{schema_version:1,source:'ark_records' as const,available:false,reason,limit:20,items:[] as unknown[],next_cursor:null as string|null,has_more:false,coverage,updated_at_ms:coverage.last_received_at_ms},
  yesterday_income:{available:false,reason,date:new Date(now+8*3600000-86400000).toISOString().slice(0,10),timezone:'Asia/Shanghai',source_mode:null as 'normal'|null,family_coin:null as number|null,stardust:null as number|null,occurred_from_ms:null as number|null,occurred_to_ms:null as number|null,received_at_ms:null as number|null},
  latest_items:{available:false,reason,source_mode:null as 'normal'|null,record_id:null as string|null,save_id:null as string|null,occurred_at_ms:null as number|null,received_at_ms:null as number|null,items:[] as SummaryItem[]}};
 }

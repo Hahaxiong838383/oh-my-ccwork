@@ -6,6 +6,14 @@ vi.mock('@tarojs/taro',()=>({default:{getStorageSync:()=> 'parent-test',request:
 beforeEach(()=>{vi.mocked(Taro.request).mockReset();process.env.TARO_APP_API_BASE_URL='https://kidshub-ai.hahaxiong.cc';});
 const response=(data:any)=>({statusCode:200,header:{},data:{ok:true,data}} as never);
 describe('真实snake_case合同经微信传输层映射',()=>{
+ it('色温和测试来源游戏快照可读，正常资产摘要保持隔离',async()=>{
+  vi.mocked(Taro.request).mockResolvedValue(response({device:{online:true,updated_at_ms:1794898400000,color_mode:'warm',led_enabled:true,focus_active:false},ark:{available:false,reason:'non_normal',reported_state:{source:'device.ark.state',source_mode:'gm',snapshot_id:'s1',logical_day:'2026-11-08',captured_at_ms:1794898399000,received_at_ms:1794898400000,wallets:{family_coin:123,stardust:0},inventory:{'M-CARD-001':2},progress:{timer_state:'paused',claimable_count:1,next_reward:{status:'claimable',kind:'currency',item_id:'C-FAMILY-001',stage_id:'REGULAR-05',remaining_seconds:0}}}},records:{recent_activity:{available:true,items:[{record_id:'r1',save_id:'save',sequence:2,source_mode:'gm',reason:'gm_adjustment',logical_day:'2026-11-08',occurred_at_ms:1794898399000,received_at_ms:1794898400000,time_status:'reported',resource_changes:[],item_changes:[],grants:[{reward_instance_id:'reward1',source_kind:'progress_stage',source_id:'REGULAR-05',logical_day:'2026-11-08',resolved_rewards:[{item_id:'C-FAMILY-001',quantity:5,kind:'currency'}]}]}],has_more:false,next_cursor:null}}}));
+  const d=await liveApi.getSnapshot('dev_c');
+  expect(d).toMatchObject({colorMode:'warm',ledEnabled:true,focusActive:false});
+  expect(d.details?.ark.available).toBe(false);
+  expect(d.details?.reportedState).toMatchObject({sourceMode:'gm',logicalDay:'2026-11-08',familyCoin:123,stardust:0,cards:2,progress:{claimableCount:1,nextReward:{remainingSeconds:0}}});
+  expect(d.details?.recentActivity.items[0]).toMatchObject({recordId:'r1',sourceMode:'gm',logicalDay:'2026-11-08',grants:[{logicalDay:'2026-11-08',resolvedRewards:[{quantity:5}]}]});
+ });
  it('历史奖励/库存/使用时长snake合同可读，不把unknown旧奖励混入当前资产',async()=>{
   const item={event_id:'old-reward',event_name:'g1.reward_granted',kind:'rewards',occurred_at_ms:1793933632128,received_at_ms:1794830000000,time_status:'reported',source_mode:'unknown',rewards:[{item_id:'E01-DEC-001',quantity:1,kind:'decoration',tank_id:null}]};
   vi.mocked(Taro.request).mockResolvedValueOnce(response({device:{online:false,updated_at_ms:null},historical_usage:{available:true,total_seconds:902,observed_seconds:0,estimated_seconds:902,from_day:'2026-11-06',to_day:'2026-11-06',daily:[]},observations:{available:true,counts:{rewards:11,inventory:21,makeup_cards:5,progress:3,wallet:0},coverage:{complete:false,first_occurred_at_ms:1793933632128},latest:{rewards:item,makeup_cards:{...item,event_id:'card',kind:'makeup_cards',rewards:undefined,inventory:{item_id:'M-CARD-001',before:1,after:0,delta:-1}}}}}));

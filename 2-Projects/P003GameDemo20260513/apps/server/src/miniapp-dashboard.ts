@@ -90,13 +90,20 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
         today: usageDaily[usageDaily.length - 1], daily: usageDaily },
       device: {
         updated_at_ms: snap?.server_received_ms ?? null,
+        captured_at_ms: p?.captured_at_ms ?? null,
         online: snap ? now - snap.server_received_ms < ONLINE_WINDOW_MS : false,
         lid_open: p?.lid_open ?? null,
         present: p?.present ?? null,
+        led_enabled: p?.led_enabled ?? null,
         brightness_level: p?.brightness_level ?? null,
-        color_mode: p?.color_mode ?? null,
+        // Keep the device's reported semantic value. Do not invert modes to compensate
+        // for a particular Launcher build's MCU decoder; unknown modes stay unknown.
+        color_mode: p?.color_mode === 'cool' || p?.color_mode === 'normal' || p?.color_mode === 'warm' ? p.color_mode : null,
         image_distance_m: p?.image_distance_m ?? null,
         image_distance_state: p?.image_distance_state ?? null,
+        focus_active: p?.focus_active ?? null,
+        presence_state: p?.presence_state ?? null,
+        presence_source: p?.presence_source ?? null,
       },
       today: {
         focus_minutes: telemetryAvailable?Math.round((todayRow?.focus_ms ?? 0) / 60_000):null,

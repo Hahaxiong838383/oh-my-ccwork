@@ -20,6 +20,12 @@ function fixture(overrides: Partial<LiveDataApi> = {}) {
 }
 
 describe('真实设备状态', () => {
+  it('色温直接对应既有字符串枚举，开灯和使用片段false均不当缺测',()=>{
+    expect(snapshotView({...snapshot,colorMode:'normal',ledEnabled:false,focusActive:false})).toMatchObject({colorMode:'常规',lighting:'已关灯',focus:'未计时'});
+    expect(snapshotView({...snapshot,colorMode:'cool'}).colorMode).toBe('冷光');
+    expect(snapshotView({...snapshot,colorMode:'warm'}).colorMode).toBe('暖光');
+    expect(snapshotView({...snapshot,colorMode:null}).colorMode).toBe('暂无数据');
+  });
   it('零亮度和无人是有效数据，未知视距不显示为0', () => {
     expect(snapshotView(snapshot)).toMatchObject({ availability: 'available', brightness: '0 档', presence: '无人', distance: '暂无数据', onlineText: '近期有上报' });
   });

@@ -127,14 +127,14 @@ test('normal Ark HTTP/ACK/SQLite metadata, partial/null/0; duplicate preserves f
  const r = await upload(f, s); assert.equal(r.status, 200); assert.equal(r.body.status, 'accepted');
  assert.equal(JSON.parse(String(arkStore().db.prepare('SELECT body FROM ark_current WHERE sn=?').get(f.sn)!.body)).snapshot_id, s.snapshot_id);
  const a = (await dash(f)).body.data.ark;
- assert.deepEqual(a, { available: true, reason: null, source_mode: 'normal', snapshot_id: s.snapshot_id, captured_at_ms: s.captured_at_ms, received_at_ms: r.body.received_at_ms, wallets: s.wallets, inventory: s.inventory });
+ assert.deepEqual(a, { available: true, reason: null, source_mode: 'normal', snapshot_id: s.snapshot_id, captured_at_ms: s.captured_at_ms, received_at_ms: r.body.received_at_ms, wallets: s.wallets, inventory: s.inventory, reported_state: {source:'device.ark.state',source_mode:s.source_mode,snapshot_id:s.snapshot_id,logical_day:s.logical_day,captured_at_ms:s.captured_at_ms,received_at_ms:r.body.received_at_ms,wallets:s.wallets,inventory:s.inventory,progress:s.progress} });
  await new Promise(resolve => setTimeout(resolve, 15));
  const replay = await upload(f, s); assert.equal(replay.body.status, 'duplicate'); assert.equal(replay.body.received_at_ms, r.body.received_at_ms); assert.deepEqual((await dash(f)).body.data.ark, a);
  const s2 = { ...s, sequence: 2, snapshot_id: 'ark-2', wallets: { family_coin: null, stardust: null } }; assert.equal((await upload(f, s2)).body.status, 'accepted');
  const n = (await dash(f)).body.data.ark; assert.equal(n.available, true); assert.deepEqual(n.wallets, s2.wallets);
 });
-test('GM/unknown latest snapshot hides resources and metadata even after normal', async () => {
- for (const mode of ['gm', 'unknown']) { const f = await fixture(); authorize(f); const s = snapshot(); assert.equal((await upload(f, s)).body.status, 'accepted'); assert.equal((await upload(f, { ...s, snapshot_id: mode, sequence: 2, source_mode: mode })).body.status, 'accepted'); emptyArk((await dash(f)).body.data.ark, 'non_normal'); }
+test('GM/unknown snapshot replaces reported facts without becoming normal assets after normal', async () => {
+ for (const mode of ['gm', 'unknown']) { const f = await fixture(); authorize(f); const s = snapshot(); assert.equal((await upload(f, s)).body.status, 'accepted');const next={...s,snapshot_id:mode,sequence:2,source_mode:mode,logical_day:'2026-11-01',wallets:{family_coin:42,stardust:0},progress:{timer_state:'paused',next_reward:{status:'day_complete',kind:'unknown',item_id:null,stage_id:null,remaining_seconds:null},claimable_count:0}}; assert.equal((await upload(f,next)).body.status, 'accepted');const a=(await dash(f)).body.data.ark;emptyArk(a,'non_normal');assert.equal(a.reported_state.snapshot_id,mode);assert.equal(a.reported_state.source_mode,mode);assert.equal(a.reported_state.logical_day,'2026-11-01');assert.deepEqual(a.reported_state.wallets,next.wallets);assert.deepEqual(a.reported_state.progress,next.progress); }
 });
 test('two owners get reciprocal 404; ownership change cannot expose previous-epoch assets', async () => {
  const a = await fixture(), b = await fixture(); authorize(a); assert.equal((await upload(a, snapshot())).body.status, 'accepted');
@@ -202,4 +202,23 @@ test('invalid-only legacy focus plus posture daily row remains unavailable and i
  tel.prepare('INSERT INTO device_telemetry_daily(sn,date,focus_ms,correct_rounds) VALUES(?,?,0,1)').run(f.sn, dayOf(now));
  noUsage((await dash(f)).body.data.usage);
  assert.equal(tel.prepare('SELECT COUNT(*) AS n FROM device_telemetry_event WHERE sn=?').get(f.sn)!.n, 1);
+});
+
+test('telemetry light modes survive HTTP ACK, SQLite and parent projection; unknown is not guessed', async () => {
+ for (const [i, mode] of ['cool', 'normal', 'warm', 'future_mode', null].entries()) {
+  const f = await fixture(), now = Date.now();
+  const state = { snapshot_id: `light-${i}`, captured_at_ms: now, led_enabled: false,
+   brightness_level: 3, color_mode: mode, focus_active: false, presence_state: 'absent', presence_source: 'camera' };
+  const r = await batch(f, [], state);
+  assert.equal(r.status, 200); assert.equal(r.body.data.snapshot.accepted, true);
+  const stored = JSON.parse(String(tel.prepare('SELECT payload_json FROM device_telemetry_snapshot WHERE sn=?').get(f.sn)!.payload_json));
+  assert.deepEqual(stored, state, 'ACK keeps the original reported values in SQLite');
+  const d = (await dash(f)).body.data.device;
+  assert.equal(d.color_mode, i < 3 ? mode : null, 'no cool/normal inversion or numeric-channel guessing');
+  assert.equal(d.led_enabled, false); assert.equal(d.brightness_level, 3); assert.equal(d.focus_active, false);
+  assert.equal(d.presence_state, 'absent'); assert.equal(d.presence_source, 'camera');
+  assert.equal(d.captured_at_ms, now); assert.equal(d.updated_at_ms, r.body.data.server_received_ms);
+ }
+ const empty = (await dash(await fixture())).body.data.device;
+ for (const key of ['color_mode', 'led_enabled', 'brightness_level', 'captured_at_ms', 'focus_active', 'presence_state', 'presence_source']) assert.equal(empty[key], null);
 });

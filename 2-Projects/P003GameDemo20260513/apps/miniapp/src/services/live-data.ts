@@ -7,6 +7,9 @@ export type DeviceSnapshot = {
   updatedAtMs: number | null;
   present: boolean | null;
   brightnessLevel: number | null;
+  colorMode?: 'cool' | 'normal' | 'warm' | null;
+  ledEnabled?: boolean | null;
+  focusActive?: boolean | null;
   imageDistanceM: number | null;
   imageDistanceState: string | null;
 };
@@ -30,6 +33,9 @@ export function snapshotView(snapshot: DeviceSnapshot | null) {
     availability: !received ? 'no_data' : snapshot!.online ? 'available' : 'stale',
     onlineText: !received ? '尚无上报' : snapshot!.online ? '近期有上报' : '近期未上报',
     brightness: received && snapshot!.brightnessLevel !== null ? `${snapshot!.brightnessLevel} 档` : '暂无数据',
+    colorMode: received && snapshot!.colorMode ? {cool:'冷光',normal:'常规',warm:'暖光'}[snapshot!.colorMode] : '暂无数据',
+    lighting: received && typeof snapshot!.ledEnabled === 'boolean' ? snapshot!.ledEnabled ? '已开灯' : '已关灯' : '暂无数据',
+    focus: received && typeof snapshot!.focusActive === 'boolean' ? snapshot!.focusActive ? '计时中' : '未计时' : '暂无数据',
     presence: !received || snapshot!.present === null ? '暂无数据' : snapshot!.present ? '有人' : '无人',
     distance: received && snapshot!.imageDistanceState === 'valid' && snapshot!.imageDistanceM !== null ? `${snapshot!.imageDistanceM} 米` : '暂无数据',
   };

@@ -1,4 +1,7 @@
 import { arkCeiling, arkService, arkStore } from './service.js';
+import type { ArkSnapshot } from './contracts.js';
+
+type ReportedState = Pick<ArkSnapshot, 'source_mode' | 'snapshot_id' | 'logical_day' | 'captured_at_ms' | 'wallets' | 'inventory' | 'progress'> & {source:'device.ark.state';received_at_ms:number};
 
 type UnavailableReason = 'not_enabled' | 'no_snapshot' | 'non_normal' | 'identity_mismatch';
 function unavailable(reason: UnavailableReason) {
@@ -6,6 +9,7 @@ function unavailable(reason: UnavailableReason) {
     available: false, reason, source_mode: null, snapshot_id: null,
     captured_at_ms: null, received_at_ms: null,
     wallets: { family_coin: null, stardust: null }, inventory: { 'M-CARD-001': null },
+    reported_state: null as ReportedState | null,
   };
 }
 
@@ -28,11 +32,17 @@ export function dashboardArk(sn: string) {
   if (!current) return unavailable('no_snapshot');
   const s = current.snapshot;
   if (s.captured_at_ms < grant.not_before_ms) return unavailable('identity_mismatch');
-  if (s.source_mode !== 'normal') return unavailable('non_normal');
+  // A GM/unknown snapshot is still a received device fact. Keep the existing
+  // normal-only asset contract, but do not erase the independent reported state.
+  const reported_state:ReportedState={source:'device.ark.state',source_mode:s.source_mode,
+    snapshot_id:s.snapshot_id,logical_day:s.logical_day,captured_at_ms:s.captured_at_ms,
+    received_at_ms:current.received_at_ms,wallets:s.wallets,inventory:s.inventory,progress:s.progress};
+  if (s.source_mode !== 'normal') return {...unavailable('non_normal'),reported_state};
   return {
     available: true, reason: null, source_mode: s.source_mode, snapshot_id: s.snapshot_id,
     captured_at_ms: s.captured_at_ms, received_at_ms: current.received_at_ms,
     wallets: { family_coin: s.wallets.family_coin, stardust: s.wallets.stardust },
     inventory: { 'M-CARD-001': s.inventory['M-CARD-001'] },
+    reported_state,
   };
 }

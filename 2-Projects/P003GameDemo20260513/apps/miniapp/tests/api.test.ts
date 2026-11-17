@@ -35,7 +35,7 @@ describe('小可现有后台合同适配', () => {
       .mockResolvedValueOnce({ statusCode: 200, header: {}, data: { ok: true, data: { device: { online: false, updated_at_ms: 1793260800000, present: false, brightness_level: 0, image_distance_m: null, image_distance_state: null }, today: { focus_minutes: 0 }, week: {} } } } as never);
     const devices = await liveApi.getDevices();
     expect(devices).toEqual([{ sn: 'SN-A', publicId: 'dev_a', note: '读写台', status: 'active', brainOpened: true }]);
-    expect(await liveApi.getSnapshot(devices[0].publicId)).toEqual({ online: false, updatedAtMs: 1793260800000, present: false, brightnessLevel: 0, imageDistanceM: null, imageDistanceState: null });
+    expect(await liveApi.getSnapshot(devices[0].publicId)).toEqual({ online: false, updatedAtMs: 1793260800000, present: false, brightnessLevel: 0, colorMode: null, ledEnabled: null, focusActive: null, imageDistanceM: null, imageDistanceState: null });
     expect(vi.mocked(Taro.request).mock.calls[1][0].url).toBe('https://test.example/v1/parent/devices/dev_a/dashboard');
   });
 
