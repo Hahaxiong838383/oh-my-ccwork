@@ -8,5 +8,8 @@ assert.equal(soakPlan({T5_SOAK:'1'},at('2026-11-18T23:00:00+08:00'))!.dailyDelay
 assert.equal(soakPlan({T5_SOAK:'1'},at('2026-11-18T23:30:00+08:00'))!.dailyDelayMs,23.5*3600000);
 const smoke=soakPlan({T5_SOAK_SMOKE:'1'},at('2026-11-18T01:00:00+08:00'))!;assert.equal(smoke.fullDay,false);assert(smoke.durationMs<86400000);
 assert.throws(()=>soakPlan({T5_SOAK:'1',T5_SOAK_SMOKE:'1'},Date.now()));
+const preflight=soakPlan({T5_SOAK_PREFLIGHT:'1'},Date.now())!;assert.equal(preflight.fullDay,false);assert.equal(preflight.durationMs,600000);assert.equal(preflight.arkIntervalMs,50000);assert.equal(preflight.maintenanceIntervalMs,300000);assert.equal(preflight.dailyDelayMs,20000);
+assert.throws(()=>soakPlan({T5_SOAK_PREFLIGHT:'1',T5_SOAK:'1'},Date.now()));
+assert.throws(()=>soakPlan({T5_SOAK_PREFLIGHT:'1',T5_SOAK_SMOKE:'1'},Date.now()));
 assert.throws(()=>soakPlan({T5_SOAK:'1'},NaN));
 console.log('PASS CST 23:00 scheduling, exact real-day duration, smoke never full-day');

@@ -1,0 +1,440 @@
+{
+  "result": "PASS_SCOPED",
+  "scope": "REAL_1H_TRANSPORT_OUTAGE_SMALL_LOAD",
+  "full_t5_pass": false,
+  "differences": [],
+  "ssh": false,
+  "modified_source_or_production": false,
+  "executed_verify_outage_py": false,
+  "used_linux_schedule_smoke": false,
+  "evidence_sha256": {
+    "OUTAGE-CLOUD-EVIDENCE.json": "95155d0b24fbc0ff542ee6e4751d40951d929c861d38645a1882cb674d6e34cc",
+    "OUTAGE-NAS-EVIDENCE.json": "3506b2b72ae22bc672b190fc45e283124dd74cbbca22d4d1020cb7b3d226a87f"
+  },
+  "identity": {
+    "runtime": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+    "producer_commit": "4aed8139ea665a529d94d29e8e9c677bff549a34",
+    "harness_sha256": "636da4e4bb056b2b55aaebd9200df720b1bfb8641212c62de08d6ad58e7b4088"
+  },
+  "independent_run": {
+    "script_path": "/tmp/outage_independent_check.py",
+    "script_sha256": "00f387c8d7c19282462f1db50b38b78f44d9639c69f925019ced761cc4e8cf0a",
+    "log_path": "/tmp/outage-independent-run.log",
+    "log_sha256": "adc02df303e6c8e752da688d4f51d7bd80bdd03d490f766b77f0ff04294ba5a0",
+    "log_bytes": 9449,
+    "exit_code": 0,
+    "assertion_count": 45,
+    "assertions_ok": 45,
+    "method": "Recounted HTTP rows, payload bytes, SHA-256, receipts, record ids, uptime literals, and guard samples from the two raw JSON files. Did not import or execute verify-outage.py."
+  },
+  "local_file_sha256": {
+    "OUTAGE-CANDIDATE.json": "19f41f7e89ad4aa112a11a60419944a0e4d9bdf2c84670fcead508b2bc4c47ae",
+    "OUTAGE-VERIFIED.json": "7073b209a34770cb07e23da4375f9238cea0433c2c636c272f028c0443d73f0f",
+    "outage-cloud-driver.py": "ff4aa4d9901a117a75b029185c73e9f0271187b4bef23d4ded3b8ded10f740b5",
+    "outage-gate.py": "e843127d662f895058906d715a57125d93ace111f7d1b213ebc9f0f09dfb8c9f",
+    "outage-nas-runner.py": "7483ef7c8b4d9fb0c3ebc87d8d8e1dcad4b144748f6ea9fe13f94597c7585f84",
+    "verify-outage.py": "8db04fcd6c7df16a45c4702ee1eab41d902a798c8aef59ba9d80291d6cec5d3e"
+  },
+  "evidence_pins_matched_locally": {
+    "outage-gate.py": "e843127d662f895058906d715a57125d93ace111f7d1b213ebc9f0f09dfb8c9f",
+    "outage-nas-runner.py": "7483ef7c8b4d9fb0c3ebc87d8d8e1dcad4b144748f6ea9fe13f94597c7585f84"
+  },
+  "measured": {
+    "accepted": 3700,
+    "blocked_elapsed_ms_min_max": [
+      7,
+      13
+    ],
+    "blocked_monotonic_seconds": "3600.000000000",
+    "canonical_envelope_bytes": 3178684,
+    "devices": 50,
+    "final_pending_records": 0,
+    "fixture_peak_bytes": 9495938,
+    "guard_not_ready": 0,
+    "guard_samples": 751,
+    "manifest_bytes_sum": 3178684,
+    "min_free_bytes": 5574287360,
+    "packages": 23,
+    "raw_payload_bytes": 3178684,
+    "record_id_min_max": [
+      1,
+      3700
+    ],
+    "recovery_ms": 161715,
+    "refused_attempts": 120,
+    "rounds": 74,
+    "source_pending": 0,
+    "stardust_python_types": {
+      "NoneType": 3700
+    }
+  },
+  "notes": [
+    {
+      "commands": {
+        "list": 120
+      },
+      "first_blocked_uptime": 11026597.22,
+      "forward_elapsed_max_ms": 1372,
+      "forward_elapsed_min_ms": 811,
+      "gap_max_s": 30.09,
+      "gap_min_s": 30.02,
+      "gate_port": 48191,
+      "id": "blocked_attempt_shape",
+      "last_blocked_uptime": 11030172.83
+    },
+    {
+      "id": "producer_finish_backlog_before_recovery_drain",
+      "nas_finished_at_ms": 1794936730752,
+      "producer_finished_at_ms": 1794936576078,
+      "producer_pending_records": 3150,
+      "recovery_finished_at_ms": 1794936637476
+    },
+    {
+      "counts": {
+        "Authorization": 0,
+        "Bearer ": 0,
+        "eyJ": 0
+      },
+      "id": "secret_marker_counts"
+    }
+  ],
+  "assertions": [
+    {
+      "actual": "95155d0b24fbc0ff542ee6e4751d40951d929c861d38645a1882cb674d6e34cc",
+      "expected": "95155d0b24fbc0ff542ee6e4751d40951d929c861d38645a1882cb674d6e34cc",
+      "id": "cloud_evidence_sha256",
+      "ok": true
+    },
+    {
+      "actual": "3506b2b72ae22bc672b190fc45e283124dd74cbbca22d4d1020cb7b3d226a87f",
+      "expected": "3506b2b72ae22bc672b190fc45e283124dd74cbbca22d4d1020cb7b3d226a87f",
+      "id": "nas_evidence_sha256",
+      "ok": true
+    },
+    {
+      "embedded": {
+        "commit": "4aed8139ea665a529d94d29e8e9c677bff549a34",
+        "harness_sha256": "636da4e4bb056b2b55aaebd9200df720b1bfb8641212c62de08d6ad58e7b4088",
+        "production_changed": false,
+        "runtime": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1"
+      },
+      "file": {
+        "commit": "4aed8139ea665a529d94d29e8e9c677bff549a34",
+        "harness_sha256": "636da4e4bb056b2b55aaebd9200df720b1bfb8641212c62de08d6ad58e7b4088",
+        "production_changed": false,
+        "runtime": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1"
+      },
+      "id": "embedded_candidate_matches_file",
+      "ok": true
+    },
+    {
+      "actual": "636da4e4bb056b2b55aaebd9200df720b1bfb8641212c62de08d6ad58e7b4088",
+      "id": "harness_sha256",
+      "ok": true
+    },
+    {
+      "actual": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+      "id": "runtime_b1ce23",
+      "ok": true
+    },
+    {
+      "actual": "4aed8139ea665a529d94d29e8e9c677bff549a34",
+      "id": "producer_commit_4aed8139",
+      "ok": true
+    },
+    {
+      "id": "candidate_production_changed_flag_false",
+      "ok": true
+    },
+    {
+      "id": "local_gate_sha_matches_evidence_pin",
+      "local": "e843127d662f895058906d715a57125d93ace111f7d1b213ebc9f0f09dfb8c9f",
+      "ok": true,
+      "pin": "e843127d662f895058906d715a57125d93ace111f7d1b213ebc9f0f09dfb8c9f"
+    },
+    {
+      "id": "local_runner_sha_matches_evidence_pin",
+      "local": "7483ef7c8b4d9fb0c3ebc87d8d8e1dcad4b144748f6ea9fe13f94597c7585f84",
+      "ok": true,
+      "pin": "7483ef7c8b4d9fb0c3ebc87d8d8e1dcad4b144748f6ea9fe13f94597c7585f84"
+    },
+    {
+      "id": "done_embeds_same_producer",
+      "ok": true
+    },
+    {
+      "id": "done_embeds_same_recovery",
+      "ok": true
+    },
+    {
+      "id": "producer_shape",
+      "ok": true
+    },
+    {
+      "elapsed_ms": 3700008.692022,
+      "id": "producer_wall_span_ms",
+      "ok": true,
+      "wall_delta": 3700009,
+      "wall_elapsed_ms": 3700009
+    },
+    {
+      "elapsed_ms": 3700008.692022,
+      "id": "producer_elapsed_meets_duration",
+      "ok": true
+    },
+    {
+      "id": "producer_full_t5_pass_false",
+      "ok": true
+    },
+    {
+      "id": "http_count_3700",
+      "ok": true,
+      "rows": 3700,
+      "unique_snapshot_ids": 3700
+    },
+    {
+      "counts": {
+        "(200, 'accepted', True)": 3700
+      },
+      "id": "http_all_200_accepted",
+      "ok": true
+    },
+    {
+      "id": "http_exact_50_by_74",
+      "ok": true,
+      "unique_pairs": 3700
+    },
+    {
+      "boot": 1794932876069,
+      "id": "snapshot_id_binds_boot_actor_round",
+      "mismatches": 0,
+      "ok": true
+    },
+    {
+      "guard_stop": null,
+      "id": "source_stop_recorded_success",
+      "ok": true,
+      "status": "Result=success\nExecMainStatus=0\nMemoryPeak=[not set]\nCPUUsageNSec=[not set]\nActiveState=inactive\n"
+    },
+    {
+      "id": "nas_stop_recorded_exit_0",
+      "ok": true,
+      "result": {
+        "elapsed_uptime_s": 3860.739999998361,
+        "exit": 0,
+        "finished_at_ms": 1794936730752,
+        "full_t5_pass": false,
+        "scope": "NAS_TRANSPORT_ONLY_REQUIRES_SOURCE_PENDING_AND_PAYLOAD_ACCOUNTING",
+        "started_at_ms": 1794932870011,
+        "verified_packages": 23
+      }
+    },
+    {
+      "decimal": "3600.000000000",
+      "float": 3600.0,
+      "id": "blocked_window_exactly_3600s",
+      "ok": true,
+      "started": "11026597.130000001",
+      "until": "11030197.130000001"
+    },
+    {
+      "attempts": 195,
+      "id": "attempt_split_120_blocked_75_forward",
+      "ok": true
+    },
+    {
+      "counts": {
+        "(False, 0)": 75,
+        "(True, 255)": 120
+      },
+      "id": "blocked_iff_exit_255_forward_iff_exit_0",
+      "ok": true
+    },
+    {
+      "id": "blocked_flag_matches_uptime_comparison",
+      "mismatches": 0,
+      "ok": true
+    },
+    {
+      "id": "blocked_all_before_until_forward_all_at_or_after",
+      "ok": true
+    },
+    {
+      "id": "blocked_elapsed_incompatible_with_8s_connect_timeout",
+      "max_ms": 13,
+      "median_ms": 7,
+      "min_ms": 7,
+      "ok": true
+    },
+    {
+      "finished_at_ms": 1794936637476,
+      "id": "recovery_ms_161715",
+      "ok": true,
+      "recovery_ms": 161715,
+      "restored_ms": 1794936475761
+    },
+    {
+      "id": "recovery_accepted_3700_batches_23",
+      "ok": true
+    },
+    {
+      "id": "final_source_pending_zero",
+      "ok": true,
+      "recovery_source_pending": 0,
+      "stats": {
+        "id": 1,
+        "last_ack_ms": 1794936607629,
+        "last_attempt_ms": 1794936637284,
+        "last_error": null,
+        "last_success_ms": 1794936637284,
+        "pending_bytes": 0,
+        "pending_records": 0,
+        "reserved_bytes": 0
+      }
+    },
+    {
+      "bad": [],
+      "id": "no_ack_in_progress_before_wall_cutoff",
+      "ok": true,
+      "progress_rows": 74,
+      "samples": 72
+    },
+    {
+      "bad": [],
+      "id": "no_ack_in_progress_before_first_forward",
+      "ok": true,
+      "samples": 72
+    },
+    {
+      "id": "guard_751_all_ready",
+      "not_ready": 0,
+      "ok": true,
+      "samples": 751
+    },
+    {
+      "budget_failures": 0,
+      "fixture_peak_bytes": 9495938,
+      "id": "guard_budget_held_and_guard_stop_unset",
+      "min_free_bytes": 5574287360,
+      "ok": true
+    },
+    {
+      "batches": 23,
+      "id": "package_count_23_ids_align",
+      "ok": true,
+      "packages": 23,
+      "receipts": 23
+    },
+    {
+      "id": "all_final_batches_complete",
+      "ok": true
+    },
+    {
+      "bad": [],
+      "bad_count": 0,
+      "id": "payload_sha_bytes_receipts_match",
+      "ok": true
+    },
+    {
+      "bad": [],
+      "bad_count": 0,
+      "epochs": {
+        "1": 3700
+      },
+      "id": "payload_identity_account_epoch_null_hash",
+      "ok": true,
+      "stardust_types": {
+        "NoneType": 3700
+      }
+    },
+    {
+      "extra_ids": 0,
+      "http_missing_from_payload": 0,
+      "id": "ids_1_through_3700_and_http_join_exact",
+      "joined_snapshots": 3700,
+      "missing_ids": 0,
+      "ok": true,
+      "payload_missing_from_http": 0,
+      "payload_rows": 3700,
+      "unique_record_ids": 3700
+    },
+    {
+      "early": [],
+      "id": "receipts_verified_after_first_forward",
+      "ok": true
+    },
+    {
+      "canonical_envelope_bytes": 3178684,
+      "id": "canonical_envelope_bytes_3178684",
+      "manifest_bytes_sum": 3178684,
+      "ok": true,
+      "raw_payload_bytes": 3178684
+    },
+    {
+      "id": "raw_payload_bytes_equal_manifest_sum",
+      "manifest_bytes_sum": 3178684,
+      "ok": true,
+      "raw_payload_bytes": 3178684
+    },
+    {
+      "bad": 0,
+      "id": "current_50_round73_null_stardust",
+      "ok": true
+    },
+    {
+      "id": "independent_numbers_match_outage_verified_summary",
+      "mismatches": {},
+      "ok": true
+    },
+    {
+      "id": "summary_evidence_hashes",
+      "ok": true
+    }
+  ],
+  "timeline": {
+    "producer_finished_at_ms": 1794936576078,
+    "producer_finish_pending_records": 3150,
+    "first_forward_at_ms": 1794936475761,
+    "recovery_finished_at_ms": 1794936637476,
+    "recovery_ms": 161715,
+    "nas_finished_at_ms": 1794936730752,
+    "final_source_pending": 0,
+    "blocked_uptime_literals": {
+      "started_uptime": "11026597.130000001",
+      "until_uptime": "11030197.130000001",
+      "difference": "3600.000000000"
+    },
+    "blocked_elapsed_ms": {
+      "min": 7,
+      "max": 13
+    },
+    "blocked_gap_s": {
+      "min": 30.02,
+      "max": 30.09
+    },
+    "forward_elapsed_ms": {
+      "min": 811,
+      "max": 1372
+    },
+    "gate_port": 48191,
+    "progress_samples_before_cutoff_with_null_ack": 72,
+    "progress_rows": 74
+  },
+  "not_verified": [
+    "No SSH and no live re-check of systemctl, the bound socket, or a packet capture.",
+    "transport_attempts has no stderr and no destination address. The 120 refusals are exit 255, blocked consistent with uptime < until, command list, elapsed 7-13ms. The pinned gate script redirects those calls to 127.0.0.1 on the unbound port. The JSON does not contain the text Connection refused.",
+    "Remote copies of the gate and runner were not re-hashed. The pins inside OUTAGE-NAS-EVIDENCE.json match the local files in D.",
+    "outage-cloud-driver.py was hashed locally and is not a field in the two evidence JSON files. The harness sha256 is pinned in the cloud evidence.",
+    "production_changed false is the candidate flag. This review did not diff the production tree.",
+    "The conclusion is not bound to the current worktree HEAD.",
+    "CPUUsageNSec and MemoryPeak in the recorded systemctl show are [not set].",
+    "The separate Linux schedule smoke at 0.25 CPU was not opened and is not an input."
+  ],
+  "not_covered": [
+    "259200-record 72h model",
+    "mature mixed load",
+    "24h soak",
+    "voice AB",
+    "production pass"
+  ]
+}

@@ -32,7 +32,7 @@ if(mode==='run'){
  const soak=soakPlan(process.env,Date.now());let runMono=performance.now();
  assert.ok(!existsSync(root),'never reuse or overwrite a run');mkdirSync(root,{recursive:true,mode:0o700});assert.equal(realpathSync(root),root,'resolve parent symlinks first');
  const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',rollup_prefix_index:process.env.T5_ROLLUP_PREFIX_INDEX==='1',synthetic:true,started_ms:Date.now()};
- if(soak?.fullDay)assert(config.devices===50&&config.events===6000&&config.batch===200&&config.deadline_ms===3600000&&config.maintenance&&config.backup&&config.ark_history_indexes&&config.rollup_prefix_index&&!config.covering_index,'real day requires fixed 50x6000 workload, 1h daily deadline and candidate indexes');
+ if(soak?.fullDay||soak?.preflight)assert(config.devices===50&&config.events===6000&&config.batch===200&&config.deadline_ms===3600000&&config.maintenance&&config.backup&&config.ark_history_indexes&&config.rollup_prefix_index&&!config.covering_index,'real cadence requires fixed 50x6000 workload, 1h daily deadline and candidate indexes');
  Object.assign(config,{soak,continuous_ark:!!soak});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  process.env.DEVICES_DB_PATH=join(root,'devices.db');
@@ -61,7 +61,7 @@ if(mode==='run'){
  const maintain=async()=>{if(maintaining)return;maintaining=true;const start=Date.now();try{
   const queryName='mixed-query-'+start,query=soak&&arkRounds>0?launch([process.execPath,'--import','tsx','scripts/storage-ark-query-load.ts',root,queryName],queryName,{...process.env,T5_QUERY_ROUNDS:'1',T5_QUERY_OBSERVE:'1'}):null;
   const code=await launch([process.execPath,'--import','tsx','scripts/analytics-rollup.ts'],'maintenance-'+start,{...process.env,ANALYTICS_DB_PATH:path}),rollupDone=Date.now();
-  if(query){const exit=await query;assert.equal(exit,0,'mixed Ark reader failed');queryReports.push({start,done:Date.now(),name:queryName,exit,result:JSON.parse(readFileSync(join(root,queryName+'.json'),'utf8'))});}
+  if(query){const exit=await query;queryReports.push({start,done:Date.now(),name:queryName,exit,result:existsSync(join(root,queryName+'.json'))?JSON.parse(readFileSync(join(root,queryName+'.json'),'utf8')):null});assert.equal(exit,0,'mixed Ark reader failed');}
   const summaries=[];for await(const row of readJsonl(join(root,'maintenance-'+start+'.stdout')))summaries.push(row);assert.equal(summaries.length,1,'one maintenance report required');maintenance.push({start,done:Date.now(),rollup_done:rollupDone,code,report:summaries[0]});
  }catch(error){maintenanceError??=error;maintenance.push({start,done:Date.now(),error:String(error)});}finally{maintaining=false;}};
  let monitorError:unknown;
@@ -144,16 +144,19 @@ if(mode==='run'){
   writeFileSync(join(root,'RESULT.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({root,complete:integrity.complete,acks:result.acks,ark_correct:arkRows.filter(x=>x.correct).length,seconds:client.duration_ms/1000}));
   if(soak){
    let firstRequest=Infinity,lastRequest=0;for await(const request of readJsonl(join(root,'requests.jsonl'))){assert(Number.isSafeInteger(request.sent_at_ms)&&Number.isSafeInteger(request.finished_at_ms));firstRequest=Math.min(firstRequest,request.sent_at_ms);lastRequest=Math.max(lastRequest,request.finished_at_ms);}
-   const querySamples:any[]=[];for(const report of queryReports)for await(const row of readJsonl(join(root,report.name+'.jsonl'))){assert(querySamples.length<25000,'bounded query evidence');querySamples.push(row);}
+   const querySamples:any[]=[];for(const report of queryReports)if(existsSync(join(root,report.name+'.jsonl')))for await(const row of readJsonl(join(root,report.name+'.jsonl'))){assert(querySamples.length<25000,'bounded query evidence');querySamples.push(row);}
    const queryTimes=querySamples.map(x=>x.ms).sort((a,b)=>a-b),queryP99=queryTimes.length?queryTimes[Math.min(queryTimes.length-1,Math.floor(queryTimes.length*.99))]:null;
    const querySpan=queryReports.length>1?queryReports.at(-1).start-queryReports[0].start:0,maxQueryGap=queryReports.slice(1).reduce((m,r,i)=>Math.max(m,r.start-queryReports[i].start),0);
-   const queryEvidence={cycles:queryReports.length,samples:querySamples.length,p99_ms:queryP99,span_ms:querySpan,max_cycle_gap_ms:maxQueryGap,invalid:querySamples.filter(x=>!x.correct||x.status!==200||!x.body_complete).length,scope:'actual ArkRuntime -> separate Analytics reader HTTP; changing per-device assets'};
+   const queryEvidence={cycles:queryReports.length,failed_cycles:queryReports.filter(r=>r.exit!==0).length,samples:querySamples.length,p99_ms:queryP99,span_ms:querySpan,max_cycle_gap_ms:maxQueryGap,invalid:querySamples.filter(x=>!x.correct||x.status!==200||!x.body_complete).length,scope:'actual ArkRuntime -> separate Analytics reader HTTP; changing per-device assets'};
    writeFileSync(join(root,'SOAK-QUERY-RESULT.json'),JSON.stringify(queryEvidence,null,2));
+   assert(queryEvidence.failed_cycles===0,'all query cycles including failed children must be accounted');
    if(soak.fullDay)assert(queryEvidence.samples>=10000&&queryEvidence.invalid===0&&queryP99!==null&&queryP99<=100&&querySpan>=86400000-600000&&maxQueryGap<=600000,'full-day Ark query coverage/latency required');
+   else if(soak.preflight)assert(queryEvidence.samples>=150&&queryEvidence.invalid===0&&queryP99!==null&&queryP99<=100&&querySpan>=540000&&maxQueryGap<=600000,'real-cadence preflight query gate');
    else assert(queryEvidence.samples>0&&queryEvidence.invalid===0,'smoke requires actual Ark queries');
    const evidence={full_day_requested:soak.fullDay,elapsed_ms:performance.now()-runMono,plan:soak,daily_started_ms:dailyStarted,daily_finished_ms:dailyFinished,first_ack_ms:firstAckMs,first_request_ms:firstRequest,last_request_ms:lastRequest,ark_rounds:arkRounds,ark_accepted:arkRounds*config.devices,archive_cycles:archiveReports,archive_stats:ark.db.prepare('SELECT * FROM ark_archive_stats').get(),maintenance_overlapped_daily:maintenance.some(m=>m.start<=lastRequest&&m.rollup_done>=firstRequest),backup_overlapped_daily:archiveReports.some(m=>m.backupReport?.state==='published'&&m.backupStarted<=lastRequest&&m.backupFinished>=firstRequest),resource_gate:result.resources.local_resource_gate,full_t5_pass:false};
    writeFileSync(join(root,'SOAK-RESULT.json'),JSON.stringify(evidence,null,2));assert(arkRounds>0);
-   if(soak.fullDay){assert(evidence.elapsed_ms>=86400000);assert(result.resources.local_resource_gate,'real-day resource gate failed');assert(evidence.maintenance_overlapped_daily&&evidence.backup_overlapped_daily,'mixed overlap required');}
+   if(soak.fullDay){assert(evidence.elapsed_ms>=86400000);assert(result.resources.local_resource_gate,'real-day resource gate failed');}
+   if(soak.fullDay||soak.preflight)assert(evidence.maintenance_overlapped_daily&&evidence.backup_overlapped_daily,'mixed overlap required');
   }
   assert.equal(code,0);assert.ok(integrity.complete);assert.ok(arkRows.every(x=>x.correct));assert.ok(evidenceConsistent&&requests.all_actors_finished,'request evidence completeness');assert.ok(requests.successes&&result.acks.p95!<=500&&result.acks.p99!<=2000,'ACK latency gate');
   if(config.maintenance){assert.equal(maintenanceError,undefined,'maintenance evidence failed');assert.ok(maintenance.every(r=>r.code===0&&!r.report?.rollup_error&&!r.report?.prune_error),'maintenance process failed');assert.equal(dirty,0);}if(config.backup&&!soak)assert.equal(backupCode,0,'backup must really run');

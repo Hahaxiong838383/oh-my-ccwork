@@ -1,0 +1,28 @@
+{
+  "scope": "PREFLIGHT_PLAN_AND_FUNCTIONAL_SMOKE_NOT_24H",
+  "duration_ms": 600000,
+  "devices": 50,
+  "events_per_device": 6000,
+  "ark_interval_ms": 50000,
+  "maintenance_interval_ms": 300000,
+  "monitor_interval_ms": 5000,
+  "daily_delay_ms": 20000,
+  "node": "24.19.0",
+  "smoke_result": {
+    "cycles": 6,
+    "failed_cycles": 0,
+    "samples": 18,
+    "p99_ms": 29.06345799999997,
+    "span_ms": 17521,
+    "max_cycle_gap_ms": 5001,
+    "invalid": 0,
+    "scope": "actual ArkRuntime -> separate Analytics reader HTTP; changing per-device assets"
+  },
+  "evidence_sha256": {
+    "preflight-plan-red.log": "901f05d6c0d813e49ff57816399f2e063e4c96494c67f72b3f2756415013b73a",
+    "preflight-plan-green.log": "dd4685fff95861073dadf1ef182704538821cfccd6a1cd90c660c3800d656bf0",
+    "preflight-code-smoke-01.log": "c0949ee3a24cbbddc6ac747d987f10975ae7e1b836deeac6edd55765800a476c",
+    "p003-t5-soak-preflight-code-smoke-01/RESULT.json": "e5e8fd7f76658031fff1097dea4890e2f5b55b2d15b92cd33d2cdac64a285ad9",
+    "p003-t5-soak-preflight-code-smoke-01/SOAK-RESULT.json": "83060439940d355e1c33dbb8e0c3fdab4f7003c6949b58213d11bb4aef894b6b"
+  }
+}
