@@ -18,6 +18,12 @@ const MAX_SNIPPET = 200;
 const DEFAULT_LIMIT = 8;
 const HARD_LIMIT = 25;
 
+// 旧库（B / EvoMap 的 memory-items.md）：2026-09-24 起一并检索。实测它有 A 没有的近期事实（codex/grok 写在这里），
+// 只查 A 会漏；只查它又会漏 A 的教训（8-30 codex 实例）。条目级返回，带行号与条目里的日期，调用方自己按日期比新旧。
+const LEGACY_ITEMS = process.env.MYCC_LEGACY_ITEMS
+  || path.join(os.homedir(), '.mycc-global/0-System/memory-items.md');
+const LEGACY_MAX = 8;
+
 const LOGDIR = path.join(os.homedir(), '.mycc-mcp');
 try { fs.mkdirSync(LOGDIR, { recursive: true }); } catch {}
 const audit = m => {
@@ -75,13 +81,49 @@ function searchFiles(query) {
   return { files: any, mode: any.length ? `any-term(${terms.length})` : 'none' };
 }
 
+const escRe = t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** 旧库条目级检索：同样「短语 → 全词 → 任一词」降级，只收条目行（- 开头）与小节标题（### 开头）。 */
+function searchLegacy(query) {
+  if (!fs.existsSync(LEGACY_ITEMS)) return { hits: [], mode: 'missing' };
+  const terms = query.trim().split(/\s+/).filter(Boolean);
+  const probe = terms.length > 1 ? terms.map(escRe).join('|') : query;
+  const lines = rg(['-n', '-i', '--no-heading', '--', probe, LEGACY_ITEMS]).split('\n').filter(Boolean)
+    .map(l => { const k = l.indexOf(':'); return { no: Number(l.slice(0, k)), text: l.slice(k + 1).trim() }; })
+    .filter(x => /^(- |### )/.test(x.text));
+  const has = (s, t) => new RegExp(t, 'i').test(s);
+  let hits = lines.filter(x => has(x.text, query.trim().split(/\s+/).length > 1 ? escRe(query.trim()) : query));
+  if (hits.length) return { hits, mode: 'phrase' };
+  if (terms.length < 2) return { hits: [], mode: 'phrase' };
+  hits = lines.filter(x => terms.every(t => has(x.text, escRe(t))));
+  if (hits.length) return { hits, mode: `all-terms(${terms.length})` };
+  return { hits: lines, mode: lines.length ? `any-term(${terms.length})` : 'none' };
+}
+
+function legacySection(query) {
+  let r;
+  try { r = searchLegacy(query); }
+  catch (e) { return `\n\n--- legacy memory-items: search failed (${clip(e.message, 160)}) ---`; }
+  if (r.mode === 'missing') return `\n\n--- legacy memory-items: file not present on this machine (${LEGACY_ITEMS}) ---`;
+  if (!r.hits.length) return `\n\n--- legacy memory-items (${LEGACY_ITEMS}): no entry matched ---`;
+  const shown = r.hits.slice(0, LEGACY_MAX).map(x => {
+    const date = (x.text.match(/20\d\d-\d\d-\d\d/) || [])[0];
+    return `  [L${x.no}]${date ? ` (${date})` : ''} ${clip(x.text, MAX_SNIPPET + 60)}`;
+  }).join('\n');
+  return `\n\n--- legacy memory-items (${LEGACY_ITEMS}): ${r.hits.length} entr${r.hits.length > 1 ? 'ies' : 'y'} matched ` +
+         `[match mode: ${r.mode}]; showing ${Math.min(LEGACY_MAX, r.hits.length)} ---\n` +
+         `  Older store, diverged between machines and possibly stale, but it holds recent facts A lacks. ` +
+         `If it conflicts with A, trust the newer dated statement and say so.\n${shown}`;
+}
+
 function search(query, limit) {
   const n = Math.min(Math.max(1, limit || DEFAULT_LIMIT), HARD_LIMIT);
   const { files, mode } = searchFiles(query);
   const total = fs.readdirSync(MEM_DIR).filter(f => f.endsWith('.md')).length;
+  const legacy = legacySection(query);
   if (!files.length) {
-    return `No memory matched ${JSON.stringify(query)} — tried phrase, all-terms and any-term.\n` +
-           `This is a genuine zero-result, not an error (index holds ${total} files).`;
+    return `No A-canonical memory matched ${JSON.stringify(query)} — tried phrase, all-terms and any-term ` +
+           `(index holds ${total} files).${legacy}`;
   }
   const picked = files.slice(0, n);
   const out = picked.map((f, i) => {
@@ -102,7 +144,7 @@ function search(query, limit) {
     ? `\n… ${files.length - picked.length} more matched but not listed (limit=${n}).`
     : '';
   return `${files.length} file(s) matched ${JSON.stringify(query)} [match mode: ${mode}]; showing ${picked.length}.\n\n${out}${more}\n` +
-         `Use memory_read with a file name to get full text.`;
+         `Use memory_read with a file name to get full text.${legacy}`;
 }
 
 /** 双重路径校验：字符白名单 + realpath 前缀，防路径遍历 */
@@ -126,9 +168,10 @@ function read(nameArg) {
 const TOOLS = [
   {
     name: 'memory_search',
-    description: "Search cc's long-term memory (A canonical: cross-project lessons, project facts, references). "
+    description: "Search cc's long-term memory (A canonical: cross-project lessons, project facts, references) "
+      + 'AND the legacy shared store 0-System/memory-items.md (entry-level, with line numbers and dates). '
       + 'Use this before debugging a third-party tool, repeating a past decision, or asking the user for facts '
-      + 'that may already be recorded. Returns file names + descriptions + matching lines.',
+      + 'that may already be recorded. Returns A file names + descriptions + matching lines, then legacy entries.',
     inputSchema: {
       type: 'object',
       properties: {

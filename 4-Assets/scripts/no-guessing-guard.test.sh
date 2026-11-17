@@ -25,6 +25,32 @@ denied() {
   out=$(jq -nc --arg c "$1" '{tool_input:{command:$c}}' | bash "$GUARD")
   printf '%s' "$out" | grep -q '"permissionDecision":"deny"'
 }
+# 2026-09-23 起所有模式统一 deny（9-19 的模式分支已撤）；顶层 decision 只认 approve/block，出现 "deny" 整条作废
+top_decision_pm() { # top_decision_pm <mode> <cmd>：返回 0 = 输出带顶层 decision 键（应当永远没有）
+  out=$(jq -nc --arg m "$1" --arg c "$2" '{permission_mode:$m,tool_input:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | jq -e 'has("decision")' >/dev/null 2>&1
+}
+top_decision() { top_decision_pm default "$1"; }
+denied_pm() {   # denied_pm <mode> <cmd>
+  out=$(jq -nc --arg m "$1" --arg c "$2" '{permission_mode:$m,tool_input:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '"permissionDecision":"deny"'
+}
+hardnote_pm() { # hardnote_pm <mode> <cmd>：带硬红线标记的提醒
+  out=$(jq -nc --arg m "$1" --arg c "$2" '{permission_mode:$m,tool_input:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '硬红线'
+}
+denied_auto()    { denied_pm auto "$1"; }
+hardnote_auto()  { hardnote_pm auto "$1"; }
+denied_default() { denied_pm default "$1"; }
+hardnote_default(){ hardnote_pm default "$1"; }
+denied_camel() {  # grok 形态：camelCase 键
+  out=$(jq -nc --arg c "$1" '{permissionMode:"auto",toolInput:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '"permissionDecision":"deny"'
+}
+hardnote_camel() {
+  out=$(jq -nc --arg c "$1" '{permissionMode:"auto",toolInput:{command:$c}}' | bash "$GUARD")
+  printf '%s' "$out" | grep -q '硬红线'
+}
 
 PASS=0; FAIL=0
 chk() { # chk <期望 fire?> <标签> <命令>
@@ -79,6 +105,19 @@ r 1 'note: 检索管到 head'        anynote 'grep -rn foo . | head -5'
 r 1 'note: systemctl'           anynote 'systemctl --user status feishu-grok-bridge'
 r 1 'note: curl 127.0.0.1:port' anynote 'curl -s http://127.0.0.1:18765/healthz'
 r 0 'note 反例: 纯 echo'         anynote 'echo hello'
+echo
+echo "═══ 2b. 所有模式都 deny（2026-09-23 更正：9-18「auto 只能提醒」的根因是输出多了顶层 decision）═══"
+r 1 'auto: git add -A deny'           denied_auto   'git add -A'
+r 1 'auto: pkill -f deny'             denied_auto   'pkill -f node'
+r 1 'auto: commit 署名 deny'          denied_auto   'git commit -m "x Co-Authored-By: y"'
+r 0 'auto 反例: git add path 不 deny'  denied_auto   'git add rules/tools.md'
+r 1 'bypass: git reset --hard deny'   denied_pm bypassPermissions 'git reset --hard origin/main'
+r 1 'default: git add -A deny'        denied_default 'git add -A'
+r 0 'default: 不带顶层 decision'       top_decision  'git add -A'
+r 0 'auto: 不带顶层 decision'          top_decision_pm auto 'pkill -f node'
+r 1 'camel(grok) auto: deny'          denied_camel  'git reset --hard origin/main'
+r 1 'camel(grok) auto: 带 🔴 提醒兜底'  hardnote_camel 'git reset --hard origin/main'
+r 1 '无 mode 字段: 仍 deny(旧夹具兼容)' denied 'git add -A'
 
 echo
 echo "═══ D. 新规则「| … || 兜底」：|| 绑的是管道尾恒成功命令 = 死代码 ═══"

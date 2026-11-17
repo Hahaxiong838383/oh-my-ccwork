@@ -33,6 +33,8 @@ Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xr
 启动慢、桌面联网浮窗或重启截图验收，再读
 [启动耗时与联网提示](references/tv-startup-status.md)：按本 boot 的真实就绪门计时，保留播放归属与验收边界。
 
+线路优先级、探针口、软件重启后的选择器恢复和吞吐比较，读
+[电视 HY2 路径与恢复](references/tv-hy2-path-20261112.md)。配置里的 selector 默认值不等于守护优先级；当前线路健康时，空等 5 分钟不会切回更高优先级。
 
 ## 可用命令
 

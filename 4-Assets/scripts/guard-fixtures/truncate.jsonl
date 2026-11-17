@@ -1,0 +1,33 @@
+{"rule": "truncate_head_tail", "expect": "hit", "src": "2026-08-01 原始案例形（grep 的模式里带 |，修前守门漏）", "cmd": "grep -nE \"a|18775|b\" SKILL.md | head -15"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "单引号版（修前漏）", "cmd": "grep -nE 'a|b' SKILL.md | head -15"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "教训原形", "cmd": "git status --short | head -25"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "教训原形", "cmd": "ls -1 tasks/ | head -6"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "教训原形", "cmd": "ps aux | grep x | head"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "2026-08-16 漏网（git 子命令表没有 remote）", "cmd": "cd ~/mycc && git remote -v | head -2"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "教训原形（--help 里搜）", "cmd": "cmd --help | grep -E \"a|b\" | head -10"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "变体", "cmd": "rg -l foo ~/mycc | tail -3"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "变体", "cmd": "find . -name '*.md' | head"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "多行脚本第二行", "cmd": "cd ~/mycc\ngrep -rn foo . | head -5"}
+{"rule": "truncate_head_tail", "expect": "ok", "src": "只计数", "cmd": "grep -c foo file"}
+{"rule": "truncate_head_tail", "expect": "ok", "src": "非列表输出（push 的回显）", "cmd": "git push origin HEAD 2>&1 | tail -5"}
+{"rule": "truncate_head_tail", "expect": "ok", "src": "跨分隔符的两条无关命令（修前误报）", "cmd": "A=$(git rev-list --count origin/main..main); git checkout main 2>&1 | tail -3"}
+{"rule": "truncate_head_tail", "expect": "ok", "src": "引号里只是提到", "cmd": "echo \"别写 grep x | head 下结论\""}
+{"rule": "truncate_head_tail", "expect": "ok", "src": "看文件开头（非检索）", "cmd": "head -3 README.md; tail -f app.log"}
+{"rule": "truncate_head_tail", "expect": "ok", "src": "命令自带的条数（不走管道）", "cmd": "git log --oneline -5"}
+{"rule": "truncate_then_search", "expect": "hit", "src": "教训原形", "cmd": "head -50 f | grep x"}
+{"rule": "truncate_then_search", "expect": "hit", "src": "变体：只数了尾部", "cmd": "tail -200 app.log | grep -c ERROR"}
+{"rule": "truncate_then_search", "expect": "hit", "src": "变体：-n 写法", "cmd": "head -n 100 big.log | rg panic"}
+{"rule": "truncate_then_search", "expect": "ok", "src": "有意只看前几行（frontmatter 在前 6 行）", "cmd": "head -6 SKILL.md | grep -cE '^(name|description)'"}
+{"rule": "truncate_then_search", "expect": "ok", "src": "顺序相反（归 truncate_head_tail）", "cmd": "grep x f | head -50"}
+{"rule": "truncate_then_search", "expect": "ok", "src": "看某段代码结构（sed 区间不在本层）", "cmd": "sed -n '60,260p' g.sh | grep -n if"}
+{"rule": "truncate_then_aggregate", "expect": "hit", "src": "教训原形", "cmd": "grep -v \"$KEY\" x.log | sed 's/.*INFO //' | cut -c1-30 | sort | uniq -c"}
+{"rule": "truncate_then_aggregate", "expect": "hit", "src": "变体：截断后去重计数", "cmd": "cut -c1-12 ids.txt | sort -u | wc -l"}
+{"rule": "truncate_then_aggregate", "expect": "ok", "src": "按字段取（不截字符）", "cmd": "cut -d, -f2 data.csv | sort | uniq -c"}
+{"rule": "truncate_then_aggregate", "expect": "ok", "src": "只为显示截断，不统计", "cmd": "rg -n foo . | cut -c1-160"}
+{"rule": "test_output_truncated", "expect": "hit", "src": "教训原形", "cmd": "python3 -m pytest tests/ | tail -8"}
+{"rule": "test_output_truncated", "expect": "hit", "src": "变体", "cmd": "npm test 2>&1 | tail -20"}
+{"rule": "test_output_truncated", "expect": "hit", "src": "变体", "cmd": "go test ./... | head -50"}
+{"rule": "test_output_truncated", "expect": "ok", "src": "正确写法：落文件看退出码", "cmd": "python3 -m pytest tests/ > /tmp/t.log 2>&1; echo RC=$?"}
+{"rule": "test_output_truncated", "expect": "ok", "src": "不截断", "cmd": "npm test"}
+{"rule": "test_output_truncated", "expect": "ok", "src": "自写测试脚本只看末行汇总（有意为之，框架名不在表内）", "cmd": "bash lesson-nudge.test.sh | tail -1"}
+{"rule": "truncate_head_tail", "expect": "hit", "src": "带 2>&1 的检索（修前 & 把匹配挡断）", "cmd": "grep -rn foo . 2>&1 | head -5"}

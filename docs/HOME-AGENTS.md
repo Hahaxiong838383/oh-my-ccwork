@@ -33,7 +33,7 @@ core:      [mycc, .mycc-global]          # PKM 中枢 + 外置共享状态
 private:   [work-private]                # 隐私 vault
 runtime:   [bin, local, go, models, nltk_data]
 legacy:    [cc-monitor-oss, lnmem-data, xray, scripts, Archive, iterm2-logs]  # 历史例外：保留，禁新增同类
-projects:  [MyAgent, task-board]          # 独立项目仓（宪法登记 2026-07-26：MyAgent=开源记忆工作区模板仓，task-board=任务看板）
+projects:  [MyAgent, task-board, home-lan]  # 独立项目仓（2026-07-26：MyAgent、task-board；2026-10-06：home-lan=家里局域网与飞牛 NAS）
 agent_cfg: ['.claude', '.codex', '.gemini', '.grok', '.windsurf', '.continue', '.augment', '.agents']
 # 合法点目录基线（系统/语言工具/AI 工具运行时）。新增点目录会被 lint 抓到供审查——防 agent 用 .xxx/ 绕过
 allowed_dot_dirs: ['.Trash', '.aliyun', '.android', '.boss-agent', '.bun', '.bytertc', '.cache', '.cargo', '.cc-airplayer', '.cc-switch', '.claude-mem', '.codeg', '.cola', '.coli', '.conda', '.config', '.cups', '.deepface', '.geo-login', '.gnupg', '.gradle', '.hermes', '.kaggle', '.keras', '.lark-cli', '.letta', '.lnmem', '.lnmem-fpga', '.local', '.matplotlib', '.mem0', '.modelscope', '.mycc-mcp', '.npm', '.obsidian', '.ollama', '.omlx', '.omp', '.openclaw', '.opencli', '.openpencil', '.pg0', '.promptfoo', '.rhinocode', '.rustup', '.sogouinput', '.ssh', '.streamlit', '.swiftpm', '.tauri', '.tmux', '.zsh', '.zsh_sessions']
@@ -81,9 +81,9 @@ lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（�
 | agent | 接线方式 | 机制 |
 |-------|---------|------|
 | cc | `~/.claude/rules/home-constitution.md`（指针文件） | rules 目录自动加载 |
-| codex | `ln -s ~/AGENTS.md ~/.codex/AGENTS.md` | codex 全局读 `~/.codex/AGENTS.md` |
+| codex | Air：`ln -s ~/AGENTS.md ~/.codex/AGENTS.md`；home-studio：`~/.codex/AGENTS.md` 由 `mycc/4-Assets/scripts/agent-entry-derive.py` 生成＝本文件原文块＋记忆入口块（systemd `agent-entry.path` 盯本文件与热索引自动重生成） | codex 全局只读 `~/.codex/AGENTS.md` 一个文件（在 ~/MyAgent、codeg 会话目录下不会读 `~/AGENTS.md`；2026-09-24 查实 home-studio 原先漏接此线） |
 | gemini | `~/.gemini/AGENTS.md` 顶部加引用段 | gemini settings `context.fileName` 已自动加载该文件 |
-| grok | omp 编排脚本 prompt 注入本文件 | grok 无项目规则文件机制（`~/.grok/README.md` 是产品文档，勿改） |
+| grok | home-studio：`~/.grok/AGENTS.md` 由 `agent-entry-derive.py` 生成＝原权限说明＋本文件原文块＋记忆入口块；omp 编排脚本仍可 prompt 注入 | grok 会加载 `~/.grok/AGENTS.md` 与 Claude rules 目录（含 cc 的指针文件），但**不读 `~/AGENTS.md`**（2026-09-24 home-studio 验收会话实测：rules 段无本文件原文）。`~/.grok/README.md` 是产品文档，勿改 |
 | omp | 编排脚本模板注入本文件引用 | 脚本层 |
 
 **新 agent 入场握手 checklist**：① 在 §二 YAML `agent_cfg` 加配置目录 ② 按上表接线 ③ 纳入 HOME-lint ④ 确认 secret / 归档 / 并发规则已传达。

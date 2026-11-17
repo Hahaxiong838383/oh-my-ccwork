@@ -8,6 +8,13 @@
 # 分两档（依据 feedback_blocking_is_not_correcting：能给信息就别拦动作）：
 #   软提醒 → additionalContext 注入上下文，命令照跑
 #   硬红线 → permissionDecision=deny，只有川哥白纸黑字禁过的才进这档
+#   ⚠️ 输出只能放 hookSpecificOutput。claude 对顶层 `decision` 只认 approve/block，写成 "deny" 会抛
+#   「Unknown hook decision type」，整条输出（连 additionalContext）作废，命令照跑。
+#   沿革：9-02/9-18 在 codeg(auto) 会话里 deny 没拦住（当时的 claude 版本），9-19 为此加了按模式分支，
+#   非 auto 分支还多写了顶层 decision:"deny"，等于把所有会话的 deny 都弄坏了。2026-09-23 在 codeg(auto)
+#   会话里用探针实测（claude-agent-sdk 0.3.280）：合法格式的 deny 拦得住，带顶层 decision:"deny" 的照跑。
+#   于是去掉模式分支、去掉顶层 decision，所有模式统一 deny。判「拦没拦住」仍要拿 guard-log 对撞
+#   tool-audit，见 [[feedback_guard_itself_can_be_hollow]] 第 9、10 例。
 #
 # 失败策略：hook 自身出错必须放行（不能让守门器把所有命令卡死），但要把失败
 # 说出来——静默放行等于没装。
@@ -15,7 +22,10 @@
 set -uo pipefail
 
 payload="$(cat)"
-cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty' 2>/dev/null)"
+# Claude Code 使用 snake_case，Grok Build 原生 hook 使用 camelCase。
+# Grok 会兼容加载 ~/.claude/settings.json，但不会替调用脚本改写 payload；只读
+# .tool_input 会让 hook 看似已加载、实际对 Grok 每次都因 cmd 为空而静默放行。
+cmd="$(printf '%s' "$payload" | jq -r '.tool_input.command // .toolInput.command // empty' 2>/dev/null)"
 
 # 取不到命令就放行：可能是 schema 变了，宁可不拦也别误伤
 if [ -z "$cmd" ]; then
@@ -45,7 +55,7 @@ log_hit() {   # $1=decision(note|deny)  $2..=rule ids
   local decision="$1"; shift
   local verb="${cmd%%[[:space:]]*}"
   local sid cwdb
-  sid="$(printf '%s' "$payload" | jq -r '(.session_id // "")[0:8]' 2>/dev/null)"
+  sid="$(printf '%s' "$payload" | jq -r '(.session_id // .sessionId // "")[0:8]' 2>/dev/null)"
   cwdb="$(basename "$(printf '%s' "$payload" | jq -r '.cwd // ""' 2>/dev/null)" 2>/dev/null)"
   {
     mkdir -p "$(dirname "$GUARD_LOG")" 2>/dev/null
@@ -89,8 +99,41 @@ elif has '(^|[;&|]\s*)git[[:space:]]+commit' && has 'Co-Authored-By:'; then
 （全局 settings 已设 attribution.commit=\"\" 关掉自动添加，这道只防手写。）"
 fi
 
+# 密钥进输出/落盘（2026-09-23 加，川哥：「secret 绝不写进对话」；本会话 8-29 `cat`、9-23 `grep -v` 两次把
+# ~/.grok/config.toml 的 api_key 打进会话记录，9-02 另一会话把 `vw list items` 整份导出到 /tmp）。
+# 判定逻辑在 secret-guard.py（正反例 fixtures 在 guard-fixtures/secret.jsonl）；这里先做零进程的前置过滤，
+# 命令里没出现疑似密钥文件/密码库时不起 python。
+if [ -z "$deny_reason" ] && has '(\.env|config\.toml|auth\.json|curlcfg|netrc|git-credentials|npmrc|pypirc|id_(rsa|ed25519|ecdsa)|\.pem|vw-items|credentials\.json|hosts\.yml|codeg\.db|(^|[;&|/[:space:]])vw[[:space:]]+(list|get))'; then
+  SG="$(dirname "$0")/secret-guard.py"
+  if [ -f "$SG" ]; then
+    sg_out="$(printf '%s' "$cmd" | /usr/bin/python3 "$SG" 2>/dev/null)"
+    sg_first="${sg_out%%$'\n'*}"
+    if [ -n "$sg_first" ]; then
+      deny_rule="${sg_first%%$'\t'*}"
+      deny_reason="密钥会进会话或落盘（${sg_first#*$'\t'}）：会话记录、claude-mem、模型服务端都会留下它，事后收不回。
+看配置用 cfgview：python3 ~/mycc/4-Assets/scripts/cfgview.py <文件>（键名照常、值遮蔽）；只想确认有没有某个键用 grep -c / grep -l。
+取密钥只进变量与 stdin：VAL=\$(vw get password <名>)，绝不裸打印，也不写进 /tmp 或任何文件。"
+    fi
+  else
+    notes+=("⚠️ secret-guard.py 不在 no-guessing-guard.sh 同目录，密钥守门已失效（本条命令像是在读密钥文件或密码库），先修路径。")
+    rule_ids+=("secret_guard_missing")
+  fi
+fi
+
 if [ -n "$deny_reason" ]; then
   log_hit deny "$deny_rule"
+  # ⚠️ 只输出 hookSpecificOutput。顶层 decision 只认 approve/block，写成 "deny" 会让 claude 抛错、整条输出作废、命令照跑
+  if printf '%s' "$payload" | jq -e 'has("toolInput")' >/dev/null 2>&1; then
+    # grok（camelCase payload）认不认 deny 没验证过：额外带一份提醒兜底。claude 走下面那份已实测的格式
+    ctx="🔴 硬红线：$deny_reason
+若这条命令仍然执行了，说明本会话没认 hook 拒绝——立即评估后果并如实报告。"
+    jq -nc --arg r "$deny_reason" --arg c "$ctx" '{
+      additionalContext: $c,
+      hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "deny",
+                            permissionDecisionReason: $r, additionalContext: $c }
+    }'
+    exit 0
+  fi
   jq -nc --arg r "$deny_reason" '{
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
@@ -103,10 +146,37 @@ fi
 
 # ---------- 软提醒：命令照跑，只把当天的教训递到眼前 ----------
 
+# 管道结构类规则先把引号内容抹成 Q 再匹配（2026-09-23 夹具化试点抓出的漏洞）：
+# 原规则用 [^|]* 找管道，`grep -nE "a|18775|b" SKILL.md | head -15`——8-01 原始案例本身——引号里的 | 让它断开，
+# 从装上起就没盖住带「或」的 grep（真实命令里约每百条 5.7 次）；同时 [^|]* 会跨过 ; 把两条无关命令粘成误报。
+# 修后：真实历史命令 1980 条上 19.9 → 17.8 次/百条，漏报补回 104、误报去掉 146。夹具 guard-fixtures/truncate.jsonl。
+# 重定向里的 &（2>&1、>&2、&>）也换掉，否则 [^|;&]* 会在 `npm test 2>&1 | tail` 这种最常见写法上断开（夹具抓到）
+cmd_noq="$(printf '%s' "$cmd_flat" | sed -E "s/'[^']*'/Q/g; s/\"([^\"\\\\]|\\\\.)*\"/Q/g; s/[0-9]*>&[0-9-]+/R/g; s/&>>?/R/g")"
+hasq() { printf '%s' "$cmd_noq" | grep -Eq "$1"; }
+
 # 检索类命令被 head/tail 截断。危险的不是截断本身，是拿截断结果下「不存在」的结论
-if has '\b(grep|rg|egrep|fgrep|find|ls|git\s+(status|log|diff|branch|show|worktree))\b[^|]*\|[^|]*\b(head|tail)\b'; then
+# git 列表类子命令（remote/tag/ls-files…）是 8-16 `git remote -v | head -2` 漏网后补的；不含 push/commit 这类非列表输出
+if hasq '\b(grep|rg|egrep|fgrep|find|ls|git[[:space:]]+(status|log|diff|branch|show|worktree|remote|tag|stash|ls-files|ls-tree|ls-remote|for-each-ref|rev-list|shortlog|reflog|config|blame|grep|submodule|cherry|name-rev|describe))\b[^|;&]*\|[^|;&]*\b(head|tail)\b'; then
   notes+=("检索输出被 head/tail 截断了。如果你要据此判断「有没有 X」——不行，截断过的结果只能证明「有」，永远证不了「没有」。存在性判断改用 grep -c / grep -q，或者去掉截断。（2026-08-01 就是这样把答案截掉后误报了零命中）")
   rule_ids+=("truncate_head_tail")
+fi
+
+# 反过来的顺序：先截 ≥10 行头尾再直接搜——只搜了头/尾那几行（教训记过的原形 `head -50 f | grep x`）
+if hasq '\b(head|tail)[[:space:]]+-(n[[:space:]]*)?[0-9]{2,}[[:space:]]+[^|;&]*\|[[:space:]]*(grep|rg|egrep)\b'; then
+  notes+=("先截断再搜索：head/tail -N 之后直接 grep，只搜了头/尾那 N 行，搜不到≠文件里没有。要下「有没有」的结论，直接对整个文件 grep -c / grep -q。")
+  rule_ids+=("truncate_then_search")
+fi
+
+# cut -c 截断后再统计：不同的值被截成同一个（9-09 cut -c1-240 截成假值、grep|sed|cut -c1-30|sort|uniq -c 原形）
+if hasq '\bcut[[:space:]]+-c[^|;&]*\|[^|;&]*\b(sort|uniq|wc)\b'; then
+  notes+=("cut -c 截断之后再 sort/uniq/wc：不同的值会被截成同一个，计数、去重、MIN/MAX 都会错。统计用完整值（cut -f / awk 取字段），展示时再截。")
+  rule_ids+=("truncate_then_aggregate")
+fi
+
+# 只看测试输出的头/尾就判通过（教训原形 `python3 -m pytest ... | tail -8`）
+if hasq '\b(pytest|npm[[:space:]]+(run[[:space:]]+)?test|go[[:space:]]+test|cargo[[:space:]]+test|jest|vitest|node[[:space:]]+--test)\b[^|;&]*\|[^|;&]*\b(tail|head)\b'; then
+  notes+=("只看测试输出的头/尾：失败可能落在被截掉的部分，而且管道的退出码是 tail 的。判通过看测试进程自己的退出码（cmd > log 2>&1; echo RC=\$?）或框架的汇总行。")
+  rule_ids+=("test_output_truncated")
 fi
 
 # 服务名 / 端口最容易凭印象写。这两个猜错时，返回信号和「服务真挂了」一模一样
@@ -171,6 +241,7 @@ if [ ${#notes[@]} -gt 0 ]; then
   log_hit note "${rule_ids[@]}"
   ctx="$(printf '%s\n' "${notes[@]}")"
   jq -nc --arg c "$ctx" '{
+    additionalContext: $c,
     hookSpecificOutput: {
       hookEventName: "PreToolUse",
       additionalContext: $c

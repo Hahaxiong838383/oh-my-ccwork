@@ -67,6 +67,16 @@ GH_TOKEN=$(vw get password "GitHub token") gh repo list
 2. `vw list items | jq -r '.[].name'` 确认**条目名**（空格、大小写必须完全一致）。
 3. 名字对但仍 `Not found` → **条目里那个字段是空的**。判据：`vw get item <id>` 的 `.login.password` 为 `null`，而 **name 能正常解出**（name 在 Bitwarden 里同样是加密的）⇒ 解密链路没问题，是川哥建了条目没填密码栏。让他去网页编辑 → 密码栏 → 保存。
 
+### 报 `More than one result was found` / 取到空值
+
+`vw get password "<名>"` 按**子串**匹配，不是精确匹配。库里同时有 `GitHub token` 和
+`GitHub token - 大权限` 时，取前者会撞两条，bw 拒绝并列出两个 id，命令替换得到空串——
+下游只看到「未认证」，看着像 token 坏了（2026-09-18 实测）。
+处置：先用 id 映射名字再按 id 取，且默认选**最小权限**那条：
+
+    for id in <列出的 id>; do echo "$id → $(vw get item "$id" | jq -r .name)"; done
+    GH_TOKEN=$(vw get item <精确匹配的 id> | jq -r .login.password | tr -d '[:space:]') gh api user --jq .login
+
 ### `status` 是 `locked` / 报未解锁
 
 session 过期或被锁。**只有川哥能解**：
@@ -120,6 +130,15 @@ sg docker -c 'docker ps -a --filter name=vaultwarden'
 `usermod -aG docker` 只对新登录生效，跑着的 session 不认。不用重启，`sg docker -c '...'` 当场可用（用户已在 `/etc/group` 里就不需要密码）。
 
 ## 条目命名规范
+
+### sudo — 条目名 `home-studio 的 sudo 密码`（2026-09-23 实测）
+
+**开发机有 sudo。** 我曾凭 ensurepip 报错里的「You may need to use sudo」就断言「开发机没有 sudo」，是没验证的结论。
+取用只走 stdin，printf 是 shell 内建、值不进 argv：
+
+    PW=$(vw get item bf551e03-735c-4483-93ed-f95cf4fb5274 | jq -r '.login.password // empty'); [ -n "$PW" ] || exit 1
+    printf '%s\n' "$PW" | sudo -S -p '' -v; unset PW      # 之后本轮 sudo 走缓存，sudo -n true 验证
+
 
 川哥在网页上建条目，名字要**简单、稳定、可预测**，我按名字找：`GitHub token`、`aliyun-key-id`、`aliyun-key-secret`、`cloudflare-token`。
 

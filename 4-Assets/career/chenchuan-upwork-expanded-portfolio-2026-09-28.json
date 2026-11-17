@@ -1,0 +1,174 @@
+[
+  {
+    "key": "xiaoke",
+    "n": "04",
+    "title": "Xiaoke AI: Real-Time Voice for a Smart Learning Desk",
+    "short": "Xiaoke AI",
+    "subtitle": "From real-time voice prototype to production use.",
+    "stage": "PRODUCTION FEATURES",
+    "role": "Product lead | Voice experience, AI-assisted prototyping & delivery",
+    "description": "Led product definition and AI-assisted prototyping for Xiaoke, an AI voice companion for a youth reading and writing desk. Designed a WebRTC-based ASR-LLM-TTS flow, full-duplex conversation, interruption handling and wake-word-plus-command interaction. These voice capabilities reached production use. Defined memory and companion experiences and coordinated cross-functional validation. The wider smart-desk product went from definition to production launch in six months. Implementation was supported by Claude Code and Codex.",
+    "body": "A voice companion for everyday reading and writing, with natural turn-taking, interruption and continuity across conversations.",
+    "flowtitle": "VOICE EXPERIENCE",
+    "flow": [
+      [
+        "Listen",
+        "Wake word + command"
+      ],
+      [
+        "Converse",
+        "Streaming voice + interruption"
+      ],
+      [
+        "Remember",
+        "Preferences + shared context"
+      ]
+    ],
+    "chips": [
+      "WebRTC voice",
+      "Companion experience",
+      "Production delivery"
+    ],
+    "contribution": "Product definition / Interaction design / AI-assisted prototyping / Acceptance",
+    "evidence": "Production status and six-month product launch: resume reference, section III To C. Memory/persona are product practices; no measured retention or latency claim.",
+    "skills": [
+      "Product Management",
+      "Conversational AI",
+      "Prototyping"
+    ],
+    "cover": "/home/hahaxiong83/mycc/4-Assets/career/chenchuan-xiaoke-portfolio-cover-2026-09-28.png",
+    "upwork_url": "https://www.upwork.com/freelancers/~01fee325b71f754dda?p=2104525322345455616",
+    "publication_status": "published",
+    "verified_at": "2026-09-28 19:07 CST",
+    "verification": "Reopened after profile reload: title, role, full description, skills, published date and cover visually checked."
+  },
+  {
+    "key": "multimodal",
+    "n": "05",
+    "title": "Multimodal Cockpit AI: Voice, Vision, Gaze & Gesture PoC",
+    "short": "Multimodal Cockpit AI",
+    "subtitle": "Coordinate voice, vision, gaze and gesture around user intent.",
+    "stage": "INTERNAL POC",
+    "role": "Product lead | Multimodal interaction design & AI-assisted validation",
+    "description": "Designed and built an internal automotive interaction PoC with AI coding tools, combining real-time voice, vision, gaze and gesture inputs. Defined cockpit scenarios, interaction priorities and acceptance criteria; translated the concept into a technical proposal and a repeatable test bench. Applied product experience across HUD generations 1.0-3.0, which shipped over 1.5 million units in total, to evaluate information presentation and cognitive load. This multimodal integration remains an internal PoC.",
+    "body": "An internal interaction prototype and repeatable test bench for evaluating multimodal assistance in the cockpit.",
+    "flowtitle": "INTERACTION MODEL",
+    "flow": [
+      [
+        "Perceive",
+        "Voice / vision / gaze / gesture"
+      ],
+      [
+        "Interpret",
+        "Scenario + intent + context"
+      ],
+      [
+        "Respond",
+        "Information + interaction"
+      ]
+    ],
+    "chips": [
+      "Multimodal UX",
+      "Human-machine interaction",
+      "Repeatable validation"
+    ],
+    "contribution": "Scenario definition / Interaction priorities / Technical proposal / Validation",
+    "evidence": "Resume reference section III HUD: internal multimodal PoC, technical proposal, repeatable bench. HUD 1.0-3.0 shipments are separate background, not PoC shipments.",
+    "skills": [
+      "Product Management",
+      "Interaction Design",
+      "Prototyping"
+    ],
+    "cover": "/home/hahaxiong83/mycc/4-Assets/career/chenchuan-multimodal-portfolio-cover-2026-09-28.png",
+    "upwork_url": "https://www.upwork.com/freelancers/~01fee325b71f754dda?p=2104525684508504064",
+    "publication_status": "published",
+    "verified_at": "2026-09-28 19:07 CST",
+    "verification": "Reopened after profile reload: title, role, full description, skills, published date and cover visually checked."
+  },
+  {
+    "key": "ontology",
+    "n": "06",
+    "title": "AI Ontology: Business Intelligence & Decision Workflows",
+    "short": "AI Ontology",
+    "subtitle": "Connect intelligence, business context and decision evidence.",
+    "stage": "INTERNAL SYSTEM",
+    "role": "Product owner | Business modeling, workflow design & AI-assisted delivery",
+    "description": "Defined and built an internal business analysis and decision-support system with AI coding tools. Integrated an industry intelligence radar, PEST analysis and an ontology of business context to connect external signals, internal progress, strategic goals and decision evidence. Automated recurring analysis and reporting, with sources and past decisions retained for review. The system supports executive and board-level strategy work by making analysis reusable, evidence traceable and follow-up more consistent.",
+    "body": "A shared workflow for turning scattered information into traceable analysis, reports and reusable decision context.",
+    "flowtitle": "DECISION-SUPPORT WORKFLOW",
+    "flow": [
+      [
+        "Signals",
+        "Industry radar + business data"
+      ],
+      [
+        "Sensemaking",
+        "PEST + ontology + evidence"
+      ],
+      [
+        "Decisions",
+        "Reports + history + review"
+      ]
+    ],
+    "chips": [
+      "Business ontology",
+      "Workflow automation",
+      "Strategic intelligence"
+    ],
+    "contribution": "Business modeling / Tool integration / Workflow design / AI-assisted delivery",
+    "evidence": "Resume reference section IV; intelligence radar + PEST + Ontology. No claim of fully automated cross-system API loop, financial uplift or company-wide deployment.",
+    "skills": [
+      "Product Management",
+      "Automated Workflow",
+      "Business Analysis"
+    ],
+    "cover": "/home/hahaxiong83/mycc/4-Assets/career/chenchuan-ontology-portfolio-cover-2026-09-28.png",
+    "upwork_url": "https://www.upwork.com/freelancers/~01fee325b71f754dda?p=2104526225458798592",
+    "publication_status": "published",
+    "verified_at": "2026-09-28 19:07 CST",
+    "verification": "Reopened after profile reload: title, role, full description, skills, published date and cover visually checked."
+  },
+  {
+    "key": "h-platform",
+    "n": "07",
+    "title": "H Platform: Executive AI Workspace & Team Workflows",
+    "short": "H Platform",
+    "subtitle": "Bring AI assistance into daily management work.",
+    "stage": "INTERNAL DAILY USE",
+    "role": "Product owner | AI workspace, management workflows & AI-assisted delivery",
+    "description": "Defined and built a Feishu-connected AI work platform for internal management teams using Claude Code and Codex. Turned strategy alignment, task breakdown, follow-up and performance-goal preparation into practical assistant workflows. Combined reusable skills, multiple AI engines, scheduled tasks and persistent context in a shared platform, with separate user workspaces and administrative controls. Owned requirements, workflow design, rollout and acceptance checks. The platform supports management judgment and is used internally.",
+    "body": "A management workspace connecting AI assistants, reusable tools and shared methods through familiar team collaboration channels.",
+    "flowtitle": "MANAGEMENT WORKFLOW",
+    "flow": [
+      [
+        "Align",
+        "Strategy + team goals"
+      ],
+      [
+        "Execute",
+        "Assistants + skills + tasks"
+      ],
+      [
+        "Review",
+        "Follow-up + reusable context"
+      ]
+    ],
+    "chips": [
+      "Feishu integration",
+      "AI agents + tools",
+      "Management workflows"
+    ],
+    "contribution": "Product ownership / Workflow design / Tool orchestration / Rollout + acceptance",
+    "evidence": "Resume reference section IV for internal daily use and management scenarios; project_feishu_grok_h_byos for skills, engines, scheduled tasks, context and user separation. No user identities or infrastructure in public material.",
+    "skills": [
+      "Product Management",
+      "AI Agents",
+      "Automated Workflow"
+    ],
+    "cover": "/home/hahaxiong83/mycc/4-Assets/career/chenchuan-h-platform-portfolio-cover-2026-09-28.png",
+    "upwork_url": "https://www.upwork.com/freelancers/~01fee325b71f754dda?p=2104526738900328448",
+    "publication_status": "published",
+    "verified_at": "2026-09-28 19:07 CST",
+    "verification": "Reopened after profile reload: title, role, full description, skills, published date and cover visually checked."
+  }
+]

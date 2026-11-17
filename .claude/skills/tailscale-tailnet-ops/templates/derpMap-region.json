@@ -1,0 +1,21 @@
+{
+  "derpMap": {
+    "Regions": {
+      "901": {
+        "RegionID": 901,
+        "RegionCode": "myderp",
+        "RegionName": "Hong Kong (custom)",
+        "Nodes": [
+          {
+            "Name": "1",
+            "RegionID": 901,
+            "HostName": "derp.example.com",
+            "IPv4": "203.0.113.15",
+            "DERPPort": 8888,
+            "STUNPort": 3478
+          }
+        ]
+      }
+    }
+  }
+}

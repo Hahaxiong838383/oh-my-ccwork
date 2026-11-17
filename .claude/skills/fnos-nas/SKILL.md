@@ -1,14 +1,20 @@
 ---
 name: fnos-nas
-description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"
+description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"、"WebDAV"、"loginprotect"
 ---
 
 # fnOS NAS 排障指南
 
 > 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验沉淀。
-> 触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"
+> 触发词："飞牛"、"NAS"、"fnOS"、"储存空间"、"文件管理"、"trim_"、"WebDAV"、"loginprotect"
 
 ---
+
+## 维护原则
+
+1. 需要在飞牛上部署服务时，**优先使用飞牛应用中心的 APP**。先 `trim-cli app store search`，能装就 `trim-cli app install`。应用中心没有，或功能明确不够，才允许手动 fpk 或 Docker，并写明原因。
+2. 后续维护用官方 CLI：npm `@trimjs/trim-cli`，本机命令 `trim-cli`。登录只用 OAuth，不把密码或授权 code 放进命令参数。
+3. 家里局域网和两台飞牛的台账在独立仓 `~/home-lan`，不要写回 MyAgent。
 
 ## 专项维护
 
@@ -23,7 +29,7 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 | 当前内核 | 6.12.43+deb12-amd64（通用，trimafs 挂载失败） |
 | 存储 | RAID1 (md0/md127) → LVM+dm-cache → btrfs /vol1 /vol2 |
 | 数据库 | PostgreSQL，数据库名 `trim` |
-| Web 端口 | 5668（HTTP）、5669（HTTPS） |
+| Web 端口 | 飞牛 1 与飞牛 2（2026-10-12，系统 1.2.0800）：5666 HTTP、5667 HTTPS。`trim-cli` 对远程 IP 用 https:5667。管理接口在 `/ogh/ac/h/` |
 
 ---
 
@@ -36,6 +42,7 @@ description: 飞牛 NAS (Teiron fnOS) 系统知识库，基于实战排障经验
 | `trim_sac` | Session Auth Center | `/var/log/trim_sac/` |
 | `trim_http_cgi` | HTTP/WebSocket 网关（Go，TRPC协议） | nginx 日志 |
 | nginx | 反向代理 | `/usr/trim/nginx/logs/access.log` |
+| `webdav.service` | 原生文件 WebDAV（`:5005` HTTP / `:5006` HTTPS） | `/usr/trim/logs/share_service.log`（分享重建）；进程 `/usr/trim/bin/webdav` |
 
 ---
 
@@ -142,6 +149,22 @@ INSERT INTO user_storage (uid, storage_id, ...) VALUES (1000, ...);
 
 ---
 
+
+### 6. WebDAV 401 对管理员账密仍拒
+
+**现象**：`PROPFIND http://192.168.1.115:5005/` 对 `hahaxiong83`（Administrators、登录密码=WebDAV 密码）回 `401 Not Authorized`，本机和 NAS localhost 一样。看起来像没授权。
+
+**根因**：`/usr/trim/bin/webdav` 的 `loginprotect`（`IsUserBanned` / `IsIPBanned` / `RecordFailure` / `sameCalendarDay`）。连续失败把用户或 IP 封进 **go-cache 内存**。封上之后对的账密也是 401。`ExecReload=kill -HUP` 清不掉。
+
+**修复**：
+```bash
+sudo systemctl restart webdav.service
+# 应 207。根下列的是共享名（如 开发机备份），不是 /vol2/1000/...
+```
+
+**注意**：Codeg `remoteDir` 不能带 `/`。home-studio 备份真值见 A 库 `project_home_studio_fnos2_backup`。
+
+---
 ## 常用诊断命令
 
 ```bash
@@ -193,3 +216,29 @@ sudo tail -f /usr/trim/nginx/logs/access.log  # nginx 访问日志（POST /uploa
 ```
 
 **注意**：上传走 WebSocket（`/websocket?type=file`）而非普通 HTTP POST，大文件调试看 uploadsrv.log 而不是 access.log。
+
+### 7. trim-cli 与 EasyTier（2026-10-12）
+
+系统升到 1.2.0800 后，`trim-cli --profile fnos2 app list` 和 `fnos1` 都能列出应用。1.2.0701 没有 `/ogh/ac/h/`，同一条命令拿到的是网页 404。
+
+应用中心的 `EasyTier` 1.0.9、`EasyTier-Web`、`易组网(用户版)` 不能替换飞牛 2 上已经在跑的 Docker `easytier/easytier:v2.6.4`。那个容器占 `10.10.10.22`，并导出家里网段。细节在 A 库 `project_fnos_trim_cli`。
+
+### 8. trim-cli 登录、失效与保活（2026-11-16 实测）
+
+**失效表现**：`refresh failed: client mismatch` 或连续 401 —— access/refresh token 已不能轮换，只能重新走 OAuth。
+`login --refresh` 成功时输出 `endpoint: oauth.refresh`；失败不要重试旧 token，也不要改凭据文件。
+
+**重新授权（非交互会话）**：`login` 的 `Authorization code` 提示需要 TTY，直接在管道/后台跑会报
+`IO error: not a terminal`。做法是用 python `pty` 起子进程：把授权链接读出来给用户，用户授权后把
+一次性 code 写进文件（不要放进命令行参数），由包装脚本写入 pty 并回车。
+
+**保活**：`~/.local/bin/trim-cli-keepalive.sh` + systemd 用户单元 `trim-cli-keepalive.{service,timer}`，
+每天 08:15 / 20:15（Asia/Shanghai，`Persistent=true`，±180s 随机）对 `fnos1`/`fnos2` 各跑一次
+`login --refresh`；linger=yes，未登录也会执行。日志 `~/.local/state/trim-cli/keepalive.log`（保留 400 行），
+失败记 `FAIL` 并非零退出，由 journal 留痕。NAS 长期关机/断网超过 refresh token 有效期仍会掉一次授权，
+属预期，看到 FAIL 再人工授权。
+
+### 9. Lucky 反向代理
+
+Lucky 跑在本机应用中心，管理入口路径隐藏、登录走 RSA 挑战；增删域名规则、字段结构、
+IPv6 入站限制和本机验证陷阱，统一见 [lucky-reverse-proxy](../lucky-reverse-proxy/SKILL.md)。

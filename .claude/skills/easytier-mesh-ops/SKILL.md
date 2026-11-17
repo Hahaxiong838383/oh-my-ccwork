@@ -28,9 +28,21 @@ description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排�
 
 **子网映射**（末位不变只换前缀）：公司 `192.168.61.X`→`10.10.61.X`，家 `192.168.1.X`→`10.10.1.X`
 **上游通道**（每节点 2 条）：`tcp://85.189.55.23:443` · `udp://…:22`
+**未装 EasyTier、走子网代理**（真值 `common.sh` 的 `ET_PROXY_DEVICES`，生成进 `10.10.10.1:8080`）：
+
+| 设备 | 原地址 | 组网内 |
+|---|---|---|
+| 飞牛 NAS 1 号 | `192.168.1.43:5666` / HTTPS `5667` | `http://10.10.1.43:5666` |
+| 极空间 | `192.168.1.23:5055` | `http://10.10.1.23:5055` |
+| 家里路由器 | `192.168.1.1` | `http://10.10.1.1` |
+| 家里 ASUS 路由 | `192.168.1.2` | `http://10.10.1.2` |
+| QNAP | `192.168.61.18:5000` / HTTPS `5001` | `http://10.10.61.18:5000` |
+
+飞牛 2 号已装 EasyTier（`10.10.10.22` / `.115`），不要和 1 号搞混。以后给飞牛 1 号装节点用 `fnos1` / `10.10.10.26`，**不要用 `.23`**（已被 home-studio 占用）。
+**上游通道**（每节点固定 2 条）：`tcp://85.189.55.23:443` · `udp://…:22`。中继另外已听备用 `tcp://85.189.55.23:8443`、`wss://85.189.55.23:8444/`（2026-10-13 面板放行后家里测通），**不要默认写进所有节点**。
 ⚠️ ~~第三条 `udp://…:11010`~~ **2026-08-20 已从所有节点删除**——野草云面板永久封该端口，
 该 connector 永远停在 `Connecting`，四天在 linux-lan 上刷了 4121 行 WARN，
-把真实故障信号淹没、排查僵死事故时带偏一轮。**别再加回来。**
+把真实故障信号淹没、排查僵死事故时带偏一轮。**别再给 hk-relay 加回来。** home-studio 自己的 `tcp/udp 11010` 是另一回事：2026-10-14 路由器已把公网 `120.244.92.170:11010` 转到 `192.168.1.133`，从 hk-relay 测 TCP 约 45ms 通。不要把这个地址写成 `85.189.55.23:11010`，也不要用代理出口 `154.44.3.170`。组网内国内出口是 `gost-mesh-exit.service`，只听 `10.10.10.23:7890`（HTTP+SOCKS5，用户 `grokbox`，密码在 `~/.config/gost/mesh-exit.auth`）。2026-10-14 11010 曾出现 connect 后立刻 remove；重启 `easytier-mesh` 再重启 gost 后 grok-box 回到 p2p。若日志只剩 `192.168.1.119:11010` Host unreachable，那是 linux-lan，不是 grok-box。
 **两个内网界面**：`10.10.10.1:11211` 控制台 · `10.10.10.1:8080` 速查页（均公网不可达）
 **SSH 入口**：既有 Unix 节点用 `*-mesh` 别名；Windows 节点用 `ssh Administrator@10.10.10.24`
 
@@ -153,7 +165,7 @@ curl -s -o /dev/null --max-time 15 --noproxy '*' \
 
 ### 4.3 「端口不通」——先查供应商面板，别只看机内
 
-**野草云面板侧有客户不可关闭的防火墙**，白名单仅 `tcp22/udp22/tcp80/tcp443/tcp8888/icmp`。
+**野草云面板侧有客户不可关闭的防火墙**。白名单含 `tcp22/udp22/tcp80/tcp443/tcp8888/icmp`，2026-10-13 起另有入站 **TCP 8443、8444**（放行前从家里是超时，放行后约 44ms 通）。
 机内 `iptables -S` 全 ACCEPT、`ufw` inactive，**拦你的那层在机器里看不见**。
 非白名单端口被**静默丢弃**（timeout 而非 RST），症状与 NAT 打洞失败**完全同形**。
 
@@ -172,8 +184,10 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 两条路径结果**一致** ⇒ 子网代理没坏，是端口找错了。
 
-**已知真值：QNAP 管理口是 5000（HTTPS 5001），不是 8080。**
-8080 上另有服务，返回 19 字节 Go 默认 `404 page not found`——极易被误判成组网故障。
+**已知真值：**
+- QNAP 管理口是 **5000**（HTTPS 5001），不是 8080。8080 上另有服务，返回 19 字节 Go 默认 `404 page not found`——极易被误判成组网故障。
+- 飞牛 1 号管理口是 **5666**（HTTPS 5667），80/443 会跳过去。
+- 极空间管理口是 **5055**，没有 SSH。
 
 ### 4.5 「控制台设备列表是空的」
 
@@ -207,6 +221,13 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 5. Tailscale 自建 DERP 的域名解析和 policy 里的 `IPv4` 是两处，见 `tailscale-tailnet-ops`。
 
 **macOS `connect` 返回 `EADDRNOTAVAIL`，同时 ping 通：** 先数 `TIME_WAIT` 和临时端口范围。卡住的条目超过范围时，把 `net.inet.ip.portrange.first`/`hifirst` 降到卡住端口之下，再重启 EasyTier。清路由和重启网卡不解决。2026-11-12 Mini 上 30155 条对 16384 个端口。
+1. 先证明新地址是同一台：主机名、原有公钥能登录、`10.10.10.1` 还在、443/udp22/80/8888 仍在听。供应商重启后 SSH 主机密钥会变，`known_hosts` 按新密钥更新。
+2. 只替换公网 IP。不要把 `udp://<公网>:11010` 带过去，面板仍丢这个端口；局域网的 `11010` 留下。换 IP 时用整文件覆盖，容易把旁边的局域网 peer 一起删掉。
+3. 改 Kuma 只动监控 17 并只重启 `ops-uptime-kuma`。RackNerd 上的 sing-box 是家里电视出口，不要重启。
+4. 验收看 `easytier-cli connector`：新地址的 `tcp/443` 与 `udp/22` 都是 Connected，且别的节点 peer 表里有 `hk-relay`。进程 active、配置里已经是新 IP，都不够。
+5. Tailscale 自建 DERP 的域名解析和 policy 里的 `IPv4` 是两处，见 `tailscale-tailnet-ops`。
+
+**macOS `connect` 返回 `EADDRNOTAVAIL`，同时 ping 通：** 先数 `TIME_WAIT` 和临时端口范围（`net.inet.ip.portrange.last - first + 1`）。卡住的 `TIME_WAIT` 超过这个范围时，把 `first`/`hifirst` 降到卡住端口之下，再重启 EasyTier。这时 `bind_device`、清路由、重启网卡都不解决。该 sysctl 重启后恢复默认；重启也会清掉卡住的连接。2026-11-12 Mini 上 30155 条 `TIME_WAIT` 对 16384 个端口，放宽到 `32768` 后 `tcp/443` 变为 ESTABLISHED。
 
 ## 五、平台差异坑（macOS / Linux / Windows）
 
@@ -230,6 +251,7 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 1. `nodes/<名字>.toml` 照抄同类节点（**必须含 `[network_identity]` 段**，漏了会静默加入名为 `default` 的空密钥网）
 2. `common.sh` 的 `ET_NODES` 加一行：`名字|ssh别名|虚拟IP|平台|sudo方式`
+2. `common.sh` 的 `ET_NODES` 加一行：`名字|ssh别名|虚拟IP|平台|sudo方式`。只走子网代理、不装 EasyTier 的设备加 `ET_PROXY_DEVICES`，不要手改 `web/index.html`
 3. Linux/macOS 跑 `./scripts/deploy-node.sh <名字>`；Windows 用原生二进制 + SYSTEM 开机任务
 4. 必须断言：进程、VIP、网络身份非空、至少一个远端 peer；Windows 再从其他节点真实 SSH Mesh IP
 5. Unix 节点给 `~/.ssh/config` 加 `<名字>-mesh` 别名

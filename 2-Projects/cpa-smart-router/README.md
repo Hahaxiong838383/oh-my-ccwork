@@ -4,6 +4,7 @@ CPA Smart Router 是部署在 `aliyun-jp` 的 CLIProxyAPI 旁路调度层：客�
 
 ## 当前状态
 
+- 2026-10-03：日本生产 CLIProxyAPI 已从 `7.3.11` 升至官方 `8.0.12`，修复上游版本头固定为 `0.2.120` 导致的 Codeg Grok 426。公开 Grok/Codex 推理及两次 Codeg 正常 API/WS 回合通过；[修复复盘](./2026-10-03-codeg-grok-426-repair.md)与[脱敏验收记录](./2026-10-03-codeg-grok-426-validation.json)已归档。此次显式 `grok-4.7` 验收不代表变更文本默认路由。
 - M-1：已验证 CPA `openai-compatibility.prefix` 可固定命中候选上游。
 - M0/M1：Go 单二进制 MVP，支持 `/v1/chat/completions`、`/v1/responses`、`/v1/models`、`/v1/images/generations`、`/v1/images/edits` 转发、鉴权、sticky、熔断、异步 JSONL 指标。
 - M2：支持 CST 日用量重置与鉴权状态查看 `/debug/state`。
@@ -110,3 +111,4 @@ ssh aliyun-jp 'tail -n 20 /opt/cpa-smart-router/router-metrics.jsonl'
 - GUI App 的 PATH 可能只有系统目录。若 `codex` 是 `#!/usr/bin/env node` 的 npm shim，终端可运行不代表 GUI 可运行；必须用最小 GUI 环境复测。部分 App 会清理继承的 PATH，runtime guard 设置成功不等于目标进程必然生效，仍需核对目标进程环境与运行时检测；这也不能单独证明原始 Node ESM 报错的原因。
 - 验收必须分开记录：客户端请求是否携带 `priority`、CPA 是否返回 HTTP 200、上游响应回报的 service tier。当前真实请求已携带 `priority`，但上游流式响应仍回 `auto/default`，不得把“请求已发出”写成“后台加速已确认”。
 - 生产 CLIProxyAPI 已于 2026-09-15 通过空 auth-dir 隔离 Canary、插件兼容、Codex/Grok 真实请求和 watchdog 回滚门升级到 `7.3.3`。当前 transient error cooling 显式为 12 秒，credential retry 为 3 轮、单轮全部凭据、最大等待 12 秒；升级新版本仍须独立回归，不能直接覆盖生产。
+- 2026-07-28 历史快照：当时 CLIProxyAPI 使用 `7.2.58`，Fast 修复未跨版本升级；当前生产版本及后续升级验收见上方「当前状态」。

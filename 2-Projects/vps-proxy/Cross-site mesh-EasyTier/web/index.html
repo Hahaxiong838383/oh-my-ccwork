@@ -82,6 +82,9 @@ kbd{font-size:.8rem;color:var(--muted)}
       <tr><td class="name">maxtkf-server<span class="role">家 · Windows 11 · SYSTEM 开机任务</span></td>
           <td><code class="cp">10.10.10.24</code></td>
           <td><code class="cp">ssh 10.10.10.24</code><span class="role">⚠ 无 -mesh 别名</span></td></tr>
+      <tr><td class="name">jidinghe-armbian<span class="role">家 · MGV3001-ZG 机顶盒 · Armbian / ARM64</span></td>
+          <td><code class="cp">10.10.10.25</code></td>
+          <td><code class="cp">ssh 10.10.10.25</code><span class="role">⚠ 无 -mesh 别名</span></td></tr>
       <tr><td class="name">air<span class="role">MacBook Air M5 · 随身</span></td>
           <td><code class="cp">10.10.10.31</code></td>
           <td><kbd>本机</kbd></td></tr>
@@ -102,6 +105,7 @@ kbd{font-size:.8rem;color:var(--muted)}
   <table>
     <thead><tr><th>设备</th><th>原地址</th><th>组网内用</th></tr></thead>
     <tbody>
+      <!-- PROXY:BEGIN 本段由 scripts/gen-cheatsheet.sh 从 common.sh 的 ET_PROXY_DEVICES 生成，勿手改 -->
       <tr><td class="name">QNAP NAS<span class="role">管理界面</span></td>
           <td><code>192.168.61.18:5000</code></td>
           <td><code class="cp">http://10.10.61.18:5000</code></td></tr>
@@ -111,9 +115,22 @@ kbd{font-size:.8rem;color:var(--muted)}
       <tr><td class="name">公司网关<span class="role">路由器后台</span></td>
           <td><code>192.168.61.254</code></td>
           <td><code class="cp">http://10.10.61.254</code></td></tr>
-      <tr><td class="name">家里路由器</td>
+      <tr><td class="name">飞牛 NAS 1 号<span class="role">管理界面 HTTP</span></td>
+          <td><code>192.168.1.43:5666</code></td>
+          <td><code class="cp">http://10.10.1.43:5666</code></td></tr>
+      <tr><td class="name">飞牛 NAS 1 号<span class="role">HTTPS</span></td>
+          <td><code>192.168.1.43:5667</code></td>
+          <td><code class="cp">https://10.10.1.43:5667</code></td></tr>
+      <tr><td class="name">极空间<span class="role">私有云管理</span></td>
+          <td><code>192.168.1.23:5055</code></td>
+          <td><code class="cp">http://10.10.1.23:5055</code></td></tr>
+      <tr><td class="name">家里路由器<span class="role">主路由后台</span></td>
           <td><code>192.168.1.1</code></td>
           <td><code class="cp">http://10.10.1.1</code></td></tr>
+      <tr><td class="name">家里 ASUS 路由<span class="role">副路由 / AP 后台</span></td>
+          <td><code>192.168.1.2</code></td>
+          <td><code class="cp">http://10.10.1.2</code></td></tr>
+      <!-- PROXY:END -->
     </tbody>
   </table>
   </div>
@@ -121,6 +138,9 @@ kbd{font-size:.8rem;color:var(--muted)}
   家里 <code>192.168.1.X</code> → <code>10.10.1.X</code>。</div>
   <div class="warn"><b>QNAP 管理口是 5000 不是 8080。</b>8080 上另有服务，访问它会返回
   <code>404 page not found</code>——那是那个服务的正常响应，不是组网故障。</div>
+  <div class="warn"><b>飞牛 1 号管理口是 5666（HTTPS 5667）。</b>80/443 会跳到这两个口。
+  飞牛 2 号已经装了 EasyTier，走 <code>10.10.10.22</code>，不要和 1 号的
+  <code>10.10.1.43</code> 搞混。<b>极空间管理口是 5055</b>，没有 SSH。</div>
 </section>
 
 <section>
