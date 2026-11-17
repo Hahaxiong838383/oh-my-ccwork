@@ -1,0 +1,166 @@
+{
+  "review": "assets_cover_v2",
+  "judgment": "semantically acceptable offline index; removes the sorter and stops early only after more than 513 matching rows; does not fix the observed 580ms cold read; do not isolate a worker first; do not relax the gates",
+  "source_named_by_request": "9a5ac270dca8e63b16eec83fe7d599500e33fe32",
+  "head_when_written": "9c5154e767dc5e16d7235d82c4d1c1d63ae081a1",
+  "ark_sql_diff_since_named_head": [],
+  "source_modified": false,
+  "committed": false,
+  "cloud_load": false,
+  "subagents": false,
+  "evidence_tar": {
+    "path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/sched-cadence-evidence-9a5ac270.tar.gz",
+    "sha256": "10bf9d9e22f4ce9b6aae3f5cec7e089832843fed04968d0a6bcc91ce560a5fa7",
+    "matches_requested": true,
+    "unpacked_index_members": 35,
+    "unpacked_index_sha_mismatches": []
+  },
+  "observed_1794950778459": {
+    "completed_batches": 1470,
+    "attempts": 4173,
+    "requests_http_200": 1471,
+    "requests_http_503_analytics_overloaded": 2702,
+    "ark_http_200": 302,
+    "ark_http_503": 1,
+    "ark_503_at_ms": 1794950177386,
+    "ark_503_client_ms": 578.7145289999899,
+    "ark_503_error": "ark_dependency_unavailable",
+    "sqlite_busy_errcode_5": [1794950177843, 1794950177880],
+    "third_query": {
+      "file": "mixed-query-1794950174754",
+      "samples": 50,
+      "client_timeouts": 20,
+      "server_http_200": 50,
+      "server_over_120ms": 4,
+      "server_over_120ms_values": [910.1133820000105, 585.45769499999, 375.3444409999647, 449.31563899997855],
+      "queued_timeouts_server_under_80ms": 16,
+      "p95_ms": 121.39691499999026,
+      "p99_ms": 148.27143800002523
+    },
+    "slowest_assets_all": {
+      "id": "mixed-query-1794950174754-0",
+      "wall_ms": 579.9895230000257,
+      "thread_read_bytes": 135168,
+      "pages_4096": 33,
+      "thread_read_calls": 40,
+      "thread_cpu_ms": 2.967
+    },
+    "slowest_evidence_all": {
+      "wall_ms": 324.7729620000464,
+      "thread_read_bytes": 45056,
+      "thread_read_calls": 15,
+      "thread_cpu_ms": 1.879
+    },
+    "slowest_request_wall_ms": 926.8668080000207,
+    "slowest_request_main_cpu_ms": 9.612,
+    "receiver_folio_samples_in_slowest_request": 9,
+    "catalog_asset_slots": "3/57",
+    "assets_per_6000": 315.7894736842105
+  },
+  "replay": {
+    "node": "v24.19.0",
+    "explain_sqlite": "3.53.3",
+    "page_counter_sqlite": "3.54.1",
+    "page_counter_note": "3.54.1 opened databases created by node sqlite 3.53.3. EXPLAIN plans were taken on 3.53.3.",
+    "v1_plan": "SEARCH USING COVERING INDEX analytics_ark_assets_cover_v1 (device_key AND event_name AND received_at range) plus USE TEMP B-TREE FOR ORDER BY",
+    "v2_plan": "SEARCH USING COVERING INDEX analytics_ark_assets_cover_v2 (device_key AND occurred_at range); no Sort opcode; no SeekRowid",
+    "cases_ordered_and_history_equal": [
+      "unique-under-limit",
+      "unique-over-limit",
+      "soak-shaped-316",
+      "bad-clock-and-window",
+      "watermark-sql",
+      "tie-same-value",
+      "tie-straddle",
+      "same-occurred-different-value",
+      "gm-evidence",
+      "cross-event-tie",
+      "corrected-watermark-row-ids"
+    ],
+    "partial_predicate_mismatch": "no query solution",
+    "null_occurred_insert": "NOT NULL constraint failed: analytics_event.occurred_at_ms",
+    "snapshot": {
+      "first_read": ["before"],
+      "during_open_snapshot_after_other_commit": ["before"],
+      "after_new_transaction": ["after", "before"]
+    },
+    "pages": [
+      {
+        "rows": 316,
+        "returned": 316,
+        "v1_index_pages": 25,
+        "v1_cache_miss": 25,
+        "v1_vm_step": 8597,
+        "v1_sort": 1,
+        "v2_index_pages": 30,
+        "v2_cache_miss": 30,
+        "v2_vm_step": 4758,
+        "v2_sort": 0
+      },
+      {
+        "rows": 2000,
+        "returned": 513,
+        "v1_index_pages": 110,
+        "v1_cache_miss": 110,
+        "v1_vm_step": 36650,
+        "v1_sort": 1,
+        "v2_index_pages": 101,
+        "v2_cache_miss": 28,
+        "v2_vm_step": 7718,
+        "v2_sort": 0
+      }
+    ]
+  },
+  "worker": {
+    "required_before_smaller_read": false,
+    "reason": "Four timeouts are the SELECT itself, and evidence alone is 324.773ms. A worker still waits on folio and still misses 120ms. Sixteen other timeouts are queueing behind that wait. Two errcode 5 events are Ark accept with busy_timeout already 0."
+  },
+  "report_420_corrections": {
+    "strict_slow_query_window": {
+      "start_ms": 1794948684657,
+      "end_ms": 1794948685775,
+      "samples": 11,
+      "folio_wait_bit_common": 10,
+      "do_get_write_access": 1,
+      "excluded_running_sample_at_ms": 1794948684655
+    },
+    "exponential_comment": "busy-retry.ts explains that exponential delay consumes the 80ms window, then uses a constant 10ms and attempt>=5. Not a code defect.",
+    "linux_v2_log": {
+      "held_250_status": 503,
+      "held_250_wall_ms": 86.603812,
+      "held_250_busy_attempts": 3,
+      "held_45_status": 200,
+      "held_45_wall_ms": 50.74298399999998,
+      "held_45_busy_attempts": 1
+    },
+    "local_six_attempt_probe": {
+      "file": "ark-zero-busy-physical-macos-v3.log",
+      "held_250_status": 503,
+      "held_250_wall_ms": 73.80733400000008,
+      "held_250_busy_attempts": 6,
+      "held_45_status": 200,
+      "held_45_wall_ms": 54.41979100000003,
+      "held_45_busy_attempts": 2
+    },
+    "four_failures_six_passes_artifact": "not found; ARK-LOCK-LOCAL.json and ARK-LOCK-LOCAL-FINAL.json are empty"
+  },
+  "executed": [
+    "shasum -a 256 sched-cadence-evidence-9a5ac270.tar.gz",
+    "sha256 of all 35 INDEX.json members",
+    "python summaries of SCHED-CADENCE-OBSERVED-1794950778459.json, sql-query-profile.jsonl, requests.jsonl, shared-reader.jsonl, ark-continuous.jsonl, sched-main-thread-wait.jsonl, bounded-main-thread-wait.jsonl",
+    "/Users/fu-121/.local/node-v24/bin/node /tmp/assets-v2-replay.mjs",
+    "/Users/fu-121/.local/node-v24/bin/node /tmp/assets-v2-extra.mjs",
+    "cc page counter against Homebrew sqlite 3.54.1 and run it on the 316-row and 2000-row databases",
+    "node sqlite 3.53.3 dbstat page counts and tie-order probes",
+    "git diff 9a5ac270..HEAD for src/ark and analytics/store.ts"
+  ],
+  "risks": [
+    "Under 513 matching rows, v2 reads the whole index and was larger in the synthetic fixture (30 pages versus 25).",
+    "Tie order is not a SQL contract. v2 btree-orders ties by event_name, clock_suspicious, properties_json, batch_attempt_id. Do not add rowid to ORDER BY.",
+    "Keeping v1 and v2 both installed doubles asset index maintenance on the single writer.",
+    "history-indexes.ts currently shares one column template for non-evidence indexes; v2 needs its own column list.",
+    "A shorter event IN list cannot use the partial index and fails closed with no query solution.",
+    "The index does not shrink the evidence read, the folio wait, or the two Ark BUSY errors.",
+    "Page counters were read by sqlite 3.54.1; plans and row identity were checked on 3.53.3."
+  ]
+}

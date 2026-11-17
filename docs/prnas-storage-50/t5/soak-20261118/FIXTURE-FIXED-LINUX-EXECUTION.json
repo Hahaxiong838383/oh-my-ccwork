@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"candidate\": \"f72b6ac4759fde9770a7592a96dd2fd676302f6c\", \"files\": 552, \"exit\": 0, \"log_sha256\": \"d0cb52d8c295109003fe4e39dcb528637f8ce557243458f0dfe69deb74a93a49\", \"stdout\": \"\\u2714 mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (2275.680177ms)\\n\\u2714 reproduce actor37 all-event rejection; synthetic IDs pass the unchanged privacy contract (63.740321ms)\\n\\u2139 tests 2\\n\\u2139 suites 0\\n\\u2139 pass 2\\n\\u2139 fail 0\\n\\u2139 cancelled 0\\n\\u2139 skipped 0\\n\\u2139 todo 0\\n\\u2139 duration_ms 2969.367753\\n\", \"stderr\": \"\"}\n",
+  "stderr": ""
+}

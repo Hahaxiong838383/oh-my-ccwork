@@ -1,0 +1,25 @@
+/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-cgroup-v1.test.ts:3
+import {readCgroupV1,createResourceRecorder} from './storage-load-resources.js';
+        ^
+SyntaxError: The requested module './storage-load-resources.js' does not provide an export named 'readCgroupV1'
+    at #asyncInstantiate (node:internal/modules/esm/module_job:327:21)
+    at async ModuleJob.run (node:internal/modules/esm/module_job:431:5)
+    at async node:internal/modules/esm/loader:643:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v24.19.0
+✖ scripts/storage-cgroup-v1.test.ts (478.863208ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 499.014417
+
+✖ failing tests:
+
+test at scripts/storage-cgroup-v1.test.ts:1:1
+✖ scripts/storage-cgroup-v1.test.ts (478.863208ms)
+  'test failed'

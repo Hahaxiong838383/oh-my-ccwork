@@ -1,0 +1,15 @@
+✔ mixed harness writes Ark in the existing Brain child, independent of a blocked Analytics loop (2870.879292ms)
+✔ NAS cgroup v1 reads the container subtree, including child processes, without claiming v2 acceptance (90.812458ms)
+PASS resource parser/counters: exact CPU weights, OOM/restart/gap/short/unknown/memory/disk fail closed; accelerated only, not 24h
+PASS quota CPU, cgroup memory headroom, unknown and changed quota fail closed
+PASS clean inactive cache is available; dirty/writeback/active/unknown memory is never counted as free
+✔ scripts/storage-load-resources.test.ts (2256.570333ms)
+✔ reproduce actor37 all-event rejection; synthetic IDs pass the unchanged privacy contract (236.827833ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3650.22025
