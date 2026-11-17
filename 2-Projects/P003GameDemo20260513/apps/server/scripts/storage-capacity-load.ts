@@ -96,6 +96,7 @@ if(mode==='run'){
  const resources=createResourceRecorder(),maintenance:any[]=[],health=createLoadHealthRecorder(sample=>appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n')),children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;let maintenanceError:unknown;
  const launch=(args:string[],name:string,env=process.env)=>new Promise<number|null>(done=>{
   const background=productionScheduling&&args.some(a=>['scripts/analytics-rollup.ts','scripts/storage-backup-job.py','scripts/storage-ark-export.py'].includes(a));
+  if(process.env.T5_ARK_EXPORT_SQL_PROFILE==='1'&&args.includes('scripts/storage-ark-export.py'))args=[...args.map(a=>a==='scripts/storage-ark-export.py'?'scripts/storage-ark-export-profile.py':a),'--profile',join(root,name+'.sql.json')];
   const command=background?['/usr/bin/ionice','-c','2','-n','7','/usr/bin/nice','-n','10',...args]:args;
   const p=spawn(command[0],command.slice(1),{cwd:process.cwd(),env,stdio:['ignore','pipe','pipe']});children.add(p);
   if(productionScheduling)appendFileSync(join(root,'scheduling-launches.jsonl'),JSON.stringify({at_ms:Date.now(),pid:p.pid,name,background,requested_nice:background?10:0,requested_ioprio:background?'best-effort:7':'inherited'})+'\n');
