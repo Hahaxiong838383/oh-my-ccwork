@@ -38,6 +38,17 @@ test('history keeps unknown distinct from zero and never uses a 12-character ali
  f.normal();f.wallet(99,NOW-1000,NOW,OTHER);assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).status,'unknown');
  f.wallet(0);const h=readArkHistory(f.store,KEY,NOW-5000,NOW);assert.equal(h.wallets.family_coin?.value,0);assert.equal(h.wallets.stardust,null);
 }finally{f.done();}});
+test('lazy batch metadata shares the read snapshot and is never cached across requests',()=>{const f=fixture();let other:AnalyticsStore|undefined;try{
+ f.normal();f.wallet(17);other=new AnalyticsStore(f.store.path);let changed=false;
+ const observed={readSnapshot:f.store.readSnapshot.bind(f.store),db:{prepare(sql:string){const st=f.store.db.prepare(sql);return {
+  all:(...args:any[])=>st.all(...args),get(...args:any[]){
+   if(sql.includes('FROM analytics_batch')&&!changed){changed=true;other!.db.prepare('UPDATE analytics_batch SET client_json=? WHERE attempt_id=?').run('{"content_version":"changed-after-read-start"}',...args);}
+   return st.get(...args);
+  }
+ };}}} as unknown as AnalyticsStore;
+ assert.equal(readArkHistory(observed,KEY,NOW-5000,NOW).wallets.family_coin?.content_version,'test-content');assert(changed);
+ assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).wallets.family_coin?.content_version,'changed-after-read-start');
+}finally{other?.close();f.done();}});
 test('latest value uses event occurrence time, not delayed batch receipt or sum(delta)',()=>{const f=fixture();try{f.normal();f.wallet(8,NOW-800,NOW);f.wallet(3,NOW-900,NOW+500);const h=readArkHistory(f.store,KEY,NOW-5000,NOW+500);assert.equal(h.wallets.family_coin?.value,8);assert.equal(h.wallets.family_coin?.content_version,'test-content');}finally{f.done();}});
 test('historical ownership watermark and suspicious clocks are fail-closed',()=>{const f=fixture();try{f.normal();f.wallet(8);assert.equal(readArkHistory(f.store,KEY,NOW-500,NOW).wallets.family_coin,null);f.wallet(9,NOW+10000);assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).wallets.family_coin?.value,8);}finally{f.done();}});
 test('GM marker poisons logical day, absent marker is unknown, truncated never yields a balance',()=>{const f=fixture();try{
