@@ -1,0 +1,2 @@
+[search-weather] {"task_id":"8006793c-86c6-4d48-8cef-fd1b2d790d0a","version":"r7-3ab915fdc3b79f4ccfe305f1","city_source":"explicit","provider":"baidu-public-web","city_name":"四川成都","station_id":"101270101","province":"四川","target_date":"2026-10-23","updated_at":"2026-10-22T18:20:00+08:00","fetched_at":"2026-10-22T10:30:00.000Z","cache_hit":false,"metric":"forecast"}
+weather runtime: actual authenticated route → frozen config → fixed provider → ledger; source gate enforced

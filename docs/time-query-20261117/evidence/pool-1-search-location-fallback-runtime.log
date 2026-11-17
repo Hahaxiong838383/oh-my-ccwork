@@ -1,0 +1,3 @@
+[search-fallback] {"task_id":"0647cde0-c394-4052-b291-0384001878ba","stage":"primary","outcome":"failed"}
+[search-fallback] {"task_id":"0647cde0-c394-4052-b291-0384001878ba","stage":"fallback","outcome":"failed"}
+local weather with location storage failure: no guessed location, no unlocated upstream search, explicit short response

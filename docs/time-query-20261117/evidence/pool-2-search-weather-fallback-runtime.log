@@ -1,0 +1,6 @@
+[search-weather] {"task_id":"e38d003a-9bad-4fcd-96a4-5b4edf199f13","outcome":"unavailable","reason":"weather_http_429"}
+[search-weather] {"task_id":"e38d003a-9bad-4fcd-96a4-5b4edf199f13","version":"r7-3ab915fdc3b79f4ccfe305f1","city_source":"explicit"}
+[search-fallback] {"task_id":"e38d003a-9bad-4fcd-96a4-5b4edf199f13","stage":"primary","outcome":"empty"}
+[search-filter] {"task_id":"e38d003a-9bad-4fcd-96a4-5b4edf199f13","returned":1,"accepted":1,"rejected_schema":0,"rejected_url":0,"rejected_text":0,"rejected_date":0,"duplicate":0,"outcome":"evidence"}
+[search-fallback] {"task_id":"e38d003a-9bad-4fcd-96a4-5b4edf199f13","stage":"fallback","outcome":"answered"}
+weather fallback runtime: authenticated task → failed provider → general evidence → delivered result; gate unchanged

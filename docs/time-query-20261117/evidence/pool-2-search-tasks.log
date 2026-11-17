@@ -1,0 +1,19 @@
+✔ R15 delivery completed does not turn a failure or empty evidence into a successful answer (106.421958ms)
+✔ R5 replay uses distinct idempotent claims, one automatic retry and immutable deadlines (35.0205ms)
+✔ R5 automatic replay cannot resurrect expired, cancelled, disabled or foreign tasks (85.840417ms)
+✔ 接单不等待网络；重复提交只执行一次；其他会话无法读取或领取 (22.856541ms)
+✔ 普通聊天不改变后台任务；明确取消拒绝迟到结果且不释放未结束的执行槽 (21.456ms)
+✔ 投机/预热/未授权/敏感查询/满会话不产生外部执行 (17.305ms)
+✔ 期限包含排队；关闸取消执行与待播；退出墓碑阻止迟到提交 (40.990667ms)
+✔ 重启不重放网络任务；幂等账本保留；查询正文不落盘 (17.359542ms)
+✔ ready过期不再领取，实际回执必须匹配领取者 (16.523959ms)
+✔ 持久日配额与上游熔断只拦新单，已接单幂等查询仍可恢复 (20.421375ms)
+✔ R7 route version is frozen at admission and retries do not re-resolve it (10.538125ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 413.132083

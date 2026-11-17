@@ -1,0 +1,9 @@
+✔ 生产鉴权拒绝parent/坏token/未知房间，默认关闭不建库；热关闸无需重启 (167.251167ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 176.805791
