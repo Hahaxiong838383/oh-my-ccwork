@@ -1,0 +1,20 @@
+[
+  {
+    "pool": "/opt/p003/server",
+    "before_after_restore_hashes": "PASS",
+    "concurrent_drift_rejected": true,
+    "scope": "local_mirror_only"
+  },
+  {
+    "pool": "/opt/p003/search-canary-20261021/brain",
+    "before_after_restore_hashes": "PASS",
+    "concurrent_drift_rejected": true,
+    "scope": "local_mirror_only"
+  },
+  {
+    "pool": "/opt/p003/listening-canary-20261030/brain",
+    "before_after_restore_hashes": "PASS",
+    "concurrent_drift_rejected": true,
+    "scope": "local_mirror_only"
+  }
+]
