@@ -1,0 +1,37 @@
+{
+  "src/ark/records-store.ts": {
+    "local": "20735e483bd01c0263a0d268dd85a2f72a552669319fa525acb1f53d133391f9",
+    "production": "20735e483bd01c0263a0d268dd85a2f72a552669319fa525acb1f53d133391f9",
+    "match": true
+  },
+  "src/ark/records-routes.ts": {
+    "local": "0fcf908e1af21b6edfc2db1e62806c0bbad6529dbb6e4116b8bfdb8bd62c6459",
+    "production": "0fcf908e1af21b6edfc2db1e62806c0bbad6529dbb6e4116b8bfdb8bd62c6459",
+    "match": true
+  },
+  "src/ark/records-contract.ts": {
+    "local": "c0669a969d5ff05d588c84aecbf6f2d8efb8de650be064e8c0f6bdf06c0e5685",
+    "production": "c0669a969d5ff05d588c84aecbf6f2d8efb8de650be064e8c0f6bdf06c0e5685",
+    "match": true
+  },
+  "src/ark/records-service.ts": {
+    "local": "da7611571277a255404b83eae745087922e0396333de39075601644cf6b949ef",
+    "production": "da7611571277a255404b83eae745087922e0396333de39075601644cf6b949ef",
+    "match": true
+  },
+  "src/ark/records-legacy.ts": {
+    "local": "7808be237a177c19f75ec7c3e27aab336e14af6421550360c17392cfe3934fa0",
+    "production": "7808be237a177c19f75ec7c3e27aab336e14af6421550360c17392cfe3934fa0",
+    "match": true
+  },
+  "src/config-store.ts": {
+    "local": "99cb05706e7a830ca84dee5e77483d47957d481eb76e010aa02f659085c055b7",
+    "production": "99cb05706e7a830ca84dee5e77483d47957d481eb76e010aa02f659085c055b7",
+    "match": true
+  },
+  "src/routes/device-config.ts": {
+    "local": "53f5d1976fcddccc0d88c3a54dc275c910b6ced1df66b04c794c9664e344034d",
+    "production": "53f5d1976fcddccc0d88c3a54dc275c910b6ced1df66b04c794c9664e344034d",
+    "match": true
+  }
+}

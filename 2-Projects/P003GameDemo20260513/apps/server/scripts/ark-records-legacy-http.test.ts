@@ -1,15 +1,16 @@
 /** Synthetic mini009 wire over real loopback HTTP/SQLite; never production records. */
 import {test, type TestContext} from 'node:test';
 import assert from 'node:assert/strict';
-import {mkdtempSync} from 'node:fs';
+import {mkdtempSync,readFileSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
-import {randomUUID} from 'node:crypto';
+import {createHash,randomUUID} from 'node:crypto';
 import {Hono} from 'hono';
 import {serve} from '@hono/node-server';
 import {SignJWT} from 'jose';
 import {RecordsStore} from '../src/ark/records-store.js';
+import {canonical} from '../src/ark/records-contract.js';
 
 process.env.AUTH_JWT_SECRET='isolated-legacy-http-only';
 const {createRecordsDeviceRoutes,createRecordsParentRoutes}=await import('../src/ark/records-routes.js');
@@ -48,6 +49,38 @@ const yesterday=()=>{const d=new Date(Date.now()+8*3600000-86400000).toISOString
 function record(sequence=2,patch:Record<string,unknown>={}){return {record_id:`save-legacy:${sequence}`,save_id:'save-legacy',sequence,occurred_at_ms:yesterday()+sequence,logical_day:'2026-11-15',source_mode:'normal',record_kind:'business_commit',config_revision:'config-synthetic',active_ecotank_id:null,
  data:{wallet_changes:[{resource_id:'C-FAMILY-001',before:0,after:7,delta:7}],inventory_changes:[],grants:[],makeup_grants:[],makeup_uses:[],previous_source_mode:'normal'},...patch};}
 function batch(records=[record()],patch:Record<string,unknown>={}){return {schema_version:1,contract_id:'p003-ark-records-r1',batch_id:'arb-synthetic',save_id:'save-legacy',coverage_from_ms:yesterday()-86400000,dropped_records:0,records,...patch};}
+
+test('actual Runtime serializer records upload through the Launcher envelope without v1 context or origin',async t=>{
+ const f=await fixture(t);
+ // mini010 retains this mini009 wire. Keep the actual Rust serializer records
+ // unchanged; only wrap the fields that Launcher sends over HTTP.
+ const runtime=JSON.parse(readFileSync(new URL('./fixtures/ark-records-mini009-runtime.json',import.meta.url),'utf8'));
+ const wire={schema_version:1,contract_id:runtime.contract_id,batch_id:'arb-runtime-fixture',save_id:runtime.save_id,
+  coverage_from_ms:runtime.coverage_from_ms,dropped_records:runtime.dropped_records,records:runtime.records};
+ const before=canonical(wire),ids=runtime.records.map((r:any)=>r.record_id);
+ // No /records/context request or synthetic origin metadata is used.
+ const uploaded=await f.post(wire);assert.equal(uploaded.status,200,JSON.stringify(uploaded.body));
+ assert.equal(uploaded.body.data.batch_id,wire.batch_id);assert.deepEqual(uploaded.body.data.accepted_record_ids,ids);
+ assert.deepEqual(uploaded.body.data.duplicated_record_ids,[]);assert.deepEqual(uploaded.body.data.rejected,[]);
+ const stored=()=>f.store.db.prepare('SELECT record_id,body,body_hash,coverage_from_ms,dropped_records FROM ark_record_legacy WHERE sn=? ORDER BY sequence').all(SN);
+ const rows=stored();assert.equal(rows.length,runtime.records.length);
+ for(let i=0;i<rows.length;i++){
+  const raw=canonical(runtime.records[i]);assert.equal(rows[i].record_id,ids[i]);assert.equal(rows[i].body,raw);
+  assert.equal(rows[i].body_hash,createHash('sha256').update(raw).digest('hex'));
+  assert.equal(rows[i].coverage_from_ms,runtime.coverage_from_ms);assert.equal(rows[i].dropped_records,runtime.dropped_records);
+ }
+ const page=await f.page();assert.equal(page.status,200);assert.equal(page.headers.get('cache-control'),'no-store');
+ assert.deepEqual(page.body.data.items.map((r:any)=>r.record_id).sort(),[...ids].sort());
+ for(const item of page.body.data.items){
+  const raw=runtime.records.find((r:any)=>r.record_id===item.record_id);
+  for(const key of ['record_id','save_id','sequence','record_kind','source_mode','logical_day','config_revision'])assert.equal(item[key],raw[key]);
+  assert.equal(item.format,runtime.contract_id);assert.equal(item.authorization_source,'legacy_explicit_scope');
+  assert.equal(item.origin_verified,false);assert.equal(item.origin_grant_id,undefined);assert.equal(item.origin_epoch,undefined);
+ }
+ const replay=await f.post(wire);assert.equal(replay.status,200);assert.equal(replay.body.data.batch_id,wire.batch_id);
+ assert.deepEqual(replay.body.data.accepted_record_ids,[]);assert.deepEqual(replay.body.data.duplicated_record_ids,ids);assert.deepEqual(replay.body.data.rejected,[]);
+ assert.deepEqual(stored(),rows);assert.equal(canonical(wire),before);
+});
 
 test('mini009 original envelope accepted, immutable ID replay, history before v1 grant visible',async t=>{
  const f=await fixture(t),r=record();const a=await f.post(batch([r]));assert.equal(a.status,200,JSON.stringify(a.body));assert.deepEqual(a.body.data.accepted_record_ids,[r.record_id]);

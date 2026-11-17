@@ -1,0 +1,23 @@
+{
+  "at_ms": 1794883975782,
+  "sn": "BJP00326081002000031",
+  "latest": [
+    {
+      "sequence": 1,
+      "body_hash": "a9cdac87e54595f1226445a13752aec4af8163f0449d4a17f51973ddb249ccfd",
+      "received_at_ms": 1794883562443,
+      "sort_ms": 1794883557030,
+      "time_status": "reported",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "baseline",
+      "source_mode": "unknown",
+      "config_revision": "g1-music-character-shadow-20260930-1",
+      "wallet_changes": null,
+      "inventory_changes": null,
+      "grants": null,
+      "record_id_hash": "4cb026abe200ee7d24b747f73fd3c0f4bb93bd75979835565cdf212db2f055d8",
+      "looks_like_probe": false
+    }
+  ]
+}

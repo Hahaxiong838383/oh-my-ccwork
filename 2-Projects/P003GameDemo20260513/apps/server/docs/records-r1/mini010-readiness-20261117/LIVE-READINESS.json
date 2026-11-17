@@ -1,0 +1,75 @@
+{
+  "at_ms": 1794883841578,
+  "sn": "BJP00326081002000031",
+  "probe": "server_signed_not_physical_device",
+  "valid_business_uploads": 0,
+  "binding_version": 1,
+  "epoch": 2,
+  "before": {
+    "v1": 0,
+    "legacy": 1
+  },
+  "results": [
+    {
+      "base": "http://127.0.0.1:3001",
+      "config_status": 200,
+      "revision": "cfg-182",
+      "ark_records": {
+        "enabled": true,
+        "contract_id": "p003-ark-records-r1"
+      },
+      "validation_status": 200,
+      "validation_ack": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "batch_id": "readiness-invalid-no-business",
+          "accepted_record_ids": [],
+          "duplicated_record_ids": [],
+          "rejected": [
+            {
+              "record_id": "readiness-no-business:1",
+              "reason": "invalid_record"
+            }
+          ],
+          "server_received_ms": 1794883841662
+        }
+      },
+      "stale_credential_status": 401,
+      "no_store": true
+    },
+    {
+      "base": "https://kidshub-ai.hahaxiong.cc",
+      "config_status": 200,
+      "revision": "cfg-182",
+      "ark_records": {
+        "enabled": true,
+        "contract_id": "p003-ark-records-r1"
+      },
+      "validation_status": 200,
+      "validation_ack": {
+        "ok": true,
+        "data": {
+          "schema_version": 1,
+          "batch_id": "readiness-invalid-no-business",
+          "accepted_record_ids": [],
+          "duplicated_record_ids": [],
+          "rejected": [
+            {
+              "record_id": "readiness-no-business:1",
+              "reason": "invalid_record"
+            }
+          ],
+          "server_received_ms": 1794883841760
+        }
+      },
+      "stale_credential_status": 401,
+      "no_store": true
+    }
+  ],
+  "after": {
+    "v1": 0,
+    "legacy": 1
+  },
+  "pass": true
+}

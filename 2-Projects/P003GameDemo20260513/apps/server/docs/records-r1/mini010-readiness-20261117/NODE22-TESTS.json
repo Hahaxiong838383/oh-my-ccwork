@@ -1,0 +1,11 @@
+{
+  "at_ms": 1794884565020,
+  "runtime": "v22.22.2",
+  "production_source_copy": true,
+  "business_database": "isolated temporary SQLite",
+  "exit_code": 0,
+  "tests": 49,
+  "pass": 49,
+  "fail": 0,
+  "setup_note": "Initial isolated copy omitted package.json type=module; copied production package metadata before this run. No production code changed."
+}
