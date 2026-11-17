@@ -75,7 +75,22 @@ wechat-mp-env/
 （IDE → 设置 → 安全设置 → 服务端口）。这不是 Linux 移植版的特性，官方工具同样如此。
 完全无头环境直接用 `miniprogram-ci`，它不依赖 IDE。
 
-## 验收记录（2026-11-17）
+## 验收记录
+
+### 第二轮 · 2026-11-17（环境自检 + 修复）
+
+| 检查 | 结果 | 证据 |
+|---|---|---|
+| 上游版本 | **已是最新** | GitHub latest release `v2.02.2609250-1`（2026-11-13 发布）与本机一致 |
+| IDE 无头启动 | **通过（新验证）** | 容器 + Xvfb 下加载全部 `*.wxvpkg`，走到 `[LoginState] need-login`，主进程存活 ~60s |
+| CI 脚本 | **修好 2 个硬阻断** | `preview.mjs` / `upload.mjs` 原为 `.mjs` 却用 `require()` → `ReferenceError: require is not defined`；改 `createRequire(import.meta.url)` 后 `--help` 与真实链路均通（能走到"缺密钥"这一步） |
+| 单实例锁 | 已清理 | 残留 `SingletonSocket → /tmp/codeg-acp/...`（目录已不存在） |
+| secrets 目录 | 已建 | `~/.mycc-secrets` 700，暂无密钥 |
+| 根盘 | **预警** | `/` 91% 已用，仅剩 20G |
+| 登录态 | **未验证** | 仍需可交互桌面扫码 |
+| 端到端上传 | **未验证** | 缺 appid + 上传密钥 |
+
+### 第一轮 · 2026-11-17（首次安装）
 
 | 检查 | 结果 | 证据 |
 |---|---|---|
@@ -84,20 +99,19 @@ wechat-mp-env/
 | 主程序加载 | 能读到 app.asar 并初始化 | 启动输出 `appPath .../resources/app.asar`，随后仅因 `Missing X server or $DISPLAY` 退出 |
 | CLI 子命令 | 已修复 | 上游 `bin/node` 把子命令当 `--electron` 的值吞掉；`bin/wxdt-cli` 绕过包装后 `islogin` 被正确识别，报「服务端口已关闭」（IDE 未运行的正常提示） |
 | miniprogram-ci | 2.1.31 已装 | `pnpm add -D miniprogram-ci` |
-| 登录态 | **未验证** | 需要图形会话扫码；本机当前无用户图形会话（只有 gdm 的 Xwayland :1024） |
-| 端到端上传 | **未验证** | 缺 appid + 上传密钥 |
-
-> 所以本环境当前状态是「工具就绪 + 依赖完整」，**登录和首次上传要等有图形会话时做一次**。
 
 ## 图形会话怎么来
 
-这台机器当前只有 gdm 的登录界面（Xwayland `:1024`，属于 gdm 用户），没有 hahaxiong83 的桌面会话。
-IDE 是 Electron 程序，必须要 X/Wayland。三条路：
+这台机器当前只有 gdm 的登录界面（Xwayland `:1024`/`:1025`，属于 gdm 用户），没有 hahaxiong83 的桌面会话。
+IDE 是 Electron 程序，必须要 X/Wayland。四条路：
 
 1. **本机登录桌面**（最简单）：显示器前登录 GNOME，开终端跑 `./bin/wxdt`。
 2. **ssh -X**：`ssh -X hahaxiong83@<host>` 后跑（走 X11 转发，慢但能用）。
-3. **远程桌面**：本机已有 `wechat-selkies` 容器提供浏览器桌面（`https://10.10.10.23:3001`），
-   可另起一个同类容器专门跑 IDE（未做，见下）。
+3. **无头容器跑**（**2026-11-17 已实测可行**）：主机没 sudo 装不了 xvfb，改用现成镜像在容器里跑，
+   容器自带 Xvfb + Electron 全部依赖库。命令见 `docs/PITFALLS.md` 2.5。
+   缺点是只有 Xvfb、没有可交互桌面，**验证得了启动、扫不了码**。
+4. **浏览器桌面**：本机已有 `wechat-selkies` 容器（`https://10.10.10.23:3001`，需认证）。
+   要扫码登录，需另起一个同类容器把 IDE 目录挂进去 + selkies 出口（未做，见待办）。
 
 ## 升级 / 回滚
 

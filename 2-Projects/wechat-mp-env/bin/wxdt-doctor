@@ -1,41 +1,83 @@
 #!/usr/bin/env bash
 # wxdt-doctor — 微信小程序环境自检
 #
-# 一条命令回答：工具装没装好、能不能开窗、CI 通道能不能用、密钥在哪、磁盘够不够。
+# 一条命令回答：工具装没装好、能不能开窗、无头能不能跑、CI 通道能不能用、密钥在哪、磁盘够不够。
 set -uo pipefail
 
 MP_ENV="${MP_ENV:-$HOME/mycc/2-Projects/wechat-mp-env}"
 ROOT="$MP_ENV/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin"
+CFG="${XDG_CONFIG_HOME:-$HOME/.config}/wechat-devtools"
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
 warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; }
+info() { printf '     %s\n' "$*"; }
+
+FAILED=0
 
 echo "=== 微信小程序环境自检（home-studio） ==="
 echo
 
+# ─────────────────────────────────────────────────────────
 echo "[1] 开发者工具"
 if [[ -x "$ROOT/electron/electron" ]]; then
   ok "运行时: $ROOT"
-  VER="$(dpkg-deb -f "$(ls -1t "$MP_ENV"/downloads/*.deb 2>/dev/null | head -1)" Version 2>/dev/null || echo '?')"
-  echo "     版本: $VER"
+  DEB="$(ls -1t "$MP_ENV"/downloads/*.deb 2>/dev/null | head -1)"
+  if [[ -n "$DEB" ]]; then
+    echo "     版本: $(dpkg-deb -f "$DEB" Version 2>/dev/null || echo '?')"
+  else
+    echo "     版本: ?（downloads/ 无 deb 留档）"
+  fi
   MISSING="$(ldd "$ROOT/electron/electron" 2>/dev/null | grep -c 'not found' || true)"
-  [[ "$MISSING" == "0" ]] && ok "共享库: 0 缺失" || bad "共享库: $MISSING 个缺失"
+  [[ "$MISSING" == "0" ]] && ok "共享库: 0 缺失" || { bad "共享库: $MISSING 个缺失"; FAILED=1; }
+  # chrome-sandbox 在用户级解包里没有 root:4755，直接调 electron 会 FATAL；
+  # 官方启动器统一带 --no-sandbox，所以只要走 bin/wechat-devtools 就没问题。
+  SB="$ROOT/electron/chrome-sandbox"
+  if [[ -f "$SB" ]] && [[ "$(stat -c '%u:%a' "$SB")" != "0:4755" ]]; then
+    info "注: chrome-sandbox 非 root:4755（用户级解包的必然结果）→ 必须走官方启动器（已含 --no-sandbox），勿直接调 electron"
+  fi
 else
-  bad "未安装（跑 scripts/install-devtools.sh）"
+  bad "未安装（跑 scripts/install-devtools.sh）"; FAILED=1
 fi
 
+# 残留的 Electron 单实例锁会让下次启动直接"已经在运行"
+echo
+echo "[1b] 单实例锁"
+STALE=0
+for f in SingletonCookie SingletonLock SingletonSocket; do
+  p="$CFG/$f"
+  [[ -L "$p" ]] || continue
+  tgt="$(readlink "$p")"
+  case "$f" in
+    SingletonSocket)
+      [[ -e "$tgt" ]] || { warn "$f → 悬空（$tgt）"; STALE=1; } ;;
+    SingletonLock)
+      pid="${tgt##*-}"
+      [[ -d "/proc/$pid" ]] || { warn "$f → 进程 $pid 已不存在"; STALE=1; } ;;
+  esac
+done
+if [[ "$STALE" == "1" ]]; then
+  warn "有残留锁，清理： rm -f $CFG/Singleton{Cookie,Lock,Socket}"
+else
+  ok "无残留（或 IDE 正在运行）"
+fi
+
+# ─────────────────────────────────────────────────────────
 echo
 echo "[2] 图形显示（IDE 窗口 / 扫码登录必需）"
 if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
   ok "DISPLAY=${DISPLAY:-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
 else
   warn "当前 shell 没有 DISPLAY —— IDE 不能在这里开窗"
-  echo "     本机可用 X socket: $(ls /tmp/.X11-unix/ 2>/dev/null | tr '\n' ' ')"
-  echo "     这些属于 gdm（登录界面），不属于当前用户；需本机登录桌面 / ssh -X / 远程桌面"
+  XS="$(ls /tmp/.X11-unix/ 2>/dev/null | tr '\n' ' ')"
+  info "本机可用 X socket: ${XS:-无}"
+  OWN="$(ls -l /tmp/.X11-unix/ 2>/dev/null | awk 'NR>1{print $3}' | sort -u | tr '\n' ' ')"
+  [[ -n "$OWN" ]] && info "归属: $OWN（gdm 的是登录界面，不属于当前用户，不能直接用）"
+  info "三条出路：① 本机登录桌面 ② ssh -X ③ 无头容器跑（见 [7]，已实测可行）"
 fi
 
+# ─────────────────────────────────────────────────────────
 echo
-echo "[3] CLI 子命令"
+echo "[3] IDE CLI 子命令"
 if [[ -x "$MP_ENV/bin/wxdt-cli" ]]; then
   ok "包装器: $MP_ENV/bin/wxdt-cli"
   CLI_OUT="$(timeout 30 "$MP_ENV/bin/wxdt-cli" islogin 2>&1 || true)"
@@ -49,24 +91,44 @@ if [[ -x "$MP_ENV/bin/wxdt-cli" ]]; then
     ok "CLI 可调用（登录态正常或已连通 IDE）"
   fi
 else
-  bad "缺少 bin/wxdt-cli"
+  bad "缺少 bin/wxdt-cli"; FAILED=1
 fi
 
+# ─────────────────────────────────────────────────────────
 echo
-echo "[4] CI 通道（miniprogram-ci）"
+echo "[4] CI 通道（miniprogram-ci，不依赖 IDE / 图形会话）"
 if [[ -d "$MP_ENV/node_modules/miniprogram-ci" ]]; then
   V="$(node -p "require('$MP_ENV/node_modules/miniprogram-ci/package.json').version" 2>/dev/null || echo '?')"
   ok "miniprogram-ci $V"
+  # 脚本自检：--help 只走参数解析，不联网、不需要 appid/密钥
+  for s in preview upload; do
+    if node "$MP_ENV/scripts/$s.mjs" --help >/dev/null 2>&1; then
+      ok "scripts/$s.mjs 可执行"
+    else
+      bad "scripts/$s.mjs 起不来 → node scripts/$s.mjs --help 看报错"; FAILED=1
+    fi
+  done
 else
-  bad "未安装 → cd $MP_ENV && pnpm add -D miniprogram-ci"
+  bad "未安装 → cd $MP_ENV && pnpm add -D miniprogram-ci"; FAILED=1
 fi
-KEYS="$(ls -1 "$HOME/.mycc-secrets"/private.*.key 2>/dev/null | wc -l)"
+SECRETS="$HOME/.mycc-secrets"
+KEYS="$(ls -1 "$SECRETS"/private.*.key 2>/dev/null | wc -l)"
 if [[ "$KEYS" -gt 0 ]]; then
-  ok "上传密钥: $KEYS 个（$HOME/.mycc-secrets/）"
+  ok "上传密钥: $KEYS 个（$SECRETS/）"
+  for k in "$SECRETS"/private.*.key; do
+    [[ "$(stat -c '%a' "$k")" == "600" ]] || warn "  $(basename "$k") 权限 $(stat -c '%a' "$k")，建议 chmod 600"
+  done
 else
-  warn "没有上传密钥（后台生成后放 $HOME/.mycc-secrets/private.<appid>.key，chmod 600）"
+  if [[ -d "$SECRETS" ]]; then
+    warn "目录已就绪但无密钥（后台生成后放 $SECRETS/private.<appid>.key，chmod 600）"
+  else
+    warn "没有密钥目录（mkdir -p $SECRETS && chmod 700 $SECRETS）"
+  fi
 fi
+APPS="$(ls -d "$HOME"/mycc/2-Projects/mp-* 2>/dev/null | wc -l)"
+[[ "$APPS" -gt 0 ]] && info "已有小程序项目: $(ls -d "$HOME"/mycc/2-Projects/mp-* 2>/dev/null | xargs -n1 basename | tr '\n' ' ')"
 
+# ─────────────────────────────────────────────────────────
 echo
 echo "[5] 磁盘与输出目录"
 OUT=/data/home-studio/artifacts
@@ -75,11 +137,55 @@ if mountpoint -q /data 2>/dev/null || [[ -d /data/home-studio ]]; then
 else
   warn "/data 未挂载 —— 二维码/产物会退到根盘"
 fi
-echo "     根盘剩余: $(df -h / | tail -1 | awk '{print $4}')（$(df -h / | tail -1 | awk '{print $5}') 已用）"
+ROOTUSE="$(df / | tail -1 | awk '{print $5}' | tr -d '%')"
+if [[ "${ROOTUSE:-0}" -ge 90 ]]; then
+  warn "根盘 $(df -h / | tail -1 | awk '{print $4}') 可用（${ROOTUSE}% 已用，≥90% 需关注）"
+else
+  info "根盘剩余: $(df -h / | tail -1 | awk '{print $4}')（${ROOTUSE}% 已用）"
+fi
 
+# ─────────────────────────────────────────────────────────
 echo
-echo "[6] Node"
-echo "     $(node -v 2>/dev/null || echo '缺 node')  $(pnpm -v 2>/dev/null | sed 's/^/pnpm /')"
+echo "[6] Node 工具链"
+if command -v node >/dev/null; then
+  NODE_MAJOR="$(node -v | sed 's/^v\([0-9]*\).*/\1/')"
+  if [[ "${NODE_MAJOR:-0}" -ge 16 ]]; then
+    PNPM_V="$(pnpm -v 2>/dev/null || true)"
+    ok "$(node -v)  ${PNPM_V:+pnpm $PNPM_V}"
+  else
+    bad "Node $(node -v) 太旧，miniprogram-ci 要求 ≥16.1.0"; FAILED=1
+  fi
+else
+  bad "缺 node"; FAILED=1
+fi
 
+# ─────────────────────────────────────────────────────────
 echo
-echo "提示: 详细用法见 $MP_ENV/docs/WORKFLOW.md；踩坑见 docs/PITFALLS.md"
+echo "[7] 无头运行 IDE（无图形会话时的兜底）"
+if command -v docker >/dev/null && docker info >/dev/null 2>&1; then
+  ok "docker $(docker version --format '{{.Server.Version}}' 2>/dev/null)"
+  IMG=ghcr.io/nickrunning/wechat-selkies:latest
+  if docker image inspect "$IMG" >/dev/null 2>&1; then
+    ok "已有镜像 $IMG（Ubuntu 24.04，自带 Xvfb + selkies，Electron 依赖库齐）"
+    info "实测可行：xvfb-run + 官方启动器能起到登录页（2026-11-17 验证）"
+    info "手动复跑："
+    info "  docker run --rm -v $MP_ENV:/env:ro --entrypoint sh $IMG \\"
+    info "    -c 'export HOME=/root; timeout 90 xvfb-run -a -s \"-screen 0 1280x900x24\" \\"
+    info "        /env/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/bin/wechat-devtools'"
+    info "要扫码登录还需可交互桌面（selkies/x11vnc），见 docs/WORKFLOW.md"
+  else
+    warn "无 $IMG 镜像 —— 需要 docker pull（约 2GB）"
+  fi
+else
+  warn "docker 不可用 —— 无头 IDE 这条路走不通"
+  info "退化方案：纯 miniprogram-ci（[4]），不需要图形"
+fi
+
+# ─────────────────────────────────────────────────────────
+echo
+if [[ "$FAILED" == "0" ]]; then
+  printf '=== 结论: \033[32m核心就绪\033[0m ===\n'
+else
+  printf '=== 结论: \033[31m有阻断项（见 ✗）\033[0m ===\n'
+fi
+echo "用法见 $MP_ENV/docs/WORKFLOW.md；踩坑见 docs/PITFALLS.md"

@@ -9,6 +9,9 @@
  * 上传成功后在 mp.weixin.qq.com → 版本管理 → 开发版本 可见，
  * 之后在后台「提交审核」→「发布」（无 API，只能人工点）。
  */
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 const fs = require('fs');
 const path = require('path');
 const os = require('os');

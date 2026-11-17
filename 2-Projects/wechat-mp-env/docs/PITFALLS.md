@@ -45,6 +45,29 @@
 ### 2.5 无图形会话时跑不起来
 - IDE 是 Electron 应用，必须有 X。SSH 里跑需要 `xvfb-run` 或 `DISPLAY=:N` 指向已有会话。
 - `miniprogram-ci` 不需要 X —— 服务器/无头场景优先用它。
+- **主机没有 sudo 时装不了 xvfb**（本机 sudo 要密码）。已实测可行的替代：**用现成镜像在容器里跑**，
+  容器内自带 Xvfb + Electron 全部依赖库，不碰主机：
+  ```bash
+  docker run --rm -v ~/mycc/2-Projects/wechat-mp-env:/env:ro \
+    --entrypoint sh ghcr.io/nickrunning/wechat-selkies:latest -c '
+      export HOME=/root
+      timeout 90 xvfb-run -a -s "-screen 0 1280x900x24" \
+        /env/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/bin/wechat-devtools'
+  ```
+  2026-11-17 验证：能正常加载 `*.wxvpkg` 资源、走到 `[LoginState] need-login`，
+  即主进程 + 渲染进程都活着。**缺的只是可交互桌面**（扫码要人手点），
+  要真正扫码需在容器里叠一层 selkies/x11vnc 桌面。容器内 `dbus` 缺失只报 warning，不影响启动。
+
+### 2.5b 残留单实例锁导致"已在运行"
+- 现象：明明没进程，启动却立刻退出或复用了别的会话。
+- 根因：`~/.config/wechat-devtools/Singleton{Lock,Socket,Cookie}` 是符号链接，指向上次运行时的
+  `hostname-pid` / `/tmp/...` socket；异常退出后残留（本机实测残留指向 `/tmp/codeg-acp/...`）。
+- 处置：`rm -f ~/.config/wechat-devtools/Singleton{Cookie,Lock,Socket}`。`bin/wxdt-doctor` 的 [1b] 段会自动检出。
+
+### 2.5c 直接跑 electron 报 SUID sandbox FATAL
+- 现象：`.../electron --version` 报 `The SUID sandbox helper binary was found, but is not configured correctly`。
+- 根因：用户级 `dpkg-deb -x` 解包后 `chrome-sandbox` 不是 `root:root 4755`，而改成 4755 需要 sudo。
+- 处置：**不要直接调 electron**，一律走官方启动器 `bin/wechat-devtools`（末尾已带 `--no-sandbox`）。这不是故障。
 
 ### 2.6 真机调试连不上
 - 手机与 home-studio 必须**同一网段**（同 WiFi / 同 LAN），且本机防火墙放行工具监听的端口。
@@ -88,8 +111,9 @@
 ## 4. 本机环境
 
 ### 4.1 根盘吃紧
-- `/` 218G 已用 186G（90%），装 IDE 后余量约 20G。
+- `/` 218G 已用 188G（**91%**），装 IDE 后余量约 20G（2026-11-17 实测；再装一个 894M 的 IDE 版本会掉到 ~19G）。
 - 项目 `node_modules`、构建产物建议指到 `/data/home-studio/artifacts/<项目>/`，源码留 NVMe。
+- `downloads/` 的 deb 留档只留最新一个，旧的及时删。
 
 ### 4.2 用户级安装（无 sudo）
 - 本机 `sudo` 需要密码，agent 不能静默提权。

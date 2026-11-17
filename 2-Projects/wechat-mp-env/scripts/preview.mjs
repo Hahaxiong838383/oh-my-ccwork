@@ -11,6 +11,9 @@
  * 依赖: mp-env 里装的 miniprogram-ci（全局共享，不必每个项目装）
  * 凭证: 代码上传密钥，默认 ~/.mycc-secrets/private.<appid>.key
  */
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
