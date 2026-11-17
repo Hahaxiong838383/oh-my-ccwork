@@ -1,0 +1,8 @@
+{
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "matched_files": 577,
+  "all_hashes_unchanged": true,
+  "production_ready": true,
+  "unit": "Result=success\nExecMainStatus=0\nActiveState=inactive\n",
+  "git_archive_matches": true
+}

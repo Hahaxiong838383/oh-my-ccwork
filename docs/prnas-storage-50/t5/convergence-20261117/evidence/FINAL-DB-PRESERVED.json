@@ -1,0 +1,11 @@
+{
+  "complete": true,
+  "bytes": 2124611584,
+  "gzip_bytes": 436706248,
+  "sha256": "e9b94f0bcb9609247176f6ac4a8ca26ccbccbcc358c3e43d0b8e520be9615154",
+  "chunks": 127,
+  "elapsed_s": 135.65967416763306,
+  "source_identity_unchanged": true,
+  "remote_chunk_sha_verified": true,
+  "production_changed": false
+}

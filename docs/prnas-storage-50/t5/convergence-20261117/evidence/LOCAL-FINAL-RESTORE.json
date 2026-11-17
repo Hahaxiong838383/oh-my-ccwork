@@ -1,0 +1,45 @@
+{
+  "sqlite": "3.53.3",
+  "integrity": [
+    {
+      "integrity_check": "ok"
+    }
+  ],
+  "counts": {
+    "analytics_batch": 3000,
+    "analytics_day": 2,
+    "analytics_device_day": 100,
+    "analytics_diagnostic_usage": 0,
+    "analytics_dirty_day": 0,
+    "analytics_event": 600000,
+    "analytics_event_seen": 600000,
+    "analytics_meta": 6,
+    "analytics_rollup_device_stage": 100,
+    "analytics_rollup_distinct": 200,
+    "analytics_rollup_fact": 1200000,
+    "analytics_rollup_retry": 0,
+    "analytics_rollup_source": 100,
+    "analytics_settlement": 600000,
+    "analytics_tier_day": 2850,
+    "analytics_tier_event": 0,
+    "analytics_transport": 3000,
+    "analytics_transport_day": 50
+  },
+  "day": [
+    {
+      "dimension": "received",
+      "day": "2026-11-17",
+      "summary_json": "{\"event_count\":600000,\"active_devices\":50,\"sessions\":50,\"event_counts\":{\"app.bridge_ready\":10550,\"app.lifecycle_changed\":10550,\"app.session_started\":10550,\"device.cover_state_changed\":10550,\"g1.presence_state_changed\":10550,\"network.connectivity_changed\":10550,\"network.provisioning_state_changed\":10550,\"ota.check_state_changed\":10550,\"ota.update_state_changed\":10550,\"settings.closed\":10550,\"settings.opened\":10550,\"settings.page_viewed\":10550,\"settings.value_changed\":10550,\"settings.wifi_pairing_requested\":10550,\"voice.session_state_changed\":10550,\"g1.command_failed\":10550,\"g1.ecotank_upgrade_completed\":10550,\"g1.experience_started\":10550,\"g1.makeup_claim_completed\":10550,\"g1.phase_changed\":10550,\"g1.route_check_completed\":10550,\"g1.runtime_command_completed\":10550,\"g1.screen_viewed\":10550,\"g1.semantic_interaction\":10550,\"g1.active_route_changed\":10550,\"g1.character_state_equipped\":10550,\"g1.chest_state_changed\":10550,\"g1.clock_recovery_changed\":10550,\"g1.config_revision_changed\":10550,\"g1.ecotank_part_activated\":10550,\"g1.ecotank_route_unlocked\":10500,\"g1.ecotank_selected\":10500,\"g1.ecotank_unlocked\":10500,\"g1.gift_became_available\":10500,\"g1.gift_claimed\":10500,\"g1.historical_progress_changed\":10500,\"g1.inventory_changed\":10500,\"g1.legacy_save_migrated\":10500,\"g1.logical_day_changed\":10500,\"g1.makeup_card_balance_changed\":10500,\"g1.makeup_card_consumed\":10500,\"g1.onboarding_state_changed\":10500,\"g1.presentation_enqueued\":10500,\"g1.presentation_recovery_detected\":10500,\"g1.presentation_state_changed\":10500,\"g1.progress_checkpoint\":10500,\"g1.progress_counting_changed\":10500,\"g1.progress_day_completed\":10500,\"g1.progress_reward_settled\":10500,\"g1.progress_stage_reached\":10500,\"g1.reward_granted\":10500,\"g1.route_day_completed\":10500,\"g1.route_day_created\":10500,\"g1.route_day_selected\":10500,\"g1.route_state_loaded\":10500,\"g1.runtime_state_restored\":10500,\"g1.wallet_balance_changed\":10500},\"clock_suspicious_events\":0,\"explicit_gm_events\":0,\"unclassified_traffic_events\":600000,\"reward_grant_events\":10500,\"unique_reward_instances\":50,\"groups\":{\"activity\":{\"app.bridge_ready\":10550,\"app.lifecycle_changed\":10550,\"app.session_started\":10550},\"g1_flow\":{\"g1.experience_started\":10550,\"g1.phase_changed\":10550,\"g1.runtime_command_completed\":10550,\"g1.screen_viewed\":10550,\"g1.semantic_interaction\":10550},\"logical_day_ecotank\":{\"g1.ecotank_upgrade_completed\":10550,\"g1.route_check_completed\":10550,\"g1.ecotank_part_activated\":10550,\"g1.ecotank_route_unlocked\":10500,\"g1.ecotank_selected\":10500,\"g1.ecotank_unlocked\":10500,\"g1.historical_progress_changed\":10500,\"g1.logical_day_changed\":10500,\"g1.progress_checkpoint\":10500,\"g1.progress_counting_changed\":10500,\"g1.progress_day_completed\":10500,\"g1.progress_reward_settled\":10500,\"g1.progress_stage_reached\":10500,\"g1.route_day_completed\":10500,\"g1.route_day_created\":10500,\"g1.route_day_selected\":10500,\"g1.route_state_loaded\":10500},\"rewards_makeup\":{\"g1.makeup_claim_completed\":10550,\"g1.gift_became_available\":10500,\"g1.gift_claimed\":10500,\"g1.makeup_card_balance_changed\":10500,\"g1.makeup_card_consumed\":10500,\"g1.reward_granted\":10500},\"settings\":{\"settings.closed\":10550,\"settings.opened\":10550,\"settings.page_viewed\":10550,\"settings.value_changed\":10550,\"settings.wifi_pairing_requested\":10550},\"voice_state\":{\"voice.session_state_changed\":10550},\"command_failures\":[{\"command\":\"g1.open_experience\",\"error_code\":\"\",\"count\":10550}]},\"data_cutoff_ms\":1794930526680}"
+    },
+    {
+      "dimension": "occurred",
+      "day": "2026-11-17",
+      "summary_json": "{\"event_count\":600000,\"active_devices\":50,\"sessions\":50,\"event_counts\":{\"app.bridge_ready\":10550,\"app.lifecycle_changed\":10550,\"app.session_started\":10550,\"device.cover_state_changed\":10550,\"g1.presence_state_changed\":10550,\"network.connectivity_changed\":10550,\"network.provisioning_state_changed\":10550,\"ota.check_state_changed\":10550,\"ota.update_state_changed\":10550,\"settings.closed\":10550,\"settings.opened\":10550,\"settings.page_viewed\":10550,\"settings.value_changed\":10550,\"settings.wifi_pairing_requested\":10550,\"voice.session_state_changed\":10550,\"g1.command_failed\":10550,\"g1.ecotank_upgrade_completed\":10550,\"g1.experience_started\":10550,\"g1.makeup_claim_completed\":10550,\"g1.phase_changed\":10550,\"g1.route_check_completed\":10550,\"g1.runtime_command_completed\":10550,\"g1.screen_viewed\":10550,\"g1.semantic_interaction\":10550,\"g1.active_route_changed\":10550,\"g1.character_state_equipped\":10550,\"g1.chest_state_changed\":10550,\"g1.clock_recovery_changed\":10550,\"g1.config_revision_changed\":10550,\"g1.ecotank_part_activated\":10550,\"g1.ecotank_route_unlocked\":10500,\"g1.ecotank_selected\":10500,\"g1.ecotank_unlocked\":10500,\"g1.gift_became_available\":10500,\"g1.gift_claimed\":10500,\"g1.historical_progress_changed\":10500,\"g1.inventory_changed\":10500,\"g1.legacy_save_migrated\":10500,\"g1.logical_day_changed\":10500,\"g1.makeup_card_balance_changed\":10500,\"g1.makeup_card_consumed\":10500,\"g1.onboarding_state_changed\":10500,\"g1.presentation_enqueued\":10500,\"g1.presentation_recovery_detected\":10500,\"g1.presentation_state_changed\":10500,\"g1.progress_checkpoint\":10500,\"g1.progress_counting_changed\":10500,\"g1.progress_day_completed\":10500,\"g1.progress_reward_settled\":10500,\"g1.progress_stage_reached\":10500,\"g1.reward_granted\":10500,\"g1.route_day_completed\":10500,\"g1.route_day_created\":10500,\"g1.route_day_selected\":10500,\"g1.route_state_loaded\":10500,\"g1.runtime_state_restored\":10500,\"g1.wallet_balance_changed\":10500},\"clock_suspicious_events\":0,\"explicit_gm_events\":0,\"unclassified_traffic_events\":600000,\"reward_grant_events\":10500,\"unique_reward_instances\":50,\"groups\":{\"activity\":{\"app.bridge_ready\":10550,\"app.lifecycle_changed\":10550,\"app.session_started\":10550},\"g1_flow\":{\"g1.experience_started\":10550,\"g1.phase_changed\":10550,\"g1.runtime_command_completed\":10550,\"g1.screen_viewed\":10550,\"g1.semantic_interaction\":10550},\"logical_day_ecotank\":{\"g1.ecotank_upgrade_completed\":10550,\"g1.route_check_completed\":10550,\"g1.ecotank_part_activated\":10550,\"g1.ecotank_route_unlocked\":10500,\"g1.ecotank_selected\":10500,\"g1.ecotank_unlocked\":10500,\"g1.historical_progress_changed\":10500,\"g1.logical_day_changed\":10500,\"g1.progress_checkpoint\":10500,\"g1.progress_counting_changed\":10500,\"g1.progress_day_completed\":10500,\"g1.progress_reward_settled\":10500,\"g1.progress_stage_reached\":10500,\"g1.route_day_completed\":10500,\"g1.route_day_created\":10500,\"g1.route_day_selected\":10500,\"g1.route_state_loaded\":10500},\"rewards_makeup\":{\"g1.makeup_claim_completed\":10550,\"g1.gift_became_available\":10500,\"g1.gift_claimed\":10500,\"g1.makeup_card_balance_changed\":10500,\"g1.makeup_card_consumed\":10500,\"g1.reward_granted\":10500},\"settings\":{\"settings.closed\":10550,\"settings.opened\":10550,\"settings.page_viewed\":10550,\"settings.value_changed\":10550,\"settings.wifi_pairing_requested\":10550},\"voice_state\":{\"voice.session_state_changed\":10550},\"command_failures\":[{\"command\":\"g1.open_experience\",\"error_code\":\"\",\"count\":10550}]},\"data_cutoff_ms\":1794930526680}"
+    }
+  ],
+  "source_sha256": "e9b94f0bcb9609247176f6ac4a8ca26ccbccbcc358c3e43d0b8e520be9615154",
+  "bytes": 2124611584,
+  "elapsed_s": 153.45480108261108,
+  "scope": "LOCAL_EXACT_RESTORE_NOT_NAS_PRODUCT_FLOW",
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1"
+}

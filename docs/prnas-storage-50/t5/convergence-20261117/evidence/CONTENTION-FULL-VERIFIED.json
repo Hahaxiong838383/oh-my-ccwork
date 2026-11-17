@@ -1,0 +1,48 @@
+{
+  "status": "PASS_FRESH_600K_MIXED_NOT_FULL_T5",
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "raw_bundle_sha256": "5fc4a63c5ff4418acfb699cbcdea8e6586a1c81417241d95eede70db93b1d229",
+  "accepted": 600000,
+  "duplicated": 0,
+  "rejected": 0,
+  "unique_ids": 600000,
+  "attempts": 10688,
+  "statuses": {
+    "503": 7688,
+    "200": 3000
+  },
+  "errors": {
+    "ANALYTICS_OVERLOADED": 7134,
+    "ANALYTICS_WAL_PRESSURE": 554
+  },
+  "ack_ms": {
+    "p95": 247.1212499999965,
+    "p99": 603.44571
+  },
+  "batch_elapsed_ms": {
+    "p95": 65724.13926299993,
+    "p99": 109617.44435,
+    "max": 199724.14884499996
+  },
+  "client_duration_ms": 1166390,
+  "dirty": 0,
+  "dimensions": 2,
+  "events_per_dimension": 600000,
+  "device_summaries": 100,
+  "production_guard": {
+    "samples": 252,
+    "all_ready": true,
+    "min_free_bytes": 5524566016
+  },
+  "production_ready_after": true,
+  "summaries_sha256": "6a383d9d4788d1a3f8a1e749562ea1bfa260e8464eb18983906b80bbaa70a3b6",
+  "early_backup_only": true,
+  "not_verified": [
+    "mature90d",
+    "50identity_security_full_matrix",
+    "voice_AB",
+    "72h_backlog_1h_outage",
+    "24h_soak",
+    "final600k_NAS_restore"
+  ]
+}

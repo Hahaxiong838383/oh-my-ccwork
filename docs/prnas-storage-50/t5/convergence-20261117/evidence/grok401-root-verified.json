@@ -1,0 +1,27 @@
+{
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "verdict": "PASS_ISOLATED",
+  "review_md_sha256": "e0743b8471f563bc5db5a0ca807dd852c756f87340cb857fd9cd93e4536fe808",
+  "review_json_sha256": "0a3c43856b02cc0dda5b0a9d21f60a6b3c47ac6b9c6a221a097d408f8611d23b",
+  "checks": [
+    {
+      "file": "logs/identity.log",
+      "sha256": "354096f170beec766186a915e9550ff9c322851afae8b6418fbbd1a7f76d4e5d",
+      "bytes": 672,
+      "exit": null
+    },
+    {
+      "file": "logs/contention-official.log",
+      "sha256": "c370e4ecbf3eeffb8ce1a4729826820e4ef6f05e6cdad3a8111d7e17799ea15a",
+      "bytes": 612,
+      "exit": 0
+    },
+    {
+      "file": "logs/contention-boundary.log",
+      "sha256": "28bc56c816f2fcb37c79cd1e67a22661cf596c128b0b9a20f8b4e02e0fe9cc57",
+      "bytes": 5362,
+      "exit": 0
+    }
+  ],
+  "review_note": "Mac observed 2.26s with busy_timeout250 is not a cloud latency result; precise host scheduling cause is not independently measured. Initial probe mistakes were corrected without candidate runtime changes; final logs are the audited executions, not a claim that every draft test passed."
+}

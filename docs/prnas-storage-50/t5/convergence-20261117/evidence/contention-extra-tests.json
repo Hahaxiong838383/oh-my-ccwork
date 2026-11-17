@@ -1,0 +1,19 @@
+{
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "results": [
+    {
+      "name": "capacity-contention",
+      "exit": 0,
+      "seconds": 18.99710178375244,
+      "sha256": "e1b1a91eed66d46c867706be1cef355e232e583f46da65bb591be426d9e1b228",
+      "bytes": 1511
+    },
+    {
+      "name": "fifty-contention",
+      "exit": 0,
+      "seconds": 1.1400279998779297,
+      "sha256": "87a8f08b1993cdd0b5e64993ffd04f605c598601cff10ebd6309139501e15ac6",
+      "bytes": 246
+    }
+  ]
+}

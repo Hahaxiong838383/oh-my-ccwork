@@ -1,0 +1,133 @@
+{
+  "reviewer": "Grok 4.7 (xAI)",
+  "role": "independent incremental acceptance of 262 relative to 85",
+  "date": "2026-11-17",
+  "candidate": "2620f3746f9b275a45eb0d8172adefb056c482aa",
+  "baseline": "85cbf6720932e1d65ab0011714e2475f0b66e1e0",
+  "candidate_rollup_blob": "08fb26c473d69960f5d97c2240066ebf7e6e8300",
+  "worktree_head_observed_after_archive": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "worktree_head_note": "Advanced during this review by another writer. Not part of this acceptance. This review did not modify the worktree.",
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "sqlite": "3.53.3"
+  },
+  "archive": {
+    "path": "review-pages/262-server-and-snapshot.tar.gz",
+    "sha256": "a5faeb28c63529ad88da26613e403e6e60b7cf9fbd6d56fc05af52a9f76e7db1",
+    "bytes": 2970866,
+    "paths": [
+      "2-Projects/P003GameDemo20260513/apps/server",
+      "2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json"
+    ],
+    "snapshot_sha256": "8b6df8ded6b26098a4bd373b61df2abe83402759e82d0feeeea9c3cadf964417"
+  },
+  "independent_test_sha256": "ccbbea5212a7d5c8b6b10ca5f2f91321ba2b76d3c27bc13ac8671bd04d68b84b",
+  "input_finding_sha256": "ea92a2904b7eb8d90d9c44d68d1c3610d7c55a877bbd6ea62f63fbcc2ec1a5c0",
+  "session_399": "FINDING.md used only as the scenario to reproduce. The 4-to-2 republish was re-executed here on the frozen 85 archive. No other 399 conclusion is treated as fact; its fixed report is still pending.",
+  "verdict": "PASS",
+  "scope": "incremental checks requested for 262 vs 85",
+  "complete_t5": false,
+  "deployed": false,
+  "finding_written": false,
+  "implementation_modified": false,
+  "port_3306": "free before and after; these commands do not bind it",
+  "checks": [
+    {
+      "id": "ttl-chunk",
+      "result": "PASS",
+      "detail": "85 republished event_count 4 to 2; 262 kept summary text and updated_at_ms, rebuilt only the in-window day."
+    },
+    {
+      "id": "ttl-maintenance-script",
+      "result": "PASS",
+      "detail": "300 chunks, 3000 facts deleted, 10 expired facts left, public event_count stayed 20, today published as 1, dirty 0."
+    },
+    {
+      "id": "pages-recovery-dedup",
+      "result": "PASS"
+    },
+    {
+      "id": "index-explain",
+      "result": "PASS",
+      "plan": "SEARCH analytics_rollup_fact USING INDEX analytics_rollup_device_rowid (dimension=? AND day=? AND device_key=? AND rowid>?)",
+      "opcodes_include": [
+        "SeekGT",
+        "IdxGT"
+      ],
+      "temp_sort": false
+    },
+    {
+      "id": "gates-not-relaxed",
+      "result": "PASS",
+      "measured": [
+        "synchronous=2",
+        "maxDayMs 30000",
+        "maxRunMs 150000",
+        "writer job 8000"
+      ],
+      "source_identical": [
+        "120ms abort",
+        "125ms adopt",
+        "ACK p95 500",
+        "ACK p99 2000",
+        "final dirty 0",
+        "single AnalyticsWriter"
+      ]
+    },
+    {
+      "id": "official-page-resume-t4",
+      "result": "PASS"
+    }
+  ],
+  "logs": {
+    "logs/calibrate.log": {
+      "exit": 0,
+      "sha256": "f93ed2b4348ab7e2c50b8479090e6b3fd181034149c5dd4215d895bf8e623553"
+    },
+    "logs/candidate.log": {
+      "exit": 0,
+      "sha256": "1bafbef2d41629c495f03536c30874e4515cb5c93881ddc8784f7ab350d22c31"
+    },
+    "logs/page.log": {
+      "exit": 0,
+      "sha256": "c0ecb80101abf7ad0a773e78a92cb5580b0f92d16bcc0d2a7504fa2d6bbabd85"
+    },
+    "logs/resume.log": {
+      "exit": 0,
+      "sha256": "0c654d36b628b9387b8a5bb1c9a8e6862fb2aa979d6ae75615db42e2031778af"
+    },
+    "logs/t4.log": {
+      "exit": 0,
+      "sha256": "338693b8229f811f2a9779bb3c68820adbdf337e066603e1154fc673491e6b73"
+    },
+    "logs/t4-run-budget.log": {
+      "exit": 0,
+      "sha256": "fe0db08d47ca66e36e02417229308b8604529d7757f650215e2701c2543e204d"
+    }
+  },
+  "not_verified": [
+    "mature 90-day net cleanup capacity and duration",
+    "50-identity matrix",
+    "voice AB",
+    "1-hour disconnect",
+    "24-hour run",
+    "final NAS restore",
+    "new 50x12000 mixed load",
+    "cloud timings supplied in the delegation letter",
+    "production host state",
+    "commit b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+    "tests that bind port 3306"
+  ],
+  "delegation_cloud_claims_not_retested": {
+    "85_maintenance": [
+      "60.065s partial",
+      "15.183s then dirty 0"
+    ],
+    "dimensions": "600k each, 100 devices, exact day",
+    "262_cold_tail": "100k in 10.4526s",
+    "old_cover_30s": 85800,
+    "index_bytes": 114442240,
+    "production_ready_guards": 22
+  }
+}

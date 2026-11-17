@@ -1,0 +1,82 @@
+{
+  "reviewer": "Grok (xAI)",
+  "session_role": "isolated review of the maintenance write-lock retry only",
+  "verdict": "PASS_ISOLATED",
+  "not_production_or_long_run": true,
+  "candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "candidate_subject": "fix(p003): resume maintenance after transient writer contention within existing budget",
+  "candidate_author": "Rayman Chen",
+  "candidate_author_date": "2026-11-17T23:25:27+08:00",
+  "parent": "2620f3746f9b275a45eb0d8172adefb056c482aa",
+  "head_at_archive": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "worktree_clean_at_archive": true,
+  "node": "v24.19.0",
+  "node_bin": "/Users/fu-121/.local/node-v24/bin/node",
+  "path_head": "/Users/fu-121/.local/node-v24/bin",
+  "archive": "/Users/fu-121/.local/state/p003-t5-convergence-20261117/review-contention/archive",
+  "server_paths_changed_from_parent": [
+    "2-Projects/P003GameDemo20260513/apps/server/package.json",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/analytics-rollup-contention.test.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts"
+  ],
+  "blobs_equal_candidate": {
+    "rollup.ts": "17b54bd2e7f5c7d5be9d495bd453f02db20a978b",
+    "analytics-rollup-contention.test.ts": "a39dfea17082dc9ffe3e190b6d625c42209832e1",
+    "store.ts": "e6a7d8bcbfe3e9e808f7310481ee7c084af081bc",
+    "ingest.ts": "de173731eb1a0610252b7be201333df5488e2e62",
+    "sqlite-policy.mjs": "aca73594312fd85229a3662e2b0aa733567e3d4e",
+    "analytics-rollup.ts": "4710f91b4a5695e0e14fca1f9bf2b327e8820305"
+  },
+  "content_sha256": {
+    "rollup.ts": "96eb0e9787265f2e117c0ed7e46c8c241051660ec00b353972895a0b13e9683e",
+    "snapshot-v1.example.json": "8b6df8ded6b26098a4bd373b61df2abe83402759e82d0feeeea9c3cadf964417",
+    "grok-contention-boundary.test.ts": "666a12227d9f34f632602fa0024cb9a5064c945176f586f5282128bde28342da"
+  },
+  "p0": [],
+  "p1": [],
+  "runs": [
+    {
+      "id": "identity",
+      "command": "/Users/fu-121/.local/node-v24/bin/node -v ; git rev-parse HEAD ; git status --porcelain ; git hash-object of archived sources against b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+      "cwd": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116",
+      "exit": null,
+      "exit_note": "snapshot log has no EXIT line",
+      "bytes": 672,
+      "sha256": "354096f170beec766186a915e9550ff9c322851afae8b6418fbbd1a7f76d4e5d",
+      "log": "logs/identity.log",
+      "started_utc": "2026-11-17T15:45:01Z",
+      "ended_utc": "2026-11-17T15:45:02Z"
+    },
+    {
+      "id": "official-contention",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/analytics-rollup-contention.test.ts",
+      "cwd": "/Users/fu-121/.local/state/p003-t5-convergence-20261117/review-contention/archive/2-Projects/P003GameDemo20260513/apps/server",
+      "exit": 0,
+      "bytes": 612,
+      "sha256": "c370e4ecbf3eeffb8ce1a4729826820e4ef6f05e6cdad3a8111d7e17799ea15a",
+      "log": "logs/contention-official.log",
+      "started_utc": "2026-11-17T15:45:02Z",
+      "ended_utc": "2026-11-17T15:45:06Z",
+      "result": "three PASS lines: real 600ms writer resumes the paged day; rolled-back COMMIT does not double distinct; persistent busy ends with the public summary unchanged"
+    },
+    {
+      "id": "independent-boundary",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx /Users/fu-121/.local/state/p003-t5-convergence-20261117/review-contention/grok-contention-boundary.test.ts",
+      "cwd": "/Users/fu-121/.local/state/p003-t5-convergence-20261117/review-contention/archive/2-Projects/P003GameDemo20260513/apps/server",
+      "exit": 0,
+      "bytes": 5362,
+      "sha256": "28bc56c816f2fcb37c79cd1e67a22661cf596c128b0b9a20f8b4e02e0fe9cc57",
+      "log": "logs/contention-boundary.log",
+      "started_utc": "2026-11-17T15:54:08Z",
+      "ended_utc": "2026-11-17T15:54:17Z",
+      "result": "cursors [0,512,512] and public 600; non-busy read/commit and CAS do not loop; 6 persistent attempts exit budget_exceeded in 1162ms; publish busy keeps public 600 then resumes to 601 without another stage write; ingest returns busy errcode 5 while the external lock is still held"
+    }
+  ],
+  "limits": [
+    "No cloud operation, no fresh 600k, no long-run or production acceptance.",
+    "analytics-recovery.test.ts was not run and port 3306 was not used.",
+    "Full analytics, T4, and tsc were not rerun in this review.",
+    "On this Mac, Atomics.wait(10) produced 6 attempts in 1162.294ms, and busy_timeout=250 returned SQLITE_BUSY 5 after 2258.363ms while the holder was still active.",
+    "store.transaction still marks only exact errcode 5 and 6 as busy. Extended busy inside a write transaction is not retried. The real cross-process lock returned 5."
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "candidate": "2620f3746f9b275a45eb0d8172adefb056c482aa",
+  "review_md_sha256": "a14ffb28471badcdac62187ec38b4fc7c737b9dafcab2b2e08e4549156933802",
+  "review_json_sha256": "accf939b1324f59763544c326a24422f3172a7b08353f7b1c45eb70a65ab5775",
+  "logs": {
+    "logs/calibrate.log": {
+      "sha256": "f93ed2b4348ab7e2c50b8479090e6b3fd181034149c5dd4215d895bf8e623553",
+      "reported_exit": 0,
+      "verified": true
+    },
+    "logs/candidate.log": {
+      "sha256": "1bafbef2d41629c495f03536c30874e4515cb5c93881ddc8784f7ab350d22c31",
+      "reported_exit": 0,
+      "verified": true
+    },
+    "logs/page.log": {
+      "sha256": "c0ecb80101abf7ad0a773e78a92cb5580b0f92d16bcc0d2a7504fa2d6bbabd85",
+      "reported_exit": 0,
+      "verified": true
+    },
+    "logs/resume.log": {
+      "sha256": "0c654d36b628b9387b8a5bb1c9a8e6862fb2aa979d6ae75615db42e2031778af",
+      "reported_exit": 0,
+      "verified": true
+    },
+    "logs/t4.log": {
+      "sha256": "338693b8229f811f2a9779bb3c68820adbdf337e066603e1154fc673491e6b73",
+      "reported_exit": 0,
+      "verified": true
+    },
+    "logs/t4-run-budget.log": {
+      "sha256": "fe0db08d47ca66e36e02417229308b8604529d7757f650215e2701c2543e204d",
+      "reported_exit": 0,
+      "verified": true
+    }
+  }
+}
