@@ -12,8 +12,10 @@ Linux 上没有官方微信开发者工具；这里装的是**社区移植版 2.
 ```bash
 cd ~/mycc/2-Projects/wechat-mp-env
 
-./bin/wxdt-doctor          # ① 自检：工具/依赖/显示/CI/密钥/磁盘
-./bin/wxdt                 # ② 开 IDE（需要图形会话），登录扫码
+./bin/wxdt-doctor          # ① 自检：工具/依赖/显示/无头/CI/密钥/磁盘
+./bin/wxdt-ide up          # ② 浏览器版 IDE（无图形会话也能用），扫码登录
+                           #    → 打开 https://10.10.10.23:3002/
+./bin/wxdt                 # ②' 有桌面会话时直接开本机 IDE 窗口
 ./bin/wxdt-cli islogin     # ③ 确认登录态
 ```
 
@@ -45,7 +47,8 @@ wechat-mp-env/
 │   └── opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/
 ├── app.bak/             # 升级时的上一版本（回滚用）
 ├── bin/
-│   ├── wxdt             # 开 IDE 窗口
+│   ├── wxdt             # 开 IDE 窗口（要有图形会话）
+│   ├── wxdt-ide         # 容器 + selkies 版 IDE，浏览器访问（无需图形会话/sudo）
 │   ├── wxdt-cli         # CLI（修掉了上游子命令被吞的 bug）
 │   └── wxdt-doctor      # 自检
 ├── downloads/           # deb 安装包留档
@@ -67,7 +70,8 @@ wechat-mp-env/
 
 | 场景 | 通道 | 命令 |
 |---|---|---|
-| 调样式、看模拟器、真机调试 | IDE | `wxdt` / `wxdt-cli open --project <dir>` |
+| 调样式、看模拟器、真机调试（**无桌面会话**） | 浏览器 IDE | `bin/wxdt-ide up` → `https://10.10.10.23:3002/` |
+| 调样式、看模拟器、真机调试（有桌面） | 本机 IDE | `wxdt` / `wxdt-cli open --project <dir>` |
 | 无人值守、脚本化、无图形会话 | CI | `scripts/preview.mjs` / `scripts/upload.mjs` |
 | 只想要二维码 | 两者都行 | 无头用 CI；有界面用 `wxdt-cli preview` |
 
@@ -137,4 +141,4 @@ IDE 是 Electron 程序，必须要 X/Wayland。四条路：
 - [ ] 提供 appid / 主体类型 → 配 `~/.mycc-secrets/private.<appid>.key`
 - [ ] 决定 IP 白名单策略（关闭 / 固定出口 / 只走 IDE 登录态）
 - [ ] 图形会话里做一次登录 + 首次上传验收
-- [ ] 是否另起 selkies 容器把 IDE 变成浏览器可访问（远程用，不动现有微信容器）
+- [x] ~~是否另起 selkies 容器把 IDE 变成浏览器可访问~~ → **已完成**：`bin/wxdt-ide`（容器 wxdt-ide，端口 3002，不动现有微信容器）

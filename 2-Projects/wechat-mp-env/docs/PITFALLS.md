@@ -28,8 +28,11 @@
 ## 2. 开发者工具（Linux 移植版）
 
 ### 2.1 启动后白屏 / 编辑器空白
-- 先删缓存：`rm -rf ~/.config/wechat_devtools/WeappCache`
-- 再删全部配置：`rm -rf ~/.config/wechat_devtools`（会丢登录态，需重扫）
+- 先删缓存：`rm -rf ~/.config/wechat-devtools/app/WeappCache`
+- 再删全部配置：`rm -rf ~/.config/wechat-devtools`（会丢登录态，需重扫）
+- 目录名是 **`wechat-devtools`（连字符）**，不是 Windows 习惯的 `wechat_devtools`（下划线）；写错路径会以为"删了没效果"。
+- 走浏览器版 IDE（`bin/wxdt-ide`）时，对应路径在挂载卷：
+  `/data/home-studio/wxdt-ide/config/.config/wechat-devtools/`
 - 仍是空白 → libstdc++ 与预编译原生模块不匹配，需要重编原生模块或改用 docker 构建版（见项目 FAQ 第 3/4/8 条）。
 
 ### 2.2 编辑器字体异常

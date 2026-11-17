@@ -17,7 +17,29 @@ wxdt-cli login -f terminal
 wxdt-cli islogin
 ```
 
-登录态存在 `~/.config/wechat_devtools/`，一般可维持数周；失效就重扫。
+登录态存在 `~/.config/wechat-devtools/app/`（**连字符**，不是 `wechat_devtools`），一般可维持数周；失效就重扫。
+
+### 0.1 没有图形会话时：浏览器版 IDE（`wxdt-ide`）
+
+本机没有 hahaxiong83 的桌面会话、也没接显示器，主机 `sudo` 又要密码。所以 IDE 用**容器 + selkies** 跑，
+浏览器访问即可 —— 不需要显示器、不需要 sudo、不需要装 xvfb。
+
+```bash
+./bin/wxdt-ide up       # 起容器 + 起 IDE（幂等），打印访问地址
+./bin/wxdt-ide url      # 只看地址/账号（密码在 ~/.mycc-secrets/wxdt-ide.pass，600）
+./bin/wxdt-ide status   # 容器 / Xvfb / IDE / 资源
+./bin/wxdt-ide shot     # 不开浏览器，直接截当前屏幕到 /tmp
+./bin/wxdt-ide down     # 停（登录态保留在 /data/home-studio/wxdt-ide/config）
+```
+
+打开 `https://10.10.10.23:3002/`（自签证书，信任一次）→ 看到的就是真实 IDE 窗口，
+里面有登录二维码，**微信扫码即登录**。登录态落在挂载卷
+`/data/home-studio/wxdt-ide/config/.config/wechat-devtools/`，容器重建不丢。
+
+容器规格：Xvfb 1920x1080 + openbox（可拖窗/最大化）+ selkies（h264/jpeg 编码），
+实测内存约 500MB、CPU 空闲 2%。IDE 目录以**只读**方式挂入，容器不改你的安装。
+
+⚠️ 容器重启后 Xvfb 会重建，**IDE 不会自动起** → 再跑一次 `./bin/wxdt-ide up` 即可。
 
 ---
 

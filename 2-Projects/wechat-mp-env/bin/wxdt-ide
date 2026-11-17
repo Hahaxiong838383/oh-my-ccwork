@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# wxdt-ide — 用容器 + selkies 跑微信开发者工具，浏览器里扫码/调样式
+#
+# 为什么有这个东西：
+#   本机没有 hahaxiong83 的图形会话（只有 gdm 登录界面），也没接显示器，
+#   主机 sudo 又要密码装不了 xvfb。于是复用现成镜像（自带 Xvfb + selkies 桌面），
+#   把 IDE 目录只读挂进去，浏览器访问就能看到真实 IDE 窗口。
+#
+# 用法：
+#   wxdt-ide up            # 起容器 + 起 IDE（幂等）
+#   wxdt-ide status        # 看状态
+#   wxdt-ide url           # 打印访问地址（含一次性的用户名/密码位置）
+#   wxdt-ide ide           # 只确保 IDE 在跑
+#   wxdt-ide shot [file]   # 截当前屏幕到 png（无需打开浏览器）
+#   wxdt-ide logs          # IDE 主进程日志（尾部）
+#   wxdt-ide down          # 停容器（不删；登录态在 /data 卷里）
+#   wxdt-ide reset         # 停并删除容器（登录态仍保留）
+set -uo pipefail
+
+MP_ENV="${MP_ENV:-$HOME/mycc/2-Projects/wechat-mp-env}"
+NAME="${WXDT_IDE_NAME:-wxdt-ide}"
+PORT="${WXDT_IDE_PORT:-3002}"
+HOSTIP="${WXDT_IDE_HOST:-10.10.10.23}"
+IMG="${WXDT_IDE_IMAGE:-ghcr.io/nickrunning/wechat-selkies:latest}"
+APP="$MP_ENV/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files"
+CFGDIR="${WXDT_IDE_CFG:-/data/home-studio/wxdt-ide/config}"
+PASSFILE="${WXDT_IDE_PASSFILE:-$HOME/.mycc-secrets/wxdt-ide.pass}"
+
+die() { echo "[x] $*" >&2; exit 1; }
+need_docker() { docker info >/dev/null 2>&1 || die "docker 不可用"; }
+
+pw() {
+  if [[ -f "$PASSFILE" ]]; then cat "$PASSFILE"; return; fi
+  # 容器已存在就从它的 env 取（首次 up 之后）
+  if docker inspect "$NAME" >/dev/null 2>&1; then
+    docker inspect "$NAME" --format '{{range .Config.Env}}{{println .}}{{end}}' \
+      | awk -F= '/^PASSWORD=/{sub(/^PASSWORD=/,"");print}' > "$PASSFILE"
+    chmod 600 "$PASSFILE"; cat "$PASSFILE"; return
+  fi
+  # 冷启动：生成随机密码
+  mkdir -p "$(dirname "$PASSFILE")"; chmod 700 "$(dirname "$PASSFILE")" 2>/dev/null || true
+  LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom | head -c 28 > "$PASSFILE"
+  chmod 600 "$PASSFILE"; cat "$PASSFILE"
+}
+
+container_running() { [[ "$(docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null)" == "true" ]]; }
+ide_running() { [[ -n "$(docker exec "$NAME" sh -c 'pgrep -f "resources/app" | head -1' 2>/dev/null)" ]]; }
+
+ensure_container() {
+  need_docker
+  if docker inspect "$NAME" >/dev/null 2>&1; then
+    if ! container_running; then docker start "$NAME" >/dev/null || die "启动容器失败"; fi
+    return
+  fi
+  [[ -d "$APP" ]] || die "找不到 IDE 目录：$APP（先跑 scripts/install-devtools.sh）"
+  mkdir -p "$CFGDIR"
+  local p; p="$(pw)"
+  docker run -d --name "$NAME" --restart unless-stopped \
+    -p "$HOSTIP:$PORT:3001" \
+    -e CUSTOM_USER=hahaxiong83 -e PASSWORD="$p" \
+    -e TITLE='WX DevTools' -e PUID="$(id -u)" -e PGID="$(id -g)" \
+    -e TZ=Asia/Shanghai -e LC_ALL=zh_CN.UTF-8 \
+    -e MAX_RES=1920x1080 -e DISABLE_DRI3=true \
+    -e AUTO_START_WECHAT=false -e AUTO_START_QQ=false \
+    -e SELKIES_ENCODER=x264enc,jpeg \
+    -v "$APP:/opt/wxdt:ro" -v "$CFGDIR:/config" \
+    "$IMG" >/dev/null || die "创建容器失败"
+  echo "[*] 容器已创建，等 Xvfb 就绪…"
+  for _ in $(seq 1 40); do
+    docker exec "$NAME" sh -c 'pgrep -x Xvfb >/dev/null' 2>/dev/null && break
+    sleep 1
+  done
+}
+
+ensure_ide() {
+  container_running || die "容器未运行：wxdt-ide up"
+  if ide_running; then echo "[=] IDE 已在运行"; return; fi
+  docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config "$NAME" /opt/wxdt/bin/bin/wechat-devtools || die "启动 IDE 失败"
+  echo "[*] IDE 启动中…"
+  for _ in $(seq 1 40); do
+    docker exec "$NAME" sh -c 'pgrep -f "resources/app" >/dev/null' 2>/dev/null && { echo "[✓] IDE 已就绪"; return; }
+    sleep 1
+  done
+  die "IDE 20s 内没起来，看日志：wxdt-ide logs"
+}
+
+cmd_up()   { ensure_container; ensure_ide; cmd_url; }
+cmd_down() { docker stop "$NAME" >/dev/null 2>&1 && echo "[✓] 已停（登录态保留在 $CFGDIR）" || echo "[=] 本来就没在跑"; }
+cmd_reset(){ docker rm -f "$NAME" >/dev/null 2>&1; echo "[✓] 容器已删除（登录态保留在 $CFGDIR；密码在 $PASSFILE）"; }
+
+cmd_status() {
+  need_docker
+  if ! docker inspect "$NAME" >/dev/null 2>&1; then echo "容器: 未创建（wxdt-ide up）"; return; fi
+  echo "容器: $(docker inspect -f '{{.State.Status}}' "$NAME")  镜像: $IMG"
+  echo "端口: $HOSTIP:$PORT -> 3001"
+  echo "Xvfb: $(docker exec "$NAME" sh -c 'pgrep -x Xvfb >/dev/null && pgrep -a -x Xvfb | sed "s/.*-screen 0 //;s/ .*//"' 2>/dev/null || echo 未运行)"
+  echo "IDE : $(ide_running && echo 运行中 || echo 未启动（wxdt-ide ide）)"
+  local st="$CFGDIR/.config/wechat-devtools"
+  if [[ -f "$st/app/.install_path" ]] || ls "$st/app" >/dev/null 2>&1; then
+    echo "登录态: 配置目录已生成 $st/app（是否已登录用 wxdt-cli islogin 或登录页判断）"
+  fi
+  docker stats "$NAME" --no-stream --format '资源: CPU {{.CPUPerc}} / MEM {{.MemUsage}}' 2>/dev/null
+}
+
+cmd_url() {
+  local p; p="$(pw)"
+  echo "访问: https://$HOSTIP:$PORT/"
+  echo "用户: hahaxiong83"
+  echo "密码: 已存 $PASSFILE（$(stat -c '%a' "$PASSFILE" 2>/dev/null || echo '?')）  —— 需要时 cat 它"
+  echo "提示: 浏览器若提示证书风险，手动信任一次（自签）。"
+}
+
+cmd_shot() {
+  local out="${1:-/tmp/wxdt-ide-shot.png}"
+  container_running || die "容器未运行"
+  docker exec -u abc -e DISPLAY=:1 "$NAME" sh -c 'xwd -root -silent > /tmp/s.xwd' 2>/dev/null || die "抓图失败"
+  docker cp "$NAME:/tmp/s.xwd" /tmp/.wxdt-s.xwd >/dev/null 2>&1 || die "复制失败"
+  python3 - "$out" <<'PY' || die "转换失败（需要 python3 + Pillow）"
+import struct, sys
+from PIL import Image
+d=open('/tmp/.wxdt-s.xwd','rb').read()
+h=struct.unpack('>25I', d[:100])
+hsize,fmt,depth,w,hh,bpl,bpp,ncolors=h[0],h[2],h[3],h[4],h[5],h[12],h[11],h[19]
+off=hsize+ncolors*12
+raw=d[off:off+bpl*hh]
+nch=bpp//8
+img=Image.frombytes('RGBA' if nch==4 else 'RGB',(w,hh),raw[:w*hh*nch],'raw',('BGRA' if nch==4 else 'BGR'),bpl,1)
+img.save(sys.argv[1]); print(f"[✓] {sys.argv[1]} ({w}x{hh})")
+PY
+  rm -f /tmp/.wxdt-s.xwd
+}
+
+cmd_logs() {
+  docker exec -u abc -e HOME=/config "$NAME" sh -c \
+    'latest=$(ls -1t /config/.config/wechat-devtools/app/logs/*.log 2>/dev/null | head -1); \
+     [ -n "$latest" ] && tail -40 "$latest" || echo "（还没有日志，IDE 可能没起过）"' 2>/dev/null
+}
+
+case "${1:-status}" in
+  up)     cmd_up ;;
+  down)   cmd_down ;;
+  reset)  cmd_reset ;;
+  status) cmd_status ;;
+  url)    cmd_url ;;
+  ide)    ensure_ide ;;
+  shot)   shift; cmd_shot "${1:-}" ;;
+  logs)   cmd_logs ;;
+  *) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac
