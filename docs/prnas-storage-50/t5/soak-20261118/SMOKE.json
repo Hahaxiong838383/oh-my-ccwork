@@ -1,0 +1,16 @@
+{
+  "result": "PASS_HTTP_PRODUCER_SMOKE_ONLY",
+  "samples": 6,
+  "pending": {
+    "id": 1,
+    "pending_records": 6,
+    "pending_bytes": 5112,
+    "reserved_bytes": 33768,
+    "last_ack_ms": null,
+    "last_attempt_ms": 1794932717562,
+    "last_success_ms": 1794932717562,
+    "last_error": null
+  },
+  "log_sha256": "c0d297783ec2cf8b78aabd8f12493cbd7938e007c377ae5a273712480f4c8ee7",
+  "full_t5_pass": false
+}
