@@ -83,3 +83,17 @@ def encrypt(pem, text):
 「词途」App 更新通道：在既有规则 `RuleKey=AdMqS1jnVHj8YLVt`（「外网回家NAS」，8666/TLS）里追加
 `wordpath.hahaxiong.cc → http://192.168.1.133:8899`。本机 SNI 校验 200；公网留给 IPv6 手机验证，
 App 里有 VPS IPv4 备用通道自动回退。
+
+## 致命坑：列表视图是残缺的，PUT 必须用单条 GET（2026-11-17 实战）
+
+- `GET /api/webservice/rules` 返回的每个 proxy 只有十几个字段；**单条 `GET /api/webservice/rule/{key}` 才有完整 42 个字段**
+  （`LocationInsecureSkipVerify`、`HttpClientTimeout`、`ProxyType`、`OtherParams` 等都在里面）。
+- 拿列表对象原样 PUT，缺失字段会被写成零值：**`LocationInsecureSkipVerify=false` 会让 https 上游立刻 502**
+  （自签 IP 证书没有 IP SAN，报 `x509: cannot validate certificate ... no IP SANs`）。
+  本次就是这样把 `fn1.hahaxiong.cc` / `fn2.hahaxiong.cc` 打挂的。
+- 正确姿势：
+  1. `GET /api/webservice/rule/{key}` 取完整对象（响应是 `{"ret":0,"rule":{...}}`）
+  2. 只改要改的字段（新增/删除 `ProxyList` 条目）
+  3. `PUT` 同一个完整对象
+- 修复 https 上游 502：对相应条目设 `LocationInsecureSkipVerify = true`，再整条 PUT；不要动全局
+  `baseconfigure.InsecureSkipVerify`（那是另一层开关，改了会扩大影响面）。
