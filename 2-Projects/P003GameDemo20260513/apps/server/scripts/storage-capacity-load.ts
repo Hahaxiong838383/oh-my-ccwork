@@ -126,7 +126,7 @@ if(mode==='run'){
  // Same test endpoints and existing exporter/Backup API. No production timer is installed.
  async function archiveCycle(){
   while(archiving)await sleep(20);archiving=true;try{
-  const began=Date.now(),exportExit=await launch(['python3','scripts/storage-ark-export.py','--db',join(root,'ark.db'),'--root',join(root,'spool')],'ark-export-'+began,process.env.T5_ARK_SINGLE_WRITER==='1'?{...process.env,ARK_ARCHIVE_CONTROL_URL:queryService!.arkControlUrl,ARK_ARCHIVE_CONTROL_SECRET:secret}:process.env);
+  const began=Date.now(),exportExit=await launch(['python3','scripts/storage-ark-export.py',...(process.env.T5_ARK_SINGLE_WRITER==='1'?['--require-owner']:[]),'--db',join(root,'ark.db'),'--root',join(root,'spool')],'ark-export-'+began,process.env.T5_ARK_SINGLE_WRITER==='1'?{...process.env,ARK_ARCHIVE_CONTROL_URL:queryService!.arkControlUrl,ARK_ARCHIVE_CONTROL_SECRET:secret}:process.env);
   assert.equal(exportExit,0,'Ark export failed');
   let backupExit:number|null=null,backupReport:any=null,backupStarted:number|null=null,backupFinished:number|null=null;
   if(config.backup&&dailyStarted&&backupEligible){backupStarted=Date.now();backupExit=await launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup-'+began);backupFinished=Date.now();assert.equal(backupExit,0,'daily backup job failed');backupReport=JSON.parse(readFileSync(join(root,'backup-'+began+'.stdout'),'utf8'));}

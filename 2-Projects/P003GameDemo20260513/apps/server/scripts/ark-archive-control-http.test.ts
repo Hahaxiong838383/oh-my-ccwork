@@ -27,12 +27,12 @@ test('real Python export uses read-only DB and owner HTTP; authenticated ACK dra
   assert.equal((await post({op:'sql',sql:'DELETE FROM ark_current'})).status,400);
   const wrongDb=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','X-Ark-Archive-Token':token},body:JSON.stringify({database:path+'.other',command:q})});assert.equal(wrongDb.status,409);assert.equal(store.db.prepare('SELECT COUNT(*) n FROM ark_archive_batch').get()!.n,0);
   timer=setInterval(()=>{if(n<80)try{accept();}catch(e){failures.push(e);}},5);
-  const first=await run(['scripts/storage-ark-export.py','--db',path,'--root',spool],env);assert.equal(first.code,0,first.err);assert.equal(JSON.parse(first.out).writer_mode,'brain-owner');clearInterval(timer);
+  const first=await run(['scripts/storage-ark-export.py','--require-owner','--db',path,'--root',spool],env);assert.equal(first.code,0,first.err);assert.equal(JSON.parse(first.out).writer_mode,'brain-owner');clearInterval(timer);
   assert.deepEqual(failures,[]);const current=store.current(id)!.snapshot.wallets.family_coin;assert.equal(current,n);
   // Recover the remainder after concurrent appends. ACKs are synthetic local transport
   // receipts, not a claim of a live NAS round trip.
   for(let i=0;i<10&&Number(store.db.prepare('SELECT pending_records FROM ark_archive_stats').get()!.pending_records)>0;i++){
-   const exp=await run(['scripts/storage-ark-export.py','--db',path,'--root',spool],env);assert.equal(exp.code,0,exp.err);
+   const exp=await run(['scripts/storage-ark-export.py','--require-owner','--db',path,'--root',spool],env);assert.equal(exp.code,0,exp.err);
    const code="import importlib.util,sys;from pathlib import Path;s=importlib.util.spec_from_file_location('a',Path('scripts/storage-archive.py'));m=importlib.util.module_from_spec(s);s.loader.exec_module(m);sp=m.Spool(Path(sys.argv[1]));[(sp.ack(x['archive_id'],x['sha256'],x['bytes'],x['record_count'])) for x in sp.list()]";
    assert.equal((await run(['-c',code,spool],env)).code,0);
   }
@@ -40,6 +40,7 @@ test('real Python export uses read-only DB and owner HTTP; authenticated ACK dra
   assert.equal(store.current(id)!.snapshot.wallets.family_coin,n);
   // A configured unavailable owner must fail closed, never silently resume direct writes.
   const before=store.db.prepare('SELECT last_success_ms FROM ark_archive_stats').get()!.last_success_ms;
-  const failed=await run(['scripts/storage-ark-export.py','--db',path,'--root',spool],{...env,ARK_ARCHIVE_CONTROL_SECRET:'wrong'});assert.notEqual(failed.code,0);assert.equal(store.db.prepare('SELECT last_success_ms FROM ark_archive_stats').get()!.last_success_ms,before);
+  const missing=await run(['scripts/storage-ark-export.py','--require-owner','--db',path,'--root',spool],{...env,ARK_ARCHIVE_CONTROL_URL:''});assert.equal(missing.code,1);assert.match(missing.err,/archive_control_required/);assert.equal(store.db.prepare('SELECT last_success_ms FROM ark_archive_stats').get()!.last_success_ms,before);
+  const failed=await run(['scripts/storage-ark-export.py','--require-owner','--db',path,'--root',spool],{...env,ARK_ARCHIVE_CONTROL_SECRET:'wrong'});assert.notEqual(failed.code,0);assert.equal(store.db.prepare('SELECT last_success_ms FROM ark_archive_stats').get()!.last_success_ms,before);
  }finally{clearInterval(timer);server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));store.close();rmSync(root,{recursive:true,force:true});}
 });

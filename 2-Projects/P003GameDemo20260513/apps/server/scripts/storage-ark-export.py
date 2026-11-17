@@ -246,6 +246,8 @@ def cycle(dbfile,root,now=None):
     finally:os.close(fd)
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--db',required=True,type=Path);p.add_argument('--root',required=True,type=Path);a=p.parse_args()
-    try:print(json.dumps(cycle(a.db,a.root)))
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--db',required=True,type=Path);p.add_argument('--root',required=True,type=Path);p.add_argument('--require-owner',action='store_true',help='online entry: refuse missing owner URL, never use a direct writer');a=p.parse_args()
+    try:
+        if a.require_owner and not os.environ.get('ARK_ARCHIVE_CONTROL_URL'):raise ValueError('archive_control_required')
+        print(json.dumps(cycle(a.db,a.root)))
     except Exception as e:print('ARK_EXPORT_FAILED:'+type(e).__name__+':'+str(getattr(e,'sqlite_errorname',str(e) if re.fullmatch('archive_[a-z_]+',str(e)) else 'NON_SQLITE')),file=__import__('sys').stderr);raise SystemExit(1)

@@ -6,13 +6,13 @@
 
 云 fd536 完整50×6000出现Ark 503及history IO等待；上传500ms节流e868仍有Ark 503，主动停止，797批/159400条并非全量通过。NAS fd536也失败，但镜像默认healthcheck、kernel/cgroup/Python不同，不能当纯磁盘A/B。保持所有旧失败证据。
 
-b318 小规模50×200、同0.5CPU/768MiB复现503。无strace的SQL计时中，有BEGIN成功后至COMMIT调用前约74ms的停顿，而各SQL执行很短。第三轮只跟踪隔离Python的fcntl/fsync：113段WAL_WRITE_LOCK，18个Brain SQLITE_BUSY时刻中17个落在Python实际持锁区间；最终失败请求也命中。最终该次锁约2.94ms，但Brain在等待下一次10ms重试时耗尽80ms预算。短锁+共享CPU调度也能使前台失败；不能简单把整个HTTP耗时叫长锁。strace有观察开销，不作性能验收。精确日志为ARK-PROFILE-SMOKE2/3-OBSERVATION及ARK-SMOKE3-LOCK-INTERVALS。
+b318 小规模50×200、同0.5CPU/768MiB复现503。无strace的SQL计时中，有BEGIN成功后至COMMIT调用前约74ms的停顿，而各SQL执行很短。第三轮只跟踪隔离Python的fcntl/fsync：113段WAL_WRITE_LOCK，18个Brain SQLITE_BUSY整毫秒点有17个与Python实际持锁区间相交。Grok按Date.now的整段[at_ms,at_ms+1)保守复核，10个可确定完全包含；其余8个（含最终失败）仅相交，不认定该次锁主。最终失败点与2.94ms写锁相交，但不能将96ms HTTP耗时称为持锁时长。短锁+共享CPU调度也能使前台失败；不能简单把整个HTTP耗时叫长锁。strace有观察开销，不作性能验收。精确日志为ARK-PROFILE-SMOKE2/3-OBSERVATION及ARK-SMOKE3-LOCK-INTERVALS。
 
 ## 实施
 
 保留现有Brain进程、ArkStore连接、数据库schema及T2 spool。Python仅只读ark.db，JSON/哈希/文件fsync/上传/收据核验仍在后台。claim、prepare、published、confirm、prune及状态写经现有Brain的回环HTTP端点 `/internal/ark-archive` 执行，固定命令，无任意SQL、不跨请求持事务、不加持久队列。命令使用同一个ArkStore连接，避免独立导出连接和前台争抢写锁。任何文件操作不进入Brain。
 
-默认关闭。仅 `ARK_ARCHIVE_CONTROL_ENABLED=1` 且非facts代理进程挂实操作；回环地址+独立32字以上secret，最多2个在读请求、8KiB/1秒读取边界。每条命令核验请求数据库绝对路径与当前连接一致，拒绝错库。Python设置CONTROL_URL时必须成功走owner，不回落直接写；只有未配置时保留旧离线导出兼容路径。T5以T5_ARK_SINGLE_WRITER显式启用，对全部子进程仍计同一配额。
+默认关闭。仅 `ARK_ARCHIVE_CONTROL_ENABLED=1` 且非facts代理进程挂实操作；回环地址+独立32字以上secret，最多2个在读请求、8KiB/1秒读取边界。每条命令核验请求数据库绝对路径与当前连接一致，拒绝错库。在线调度必须传`--require-owner`，URL缺失立即失败；Python设置CONTROL_URL时必须成功走owner，不回落直接写；只有未配置时保留旧离线导出兼容路径。T5以T5_ARK_SINGLE_WRITER显式启用，对全部子进程仍计同一配额。
 
 确认保留原逐列不可变性校验：Python对原始列数组作SHA256，Brain在写事务内读取相同列核对，再删outbox/更新批次及stats。保留最大1000行/1MiB/20批、FULL、80ms前台重试与现有历史门限。重复claim/prepare/published/confirm不二次记账。失败保留durable队列。
 
@@ -30,6 +30,6 @@ b318 小规模50×200、同0.5CPU/768MiB复现503。无strace的SQL计时中，�
 
 ## 回滚
 
-源码点 `rollback/p003-t5-pre-ark-single-writer-20261118` = b318c23114241f65052d86b9a66a8129a8e4f909。当前未动生产。未来若启用，先停归档调度，保留outbox及spool，然后撤owner控制配置并按发布清单回代码。不得让旧直接写导出与新owner导出并跑；不得回灌整库或删除待确认数据。设备范围、23点日批、教学72小时窗口保持原状。
+源码点 `rollback/p003-t5-pre-ark-single-writer-20261118` = b318c23114241f65052d86b9a66a8129a8e4f909。当前未动生产。未来若启用，先停归档调度，保留outbox及spool，保留`--require-owner`直至调度停妥，再撤owner控制配置并按发布清单回代码。不得让旧直接写导出与新owner导出并跑；不得回灌整库或删除待确认数据。设备范围、23点日批、教学72小时窗口保持原状。
 
 署名：codex（OpenAI）| 2026-11-18
