@@ -1,0 +1,2848 @@
+[
+  {
+    "name": "d13-baseline-full",
+    "summary": {
+      "p95_ms": 35.16410799999721,
+      "p99_ms": 48.242573000003176,
+      "history_transport_failures": 2,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 144.871807,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 124.91703800000005,
+      "body_ms": null
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 122.65766400000007,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 59.01375099999996,
+      "body_ms": null
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 31.620068000000174,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 24.185801000000083,
+      "body_ms": 29.0568659999999
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 144.871807,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 124.91703800000005,
+        "body_ms": null
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 122.65766400000007,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 59.01375099999996,
+        "body_ms": null
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 144.871807,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 124.91703800000005,
+        "body_ms": null
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 122.65766400000007,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 59.01375099999996,
+        "body_ms": null
+      }
+    ]
+  },
+  {
+    "name": "d13-cold-0",
+    "summary": {
+      "p95_ms": 58.396650000000136,
+      "p99_ms": 125.26029199999994,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 125.26029199999994,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 107.65627199999994,
+      "body_ms": null,
+      "read_bytes": 1384448,
+      "cpu_us": 63742,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07739200000003166,
+          "cpu": {
+            "user": 103,
+            "system": 4
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 70.01692700000001,
+          "cpu": {
+            "user": 12281,
+            "system": 6179
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.9986129999999775,
+          "cpu": {
+            "user": 1973,
+            "system": 145
+          }
+        }
+      ],
+      "sql_ms": 77.09293200000002
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 80.16701199999989,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 47.43338599999993,
+      "body_ms": 72.34517399999982,
+      "read_bytes": 1191936,
+      "cpu_us": 15987,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.058587999999986096,
+          "cpu": {
+            "user": 78,
+            "system": 12
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 33.25017199999991,
+          "cpu": {
+            "user": 2944,
+            "system": 2142
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.0933319999999185,
+          "cpu": {
+            "user": 1537,
+            "system": 955
+          }
+        }
+      ],
+      "sql_ms": 40.40209199999981
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 20.81964599999992,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 14.994360000000142,
+      "body_ms": 19.608905999999934,
+      "read_bytes": 274432,
+      "cpu_us": 15735,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.04920700000002398,
+          "cpu": {
+            "user": 51,
+            "system": 8
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 5.158546999999999,
+          "cpu": {
+            "user": 4999,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.51921399999992,
+          "cpu": {
+            "user": 2526,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 7.7269679999999425
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 125.26029199999994,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 107.65627199999994,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 63742,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07739200000003166,
+            "cpu": {
+              "user": 103,
+              "system": 4
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 70.01692700000001,
+            "cpu": {
+              "user": 12281,
+              "system": 6179
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.9986129999999775,
+            "cpu": {
+              "user": 1973,
+              "system": 145
+            }
+          }
+        ],
+        "sql_ms": 77.09293200000002
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 125.26029199999994,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 107.65627199999994,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 63742,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07739200000003166,
+            "cpu": {
+              "user": 103,
+              "system": 4
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 70.01692700000001,
+            "cpu": {
+              "user": 12281,
+              "system": 6179
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.9986129999999775,
+            "cpu": {
+              "user": 1973,
+              "system": 145
+            }
+          }
+        ],
+        "sql_ms": 77.09293200000002
+      }
+    ]
+  },
+  {
+    "name": "d13-warmdb-0",
+    "summary": {
+      "p95_ms": 53.5810620000002,
+      "p99_ms": 158.60501999999997,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 158.60501999999997,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 43.952556999999956,
+      "body_ms": null,
+      "read_bytes": 0,
+      "cpu_us": 70985,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07217800000000807,
+          "cpu": {
+            "user": 89,
+            "system": 14
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 6.438241000000062,
+          "cpu": {
+            "user": 10612,
+            "system": 951
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.832461999999964,
+          "cpu": {
+            "user": 4823,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 9.342881000000034
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 101.30941599999983,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 59.79685299999994,
+      "body_ms": 92.12663099999986,
+      "read_bytes": 0,
+      "cpu_us": 28983,
+      "throttled_us": 27481,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07351500000004307,
+          "cpu": {
+            "user": 82,
+            "system": 12
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 13.81705599999998,
+          "cpu": {
+            "user": 9454,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 4.88227500000005,
+          "cpu": {
+            "user": 4892,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 18.772846000000072
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 13.97005900000022,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 9.355199000000084,
+      "body_ms": 12.9509079999998,
+      "read_bytes": 0,
+      "cpu_us": 10375,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.0712149999999383,
+          "cpu": {
+            "user": 69,
+            "system": 10
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.673461999999745,
+          "cpu": {
+            "user": 1729,
+            "system": 952
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.638680999999906,
+          "cpu": {
+            "user": 1562,
+            "system": 83
+          }
+        }
+      ],
+      "sql_ms": 4.383357999999589
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 158.60501999999997,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 43.952556999999956,
+        "body_ms": null,
+        "read_bytes": 0,
+        "cpu_us": 70985,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07217800000000807,
+            "cpu": {
+              "user": 89,
+              "system": 14
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 6.438241000000062,
+            "cpu": {
+              "user": 10612,
+              "system": 951
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 2.832461999999964,
+            "cpu": {
+              "user": 4823,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 9.342881000000034
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 158.60501999999997,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 43.952556999999956,
+        "body_ms": null,
+        "read_bytes": 0,
+        "cpu_us": 70985,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07217800000000807,
+            "cpu": {
+              "user": 89,
+              "system": 14
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 6.438241000000062,
+            "cpu": {
+              "user": 10612,
+              "system": 951
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 2.832461999999964,
+            "cpu": {
+              "user": 4823,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 9.342881000000034
+      }
+    ]
+  },
+  {
+    "name": "d13-warmhttp-0",
+    "summary": {
+      "p95_ms": 67.31751699999995,
+      "p99_ms": 142.745592,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 142.745592,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 98.27891,
+      "body_ms": 117.50423799999999,
+      "read_bytes": 1384448,
+      "cpu_us": 50660,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07375500000000557,
+          "cpu": {
+            "user": 88,
+            "system": 12
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 69.94427200000007,
+          "cpu": {
+            "user": 14997,
+            "system": 2557
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.957311000000004,
+          "cpu": {
+            "user": 2061,
+            "system": 148
+          }
+        }
+      ],
+      "sql_ms": 76.97533800000008
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 103.03785499999981,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 91.55938000000015,
+      "body_ms": 100.18325700000014,
+      "read_bytes": 1191936,
+      "cpu_us": 37221,
+      "throttled_us": 5020,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.10315600000012637,
+          "cpu": {
+            "user": 1143,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 55.67110200000002,
+          "cpu": {
+            "user": 9798,
+            "system": 2223
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 12.409865000000082,
+          "cpu": {
+            "user": 3976,
+            "system": 887
+          }
+        }
+      ],
+      "sql_ms": 68.18412300000023
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 14.898658000000069,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 10.342896999999994,
+      "body_ms": 13.872896999999739,
+      "read_bytes": 274432,
+      "cpu_us": 10394,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.039007999999739695,
+          "cpu": {
+            "user": 41,
+            "system": 6
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.020700999999917,
+          "cpu": {
+            "user": 3238,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.4232899999997244,
+          "cpu": {
+            "user": 1429,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 5.482998999999381
+    },
+    "failures": [],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 142.745592,
+        "body_complete": true,
+        "status": 200,
+        "reader_ms": 98.27891,
+        "body_ms": 117.50423799999999,
+        "read_bytes": 1384448,
+        "cpu_us": 50660,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07375500000000557,
+            "cpu": {
+              "user": 88,
+              "system": 12
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 69.94427200000007,
+            "cpu": {
+              "user": 14997,
+              "system": 2557
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.957311000000004,
+            "cpu": {
+              "user": 2061,
+              "system": 148
+            }
+          }
+        ],
+        "sql_ms": 76.97533800000008
+      }
+    ]
+  },
+  {
+    "name": "d13-cpu2-0",
+    "summary": {
+      "p95_ms": 76.41619600000013,
+      "p99_ms": 125.49110099999996,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 125.49110099999996,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 102.6816540000001,
+      "body_ms": null,
+      "read_bytes": 1384448,
+      "cpu_us": 63757,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07689600000003338,
+          "cpu": {
+            "user": 90,
+            "system": 13
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 67.88859699999989,
+          "cpu": {
+            "user": 16741,
+            "system": 4165
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.180839000000105,
+          "cpu": {
+            "user": 2217,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 75.14633200000003
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 76.41619600000013,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 47.75422500000002,
+      "body_ms": 67.0962679999999,
+      "read_bytes": 1191936,
+      "cpu_us": 15830,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.04383199999995213,
+          "cpu": {
+            "user": 51,
+            "system": 7
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 34.50600199999997,
+          "cpu": {
+            "user": 3337,
+            "system": 2102
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.318616999999904,
+          "cpu": {
+            "user": 967,
+            "system": 1023
+          }
+        }
+      ],
+      "sql_ms": 40.86845099999982
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 25.88094000000001,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 19.827254000000266,
+      "body_ms": 24.540324000000055,
+      "read_bytes": 274432,
+      "cpu_us": 19712,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.1135309999999663,
+          "cpu": {
+            "user": 108,
+            "system": 16
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 7.148063000000093,
+          "cpu": {
+            "user": 6307,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 4.5165139999999155,
+          "cpu": {
+            "user": 3675,
+            "system": 845
+          }
+        }
+      ],
+      "sql_ms": 11.778107999999975
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 125.49110099999996,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 102.6816540000001,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 63757,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07689600000003338,
+            "cpu": {
+              "user": 90,
+              "system": 13
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 67.88859699999989,
+            "cpu": {
+              "user": 16741,
+              "system": 4165
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.180839000000105,
+            "cpu": {
+              "user": 2217,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 75.14633200000003
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 125.49110099999996,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 102.6816540000001,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 63757,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07689600000003338,
+            "cpu": {
+              "user": 90,
+              "system": 13
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 67.88859699999989,
+            "cpu": {
+              "user": 16741,
+              "system": 4165
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.180839000000105,
+            "cpu": {
+              "user": 2217,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 75.14633200000003
+      }
+    ]
+  },
+  {
+    "name": "d13-cold-1",
+    "summary": {
+      "p95_ms": 125.14932700000008,
+      "p99_ms": 135.23079500000017,
+      "history_transport_failures": 2,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 135.23079500000017,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 219.07993800000008,
+      "body_ms": null,
+      "read_bytes": 1384448,
+      "cpu_us": 97706,
+      "throttled_us": 55070,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.08128899999996975,
+          "cpu": {
+            "user": 106,
+            "system": 12
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 108.40278399999988,
+          "cpu": {
+            "user": 7628,
+            "system": 6545
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 13.255018000000064,
+          "cpu": {
+            "user": 4514,
+            "system": 2096
+          }
+        }
+      ],
+      "sql_ms": 121.73909099999992
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 125.14932700000008,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 65.47069199999987,
+      "body_ms": null,
+      "read_bytes": 1191936,
+      "cpu_us": 45843,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.15152999999986605,
+          "cpu": {
+            "user": 172,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 49.16284399999995,
+          "cpu": {
+            "user": 29166,
+            "system": 717
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.983054000000038,
+          "cpu": {
+            "user": 1852,
+            "system": 1058
+          }
+        }
+      ],
+      "sql_ms": 57.297427999999854
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 15.896803999999975,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 11.360246999999617,
+      "body_ms": 14.852872999999818,
+      "read_bytes": 274432,
+      "cpu_us": 11275,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06233100000008562,
+          "cpu": {
+            "user": 101,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.308204999999816,
+          "cpu": {
+            "user": 2267,
+            "system": 1119
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.5313120000000708,
+          "cpu": {
+            "user": 1538,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 5.901847999999973
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 135.23079500000017,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 219.07993800000008,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 97706,
+        "throttled_us": 55070,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.08128899999996975,
+            "cpu": {
+              "user": 106,
+              "system": 12
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 108.40278399999988,
+            "cpu": {
+              "user": 7628,
+              "system": 6545
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 13.255018000000064,
+            "cpu": {
+              "user": 4514,
+              "system": 2096
+            }
+          }
+        ],
+        "sql_ms": 121.73909099999992
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 125.14932700000008,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 65.47069199999987,
+        "body_ms": null,
+        "read_bytes": 1191936,
+        "cpu_us": 45843,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.15152999999986605,
+            "cpu": {
+              "user": 172,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 49.16284399999995,
+            "cpu": {
+              "user": 29166,
+              "system": 717
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.983054000000038,
+            "cpu": {
+              "user": 1852,
+              "system": 1058
+            }
+          }
+        ],
+        "sql_ms": 57.297427999999854
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 135.23079500000017,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 219.07993800000008,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 97706,
+        "throttled_us": 55070,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.08128899999996975,
+            "cpu": {
+              "user": 106,
+              "system": 12
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 108.40278399999988,
+            "cpu": {
+              "user": 7628,
+              "system": 6545
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 13.255018000000064,
+            "cpu": {
+              "user": 4514,
+              "system": 2096
+            }
+          }
+        ],
+        "sql_ms": 121.73909099999992
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 125.14932700000008,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 65.47069199999987,
+        "body_ms": null,
+        "read_bytes": 1191936,
+        "cpu_us": 45843,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.15152999999986605,
+            "cpu": {
+              "user": 172,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 49.16284399999995,
+            "cpu": {
+              "user": 29166,
+              "system": 717
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.983054000000038,
+            "cpu": {
+              "user": 1852,
+              "system": 1058
+            }
+          }
+        ],
+        "sql_ms": 57.297427999999854
+      },
+      {
+        "query_id": "0-2",
+        "actor": 2,
+        "client_ms": 130.12081000000012,
+        "body_complete": true,
+        "status": 200,
+        "reader_ms": 50.60756600000013,
+        "body_ms": 120.28215,
+        "read_bytes": 1167360,
+        "cpu_us": 18322,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.03674399999999878,
+            "cpu": {
+              "user": 45,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 36.12564999999995,
+            "cpu": {
+              "user": 4669,
+              "system": 1996
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.743233000000146,
+            "cpu": {
+              "user": 1976,
+              "system": 923
+            }
+          }
+        ],
+        "sql_ms": 42.905627000000095
+      }
+    ]
+  },
+  {
+    "name": "d13-warmdb-1",
+    "summary": {
+      "p95_ms": 45.456956999999875,
+      "p99_ms": 185.79617000000007,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 185.79617000000007,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 126.87715300000002,
+      "body_ms": null,
+      "read_bytes": 0,
+      "cpu_us": 147779,
+      "throttled_us": 70362,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06901599999991959,
+          "cpu": {
+            "user": 87,
+            "system": 12
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 10.625750000000153,
+          "cpu": {
+            "user": 14619,
+            "system": 989
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 5.058594000000085,
+          "cpu": {
+            "user": 8373,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 15.753360000000157
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 45.456956999999875,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 12.11274400000002,
+      "body_ms": 36.187734999999975,
+      "read_bytes": 0,
+      "cpu_us": 13360,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.04621499999984735,
+          "cpu": {
+            "user": 60,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.5557639999999537,
+          "cpu": {
+            "user": 1607,
+            "system": 964
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.441385000000082,
+          "cpu": {
+            "user": 1412,
+            "system": 37
+          }
+        }
+      ],
+      "sql_ms": 4.043363999999883
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 16.357383000000027,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 10.799217000000226,
+      "body_ms": 15.314208000000235,
+      "read_bytes": 0,
+      "cpu_us": 11329,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.045323000000280445,
+          "cpu": {
+            "user": 47,
+            "system": 5
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 3.7163150000001224,
+          "cpu": {
+            "user": 3723,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.8830210000000989,
+          "cpu": {
+            "user": 1889,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 5.644659000000502
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 185.79617000000007,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 126.87715300000002,
+        "body_ms": null,
+        "read_bytes": 0,
+        "cpu_us": 147779,
+        "throttled_us": 70362,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06901599999991959,
+            "cpu": {
+              "user": 87,
+              "system": 12
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 10.625750000000153,
+            "cpu": {
+              "user": 14619,
+              "system": 989
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 5.058594000000085,
+            "cpu": {
+              "user": 8373,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 15.753360000000157
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 185.79617000000007,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 126.87715300000002,
+        "body_ms": null,
+        "read_bytes": 0,
+        "cpu_us": 147779,
+        "throttled_us": 70362,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06901599999991959,
+            "cpu": {
+              "user": 87,
+              "system": 12
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 10.625750000000153,
+            "cpu": {
+              "user": 14619,
+              "system": 989
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 5.058594000000085,
+            "cpu": {
+              "user": 8373,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 15.753360000000157
+      }
+    ]
+  },
+  {
+    "name": "d13-warmhttp-1",
+    "summary": {
+      "p95_ms": 54.34634799999981,
+      "p99_ms": 125.06622900000002,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 125.06622900000002,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 97.70098899999994,
+      "body_ms": 109.13924199999997,
+      "read_bytes": 1384448,
+      "cpu_us": 50259,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06495000000018081,
+          "cpu": {
+            "user": 78,
+            "system": 13
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 69.15452900000014,
+          "cpu": {
+            "user": 14890,
+            "system": 3039
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.054023000000143,
+          "cpu": {
+            "user": 1998,
+            "system": 166
+          }
+        }
+      ],
+      "sql_ms": 76.27350200000046
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 62.297293999999965,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 51.48763299999996,
+      "body_ms": 57.61870499999986,
+      "read_bytes": 1191936,
+      "cpu_us": 16975,
+      "throttled_us": 11556,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06821400000012545,
+          "cpu": {
+            "user": 81,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 37.487591000000066,
+          "cpu": {
+            "user": 5248,
+            "system": 370
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.180176000000074,
+          "cpu": {
+            "user": 2067,
+            "system": 12
+          }
+        }
+      ],
+      "sql_ms": 43.735981000000265
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 15.963728000000174,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 11.017701000000216,
+      "body_ms": 14.887128999999732,
+      "read_bytes": 274432,
+      "cpu_us": 11267,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.053747999999814056,
+          "cpu": {
+            "user": 61,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.103066000000126,
+          "cpu": {
+            "user": 3652,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.486884999999802,
+          "cpu": {
+            "user": 1495,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 5.643698999999742
+    },
+    "failures": [],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 125.06622900000002,
+        "body_complete": true,
+        "status": 200,
+        "reader_ms": 97.70098899999994,
+        "body_ms": 109.13924199999997,
+        "read_bytes": 1384448,
+        "cpu_us": 50259,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06495000000018081,
+            "cpu": {
+              "user": 78,
+              "system": 13
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 69.15452900000014,
+            "cpu": {
+              "user": 14890,
+              "system": 3039
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.054023000000143,
+            "cpu": {
+              "user": 1998,
+              "system": 166
+            }
+          }
+        ],
+        "sql_ms": 76.27350200000046
+      }
+    ]
+  },
+  {
+    "name": "d13-cpu2-1",
+    "summary": {
+      "p95_ms": 66.95677599999999,
+      "p99_ms": 126.49109899999996,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 126.49109899999996,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 118.02632200000005,
+      "body_ms": null,
+      "read_bytes": 1384448,
+      "cpu_us": 64843,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07406400000002122,
+          "cpu": {
+            "user": 92,
+            "system": 11
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 80.849156,
+          "cpu": {
+            "user": 14641,
+            "system": 5198
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.956708000000049,
+          "cpu": {
+            "user": 1877,
+            "system": 110
+          }
+        }
+      ],
+      "sql_ms": 87.87992800000006
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 92.46987100000001,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 63.150326000000064,
+      "body_ms": 83.34047399999997,
+      "read_bytes": 1191936,
+      "cpu_us": 21221,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.04497100000003229,
+          "cpu": {
+            "user": 59,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 47.071572999999944,
+          "cpu": {
+            "user": 5031,
+            "system": 3076
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.767937999999958,
+          "cpu": {
+            "user": 2244,
+            "system": 1031
+          }
+        }
+      ],
+      "sql_ms": 54.884481999999934
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 14.822320999999647,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 10.0108409999998,
+      "body_ms": 13.683606999999938,
+      "read_bytes": 274432,
+      "cpu_us": 10119,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.043721999999888794,
+          "cpu": {
+            "user": 45,
+            "system": 6
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 3.814716000000317,
+          "cpu": {
+            "user": 2845,
+            "system": 105
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.547841999999946,
+          "cpu": {
+            "user": 1493,
+            "system": 62
+          }
+        }
+      ],
+      "sql_ms": 5.406280000000152
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 126.49109899999996,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 118.02632200000005,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 64843,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07406400000002122,
+            "cpu": {
+              "user": 92,
+              "system": 11
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 80.849156,
+            "cpu": {
+              "user": 14641,
+              "system": 5198
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.956708000000049,
+            "cpu": {
+              "user": 1877,
+              "system": 110
+            }
+          }
+        ],
+        "sql_ms": 87.87992800000006
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 126.49109899999996,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 118.02632200000005,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 64843,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07406400000002122,
+            "cpu": {
+              "user": 92,
+              "system": 11
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 80.849156,
+            "cpu": {
+              "user": 14641,
+              "system": 5198
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.956708000000049,
+            "cpu": {
+              "user": 1877,
+              "system": 110
+            }
+          }
+        ],
+        "sql_ms": 87.87992800000006
+      }
+    ]
+  },
+  {
+    "name": "d13-cold-2",
+    "summary": {
+      "p95_ms": 80.03081199999997,
+      "p99_ms": 144.983655,
+      "history_transport_failures": 2,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 144.983655,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 112.58549799999992,
+      "body_ms": null,
+      "read_bytes": 1384448,
+      "cpu_us": 47488,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06914500000004864,
+          "cpu": {
+            "user": 85,
+            "system": 11
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 73.08406100000002,
+          "cpu": {
+            "user": 6122,
+            "system": 1995
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.389009999999985,
+          "cpu": {
+            "user": 2693,
+            "system": 94
+          }
+        }
+      ],
+      "sql_ms": 80.54221600000005
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 122.20273900000007,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 67.86241300000006,
+      "body_ms": null,
+      "read_bytes": 1191936,
+      "cpu_us": 32000,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06535999999994146,
+          "cpu": {
+            "user": 149,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 37.004141000000004,
+          "cpu": {
+            "user": 5624,
+            "system": 1207
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 13.497142000000053,
+          "cpu": {
+            "user": 5467,
+            "system": 928
+          }
+        }
+      ],
+      "sql_ms": 50.566643
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 17.596873999999843,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 12.497013000000152,
+      "body_ms": 15.925241999999798,
+      "read_bytes": 274432,
+      "cpu_us": 13033,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.045063999999911175,
+          "cpu": {
+            "user": 52,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.428347000000031,
+          "cpu": {
+            "user": 2913,
+            "system": 1067
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.9824079999998503,
+          "cpu": {
+            "user": 993,
+            "system": 998
+          }
+        }
+      ],
+      "sql_ms": 6.455818999999792
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 144.983655,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 112.58549799999992,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 47488,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06914500000004864,
+            "cpu": {
+              "user": 85,
+              "system": 11
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 73.08406100000002,
+            "cpu": {
+              "user": 6122,
+              "system": 1995
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.389009999999985,
+            "cpu": {
+              "user": 2693,
+              "system": 94
+            }
+          }
+        ],
+        "sql_ms": 80.54221600000005
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 122.20273900000007,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 67.86241300000006,
+        "body_ms": null,
+        "read_bytes": 1191936,
+        "cpu_us": 32000,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06535999999994146,
+            "cpu": {
+              "user": 149,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 37.004141000000004,
+            "cpu": {
+              "user": 5624,
+              "system": 1207
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 13.497142000000053,
+            "cpu": {
+              "user": 5467,
+              "system": 928
+            }
+          }
+        ],
+        "sql_ms": 50.566643
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 144.983655,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 112.58549799999992,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 47488,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06914500000004864,
+            "cpu": {
+              "user": 85,
+              "system": 11
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 73.08406100000002,
+            "cpu": {
+              "user": 6122,
+              "system": 1995
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.389009999999985,
+            "cpu": {
+              "user": 2693,
+              "system": 94
+            }
+          }
+        ],
+        "sql_ms": 80.54221600000005
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 122.20273900000007,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 67.86241300000006,
+        "body_ms": null,
+        "read_bytes": 1191936,
+        "cpu_us": 32000,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06535999999994146,
+            "cpu": {
+              "user": 149,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 37.004141000000004,
+            "cpu": {
+              "user": 5624,
+              "system": 1207
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 13.497142000000053,
+            "cpu": {
+              "user": 5467,
+              "system": 928
+            }
+          }
+        ],
+        "sql_ms": 50.566643
+      }
+    ]
+  },
+  {
+    "name": "d13-warmdb-2",
+    "summary": {
+      "p95_ms": 49.39648399999987,
+      "p99_ms": 168.36935099999994,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 168.36935099999994,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 98.37898500000006,
+      "body_ms": null,
+      "read_bytes": 0,
+      "cpu_us": 93204,
+      "throttled_us": 78568,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.0735819999999876,
+          "cpu": {
+            "user": 93,
+            "system": 11
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.883330000000001,
+          "cpu": {
+            "user": 9965,
+            "system": 7
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.926580999999942,
+          "cpu": {
+            "user": 6172,
+            "system": 27
+          }
+        }
+      ],
+      "sql_ms": 7.88349299999993
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 34.38296800000012,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 11.498806000000059,
+      "body_ms": 25.022238000000016,
+      "read_bytes": 0,
+      "cpu_us": 12366,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.11526600000001963,
+          "cpu": {
+            "user": 118,
+            "system": 13
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.6362950000000183,
+          "cpu": {
+            "user": 2651,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.5975220000000263,
+          "cpu": {
+            "user": 652,
+            "system": 953
+          }
+        }
+      ],
+      "sql_ms": 4.349083000000064
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 14.804435999999896,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 9.690791999999874,
+      "body_ms": 13.407212999999956,
+      "read_bytes": 0,
+      "cpu_us": 10885,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.03706899999997404,
+          "cpu": {
+            "user": 43,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.8535170000000107,
+          "cpu": {
+            "user": 2860,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.459965000000011,
+          "cpu": {
+            "user": 1466,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 4.350550999999996
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 168.36935099999994,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 98.37898500000006,
+        "body_ms": null,
+        "read_bytes": 0,
+        "cpu_us": 93204,
+        "throttled_us": 78568,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.0735819999999876,
+            "cpu": {
+              "user": 93,
+              "system": 11
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 4.883330000000001,
+            "cpu": {
+              "user": 9965,
+              "system": 7
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 2.926580999999942,
+            "cpu": {
+              "user": 6172,
+              "system": 27
+            }
+          }
+        ],
+        "sql_ms": 7.88349299999993
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 168.36935099999994,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 98.37898500000006,
+        "body_ms": null,
+        "read_bytes": 0,
+        "cpu_us": 93204,
+        "throttled_us": 78568,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.0735819999999876,
+            "cpu": {
+              "user": 93,
+              "system": 11
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 4.883330000000001,
+            "cpu": {
+              "user": 9965,
+              "system": 7
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 2.926580999999942,
+            "cpu": {
+              "user": 6172,
+              "system": 27
+            }
+          }
+        ],
+        "sql_ms": 7.88349299999993
+      }
+    ]
+  },
+  {
+    "name": "d13-warmhttp-2",
+    "summary": {
+      "p95_ms": 60.32659699999999,
+      "p99_ms": 120.92768499999988,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 120.92768499999988,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 96.67521500000021,
+      "body_ms": 108.94722499999989,
+      "read_bytes": 1384448,
+      "cpu_us": 54292,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.11128900000016984,
+          "cpu": {
+            "user": 124,
+            "system": 14
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 66.04536099999996,
+          "cpu": {
+            "user": 13399,
+            "system": 4028
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.026131000000078,
+          "cpu": {
+            "user": 1145,
+            "system": 1125
+          }
+        }
+      ],
+      "sql_ms": 73.1827810000002
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 51.45715199999995,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 45.1929839999998,
+      "body_ms": 49.99682299999995,
+      "read_bytes": 1191936,
+      "cpu_us": 14565,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.04520600000000741,
+          "cpu": {
+            "user": 55,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 32.932092999999895,
+          "cpu": {
+            "user": 3487,
+            "system": 1165
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.1623839999999745,
+          "cpu": {
+            "user": 290,
+            "system": 1914
+          }
+        }
+      ],
+      "sql_ms": 39.13968299999988
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 21.723003999999946,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 14.483622000000196,
+      "body_ms": 19.856591000000208,
+      "read_bytes": 274432,
+      "cpu_us": 14000,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.03674899999987247,
+          "cpu": {
+            "user": 44,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 3.9578599999999824,
+          "cpu": {
+            "user": 3021,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.4731080000001384,
+          "cpu": {
+            "user": 2452,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 6.467716999999993
+    },
+    "failures": [],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 120.92768499999988,
+        "body_complete": true,
+        "status": 200,
+        "reader_ms": 96.67521500000021,
+        "body_ms": 108.94722499999989,
+        "read_bytes": 1384448,
+        "cpu_us": 54292,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.11128900000016984,
+            "cpu": {
+              "user": 124,
+              "system": 14
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 66.04536099999996,
+            "cpu": {
+              "user": 13399,
+              "system": 4028
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.026131000000078,
+            "cpu": {
+              "user": 1145,
+              "system": 1125
+            }
+          }
+        ],
+        "sql_ms": 73.1827810000002
+      }
+    ]
+  },
+  {
+    "name": "d13-cpu2-2",
+    "summary": {
+      "p95_ms": 86.89851699999986,
+      "p99_ms": 124.336365,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 124.336365,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 102.08711500000004,
+      "body_ms": null,
+      "read_bytes": 1384448,
+      "cpu_us": 37959,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.10725000000002183,
+          "cpu": {
+            "user": 135,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 69.88498200000004,
+          "cpu": {
+            "user": 3046,
+            "system": 2761
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.122763999999961,
+          "cpu": {
+            "user": 530,
+            "system": 1913
+          }
+        }
+      ],
+      "sql_ms": 77.11499600000002
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 92.4173139999998,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 51.134636,
+      "body_ms": 84.48790699999995,
+      "read_bytes": 1191936,
+      "cpu_us": 19494,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.04418699999996534,
+          "cpu": {
+            "user": 68,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 35.900588000000084,
+          "cpu": {
+            "user": 3267,
+            "system": 1955
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.45766900000001,
+          "cpu": {
+            "user": 2187,
+            "system": 213
+          }
+        }
+      ],
+      "sql_ms": 42.40244400000006
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 17.577995999999985,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 12.550612999999885,
+      "body_ms": 16.15942300000006,
+      "read_bytes": 274432,
+      "cpu_us": 13194,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.047712999999930616,
+          "cpu": {
+            "user": 54,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.990357000000131,
+          "cpu": {
+            "user": 2911,
+            "system": 1763
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.192148999999972,
+          "cpu": {
+            "user": 1152,
+            "system": 1029
+          }
+        }
+      ],
+      "sql_ms": 7.230219000000034
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 124.336365,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 102.08711500000004,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 37959,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.10725000000002183,
+            "cpu": {
+              "user": 135,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 69.88498200000004,
+            "cpu": {
+              "user": 3046,
+              "system": 2761
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.122763999999961,
+            "cpu": {
+              "user": 530,
+              "system": 1913
+            }
+          }
+        ],
+        "sql_ms": 77.11499600000002
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 124.336365,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 102.08711500000004,
+        "body_ms": null,
+        "read_bytes": 1384448,
+        "cpu_us": 37959,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.10725000000002183,
+            "cpu": {
+              "user": 135,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 69.88498200000004,
+            "cpu": {
+              "user": 3046,
+              "system": 2761
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.122763999999961,
+            "cpu": {
+              "user": 530,
+              "system": 1913
+            }
+          }
+        ],
+        "sql_ms": 77.11499600000002
+      }
+    ]
+  }
+]

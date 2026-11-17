@@ -1,0 +1,118 @@
+{
+  "CHECKPOINT-ALIGNMENT.json": {
+    "bytes": 23285,
+    "sha256": "55dbd81c18f80001f6dbf8ff4013df0572923c39cd7ff684369b0ad3c76e19c5"
+  },
+  "DIAGNOSTIC_PROTOCOL.md": {
+    "bytes": 3653,
+    "sha256": "c198d6137d147c345750a8e318afd2413ca87deded0f4bd5c467ccb14b17ae28"
+  },
+  "FINAL-READONLY.json": {
+    "bytes": 4575,
+    "sha256": "64e143efac08907ba142e568b313af494f362b7b8d64c27bb07765c88afe322e"
+  },
+  "LIVE-SOURCE-ALIGNMENT.json": {
+    "bytes": 295,
+    "sha256": "e85a9cc782840cf140c40701a345e99eca1168e390b0a088ad9826816d862ab4"
+  },
+  "P003_T5_第1与第3项定位回执_20261117.md": {
+    "bytes": 9983,
+    "sha256": "5340f4e321a7c2ba9fa668aed4469d94103baed1bd8ecfb3d431ea1ff1dad6cb"
+  },
+  "QUERY-ANALYSIS.json": {
+    "bytes": 65579,
+    "sha256": "27a0f3e75920d38031c22057a2fdc2c89ace1f499819d9e59414426b76f5180b"
+  },
+  "QUERY-STAGES-ANALYSIS.json": {
+    "bytes": 60582,
+    "sha256": "3731dc6326592d7be40d600536a08b0bf1a1820f0580c6fb1921894be34e8b46"
+  },
+  "README.md": {
+    "bytes": 1004,
+    "sha256": "43d461ed0ce83e759d4a6bfc1406575cfcfe5c900259ccf0832fadbe0fe6341e"
+  },
+  "ROOT-VERIFICATION.json": {
+    "bytes": 330,
+    "sha256": "2a8b038e5e66da2d3f7f21dd06451e2b650fd66373602306fdc51f0f17bab5ee"
+  },
+  "UPLOAD-ANALYSIS.json": {
+    "bytes": 15656,
+    "sha256": "c991bdea14ae232e85f80b2b2f37ee58634c44f2ed3fbb8100801a7f6412d3eb"
+  },
+  "UPLOAD-SOURCE.json": {
+    "bytes": 263,
+    "sha256": "155ba50f5d37295d6c01a28f816af68a924c96aaf0509958dcec22251d95a2f9"
+  },
+  "diagnostic-tools/analyse_query.py": {
+    "bytes": 1782,
+    "sha256": "92b3a1cf9462e856994025df2737adcfa24d125d71b71a301fd2912b076e4652"
+  },
+  "diagnostic-tools/analyse_stages.py": {
+    "bytes": 2050,
+    "sha256": "7238da292185389e87c94a6d6923e31553943f2c56f6072abe8ff6c2b1db9751"
+  },
+  "diagnostic-tools/analyse_upload.py": {
+    "bytes": 3110,
+    "sha256": "b30ac5630b7fdddf8a89d7468b535961ae8d0ce1a909f648ff7118c4682122d7"
+  },
+  "diagnostic-tools/ark-runtime-observation.ts": {
+    "bytes": 3518,
+    "sha256": "644681f47c8cd43de489ae0579181cd61738e9a46546a037e9ea5985b2167221"
+  },
+  "diagnostic-tools/checkpoint_alignment.py": {
+    "bytes": 1260,
+    "sha256": "21299431770fd7364b107fa8a760ceb58c5f3a542b56106e0f36118bb57c734b"
+  },
+  "diagnostic-tools/storage-ark-query-diag.ts": {
+    "bytes": 8779,
+    "sha256": "73bf603124d66b89bc174ef222a5b9d3c0b472a9f1d081aea5a3c76cbbe089a6"
+  },
+  "diagnostic-tools/storage-ark-query-stages.ts": {
+    "bytes": 10391,
+    "sha256": "9631fc6d4749bcb18d1467493d6ec53468c0860ecf2903ca44a34f76b55bbc90"
+  },
+  "diagnostic-tools/storage-capacity-diag.ts": {
+    "bytes": 16207,
+    "sha256": "a4694049cf7e07a3725ce5cc6101e2b163cffd1d981701904f030ffc990c1fe7"
+  },
+  "diagnostic-tools/storage-load-resources-diag.ts": {
+    "bytes": 4130,
+    "sha256": "b38af00fde4d7b15f0072202cf3158859919bd63a0755a29ddd9e72a3a9b2f3b"
+  },
+  "grok-design/REVIEW.json": {
+    "bytes": 6367,
+    "sha256": "fbcf7ebb978e66f1c4fb0e053aa6ee7e2e8b498aa47ab0d4ed3d52a9cb360685"
+  },
+  "grok-design/REVIEW.md": {
+    "bytes": 7821,
+    "sha256": "fc5de6933e52dec0e55200a9af25ab5e28d1c94ae5ed06f44ea1b7bdf8ac87d8"
+  },
+  "grok-final/REVIEW.json": {
+    "bytes": 9810,
+    "sha256": "f9f37c7cbb41e5deb15bf075cbdb50eb91301decc14ed2af655a23d26a403347"
+  },
+  "grok-final/REVIEW.md": {
+    "bytes": 11522,
+    "sha256": "dea9fca9cc4e088345c2c28eb3b32f5678a4c49f589f4358fee580b692f8fe4e"
+  },
+  "grok-interim/REVIEW.json": {
+    "bytes": 9690,
+    "sha256": "7411f2ef3b1efbc14c956526d0f09cc6f81aa01fb2dcf9e7d58494af832f049c"
+  },
+  "grok-interim/REVIEW.md": {
+    "bytes": 11804,
+    "sha256": "1d3f97214e18c61fb48aa034f2324a0e40e40f751d30917c09ae2125d61433e4"
+  },
+  "query-evidence.tar.gz": {
+    "bytes": 259134,
+    "sha256": "d05bcb012f3e5141134a87513d40d174f79407fe6cf9a0dca9f2cbf47e054f20"
+  },
+  "query-stages-evidence.tar.gz": {
+    "bytes": 139646,
+    "sha256": "d833e1cb8c764f0a60231f5a1f73a3a8557da9dcf916744e9801ffb9a9e539da"
+  },
+  "upload-evidence.tar.gz": {
+    "bytes": 1221596,
+    "sha256": "32a06de8bf84a4685614558b97775a0d08886d7b6cef77e7651c9afe5c82a44b"
+  }
+}

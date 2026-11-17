@@ -1,0 +1,7 @@
+{
+  "live_analytics_lifecycle_byte_equal_to_test_baseline": true,
+  "live_writer_sha_equal_to_test_baseline": true,
+  "live_ark_runtime_sha_equal_65c86916": true,
+  "whole_analytics_index_differs_outside_lifecycle": true,
+  "scope": "No global external watchdog audit; no production injection"
+}

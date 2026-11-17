@@ -1,0 +1,138 @@
+{
+  "at_ms": 1794905923408,
+  "units": "\u25cf p003-t5-d13-a0-halfcore-1.service loaded failed failed /opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node --max-old-space-size=384 --import tsx scripts/storage-capacity-load.ts run /opt/p003/archive-t5-20261117/p003-t5-d13-a0-halfcore-1\n\u25cf p003-t5-d13-a1-onecore.service    loaded failed failed /opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node --max-old-space-size=384 --import tsx scripts/storage-capacity-load.ts run /opt/p003/archive-t5-20261117/p003-t5-d13-a1-onecore\n",
+  "retained_failure_db": {
+    "analytics.db": {
+      "bytes": 2048225280,
+      "sha256": "c6f167ee30a23efcad54f1203ad8d053ac599216e94f0441769e348f8e50db29"
+    },
+    "analytics.db-wal": {
+      "bytes": 171120112,
+      "sha256": "d38fa6b9df9c6ef21b3206a986f20880e918955cfccf098382fc398eb043f15c"
+    },
+    "analytics.db-shm": {
+      "bytes": 557056,
+      "sha256": "4c72fd82cdad3a14b4007dea0efa421cf1b2d154ad876cf45bf9767cdc56db6d"
+    }
+  },
+  "production_files": {
+    "src/analytics/writer.ts": {
+      "sha256": "43e33cde14869a66ebd08977fd7f165f422b3a33d65008f6d5f63cb02680d418"
+    },
+    "src/analytics/index.ts": {
+      "sha256": "2eee1ef0047c1e3025f98d2f3952bb31e437fb69c219c4745718cea4c3e279ba"
+    },
+    "deploy/analytics-start.ts": {
+      "sha256": "3a738a5fd2f52019ceb3e9e006b5f3750cc787d1d12a72fd91b770a8a40ac79e"
+    },
+    "deploy/analytics.ecosystem.cjs": {
+      "sha256": "3c1afa44e6df9dcba581cc3008c7ee8488e2d7b07fbe2e570f506ecf129b8ed8"
+    },
+    "src/ark/runtime.ts": {
+      "sha256": "73a32c1fe5197f6315aa8315b4ac8c8eb1fb9a938da2ed8383a904ee1878f270"
+    },
+    "src/miniapp-dashboard.ts": {
+      "sha256": "aae33f44eab5640a8861ae9888e1d8b4be1537585d72de6238c3c4e3b1abba32"
+    },
+    "src/ark/dashboard.ts": {
+      "sha256": "5fa0559812af45ec2b5629acc9e54dd19e1d4c2e5035b77b542837205fcf9f9b"
+    },
+    "src/ark/records-store.ts": {
+      "sha256": "1ee95fc9dc9b9e16a622f3b96053857857ce648bddce8f555b339c21d0bf4311"
+    },
+    "src/ark/records-contract.ts": {
+      "sha256": "595075f3a78ea60d48ed71511528e6abb8ce9e1b104073bf1102829681c87910"
+    },
+    "src/ark/records-legacy.ts": {
+      "sha256": "cdf0bda728e1f75941d4787d3357db7a7f3097723cd5dbcbbe8885e4f9459825"
+    }
+  },
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2342902,
+      "restart": 14
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1856264,
+      "restart": 0
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 2296315,
+      "restart": 3
+    }
+  ],
+  "health": {
+    "brain": {
+      "status": 200,
+      "body": {
+        "status": "ok"
+      }
+    },
+    "analytics": {
+      "status": 200,
+      "body": {
+        "ok": true,
+        "alive": true,
+        "ready": true,
+        "dependencies_ready": true,
+        "storage_ready": true,
+        "gate_enabled": true,
+        "control_valid": true,
+        "allowlist_count": 3,
+        "in_flight": 0,
+        "requests": 0,
+        "storage_failures": 0,
+        "sql_busy": 0,
+        "rss_bytes": 135286784,
+        "wal_bytes": 1046512,
+        "wal_max_bytes": 268435456,
+        "wal_pressure": false,
+        "sqlite_version": "3.53.3",
+        "sqlite_version_safe": true,
+        "sqlite_synchronous": 2,
+        "sqlite_wal_autocheckpoint": 0,
+        "checkpoint": {
+          "enabled": true,
+          "running": false,
+          "worker_pid": null,
+          "interval_ms": 10000,
+          "timeout_ms": 30000,
+          "stale_after_ms": 60000,
+          "last_attempt_ms": 1794905934402,
+          "last_completed_ms": 1794905934624,
+          "last_success_ms": 1794905934624,
+          "last_result": {
+            "ok": true,
+            "sqlite_version": "3.53.3",
+            "busy": 0,
+            "log_frames": 1,
+            "checkpointed_frames": 1,
+            "duration_ms": 0.07082200000002103,
+            "reclaimed": false,
+            "reclaim_busy": false
+          },
+          "last_error": null,
+          "failures": 0,
+          "timeouts": 0,
+          "stale": false,
+          "stalled": false
+        },
+        "disk_free_bytes": 6509363200,
+        "disk_warning": true,
+        "processing_p95_ms": null,
+        "processing_p99_ms": null,
+        "last_rollup_success_ms": 1794905711684,
+        "last_rollup_attempt_ms": 1794905711684,
+        "last_rollup_partial_ms": null,
+        "rollup_status": "complete",
+        "rollup_failed_days": 0,
+        "rollup_remaining_dirty_days": 0,
+        "last_backup_success_ms": 1794846609780
+      }
+    }
+  },
+  "free_bytes": 6509363200
+}

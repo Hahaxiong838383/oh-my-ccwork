@@ -1,0 +1,186 @@
+{
+  "role": "read-only design review for 主13; not a gate pass",
+  "head": "ed5419a89708a62ac90b32d61a96b050e2ad8f64",
+  "query_source": "65c86916e1e6a64352ec75d3c2b6eebb364e649a",
+  "measurement_files_diff_since_query_source": [],
+  "did_not": [
+    "ssh",
+    "load",
+    "shared_tree_edit",
+    "drop_caches",
+    "relax_500_120_30s",
+    "drop_503_or_timeout",
+    "T6",
+    "buy_disk",
+    "expand_past_verified_tier"
+  ],
+  "scope": [
+    "item1_ack_p95",
+    "item3_first_http"
+  ],
+  "item1": {
+    "established": {
+      "successes": 3000,
+      "attempts": 9839,
+      "http_503": 6839,
+      "p95_ms": 525.9235509999562,
+      "p99_ms": 1738.3392660000827,
+      "duration_ms": 1350168,
+      "percentile_population": "HTTP 200 only; 503 counted beside, not inside p95",
+      "half_scale_same_recipe_p95_ms": 395.00174700000207,
+      "upload_started_ms": 1794886291340,
+      "maintenance_overlap_during_acks": [
+        {
+          "start_offset_s": 3.3,
+          "duration_s": 2.7,
+          "result": "ok"
+        },
+        {
+          "start_offset_s": 301,
+          "duration_s": 43.2,
+          "result": "prune_failed_partial"
+        },
+        {
+          "start_offset_s": 601,
+          "duration_s": 57.9,
+          "result": "partial"
+        },
+        {
+          "start_offset_s": 901,
+          "duration_s": 61.1,
+          "result": "partial"
+        },
+        {
+          "start_offset_s": 1201,
+          "duration_s": 61.4,
+          "result": "partial"
+        }
+      ],
+      "backup": "started +5s by harness; exit 0; start/stop not in RESULT",
+      "checkpoint": "every 10s; only last duration 0.078ms and failures=0 retained",
+      "requests_jsonl_has_at_ms": false,
+      "cgroup": {
+        "CPUQuota": "50%",
+        "MemoryMax": "768M",
+        "IOWeight": 20,
+        "Nice": 10,
+        "MemoryPeak": 805416960
+      },
+      "host_mem_available_min_fraction": 0.4584
+    },
+    "excluded_as_p95_components": [
+      "503 retry sleep",
+      "2s inter-batch sleep",
+      "AbortSignal.timeout(20000)"
+    ],
+    "confounded": [
+      "maintenance subprocess",
+      "backup subprocess",
+      "checkpoint subprocess",
+      "cgroup cap",
+      "db growth"
+    ],
+    "probe": {
+      "first": "stratify existing health.jsonl processing_p95_ms against the five maintenance windows; associational only",
+      "rule_before_writes": "if outside-window server p95 already >500, maintenance is not necessary; if only inside exceeds, proceed to ABA",
+      "writes_only_if_unresolved": {
+        "base": "existing 600k db; do not rerun 50x12000; stop if a copy will not fit",
+        "wave": "50 identities x 10 batches x 200 events",
+        "cgroup": "same as failed run until the conditional uncapped B0",
+        "order": [
+          "B0_no_maintenance_no_backup",
+          "B1_wave_inside_one_maintenance",
+          "B0_repeat",
+          "B2_backup_starts_5s_before_wave_only_if_all_prior_p95_gt_500",
+          "B0_without_CPUQuota_and_MemoryMax_only_if_B0_B1_B2_all_gt_500"
+        ],
+        "invalid_if": "abs(B0_p95 - B0_repeat_p95) > abs(B0_p95 - B1_p95)"
+      },
+      "conclusions": {
+        "both_B0_le_500_and_B1_gt_500": "maintenance overlap sufficient at this db size; mixed gate still open",
+        "B2_gt_500_and_B0_le_500": "backup overlap sufficient; mixed gate still open",
+        "B0_B1_B2_all_gt_500": "write path at this size misses 500 without maintenance or backup",
+        "uncapped_B0_le_500": "excess follows the test cgroup",
+        "uncapped_B0_gt_500": "cgroup is not necessary",
+        "any_quiet_arm_le_500": "not a pass of the original mixed gate"
+      }
+    }
+  },
+  "item3": {
+    "established": {
+      "samples": 1000,
+      "p95_ms": 34.872879999998986,
+      "p99_ms": 50.060333999999784,
+      "invalid_facts": 0,
+      "history_transport_failures": 1,
+      "pass": false,
+      "failure": {
+        "query_id": "0-0",
+        "client_ms": 155.528002,
+        "client_status": null,
+        "headers_ms": null,
+        "body_ms": null,
+        "client_service_ms": null,
+        "body_complete": false,
+        "correct": true,
+        "reader_status": 200,
+        "reader_ms": 137.419573,
+        "client_log_earlier_than_reader_log_ms": 73
+      },
+      "query_cgroup_memory_bytes": [
+        53678080,
+        288002048
+      ],
+      "query_throttle_delta_usec": 552579,
+      "overlapped_upload_maintenance_backup": false
+    },
+    "clock_notes": {
+      "137ms_includes": "app.fetch through synchronous readArkHistory (evidence, assets, conditional daily) before c.json",
+      "137ms_excludes": [
+        "fork",
+        "tsx",
+        "AnalyticsStore open",
+        "listen",
+        "TCP handshake"
+      ],
+      "155_minus_137_is_not_overhead": true,
+      "abort_cannot_shorten_sync_sql": true,
+      "handler_already_over_120": true,
+      "correct_true_can_come_from_snapshot": true,
+      "fadvise": "POSIX_FADV_DONTNEED on analytics.db only; advisory; open() can fault pages before the timer"
+    },
+    "probe": {
+      "replicates": 3,
+      "order_within_process": [
+        "fadvise_same_files_logged",
+        "open_read_bytes",
+        "http_1",
+        "http_2",
+        "http_21",
+        "one_new_connection"
+      ],
+      "same_sha_and_query_cgroup": true,
+      "no_db_copy": true,
+      "no_product_clock_change": true,
+      "fields": [
+        "pre_http_ms",
+        "remaining",
+        "evidence_ms",
+        "assets_ms",
+        "daily_ms",
+        "service_ms",
+        "read_bytes",
+        "client_status",
+        "body_complete"
+      ]
+    },
+    "conclusions": {
+      "at_least_2_of_3_first_gt_120_later_le_50_and_first_read_bytes_dominate": "first-touch page read inside app.fetch; gate still failed",
+      "service_le_120_but_body_incomplete": "AbortSignal or budget start; still fail if facts() clock >120",
+      "first_and_later_both_gt_120": "not a cold-page result",
+      "only_1_of_3": "original failure stands; cause not named",
+      "all_3_complete_and_product_clock_le_120": "non-reproduction only; does not erase the recorded transport failure and does not replace the 1000-request zero-failure gate"
+    }
+  },
+  "original_mixed_gate_unchanged": "50x12000 with maintenance and backup on the original cadence, all 503 retained, success ACK p95<=500; item3 remains one incomplete first HTTP over 120ms"
+}

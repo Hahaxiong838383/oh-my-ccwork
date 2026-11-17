@@ -1,0 +1,267 @@
+{
+  "role": "read-only final review for 主13; locate evidence; do not declare T5 item 1 or item 3 passed; do not declare production fixed",
+  "head": "ed5419a89708a62ac90b32d61a96b050e2ad8f64",
+  "worktree_clean": true,
+  "production_sha_checked_here": false,
+  "did_not": [
+    "ssh",
+    "load",
+    "business_edit",
+    "product_clock_change",
+    "drop_failed_db",
+    "run_1536_arm"
+  ],
+  "gates_unchanged": {
+    "upload_success_ack_p95_ms": 500,
+    "query_abort_budget_ms": 120,
+    "history_predicate_ms": 125,
+    "harness_pass": "invalid_facts===0 && history_transport_failures===0 && client_ms p99<=100",
+    "harness_pass_is_not_the_product_gate": true
+  },
+  "sha256": {
+    "src/analytics/writer.ts": "43e33cde14869a66ebd08977fd7f165f422b3a33d65008f6d5f63cb02680d418",
+    "src/analytics/index.ts": "0a81e22018c7122d44209108f502c4bedd956e038e60e3ae79b6b4df86557643",
+    "deploy/analytics.ecosystem.cjs": "3c1afa44e6df9dcba581cc3008c7ee8488e2d7b07fbe2e570f506ecf129b8ed8",
+    "deploy/analytics-start.ts": "3a738a5fd2f52019ceb3e9e006b5f3750cc787d1d12a72fd91b770a8a40ac79e",
+    "ark-runtime-observation.ts": "644681f47c8cd43de489ae0579181cd61738e9a46546a037e9ea5985b2167221",
+    "storage-ark-query-stages.ts": "9631fc6d4749bcb18d1467493d6ec53468c0860ecf2903ca44a34f76b55bbc90"
+  },
+  "git_blob": {
+    "src/analytics/writer.ts": "8d83b5ae5b811c0a4e608fe64c82a1d945c7a29a"
+  },
+  "upload": {
+    "percentile": "status==200 only, sorted, index floor(n*p)",
+    "complete_arms": [
+      {
+        "name": "p003-t5-d13-a0-halfcore-1",
+        "cpu_quota": "50%",
+        "memory_max": "768M",
+        "attempts": 2452,
+        "successes": 500,
+        "p95_ms": 1946.9739699999918,
+        "p99_ms": 4678.015062999999,
+        "database_before_events": 600000,
+        "database_delta_events": 100000,
+        "integrity_complete": true,
+        "maintenance": false,
+        "backup": false
+      },
+      {
+        "name": "p003-t5-d13-a1-onecore",
+        "cpu_quota": "100%",
+        "memory_max": "768M",
+        "attempts": 2274,
+        "successes": 500,
+        "p95_ms": 1341.6251899999916,
+        "p99_ms": 3681.505986,
+        "database_before_events": 600000,
+        "database_delta_events": 100000,
+        "integrity_complete": true,
+        "maintenance": false,
+        "backup": false
+      }
+    ],
+    "stopped_arm": {
+      "name": "p003-t5-d13-a0-halfcore-2",
+      "successes": 183,
+      "attempts": 2183,
+      "p95_of_183_only_ms": 1495.9319319999995,
+      "p95_of_183_is_not_an_aba_point": true,
+      "acknowledged_events": 36600,
+      "database_run_events": 36800,
+      "unacked_committed_batch": {
+        "analytics_event": 200,
+        "analytics_event_seen": 200
+      },
+      "writer_samples_ge_8000": 1,
+      "longest_writer_ms": 8003.545306999993,
+      "longest_request_id": "load-t5-17-1794904732610-9-0-20",
+      "first_storage_unavailable_client_ms": 8015.770124000002,
+      "storage_unavailable_count": 1008,
+      "ready_false_health_samples": 636,
+      "ready_false_span_ms": 635236,
+      "alive_throughout": true,
+      "sql_busy_max": 0,
+      "storage_failures_max": 1,
+      "checkpoint_failures_max_after": 0,
+      "checkpoint_latest_ok": true,
+      "oom_delta_on_longest": 0,
+      "memory_max_delta_on_longest": 0,
+      "longest_window_cgroup": {
+        "cpu_ms": 745.776,
+        "throttled_ms": 433.826,
+        "io_pressure_full_stall_ms": 5758.728,
+        "stall_share_of_wall": 0.7195221341426468,
+        "scope": "whole cgroup io.pressure full total, cpu.stat, io.stat; not writer-thread exclusive; not additive"
+      }
+    },
+    "memory_1536_arm": "NOT_RUN",
+    "failed_db_retained": true,
+    "cpu_independent_benefit_percent": null
+  },
+  "query_stages": {
+    "design": "6 processes x 50, no posix_fadvise, CPUQuota 100%, MemoryMax 768M, fixed order, predicate threshold unchanged",
+    "no_fadvise_does_not_mean_read_bytes_zero": true,
+    "arms": [
+      {
+        "name": "d13s-noevict-0",
+        "n": 50,
+        "p95_ms": 69.97510299999999,
+        "p99_ms": 153.04297100000008,
+        "history_transport_failures": 2,
+        "pass": false,
+        "valid_adoptions": 48,
+        "adopted_true_without_valid_body": 1
+      },
+      {
+        "name": "d13s-noevict-1",
+        "n": 50,
+        "p95_ms": 49.5534590000002,
+        "p99_ms": 131.76772199999994,
+        "history_transport_failures": 0,
+        "pass": false,
+        "valid_adoptions": 49,
+        "adopted_false": 1
+      },
+      {
+        "name": "d13s-noevict-2",
+        "n": 50,
+        "p95_ms": 44.74163600000065,
+        "p99_ms": 154.07800999999995,
+        "history_transport_failures": 1,
+        "pass": false,
+        "valid_adoptions": 49
+      },
+      {
+        "name": "d13s-noevict-http-0",
+        "n": 50,
+        "p95_ms": 41.13524099999995,
+        "p99_ms": 86.02763200000004,
+        "history_transport_failures": 0,
+        "pass": true,
+        "valid_adoptions": 50
+      },
+      {
+        "name": "d13s-noevict-http-1",
+        "n": 50,
+        "p95_ms": 41.567629000000125,
+        "p99_ms": 128.957357,
+        "history_transport_failures": 0,
+        "pass": false,
+        "valid_adoptions": 50
+      },
+      {
+        "name": "d13s-noevict-http-2",
+        "n": 50,
+        "p95_ms": 42.903785999999855,
+        "p99_ms": 63.46038499999986,
+        "history_transport_failures": 0,
+        "pass": true,
+        "valid_adoptions": 50
+      }
+    ],
+    "noevict_1_first": {
+      "query_id": "0-0",
+      "status": 200,
+      "body_complete": true,
+      "response_schema_parse": true,
+      "client_ms": 131.76772199999994,
+      "gate_age_ms": 128.42154799999992,
+      "adopted": false,
+      "reader_ms": 34.54854899999998,
+      "sql_ms": 4.999254999999948,
+      "read_bytes": 0,
+      "rchar": 1034394,
+      "throttled_us": 0,
+      "fetch_entered_ms": 0.9190389999999979,
+      "headers_ms_from_fetch_enter": 116.416652
+    },
+    "noevict_http_first_client_ms": [
+      86.02763200000004,
+      128.957357,
+      63.46038499999986
+    ],
+    "noevict_http_harness_p99_le_100": "2/3",
+    "noevict_http_1_first_shows_client_ms_ne_gate": {
+      "client_ms": 128.957357,
+      "gate_age_ms": 122.01761099999999,
+      "adopted": true,
+      "response_schema_parse": true,
+      "body_complete": true
+    },
+    "adopted_true_is_not_sufficient": {
+      "arm": "d13s-noevict-0",
+      "query_id": "0-1",
+      "gate_age_ms": 121.53659600000015,
+      "adopted": true,
+      "response_schema_parse": false,
+      "body_complete": false,
+      "status": null,
+      "abort_phase": "before-history-gate",
+      "reason": "Promise.race abort resolves unknownHistory before the age<=125 assignment"
+    },
+    "valid_adoption_requires": [
+      "history-gate adopted true",
+      "response-schema parse stage",
+      "status 200",
+      "body_complete"
+    ]
+  },
+  "source_entry_this_tree": {
+    "writer_job_timeout_ms": 8000,
+    "on_timeout": [
+      "failed=true",
+      "rejectPending(false) leaves the slot",
+      "close() drains",
+      "no new Worker",
+      "no replay"
+    ],
+    "http_while_not_ready": "503 ANALYTICS_STORAGE_UNAVAILABLE",
+    "process_exit_on_writer_failure": false,
+    "exit_signals": [
+      "SIGTERM",
+      "SIGINT"
+    ],
+    "health_alive_hardcoded_true": true,
+    "ready_route_503_when_storage_not_ready": true,
+    "pm2_file": "deploy/analytics.ecosystem.cjs",
+    "pm2_ready_probe": false,
+    "pm2_max_memory_restart": "512M",
+    "pm2_kill_timeout_ms": 35000,
+    "pm2_restart_delay_ms": 2000,
+    "pm2_autorestart_explicitly_disabled": false,
+    "observed_failure_rss_below_512m": true
+  },
+  "minimal_fix": {
+    "do": "After this failure's writer.busy is false, process.exit(1) and let the existing single-instance PM2 start one new process and therefore one new writer. Keep the existing 30s drain and 35s kill_timeout.",
+    "do_not": [
+      "new queue service",
+      "replay the timed-out batch inside AnalyticsWriter",
+      "exit or construct a second writer while busy is true",
+      "treat the restart as making p95<=500"
+    ],
+    "separates": "Permanent 503 after an 8s settle is not the same defect as the completed arms' p95 of 1946.974ms and 1341.625ms."
+  },
+  "supported": [
+    "Two complete short arms both miss 500ms. They are 600k+100k clones with maintenance and backup off, not the original mixed 600k gate.",
+    "The third 0.5 CPU arm stopped after one 8003.545ms settle. 200 event and seen rows committed, ACK stayed at 36600 against DB 36800, then storage_ready=false for 635236ms with checkpoint ok, sql_busy 0, oom 0.",
+    "I/O stall is the main cgroup counter during that sample and is not thread-exclusive.",
+    "1536MiB was not run.",
+    "This tree's writer does not rebuild, and this tree's entry does not exit when ready stays false. Existing PM2 settings restart on process death or 512MiB RSS, not on /ready 503.",
+    "client_ms is not the 125ms predicate. adopted=true also happens when the abort race returns unknownHistory. noevict-1 first request is HTTP 200 with adopted=false and is not explained by cold SQL.",
+    "Warm HTTP made 2/3 processes pass the harness p99<=100 flag and validly adopted those first requests. It did not clear all three."
+  ],
+  "unsupported": [
+    "T5 item 1 or item 3 pass.",
+    "Production repaired.",
+    "A CPU-only benefit percentage.",
+    "Memory or hardware excluded.",
+    "The 183-success p95 is the third ABA point.",
+    "Writer-thread-exclusive or additive I/O stall.",
+    "Data loss of the unacked 200 rows.",
+    "Warmup alone cures the query gate.",
+    "adopted boolean alone, or client_ms alone, decides history acceptance.",
+    "No fadvise means every first request had read_bytes 0.",
+    "Live production PM2 behavior verified from this tree's source."
+  ]
+}

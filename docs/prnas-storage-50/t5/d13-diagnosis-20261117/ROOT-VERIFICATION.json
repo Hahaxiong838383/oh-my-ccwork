@@ -1,0 +1,11 @@
+{
+  "production_hashes_unchanged": true,
+  "production_pids_restarts_unchanged": true,
+  "health_200": true,
+  "two_upload_arms_exact": true,
+  "third_incomplete_preserved": true,
+  "late_commit_without_ack_200_exact": true,
+  "http_200_rejected_at_history_gate_verified": true,
+  "production_changed": false,
+  "t5_pass": false
+}

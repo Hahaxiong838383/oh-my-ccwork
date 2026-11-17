@@ -1,0 +1,589 @@
+[
+  {
+    "name": "p003-t5-d13-a0-halfcore-1",
+    "attempts": 2452,
+    "successes": 500,
+    "p95_ms": 1946.9739699999918,
+    "p99_ms": 4678.015062999999,
+    "errors": {
+      "ANALYTICS_OVERLOADED": 1718,
+      "ANALYTICS_WAL_PRESSURE": 234
+    },
+    "duration_ms": 349725,
+    "writer_samples": 500,
+    "writer_p95_ms": 1917.093280000001,
+    "slowest_10": [
+      {
+        "ms": 5920.419101000007,
+        "cpu_ms": 470.283,
+        "throttled_ms": 280.485,
+        "io_stall_ms": 4795.968,
+        "memory_max_hits": 95,
+        "read_bytes": 2306048,
+        "write_bytes": 81723392
+      },
+      {
+        "ms": 4823.106107999978,
+        "cpu_ms": 676.4,
+        "throttled_ms": 830.544,
+        "io_stall_ms": 3478.639,
+        "memory_max_hits": 132,
+        "read_bytes": 2088960,
+        "write_bytes": 80228352
+      },
+      {
+        "ms": 4792.451589999997,
+        "cpu_ms": 334.406,
+        "throttled_ms": 54.479,
+        "io_stall_ms": 4127.249,
+        "memory_max_hits": 23,
+        "read_bytes": 1404928,
+        "write_bytes": 58544128
+      },
+      {
+        "ms": 4682.439123999997,
+        "cpu_ms": 548.571,
+        "throttled_ms": 553.992,
+        "io_stall_ms": 3726.532,
+        "memory_max_hits": 0,
+        "read_bytes": 1138688,
+        "write_bytes": 65949696
+      },
+      {
+        "ms": 4672.5309460000135,
+        "cpu_ms": 307.527,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 4197.422,
+        "memory_max_hits": 26,
+        "read_bytes": 991232,
+        "write_bytes": 61775872
+      },
+      {
+        "ms": 3978.5985849999997,
+        "cpu_ms": 503.778,
+        "throttled_ms": 577.127,
+        "io_stall_ms": 3050.871,
+        "memory_max_hits": 100,
+        "read_bytes": 6008832,
+        "write_bytes": 53100544
+      },
+      {
+        "ms": 3924.858283999987,
+        "cpu_ms": 399.066,
+        "throttled_ms": 306.422,
+        "io_stall_ms": 3050.319,
+        "memory_max_hits": 29,
+        "read_bytes": 815104,
+        "write_bytes": 48574464
+      },
+      {
+        "ms": 3820.3021949999966,
+        "cpu_ms": 474.554,
+        "throttled_ms": 662.34,
+        "io_stall_ms": 2969.177,
+        "memory_max_hits": 158,
+        "read_bytes": 4481024,
+        "write_bytes": 50618368
+      },
+      {
+        "ms": 3759.39804,
+        "cpu_ms": 357.7,
+        "throttled_ms": 312.835,
+        "io_stall_ms": 3061.304,
+        "memory_max_hits": 0,
+        "read_bytes": 1794048,
+        "write_bytes": 54493184
+      },
+      {
+        "ms": 3491.811616000021,
+        "cpu_ms": 571.088,
+        "throttled_ms": 903.426,
+        "io_stall_ms": 2415.505,
+        "memory_max_hits": 0,
+        "read_bytes": 2060288,
+        "write_bytes": 46301184
+      }
+    ],
+    "tail_means": {
+      "ms": 3264.3814091599993,
+      "cpu_ms": 318.14704,
+      "throttled_ms": 232.13624,
+      "io_stall_ms": 2598.60476,
+      "memory_max_hits": 42.12,
+      "read_bytes": 1573027.84,
+      "write_bytes": 44926402.56
+    },
+    "all_means": {
+      "ms": 398.4262349740013,
+      "cpu_ms": 86.877986,
+      "throttled_ms": 43.148764,
+      "io_stall_ms": 233.490546,
+      "memory_max_hits": 9.764,
+      "read_bytes": 812089.344,
+      "write_bytes": 6386884.608
+    },
+    "integrity": {
+      "batches": 500,
+      "events_accepted": 100000,
+      "events_duplicated": 0,
+      "events_acknowledged": 100000,
+      "unique_acknowledged_events": 100000,
+      "expected_events": 100000,
+      "expected_batches": 500,
+      "counts": {
+        "events": 700000,
+        "seen": 700000,
+        "batches": 3500
+      },
+      "database_before": {
+        "events": 600000,
+        "seen": 600000,
+        "batches": 3000
+      },
+      "database_delta": {
+        "events": 100000,
+        "seen": 100000,
+        "batches": 500
+      },
+      "database_run_events": 100000,
+      "database_canonical_matches": 100000,
+      "database_seen_matches": 100000,
+      "database_integrity": true,
+      "complete": true
+    },
+    "acks": {
+      "attempts": 2452,
+      "successes": 500,
+      "statuses": {
+        "200": 500,
+        "503": 1952
+      },
+      "p95": 1946.9739699999918,
+      "p99": 4678.015062999999,
+      "all_actors_finished": true,
+      "raw_file": "requests.jsonl",
+      "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+    },
+    "resources": {
+      "samples": 353,
+      "unavailable_samples": 0,
+      "observed_ms": 352317.21108299994,
+      "required_ms": 86400000,
+      "max_sample_gap_ms": 2007.3364220000003,
+      "cpu_average_percent": 13.079050472459093,
+      "mem_available_min_fraction": 0.5237993174838664,
+      "disk_free_min_bytes": 6236319744,
+      "identity_changed": false,
+      "oom_seen": false,
+      "complete_24h_evidence": false,
+      "local_resource_gate": false,
+      "not_covered": [
+        "NAS budget",
+        "voice A/B",
+        "maintenance backlog",
+        "external service restart counters"
+      ]
+    },
+    "config": {
+      "devices": 50,
+      "events": 2000,
+      "batch": 200,
+      "seed": 17,
+      "deadline_ms": 1200000,
+      "maintenance": false,
+      "backup": false,
+      "covering_index": true,
+      "synthetic": true,
+      "started_ms": 1794903788042
+    },
+    "health_summary": {
+      "samples": 353,
+      "retained_samples": 256,
+      "tail_capacity": 256,
+      "truncated": true,
+      "failed_samples": 35,
+      "status_counts": {
+        "200": 318,
+        "503": 35
+      },
+      "first_at_ms": 1794903846443,
+      "last_at_ms": 1794904198765,
+      "rss_peak_bytes": 345849856,
+      "wal_peak_bytes": 272018912,
+      "disk_free_min_bytes": 6236319744,
+      "raw_file": "health.jsonl",
+      "duration_interpretation": "sample timestamps; not continuous uptime or pressure duration"
+    },
+    "observation_window": {
+      "elapsed_ms": 352317,
+      "cpu_ms": 54221.461,
+      "throttled_ms": 29726.026,
+      "io_stall_ms": 127275.42,
+      "memory_max_hits": 6314,
+      "oom_kill": 0,
+      "read_bytes": 415526912,
+      "write_bytes": 3541135360
+    }
+  },
+  {
+    "name": "p003-t5-d13-a0-halfcore-2",
+    "attempts": 2183,
+    "successes": 183,
+    "p95_ms": 1495.9319319999995,
+    "p99_ms": 3853.830025000003,
+    "errors": {
+      "ANALYTICS_OVERLOADED": 904,
+      "ANALYTICS_WAL_PRESSURE": 88,
+      "ANALYTICS_STORAGE_UNAVAILABLE": 1008
+    },
+    "duration_ms": 743655,
+    "writer_samples": 184,
+    "writer_p95_ms": 1462.1224619999994,
+    "slowest_10": [
+      {
+        "ms": 8003.545306999993,
+        "cpu_ms": 745.776,
+        "throttled_ms": 433.826,
+        "io_stall_ms": 5758.728,
+        "memory_max_hits": 0,
+        "read_bytes": 1429504,
+        "write_bytes": 75218944
+      },
+      {
+        "ms": 4659.723677000002,
+        "cpu_ms": 716.15,
+        "throttled_ms": 851.503,
+        "io_stall_ms": 3324.776,
+        "memory_max_hits": 234,
+        "read_bytes": 9592832,
+        "write_bytes": 59412480
+      },
+      {
+        "ms": 3848.3992470000085,
+        "cpu_ms": 613.608,
+        "throttled_ms": 747.543,
+        "io_stall_ms": 2866.41,
+        "memory_max_hits": 168,
+        "read_bytes": 3723264,
+        "write_bytes": 52535296
+      },
+      {
+        "ms": 3561.7827410000027,
+        "cpu_ms": 368.054,
+        "throttled_ms": 626.379,
+        "io_stall_ms": 2811.456,
+        "memory_max_hits": 122,
+        "read_bytes": 5042176,
+        "write_bytes": 51593216
+      },
+      {
+        "ms": 2966.570511999991,
+        "cpu_ms": 360.132,
+        "throttled_ms": 99.838,
+        "io_stall_ms": 2125.649,
+        "memory_max_hits": 13,
+        "read_bytes": 1441792,
+        "write_bytes": 39006208
+      },
+      {
+        "ms": 2381.1512959999964,
+        "cpu_ms": 449.453,
+        "throttled_ms": 670.897,
+        "io_stall_ms": 1530.906,
+        "memory_max_hits": 66,
+        "read_bytes": 1896448,
+        "write_bytes": 29687808
+      },
+      {
+        "ms": 2228.282702000026,
+        "cpu_ms": 241.098,
+        "throttled_ms": 25.734,
+        "io_stall_ms": 1756.4,
+        "memory_max_hits": 0,
+        "read_bytes": 1003520,
+        "write_bytes": 38354944
+      },
+      {
+        "ms": 2213.8799270000018,
+        "cpu_ms": 295.608,
+        "throttled_ms": 411.445,
+        "io_stall_ms": 1671.343,
+        "memory_max_hits": 0,
+        "read_bytes": 692224,
+        "write_bytes": 38240256
+      },
+      {
+        "ms": 1831.9239169999928,
+        "cpu_ms": 124.909,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 1423.955,
+        "memory_max_hits": 0,
+        "read_bytes": 176128,
+        "write_bytes": 20434944
+      },
+      {
+        "ms": 1462.1224619999994,
+        "cpu_ms": 327.647,
+        "throttled_ms": 490.835,
+        "io_stall_ms": 913.573,
+        "memory_max_hits": 96,
+        "read_bytes": 5738496,
+        "write_bytes": 24342528
+      }
+    ],
+    "tail_means": {
+      "ms": 3315.738178800001,
+      "cpu_ms": 424.2435,
+      "throttled_ms": 435.8,
+      "io_stall_ms": 2418.3196,
+      "memory_max_hits": 69.9,
+      "read_bytes": 3073638.4,
+      "write_bytes": 42882662.4
+    },
+    "all_means": {
+      "ms": 438.13146865761007,
+      "cpu_ms": 99.03152173913044,
+      "throttled_ms": 53.931989130434786,
+      "io_stall_ms": 243.19664130434782,
+      "memory_max_hits": 10.532608695652174,
+      "read_bytes": 1051848.347826087,
+      "write_bytes": 6332438.260869565
+    },
+    "observation_window": {
+      "elapsed_ms": 763660,
+      "cpu_ms": 39850.314,
+      "throttled_ms": 25080.846,
+      "io_stall_ms": 49985.65,
+      "memory_max_hits": 2230,
+      "oom_kill": 0,
+      "read_bytes": 195153920,
+      "write_bytes": 1291980800
+    }
+  },
+  {
+    "name": "p003-t5-d13-a1-onecore",
+    "attempts": 2274,
+    "successes": 500,
+    "p95_ms": 1341.6251899999916,
+    "p99_ms": 3681.505986,
+    "errors": {
+      "ANALYTICS_OVERLOADED": 1518,
+      "ANALYTICS_WAL_PRESSURE": 256
+    },
+    "duration_ms": 320980,
+    "writer_samples": 500,
+    "writer_p95_ms": 1337.1706119999872,
+    "slowest_10": [
+      {
+        "ms": 4545.05163099998,
+        "cpu_ms": 257.775,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 3897.884,
+        "memory_max_hits": 50,
+        "read_bytes": 643072,
+        "write_bytes": 48508928
+      },
+      {
+        "ms": 4349.080761000005,
+        "cpu_ms": 305.344,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 3962.899,
+        "memory_max_hits": 0,
+        "read_bytes": 569344,
+        "write_bytes": 57876480
+      },
+      {
+        "ms": 4070.3538629999966,
+        "cpu_ms": 229.623,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 3618.387,
+        "memory_max_hits": 18,
+        "read_bytes": 626688,
+        "write_bytes": 40636416
+      },
+      {
+        "ms": 3724.3015240000095,
+        "cpu_ms": 249.104,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 3317.059,
+        "memory_max_hits": 0,
+        "read_bytes": 630784,
+        "write_bytes": 48824320
+      },
+      {
+        "ms": 3675.431805,
+        "cpu_ms": 331.67,
+        "throttled_ms": 44.728,
+        "io_stall_ms": 3127.936,
+        "memory_max_hits": 83,
+        "read_bytes": 1421312,
+        "write_bytes": 54915072
+      },
+      {
+        "ms": 3441.4563249999774,
+        "cpu_ms": 286.602,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 2899.576,
+        "memory_max_hits": 0,
+        "read_bytes": 757760,
+        "write_bytes": 43933696
+      },
+      {
+        "ms": 3262.460992999957,
+        "cpu_ms": 470.206,
+        "throttled_ms": 68.575,
+        "io_stall_ms": 2662.757,
+        "memory_max_hits": 0,
+        "read_bytes": 1417216,
+        "write_bytes": 47828992
+      },
+      {
+        "ms": 3181.997019000002,
+        "cpu_ms": 236.085,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 1929.953,
+        "memory_max_hits": 26,
+        "read_bytes": 602112,
+        "write_bytes": 32616448
+      },
+      {
+        "ms": 3054.056929000013,
+        "cpu_ms": 188.085,
+        "throttled_ms": 0.0,
+        "io_stall_ms": 2734.291,
+        "memory_max_hits": 60,
+        "read_bytes": 1961984,
+        "write_bytes": 49684480
+      },
+      {
+        "ms": 2817.608798000001,
+        "cpu_ms": 402.468,
+        "throttled_ms": 68.253,
+        "io_stall_ms": 2166.807,
+        "memory_max_hits": 0,
+        "read_bytes": 2158592,
+        "write_bytes": 42082304
+      }
+    ],
+    "tail_means": {
+      "ms": 2702.6840698799933,
+      "cpu_ms": 240.609,
+      "throttled_ms": 11.00272,
+      "io_stall_ms": 2178.5022400000003,
+      "memory_max_hits": 15.64,
+      "read_bytes": 1021870.08,
+      "write_bytes": 36476682.24
+    },
+    "all_means": {
+      "ms": 325.7458449439995,
+      "cpu_ms": 80.350538,
+      "throttled_ms": 5.393798,
+      "io_stall_ms": 190.294428,
+      "memory_max_hits": 7.578,
+      "read_bytes": 747945.984,
+      "write_bytes": 5899165.696
+    },
+    "integrity": {
+      "batches": 500,
+      "events_accepted": 100000,
+      "events_duplicated": 0,
+      "events_acknowledged": 100000,
+      "unique_acknowledged_events": 100000,
+      "expected_events": 100000,
+      "expected_batches": 500,
+      "counts": {
+        "events": 700000,
+        "seen": 700000,
+        "batches": 3500
+      },
+      "database_before": {
+        "events": 600000,
+        "seen": 600000,
+        "batches": 3000
+      },
+      "database_delta": {
+        "events": 100000,
+        "seen": 100000,
+        "batches": 500
+      },
+      "database_run_events": 100000,
+      "database_canonical_matches": 100000,
+      "database_seen_matches": 100000,
+      "database_integrity": true,
+      "complete": true
+    },
+    "acks": {
+      "attempts": 2274,
+      "successes": 500,
+      "statuses": {
+        "200": 500,
+        "503": 1774
+      },
+      "p95": 1341.6251899999916,
+      "p99": 3681.505986,
+      "all_actors_finished": true,
+      "raw_file": "requests.jsonl",
+      "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+    },
+    "resources": {
+      "samples": 324,
+      "unavailable_samples": 0,
+      "observed_ms": 323175.204344,
+      "required_ms": 86400000,
+      "max_sample_gap_ms": 1571.0596920000025,
+      "cpu_average_percent": 14.175744600465965,
+      "mem_available_min_fraction": 0.5296398873413016,
+      "disk_free_min_bytes": 6223372288,
+      "identity_changed": false,
+      "oom_seen": false,
+      "complete_24h_evidence": false,
+      "local_resource_gate": false,
+      "not_covered": [
+        "NAS budget",
+        "voice A/B",
+        "maintenance backlog",
+        "external service restart counters"
+      ]
+    },
+    "config": {
+      "devices": 50,
+      "events": 2000,
+      "batch": 200,
+      "seed": 17,
+      "deadline_ms": 1200000,
+      "maintenance": false,
+      "backup": false,
+      "covering_index": true,
+      "synthetic": true,
+      "started_ms": 1794904246411
+    },
+    "health_summary": {
+      "samples": 324,
+      "retained_samples": 256,
+      "tail_capacity": 256,
+      "truncated": true,
+      "failed_samples": 46,
+      "status_counts": {
+        "200": 278,
+        "503": 46
+      },
+      "first_at_ms": 1794904303873,
+      "last_at_ms": 1794904627052,
+      "rss_peak_bytes": 322646016,
+      "wal_peak_bytes": 272323792,
+      "disk_free_min_bytes": 6223372288,
+      "raw_file": "health.jsonl",
+      "duration_interpretation": "sample timestamps; not continuous uptime or pressure duration"
+    },
+    "observation_window": {
+      "elapsed_ms": 323175,
+      "cpu_ms": 52173.958,
+      "throttled_ms": 3863.663,
+      "io_stall_ms": 112389.793,
+      "memory_max_hits": 5619,
+      "oom_kill": 0,
+      "read_bytes": 433643520,
+      "write_bytes": 3519819776
+    }
+  }
+]

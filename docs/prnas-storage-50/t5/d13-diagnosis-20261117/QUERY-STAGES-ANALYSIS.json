@@ -1,0 +1,2540 @@
+[
+  {
+    "name": "d13s-noevict-0",
+    "summary": {
+      "p95_ms": 69.97510299999999,
+      "p99_ms": 153.04297100000008,
+      "history_transport_failures": 2,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 153.04297100000008,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 171.34865999999988,
+      "body_ms": null,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.12068699999986165
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 129.974743,
+          "adopted": false
+        },
+        {
+          "label": "grant",
+          "ms": 0.24290499999983695
+        },
+        {
+          "label": "grant",
+          "ms": 0.5734489999999823
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 4.019698999999946
+        },
+        {
+          "label": "grant",
+          "ms": 0.577062000000069
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.49802500000009786
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.540215999999873
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.18431900000018686
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 89.51464400000009
+        }
+      ],
+      "fetch_entered_ms": 1.113835999999992,
+      "headers_ms": null,
+      "abort_ms": 121.28109100000006,
+      "abort_phase": "before-history-gate",
+      "fetch_error": "AbortError: This operation was aborted",
+      "read_bytes": 1384448,
+      "cpu_us": 120618,
+      "throttled_us": 39778,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.24481500000001688,
+          "cpu": {
+            "user": 1514,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 72.73278600000003,
+          "cpu": {
+            "user": 22996,
+            "system": 5648
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 6.794774000000189,
+          "cpu": {
+            "user": 270,
+            "system": 1913
+          }
+        }
+      ],
+      "sql_ms": 79.77237500000024
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 122.46320999999989,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 58.05147799999986,
+      "body_ms": null,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.23766700000010132
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 121.53659600000015,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.3899069999999938
+        },
+        {
+          "label": "grant",
+          "ms": 0.19777300000009745
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.17748600000004444
+        },
+        {
+          "label": "grant",
+          "ms": 1.3699360000000524
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.029570000000148866
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.25363500000003114
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.09400499999992462
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 55.0053640000001
+        }
+      ],
+      "fetch_entered_ms": 0.4577910000000429,
+      "headers_ms": null,
+      "abort_ms": 120.31872700000008,
+      "abort_phase": "before-history-gate",
+      "fetch_error": "AbortError: This operation was aborted",
+      "read_bytes": 1191936,
+      "cpu_us": 45089,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.10914099999990867,
+          "cpu": {
+            "user": 110,
+            "system": 17
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 43.066147999999885,
+          "cpu": {
+            "user": 22928,
+            "system": 2999
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 7.208012999999937,
+          "cpu": {
+            "user": 8294,
+            "system": 70
+          }
+        }
+      ],
+      "sql_ms": 50.38330199999973
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 27.888746000000083,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 19.002281999999923,
+      "body_ms": 25.542832999999973,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.2021150000000489
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.044177999999647
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 25.922251000000415,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.7525449999998273
+        },
+        {
+          "label": "grant",
+          "ms": 0.12970099999984086
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.08706499999971129
+        },
+        {
+          "label": "grant",
+          "ms": 0.17260600000008708
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.02239800000006653
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.1774110000001201
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.2015799999999217
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 17.86751400000003
+        }
+      ],
+      "fetch_entered_ms": 0.28608900000017456,
+      "headers_ms": 24.828305999999884,
+      "abort_ms": 26.00122599999986,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 274432,
+      "cpu_us": 19796,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.05051000000003114,
+          "cpu": {
+            "user": 69,
+            "system": 10
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 5.296547000000373,
+          "cpu": {
+            "user": 2452,
+            "system": 2703
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.746403999999984,
+          "cpu": {
+            "user": 2797,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 8.093461000000389
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 153.04297100000008,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 171.34865999999988,
+        "body_ms": null,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.12068699999986165
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 129.974743,
+            "adopted": false
+          },
+          {
+            "label": "grant",
+            "ms": 0.24290499999983695
+          },
+          {
+            "label": "grant",
+            "ms": 0.5734489999999823
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 4.019698999999946
+          },
+          {
+            "label": "grant",
+            "ms": 0.577062000000069
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.49802500000009786
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.540215999999873
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.18431900000018686
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 89.51464400000009
+          }
+        ],
+        "fetch_entered_ms": 1.113835999999992,
+        "headers_ms": null,
+        "abort_ms": 121.28109100000006,
+        "abort_phase": "before-history-gate",
+        "fetch_error": "AbortError: This operation was aborted",
+        "read_bytes": 1384448,
+        "cpu_us": 120618,
+        "throttled_us": 39778,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.24481500000001688,
+            "cpu": {
+              "user": 1514,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 72.73278600000003,
+            "cpu": {
+              "user": 22996,
+              "system": 5648
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.794774000000189,
+            "cpu": {
+              "user": 270,
+              "system": 1913
+            }
+          }
+        ],
+        "sql_ms": 79.77237500000024
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 122.46320999999989,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 58.05147799999986,
+        "body_ms": null,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.23766700000010132
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 121.53659600000015,
+            "adopted": true
+          },
+          {
+            "label": "grant",
+            "ms": 0.3899069999999938
+          },
+          {
+            "label": "grant",
+            "ms": 0.19777300000009745
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 0.17748600000004444
+          },
+          {
+            "label": "grant",
+            "ms": 1.3699360000000524
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.029570000000148866
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.25363500000003114
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.09400499999992462
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 55.0053640000001
+          }
+        ],
+        "fetch_entered_ms": 0.4577910000000429,
+        "headers_ms": null,
+        "abort_ms": 120.31872700000008,
+        "abort_phase": "before-history-gate",
+        "fetch_error": "AbortError: This operation was aborted",
+        "read_bytes": 1191936,
+        "cpu_us": 45089,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.10914099999990867,
+            "cpu": {
+              "user": 110,
+              "system": 17
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 43.066147999999885,
+            "cpu": {
+              "user": 22928,
+              "system": 2999
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.208012999999937,
+            "cpu": {
+              "user": 8294,
+              "system": 70
+            }
+          }
+        ],
+        "sql_ms": 50.38330199999973
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 153.04297100000008,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 171.34865999999988,
+        "body_ms": null,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.12068699999986165
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 129.974743,
+            "adopted": false
+          },
+          {
+            "label": "grant",
+            "ms": 0.24290499999983695
+          },
+          {
+            "label": "grant",
+            "ms": 0.5734489999999823
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 4.019698999999946
+          },
+          {
+            "label": "grant",
+            "ms": 0.577062000000069
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.49802500000009786
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.540215999999873
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.18431900000018686
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 89.51464400000009
+          }
+        ],
+        "fetch_entered_ms": 1.113835999999992,
+        "headers_ms": null,
+        "abort_ms": 121.28109100000006,
+        "abort_phase": "before-history-gate",
+        "fetch_error": "AbortError: This operation was aborted",
+        "read_bytes": 1384448,
+        "cpu_us": 120618,
+        "throttled_us": 39778,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.24481500000001688,
+            "cpu": {
+              "user": 1514,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 72.73278600000003,
+            "cpu": {
+              "user": 22996,
+              "system": 5648
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 6.794774000000189,
+            "cpu": {
+              "user": 270,
+              "system": 1913
+            }
+          }
+        ],
+        "sql_ms": 79.77237500000024
+      },
+      {
+        "query_id": "0-1",
+        "actor": 1,
+        "client_ms": 122.46320999999989,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 58.05147799999986,
+        "body_ms": null,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.23766700000010132
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 121.53659600000015,
+            "adopted": true
+          },
+          {
+            "label": "grant",
+            "ms": 0.3899069999999938
+          },
+          {
+            "label": "grant",
+            "ms": 0.19777300000009745
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 0.17748600000004444
+          },
+          {
+            "label": "grant",
+            "ms": 1.3699360000000524
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.029570000000148866
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.25363500000003114
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.09400499999992462
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 55.0053640000001
+          }
+        ],
+        "fetch_entered_ms": 0.4577910000000429,
+        "headers_ms": null,
+        "abort_ms": 120.31872700000008,
+        "abort_phase": "before-history-gate",
+        "fetch_error": "AbortError: This operation was aborted",
+        "read_bytes": 1191936,
+        "cpu_us": 45089,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.10914099999990867,
+            "cpu": {
+              "user": 110,
+              "system": 17
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 43.066147999999885,
+            "cpu": {
+              "user": 22928,
+              "system": 2999
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 7.208012999999937,
+            "cpu": {
+              "user": 8294,
+              "system": 70
+            }
+          }
+        ],
+        "sql_ms": 50.38330199999973
+      }
+    ]
+  },
+  {
+    "name": "d13s-noevict-http-0",
+    "summary": {
+      "p95_ms": 41.13524099999995,
+      "p99_ms": 86.02763200000004,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": true
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 86.02763200000004,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 45.38394500000004,
+      "body_ms": 67.7464379999999,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.22008500000015374
+        },
+        {
+          "label": "response-schema",
+          "ms": 2.730786999999964
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 82.58968499999992,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.2313930000000255
+        },
+        {
+          "label": "grant",
+          "ms": 0.16791199999988748
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 1.6131890000001476
+        },
+        {
+          "label": "grant",
+          "ms": 0.7486820000001444
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.06585100000006605
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.1378269999997883
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.08046799999988252
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 21.497450999999955
+        }
+      ],
+      "fetch_entered_ms": 1.1707790000000386,
+      "headers_ms": 57.2135659999999,
+      "abort_ms": 83.44826400000011,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 43634,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06498400000009497,
+          "cpu": {
+            "user": 0,
+            "system": 97
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 5.741440000000011,
+          "cpu": {
+            "user": 5041,
+            "system": 548
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 3.422064999999975,
+          "cpu": {
+            "user": 3411,
+            "system": 54
+          }
+        }
+      ],
+      "sql_ms": 9.228489000000081
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 30.051885999999968,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 19.134350999999924,
+      "body_ms": 26.65851100000009,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.27290900000002694
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.13863500000002205
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 27.405676000000085,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 1.5073440000001028
+        },
+        {
+          "label": "grant",
+          "ms": 0.13506499999994048
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.24161900000012793
+        },
+        {
+          "label": "grant",
+          "ms": 0.2249099999999089
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03153799999995499
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.24319199999990815
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.0949639999998908
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 16.68868999999995
+        }
+      ],
+      "fetch_entered_ms": 0.5327559999998357,
+      "headers_ms": 24.96625300000005,
+      "abort_ms": 27.503210999999965,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 21051,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.08877499999994143,
+          "cpu": {
+            "user": 123,
+            "system": 14
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 5.405113999999912,
+          "cpu": {
+            "user": 4399,
+            "system": 959
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 3.290997999999945,
+          "cpu": {
+            "user": 1353,
+            "system": 1898
+          }
+        }
+      ],
+      "sql_ms": 8.784886999999799
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 15.288480000000163,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 10.737769999999728,
+      "body_ms": 14.228077000000212,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.3210109999999986
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.04415000000017244
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 14.767264000000068,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.15885800000023664
+        },
+        {
+          "label": "grant",
+          "ms": 0.07779500000015105
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.04867500000000291
+        },
+        {
+          "label": "grant",
+          "ms": 0.15308300000015151
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03011000000014974
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.21237399999972695
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.06494500000007974
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 9.679207000000133
+        }
+      ],
+      "fetch_entered_ms": 0.41690399999970396,
+      "headers_ms": 13.862653000000137,
+      "abort_ms": 14.835061999999652,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 11832,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.11331599999994069,
+          "cpu": {
+            "user": 165,
+            "system": 20
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 3.1241719999998168,
+          "cpu": {
+            "user": 3127,
+            "system": 19
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.945488999999725,
+          "cpu": {
+            "user": 965,
+            "system": 986
+          }
+        }
+      ],
+      "sql_ms": 5.182976999999482
+    },
+    "failures": [],
+    "over_120": []
+  },
+  {
+    "name": "d13s-noevict-1",
+    "summary": {
+      "p95_ms": 49.5534590000002,
+      "p99_ms": 131.76772199999994,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 131.76772199999994,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 34.54854899999998,
+      "body_ms": 121.33475299999998,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.1165529999999535
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.3428949999999986
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 128.42154799999992,
+          "adopted": false
+        },
+        {
+          "label": "grant",
+          "ms": 0.2512979999999061
+        },
+        {
+          "label": "grant",
+          "ms": 0.23246799999992618
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 1.2860220000000027
+        },
+        {
+          "label": "grant",
+          "ms": 0.25297299999999723
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03951199999994515
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.10782399999993686
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.0728350000000546
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 13.946055000000001
+        }
+      ],
+      "fetch_entered_ms": 0.9190389999999979,
+      "headers_ms": 116.416652,
+      "abort_ms": 129.11271499999998,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 42166,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.07254699999998593,
+          "cpu": {
+            "user": 78,
+            "system": 12
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 3.1226239999999734,
+          "cpu": {
+            "user": 1232,
+            "system": 1873
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.804083999999989,
+          "cpu": {
+            "user": 1814,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 4.999254999999948
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 17.773197999999866,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 11.030319000000077,
+      "body_ms": 16.38439900000003,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.21128100000009908
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.07055799999989176
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 16.85523699999999,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.2570299999999861
+        },
+        {
+          "label": "grant",
+          "ms": 0.11812399999985246
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.1597550000000183
+        },
+        {
+          "label": "grant",
+          "ms": 0.27322000000003754
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.025055000000065775
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.15002500000002783
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.05786200000000008
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 9.14850100000001
+        }
+      ],
+      "fetch_entered_ms": 0.3359109999998964,
+      "headers_ms": 15.57346500000017,
+      "abort_ms": 16.961512999999968,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 12184,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.060750999999982014,
+          "cpu": {
+            "user": 68,
+            "system": 11
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.9894930000000386,
+          "cpu": {
+            "user": 2013,
+            "system": 991
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.528667999999925,
+          "cpu": {
+            "user": 611,
+            "system": 925
+          }
+        }
+      ],
+      "sql_ms": 4.578911999999946
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 14.797787999999855,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 9.665865999999824,
+      "body_ms": 13.844988999999714,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.1937340000004042
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.04777799999965282
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 14.24773899999991,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.17000200000029508
+        },
+        {
+          "label": "grant",
+          "ms": 0.07703800000035699
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.03976200000033714
+        },
+        {
+          "label": "grant",
+          "ms": 0.15614000000005035
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.020103999999719235
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.17232599999988452
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.08094200000005003
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 8.276544999999714
+        }
+      ],
+      "fetch_entered_ms": 0.2897649999999885,
+      "headers_ms": 13.496466000000055,
+      "abort_ms": 14.315131999999721,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 10794,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.05425699999977951,
+          "cpu": {
+            "user": 110,
+            "system": 16
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.855805000000146,
+          "cpu": {
+            "user": 2091,
+            "system": 929
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.5166850000000522,
+          "cpu": {
+            "user": 1522,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 4.426746999999978
+    },
+    "failures": [],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 131.76772199999994,
+        "body_complete": true,
+        "status": 200,
+        "reader_ms": 34.54854899999998,
+        "body_ms": 121.33475299999998,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.1165529999999535
+          },
+          {
+            "label": "response-schema",
+            "ms": 0.3428949999999986
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 128.42154799999992,
+            "adopted": false
+          },
+          {
+            "label": "grant",
+            "ms": 0.2512979999999061
+          },
+          {
+            "label": "grant",
+            "ms": 0.23246799999992618
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 1.2860220000000027
+          },
+          {
+            "label": "grant",
+            "ms": 0.25297299999999723
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.03951199999994515
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.10782399999993686
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.0728350000000546
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 13.946055000000001
+          }
+        ],
+        "fetch_entered_ms": 0.9190389999999979,
+        "headers_ms": 116.416652,
+        "abort_ms": 129.11271499999998,
+        "abort_phase": "after-history-gate",
+        "fetch_error": null,
+        "read_bytes": 0,
+        "cpu_us": 42166,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.07254699999998593,
+            "cpu": {
+              "user": 78,
+              "system": 12
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 3.1226239999999734,
+            "cpu": {
+              "user": 1232,
+              "system": 1873
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 1.804083999999989,
+            "cpu": {
+              "user": 1814,
+              "system": 0
+            }
+          }
+        ],
+        "sql_ms": 4.999254999999948
+      }
+    ]
+  },
+  {
+    "name": "d13s-noevict-http-1",
+    "summary": {
+      "p95_ms": 41.567629000000125,
+      "p99_ms": 128.957357,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 128.957357,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 33.71634100000006,
+      "body_ms": 95.67001299999993,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.13433499999996457
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.920376000000033
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 122.01761099999999,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.9007859999999255
+        },
+        {
+          "label": "grant",
+          "ms": 0.13775399999985893
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 1.6679119999998875
+        },
+        {
+          "label": "grant",
+          "ms": 0.44352200000002995
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.07840099999998529
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.17346200000019962
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.15325299999994968
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 18.795341000000008
+        }
+      ],
+      "fetch_entered_ms": 0.8799389999999221,
+      "headers_ms": 48.02382899999998,
+      "abort_ms": 122.734058,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 58942,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.1724939999999151,
+          "cpu": {
+            "user": 503,
+            "system": 1066
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.78367900000012,
+          "cpu": {
+            "user": 7462,
+            "system": 1931
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 3.4326670000000377,
+          "cpu": {
+            "user": 6390,
+            "system": 921
+          }
+        }
+      ],
+      "sql_ms": 8.388840000000073
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 40.88834399999996,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 29.598107000000027,
+      "body_ms": 38.800207,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.32634600000005776
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.06351199999994606
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 39.951055,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.27039300000001276
+        },
+        {
+          "label": "grant",
+          "ms": 0.1344610000001012
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.24971399999981259
+        },
+        {
+          "label": "grant",
+          "ms": 0.4349579999998241
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03261799999995674
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.18676000000004933
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.48314000000004853
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 23.51342199999999
+        }
+      ],
+      "fetch_entered_ms": 1.001066000000037,
+      "headers_ms": 37.784018999999944,
+      "abort_ms": 40.08692599999995,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 23326,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.0942170000000715,
+          "cpu": {
+            "user": 123,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 9.470462999999882,
+          "cpu": {
+            "user": 6379,
+            "system": 49
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 3.017796999999973,
+          "cpu": {
+            "user": 2596,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 12.582476999999926
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 13.603660000000218,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 8.624409999999898,
+      "body_ms": 12.316212000000178,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.23528999999962252
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.044539999999869906
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 12.81427100000019,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.2534089999999196
+        },
+        {
+          "label": "grant",
+          "ms": 0.1958239999999023
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.049152999999932945
+        },
+        {
+          "label": "grant",
+          "ms": 0.21609900000021298
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.02754800000002433
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.15730700000040088
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.07395600000018021
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 7.414351999999781
+        }
+      ],
+      "fetch_entered_ms": 0.367326999999932,
+      "headers_ms": 11.908260000000155,
+      "abort_ms": 12.89713299999994,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 9727,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.09105899999985922,
+          "cpu": {
+            "user": 144,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.7112050000000636,
+          "cpu": {
+            "user": 3069,
+            "system": 6
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.4859639999999672,
+          "cpu": {
+            "user": 1438,
+            "system": 54
+          }
+        }
+      ],
+      "sql_ms": 4.28822799999989
+    },
+    "failures": [],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 128.957357,
+        "body_complete": true,
+        "status": 200,
+        "reader_ms": 33.71634100000006,
+        "body_ms": 95.67001299999993,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.13433499999996457
+          },
+          {
+            "label": "response-schema",
+            "ms": 0.920376000000033
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 122.01761099999999,
+            "adopted": true
+          },
+          {
+            "label": "grant",
+            "ms": 0.9007859999999255
+          },
+          {
+            "label": "grant",
+            "ms": 0.13775399999985893
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 1.6679119999998875
+          },
+          {
+            "label": "grant",
+            "ms": 0.44352200000002995
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.07840099999998529
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.17346200000019962
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.15325299999994968
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 18.795341000000008
+          }
+        ],
+        "fetch_entered_ms": 0.8799389999999221,
+        "headers_ms": 48.02382899999998,
+        "abort_ms": 122.734058,
+        "abort_phase": "after-history-gate",
+        "fetch_error": null,
+        "read_bytes": 0,
+        "cpu_us": 58942,
+        "throttled_us": 0,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.1724939999999151,
+            "cpu": {
+              "user": 503,
+              "system": 1066
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 4.78367900000012,
+            "cpu": {
+              "user": 7462,
+              "system": 1931
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 3.4326670000000377,
+            "cpu": {
+              "user": 6390,
+              "system": 921
+            }
+          }
+        ],
+        "sql_ms": 8.388840000000073
+      }
+    ]
+  },
+  {
+    "name": "d13s-noevict-2",
+    "summary": {
+      "p95_ms": 44.74163600000065,
+      "p99_ms": 154.07800999999995,
+      "history_transport_failures": 1,
+      "invalid_facts": 0,
+      "pass": false
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 154.07800999999995,
+      "body_complete": false,
+      "status": null,
+      "reader_ms": 73.98346100000003,
+      "body_ms": null,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.09234500000002299
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 152.269902,
+          "adopted": false
+        },
+        {
+          "label": "grant",
+          "ms": 0.22665100000017446
+        },
+        {
+          "label": "grant",
+          "ms": 0.07889699999986988
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 1.6765910000000304
+        },
+        {
+          "label": "grant",
+          "ms": 0.37789100000009057
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03956699999991997
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.13964099999998325
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.0948839999999791
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 52.72066199999995
+        }
+      ],
+      "fetch_entered_ms": 0.8225209999998242,
+      "headers_ms": null,
+      "abort_ms": 145.0317379999999,
+      "abort_phase": "before-history-gate",
+      "fetch_error": "AbortError: This operation was aborted",
+      "read_bytes": 0,
+      "cpu_us": 66622,
+      "throttled_us": 69252,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.06866600000000744,
+          "cpu": {
+            "user": 90,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 4.662324000000012,
+          "cpu": {
+            "user": 8829,
+            "system": 907
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.537702999999965,
+          "cpu": {
+            "user": 4571,
+            "system": 94
+          }
+        }
+      ],
+      "sql_ms": 7.268692999999985
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 77.36412100000007,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 30.847636999999963,
+      "body_ms": 55.23583800000006,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.8340559999999186
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.25476800000001276
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 66.61682399999995,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.22515999999995984
+        },
+        {
+          "label": "grant",
+          "ms": 5.442017999999962
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.6525770000000648
+        },
+        {
+          "label": "grant",
+          "ms": 0.47604899999998906
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.02780999999993128
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.2876209999999446
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.11342100000001665
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 26.593594999999937
+        }
+      ],
+      "fetch_entered_ms": 1.043083999999908,
+      "headers_ms": 48.01243599999998,
+      "abort_ms": 66.72455300000001,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 33714,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.0680650000000469,
+          "cpu": {
+            "user": 95,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 10.58534700000007,
+          "cpu": {
+            "user": 9617,
+            "system": 995
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 5.050731999999925,
+          "cpu": {
+            "user": 4066,
+            "system": 997
+          }
+        }
+      ],
+      "sql_ms": 15.704144000000042
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 15.670246000000134,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 10.523583000000144,
+      "body_ms": 14.625680999999986,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.20735599999989063
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.038043000000016036
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 15.03804799999989,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.2395200000000841
+        },
+        {
+          "label": "grant",
+          "ms": 0.07310199999983524
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.07025599999997212
+        },
+        {
+          "label": "grant",
+          "ms": 0.530247999999574
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03388100000029226
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.21143799999981638
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.08278199999995195
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 9.04794400000037
+        }
+      ],
+      "fetch_entered_ms": 0.356134000000111,
+      "headers_ms": 14.092383000000154,
+      "abort_ms": 15.128454000000147,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 11873,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.09847999999965396,
+          "cpu": {
+            "user": 185,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.762200000000121,
+          "cpu": {
+            "user": 2796,
+            "system": 0
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.9941490000001068,
+          "cpu": {
+            "user": 2001,
+            "system": 0
+          }
+        }
+      ],
+      "sql_ms": 4.8548289999998815
+    },
+    "failures": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 154.07800999999995,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 73.98346100000003,
+        "body_ms": null,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.09234500000002299
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 152.269902,
+            "adopted": false
+          },
+          {
+            "label": "grant",
+            "ms": 0.22665100000017446
+          },
+          {
+            "label": "grant",
+            "ms": 0.07889699999986988
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 1.6765910000000304
+          },
+          {
+            "label": "grant",
+            "ms": 0.37789100000009057
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.03956699999991997
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.13964099999998325
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.0948839999999791
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 52.72066199999995
+          }
+        ],
+        "fetch_entered_ms": 0.8225209999998242,
+        "headers_ms": null,
+        "abort_ms": 145.0317379999999,
+        "abort_phase": "before-history-gate",
+        "fetch_error": "AbortError: This operation was aborted",
+        "read_bytes": 0,
+        "cpu_us": 66622,
+        "throttled_us": 69252,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06866600000000744,
+            "cpu": {
+              "user": 90,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 4.662324000000012,
+            "cpu": {
+              "user": 8829,
+              "system": 907
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 2.537702999999965,
+            "cpu": {
+              "user": 4571,
+              "system": 94
+            }
+          }
+        ],
+        "sql_ms": 7.268692999999985
+      }
+    ],
+    "over_120": [
+      {
+        "query_id": "0-0",
+        "actor": 0,
+        "client_ms": 154.07800999999995,
+        "body_complete": false,
+        "status": null,
+        "reader_ms": 73.98346100000003,
+        "body_ms": null,
+        "client_stages": [
+          {
+            "label": "grant",
+            "ms": 0.09234500000002299
+          },
+          {
+            "label": "history-gate",
+            "age_ms": 152.269902,
+            "adopted": false
+          },
+          {
+            "label": "grant",
+            "ms": 0.22665100000017446
+          },
+          {
+            "label": "grant",
+            "ms": 0.07889699999986988
+          }
+        ],
+        "reader_stages": [
+          {
+            "label": "request-schema",
+            "ms": 1.6765910000000304
+          },
+          {
+            "label": "grant",
+            "ms": 0.37789100000009057
+          },
+          {
+            "label": "prepare-other-select",
+            "ms": 0.03956699999991997
+          },
+          {
+            "label": "prepare-evidence",
+            "ms": 0.13964099999998325
+          },
+          {
+            "label": "prepare-assets",
+            "ms": 0.0948839999999791
+          },
+          {
+            "label": "history-reduction-all",
+            "ms": 52.72066199999995
+          }
+        ],
+        "fetch_entered_ms": 0.8225209999998242,
+        "headers_ms": null,
+        "abort_ms": 145.0317379999999,
+        "abort_phase": "before-history-gate",
+        "fetch_error": "AbortError: This operation was aborted",
+        "read_bytes": 0,
+        "cpu_us": 66622,
+        "throttled_us": 69252,
+        "sql": [
+          {
+            "label": "other-select",
+            "method": "all",
+            "ms": 0.06866600000000744,
+            "cpu": {
+              "user": 90,
+              "system": 0
+            }
+          },
+          {
+            "label": "evidence",
+            "method": "all",
+            "ms": 4.662324000000012,
+            "cpu": {
+              "user": 8829,
+              "system": 907
+            }
+          },
+          {
+            "label": "assets",
+            "method": "all",
+            "ms": 2.537702999999965,
+            "cpu": {
+              "user": 4571,
+              "system": 94
+            }
+          }
+        ],
+        "sql_ms": 7.268692999999985
+      }
+    ]
+  },
+  {
+    "name": "d13s-noevict-http-2",
+    "summary": {
+      "p95_ms": 42.903785999999855,
+      "p99_ms": 63.46038499999986,
+      "history_transport_failures": 0,
+      "invalid_facts": 0,
+      "pass": true
+    },
+    "first": {
+      "query_id": "0-0",
+      "actor": 0,
+      "client_ms": 63.46038499999986,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 25.170153000000028,
+      "body_ms": 40.16353099999992,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.10468700000001263
+        },
+        {
+          "label": "response-schema",
+          "ms": 5.2552250000001095
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 57.41102599999999,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.3294949999999517
+        },
+        {
+          "label": "grant",
+          "ms": 0.14916900000002897
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 1.0403029999999944
+        },
+        {
+          "label": "grant",
+          "ms": 0.28984799999989264
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03005899999993744
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.11506399999984751
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.08582899999987603
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 11.163823000000093
+        }
+      ],
+      "fetch_entered_ms": 0.8768140000001949,
+      "headers_ms": 32.41764899999998,
+      "abort_ms": 58.41034300000001,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 29051,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.050604999999904976,
+          "cpu": {
+            "user": 58,
+            "system": 9
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.9859650000000784,
+          "cpu": {
+            "user": 1998,
+            "system": 999
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.413966999999957,
+          "cpu": {
+            "user": 1365,
+            "system": 57
+          }
+        }
+      ],
+      "sql_ms": 4.45053699999994
+    },
+    "second": {
+      "query_id": "0-1",
+      "actor": 1,
+      "client_ms": 21.802249999999958,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 12.47533599999997,
+      "body_ms": 18.03932800000007,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.2364869999998973
+        },
+        {
+          "label": "response-schema",
+          "ms": 1.8430699999998978
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 20.348436999999876,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.49186299999996663
+        },
+        {
+          "label": "grant",
+          "ms": 0.1284979999998086
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.17674200000010387
+        },
+        {
+          "label": "grant",
+          "ms": 0.21482100000002902
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.025278000000071188
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.10379100000000108
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.055948000000171305
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 10.040712999999869
+        }
+      ],
+      "fetch_entered_ms": 0.39045599999985825,
+      "headers_ms": 17.28492200000005,
+      "abort_ms": 20.70354099999986,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 14005,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.0419040000001587,
+          "cpu": {
+            "user": 49,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.7960339999999633,
+          "cpu": {
+            "user": 1995,
+            "system": 810
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 2.05399599999987,
+          "cpu": {
+            "user": 2038,
+            "system": 7
+          }
+        }
+      ],
+      "sql_ms": 4.891933999999992
+    },
+    "21st": {
+      "query_id": "0-20",
+      "actor": 20,
+      "client_ms": 15.82508000000007,
+      "body_complete": true,
+      "status": 200,
+      "reader_ms": 10.961905000000115,
+      "body_ms": 14.649553000000196,
+      "client_stages": [
+        {
+          "label": "grant",
+          "ms": 0.30196399999977075
+        },
+        {
+          "label": "response-schema",
+          "ms": 0.043325000000095315
+        },
+        {
+          "label": "history-gate",
+          "age_ms": 15.177502000000004,
+          "adopted": true
+        },
+        {
+          "label": "grant",
+          "ms": 0.22063100000013947
+        },
+        {
+          "label": "grant",
+          "ms": 0.06807200000002922
+        }
+      ],
+      "reader_stages": [
+        {
+          "label": "request-schema",
+          "ms": 0.05280200000015611
+        },
+        {
+          "label": "grant",
+          "ms": 0.3051989999999023
+        },
+        {
+          "label": "prepare-other-select",
+          "ms": 0.03671600000006947
+        },
+        {
+          "label": "prepare-evidence",
+          "ms": 0.20291500000030283
+        },
+        {
+          "label": "prepare-assets",
+          "ms": 0.05863199999976132
+        },
+        {
+          "label": "history-reduction-all",
+          "ms": 9.44990000000007
+        }
+      ],
+      "fetch_entered_ms": 0.4206589999998869,
+      "headers_ms": 14.33640800000012,
+      "abort_ms": 15.281121999999868,
+      "abort_phase": "after-history-gate",
+      "fetch_error": null,
+      "read_bytes": 0,
+      "cpu_us": 12138,
+      "throttled_us": 0,
+      "sql": [
+        {
+          "label": "other-select",
+          "method": "all",
+          "ms": 0.09475099999963277,
+          "cpu": {
+            "user": 370,
+            "system": 0
+          }
+        },
+        {
+          "label": "evidence",
+          "method": "all",
+          "ms": 2.7012570000001688,
+          "cpu": {
+            "user": 1999,
+            "system": 738
+          }
+        },
+        {
+          "label": "assets",
+          "method": "all",
+          "ms": 1.6037169999999605,
+          "cpu": {
+            "user": 1533,
+            "system": 76
+          }
+        }
+      ],
+      "sql_ms": 4.399724999999762
+    },
+    "failures": [],
+    "over_120": []
+  }
+]

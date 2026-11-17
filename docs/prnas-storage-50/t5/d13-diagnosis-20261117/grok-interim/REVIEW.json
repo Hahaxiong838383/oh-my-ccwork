@@ -1,0 +1,290 @@
+{
+  "role": "read-only interim review for 主13; query gate remains failed; upload not judged",
+  "head": "ed5419a89708a62ac90b32d61a96b050e2ad8f64",
+  "worktree_clean": true,
+  "query_source": "65c86916e1e6a64352ec75d3c2b6eebb364e649a",
+  "upload_source": "e0931608b26586f79e6c27f8743c313b5a567d3f",
+  "upload_harness_sha256": "a4694049cf7e07a3725ce5cc6101e2b163cffd1d981701904f030ffc990c1fe7",
+  "did_not": [
+    "ssh",
+    "load",
+    "shared_tree_edit",
+    "touch_running_upload",
+    "drop_caches",
+    "fadvise",
+    "change_product_clock"
+  ],
+  "query_recomputed_from": "query-evidence jsonl joined on query_id",
+  "query_gate": {
+    "baseline": "d13-baseline-full",
+    "samples": 1000,
+    "history_transport_failures": 2,
+    "invalid_facts": 0,
+    "pass": false,
+    "p95_ms": 35.16410799999721,
+    "p99_ms": 48.242573000003176,
+    "failures": [
+      {
+        "query_id": "0-0",
+        "client_ms": 144.871807,
+        "reader_ms": 124.917038,
+        "status": null,
+        "body_complete": false,
+        "correct": true,
+        "client_at_minus_reader_at_ms": -119
+      },
+      {
+        "query_id": "0-1",
+        "client_ms": 122.657664,
+        "reader_ms": 59.013751,
+        "status": null,
+        "body_complete": false,
+        "correct": true,
+        "client_at_minus_reader_at_ms": -18
+      }
+    ],
+    "after_index_5": {
+      "n": 995,
+      "transport_failures": 0,
+      "client_ms_max": 93.03,
+      "client_ms_gt_100": 0
+    },
+    "cgroup": {
+      "cpu_max": "100000 100000",
+      "memory_max": 805306368,
+      "memory_current_end": 262307840,
+      "memory_events_max": 0,
+      "throttled_usec_delta": 478075
+    },
+    "systemd_memory_peak_line_unusable": true
+  },
+  "prespecified_cold_page_rule": "not fired",
+  "prespecified_rule_reason": "reader_ms>120 on the first request is 1/3 cold, 1/3 warmdb, 0/3 cpu2, 0/3 warmhttp; second requests are not all <=50ms",
+  "confirmed": [
+    "Item 3 gate of the fixed 1000-run stays failed on two early transport failures. Steady state of that process is inside 120ms.",
+    "fadvise on analytics.db changes physical reads: 9/9 fadvise first requests read_bytes=1384448; 3/3 warmdb first requests read_bytes=0 with rchar=1034393.",
+    "That cache difference shows up in evidence all(): about 66-108ms after fadvise versus 4.9-10.6ms without it. It is a component of that statement, not a necessary cause of the transport abort.",
+    "correct=true does not show that history arrived. client_ms is not the <=125 acceptance predicate. Harness transport success is status 200 and body_complete."
+  ],
+  "narrowed_away": [
+    "Cold pages as the necessary cause of the transport failure.",
+    "One mechanism for all three warmdb first failures.",
+    "Only the first query fails.",
+    "2 CPU clears the quota question.",
+    "HTTP constant-route warmup passes the query gate.",
+    "systemd Memory peak of 336K or 520K as the process footprint."
+  ],
+  "first_request": [
+    {
+      "arm": "cold-0",
+      "client_ms": 125.26,
+      "reader_ms": 107.656,
+      "body_complete": false,
+      "read_bytes": 1384448,
+      "evidence_ms": 70.017,
+      "throttled_us": 0,
+      "also_failed": []
+    },
+    {
+      "arm": "cold-1",
+      "client_ms": 135.231,
+      "reader_ms": 219.08,
+      "body_complete": false,
+      "read_bytes": 1384448,
+      "evidence_ms": 108.403,
+      "throttled_us": 55070,
+      "also_failed": [
+        "0-1"
+      ],
+      "also_client_gt_125_complete": [
+        "0-2"
+      ]
+    },
+    {
+      "arm": "cold-2",
+      "client_ms": 144.984,
+      "reader_ms": 112.585,
+      "body_complete": false,
+      "read_bytes": 1384448,
+      "evidence_ms": 73.084,
+      "throttled_us": 0,
+      "also_failed": [
+        "0-1"
+      ]
+    },
+    {
+      "arm": "warmdb-0",
+      "client_ms": 158.605,
+      "reader_ms": 43.953,
+      "body_complete": false,
+      "read_bytes": 0,
+      "rchar": 1034393,
+      "evidence_ms": 6.438,
+      "throttled_us": 0,
+      "client_at_minus_reader_at_ms": 41,
+      "sql_ms": 9.343,
+      "unaccounted_ms": 34.61
+    },
+    {
+      "arm": "warmdb-1",
+      "client_ms": 185.796,
+      "reader_ms": 126.877,
+      "body_complete": false,
+      "read_bytes": 0,
+      "rchar": 1034393,
+      "evidence_ms": 10.626,
+      "throttled_us": 70362,
+      "client_at_minus_reader_at_ms": -11,
+      "unaccounted_ms": 111.124
+    },
+    {
+      "arm": "warmdb-2",
+      "client_ms": 168.369,
+      "reader_ms": 98.379,
+      "body_complete": false,
+      "read_bytes": 0,
+      "rchar": 1034393,
+      "evidence_ms": 4.883,
+      "throttled_us": 78568,
+      "client_at_minus_reader_at_ms": -7,
+      "unaccounted_ms": 90.495
+    },
+    {
+      "arm": "warmhttp-0",
+      "client_ms": 142.746,
+      "reader_ms": 98.279,
+      "body_complete": true,
+      "read_bytes": 1384448,
+      "evidence_ms": 69.944,
+      "throttled_us": 0,
+      "headers_ms": 108.183,
+      "body_ms": 117.504
+    },
+    {
+      "arm": "warmhttp-1",
+      "client_ms": 125.066,
+      "reader_ms": 97.701,
+      "body_complete": true,
+      "read_bytes": 1384448,
+      "evidence_ms": 69.155,
+      "throttled_us": 0
+    },
+    {
+      "arm": "warmhttp-2",
+      "client_ms": 120.928,
+      "reader_ms": 96.675,
+      "body_complete": true,
+      "read_bytes": 1384448,
+      "evidence_ms": 66.045,
+      "throttled_us": 0
+    },
+    {
+      "arm": "cpu2-0",
+      "client_ms": 125.491,
+      "reader_ms": 102.682,
+      "body_complete": false,
+      "read_bytes": 1384448,
+      "evidence_ms": 67.889,
+      "throttled_us": 0,
+      "cpu_max": "200000 100000"
+    },
+    {
+      "arm": "cpu2-1",
+      "client_ms": 126.491,
+      "reader_ms": 118.026,
+      "body_complete": false,
+      "read_bytes": 1384448,
+      "evidence_ms": 80.849,
+      "throttled_us": 0,
+      "cpu_max": "200000 100000"
+    },
+    {
+      "arm": "cpu2-2",
+      "client_ms": 124.336,
+      "reader_ms": 102.087,
+      "body_complete": false,
+      "read_bytes": 1384448,
+      "evidence_ms": 69.885,
+      "throttled_us": 0,
+      "cpu_max": "200000 100000"
+    }
+  ],
+  "measurement_boundaries": [
+    "SQL proxy times all/get/run only, not prepare, readSnapshot BEGIN/COMMIT, or later JSON.parse.",
+    "daily SQL did not run; each history request has other-select, evidence, assets.",
+    "read_bytes is storage bytes during app.fetch. rchar still records cached logical reads.",
+    "fadvise is advisory and covers analytics.db only.",
+    "Client and reader share the systemd unit cgroup.",
+    "client_ms includes work after the <=125 history predicate.",
+    "Replicates are three sequential processes on one host, order fixed."
+  ],
+  "upload": {
+    "judged": false,
+    "is_600k_mixed_gate": false,
+    "leave_running": true,
+    "design_matches_request": {
+      "arms": [
+        "a0-halfcore-1 CPUQuota 50%",
+        "a1-onecore CPUQuota 100%",
+        "a0-halfcore-2 CPUQuota 50%"
+      ],
+      "memory_max": "768M",
+      "maintenance": false,
+      "backup": false,
+      "checkpoint": "product path, default 10s",
+      "workload": "50 identities x 2000 events, batch 200, 500 target successes",
+      "clone": "independent copy of p003-t5-50x12000-cover01 per arm",
+      "delete_after_integrity_complete": [
+        "analytics.db",
+        "analytics.db-wal",
+        "analytics.db-shm"
+      ],
+      "source_600k_retained": true
+    },
+    "early_snapshot_not_a_result": {
+      "source": "upload_check.output.json and upload_progress.output.json already on disk; no new probe",
+      "arm": "a0-halfcore-1",
+      "attempts": 0,
+      "db_bytes": 2011045888,
+      "memory_current": 805007360,
+      "memory_events_max": 15130,
+      "oom": 0,
+      "io_pressure_some_avg10": 56.5,
+      "usage_usec": 23619486,
+      "throttled_usec": 15403058
+    },
+    "interpretation_rules": [
+      "If the two 50% p95 values differ by at least as much as either differs from the 100% arm, the CPU contrast is unstable.",
+      "All three above 500 means raising 0.5 to 1.0 CPU did not bring this shorter clone workload under 500. MemoryMax stays common.",
+      "Both 50% arms above 500 and the 100% arm at or below 500 only moves p95 inside this clone setup.",
+      "Do not treat any arm as the original mixed gate.",
+      "copyFileSync is inside the measured cgroup before ACKs. Compare arms with each other, not with the original 525ms run.",
+      "Do not read the upload as a cold-page experiment.",
+      "Index drop names were not logged. Do not scan the source database until the driver exits.",
+      "Use requests.jsonl timestamps and resources.jsonl diag, not the e093 RESULT.resources summary, for throttle and memory.max."
+    ]
+  },
+  "minimal_followup_after_upload": {
+    "do_not_start_now": true,
+    "do_not_touch_source_db_while_upload_runs": true,
+    "no_more_fadvise_or_cpu2_arms": true,
+    "no_src_change": true,
+    "design": "3 fresh processes, no fadvise, CPUQuota 100%, MemoryMax 768M, first 3 previews, harness timestamps only",
+    "timestamps": [
+      "grant_done",
+      "fetch_send",
+      "headers",
+      "abort",
+      "predicate_125_clock",
+      "post_predicate",
+      "evidence_prepare",
+      "evidence_all"
+    ],
+    "decisions": [
+      "grant_to_send >20ms and reader<80 and read_bytes≈0: budget consumed before HTTP; next single factor is ark.db without fadvise on analytics.db",
+      "grant<5ms, reader<80, read_bytes≈0, reader log earlier than client abort by >20ms, headers null: finished response lost the callback race; next single factor is separate cgroups",
+      "prepare>30ms and all<15ms and read_bytes≈0: first plan cost",
+      "if the three processes disagree: leave the mechanism unnamed"
+    ]
+  }
+}
