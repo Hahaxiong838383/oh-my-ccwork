@@ -237,3 +237,8 @@ sudo tail -f /usr/trim/nginx/logs/access.log  # nginx 访问日志（POST /uploa
 `login --refresh`；linger=yes，未登录也会执行。日志 `~/.local/state/trim-cli/keepalive.log`（保留 400 行），
 失败记 `FAIL` 并非零退出，由 journal 留痕。NAS 长期关机/断网超过 refresh token 有效期仍会掉一次授权，
 属预期，看到 FAIL 再人工授权。
+
+### 9. Lucky 反向代理
+
+Lucky 跑在本机应用中心，管理入口路径隐藏、登录走 RSA 挑战；增删域名规则、字段结构、
+IPv6 入站限制和本机验证陷阱，统一见 [lucky-reverse-proxy](../lucky-reverse-proxy/SKILL.md)。
