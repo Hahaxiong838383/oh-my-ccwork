@@ -25,6 +25,9 @@
 4. **简洁直接**，不废话、不客套
 5. **先跑起来再迭代**，够用就行
 6. DO NOT send optional commentary
+7. **home-studio 数据盘优先**：新独立数据/产物默认 `/data/home-studio/`，不设大小门槛；生成、下载、导出或改输出路径前读 `docs/rules/HOME-STUDIO-STORAGE.md`。保留已迁移软链；源码/编译/数据库仍留 NVMe，知识文档与共享记忆照常归档。
+
+8. **Git 同步规则**：开工先 `git pull --rebase --autostash`；一个任务一个提交、当日 push，领先远端 >3 个必须推；长任务用 `git worktree`；**禁止 force push / 改写远端**；发现分叉（`rev-list --left-right --count origin/main...HEAD` 两侧非 0）立即停下，按 `docs/rules/GIT-SYNC.md` 处理。体检：`bash 4-Assets/scripts/git-sync-health.sh`。
 
 ## 记忆系统
 

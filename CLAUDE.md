@@ -70,6 +70,7 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 1. **新文件必须放到对应目录**，不得在根目录随意创建（外部可执行文件是唯一例外）
 2. **向任何归档目录写入文件前，必须先读取该目录的 `README.md`**，并按其中的命名规范、分类规则、质量标准执行
 3. **不确定放哪里时先放 `1-Inbox/`**，后续整理时再迁移到正确位置
+4. **home-studio 独立数据/产物例外**：新文件默认优先 `/data/home-studio/`，无大小门槛；先读 `docs/rules/HOME-STUDIO-STORAGE.md` 并确认挂载，保留迁移软链。源码/编译/数据库仍留 NVMe，知识文档与共享记忆仍按本表。
 
 ## 6. task-log 追加
 
@@ -83,6 +84,13 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 - 触发条件：skill 执行、知识库写入、报告生成、重要配置变更。日常问答不记录
 
 ---
+
+## 6.5 Git 同步（2026-11-17）
+
+- 开工先 `git pull --rebase --autostash`；做完一个任务就提交并 push，领先远端 >3 个提交必须推。
+- 长任务/保留未提交改动 → `git worktree add .worktrees/<slug> -b <branch>`，不往主 checkout 堆。
+- **禁止** `push --force` / `--force-with-lease` / 远端 reset / filter-branch。
+- 分叉立即停：`git rev-list --left-right --count origin/main...HEAD` 两侧非 0 → 按 [`docs/rules/GIT-SYNC.md`](docs/rules/GIT-SYNC.md) 备份、临时工作树合并、快进推送；体检 `bash 4-Assets/scripts/git-sync-health.sh`。
 
 # P1 · 启动条件触发（万能公式表）
 
