@@ -5,6 +5,7 @@ import {resolve,join} from 'node:path';
 import {once} from 'node:events';
 import {serve} from '@hono/node-server';
 import {Hono} from 'hono';
+import {createArkArchiveControl} from '../src/ark/archive-control.js';
 const root=resolve(process.argv[2]??'');
 assert(root.includes('/p003-t5-')&&!root.includes('/server/data')&&realpathSync(root)===root);
 const config=JSON.parse(readFileSync(join(root,'config.json'),'utf8'));assert(config.synthetic&&config.continuous_ark);
@@ -56,12 +57,12 @@ process.on('message',async(message:any)=>{
    // The production Brain owns Ark POST/current; Analytics owns raw history.
    // Reuse this existing child so the test has the same two event loops and
    // counts all of them against the original shared resource budget.
-   const app=new Hono();app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>runtime!,secret:()=>message.secret,ceiling:()=>ids.map(i=>i.sn),acceptsCredential:()=>true,isAdmin:()=>false}));
+   const app=new Hono();app.route('/internal/ark-archive',createArkArchiveControl({store:()=>ark,secret:()=>message.secret,enabled:()=>process.env.T5_ARK_SINGLE_WRITER==='1'}));app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>runtime!,secret:()=>message.secret,ceiling:()=>ids.map(i=>i.sn),acceptsCredential:()=>true,isAdmin:()=>false}));
    server=serve({hostname:'127.0.0.1',port:0,fetch:async request=>{const r=await app.fetch(request);r.headers.set('X-T5-Brain-Pid',String(process.pid));return r;}});
    if(!server.listening)await once(server,'listening');
    const arkUrl='http://127.0.0.1:'+(server.address()as any).port+'/t5/ark/state';
    writeFileSync(join(root,'brain-topology.json'),JSON.stringify({brain_pid:process.pid,receiver_pid:config.receiver_pid,ark_url:arkUrl,scope:'same-existing-child-same-test-cgroup'}));
-   process.send?.({id,exit:0,brain_pid:process.pid,ark_url:arkUrl});
+   process.send?.({id,exit:0,brain_pid:process.pid,ark_url:arkUrl,ark_control_url:new URL('/internal/ark-archive',arkUrl).href});
   }else if(message.type==='query')process.send?.({id,exit:await cycle(message.name)});
   else if(message.type==='stop'){if(server){server.closeAllConnections();await new Promise<void>(r=>server!.close(()=>r()));}ark.close();process.send?.({id,exit:0});process.disconnect();}
   else throw Error('invalid_query_message');

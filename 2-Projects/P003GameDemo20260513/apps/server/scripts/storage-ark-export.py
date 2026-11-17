@@ -4,7 +4,7 @@
 Uses the existing T2 spool and forced-command transport. No device, owner, grant,
 wallet or current-state mutation. Disabling new checkpoints still drains old ones.
 """
-import argparse,fcntl,hashlib,importlib.util,json,os,shutil,sqlite3,time,uuid
+import argparse,fcntl,hashlib,importlib.util,json,os,shutil,sqlite3,time,uuid,re,urllib.request,urllib.error,urllib.parse
 from pathlib import Path
 HERE=Path(__file__).resolve().parent
 spec=importlib.util.spec_from_file_location('ark_spool',HERE/'storage-archive.py')
@@ -38,6 +38,56 @@ class ExportConnection(sqlite3.Connection):
     def commit(self):
         return self.retry(lambda:super(ExportConnection,self).commit())
 
+class OwnerConnection:
+    """Read-only local view; fixed write commands are executed by Brain's owner."""
+    busy_retries=0
+    def __init__(self, dbfile, url, secret):
+        parsed=urllib.parse.urlsplit(url)
+        if parsed.scheme!='http' or parsed.hostname!='127.0.0.1' or parsed.username or parsed.password or parsed.query or parsed.fragment or len(secret)<32:
+            raise ValueError('archive_control_config_invalid')
+        self.url,self.secret,self.database=url,secret,str(dbfile)
+        self.db=sqlite3.connect('file:'+str(dbfile)+'?mode=ro',uri=True,timeout=.1,isolation_level=None)
+        self.db.row_factory=sqlite3.Row;self.db.execute('PRAGMA query_only=ON')
+    def execute(self,*a,**kw):return self.db.execute(*a,**kw)
+    @property
+    def in_transaction(self):return self.db.in_transaction
+    def close(self):self.db.close()
+    def control(self,q):
+        data=json.dumps({'database':self.database,'command':q},ensure_ascii=False,separators=(',',':')).encode()
+        req=urllib.request.Request(self.url,data,{'Content-Type':'application/json','X-Ark-Archive-Token':self.secret},method='POST')
+        # Bypass ambient proxies, refuse redirects; never fall back to a DB writer.
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self,*a,**kw):return None
+        opener=urllib.request.build_opener(urllib.request.ProxyHandler({}),NoRedirect())
+        started=time.monotonic()
+        while True:
+            try:
+                with opener.open(req,timeout=2) as r:
+                    raw=r.read(8193)
+                    if len(raw)>8192:raise ValueError('archive_control_response_invalid')
+                    result=json.loads(raw)
+                    if result.get('ok') is not True:raise ValueError('archive_control_response_invalid')
+                    return result['result']
+            except urllib.error.HTTPError as e:
+                status=e.code
+                try:detail=json.loads(e.read(8192)).get('error','')
+                except (ValueError,AttributeError):detail=''
+                finally:e.close()
+                if status!=503 or time.monotonic()-started>=1:raise ValueError(detail if isinstance(detail,str) and re.fullmatch('archive_[a-z_]+',detail) else 'archive_control_failed') from None
+                self.busy_retries+=1;time.sleep(.025)
+            except urllib.error.URLError:raise ValueError('archive_control_unreachable') from None
+
+def row_fingerprint(rows):
+    columns=['id','grant_id','received_at_ms','envelope','bytes','reserved_bytes','batch_id']
+    raw=json.dumps([[r[k] for k in columns] for r in rows],ensure_ascii=False,separators=(',',':')).encode()
+    return hashlib.sha256(raw).hexdigest()
+
+def status(db,state,now):
+    if isinstance(db,OwnerConnection):return db.control({'op':'status','state':state,'now':now})
+    if state=='attempt':db.execute('UPDATE ark_archive_stats SET last_attempt_ms=? WHERE id=1',(now,))
+    elif state=='success':db.execute('UPDATE ark_archive_stats SET last_success_ms=?,last_error=NULL WHERE id=1',(now,))
+    else:db.execute("UPDATE ark_archive_stats SET last_error='export_failed' WHERE id=1")
+
 def transaction(db,fn):
     db.execute('BEGIN IMMEDIATE')
     try:
@@ -46,6 +96,7 @@ def transaction(db,fn):
         db.rollback();raise
 
 def claim(db,now):
+    if isinstance(db,OwnerConnection):return db.control({'op':'claim','archive_id':uuid.uuid4().hex,'now':now})
     # Only the device appends rows; exporters are serialized by .ark-export.lock.
     # Fetch the bounded prefix before reserving the write lock, so cold-page
     # reads do not reject incoming device snapshots. Recheck it atomically below.
@@ -94,7 +145,8 @@ def process_batch(db,spool,work,aid):
     if b['manifest']:
         if json.loads(b['manifest'])!=m:raise ValueError('archive_manifest_mapping_mismatch')
     else:
-        transaction(db,lambda:db.execute("UPDATE ark_archive_batch SET manifest=?,state='prepared' WHERE archive_id=?",(json.dumps(m,sort_keys=True),aid)))
+        if isinstance(db,OwnerConnection):db.control({'op':'prepare','archive_id':aid,'manifest':m})
+        else:transaction(db,lambda:db.execute("UPDATE ark_archive_batch SET manifest=?,state='prepared' WHERE archive_id=?",(json.dumps(m,sort_keys=True),aid)))
     receipt=spool.receipt(m)
     if receipt:
         clean_payload(spool,m,work)
@@ -107,7 +159,9 @@ def process_batch(db,spool,work,aid):
             db.execute('DELETE FROM ark_archive_outbox WHERE batch_id=?',(aid,))
             db.execute("UPDATE ark_archive_batch SET state='complete',verified_at_ms=? WHERE archive_id=?",(receipt['verified_at_ms'],aid))
             db.execute('UPDATE ark_archive_stats SET last_ack_ms=MAX(COALESCE(last_ack_ms,0),?) WHERE id=1',(receipt['verified_at_ms'],))
-        transaction(db,finish);return 'confirmed'
+        if isinstance(db,OwnerConnection):db.control({'op':'confirm','archive_id':aid,'manifest':m,'rows_sha256':row_fingerprint(rows),'verified_at_ms':receipt['verified_at_ms']})
+        else:transaction(db,finish)
+        return 'confirmed'
     final=spool.package(aid)/'payload.bin';pending=spool.root/'pending'/aid/'payload.bin';source=work/(aid+'.jsonl')
     # Other processes may consume disk after HTTP acceptance. Stop new file writes,
     # retain the immutable DB mapping, and allow the verified cleanup branch above.
@@ -124,7 +178,8 @@ def process_batch(db,spool,work,aid):
             with temp.open('xb') as f:os.fchmod(f.fileno(),0o600);f.write(payload);f.flush();os.fsync(f.fileno())
             os.replace(temp,source);archive.sync_dir(work)
     spool.publish_prepared(source,m)
-    transaction(db,lambda:db.execute("UPDATE ark_archive_batch SET state='published' WHERE archive_id=?",(aid,)))
+    if isinstance(db,OwnerConnection):db.control({'op':'published','archive_id':aid})
+    else:transaction(db,lambda:db.execute("UPDATE ark_archive_batch SET state='published' WHERE archive_id=?",(aid,)))
     return 'published'
 
 def prune_metadata(db,spool,now):
@@ -143,9 +198,11 @@ def prune_metadata(db,spool,now):
             if p.exists():
                 if not spool.receipt(m):raise ValueError('archive_missing_receipt')
                 p.unlink();archive.sync_dir(p.parent)
-        transaction(db,lambda:db.execute("DELETE FROM ark_archive_batch WHERE archive_id=? AND state='complete'",(b['archive_id'],)))
+        if isinstance(db,OwnerConnection):db.control({'op':'prune_batch','archive_id':b['archive_id'],'manifest':m,'now':now})
+        else:transaction(db,lambda:db.execute("DELETE FROM ark_archive_batch WHERE archive_id=? AND state='complete'",(b['archive_id'],)))
     # Current grants keep their lightweight cadence even after all body rows are removed.
-    transaction(db,lambda:db.execute('DELETE FROM ark_archive_baseline WHERE grant_id IN (SELECT b.grant_id FROM ark_archive_baseline b WHERE received_at_ms<? AND NOT EXISTS(SELECT 1 FROM ark_grant g WHERE g.grant_id=b.grant_id) AND NOT EXISTS(SELECT 1 FROM ark_archive_outbox o WHERE o.grant_id=b.grant_id) LIMIT 100)',(now-90*DAY,)))
+    if isinstance(db,OwnerConnection):db.control({'op':'prune_baselines','now':now})
+    else:transaction(db,lambda:db.execute('DELETE FROM ark_archive_baseline WHERE grant_id IN (SELECT b.grant_id FROM ark_archive_baseline b WHERE received_at_ms<? AND NOT EXISTS(SELECT 1 FROM ark_grant g WHERE g.grant_id=b.grant_id) AND NOT EXISTS(SELECT 1 FROM ark_archive_outbox o WHERE o.grant_id=b.grant_id) LIMIT 100)',(now-90*DAY,)))
 
 def cycle(dbfile,root,now=None):
     now=int(time.time()*1000) if now is None else now;spool=Spool(root)
@@ -153,12 +210,15 @@ def cycle(dbfile,root,now=None):
     try:
         fcntl.flock(fd,fcntl.LOCK_EX|fcntl.LOCK_NB)
         dbfile=Path(dbfile).resolve(strict=True)
-        db=sqlite3.connect('file:'+str(dbfile)+'?mode=rw',uri=True,timeout=.1,isolation_level=None,factory=ExportConnection);db.row_factory=sqlite3.Row
+        control_url=os.environ.get('ARK_ARCHIVE_CONTROL_URL','')
+        if control_url:db=OwnerConnection(dbfile,control_url,os.environ.get('ARK_ARCHIVE_CONTROL_SECRET',''))
+        else:
+            db=sqlite3.connect('file:'+str(dbfile)+'?mode=rw',uri=True,timeout=.1,isolation_level=None,factory=ExportConnection);db.row_factory=sqlite3.Row
         work=spool.root/'ark-work'
         if work.is_symlink():raise ValueError('archive_work_symlink')
         work.mkdir(exist_ok=True,mode=0o700)
         try:
-            db.execute('UPDATE ark_archive_stats SET last_attempt_ms=? WHERE id=1',(now,))
+            status(db,'attempt',now)
             count={'published':0,'confirmed':0}
             pending=db.execute("SELECT archive_id FROM ark_archive_batch WHERE state!='complete' ORDER BY created_at_ms,archive_id LIMIT ?",(MAX_BATCHES,)).fetchall()
             disk_paused=False
@@ -173,14 +233,14 @@ def cycle(dbfile,root,now=None):
                 if aid is None:break
                 count[process_batch(db,spool,work,aid)]+=1
             prune_metadata(db,spool,now)
-            db.execute('UPDATE ark_archive_stats SET last_success_ms=?,last_error=NULL WHERE id=1',(now,))
-            count.update(busy_retries=db.busy_retries,sqlite_busy_timeout_ms=db.execute('PRAGMA busy_timeout').fetchone()[0])
+            status(db,'success',now)
+            count.update(busy_retries=db.busy_retries,sqlite_busy_timeout_ms=db.execute('PRAGMA busy_timeout').fetchone()[0],writer_mode='brain-owner' if isinstance(db,OwnerConnection) else 'direct')
             return count
         except BaseException:
             if db.in_transaction:db.rollback()
             # A second locked status write must not mask the original error/code.
-            try:db.execute("UPDATE ark_archive_stats SET last_error='export_failed' WHERE id=1")
-            except sqlite3.Error:pass
+            try:status(db,'failed',now)
+            except (sqlite3.Error,ValueError):pass
             raise
         finally:db.close()
     finally:os.close(fd)
@@ -188,4 +248,4 @@ def cycle(dbfile,root,now=None):
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--db',required=True,type=Path);p.add_argument('--root',required=True,type=Path);a=p.parse_args()
     try:print(json.dumps(cycle(a.db,a.root)))
-    except Exception as e:print('ARK_EXPORT_FAILED:'+type(e).__name__+':'+str(getattr(e,'sqlite_errorname','NON_SQLITE')),file=__import__('sys').stderr);raise SystemExit(1)
+    except Exception as e:print('ARK_EXPORT_FAILED:'+type(e).__name__+':'+str(getattr(e,'sqlite_errorname',str(e) if re.fullmatch('archive_[a-z_]+',str(e)) else 'NON_SQLITE')),file=__import__('sys').stderr);raise SystemExit(1)

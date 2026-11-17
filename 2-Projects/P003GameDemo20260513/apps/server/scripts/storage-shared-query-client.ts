@@ -13,9 +13,9 @@ export async function startSharedQuery(root:string,url:string,secret:string){
   const error=Error('query service exited '+code+'/'+signal);if(!stopping)unexpectedExit=error;fail(error);resolve({code,signal});
  }));
  const call=async(type:string,extra:object={})=>{if(!child.connected)throw Error('query service disconnected');const id=String(++sequence),answer=wait(id);child.send({id,type,...extra},error=>{if(error)fail(error);});return answer;};
- let configured:{brain_pid:number;ark_url:string};
+ let configured:{brain_pid:number;ark_url:string;ark_control_url:string};
  try{await wait('boot');configured=await call('configure',{url,secret});}catch(error){child.kill('SIGTERM');throw error;}
- return {child,brainPid:configured.brain_pid,arkUrl:configured.ark_url,query:async(name:string)=>(await call('query',{name})).exit as number,stop:async()=>{
+ return {child,brainPid:configured.brain_pid,arkUrl:configured.ark_url,arkControlUrl:configured.ark_control_url,query:async(name:string)=>(await call('query',{name})).exit as number,stop:async()=>{
   if(unexpectedExit)throw unexpectedExit;stopping=true;
   try{await call('stop');const result=await exited;if(result.code!==0||result.signal)throw Error('query service shutdown failed');}catch(error){child.kill('SIGTERM');throw error;}
  }};

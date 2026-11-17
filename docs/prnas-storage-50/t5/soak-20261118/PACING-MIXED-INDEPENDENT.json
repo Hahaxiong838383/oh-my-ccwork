@@ -1,0 +1,66 @@
+{
+  "candidate": "e868efa8c532bab6e3c3709b7dce6cf4a68ddb1e",
+  "raw_files_verified": 36,
+  "whole_t5_pass": false,
+  "batches": 797,
+  "accepted_events": 159400,
+  "complete_actors": 1,
+  "all_ack_sets_unique": true,
+  "attempts": 10566,
+  "http_statuses": {
+    "503": 1983,
+    "200": 797,
+    "429": 7786
+  },
+  "ack_p95_ms": 96.98103999999876,
+  "ack_p99_ms": 176.17737900000066,
+  "all_attempt_p99_ms": 87.64810799999941,
+  "ark_attempts": 334,
+  "ark_accepted": 333,
+  "ark_errors": 5,
+  "query_cycles": [
+    {
+      "synthetic": true,
+      "topology": "persistent Brain client -> same Analytics HTTP receiver handling ingestion",
+      "pid": 2514864,
+      "receiver_pid": 2514816,
+      "devices": 50,
+      "samples": 50,
+      "p95_ms": 15.378749999999854,
+      "p99_ms": 48.09973600000012,
+      "invalid_facts": 0,
+      "history_transport_failures": 0,
+      "pass": true
+    },
+    {
+      "synthetic": true,
+      "topology": "persistent Brain client -> same Analytics HTTP receiver handling ingestion",
+      "pid": 2514864,
+      "receiver_pid": 2514816,
+      "devices": 50,
+      "samples": 50,
+      "p95_ms": 11.891406999999163,
+      "p99_ms": 60.62199699999837,
+      "invalid_facts": 0,
+      "history_transport_failures": 0,
+      "pass": true
+    },
+    {
+      "synthetic": true,
+      "topology": "persistent Brain client -> same Analytics HTTP receiver handling ingestion",
+      "pid": 2514864,
+      "receiver_pid": 2514816,
+      "devices": 50,
+      "samples": 50,
+      "p95_ms": 46.234020000032615,
+      "p99_ms": 103.54894499998773,
+      "invalid_facts": 0,
+      "history_transport_failures": 0,
+      "pass": false
+    }
+  ],
+  "history_transport_failures": 0,
+  "ingest_complete": false,
+  "ark_all_accepted": false,
+  "queries_all_pass": false
+}

@@ -1,0 +1,850 @@
+{
+  "scope": "actual fcntl WAL_WRITE_LOCK intervals; trace overhead present; same-host timestamps millisecond-rounded on Node",
+  "locks": [
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280806.2468,
+      "unlock_begin_ms": 1794956280808.716,
+      "ms": 2.46923828125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280814.192,
+      "unlock_begin_ms": 1794956280819.4622,
+      "ms": 5.270263671875,
+      "error_overlap": [
+        1794956280817
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280821.54,
+      "unlock_begin_ms": 1794956280822.539,
+      "ms": 0.9990234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280900.53,
+      "unlock_begin_ms": 1794956280901.677,
+      "ms": 1.14697265625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280902.392,
+      "unlock_begin_ms": 1794956280905.548,
+      "ms": 3.156005859375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280906.572,
+      "unlock_begin_ms": 1794956280907.781,
+      "ms": 1.208984375,
+      "error_overlap": [
+        1794956280907
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280928.57,
+      "unlock_begin_ms": 1794956280929.6702,
+      "ms": 1.10009765625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280930.8682,
+      "unlock_begin_ms": 1794956280932.301,
+      "ms": 1.432861328125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956280937.736,
+      "unlock_begin_ms": 1794956280938.9119,
+      "ms": 1.17578125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281017.2942,
+      "unlock_begin_ms": 1794956281018.531,
+      "ms": 1.23681640625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281019.206,
+      "unlock_begin_ms": 1794956281020.731,
+      "ms": 1.52490234375,
+      "error_overlap": [
+        1794956281020
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281022.017,
+      "unlock_begin_ms": 1794956281024.3472,
+      "ms": 2.330078125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281101.806,
+      "unlock_begin_ms": 1794956281103.81,
+      "ms": 2.004150390625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281104.9822,
+      "unlock_begin_ms": 1794956281106.538,
+      "ms": 1.555908203125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281107.768,
+      "unlock_begin_ms": 1794956281109.114,
+      "ms": 1.345947265625,
+      "error_overlap": [
+        1794956281108
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281130.469,
+      "unlock_begin_ms": 1794956281131.968,
+      "ms": 1.4990234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281132.908,
+      "unlock_begin_ms": 1794956281134.378,
+      "ms": 1.469970703125,
+      "error_overlap": [
+        1794956281134
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281135.688,
+      "unlock_begin_ms": 1794956281136.92,
+      "ms": 1.23193359375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281207.799,
+      "unlock_begin_ms": 1794956281209.761,
+      "ms": 1.9619140625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281215.5881,
+      "unlock_begin_ms": 1794956281217.664,
+      "ms": 2.075927734375,
+      "error_overlap": [
+        1794956281216
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281218.271,
+      "unlock_begin_ms": 1794956281219.29,
+      "ms": 1.01904296875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281245.702,
+      "unlock_begin_ms": 1794956281247.147,
+      "ms": 1.445068359375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281248.0872,
+      "unlock_begin_ms": 1794956281295.5288,
+      "ms": 47.441650390625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281296.59,
+      "unlock_begin_ms": 1794956281297.7668,
+      "ms": 1.1767578125,
+      "error_overlap": [
+        1794956281297
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281320.373,
+      "unlock_begin_ms": 1794956281322.22,
+      "ms": 1.846923828125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281327.97,
+      "unlock_begin_ms": 1794956281330.593,
+      "ms": 2.623046875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281335.586,
+      "unlock_begin_ms": 1794956281336.761,
+      "ms": 1.175048828125,
+      "error_overlap": [
+        1794956281336
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281409.153,
+      "unlock_begin_ms": 1794956281410.585,
+      "ms": 1.431884765625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281417.3857,
+      "unlock_begin_ms": 1794956281419.1821,
+      "ms": 1.79638671875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281423.509,
+      "unlock_begin_ms": 1794956281425.7678,
+      "ms": 2.2587890625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281504.565,
+      "unlock_begin_ms": 1794956281506.129,
+      "ms": 1.56396484375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281507.7593,
+      "unlock_begin_ms": 1794956281509.5552,
+      "ms": 1.7958984375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281514.493,
+      "unlock_begin_ms": 1794956281515.508,
+      "ms": 1.01513671875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281595.848,
+      "unlock_begin_ms": 1794956281597.2878,
+      "ms": 1.43994140625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281599.477,
+      "unlock_begin_ms": 1794956281600.865,
+      "ms": 1.387939453125,
+      "error_overlap": [
+        1794956281600
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281602.019,
+      "unlock_begin_ms": 1794956281603.246,
+      "ms": 1.22705078125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281628.2239,
+      "unlock_begin_ms": 1794956281629.581,
+      "ms": 1.357177734375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281630.44,
+      "unlock_begin_ms": 1794956281633.27,
+      "ms": 2.830078125,
+      "error_overlap": [
+        1794956281631
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281634.614,
+      "unlock_begin_ms": 1794956281635.815,
+      "ms": 1.200927734375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281705.0032,
+      "unlock_begin_ms": 1794956281706.362,
+      "ms": 1.35888671875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281713.01,
+      "unlock_begin_ms": 1794956281717.675,
+      "ms": 4.6650390625,
+      "error_overlap": [
+        1794956281715
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281718.945,
+      "unlock_begin_ms": 1794956281720.169,
+      "ms": 1.223876953125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281747.722,
+      "unlock_begin_ms": 1794956281749.7239,
+      "ms": 2.001953125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281796.0151,
+      "unlock_begin_ms": 1794956281796.088,
+      "ms": 0.07275390625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281797.533,
+      "unlock_begin_ms": 1794956281799.775,
+      "ms": 2.241943359375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281805.264,
+      "unlock_begin_ms": 1794956281807.241,
+      "ms": 1.97705078125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281906.752,
+      "unlock_begin_ms": 1794956281913.419,
+      "ms": 6.6669921875,
+      "error_overlap": [
+        1794956281910
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281914.623,
+      "unlock_begin_ms": 1794956281916.6401,
+      "ms": 2.01708984375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956281917.994,
+      "unlock_begin_ms": 1794956281919.2222,
+      "ms": 1.228271484375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282003.586,
+      "unlock_begin_ms": 1794956282005.469,
+      "ms": 1.883056640625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282010.613,
+      "unlock_begin_ms": 1794956282014.909,
+      "ms": 4.2958984375,
+      "error_overlap": [
+        1794956282013
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282016.3472,
+      "unlock_begin_ms": 1794956282017.584,
+      "ms": 1.23681640625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282121.146,
+      "unlock_begin_ms": 1794956282123.111,
+      "ms": 1.965087890625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282131.262,
+      "unlock_begin_ms": 1794956282133.465,
+      "ms": 2.203125,
+      "error_overlap": [
+        1794956282132
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282134.792,
+      "unlock_begin_ms": 1794956282136.041,
+      "ms": 1.2490234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282224.812,
+      "unlock_begin_ms": 1794956282225.936,
+      "ms": 1.1240234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282230.4678,
+      "unlock_begin_ms": 1794956282231.927,
+      "ms": 1.459228515625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282233.009,
+      "unlock_begin_ms": 1794956282234.219,
+      "ms": 1.2099609375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282295.638,
+      "unlock_begin_ms": 1794956282296.8171,
+      "ms": 1.17919921875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282297.523,
+      "unlock_begin_ms": 1794956282300.053,
+      "ms": 2.530029296875,
+      "error_overlap": [
+        1794956282298
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282300.979,
+      "unlock_begin_ms": 1794956282302.272,
+      "ms": 1.29296875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282332.8728,
+      "unlock_begin_ms": 1794956282336.343,
+      "ms": 3.47021484375,
+      "error_overlap": [
+        1794956282335
+      ]
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282337.538,
+      "unlock_begin_ms": 1794956282337.9978,
+      "ms": 0.459716796875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956280317.sql.json.strace.2519492",
+      "lock_acquired_by_ms": 1794956282338.356,
+      "unlock_begin_ms": 1794956282339.3108,
+      "ms": 0.954833984375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288111.312,
+      "unlock_begin_ms": 1794956288113.7112,
+      "ms": 2.399169921875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288123.282,
+      "unlock_begin_ms": 1794956288124.479,
+      "ms": 1.197021484375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288132.873,
+      "unlock_begin_ms": 1794956288134.071,
+      "ms": 1.197998046875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288142.4702,
+      "unlock_begin_ms": 1794956288143.545,
+      "ms": 1.07470703125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288152.2778,
+      "unlock_begin_ms": 1794956288153.358,
+      "ms": 1.080078125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288165.299,
+      "unlock_begin_ms": 1794956288166.437,
+      "ms": 1.137939453125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288175.114,
+      "unlock_begin_ms": 1794956288176.2458,
+      "ms": 1.1318359375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288184.414,
+      "unlock_begin_ms": 1794956288185.504,
+      "ms": 1.08984375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288194.008,
+      "unlock_begin_ms": 1794956288195.097,
+      "ms": 1.0888671875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288203.639,
+      "unlock_begin_ms": 1794956288204.7961,
+      "ms": 1.1572265625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288212.36,
+      "unlock_begin_ms": 1794956288213.481,
+      "ms": 1.120849609375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288221.7659,
+      "unlock_begin_ms": 1794956288222.864,
+      "ms": 1.09814453125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288233.024,
+      "unlock_begin_ms": 1794956288234.153,
+      "ms": 1.129150390625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288242.513,
+      "unlock_begin_ms": 1794956288243.6062,
+      "ms": 1.09326171875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288251.763,
+      "unlock_begin_ms": 1794956288252.844,
+      "ms": 1.0810546875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288261.065,
+      "unlock_begin_ms": 1794956288262.327,
+      "ms": 1.261962890625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288270.756,
+      "unlock_begin_ms": 1794956288271.831,
+      "ms": 1.074951171875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288280.231,
+      "unlock_begin_ms": 1794956288281.3362,
+      "ms": 1.105224609375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288289.4138,
+      "unlock_begin_ms": 1794956288290.5012,
+      "ms": 1.08740234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288298.6528,
+      "unlock_begin_ms": 1794956288299.775,
+      "ms": 1.1220703125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288308.636,
+      "unlock_begin_ms": 1794956288309.809,
+      "ms": 1.173095703125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288310.806,
+      "unlock_begin_ms": 1794956288311.307,
+      "ms": 0.5009765625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956287917.sql.json.strace.2519543",
+      "lock_acquired_by_ms": 1794956288311.685,
+      "unlock_begin_ms": 1794956288312.55,
+      "ms": 0.864990234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284199.176,
+      "unlock_begin_ms": 1794956284203.69,
+      "ms": 4.513916015625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284214.047,
+      "unlock_begin_ms": 1794956284215.755,
+      "ms": 1.707763671875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284303.2258,
+      "unlock_begin_ms": 1794956284305.2212,
+      "ms": 1.995361328125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284395.873,
+      "unlock_begin_ms": 1794956284396.997,
+      "ms": 1.1240234375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284413.768,
+      "unlock_begin_ms": 1794956284414.8271,
+      "ms": 1.05908203125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284512.293,
+      "unlock_begin_ms": 1794956284515.231,
+      "ms": 2.93798828125,
+      "error_overlap": [
+        1794956284515
+      ]
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284607.257,
+      "unlock_begin_ms": 1794956284611.24,
+      "ms": 3.98291015625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284698.585,
+      "unlock_begin_ms": 1794956284703.4631,
+      "ms": 4.878173828125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284713.9312,
+      "unlock_begin_ms": 1794956284715.838,
+      "ms": 1.90673828125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284801.9941,
+      "unlock_begin_ms": 1794956284803.195,
+      "ms": 1.200927734375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284815.343,
+      "unlock_begin_ms": 1794956284817.269,
+      "ms": 1.926025390625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284903.42,
+      "unlock_begin_ms": 1794956284905.508,
+      "ms": 2.088134765625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956284918.742,
+      "unlock_begin_ms": 1794956284919.823,
+      "ms": 1.0810546875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285008.821,
+      "unlock_begin_ms": 1794956285013.211,
+      "ms": 4.389892578125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285099.861,
+      "unlock_begin_ms": 1794956285101.969,
+      "ms": 2.10791015625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285114.362,
+      "unlock_begin_ms": 1794956285115.223,
+      "ms": 0.86083984375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285122.24,
+      "unlock_begin_ms": 1794956285123.084,
+      "ms": 0.843994140625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285130.725,
+      "unlock_begin_ms": 1794956285131.8271,
+      "ms": 1.10205078125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285201.228,
+      "unlock_begin_ms": 1794956285202.6218,
+      "ms": 1.393798828125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285298.256,
+      "unlock_begin_ms": 1794956285299.27,
+      "ms": 1.013916015625,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285310.793,
+      "unlock_begin_ms": 1794956285312.6472,
+      "ms": 1.854248046875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285313.2878,
+      "unlock_begin_ms": 1794956285314.179,
+      "ms": 0.89111328125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956283007.sql.json.strace.2519519",
+      "lock_acquired_by_ms": 1794956285314.459,
+      "unlock_begin_ms": 1794956285318.675,
+      "ms": 4.216064453125,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956274602.sql.json.strace.2519444",
+      "lock_acquired_by_ms": 1794956275220.792,
+      "unlock_begin_ms": 1794956275227.1099,
+      "ms": 6.31787109375,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956274602.sql.json.strace.2519444",
+      "lock_acquired_by_ms": 1794956275228.2869,
+      "unlock_begin_ms": 1794956275228.518,
+      "ms": 0.231201171875,
+      "error_overlap": []
+    },
+    {
+      "source": "ark-export-1794956274602.sql.json.strace.2519444",
+      "lock_acquired_by_ms": 1794956275229.304,
+      "unlock_begin_ms": 1794956275232.279,
+      "ms": 2.97509765625,
+      "error_overlap": []
+    }
+  ],
+  "errors": [
+    1794956280817,
+    1794956280907,
+    1794956281020,
+    1794956281108,
+    1794956281134,
+    1794956281216,
+    1794956281297,
+    1794956281336,
+    1794956281600,
+    1794956281631,
+    1794956281715,
+    1794956281910,
+    1794956282013,
+    1794956282132,
+    1794956282233,
+    1794956282298,
+    1794956282335,
+    1794956284515
+  ]
+}
