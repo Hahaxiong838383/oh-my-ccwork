@@ -1,0 +1,6 @@
+{
+  "candidate": "bf2b37d563ff749d82fca24282ed5878740f3e4e",
+  "added": "2-Projects/realtime-voice-agent/tests",
+  "sha256": "db7fff2c5565774ebcb359748731b52997e705353478f5729893e0bb6cecd3c9",
+  "reason": "first root archive omitted original external control fixture; compilation failure is archive tooling, not candidate business failure"
+}

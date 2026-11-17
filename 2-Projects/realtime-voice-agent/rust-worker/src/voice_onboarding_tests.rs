@@ -298,6 +298,30 @@ fn input_gate_keeps_exit_but_drops_playback_answers_and_late_asr() {
     assert_eq!(route_input(true, false, true, false), InputRoute::Ordinary);
 }
 #[test]
+fn runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let meta = json!({"version":1,"grant":"a".repeat(64),"expires_at_ms":epoch_ms()+600000});
+    let mut r = Runtime::from_metadata(Some(&meta),Some("trace"),Some("session"),Some("dev-synthetic"),"http://127.0.0.1:1/v1","token=synthetic").unwrap();
+    ready(&mut r.session);
+    done(&mut r.session,2,2);
+    let mut ack=req(3,"audio_complete");
+    ack.payload["audio_token"]=r.session.state["audio_token"].clone();
+    ack.payload["audio_status"]=json!("complete");
+    r.control(&ack,Some("dev-synthetic"),false);
+    assert!(r.reject_asr()); // New cue completion must require new speech.
+    r.speech();assert!(!r.reject_asr());
+    let state=r.session.state.clone();
+    r.control(&ack,Some("dev-synthetic"),false);
+    assert_eq!(r.session.state,state);
+    assert!(!r.reject_asr(),"duplicate audio receipt must not swallow the pending ASR final");
+    r.control(&req(1,"begin"),Some("dev-synthetic"),false);
+    assert!(!r.reject_asr(),"duplicate begin is also side-effect free");
+    r.control(&req(4,"request_exit_prompt"),Some("dev-synthetic"),false);
+    assert!(r.reject_asr()); // A genuinely new playback invalidates old VAD.
+    done(&mut r.session,5,5);
+    assert!(r.reject_asr());r.speech();assert!(!r.reject_asr());
+}
+#[test]
 fn full_missing_flow_all_questions_then_exit_and_strict_revisions() {
     let mut s = session();
     let mut begin = req(1, "begin");

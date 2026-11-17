@@ -73,6 +73,18 @@ async function fixture(run: (f: any) => Promise<void>) {
     rmSync(dir, { recursive: true, force: true });
   }
 }
+test("nickname clarification and refusal never become a child's saved name", async () => {
+  for (const text of ["等一下", "等一等", "稍等", "再说一遍", "再问一遍", "没听清", "算了", "拒绝", "跳过", "再说一次", "没听清楚", "稍等一下", "请重复一遍", "能再说一次吗", "我没听清楚", "麻烦你再讲一遍", "请等一会儿", "等下", "重新问一次", "请重复", "让我想一下"]) {
+    await fixture(async ({ post, p }) => {
+      p.exec("UPDATE family_member SET birthday='2018-08',gender='女孩'");
+      assert.deepEqual((await post({ action: "begin", request_id: "begin" })).body.missing, ["nickname"]);
+      const result = await post({ action: "answer", request_id: "answer", revision: 0, field: "nickname", text });
+      assert.equal(result.status, 200);
+      assert.notEqual(result.body.memory_write, "saved", text);
+      assert.equal(p.prepare("SELECT nickname FROM family_member").get().nickname, "", text);
+    });
+  }
+});
 test("real HTTP/SQLite: natural age commits without invented birthday; replay is idempotent", () =>
   fixture(async ({ post, p }) => {
     const b = await post({ action: "begin", request_id: "b" });

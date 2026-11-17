@@ -440,8 +440,11 @@ impl Runtime {
         if epoch_ms() >= self.expires {
             return;
         }
+        let before = (self.session.revision, self.active(), self.blocks_input());
         let effects = self.session.control(e, identity, self.now(), listening);
-        if !effects.is_empty() {
+        // A cached state reply is transport replay, not a new audio/input turn.
+        // Preserve fresh VAD while waiting for its ASR final on request retries.
+        if before != (self.session.revision, self.active(), self.blocks_input()) {
             self.speech_seen = false;
         }
         self.apply(effects);

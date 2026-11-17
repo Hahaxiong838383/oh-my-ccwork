@@ -1,0 +1,22 @@
+{
+  "candidate": "bf2b37d563ff749d82fca24282ed5878740f3e4e",
+  "archive_sha256": "bf8b7cbbfd827e55e6b38d80f1034b138e40ab09426c74c8317cbdca8ca10a5e",
+  "evidence_sha_match": {
+    "brain-existing-regression.txt": true,
+    "brain-http-sqlite.txt": true,
+    "brain-session-regression.txt": true,
+    "red-cancel-before-begin.txt": true,
+    "red-new-session-revocation.txt": true,
+    "red-preserve-known-age.txt": true,
+    "rust-baseline-cleanup.txt": true,
+    "rust-baseline-network.txt": true,
+    "rust-candidate-build.txt": true,
+    "rust-compile.txt": true,
+    "rust-final-locked.txt": true,
+    "rust-full-parallel.txt": true,
+    "rust-full-serial.txt": true,
+    "typescript-baseline.txt": true,
+    "typescript-candidate.txt": true,
+    "worker-entry.txt": true
+  }
+}

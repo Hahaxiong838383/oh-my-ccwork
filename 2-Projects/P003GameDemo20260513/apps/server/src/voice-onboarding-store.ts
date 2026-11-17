@@ -38,11 +38,15 @@ export function extractAnswer(
   | { result: "unclear" | "declined" } {
   const s = text.trim().replace(/[，。！？!?\s]/g, "");
   if (
-    /^(我)?(不想说|不告诉你|不说|不要问|保密|不愿意|不想回答)(了|啦|呀)?$/.test(
+    /^(我)?(不想说|不告诉你|不说|不要问|保密|不愿意|不想回答|拒绝|算了|跳过)(了|啦|呀)?$/.test(
       s,
     )
   )
     return { result: "declined" };
+  // A request to pause or repeat is not a name, even when it consists only of Han characters.
+  const conversationalRequest = /^(?:请你?|麻烦你?|能不能|能|可以|你可以)?(?:等(?:一下|下|一等|等|一会儿?|会儿?)|稍(?:微)?等(?:一下|下|一会儿?)?|(?:再|重新)?(?:说|问|讲|来|重复)(?:一(?:遍|次))?|(?:我)?(?:没|没有)(?:听清(?:楚)?|听懂|明白)|(?:我)?还没想好|让我(?:想想|想一下|想一想)|想一想)(?:好吗|好不好|可以吗|吗|啊|呀|吧)?$/;
+  if (conversationalRequest.test(s))
+    return { result: "unclear" };
   if (field === "age") {
     const m =
       /^(?:我)?(?:今年|现在)?([0-9]{1,2}|[一二三四五六七八九十两]{1,3})(?:周)?岁(?:了|半|啦)?$/.exec(
