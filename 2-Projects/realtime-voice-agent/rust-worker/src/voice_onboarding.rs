@@ -96,7 +96,8 @@ impl Session {
     }
     pub fn blocks_input(&self) -> bool {
         if self.version == 2 {
-            return self.active() && (self.phase != "ready" || self.pending);
+            // Keep fresh VAD/exit available while an answer HTTP request is pending.
+            return self.active() && self.phase != "ready";
         }
         self.active()
             && (self.pending

@@ -707,6 +707,19 @@ async fn v2_runtime_duplicate_keeps_fresh_vad_and_no_echo_exit() {
     assert_eq!(r.input_route(true), InputRoute::Exit);
     r.answer("八岁");
     assert!(r.session.pending);
+    let waiting = r.queue.len();
+    r.speech();
+    assert_eq!(
+        r.input_route(true),
+        InputRoute::Exit,
+        "network wait must not swallow a fresh exit command"
+    );
+    r.answer("九岁");
+    assert_eq!(
+        r.queue.len(),
+        waiting,
+        "pending answer must not enqueue a second write"
+    );
     r.control(
         &req2(3, "question_skipped", 1),
         Some("dev-synthetic"),

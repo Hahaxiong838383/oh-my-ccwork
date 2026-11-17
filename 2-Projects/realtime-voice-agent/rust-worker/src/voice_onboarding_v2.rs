@@ -173,7 +173,7 @@ impl Session {
         if !expired.is_empty() {
             return expired;
         }
-        if !self.active() || self.blocks_input() || text.trim().is_empty() {
+        if !self.active() || self.blocks_input() || self.pending || text.trim().is_empty() {
             return vec![];
         }
         let request = uuid::Uuid::new_v4().to_string();
