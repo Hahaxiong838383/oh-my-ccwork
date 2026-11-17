@@ -7,8 +7,10 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  return store.readSnapshot(()=>{
  const columns=`e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,b.client_json`;
  type Row={event_name:string;occurred_at_ms:number;received_at_ms:number;clock_suspicious:number;properties_json:string;client_json:string|null};
- // Normal mode and every schema-supported GM-bearing event are independent of asset volume.
- const evidence=store.db.prepare(`SELECT ${columns} FROM analytics_event e LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
+ // Seek the relevant event families before inspecting GM properties. Without the hint SQLite
+ // favors received-time ordering and reads all unrelated device events before LIMIT can apply.
+ // The index already exists; no schema/retention/authorization or fact semantics change.
+ const evidence=store.db.prepare(`SELECT ${columns} FROM analytics_event e INDEXED BY analytics_ark_device_event_received LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
  WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=?
  AND e.event_name IN ('g1.logical_day_changed','g1.command_failed','g1.runtime_command_completed','g1.gift_became_available','g1.gift_claimed','g1.reward_granted')
  AND (e.event_name='g1.logical_day_changed' OR json_extract(e.properties_json,'$.gm_override')=1 OR json_extract(e.properties_json,'$.source_mode')='gm'

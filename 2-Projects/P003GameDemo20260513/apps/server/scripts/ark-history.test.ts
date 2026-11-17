@@ -63,3 +63,19 @@ test('bad award row invalidates the observed award subtotal instead of silently 
  if(defect==='truncated')f.store.db.prepare("UPDATE analytics_event SET properties_json='{\"truncated\":true}' WHERE json_extract(properties_json,'$.reward_instance_id')='bad'").run();
  assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).daily,undefined,defect);
 }finally{f.done();}}});
+
+test('history selects event families through the existing selective index, preserving exact facts',()=>{const f=fixture();try{
+ f.normal();f.wallet(21);
+ const row=f.store.db.prepare('SELECT * FROM analytics_event LIMIT 1').get() as any;
+ const insert=f.store.db.prepare('INSERT INTO analytics_event VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+ f.store.transaction(()=>{for(let i=0;i<12000;i++)insert.run(KEY,'index-noise'+i,'voice.session_state_changed',NOW-500,NOW,'s',i,'normal','{}','{}',row.batch_attempt_id,'2026-10-31','2026-10-31',0);});
+ const plans:string[]=[];
+ const instrument=(removeHint:boolean)=>({readSnapshot:f.store.readSnapshot.bind(f.store),db:{prepare(sql:string){
+  if(removeHint)sql=sql.replaceAll(' INDEXED BY analytics_ark_device_event_received','');
+  const statement=f.store.db.prepare(sql);
+  return {all(...args:any[]){if(!removeHint)plans.push(...(f.store.db.prepare('EXPLAIN QUERY PLAN '+sql).all(...args) as {detail:string}[]).filter(r=>r.detail.startsWith('SEARCH e ')).map(r=>r.detail));return statement.all(...args);}};
+ }}} as unknown as AnalyticsStore);
+ const previous=readArkHistory(instrument(true),KEY,NOW-5000,NOW),current=readArkHistory(instrument(false),KEY,NOW-5000,NOW);
+ assert.deepEqual(current,previous);assert.equal(current.wallets.family_coin?.value,21);assert.equal(plans.length,3);
+ for(const plan of plans)assert.match(plan,/event_name=\?/,`must seek relevant events instead of scanning every device event: ${plan}`);
+}finally{f.done();}});
