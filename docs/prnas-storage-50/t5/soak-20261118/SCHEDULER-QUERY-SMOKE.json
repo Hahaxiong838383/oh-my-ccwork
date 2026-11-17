@@ -1,0 +1,178 @@
+{
+  "scope": "SMOKE_WITH_REAL_QUERY_AND_DETERMINISTIC_OVERLAP_NOT_24H",
+  "query": {
+    "cycles": 6,
+    "samples": 18,
+    "p99_ms": 43.12516699999992,
+    "span_ms": 19879,
+    "max_cycle_gap_ms": 6112,
+    "invalid": 0,
+    "scope": "actual ArkRuntime -> separate Analytics reader HTTP; changing per-device assets"
+  },
+  "soak": {
+    "full_day_requested": false,
+    "elapsed_ms": 23654.014625,
+    "plan": {
+      "fullDay": false,
+      "durationMs": 17000,
+      "dailyDelayMs": 2000,
+      "maintenanceIntervalMs": 5000,
+      "arkIntervalMs": 2000,
+      "monitorIntervalMs": 1000
+    },
+    "daily_started_ms": 1794937492530,
+    "daily_finished_ms": 1794937510075,
+    "first_ack_ms": 1794937493652,
+    "first_request_ms": 1794937493406,
+    "last_request_ms": 1794937508038,
+    "ark_rounds": 9,
+    "ark_accepted": 27,
+    "archive_cycles": [
+      {
+        "began": 1794937490519,
+        "done": 1794937490831,
+        "exportExit": 0,
+        "backupExit": null,
+        "backupReport": null,
+        "backupStarted": null,
+        "backupFinished": null
+      },
+      {
+        "began": 1794937494338,
+        "done": 1794937494972,
+        "exportExit": 0,
+        "backupExit": 0,
+        "backupReport": {
+          "budget_seconds": 300,
+          "checked_at_ms": 1794937494889,
+          "last_offsite_backup_ms": null,
+          "manifest": {
+            "archive_id": "a662b6fae5b847a3a3d8dbe490c48dc5",
+            "bytes": 802816,
+            "created_at_ms": 1794937494889,
+            "kind": "analytics_backup",
+            "record_count": 1077,
+            "schema_version": 1,
+            "sha256": "afd88e7008348b5ad3b0521ce7e85d7524b821b146dd66325fa8138ebb64b4bc",
+            "source_range": {
+              "backup_started_at_ms": 1794937494889,
+              "tables": {
+                "analytics_batch": 1,
+                "analytics_day": 2,
+                "analytics_device_day": 2,
+                "analytics_diagnostic_usage": 0,
+                "analytics_dirty_day": 0,
+                "analytics_event": 200,
+                "analytics_event_seen": 200,
+                "analytics_meta": 5,
+                "analytics_rollup_device_stage": 2,
+                "analytics_rollup_distinct": 4,
+                "analytics_rollup_fact": 400,
+                "analytics_rollup_retry": 0,
+                "analytics_rollup_source": 2,
+                "analytics_settlement": 200,
+                "analytics_tier_day": 57,
+                "analytics_tier_event": 0,
+                "analytics_transport": 1,
+                "analytics_transport_day": 1
+              }
+            }
+          },
+          "offsite_age_ms": null,
+          "oldest_pending_ms": 1794937494889,
+          "pending_bytes": 802816,
+          "state": "published"
+        },
+        "backupStarted": 1794937494636,
+        "backupFinished": 1794937494971
+      },
+      {
+        "began": 1794937495841,
+        "done": 1794937496291,
+        "exportExit": 0,
+        "backupExit": 0,
+        "backupReport": {
+          "checked_at_ms": 1794937496271,
+          "last_offsite_backup_ms": null,
+          "offsite_age_ms": null,
+          "oldest_pending_ms": 1794937494889,
+          "pending_bytes": 802816,
+          "state": "waiting_for_nas"
+        },
+        "backupStarted": 1794937496092,
+        "backupFinished": 1794937496290
+      },
+      {
+        "began": 1794937501299,
+        "done": 1794937501818,
+        "exportExit": 0,
+        "backupExit": 0,
+        "backupReport": {
+          "checked_at_ms": 1794937501786,
+          "last_offsite_backup_ms": null,
+          "offsite_age_ms": null,
+          "oldest_pending_ms": 1794937494889,
+          "pending_bytes": 802816,
+          "state": "waiting_for_nas"
+        },
+        "backupStarted": 1794937501553,
+        "backupFinished": 1794937501818
+      },
+      {
+        "began": 1794937506829,
+        "done": 1794937507330,
+        "exportExit": 0,
+        "backupExit": 0,
+        "backupReport": {
+          "checked_at_ms": 1794937507306,
+          "last_offsite_backup_ms": null,
+          "offsite_age_ms": null,
+          "oldest_pending_ms": 1794937494889,
+          "pending_bytes": 802816,
+          "state": "waiting_for_nas"
+        },
+        "backupStarted": 1794937507119,
+        "backupFinished": 1794937507330
+      },
+      {
+        "began": 1794937510075,
+        "done": 1794937510471,
+        "exportExit": 0,
+        "backupExit": 0,
+        "backupReport": {
+          "checked_at_ms": 1794937510443,
+          "last_offsite_backup_ms": null,
+          "offsite_age_ms": null,
+          "oldest_pending_ms": 1794937494889,
+          "pending_bytes": 802816,
+          "state": "waiting_for_nas"
+        },
+        "backupStarted": 1794937510284,
+        "backupFinished": 1794937510470
+      }
+    ],
+    "archive_stats": {
+      "id": 1,
+      "pending_records": 27,
+      "pending_bytes": 22996,
+      "reserved_bytes": 151932,
+      "last_ack_ms": null,
+      "last_attempt_ms": 1794937510245,
+      "last_success_ms": 1794937510245,
+      "last_error": null
+    },
+    "maintenance_overlapped_daily": true,
+    "backup_overlapped_daily": true,
+    "resource_gate": false,
+    "full_t5_pass": false
+  },
+  "source_failure_record": "soak-with-query-smoke-01.log omitted existing production startup; retained",
+  "evidence_sha256": {
+    "p003-t5-soak-with-query-smoke-03/RESULT.json": "721eb133b2eca8454e40a763576ad81b20a95794ad15cc1a046a1301526ed38f",
+    "p003-t5-soak-with-query-smoke-03/SOAK-RESULT.json": "970fcdddcb12f70b12e9219fe1d105c035714499c51ee0ee0600a391fb3f32ea",
+    "p003-t5-soak-with-query-smoke-03/SOAK-QUERY-RESULT.json": "e3d9c35602f00d8cecf3a7c3b3fda3ae61da23866413a51c51d911524ef77a8b",
+    "soak-with-query-smoke-01.log": "3724b779852326754b29d0c3dafed95c4634e46097818dd0af2f960d4e5d173d",
+    "soak-with-query-smoke-02.log": "1540cbedaa94774c04f537520f060b53c173637b93e95f52dc2a5080f480886f",
+    "soak-with-query-smoke-03.log": "c901a992e974cb9f93c92ff05396817425bbdc6314affd1e081f9c94b1d2da30"
+  }
+}

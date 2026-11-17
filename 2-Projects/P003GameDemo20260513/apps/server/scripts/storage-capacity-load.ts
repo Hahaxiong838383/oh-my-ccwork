@@ -1,6 +1,6 @@
 /** T5 synthetic loopback harness; no production identities, credentials or endpoints. */
 import assert from 'node:assert/strict';
-import {mkdirSync,writeFileSync,appendFileSync,readFileSync,existsSync,realpathSync,statfsSync} from 'node:fs';
+import {mkdirSync,writeFileSync,appendFileSync,readFileSync,existsSync,realpathSync,statfsSync,statSync} from 'node:fs';
 import {resolve,join} from 'node:path';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
@@ -57,7 +57,13 @@ if(mode==='run'){
  writeFileSync(join(root,'client-private.json'),JSON.stringify({url:'http://127.0.0.1:'+(server.address() as any).port,tokens}),{mode:0o600});
  const resources=createResourceRecorder(),maintenance:any[]=[],health=createLoadHealthRecorder(sample=>appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n')),children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;let maintenanceError:unknown;
  const launch=(args:string[],name:string,env=process.env)=>new Promise<number|null>(done=>{const p=spawn(args[0],args.slice(1),{cwd:process.cwd(),env,stdio:['ignore','pipe','pipe']});children.add(p);p.stdout.on('data',x=>appendFileSync(join(root,name+'.stdout'),x));p.stderr.on('data',x=>appendFileSync(join(root,name+'.stderr'),x));p.once('error',e=>appendFileSync(join(root,name+'.stderr'),e.message));p.once('close',code=>{children.delete(p);done(code);});});
- const maintain=async()=>{if(maintaining)return;maintaining=true;const start=Date.now();try{const code=await launch([process.execPath,'--import','tsx','scripts/analytics-rollup.ts'],'maintenance-'+start,{...process.env,ANALYTICS_DB_PATH:path});const summaries=[];for await(const row of readJsonl(join(root,'maintenance-'+start+'.stdout')))summaries.push(row);assert.equal(summaries.length,1,'one maintenance report required');maintenance.push({start,done:Date.now(),code,report:summaries[0]});}catch(error){maintenanceError??=error;maintenance.push({start,done:Date.now(),error:String(error)});}finally{maintaining=false;}};
+ const queryReports:any[]=[];
+ const maintain=async()=>{if(maintaining)return;maintaining=true;const start=Date.now();try{
+  const queryName='mixed-query-'+start,query=soak&&arkRounds>0?launch([process.execPath,'--import','tsx','scripts/storage-ark-query-load.ts',root,queryName],queryName,{...process.env,T5_QUERY_ROUNDS:'1',T5_QUERY_OBSERVE:'1'}):null;
+  const code=await launch([process.execPath,'--import','tsx','scripts/analytics-rollup.ts'],'maintenance-'+start,{...process.env,ANALYTICS_DB_PATH:path}),rollupDone=Date.now();
+  if(query){const exit=await query;assert.equal(exit,0,'mixed Ark reader failed');queryReports.push({start,done:Date.now(),name:queryName,exit,result:JSON.parse(readFileSync(join(root,queryName+'.json'),'utf8'))});}
+  const summaries=[];for await(const row of readJsonl(join(root,'maintenance-'+start+'.stdout')))summaries.push(row);assert.equal(summaries.length,1,'one maintenance report required');maintenance.push({start,done:Date.now(),rollup_done:rollupDone,code,report:summaries[0]});
+ }catch(error){maintenanceError??=error;maintenance.push({start,done:Date.now(),error:String(error)});}finally{maintaining=false;}};
  let monitorError:unknown;
  const monitor=async()=>{if(monitoring)return;monitoring=true;let sample:any;try{const t=performance.now(),r=await fetch('http://127.0.0.1:'+(server.address() as any).port+'/ready',{signal:AbortSignal.timeout(5000)});sample={at:Date.now(),status:r.status,ms:performance.now()-t,...await r.json()};}catch(e){sample={at:Date.now(),error:String(e)};}finally{try{const resource={...linuxResources(root),monotonic_ms:performance.now(),at:Date.now()};appendFileSync(join(root,'resources.jsonl'),JSON.stringify(resource)+'\n');resources.record(resource);health.record(sample);}catch(e){monitorError=e;}finally{monitoring=false;}}};
  const timer=setInterval(()=>void monitor(),soak?.monitorIntervalMs??1000),maintenanceTimer=config.maintenance?setInterval(()=>void maintain(),soak?.maintenanceIntervalMs??300000):null;
@@ -65,15 +71,17 @@ if(mode==='run'){
  if(config.maintenance)firstMaintenance=setTimeout(()=>void maintain(),2000);
  if(config.backup&&!soak)backupTimer=setTimeout(()=>{backupPromise=launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup');},5000);
  const before=loadDatabaseCounts(store.db);
- let arkRounds=0,dailyStarted=0,dailyFinished=0,soakStop=false,soakError:unknown;
+ let arkRounds=0,dailyStarted=0,dailyFinished=0,firstAckMs=0,backupEligible=false,archiving=false,soakStop=false,soakError:unknown;
  const archiveReports:any[]=[];
  // Same test endpoints and existing exporter/Backup API. No production timer is installed.
  async function archiveCycle(){
+  while(archiving)await sleep(20);archiving=true;try{
   const began=Date.now(),exportExit=await launch(['python3','scripts/storage-ark-export.py','--db',join(root,'ark.db'),'--root',join(root,'spool')],'ark-export-'+began);
   assert.equal(exportExit,0,'Ark export failed');
   let backupExit:number|null=null,backupReport:any=null,backupStarted:number|null=null,backupFinished:number|null=null;
-  if(config.backup&&dailyStarted){backupStarted=Date.now();backupExit=await launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup-'+began);backupFinished=Date.now();assert.equal(backupExit,0,'daily backup job failed');backupReport=JSON.parse(readFileSync(join(root,'backup-'+began+'.stdout'),'utf8'));}
+  if(config.backup&&dailyStarted&&backupEligible){backupStarted=Date.now();backupExit=await launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup-'+began);backupFinished=Date.now();assert.equal(backupExit,0,'daily backup job failed');backupReport=JSON.parse(readFileSync(join(root,'backup-'+began+'.stdout'),'utf8'));}
   const report={began,done:Date.now(),exportExit,backupExit,backupReport,backupStarted,backupFinished};archiveReports.push(report);appendFileSync(join(root,'archive-cycles.jsonl'),JSON.stringify(report)+'\n');
+  }finally{archiving=false;}
  }
  async function produceArk(){
   const sample=JSON.parse(readFileSync(new URL('../../../docs/ark-brain-20261031/snapshot-v1.example.json',import.meta.url),'utf8'));
@@ -96,8 +104,16 @@ if(mode==='run'){
  try{
   if(soak)while(performance.now()-runMono<soak.dailyDelayMs){if(soakError)throw soakError;if(monitorError)throw monitorError;await sleep(1000);}
   dailyStarted=Date.now();
-  const code=await launch([process.execPath,'--import','tsx','scripts/storage-capacity-load.ts','client',root],'client');
-  dailyFinished=Date.now();
+  let clientEnded=false;
+  const clientTask=launch([process.execPath,'--import','tsx','scripts/storage-capacity-load.ts','client',root],'client').finally(()=>{clientEnded=true;});
+  if(soak){
+   const completedFile=join(root,'completed.jsonl');
+   while(!(existsSync(completedFile)&&statSync(completedFile).size>0)&&!clientEnded){if(soakError)throw soakError;await sleep(50);}
+   assert(existsSync(completedFile)&&statSync(completedFile).size>0,'daily never produced a real ACK');firstAckMs=Date.now();backupEligible=true;
+   // Bind overlap to actual work, not the random phase of the five-minute timers.
+   while(maintaining)await sleep(20);await Promise.all([maintain(),archiveCycle()]);
+  }
+  const code=await clientTask;dailyFinished=Date.now();
   if(soak){
    while(performance.now()-runMono<soak.durationMs){if(soakError)throw soakError;if(monitorError)throw monitorError;await sleep(1000);}
    soakStop=true;await arkPromise;await archivePromise;if(soakError)throw soakError;
@@ -127,7 +143,15 @@ if(mode==='run'){
   const result={stage:'T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE',evidence_version:3,synthetic:true,config,node:process.version,platform:process.platform,client_exit:code,integrity,ark:arkRows,maintenance,maintenance_error:maintenanceError?String(maintenanceError):null,backup_exit:backupCode,checkpoint:checkpointer.status(),dirty_days:dirty,acks:requests,evidence_consistent:evidenceConsistent,health:health.recent(),health_summary:health.summary(),resources:resources.summary(86400000),duration_ms:client.duration_ms};
   writeFileSync(join(root,'RESULT.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({root,complete:integrity.complete,acks:result.acks,ark_correct:arkRows.filter(x=>x.correct).length,seconds:client.duration_ms/1000}));
   if(soak){
-   const evidence={full_day_requested:soak.fullDay,elapsed_ms:performance.now()-runMono,plan:soak,daily_started_ms:dailyStarted,daily_finished_ms:dailyFinished,ark_rounds:arkRounds,ark_accepted:arkRounds*config.devices,archive_cycles:archiveReports,archive_stats:ark.db.prepare('SELECT * FROM ark_archive_stats').get(),maintenance_overlapped_daily:maintenance.some(m=>m.start<=dailyFinished&&m.done>=dailyStarted),backup_overlapped_daily:archiveReports.some(m=>m.backupReport?.state==='published'&&m.backupStarted<=dailyFinished&&m.backupFinished>=dailyStarted),resource_gate:result.resources.local_resource_gate,full_t5_pass:false};
+   let firstRequest=Infinity,lastRequest=0;for await(const request of readJsonl(join(root,'requests.jsonl'))){assert(Number.isSafeInteger(request.sent_at_ms)&&Number.isSafeInteger(request.finished_at_ms));firstRequest=Math.min(firstRequest,request.sent_at_ms);lastRequest=Math.max(lastRequest,request.finished_at_ms);}
+   const querySamples:any[]=[];for(const report of queryReports)for await(const row of readJsonl(join(root,report.name+'.jsonl'))){assert(querySamples.length<25000,'bounded query evidence');querySamples.push(row);}
+   const queryTimes=querySamples.map(x=>x.ms).sort((a,b)=>a-b),queryP99=queryTimes.length?queryTimes[Math.min(queryTimes.length-1,Math.floor(queryTimes.length*.99))]:null;
+   const querySpan=queryReports.length>1?queryReports.at(-1).start-queryReports[0].start:0,maxQueryGap=queryReports.slice(1).reduce((m,r,i)=>Math.max(m,r.start-queryReports[i].start),0);
+   const queryEvidence={cycles:queryReports.length,samples:querySamples.length,p99_ms:queryP99,span_ms:querySpan,max_cycle_gap_ms:maxQueryGap,invalid:querySamples.filter(x=>!x.correct||x.status!==200||!x.body_complete).length,scope:'actual ArkRuntime -> separate Analytics reader HTTP; changing per-device assets'};
+   writeFileSync(join(root,'SOAK-QUERY-RESULT.json'),JSON.stringify(queryEvidence,null,2));
+   if(soak.fullDay)assert(queryEvidence.samples>=10000&&queryEvidence.invalid===0&&queryP99!==null&&queryP99<=100&&querySpan>=86400000-600000&&maxQueryGap<=600000,'full-day Ark query coverage/latency required');
+   else assert(queryEvidence.samples>0&&queryEvidence.invalid===0,'smoke requires actual Ark queries');
+   const evidence={full_day_requested:soak.fullDay,elapsed_ms:performance.now()-runMono,plan:soak,daily_started_ms:dailyStarted,daily_finished_ms:dailyFinished,first_ack_ms:firstAckMs,first_request_ms:firstRequest,last_request_ms:lastRequest,ark_rounds:arkRounds,ark_accepted:arkRounds*config.devices,archive_cycles:archiveReports,archive_stats:ark.db.prepare('SELECT * FROM ark_archive_stats').get(),maintenance_overlapped_daily:maintenance.some(m=>m.start<=lastRequest&&m.rollup_done>=firstRequest),backup_overlapped_daily:archiveReports.some(m=>m.backupReport?.state==='published'&&m.backupStarted<=lastRequest&&m.backupFinished>=firstRequest),resource_gate:result.resources.local_resource_gate,full_t5_pass:false};
    writeFileSync(join(root,'SOAK-RESULT.json'),JSON.stringify(evidence,null,2));assert(arkRounds>0);
    if(soak.fullDay){assert(evidence.elapsed_ms>=86400000);assert(result.resources.local_resource_gate,'real-day resource gate failed');assert(evidence.maintenance_overlapped_daily&&evidence.backup_overlapped_daily,'mixed overlap required');}
   }
@@ -151,15 +175,15 @@ if(mode==='run'){
   const stamp=Date.now(),snapshot={...sample,snapshot_id:prefix+'-ark-'+actor,boot_id:prefix,boot_started_at_ms:stamp-1,captured_at_ms:stamp,sequence:1,logical_day:new Date(stamp+8*3600000).toISOString().slice(0,10),wallets:{family_coin:100+actor,stardust:actor+1},inventory:{'M-CARD-001':actor%4}};
   if(!config.continuous_ark){const ar=await fetch(privateConfig.url+'/t5/ark/state',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(20000)});const aj=await ar.json();arkRequests.push({actor,status:ar.status,result:aj});assert.equal(ar.status,200);assert.equal(aj.status,'accepted');}
   for(let offset=0;offset<config.events;offset+=config.batch){
-   const events=Array.from({length:Math.min(config.batch,config.events-offset)},(_,i)=>{const n=offset+i,spec=catalog[n%catalog.length];return {schema_version:1,client_event_id:prefix+'-'+actor+'-'+n,event_name:spec.eventName,occurred_at_ms:started,session_id:hash(prefix+'-'+actor).slice(0,32),sequence:n,priority:'normal',context:{},properties:structuredClone(spec.sample)};});
+   const events=Array.from({length:Math.min(config.batch,config.events-offset)},(_,i)=>{const n=offset+i,spec=catalog[n%catalog.length];return {schema_version:1,client_event_id:prefix+'-'+actor+'-'+n,event_name:spec.eventName,occurred_at_ms:config.continuous_ark?config.started_ms:started,session_id:hash(prefix+'-'+actor).slice(0,32),sequence:n,priority:'normal',context:{},properties:structuredClone(spec.sample)};});
    const ids=events.map(e=>e.client_event_id),body=JSON.stringify({schema_version:1,batch_id:prefix+'-'+actor+'-'+offset,sent_at_ms:started,client:{component:'synthetic-t5'},events});
    const batchStarted=performance.now();
    for(let attempt=0;;attempt++){
     assert.ok(Date.now()-started<config.deadline_ms,'load deadline exceeded');
-    const start=performance.now();let status=0,retry=0,j:any;
+    const start=performance.now(),sentAt=Date.now();let status=0,retry=0,j:any;
     try{const r=await fetch(privateConfig.url+'/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json','X-Request-Id':prefix+'-'+actor+'-'+offset+'-'+attempt},body,signal:AbortSignal.timeout(20000)});status=r.status;retry=Number(r.headers.get('retry-after')??0)*1000;j=await r.json();}catch(e){j={error_code:'CLIENT_TRANSPORT',error:String(e)};retry=1000;}
     const finished=performance.now();
-    const record={actor,offset,attempt,status,ms:finished-start,batch_elapsed_ms:finished-batchStarted,retry_ms:retry,error:j.error_code??null};attempts++;appendFileSync(join(root,'requests.jsonl'),JSON.stringify(record)+'\n');
+    const record={actor,offset,attempt,status,sent_at_ms:sentAt,finished_at_ms:Date.now(),ms:finished-start,batch_elapsed_ms:finished-batchStarted,retry_ms:retry,error:j.error_code??null};attempts++;appendFileSync(join(root,'requests.jsonl'),JSON.stringify(record)+'\n');
     if(status===200){assert.ok(j.ok&&j.rejected.length===0);assert.deepEqual([...j.accepted_event_ids,...j.duplicated_event_ids].sort(),[...ids].sort());appendFileSync(join(root,'completed.jsonl'),JSON.stringify({actor,offset,ack:j})+'\n');completed++;break;}
     assert.ok(status===0||status===429||status===503,'terminal HTTP '+status);assert.ok(Number.isFinite(retry)&&retry>=0&&retry<=3600000,'invalid Retry-After');await sleep(Math.max(100,retry)+Math.floor(random()*1000));
    }

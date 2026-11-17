@@ -1,0 +1,130 @@
+{
+  "review": "scheduler-orchestration",
+  "fixed_sha": "ec6e3f7515fd54db17bff6959d710a594a33adf6",
+  "parent_sha": "13b62db9c0039539eaa5bf887486023b64abc9cf",
+  "src_tree_sha": "6c4da74257c63aa9797501024822c251de1e0fc8",
+  "src_tree_matches_b1ce23": true,
+  "b1ce23_sha": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0"
+  },
+  "archive": {
+    "path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/review-scheduler/archive",
+    "snapshot_resolved": true,
+    "blobs": {
+      "scripts/storage-soak-schedule.ts": "eda6141d44579f5e3d35a9fe5dfc948bc6bb189f",
+      "scripts/storage-soak-schedule.test.ts": "10e28e6be80de3f66e2808547fb84c5125870bb5",
+      "scripts/storage-capacity-load.ts": "26b7e92ee8812bc2e803e7deaf8616db2a5d9c5a",
+      "docs/ark-brain-20261031/snapshot-v1.example.json": "35f65e578e8d68671cb4590fe68ae49106a85f8c"
+    }
+  },
+  "runs": {
+    "schedule_test": {
+      "exit": 0,
+      "stdout_sha256": "dd4685fff95861073dadf1ef182704538821cfccd6a1cd90c660c3800d656bf0",
+      "stdout_bytes": 73,
+      "matches_committed_green_log": true
+    },
+    "plan_edges": {
+      "exit": 0,
+      "sha256": "146ab2f478478f483bb44108a788f4179b09541d619b8ee7553cbe04fffaeb91",
+      "bytes": 968,
+      "real_duration_ms": 86400000,
+      "delay_0100_ms": 79200000,
+      "delay_2300_ms": 0,
+      "delay_2330_ms": 84600000,
+      "delay_2300_plus_1ms": 86399999,
+      "smoke_duration_ms": 17000,
+      "smoke_full_day": false,
+      "both_flags": "throws",
+      "nan_now": "throws"
+    },
+    "fullday_shape_guard": {
+      "exit": 1,
+      "stderr_sha256": "8198e2fb0ae0485e4d1665b87184f57c01edd232f1f285e1f4e13a70e7aeb3df",
+      "stderr_bytes": 588,
+      "entered_24h_wait": false,
+      "assertion": "real day requires fixed 50x6000 workload, 1h daily deadline and candidate indexes"
+    },
+    "smoke": {
+      "exit": 0,
+      "command": "T5_SOAK_SMOKE=1 T5_DEVICES=3 T5_EVENTS=200 T5_MAINTENANCE=1 T5_BACKUP=1 T5_ARK_HISTORY_INDEXES=1 T5_ROLLUP_PREFIX_INDEX=1 node --import tsx scripts/storage-capacity-load.ts run",
+      "directory": "/Users/fu-121/.local/state/p003-t5-soak-20261118/review-scheduler/p003-t5-review-scheduler-smoke",
+      "stdout_sha256": "0ea0e297985e05ff8b0bc1f566511088477a740577cc9b897be8ac918c0f8e63",
+      "stdout_bytes": 404,
+      "soak_result_sha256": "ed327fcd040ebd87f5ccafd04ffed51e3f7afa470c37c6a3b5630050a7736414",
+      "result_sha256": "46e2503d284bad814ce65f8cec254f4cf9cd6f015ff22e67872baaae5d08ab98",
+      "full_day_requested": false,
+      "full_t5_pass": false,
+      "elapsed_ms": 18856.779583,
+      "ark_rounds": 9,
+      "ark_accepted": 27,
+      "pending_records": 27,
+      "complete_record_sum": 0,
+      "published_record_sum": 27,
+      "last_ack_ms": null,
+      "last_offsite_backup_ms": null,
+      "backup_state_that_overlapped": "published",
+      "later_backup_states": ["waiting_for_nas", "waiting_for_nas", "waiting_for_nas"],
+      "maintenance_overlapped_daily": true,
+      "backup_overlapped_daily": true,
+      "resource_gate": false,
+      "resource_samples": 20,
+      "resource_supported_samples": 0,
+      "platform": "darwin",
+      "client_ark_requests": 0,
+      "current_family_coin": [8, 9, 10],
+      "current_stardust": null,
+      "integrity_complete": true,
+      "dirty_days": 0,
+      "failure_json": false,
+      "daily_wall_ms": 8567
+    },
+    "normal_2x200": {
+      "exit": 0,
+      "directory": "/Users/fu-121/.local/state/p003-t5-soak-20261118/review-scheduler/p003-t5-review-normal-01",
+      "stdout_sha256": "64a65f74d59137f469ec9d3d9d745ca83546b885c9300833be642e12db3bf336",
+      "result_sha256": "0ecb49b93156aef44e1bb25624098bd3f613ede092ff486f05b4364d14ecae58",
+      "soak_result_present": false,
+      "backup_exit": 0,
+      "integrity_complete": true,
+      "dirty_days": 0,
+      "continuous_ark": false
+    }
+  },
+  "blocker": {
+    "id": "daily-overlap-not-forced",
+    "reproduced_by": "control_flow_model",
+    "real_24h_executed": false,
+    "phase_model_sha256": "586f77c993eb0c7483a053053ae261f6cf2dea75148028c5322999e2dd682b32",
+    "maintenance_model_sha256": "0999f48e7202ca47bbbf1060391c7b60a94c88db5b298f6e5d1914230203ba88",
+    "backup_miss_example": {
+      "export_ms": 2000,
+      "interval_ms": 300000,
+      "daily_delay_ms": 79200000,
+      "first_backup_after_daily_ms": 228000,
+      "misses_daily_wall_ms": [70000, 120000, 180000]
+    },
+    "maintenance_miss_example": {
+      "maintenance_ms": 500,
+      "daily_wall_ms": 120000,
+      "miss_count": 179,
+      "offsets_scanned": 300
+    },
+    "fails_closed": true,
+    "false_pass": false,
+    "minimal_fix": "After dailyStarted is set and before awaiting the client, start one maintain() and one backup concurrently with the client. Share a single-flight lock with the 5-minute loops. Keep the published interval predicate; do not accept not_due or waiting_for_nas."
+  },
+  "not_a_product_fault": {
+    "mac_smoke_pending_records": 27,
+    "mac_smoke_resource_gate": false,
+    "reason": "No NAS receipt and non-Linux resource samples. Documented smoke boundary."
+  },
+  "not_full_t5": {
+    "full_t5_pass_hardcoded_false": true,
+    "still_open": ["mature cloud database", "72h backlog drain", "voice AB", "real 24h wall clock"]
+  },
+  "one_hour_cloud_nas": "separate frozen procedure; this script was not used to start it and no SSH was used",
+  "worktree_after_archive": "HEAD stayed at the fixed sha. An uncommitted +15/-2 edit appeared in storage-capacity-load.ts plus other soak docs. Those bytes were not executed. The overlap predicate in that edit is unchanged."
+}

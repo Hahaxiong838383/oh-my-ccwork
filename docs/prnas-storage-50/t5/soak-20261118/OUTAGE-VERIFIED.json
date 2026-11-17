@@ -1,0 +1,30 @@
+{
+  "result": "PASS_REAL_1H_TRANSPORT_OUTAGE_SMALL_LOAD",
+  "runtime": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "harness_commit": "4aed8139",
+  "accepted": 3700,
+  "devices": 50,
+  "duplicates_or_losses": 0,
+  "source_pending": 0,
+  "packages": 23,
+  "envelope_bytes": 3178684,
+  "unknown_stardust_preserved": true,
+  "blocked_monotonic_seconds": 3600.0,
+  "refused_attempts": 120,
+  "recovery_ms": 161715,
+  "production_guard_samples": 751,
+  "production_guard_failures": 0,
+  "minimum_free_bytes": 5574287360,
+  "fixture_peak_bytes": 9495938,
+  "full_t5_pass": false,
+  "not_covered": [
+    "259200-record 72h model",
+    "mature mixed load",
+    "24h soak",
+    "voice AB"
+  ],
+  "evidence_sha256": {
+    "OUTAGE-CLOUD-EVIDENCE.json": "95155d0b24fbc0ff542ee6e4751d40951d929c861d38645a1882cb674d6e34cc",
+    "OUTAGE-NAS-EVIDENCE.json": "3506b2b72ae22bc672b190fc45e283124dd74cbbca22d4d1020cb7b3d226a87f"
+  }
+}
