@@ -22,7 +22,9 @@ description: 微信小程序在本机的开发、真机调试与自建后端运�
 | **不可用 appid** | `wxdc44a36b9eb7bae6`（小游戏，要 `game.json`）、`wx0102ed7a38028e17`（测试号，无插件无域名） |
 | TTS 服务 | home-studio `:8790`，`scripts/tts-server.py`，`wordpath-tts.service` |
 | OCR 服务 | home-studio `:8791`，`scripts/ocr-server.py`，`wordpath-ocr.service` |
-| 公网反代 | Lucky（`192.168.1.115:16601/Max121211`）→ `tts/ocr.hahaxiong.cc:8666` |
+| 公网反代（内网） | Lucky（`192.168.1.115:16601/Max121211`）→ `tts/ocr.hahaxiong.cc:8666` |
+| 公网反代（443） | 阿里云北京 `60.205.5.246` nginx → `bridge.hahaxiong.cc` → 回源家宽 |
+| 小程序 BASE | `https://bridge.hahaxiong.cc`（无端口，待备案通过才能用） |
 | 公网 IPv4 | `120.244.92.4`（家宽，8666 已映射；80/443 未映射） |
 
 ## 一、appid 选择（先做这步，选错白干）
@@ -108,6 +110,65 @@ RuleKey  AdMqS1jnVHj8YLVt（外网回家NAS，8666/TLS，Let's Encrypt *.hahaxio
 
 **DNS 是反代的前提**：阿里云 A 记录必须指向家宽当前公网 IPv4（`120.244.92.4`）。
 A 记录过期（指着旧 IP）表现为「Lucky 配得全对但外面进不来」。删 DNS ≠ 更安全，等于反代失效。
+
+## 五·补、公网 443 入口（bridge 中转）
+
+微信合法域名**只认 443/80 且不能带端口**，家里 8666 过不了白名单。方案：用一台境内
+阿里云 ECS 做 443 入口，nginx 按路径分流并**改写 SNI/Host** 回源家宽 Lucky。
+
+```
+微信 → https://bridge.hahaxiong.cc/{tts,ocr}
+     → VPS:443 nginx（Let's Encrypt）
+     → proxy_set_header Host tts|ocr.hahaxiong.cc
+       proxy_ssl_name    tts|ocr.hahaxiong.cc   ← 关键：改写 SNI 让 Lucky 分流
+       proxy_pass        https://wordpath.hahaxiong.cc:8666
+     → 家宽 Lucky（按 SNI → 8790 Piper / 8791 RapidOCR）
+```
+
+**nginx 要点**：
+```nginx
+resolver 223.5.5.5 119.29.29.29 valid=60s ipv6=off;   # 家宽 IP 变化 60s 内自动跟
+set $origin "wordpath.hahaxiong.cc";
+location /tts { proxy_pass https://$origin:8666; proxy_ssl_server_name on;
+                proxy_ssl_name tts.hahaxiong.cc; proxy_set_header Host tts.hahaxiong.cc; }
+location /ocr { ... proxy_ssl_name ocr.hahaxiong.cc; client_max_body_size 8m;
+                proxy_read_timeout 60s; }   # OCR 慢
+location = /health { proxy_pass https://$origin:8666/health; ... }  # ★ 别忘，probe() 打这里
+```
+
+**★ 血泪坑**：小程序 `probe()` 请求 `<BASE>/health`，如果 nginx 只配了 `/tts` `/ocr`
+没给 `/health`，探测永远 404 → `healthOK=false` → 页面报「连不上发音服务」，
+**但合成其实是好的**。改 nginx 后必须逐个 endpoint curl 验证。
+
+**★ 备案前提**：境内 ECS 的 443 对**未备案域名做 SNI 拦截**（带 SNI 的 TLS 握手被 RST，
+直连 IP + Host 头却 200）。备案流程见 `aliyun-icp-filing` skill。**备案没下来前 443 不可用**，
+只能退回家里 8666 + 手机调试开关。
+
+**VPS 安全基线**（新机必做，顺序不能反）：
+```bash
+# 1) 先装再 enable，避免锁死
+apt install -y fail2ban ufw
+cat > /etc/fail2ban/jail.local <<'EOF'
+[DEFAULT]
+ignoreip = 127.0.0.1/8 ::1 <家宽出口IP> <本机IP>
+bantime=1h  findtime=10m  maxretry=3  backend=systemd
+[sshd]
+enabled=true
+EOF
+systemctl restart fail2ban
+# 2) ufw：先 allow 22/80/443 再 enable
+ufw default deny incoming; ufw default allow outgoing
+ufw allow 22,80,443/tcp; ufw --force enable
+# 3) SSH 用 drop-in，不动主配置（好回滚）
+cat > /etc/ssh/sshd_config.d/99-hardening.conf <<'EOF'
+PermitRootLogin yes          # 保留，云助手是兜底
+PasswordAuthentication yes
+MaxAuthTries 3
+LoginGraceTime 20
+AllowTcpForwarding no
+EOF
+sshd -t && systemctl reload ssh && <立即新建连接验证>
+```
 
 ## 六、真机调试（必读）
 
