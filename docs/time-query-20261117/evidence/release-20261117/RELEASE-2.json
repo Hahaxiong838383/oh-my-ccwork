@@ -1,0 +1,63 @@
+{
+  "started_ms": 1794877943851,
+  "pool": 2,
+  "success": true,
+  "pre": {
+    "pool": 2,
+    "source": {
+      "pid": 2075757,
+      "restarts": 0,
+      "status": "active"
+    },
+    "idle": {
+      "at_ms": 1794877943296,
+      "verified": true,
+      "total_rooms": 0,
+      "active_rooms": 0,
+      "idle": true
+    },
+    "node": "v22.22.2",
+    "ntp": "Timezone=Asia/Shanghai\nNTPSynchronized=yes\n",
+    "manifest_sha256": "4f22e3ff02da630507b661becba66558735adb3bcb7f84ce335c7dea9987a65c"
+  },
+  "backup": "/root/p003-clock-release-20261117/backup-2-1794877943324",
+  "database_restore": false,
+  "before_services": [
+    {
+      "pid": 2284194,
+      "status": "online",
+      "restarts": 8
+    },
+    {
+      "pid": 2291838,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2075757,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "after_services": [
+    {
+      "pid": 2284194,
+      "status": "online",
+      "restarts": 8
+    },
+    {
+      "pid": 2291838,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2292224,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "probe_sha256": "95ee28e06cb6a825efd5630b6fb79feb3fe87490dc4bfc74351a6ca42f54a8e5",
+  "environment_unchanged": true,
+  "bindings_unchanged": true,
+  "finished_ms": 1794877948172
+}

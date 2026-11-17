@@ -1,0 +1,167 @@
+{
+  "pass": true,
+  "rows": [
+    {
+      "pool": 1,
+      "exit": 0,
+      "result": {
+        "pool": "/root/p003-clock-release-20261117/verify/1/2-Projects/P003GameDemo20260513/apps/server",
+        "port": 52733,
+        "synthetic": true,
+        "rtc_room_created": false,
+        "rows": [
+          {
+            "text": "现在几点了",
+            "status": 200,
+            "spoken": "现在是北京时间上午九点零九分。",
+            "before_ms": 1794877780621,
+            "after_ms": 1794877780791,
+            "elapsed_ms": 170,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "今天是几号呀",
+            "status": 200,
+            "spoken": "今天是2026年11月17日，星期二。",
+            "before_ms": 1794877780810,
+            "after_ms": 1794877780834,
+            "elapsed_ms": 24,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "今天是周几",
+            "status": 200,
+            "spoken": "今天是星期二。",
+            "before_ms": 1794877780834,
+            "after_ms": 1794877780851,
+            "elapsed_ms": 17,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "纽约现在几点",
+            "status": 200,
+            "spoken": "纽约现在是晚上八点零九分，星期一。",
+            "before_ms": 1794877780851,
+            "after_ms": 1794877780867,
+            "elapsed_ms": 16,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "帮我查当前时间",
+            "status": 200,
+            "spoken": "现在是北京时间上午九点零九分。",
+            "before_ms": 1794877780868,
+            "after_ms": 1794877780885,
+            "elapsed_ms": 17,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "美国时间",
+            "status": 200,
+            "spoken": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？",
+            "before_ms": 1794877780885,
+            "after_ms": 1794877780899,
+            "elapsed_ms": 14,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09"
+          }
+        ],
+        "cleanup": true,
+        "audit_rows": 12,
+        "pass": true
+      }
+    },
+    {
+      "pool": 2,
+      "exit": 0,
+      "result": {
+        "pool": "/root/p003-clock-release-20261117/verify/2/2-Projects/P003GameDemo20260513/apps/server",
+        "port": 55407,
+        "synthetic": true,
+        "rtc_room_created": false,
+        "rows": [
+          {
+            "text": "现在几点了",
+            "status": 200,
+            "spoken": "现在是北京时间上午九点零九分。",
+            "before_ms": 1794877783503,
+            "after_ms": 1794877783654,
+            "elapsed_ms": 151,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "今天是几号呀",
+            "status": 200,
+            "spoken": "今天是2026年11月17日，星期二。",
+            "before_ms": 1794877783673,
+            "after_ms": 1794877783688,
+            "elapsed_ms": 15,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "今天是周几",
+            "status": 200,
+            "spoken": "今天是星期二。",
+            "before_ms": 1794877783688,
+            "after_ms": 1794877783700,
+            "elapsed_ms": 12,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "纽约现在几点",
+            "status": 200,
+            "spoken": "纽约现在是晚上八点零九分，星期一。",
+            "before_ms": 1794877783701,
+            "after_ms": 1794877783714,
+            "elapsed_ms": 13,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "帮我查当前时间",
+            "status": 200,
+            "spoken": "现在是北京时间上午九点零九分。",
+            "before_ms": 1794877783714,
+            "after_ms": 1794877783728,
+            "elapsed_ms": 14,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09",
+            "time_verified": true
+          },
+          {
+            "text": "美国时间",
+            "status": 200,
+            "spoken": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？",
+            "before_ms": 1794877783728,
+            "after_ms": 1794877783741,
+            "elapsed_ms": 13,
+            "clock_response": true,
+            "reference_beijing": "2026年11月17日星期二 09:09"
+          }
+        ],
+        "cleanup": true,
+        "audit_rows": 12,
+        "pass": true
+      }
+    }
+  ],
+  "synthetic": true,
+  "production_data_used": false
+}

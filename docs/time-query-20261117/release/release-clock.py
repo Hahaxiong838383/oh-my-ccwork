@@ -1,5 +1,6 @@
 from pathlib import Path
 import os,sys,json,hashlib,subprocess,time,fcntl,tempfile,shutil,sqlite3,urllib.request
+from contextlib import ExitStack
 D=Path('/root/p003-clock-release-20261117');I=int(sys.argv[1]);APPLY='--apply' in sys.argv
 ROOTS=['/opt/p003/server','/opt/p003/search-canary-20261021/brain','/opt/p003/listening-canary-20261030/brain'];PORTS=[3001,3007,3008];UNITS=[None,'p003-search-brain.service','p003-listening-brain.service'];R=Path(ROOTS[I]);port=PORTS[I]
 sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
@@ -32,7 +33,10 @@ def bindings():
  for root in ROOTS:
   p=Path(root)/'data/devices.db'
   if p.exists():
-   with sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True) as db:rows[root]=db.execute('SELECT sn,public_id,account_id,parent_account_id,binding_version,status FROM device_registry ORDER BY sn').fetchall()
+   with sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True) as db:
+    columns={x[1] for x in db.execute('PRAGMA table_info(device_registry)').fetchall()};required=['sn','public_id','account_id','parent_account_id','status'];assert all(c in columns for c in required)
+    selected=required+(['binding_version'] if 'binding_version' in columns else [])
+    rows[root]={'columns':selected,'rows':db.execute('SELECT '+','.join(selected)+' FROM device_registry ORDER BY sn').fetchall()}
  return hashlib.sha256(json.dumps(rows,separators=(',',':')).encode()).hexdigest()
 def idle():
  r=subprocess.run(['/usr/bin/node','--env-file=.env.local',str(D/'idle-probe.mjs')],cwd=ROOTS[0],capture_output=True,text=True,timeout=20)
@@ -41,9 +45,22 @@ def idle():
  sockets=subprocess.check_output(['ss','-Htn','state','established','sport','=',':'+str(port)],text=True)
  assert not sockets.strip(),'active HTTP streams: retry release later'
  return x
-with Path('/root/p003-miniapp-admin-20261117/release.lock').open('a') as lock:
- fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
- proof=json.loads((D/'NODE22-TESTS.json').read_text());assert proof['pass'] and proof['complete'] and proof['node']=='v22.22.2'
+def probe_environment(pid):
+ env=dict(os.environ)
+ if I:
+  raw=Path('/proc/'+str(pid)+'/environ').read_bytes()
+  env.update(dict(x.decode().split('=',1) for x in raw.split(b'\0') if b'=' in x))
+ env['PORT']=str(port);env['CLOCK_PROBE_RESULT']=str(D/f'PROBE-{I}.json')
+ return env
+def probe_args():
+ return ['/usr/bin/node']+(['--env-file=.env.local'] if I==0 else [])+['--experimental-sqlite',str(D/('live-gray-guard.mjs' if I else 'live-clock-probe.mjs'))]
+with ExitStack() as stack:
+ # Session360 now uses a second release directory. Share both actual locks;
+ # the former dashboard lock alone does not serialize its new publisher.
+ for lock_path in ['/root/p003-miniapp-admin-20261117/release.lock','/root/p003-history-identity-fix-20261117/release.lock']:
+  lock=stack.enter_context(Path(lock_path).open('a'))
+  fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ assert json.loads((D/'FULL-CANARY-TESTS.json').read_text())['pass'];proof=json.loads((D/'NODE22-TESTS.json').read_text());assert proof['pass'] and proof['complete'] and proof['node']=='v22.22.2'
  manifest=json.loads((D/'candidate/MANIFEST.json').read_text());rows=[x for x in manifest if x['pool']==str(R)];assert len(rows)==4
  for row in rows:
   assert sha(R/row['path'])==row['before_sha256'],'target drift'
@@ -53,28 +70,29 @@ with Path('/root/p003-miniapp-admin-20261117/release.lock').open('a') as lock:
   for p,h in files.items():
    if p not in targets:assert sha(Path(root)/p)==h,'unrelated source drift since tests'
  s=service(I);assert s['pid']>0 and s['status'] in ('online','active');assert Path('/proc/'+str(s['pid'])+'/cwd').resolve()==R
+ # Fail before backups/source writes/restart if the actual probe cannot run.
+ # Gray guard is already read-only; main probe validates schema/env read-only.
+ preflight=subprocess.run(probe_args()+['--preflight'],cwd=R,env=probe_environment(s['pid']),capture_output=True,text=True,timeout=30)
+ assert preflight.returncode==0,'probe preflight failed before source mutation; no restart performed'
+ preflight_summary=json.loads(preflight.stdout);assert preflight_summary['pass']
+ bound=bindings()
  time_state=subprocess.check_output(['timedatectl','show','-p','NTPSynchronized','-p','Timezone'],text=True);assert 'NTPSynchronized=yes' in time_state
- idle_state=idle();pre={'pool':I,'source':s,'idle':idle_state,'node':proof['node'],'ntp':time_state,'manifest_sha256':sha(D/'candidate/MANIFEST.json')}
+ idle_state=idle();pre={'pool':I,'source':s,'idle':idle_state,'node':proof['node'],'ntp':time_state,'probe_preflight':preflight_summary,'manifest_sha256':sha(D/'candidate/MANIFEST.json')}
  if not APPLY:print(json.dumps({'dry_run':True,**pre}));sys.exit(0)
  receipt_path=D/f'RELEASE-{I}.json';assert not receipt_path.exists(),'prior pool receipt: inspect before action'
- bdir=D/f'backup-{I}';bdir.mkdir(mode=0o700);modes={}
+ bdir=D/f'backup-{I}-{int(time.time()*1000)}';bdir.mkdir(mode=0o700);modes={}
  for n,row in enumerate(rows):
   p=R/row['path'];modes[row['path']]=p.stat().st_mode&0o777 if p.exists() else 0o644
   if p.exists():shutil.copy2(p,bdir/str(n));assert sha(bdir/str(n))==row['before_sha256']
  write(bdir/'MANIFEST.json',{'rows':rows,'modes':modes,'pre':pre})
- envfiles=[Path(root)/n for root in ROOTS for n in ['.env.local','canary.env'] if (Path(root)/n).exists()];envhashes={str(p):sha(p) for p in envfiles};before_pm2=pm2();before_services=[service(i) for i in range(3)];bound=bindings()
+ envfiles=[Path(root)/n for root in ROOTS for n in ['.env.local','canary.env'] if (Path(root)/n).exists()];envhashes={str(p):sha(p) for p in envfiles};before_pm2=pm2();before_services=[service(i) for i in range(3)]
  receipt={'started_ms':int(time.time()*1000),'pool':I,'success':False,'pre':pre,'backup':str(bdir),'database_restore':False,'before_services':before_services}
  write(receipt_path,receipt);applied=[]
  try:
   for row in rows:
    p=R/row['path'];assert sha(p)==row['before_sha256'],'concurrent target drift';atomic(p,(D/'candidate'/str(I)/row['path']).read_bytes(),modes[row['path']]);applied.append(row)
   restart();current=service(I)
-  env=dict(os.environ)
-  if I:
-   raw=Path('/proc/'+str(current['pid'])+'/environ').read_bytes()
-   env.update(dict(x.decode().split('=',1) for x in raw.split(b'\0') if b'=' in x))
-  env['PORT']=str(port);env['CLOCK_PROBE_RESULT']=str(D/f'PROBE-{I}.json')
-  args=['/usr/bin/node']+(['--env-file=.env.local'] if I==0 else [])+['--experimental-sqlite',str(D/'live-clock-probe.mjs')]
+  env=probe_environment(current['pid']);args=probe_args()
   with (D/f'PROBE-{I}.private.log').open('wb') as f:r=subprocess.run(args,cwd=R,env=env,stdout=f,stderr=subprocess.STDOUT,timeout=200)
   assert r.returncode==0,'actual HTTP probe failed; inspect private result'
   probe=json.loads((D/f'PROBE-{I}.json').read_text());assert probe['pass'] and probe['cleanup']

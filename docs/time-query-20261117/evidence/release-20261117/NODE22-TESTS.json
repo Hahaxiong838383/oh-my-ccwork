@@ -1,0 +1,39 @@
+{
+  "node": "v22.22.2",
+  "rows": [
+    {
+      "pool": 0,
+      "test": "clock-query",
+      "exit": 0,
+      "sha256": "5826a38bb964d4615f8187f5ff9d0f3c885502268fd5bfeec2227d2abb5123bc"
+    },
+    {
+      "pool": 0,
+      "test": "clock-http",
+      "exit": 0,
+      "sha256": "2b42accda77fcfa7b8d3b43a489d2453edfba28f2bec773b30952075ea849203"
+    },
+    {
+      "pool": 0,
+      "test": "clock-search-runtime",
+      "exit": 0,
+      "sha256": "31e53759a319c663e63a20271c14527139e0d5140b8f568c1c03d871fb434f94"
+    },
+    {
+      "pool": 1,
+      "test": "clock-query",
+      "exit": 0,
+      "sha256": "0f01137dcbfe46d1f2f8e2b046a2df42e961ebbde53fe55b2dd8c22f48b197a5"
+    },
+    {
+      "pool": 1,
+      "test": "clock-http",
+      "exit": 0,
+      "sha256": "f11666e4589618eb53559e12f262a8b6050f4393c2a1c5bb64dd8f6f65eb7686"
+    }
+  ],
+  "complete": false,
+  "pass": false,
+  "unit": "ExecMainStatus=0\nActiveState=active\n",
+  "failures": {}
+}

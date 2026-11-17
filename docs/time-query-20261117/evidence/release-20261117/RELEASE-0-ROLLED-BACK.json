@@ -1,0 +1,46 @@
+{
+  "started_ms": 1794878004138,
+  "pool": 0,
+  "success": false,
+  "pre": {
+    "pool": 0,
+    "source": {
+      "pid": 2284194,
+      "status": "online",
+      "restarts": 8
+    },
+    "idle": {
+      "at_ms": 1794878003549,
+      "verified": true,
+      "total_rooms": 0,
+      "active_rooms": 0,
+      "idle": true
+    },
+    "node": "v22.22.2",
+    "ntp": "Timezone=Asia/Shanghai\nNTPSynchronized=yes\n",
+    "manifest_sha256": "4f22e3ff02da630507b661becba66558735adb3bcb7f84ce335c7dea9987a65c"
+  },
+  "backup": "/root/p003-clock-release-20261117/backup-0-1794878003559",
+  "database_restore": false,
+  "before_services": [
+    {
+      "pid": 2284194,
+      "status": "online",
+      "restarts": 8
+    },
+    {
+      "pid": 2291838,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2292224,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "error_type": "AssertionError",
+  "error": "actual HTTP probe failed; inspect private result",
+  "rolled_back": true,
+  "finished_ms": 1794878009901
+}
