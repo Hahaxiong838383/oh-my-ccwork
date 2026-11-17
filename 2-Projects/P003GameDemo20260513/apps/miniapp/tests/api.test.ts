@@ -51,6 +51,29 @@ describe('小可现有后台合同适配', () => {
 });
 
 describe('真实接口请求与账号隔离', () => {
+  it('微信公开配置不带旧token也不读取用户标识，缺Secret保持未就绪',async()=>{
+    saveSession('old-account');
+    vi.mocked(Taro.request).mockResolvedValueOnce({statusCode:200,header:{},data:{ok:true,app_id:'wx-test',configured:false,configuration_status:'missing_app_secret'}} as never);
+    expect(await liveApi.getWechatConfiguration!()).toEqual({appId:'wx-test',configured:false,configurationStatus:'missing_app_secret'});
+    expect(vi.mocked(Taro.request).mock.calls[0][0].header?.Authorization).toBeUndefined();
+  });
+  it('微信补齐 code 过期不会清除已登录短信账号，真实认证过期仍清除', async () => {
+    saveSession('account-a');
+    vi.mocked(Taro.request).mockResolvedValueOnce({ statusCode:401,header:{},data:{error:'wechat_login_code_invalid'} } as never);
+    await expect(liveApi.linkWechat!({phone_code:'p',login_code:'l',app_id:'wx-test'})).rejects.toMatchObject({status:401});
+    expect(storage.get('xiaoke.bff.session')).toBe('account-a');
+    vi.mocked(Taro.request).mockResolvedValueOnce({ statusCode:401,header:{},data:{error:'unauthorized'} } as never);
+    await expect(liveApi.linkWechat!({phone_code:'p',login_code:'l',app_id:'wx-test'})).rejects.toMatchObject({status:401});
+    expect(storage.get('xiaoke.bff.session')).toBeUndefined();
+  });
+  it('微信登录只发送临时授权码和运行 AppID，保存后端核验身份',async()=>{
+    saveSession('old-account');
+    vi.mocked(Taro.request).mockResolvedValueOnce({statusCode:200,header:{},data:{ok:true,token:'new-account',wechat_identity:{app_id:'wx-test',configured:true,state:'linked',openid:'verified-openid',unionid:null,unionid_status:'not_returned',verified_at_ms:1793933632128}}} as never);
+    const result=await liveApi.loginWechat!({phone_code:'phone',login_code:'login',app_id:'wx-test'});
+    expect(result.wechatIdentity).toMatchObject({appId:'wx-test',openid:'verified-openid',unionid:null,unionidStatus:'not_returned'});
+    expect(vi.mocked(Taro.request).mock.calls[0][0]).toMatchObject({url:'https://test.example/api/auth/wechat/phone',data:{phone_code:'phone',login_code:'login',app_id:'wx-test'}});
+    expect(vi.mocked(Taro.request).mock.calls[0][0].header?.Authorization).toBeUndefined();
+  });
   it('发送当前会话并保留真实零值和未知值', async () => {
     saveSession('account-a');
     vi.mocked(Taro.request).mockResolvedValue({ statusCode: 200, header: {}, data: { brightness_level: 0, present: false, updated_at_ms: null } } as never);

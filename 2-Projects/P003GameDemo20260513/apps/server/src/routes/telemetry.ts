@@ -5,7 +5,9 @@ import { telemetryStore, dayOf } from '../telemetry-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { verifyDeviceCredential } from './device-session.js';
 import { verifyAuthToken } from '../auth-jwt.js';
-import {readParentDashboard, MiniappReadError} from '../miniapp-dashboard.js';
+import {readParentDashboardWithHistory, MiniappReadError} from '../miniapp-dashboard.js';
+import {readParentObservations} from '../parent-observations.js';
+import {ObservationError} from '../history-observations.js';
 import {parentConversationsRoute} from '../parent-conversations.js';
 
 /**
@@ -231,10 +233,19 @@ function dateAdd(day: string, deltaDays: number): string {
 parentTelemetryRoute.route('/', recordsParentRoute);
 parentTelemetryRoute.route('/', parentConversationsRoute);
 
-parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
+parentTelemetryRoute.get('/:publicId/observations', async c => {
+  c.header('Cache-Control', 'no-store');
+  try { return c.json(await readParentObservations(c.req.param('publicId'), c.get('accountId'), c.get('authRole'), new URL(c.req.url).searchParams)); }
+  catch(error) {
+    if(error instanceof ObservationError)return c.json({ok:false,error:error.message},error.status);
+    return c.json({ok:false,error:'observations_dependency_unavailable'},503);
+  }
+});
+
+parentTelemetryRoute.get('/:publicId/dashboard', async (c) => {
   c.header('Cache-Control', 'no-store');
   if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
-  try { return c.json({ok:true, data:readParentDashboard(c.req.param('publicId'), c.get('accountId'), c.get('authRole'))}); }
+  try { return c.json({ok:true, data:await readParentDashboardWithHistory(c.req.param('publicId'), c.get('accountId'), c.get('authRole'))}); }
   catch (error) {
     if (error instanceof MiniappReadError) return c.json({ok:false,error:error.message}, error.status);
     return c.json({ok:false,error:'dashboard_dependency_unavailable'},503);

@@ -1,13 +1,9 @@
 import Taro from '@tarojs/taro';
 import { snakeToCamel } from './dto';
+import { ApiError } from './api-error';
+export { ApiError } from './api-error';
 
 const sessionKey = 'xiaoke.bff.session';
-
-export class ApiError extends Error {
-  constructor(public readonly status: number, public readonly payload: unknown, public readonly retryAfterSeconds?: number) {
-    super(`API request failed: ${status}`);
-  }
-}
 
 function apiBaseUrl() {
   return (process.env.TARO_APP_API_BASE_URL || 'http://127.0.0.1:4180').replace(/\/$/, '');
@@ -21,7 +17,7 @@ export function hasSession() {
   return Boolean(Taro.getStorageSync<string>(sessionKey));
 }
 
-export async function apiRequest<T>(path: string, options: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; data?: unknown; authenticated?: boolean } = {}) {
+export async function apiRequest<T>(path: string, options: { method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'; data?: unknown; authenticated?: boolean; preserveSessionOnErrors?: string[] } = {}) {
   const session = options.authenticated === false ? '' : Taro.getStorageSync<string>(sessionKey);
   const response = await Taro.request<unknown>({
     url: `${apiBaseUrl()}${path}`,
@@ -39,7 +35,8 @@ export async function apiRequest<T>(path: string, options: { method?: 'GET' | 'P
     return payload as T;
   }
   // A 的旧请求不能清除用户刚登录的 B 会话。
-  if (response.statusCode === 401 && session && Taro.getStorageSync<string>(sessionKey) === session) clearSession();
+  const businessError = payload && typeof payload === 'object' ? (payload as { error?: string }).error : undefined;
+  if (response.statusCode === 401 && session && !(businessError && options.preserveSessionOnErrors?.includes(businessError)) && Taro.getStorageSync<string>(sessionKey) === session) clearSession();
   const retryValue = response.header?.['Retry-After'] || response.header?.['retry-after'];
   const retryAfterSeconds = retryValue === undefined ? undefined : Number(retryValue);
   throw new ApiError(response.statusCode, payload, Number.isFinite(retryAfterSeconds) ? retryAfterSeconds : undefined);

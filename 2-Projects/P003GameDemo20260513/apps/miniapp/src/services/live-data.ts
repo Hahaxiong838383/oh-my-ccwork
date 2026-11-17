@@ -1,4 +1,5 @@
 import type { DashboardDetails } from './real-details';
+import { wechatAuthorizationErrors, wechatErrorMessage, type WechatCredentials, type WechatIdentity, type WechatConfiguration } from './wechat-identity';
 export type BoundDevice = { sn: string; publicId: string; note: string; status: string; brainOpened: boolean };
 export type DeviceSnapshot = {
   details?: DashboardDetails;
@@ -15,6 +16,10 @@ export interface LiveDataApi {
   clearSession(): void;
   sendCode(phone: string): Promise<void>;
   login(phone: string, code: string): Promise<{ token: string }>;
+  loginWechat?(credentials: WechatCredentials): Promise<{ token: string; wechatIdentity: WechatIdentity }>;
+  linkWechat?(credentials: WechatCredentials): Promise<WechatIdentity>;
+  getWechatIdentity?(): Promise<WechatIdentity>;
+  getWechatConfiguration?(): Promise<WechatConfiguration>;
   getDevices(): Promise<BoundDevice[]>;
   getSnapshot(publicId: string): Promise<DeviceSnapshot>;
 }
@@ -41,8 +46,12 @@ export type LiveDataState = {
   error: string;
   message: string;
   retryAt: number;
+  wechatIdentity: WechatIdentity | null;
+  wechatConfiguration: WechatConfiguration | null;
+  wechatBusy: boolean;
+  wechatError: string;
 };
-const emptyState = (signedIn: boolean): LiveDataState => ({ signedIn, devices: [], selectedId: '', snapshot: null, busy: false, sendingCode: false, loaded: false, error: '', message: '', retryAt: 0 });
+const emptyState = (signedIn: boolean): LiveDataState => ({ signedIn, devices: [], selectedId: '', snapshot: null, busy: false, sendingCode: false, loaded: false, error: '', message: '', retryAt: 0, wechatIdentity: null, wechatConfiguration: null, wechatBusy: false, wechatError: '' });
 const phoneValid = (phone: string) => /^1\d{10}$/.test(phone);
 
 export function liveErrorMessage(error: unknown): string {
@@ -72,7 +81,7 @@ export class LiveDataController {
   logout() {
     this.version += 1;
     this.api.clearSession();
-    this.update(emptyState(false));
+    this.update({ ...emptyState(false), wechatConfiguration: this.state.wechatConfiguration });
   }
   private fail(error: unknown, version: number) {
     if (version !== this.version) return;
@@ -96,10 +105,11 @@ export class LiveDataController {
     }
   }
   async login(phone: string, code: string) {
+    if (this.state.wechatBusy) return;
     if (!phoneValid(phone) || !/^\d{6}$/.test(code)) { this.update({ error: '请输入正确的手机号和6位验证码' }); return; }
     const version = ++this.version;
     this.api.clearSession();
-    this.update({ ...emptyState(false), busy: true, retryAt: this.state.retryAt });
+    this.update({ ...emptyState(false), busy: true, retryAt: this.state.retryAt, wechatConfiguration: this.state.wechatConfiguration });
     try {
       const result = await this.api.login(phone, code);
       if (version !== this.version) return;
@@ -113,10 +123,11 @@ export class LiveDataController {
     }
   }
   async refresh() {
-    if (!this.state.signedIn) return;
+    if (!this.state.signedIn || this.state.wechatBusy) return;
     const version = ++this.version;
     const previousId = this.state.selectedId;
     this.update({ devices: [], selectedId: '', snapshot: null, busy: true, loaded: false, error: '', message: '' });
+    void this.loadWechatIdentity(version);
     try {
       const devices = await this.api.getDevices();
       if (version !== this.version) return;
@@ -126,8 +137,54 @@ export class LiveDataController {
       else this.update({ busy: false });
     } catch (error) { this.fail(error, version); }
   }
+  private async loadWechatIdentity(version: number) {
+    if (!this.api.getWechatIdentity) return;
+    try {
+      const identity = await this.api.getWechatIdentity();
+      if (version === this.version) this.update({ wechatIdentity: identity, wechatConfiguration: identity, wechatError: '' });
+    } catch (error) {
+      if (version !== this.version) return;
+      if ((error as { status?: number }).status === 401) { this.logout(); return; }
+      this.update({ wechatError: '微信身份暂时读取失败，可继续查看设备数据' });
+    }
+  }
+  async loadWechatConfiguration() {
+    if (!this.api.getWechatConfiguration) return;
+    const version=this.version;
+    try { const configuration=await this.api.getWechatConfiguration(); if(version===this.version)this.update({wechatConfiguration:configuration,wechatError:''}); }
+    catch { if(version===this.version)this.update({wechatConfiguration:null,wechatError:'微信登录配置暂未读到，可使用短信登录或重试'}); }
+  }
+  async authorizeWechat(prepare: () => Promise<WechatCredentials>, link = this.state.signedIn) {
+    if (this.state.wechatBusy || this.state.busy || (link && !this.state.signedIn)) return;
+    const version = this.version;
+    this.update({ wechatBusy: true, wechatError: '', message: '' });
+    try {
+      const credentials = await prepare();
+      if (version !== this.version) return;
+      if (link) {
+        if (!this.api.linkWechat) throw { code: 'wechat_platform_unavailable' };
+        const identity = await this.api.linkWechat(credentials);
+        if (version !== this.version) return;
+        this.update({ wechatIdentity: identity, wechatBusy: false, message: '微信身份已核验并关联当前账号' });
+      } else {
+        if (!this.api.loginWechat) throw { code: 'wechat_platform_unavailable' };
+        const result = await this.api.loginWechat(credentials);
+        if (version !== this.version) return;
+        this.api.saveSession(result.token);
+        this.update({ signedIn: true, wechatIdentity: result.wechatIdentity, wechatBusy: false });
+        await this.refresh();
+      }
+    } catch (error) {
+      if (version !== this.version) return;
+      const failure = error as { status?: number; payload?: { error?: string } };
+      if (link && failure.status === 401 && !wechatAuthorizationErrors.includes(failure.payload?.error || '')) { this.logout(); this.update({ wechatError: '登录已过期，请重新登录' }); return; }
+      this.update({ wechatError: wechatErrorMessage(error) });
+    } finally {
+      if (version === this.version) this.update({ wechatBusy: false });
+    }
+  }
   async selectDevice(publicId: string) {
-    if (!this.state.signedIn || !this.state.devices.some(item => item.publicId === publicId)) return;
+    if (!this.state.signedIn || this.state.wechatBusy || !this.state.devices.some(item => item.publicId === publicId)) return;
     const version = ++this.version;
     this.update({ selectedId: publicId, snapshot: null, busy: true, error: '' });
     await this.loadSnapshot(publicId, version);

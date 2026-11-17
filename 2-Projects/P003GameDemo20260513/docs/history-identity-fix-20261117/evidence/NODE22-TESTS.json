@@ -1,0 +1,158 @@
+{
+  "started_ms": 1794879052874,
+  "pass": true,
+  "tests": [
+    {
+      "name": "history-usage",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "c5cd58b3c446e7d5957f5bbc3d79253cb4d677b2928bee42eaa3f4aa113a5872"
+    },
+    {
+      "name": "history-observations",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "7ef89178b27c4283c3e24e0c8ba5eabad537354e946920fff2a260f9d2808322"
+    },
+    {
+      "name": "history-scope",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "61062d6b4da3bf909d3731904445efa465f5faa479060bf86313b6f469d0d561"
+    },
+    {
+      "name": "history-gateway",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "e29efe1d2ac1a27f978a274f3476af0f17111c8fe4d40c7c48d38023bfb6efff"
+    },
+    {
+      "name": "history-dashboard",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "b3e70103e82a7d0f6f1d9b4619ce5ed5ee36c548a9b920c65043d5163ce42d49"
+    },
+    {
+      "name": "wechat-identity",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "b328905c6a1f8fa1ec3e47412882fa8dfb0b485943ee86d032cc4cea95c68ed2"
+    },
+    {
+      "name": "wechat-client",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "cff53653ecf46a0adade8b7599cac37016601c9c51ae35e19b048b36460b6ae5"
+    },
+    {
+      "name": "miniapp-admin",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "76fb59da6cb5d6f5591ea53a8e35497d7e2867f64e597d4ca95a6dda2a1a6961"
+    },
+    {
+      "name": "miniapp-unbind",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "2025531aebf4d779370bd8fe6c04cb1bdbaeb0df5a7c05df3fc20074e02fe242"
+    },
+    {
+      "name": "mini008-dashboard",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "70d2c2ba34260451b1d4513325775f3e82e710e8a039aed36b6519c8095a3a72"
+    },
+    {
+      "name": "parent-conversations",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "45102b9b2fa1bf7e4b8eadd9b12230923c51b93a47f87b5e7cee146970b0565e"
+    },
+    {
+      "name": "telemetry",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "cc0bde5848a8705996671175050553f6a7db0c19187580a910f248eeac471eec"
+    },
+    {
+      "name": "pairing",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "28885d294fda01d2fb527f31f172419d2a482e0151d290c2037356e4607aa46f"
+    },
+    {
+      "name": "sms-auth",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "81eff8d9f833b4fcc620de596894ccfd0bdb796b25b175da87fd4634977b57e4"
+    },
+    {
+      "name": "sms-login-hardening",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "a4cf1657ff7ee56e361fd1d68e4dd3930ade36b680e055f458d7e1098ef2e93c"
+    },
+    {
+      "name": "sms-login-http",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "6c744f1c927b111cdf69a068ce3a466051c6f9f0682bf275ff0b287a72b700d9"
+    },
+    {
+      "name": "ark-records",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "b397aac0ffe55a79c3e029dbbf3586965588859a4286073726b38910940b0393"
+    },
+    {
+      "name": "ark-records-legacy",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "27df93216e0d9f1fa5fa47b7fd9add185e2f79516056f21b9306c0fdb997092b"
+    },
+    {
+      "name": "ark-records-legacy-http",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "5e179abc0aaa42319a05026aec095d8eaa7f1dc94343f8ba8b6187e7e575239e"
+    },
+    {
+      "name": "ark-records-legacy-config",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "c998623683d80444e6da6d79f221ced7be993a10e3dad743fd9d108cc4976bc8"
+    },
+    {
+      "name": "ark-records-legacy-summaries",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "380721691fbaa5605d74d86de587c5bcc5d6c2f8e2ab52c92420b85ef89cab1d"
+    },
+    {
+      "name": "ark-records-summaries",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "fe7f8a744a0aa01b32456303e66eb1c050a7a46966b9c213db5edd6c181a31a6"
+    },
+    {
+      "name": "ark-history",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "16db84d4ff64647b4f2ee6d70e334eb4a743247b1af81955d61279943833fe36"
+    },
+    {
+      "name": "analytics-http",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "404d35ab99ed306fa2edaaf1649b70a65ac9f8cb4de3fc94c8fb4d87adfe6765"
+    },
+    {
+      "name": "analytics-admin-auth",
+      "runtime": "bin",
+      "returncode": 0,
+      "log_sha256": "978ea5fe9c5b98f80177240057c716d5670e57d21f6c372aaf07ffc68fff2696"
+    }
+  ],
+  "manifest_sha256": "11d39e82938a817318fc937654f69345bb807fd7b9aa8acb2983b99066dd8354",
+  "finished_ms": 1794879119327
+}

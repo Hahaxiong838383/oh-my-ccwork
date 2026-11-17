@@ -1,0 +1,7 @@
+{
+  "pass": true,
+  "manifest_sha256": "11d39e82938a817318fc937654f69345bb807fd7b9aa8acb2983b99066dd8354",
+  "review_sha256": "e46fef994065ef89bf300b7d9881b7ce444fd41ae4126c3f9acf8254b0f29158",
+  "unresolved_high_medium": 0,
+  "user_authorized_deploy": true
+}

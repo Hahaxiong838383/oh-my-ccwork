@@ -112,3 +112,24 @@ test('admin aggregate rejects a shared Brain account introduced after domain aut
   assert.ok(!JSON.stringify(r.body).includes('unique-brain-private'));
  }finally{otaStore.listDeviceStatus=original;}
 });
+
+test('deployed route contract exposes shared historical usage and admin verified identity state',async()=>{
+ const f=await fixture();
+ const a=await dash(f),p=await req(`/v1/parent/devices/${f.pub}/dashboard`,f.parent);
+ assert.equal(a.status,200);assert.equal(p.status,200);
+ assert.ok(a.body.data.historical_usage,'admin must call enriched async reader');
+ assert.ok(p.body.data.historical_usage,'parent must call the same enriched reader');
+ assert.ok(a.body.data.observations,'historical observations must have an explicit availability state');
+ assert.ok(a.body.wechat_identity,'identity must be returned from the account store');
+ assert.equal(a.body.wechat_identity.openid,null,'no synthetic identity for SMS accounts');
+ assert.equal(a.body.wechat_identity.unionid,null);
+});
+
+test('observations routes enforce auth, scope and request validation',async()=>{
+ const f=await fixture();
+ for(const [token,status] of [['',401],[editor,403]] as const){
+  const r=await page(f,'observations','',token);assert.equal(r.status,status);assert.equal(r.headers.get('cache-control'),'no-store');
+ }
+ const parentMissing=await req(`/v1/parent/devices/missing/observations`,f.parent);assert.equal(parentMissing.status,404);
+ const invalid=await page(f,'observations','?limit=5000');assert.equal(invalid.status,400,'route must be mounted and reject invalid limit before upstream work');
+});

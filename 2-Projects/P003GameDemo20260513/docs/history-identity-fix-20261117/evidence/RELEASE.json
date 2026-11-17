@@ -1,0 +1,39 @@
+{
+  "started_ms": 1794879201573,
+  "success": true,
+  "manifest_sha256": "11d39e82938a817318fc937654f69345bb807fd7b9aa8acb2983b99066dd8354",
+  "before": {
+    "p003-voice": {
+      "pid": 2292625,
+      "status": "online",
+      "restarts": 10
+    },
+    "p003-analytics": {
+      "pid": 2075980,
+      "status": "online",
+      "restarts": 2
+    }
+  },
+  "files": 16,
+  "database_restore": false,
+  "real_unbind_performed": false,
+  "after": {
+    "p003-voice": {
+      "pid": 2296337,
+      "status": "online",
+      "restarts": 11
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "other_processes_unchanged": true,
+  "bindings_unchanged": true,
+  "environment_changes": [
+    "wechat_app_configuration",
+    "existing_C_history_scope_for_analytics"
+  ],
+  "finished_ms": 1794879207051
+}

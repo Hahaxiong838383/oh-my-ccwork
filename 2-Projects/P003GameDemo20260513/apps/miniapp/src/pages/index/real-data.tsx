@@ -15,7 +15,7 @@ export default function RealDataHome() {
   useEffect(() => {
     const unsubscribe = controller.subscribe(setState);
     void controller.refresh();
-    if (process.env.TARO_ENV === 'weapp') void Taro.setNavigationBarTitle({ title: '小可 · 我的设备' });
+    if (process.env.TARO_ENV === 'weapp') { void Taro.setNavigationBarTitle({ title: '小可 · 我的设备' }); void controller.loadWechatConfiguration(); }
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => { unsubscribe(); clearInterval(timer); };
   }, [controller]);
@@ -24,6 +24,14 @@ export default function RealDataHome() {
   const currentDevice = state.devices.find(item => item.publicId === state.selectedId);
   const view = snapshotView(state.snapshot);
   const logout = () => { controller.logout(); setPhone(''); setCode(''); };
+  const authorizeWechat = (event: { detail: { code?: string } }) => void controller.authorizeWechat(async () => {
+    if (process.env.TARO_ENV !== 'weapp') throw { code: 'wechat_platform_unavailable' };
+    if (!event.detail.code) throw { code: 'wechat_cancelled' };
+    const appId = Taro.getAccountInfoSync().miniProgram.appId;
+    const login = await Taro.login();
+    if (!appId || !login.code) throw { code: 'wechat_login_code_invalid' };
+    return { phone_code: event.detail.code, login_code: login.code, app_id: appId };
+  });
 
   return <View className={`app-screen home-screen live-screen ${process.env.TARO_ENV === 'weapp' ? 'weapp-screen' : ''}`}>
     <View className="preview-strip"><Text>内测 · 真实设备数据</Text><Text>小可</Text></View>
@@ -31,24 +39,33 @@ export default function RealDataHome() {
     <View className="tab-content">
       {!state.signedIn && <Card>
         <Heading title="登录内测账号" />
-        <Text className="muted live-description">使用短信验证码登录后，查看属于当前账号的设备。</Text>
+        <Text className="muted live-description">登录后查看属于当前账号的设备。</Text>
+        {process.env.TARO_ENV === 'weapp' && <><Button className="action-button primary" openType="getPhoneNumber" onGetPhoneNumber={authorizeWechat} loading={state.wechatBusy} disabled={state.busy || state.wechatBusy || state.sendingCode || !state.wechatConfiguration?.configured}>微信手机号授权登录</Button><Text className="small-note">{state.wechatConfiguration?.configured?'使用微信授权手机号登录，同时关联微信身份。也可使用下方短信登录。':state.wechatConfiguration?'微信登录凭据待配置，请先使用短信登录。':'正在确认微信登录配置…'}</Text>{!state.wechatConfiguration&&<Button className="link-button" onClick={()=>void controller.loadWechatConfiguration()}>重新读取微信配置</Button>}</>}
         <Field label="手机号" value={phone} onChange={setPhone} numeric maxLength={11} placeholder="请输入手机号" />
         <View className="live-code-row">
           <Field label="验证码" value={code} onChange={setCode} numeric maxLength={6} placeholder="6位短信验证码" />
           <Button className="live-code-button" disabled={state.sendingCode || state.busy || waitSeconds > 0} onClick={() => void controller.sendCode(phone)}>{state.sendingCode ? '发送中' : waitSeconds > 0 ? `${waitSeconds}秒后重发` : '获取验证码'}</Button>
         </View>
-        <Primary disabled={state.busy || state.sendingCode || !/^1\d{10}$/.test(phone) || !/^\d{6}$/.test(code)} onClick={() => void controller.login(phone, code)}>{state.busy ? '正在登录…' : '登录'}</Primary>
+        <Primary disabled={state.busy || state.wechatBusy || state.sendingCode || !/^1\d{10}$/.test(phone) || !/^\d{6}$/.test(code)} onClick={() => void controller.login(phone, code)}>{state.busy ? '正在登录…' : '短信登录'}</Primary>
         {state.message && <Text className="small-note">{state.message}</Text>}
       </Card>}
 
       {state.error && <View className="notice live-error"><Text>{state.error}</Text>{state.signedIn && <Button className="link-button" onClick={() => void controller.refresh()}>重新加载</Button>}</View>}
+      {state.wechatError && <View className="notice live-error"><Text>{state.wechatError}</Text></View>}
 
       {state.signedIn && <>
-        <View className="section-heading"><Text className="section-title">我的设备</Text><Button className="link-button" disabled={state.busy} onClick={() => void controller.refresh()}>{state.busy ? '正在读取…' : '刷新'}</Button></View>
+        <Card><Heading title="微信身份"/><Text className="row-title">{state.wechatIdentity?.state === 'linked' ? '微信身份已验证' : state.wechatIdentity?.state === 'not_configured' ? '微信登录配置待完成' : '尚未关联微信身份'}</Text>
+          {state.wechatIdentity?.appId && <Text className="small-note" selectable>小程序 AppID：{state.wechatIdentity.appId}</Text>}
+          {state.wechatIdentity?.state === 'linked' && <Text className="small-note">{state.wechatIdentity.unionidStatus === 'available' ? '跨应用身份已返回' : '微信暂未返回 UnionID，不影响当前账号使用'}</Text>}
+          {state.wechatIdentity?.configured===false&&<Text className="small-note">服务端微信登录凭据待配置；已有设备数据仍可查看。</Text>}
+          {process.env.TARO_ENV === 'weapp' ? <Button className="link-button" openType="getPhoneNumber" onGetPhoneNumber={authorizeWechat} loading={state.wechatBusy} disabled={state.busy || state.wechatBusy || !state.wechatIdentity?.configured}>{state.wechatIdentity?.state === 'linked' ? '重新验证微信身份' : '补充微信身份'}</Button> : <Text className="small-note">请在微信小程序内授权当前账号手机号，补充微信身份。</Text>}
+          {state.message && <Text className="small-note">{state.message}</Text>}
+        </Card>
+        <View className="section-heading"><Text className="section-title">我的设备</Text><Button className="link-button" disabled={state.busy || state.wechatBusy} onClick={() => void controller.refresh()}>{state.busy ? '正在读取…' : '刷新'}</Button></View>
         {!state.loaded && state.busy && <Card><Text className="muted">正在读取设备列表…</Text></Card>}
         {state.loaded && !state.devices.length && <Card><Empty title="当前账号暂无设备" text="请联系内测负责人确认设备归属，再刷新列表。" action="刷新设备" onClick={() => void controller.refresh()} /></Card>}
         {state.devices.length > 0 && <Card className="live-device-list">
-          {state.devices.map(device => <Button key={device.publicId} className={`live-device-row ${state.selectedId === device.publicId ? 'selected' : ''}`} onClick={() => void controller.selectDevice(device.publicId)}>
+          {state.devices.map(device => <Button key={device.publicId} disabled={state.wechatBusy} className={`live-device-row ${state.selectedId === device.publicId ? 'selected' : ''}`} onClick={() => void controller.selectDevice(device.publicId)}>
             <View><Text className="row-title">{device.note || '读写台'}</Text><Text className="small-note">设备尾号 {device.sn.slice(-6)}{device.status === 'disabled' ? ' · 已停用' : ''}</Text></View>
             <Text className="live-selected">{state.selectedId === device.publicId ? '已选择' : '查看'}</Text>
           </Button>)}

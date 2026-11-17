@@ -1,6 +1,7 @@
 import { ApiError, apiRequest, clearSession, hasSession, saveSession } from './api';
 import type { BoundDevice, DeviceSnapshot, LiveDataApi } from './live-data';
 import { dashboardDetails } from './real-details';
+import { wechatAuthorizationErrors, wechatConfiguration, wechatIdentity } from './wechat-identity';
 
 type JsonObject = Record<string, unknown>;
 function object(value: unknown): JsonObject {
@@ -24,6 +25,22 @@ export const liveApi: LiveDataApi = {
     if (typeof result.token !== 'string' || !result.token.trim()) throw new ApiError(502, { error: 'invalid_response' });
     return { token: result.token };
   },
+  async loginWechat(credentials) {
+    const result = successful(await apiRequest('/api/auth/wechat/phone', { method: 'POST', data: credentials, authenticated: false }));
+    if (typeof result.token !== 'string' || !result.token.trim()) throw new ApiError(502, { error: 'invalid_response' });
+    return { token: result.token, wechatIdentity: wechatIdentity(result.wechatIdentity) };
+  },
+  async linkWechat(credentials) {
+    const result = successful(await apiRequest('/api/auth/wechat/link', { method: 'POST', data: credentials, preserveSessionOnErrors: wechatAuthorizationErrors }));
+    return wechatIdentity(result.wechatIdentity);
+  },
+  async getWechatIdentity() {
+    const result = successful(await apiRequest('/api/auth/wechat/identity'));
+    return wechatIdentity(result.wechatIdentity);
+  },
+  async getWechatConfiguration() {
+    return wechatConfiguration(successful(await apiRequest('/api/auth/wechat/config', { authenticated: false })));
+  },
   async getDevices(): Promise<BoundDevice[]> {
     const result = successful(await apiRequest('/api/profile/bound-devices'));
     if (!Array.isArray(result.devices)) throw new ApiError(502, { error: 'invalid_response' });
@@ -38,6 +55,6 @@ export const liveApi: LiveDataApi = {
     const data = object(result.data);
     const row = object(data.device);
     if (typeof row.online !== 'boolean' || !Object.prototype.hasOwnProperty.call(row, 'updatedAtMs')) throw new ApiError(502, { error: 'invalid_response' });
-    return { online: row.online, updatedAtMs: numberOrNull(row.updatedAtMs), present: typeof row.present === 'boolean' ? row.present : null, brightnessLevel: numberOrNull(row.brightnessLevel), imageDistanceM: numberOrNull(row.imageDistanceM), imageDistanceState: typeof row.imageDistanceState === 'string' ? row.imageDistanceState : null, ...(['usage','ark','records','conversations'].some(key=>key in data)?{details:dashboardDetails(data)}:{}) };
+    return { online: row.online, updatedAtMs: numberOrNull(row.updatedAtMs), present: typeof row.present === 'boolean' ? row.present : null, brightnessLevel: numberOrNull(row.brightnessLevel), imageDistanceM: numberOrNull(row.imageDistanceM), imageDistanceState: typeof row.imageDistanceState === 'string' ? row.imageDistanceState : null, ...(['usage','ark','records','conversations','historicalUsage','observations'].some(key=>key in data)?{details:dashboardDetails(data)}:{}) };
   },
 };

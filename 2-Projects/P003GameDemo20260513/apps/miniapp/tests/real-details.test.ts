@@ -19,4 +19,17 @@ describe('真实数据面板映射', () => {
     const v=detailsView(dashboardDetails({records:{yesterdayIncome:{available:false,reason:'dependency_unavailable',familyCoin:99},latestItems:{available:false,reason:'clock_unknown',items:[{itemId:'old'}]}},conversations:{available:false,reason:'not_enabled',messageCount:10}}));
     expect(v.incomeFamilyCoin).toBe('暂无数据');expect(v.latestItems).toEqual([]);expect(v.conversationCount).toBe('暂无数据');
   });
+  it('历史使用采用服务端去重后的总量，进度与估算分开说明',()=>{
+    const d=dashboardDetails({historicalUsage:{available:true,totalSeconds:962,totalMinutes:16.03,observedSeconds:902,estimatedSeconds:60,fromDay:'2026-11-06',toDay:'2026-11-16',daily:[{date:'2026-11-06',available:true,focusMinutes:15.03,observedSeconds:902,estimatedSeconds:0}]}});
+    expect(d.historicalUsage).toMatchObject({available:true,totalSeconds:962,observedSeconds:902,estimatedSeconds:60});
+    expect(detailsView(d).historicalUsage).toBe('16 分 2 秒');
+  });
+  it('历史观察保留零库存，奖励物品不伪装为家族币收益或当前余额',()=>{
+    const d=dashboardDetails({observations:{available:true,reason:'partial_history',counts:{rewards:11,inventory:21,makeupCards:5,progress:3,wallet:0},coverage:{complete:false,firstOccurredAtMs:1793933632128},latest:{rewards:{eventId:'e1',eventName:'g1.reward_granted',kind:'rewards',occurredAtMs:1793933632128,receivedAtMs:1793933632128,sourceMode:'unknown',timeStatus:'reported',rewards:[{itemId:'E01-DEC-001',quantity:1,kind:'decoration',tankId:null}]},inventory:{eventId:'e2',kind:'inventory',inventory:{itemId:'M-CARD-001',before:1,after:0,delta:-1,status:null,tankId:null}}}}});
+    expect(d.observations.counts.rewards).toBe(11);
+    expect(d.observations.latest.inventory?.inventory?.after).toBe(0);
+    expect(d.observations.latest.rewards?.rewards[0].itemId).toBe('E01-DEC-001');
+    expect(detailsView(d).familyCoin).toBe('暂无数据');
+    expect(detailsView(d).incomeFamilyCoin).toBe('暂无数据');
+  });
 });

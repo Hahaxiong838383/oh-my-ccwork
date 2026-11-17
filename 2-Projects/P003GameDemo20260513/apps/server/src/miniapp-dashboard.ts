@@ -1,3 +1,7 @@
+import {readParentHistoricalData,readParentObservations} from './parent-observations.js';
+import {emptyObservations,ObservationError} from './history-observations.js';
+import {buildHistoricalUsage} from './history-usage.js';
+import {readWechatIdentity} from './wechat-identity.js';
 import {DatabaseSync} from 'node:sqlite';
 import {resolve} from 'node:path';
 import {telemetryStore, dayOf} from './telemetry-store.js';
@@ -63,16 +67,15 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
  if (!dev || dev.parent_account_id !== accountId) throw new MiniappReadError(404, 'not_found');
   const today = dayOf(now);
   const weekFrom = dateAdd(today, -6);
-  const daily = telemetryStore.dailyRange(dev.sn, weekFrom, today);
-  const todayRow = daily.find((d) => d.date === today);
-  const snap = telemetryStore.latestSnapshot(dev.sn);
-  const p = snap?.payload;
+  let daily:ReturnType<typeof telemetryStore.dailyRange>=[],snap:ReturnType<typeof telemetryStore.latestSnapshot>=null;
+  let usageDaily:ReturnType<typeof telemetryStore.usageRange>=Array.from({length:7},(_,i)=>({date:dateAdd(today,i-6),available:false,focus_minutes:null,updated_at_ms:null}));
+  let telemetryAvailable=true;
+  try { daily=telemetryStore.dailyRange(dev.sn,weekFrom,today);snap=telemetryStore.latestSnapshot(dev.sn);usageDaily=telemetryStore.usageRange(dev.sn,weekFrom,today); }
+  catch { telemetryAvailable=false;daily=[];snap=null; }
+  const todayRow=daily.find(d=>d.date===today),p=snap?.payload;
+  const totalFocusMin=Math.round(daily.reduce((s,d)=>s+d.focus_ms,0)/60000);
+  const elapsedDays=daily.filter(d=>d.date<today).length||1;
 
-  // 周日均：只除以已经过的自然日数（合同 §7.1：避免未来天数稀释）
-  const totalFocusMin = Math.round(daily.reduce((s, d) => s + d.focus_ms, 0) / 60_000);
-  const elapsedDays = daily.filter((d) => d.date < today).length || 1;
-
-  const usageDaily = telemetryStore.usageRange(dev.sn, weekFrom, today);
   let ark: ReturnType<typeof dashboardArk>;
   let records: ReturnType<typeof recordsDashboard>;
   try { ark = dashboardArk(dev.sn); records = recordsDashboard(publicId, accountId); }
@@ -83,7 +86,7 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
       ark,
       records,
       conversations: parentConversationSummary(publicId, accountId, authRole),
-      usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',
+      usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',reason:telemetryAvailable?null:'dependency_unavailable',
         today: usageDaily[usageDaily.length - 1], daily: usageDaily },
       device: {
         updated_at_ms: snap?.server_received_ms ?? null,
@@ -96,21 +99,21 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
         image_distance_state: p?.image_distance_state ?? null,
       },
       today: {
-        focus_minutes: Math.round((todayRow?.focus_ms ?? 0) / 60_000),
-        guarded_minutes: Math.round((todayRow?.guarded_ms ?? 0) / 60_000),
-        posture_alert_count: todayRow?.reminder_played ?? 0,
+        focus_minutes: telemetryAvailable?Math.round((todayRow?.focus_ms ?? 0) / 60_000):null,
+        guarded_minutes: telemetryAvailable?Math.round((todayRow?.guarded_ms ?? 0) / 60_000):null,
+        posture_alert_count: telemetryAvailable?(todayRow?.reminder_played ?? 0):null,
       },
       week: {
-        total_focus_minutes: totalFocusMin,
-        daily_average_focus_minutes: Math.round(
+        total_focus_minutes: telemetryAvailable?totalFocusMin:null,
+        daily_average_focus_minutes: telemetryAvailable?Math.round(
           daily.filter((d) => d.date < today).reduce((s, d) => s + d.focus_ms, 0) / 60_000 / elapsedDays,
-        ),
+        ):null,
         daily: (() => {
           const map = new Map(daily.map((d) => [d.date, d]));
-          const out: Array<{ date: string; focus_minutes: number }> = [];
+          const out: Array<{ date: string; focus_minutes: number|null }> = [];
           for (let i = -6; i <= 0; i += 1) {
             const day = dateAdd(today, i);
-            out.push({ date: day, focus_minutes: Math.round((map.get(day)?.focus_ms ?? 0) / 60_000) });
+            out.push({ date: day, focus_minutes: telemetryAvailable?Math.round((map.get(day)?.focus_ms ?? 0) / 60_000):null });
           }
           return out;
         })(),
@@ -174,4 +177,48 @@ export function readAdminMiniappConversations(sn:string,params:URLSearchParams) 
  const data=readParentConversations(publicId,owner,role,params);
  if(authority(publicId,owner)!==before)throw new MiniappReadError(404,'not_found');
  return data;
+}
+
+
+/** Preserve legacy parent domain degradation while fingerprinting every relevant authorization
+ * component across the new await. Static lookup failures are explicit values, never permission. */
+function parentReadAuthority(publicId:string,owner:string) {
+ const d=deviceRegistryStore.getByPublicId(publicId);if(!d||d.parent_account_id!==owner)throw new MiniappReadError(404,'not_found');
+ const safe=(fn:()=>unknown)=>{try{return {available:true,value:fn()};}catch{return {available:false};}};
+ const arkEnabled=arkCeiling().includes(d.sn);
+ return JSON.stringify({sn:d.sn,public_id:d.public_id,owner:d.parent_account_id,account_id:d.account_id,
+  binding_version:d.binding_version,status:d.status,identity:safe(()=>deviceRegistryStore.arkIdentity(d.sn)),
+  owner_role:safe(()=>accountRole(owner)),device_role:safe(()=>d.account_id?accountRole(d.account_id):null),
+  account_uses:safe(()=>accountUses(d.account_id)),ark_enabled:arkEnabled,
+  settings:safe(()=>arkEnabled?arkStore().settings():null),grant:safe(()=>arkEnabled?arkStore().db.prepare('SELECT * FROM ark_grant WHERE sn=?').get(d.sn)??null:null),
+  records_enabled:safe(()=>recordsAllowed(d.sn)),legacy_scope:process.env.ARK_RECORDS_LEGACY_SCOPE_JSON??null,
+  conversation_scope:process.env.PARENT_CONVERSATION_SCOPE_JSON??null});
+}
+
+/** Legacy history is separately authorized and asynchronous; existing current/R1 contracts stay intact. */
+export async function readParentDashboardWithHistory(publicId:string,accountId:string,authRole:string,now=Date.now()) {
+ const data=readParentDashboard(publicId,accountId,authRole,now);
+ const before=parentReadAuthority(publicId,accountId);
+ let historical:Awaited<ReturnType<typeof readParentHistoricalData>>;
+ try { historical=await readParentHistoricalData(publicId,accountId,authRole,now); }
+ catch(e) { const reason=e instanceof ObservationError&&e.status===404?'not_enabled':'dependency_unavailable';historical={observations:emptyObservations(reason),historical_usage:{...buildHistoricalUsage([],[],now),reason,coverage:{...buildHistoricalUsage([],[],now).coverage,telemetry_available:false,analytics_available:false}}}; }
+ if(parentReadAuthority(publicId,accountId)!==before)throw new MiniappReadError(404,'not_found');
+ const map=new Map(historical.historical_usage.daily.map(x=>[x.date,x]));
+ const daily=data.usage.daily.map(x=>map.get(x.date)??x);
+ return {...data,...historical,usage:{...data.usage,source:historical.historical_usage.available?'merged_observations':data.usage.source,today:daily.at(-1)!,daily}};
+}
+export async function readAdminMiniappDashboardWithHistory(sn:string,now=Date.now()) {
+ const initial=readAdminMiniappDashboard(sn,now),b=initial.binding;
+ if(!initial.data)return {...initial,wechat_identity:readWechatIdentity(b.parent_account_id)};
+ const before=authority(b.public_id!,b.parent_account_id!);
+ const owner=accountStore.findAccount(b.parent_account_id!)!;
+ const data=await readParentDashboardWithHistory(b.public_id!,b.parent_account_id!,owner.role,now);
+ const wechat_identity=readWechatIdentity(b.parent_account_id);
+ if(authority(b.public_id!,b.parent_account_id!)!==before)throw new MiniappReadError(404,'not_found');
+ return {...initial,data,wechat_identity};
+}
+export async function readAdminMiniappObservations(sn:string,params:URLSearchParams) {
+ const {publicId,owner,role}=adminOwner(sn),before=authority(publicId,owner);
+ const data=await readParentObservations(publicId,owner,role,params);
+ if(authority(publicId,owner)!==before)throw new MiniappReadError(404,'not_found');return data;
 }

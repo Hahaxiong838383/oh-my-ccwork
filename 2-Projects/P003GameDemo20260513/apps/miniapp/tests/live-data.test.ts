@@ -34,6 +34,26 @@ describe('真实设备状态', () => {
 });
 
 describe('真实首页账号生命周期', () => {
+  it('微信授权准备期间退出，不提交授权或恢复旧账号',async()=>{
+    let finish!:(x:{phone_code:string;login_code:string;app_id:string})=>void;
+    const linkWechat=vi.fn();
+    const {controller,token}=fixture({linkWechat});
+    const pending=controller.authorizeWechat(()=>new Promise(resolve=>{finish=resolve;}),true);
+    controller.logout();finish({phone_code:'p',login_code:'l',app_id:'wx'});await pending;
+    expect(linkWechat).not.toHaveBeenCalled();expect(token()).toBe('');expect(controller.state.wechatIdentity).toBeNull();
+  });
+  it('身份补齐的临时授权码过期保留已读设备和登录态',async()=>{
+    const {controller,token}=fixture({linkWechat:async()=>{throw {status:401,payload:{error:'wechat_login_code_invalid'}};}});
+    await controller.refresh();
+    await controller.authorizeWechat(async()=>({phone_code:'p',login_code:'l',app_id:'wx'}),true);
+    expect(controller.state).toMatchObject({signedIn:true,snapshot,wechatBusy:false});
+    expect(controller.state.wechatError).toContain('凭证已过期');expect(token()).toBe('account-a');
+  });
+  it('微信身份读取故障不阻塞设备数据',async()=>{
+    const {controller}=fixture({getWechatIdentity:async()=>{throw {status:503};}});
+    await controller.refresh();
+    expect(controller.state.snapshot).toEqual(snapshot);expect(controller.state.wechatError).toContain('可继续查看');
+  });
   it('读取账号列表后只请求列表中设备的publicId', async () => {
     const ids: string[] = [];
     const { controller } = fixture({ getSnapshot: async id => { ids.push(id); return snapshot; } });

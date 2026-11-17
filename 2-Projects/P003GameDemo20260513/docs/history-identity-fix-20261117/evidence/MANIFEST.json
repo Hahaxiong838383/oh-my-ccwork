@@ -1,0 +1,119 @@
+{
+  "created_ms": 1794878907647,
+  "files": [
+    {
+      "target": "/opt/p003/server/src/account-store.ts",
+      "candidate": "candidate/src/account-store.ts",
+      "before_sha256": "949f4a92d4e26eff3addd925416cd050c6be0501a6a238f22336dfbbfc942f9a",
+      "after_sha256": "57efa7e6d3b6835c25a8280f28fc3df02b01d99fcab48f24b84a8d8d4eb3118c"
+    },
+    {
+      "target": "/opt/p003/server/src/analytics/index.ts",
+      "candidate": "candidate/src/analytics/index.ts",
+      "before_sha256": "d9dc939ce5a137d06fab7ef83a54a88b3aa70b403f79a62e732fc5f2c44e7910",
+      "after_sha256": "2eee1ef0047c1e3025f98d2f3952bb31e437fb69c219c4745718cea4c3e279ba"
+    },
+    {
+      "target": "/opt/p003/server/src/analytics/observations-route.ts",
+      "candidate": "candidate/src/analytics/observations-route.ts",
+      "before_sha256": null,
+      "after_sha256": "eb172148f0f023e43bfd3a228124c43bfaeb21dd6c92c51b2f264f4fbaab26c1"
+    },
+    {
+      "target": "/opt/p003/server/src/history-observations.ts",
+      "candidate": "candidate/src/history-observations.ts",
+      "before_sha256": null,
+      "after_sha256": "43ac3d4b382d66f84e1781cba2880cd07667b9a482a3370a262d9e643860b454"
+    },
+    {
+      "target": "/opt/p003/server/src/history-scope.ts",
+      "candidate": "candidate/src/history-scope.ts",
+      "before_sha256": null,
+      "after_sha256": "bb8318f26973b71a13ba2ea9c4c1095077b12d7d681054d34c015a38b4cd657f"
+    },
+    {
+      "target": "/opt/p003/server/src/history-usage.ts",
+      "candidate": "candidate/src/history-usage.ts",
+      "before_sha256": null,
+      "after_sha256": "fba53fac143f363a9f1b02d231a81655bfd3598a8eb09fe36356adb0b26700b4"
+    },
+    {
+      "target": "/opt/p003/server/src/miniapp-dashboard.ts",
+      "candidate": "candidate/src/miniapp-dashboard.ts",
+      "before_sha256": "264e22f5c11607528064c3dab3291bb6ed34fed69d40b5f3450d3d5bae90287c",
+      "after_sha256": "367653c43b3eefe55fe3f95d05c1d19f057f2bdbbe7576d94b61cf31a9196759"
+    },
+    {
+      "target": "/opt/p003/server/src/parent-observations.ts",
+      "candidate": "candidate/src/parent-observations.ts",
+      "before_sha256": null,
+      "after_sha256": "0549c8d6bf944ce42f8f9d60996dc8e2f6f251489b0fbb04e88b5f64b2894222"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/miniapp-admin.ts",
+      "candidate": "candidate/src/routes/miniapp-admin.ts",
+      "before_sha256": "d6e3e3833f47d16dde9104e28ff59e0f1260fa9b7a448ee6cbc267d590082c99",
+      "after_sha256": "91a4a6dba76804abe85cc7d0d9e06cfaf12dd78d71ff7a5d9a47abd76a24ed68"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/telemetry.ts",
+      "candidate": "candidate/src/routes/telemetry.ts",
+      "before_sha256": "eea77ac6b254cfd4ccc3e8b022a08cb4292da52352d7ae787c1bea17e76d4961",
+      "after_sha256": "6863c588d36ee50065a209fca8d1280425b667cea57c2a59a0a190e4d12b6bca"
+    },
+    {
+      "target": "/opt/p003/server/src/routes/wechat-auth.ts",
+      "candidate": "candidate/src/routes/wechat-auth.ts",
+      "before_sha256": "0ecb62555f1e823044eb031065af3b52345089a4e54e297c45ad61e9daacdd60",
+      "after_sha256": "2f383e1a583c7ec26bd4fa765bfa9d00eb8a84fdb0ccf987bf61b22d6cc16255"
+    },
+    {
+      "target": "/opt/p003/server/src/wechat-identity.ts",
+      "candidate": "candidate/src/wechat-identity.ts",
+      "before_sha256": null,
+      "after_sha256": "f204719342c5206dfe4e3bed2c348a76ed9e8b6dccb019160d2f995252861c5e"
+    },
+    {
+      "target": "/opt/p003/server/src/wechat-phone.ts",
+      "candidate": "candidate/src/wechat-phone.ts",
+      "before_sha256": "bc10b7270a141caf18ce2a3b38af069125691678228e329ffe7bb283a7e15513",
+      "after_sha256": "cbb6f95027b34fd4530cd4864891a4100a48f789c7101c9abd12018b64e5341c"
+    },
+    {
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "candidate": "candidate/admin/index.html",
+      "before_sha256": "d46500fdba5dd3be981fc3f7e03c551efd8fd25d5608cc01f456e3fab526023b",
+      "after_sha256": "aa72315824d1f19926c693eda543e8de2e6de26436255f36b78b71ac73b2e826"
+    },
+    {
+      "target": "/opt/p003/server/.env.local",
+      "candidate": "voice.env.candidate",
+      "before_sha256": "8dd46e02896afc12426689e76fd429f73b545615ab5bb1454e6718c21cdfceff",
+      "after_sha256": "5d1c227d9bf9ad90d669b5ad71379c6586dc20f845b1691c7372f8943019c8fa",
+      "mode": 384
+    },
+    {
+      "target": "/opt/p003/server/.env.analytics",
+      "candidate": "analytics.env.candidate",
+      "before_sha256": "aff1b7302af6e63a752221011a7f075bf88fc5f4a2ed27eef03256fda075ae1c",
+      "after_sha256": "f05150b923b160f6e45d54419f860ae284917b8d14e96c8464288ddd4771c193",
+      "mode": 384
+    }
+  ],
+  "local_source_hashes": {
+    "2-Projects/P003GameDemo20260513/apps/server/src/account-store.ts": "57efa7e6d3b6835c25a8280f28fc3df02b01d99fcab48f24b84a8d8d4eb3118c",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/index.ts": "2eee1ef0047c1e3025f98d2f3952bb31e437fb69c219c4745718cea4c3e279ba",
+    "2-Projects/P003GameDemo20260513/apps/server/src/analytics/observations-route.ts": "eb172148f0f023e43bfd3a228124c43bfaeb21dd6c92c51b2f264f4fbaab26c1",
+    "2-Projects/P003GameDemo20260513/apps/server/src/history-observations.ts": "43ac3d4b382d66f84e1781cba2880cd07667b9a482a3370a262d9e643860b454",
+    "2-Projects/P003GameDemo20260513/apps/server/src/history-scope.ts": "bb8318f26973b71a13ba2ea9c4c1095077b12d7d681054d34c015a38b4cd657f",
+    "2-Projects/P003GameDemo20260513/apps/server/src/history-usage.ts": "fba53fac143f363a9f1b02d231a81655bfd3598a8eb09fe36356adb0b26700b4",
+    "2-Projects/P003GameDemo20260513/apps/server/src/miniapp-dashboard.ts": "367653c43b3eefe55fe3f95d05c1d19f057f2bdbbe7576d94b61cf31a9196759",
+    "2-Projects/P003GameDemo20260513/apps/server/src/parent-observations.ts": "0549c8d6bf944ce42f8f9d60996dc8e2f6f251489b0fbb04e88b5f64b2894222",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/miniapp-admin.ts": "91a4a6dba76804abe85cc7d0d9e06cfaf12dd78d71ff7a5d9a47abd76a24ed68",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/telemetry.ts": "6863c588d36ee50065a209fca8d1280425b667cea57c2a59a0a190e4d12b6bca",
+    "2-Projects/P003GameDemo20260513/apps/server/src/routes/wechat-auth.ts": "2f383e1a583c7ec26bd4fa765bfa9d00eb8a84fdb0ccf987bf61b22d6cc16255",
+    "2-Projects/P003GameDemo20260513/apps/server/src/wechat-identity.ts": "f204719342c5206dfe4e3bed2c348a76ed9e8b6dccb019160d2f995252861c5e",
+    "2-Projects/P003GameDemo20260513/apps/server/src/wechat-phone.ts": "cbb6f95027b34fd4530cd4864891a4100a48f789c7101c9abd12018b64e5341c",
+    "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html": "aa72315824d1f19926c693eda543e8de2e6de26436255f36b78b71ac73b2e826"
+  }
+}

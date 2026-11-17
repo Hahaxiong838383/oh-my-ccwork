@@ -1,4 +1,4 @@
-export type HistoryFilter={fromDay?:string;toDay?:string};
+export type HistoryFilter={fromDay?:string;toDay?:string;kind?:string};
 export type HistoryQuery=HistoryFilter&{limit:number;cursor?:string};
 export type HistoryPage<T>={items:T[];nextCursor:string|null;hasMore:boolean;messageCount?:number;userMessageCount?:number;assistantMessageCount?:number;historyComplete?:boolean};
 export type HistoryState<T>={items:T[];page:HistoryPage<T>|null;busy:boolean;loaded:boolean;error:string;needsRefresh:boolean;filters:HistoryFilter};

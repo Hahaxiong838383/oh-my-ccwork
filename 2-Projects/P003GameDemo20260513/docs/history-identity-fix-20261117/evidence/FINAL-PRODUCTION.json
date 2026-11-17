@@ -1,0 +1,1 @@
+{"at_ms": 1794879969634, "deployed_files_match": true, "wechat_identity_table_exists": true, "wechat_identity_rows": 0, "processes": {"p003-voice": {"status": "online", "restarts": 11}, "kidshub-voice": {"status": "online", "restarts": 0}, "p003-analytics": {"status": "online", "restarts": 3}}}

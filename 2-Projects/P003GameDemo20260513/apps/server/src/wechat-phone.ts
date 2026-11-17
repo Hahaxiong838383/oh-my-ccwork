@@ -1,6 +1,8 @@
-/** WeChat phone-code exchange. No phone codes, URLs containing tokens, or upstream bodies are logged. */
+/** WeChat code exchange. No codes, URLs containing credentials, or upstream bodies are logged. */
+import type { VerifiedWechatIdentity } from './account-store.js';
 export type WechatErrorCode =
   | 'wechat_not_configured' | 'wechat_phone_code_invalid' | 'wechat_identity_mismatch'
+  | 'wechat_login_code_invalid' | 'wechat_app_mismatch'
   | 'phone_region_not_supported' | 'wechat_unavailable' | 'wechat_exchange_failed';
 
 export class WechatPhoneError extends Error {
@@ -8,16 +10,25 @@ export class WechatPhoneError extends Error {
 }
 
 type AppConfig = { appId: string; appSecret: string };
+export type WechatConfigurationStatus = 'ready' | 'missing_app_id' | 'invalid_app_id' | 'missing_app_secret' | 'invalid_app_secret';
 type Json = Record<string, unknown>;
 const invalidAccessToken = new Set([40001, 40014, 42001]);
 const configErrors = new Set([40013, 40125, 40164, 48001, 48002, 50001, 61007]);
 const jsonObject = (value: unknown): Json | null => value && typeof value === 'object' && !Array.isArray(value) ? value as Json : null;
 
-export function wechatAppConfig(): AppConfig {
+export function wechatConfigurationStatus(): WechatConfigurationStatus {
   const appId = process.env.WECHAT_APP_ID?.trim() ?? '';
   const appSecret = process.env.WECHAT_APP_SECRET?.trim() ?? '';
-  if (!/^wx[a-f0-9]{16}$/.test(appId) || appSecret.length < 16 || /\s/.test(appSecret)) throw new WechatPhoneError('wechat_not_configured');
-  return { appId, appSecret };
+  if (!appId) return 'missing_app_id';
+  if (!/^wx[a-f0-9]{16}$/.test(appId)) return 'invalid_app_id';
+  if (!appSecret) return 'missing_app_secret';
+  if (appSecret.length < 16 || /\s/.test(appSecret)) return 'invalid_app_secret';
+  return 'ready';
+}
+
+export function wechatAppConfig(): AppConfig {
+  if (wechatConfigurationStatus() !== 'ready') throw new WechatPhoneError('wechat_not_configured');
+  return { appId: process.env.WECHAT_APP_ID!.trim(), appSecret: process.env.WECHAT_APP_SECRET!.trim() };
 }
 
 /** Dependencies make remote HTTP and clock explicit; there is no production mock mode or bypass. */
@@ -30,6 +41,7 @@ export class WechatPhoneClient {
   private refreshInvalidToken = false;
   private lastForcedRefresh = -Infinity;
   private readonly attemptedCodes = new Map<string, number>();
+  private readonly attemptedLoginCodes = new Map<string, number>();
 
   constructor(options: { fetchImpl?: typeof fetch; now?: () => number; timeoutMs?: number } = {}) {
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
@@ -37,13 +49,13 @@ export class WechatPhoneClient {
     this.timeoutMs = options.timeoutMs ?? 8000;
   }
 
-  private async post(url: string, body: unknown): Promise<Json> {
+  private async request(url: string, body?: unknown): Promise<Json> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
       const response = await this.fetchImpl(url, {
-        method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body), signal: controller.signal, redirect: 'error',
+        method: body === undefined ? 'GET' : 'POST', headers: { 'content-type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: controller.signal, redirect: 'error',
       });
       if (!response.ok) throw new WechatPhoneError('wechat_unavailable');
       const text = await response.text();
@@ -56,6 +68,31 @@ export class WechatPhoneClient {
       // Never expose fetch exceptions: they may contain access_token URLs or app secrets.
       throw new WechatPhoneError('wechat_exchange_failed');
     } finally { clearTimeout(timer); }
+  }
+
+  private post(url: string, body: unknown): Promise<Json> { return this.request(url, body); }
+
+  async exchangeLoginCode(code: string): Promise<VerifiedWechatIdentity> {
+    const config = wechatAppConfig();
+    const { createHash } = await import('node:crypto');
+    const hash = createHash('sha256').update(`${config.appId}\0${code}`).digest('hex');
+    const now = this.now();
+    for (const [key, until] of this.attemptedLoginCodes) if (until <= now) this.attemptedLoginCodes.delete(key);
+    if (this.attemptedLoginCodes.has(hash)) throw new WechatPhoneError('wechat_login_code_invalid');
+    if (this.attemptedLoginCodes.size >= 10000) throw new WechatPhoneError('wechat_unavailable');
+    this.attemptedLoginCodes.set(hash, now + 5 * 60_000);
+    const query = new URLSearchParams({ appid: config.appId, secret: config.appSecret, js_code: code, grant_type: 'authorization_code' });
+    const data = await this.request(`https://api.weixin.qq.com/sns/jscode2session?${query}`);
+    if (data.errcode !== undefined && (typeof data.errcode !== 'number' || !Number.isInteger(data.errcode))) throw new WechatPhoneError('wechat_exchange_failed');
+    if (typeof data.errcode === 'number' && data.errcode !== 0) {
+      if (data.errcode === 40029 || data.errcode === 40163) throw new WechatPhoneError('wechat_login_code_invalid');
+      throw new WechatPhoneError(configErrors.has(data.errcode) ? 'wechat_not_configured' : 'wechat_unavailable');
+    }
+    const validIdentity = (value: unknown): value is string => typeof value === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);
+    if (!validIdentity(data.openid) || typeof data.session_key !== 'string' || !data.session_key || data.session_key.length > 2048 ||
+        (data.unionid != null && !validIdentity(data.unionid))) throw new WechatPhoneError('wechat_exchange_failed');
+    // session_key is deliberately discarded. Only server-verified identifiers leave this boundary.
+    return { appId: config.appId, openid: data.openid, unionid: typeof data.unionid === 'string' ? data.unionid : null };
   }
 
   private async token(config: AppConfig): Promise<string> {

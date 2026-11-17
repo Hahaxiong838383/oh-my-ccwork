@@ -1,13 +1,20 @@
 import {describe,expect,it,vi} from 'vitest';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import RealDetails,{BusinessRow,ConversationRow} from '../src/pages/index/real-details';
+import RealDetails,{BusinessRow,ConversationRow,ObservationRow} from '../src/pages/index/real-details';
+import {observation} from '../src/services/observations';
 import type {BusinessItem} from '../src/services/history-api';
 import {dashboardDetails} from '../src/services/real-details';
 vi.mock('@tarojs/taro',()=>({default:{}}));
 vi.mock('@tarojs/components',async()=>{const R=await import('react');const tag=(name:string)=>(p:any)=>R.createElement(name,{className:p.className},p.children);return {View:tag('div'),Text:tag('span'),Button:tag('button'),Picker:tag('div')};});
 vi.mock('../src/pages/index/components',async()=>{const R=await import('react');return {Card:(p:any)=>R.createElement('section',{},p.children),Heading:(p:any)=>R.createElement('h2',{},p.title)};});
 describe('真实面板可见内容',()=>{
+ it('历史道具零库存、进度秒数、异常时钟及来源说明真实可见',()=>{
+  const inventory=renderToStaticMarkup(<ObservationRow item={observation({eventId:'i',kind:'inventory',timeStatus:'clock_suspect',receivedAtMs:1794830000000,inventory:{itemId:'<道具>',before:1,after:0,delta:-1,status:null}})}/>);
+  expect(inventory).toContain('&lt;道具&gt;：1 → 0');expect(inventory).toContain('设备时间待确认');expect(inventory).toContain('来源模式未确认');
+  const progress=renderToStaticMarkup(<ObservationRow item={observation({eventId:'p',kind:'progress',progress:{elapsedSeconds:902,checkpointMinutes:15}})}/>);
+  expect(progress).toContain('15 分 2 秒');expect(progress).toContain('15 分钟节点');
+ });
  it('可呈现历史条数、已有时长和真实0，不要求设备此刻在线',()=>{
   const html=renderToStaticMarkup(<RealDetails publicId="dev_c" onAccessLost={()=>{}} details={dashboardDetails({usage:{today:{available:true,focusMinutes:2},daily:[{date:'2026-11-15',available:false,focusMinutes:null}]},ark:{available:true,sourceMode:'normal',wallets:{familyCoin:0,stardust:9},inventory:{'M-CARD-001':0}},conversations:{available:true,messageCount:184,lastMessageAtMs:1794830000000},records:{yesterdayIncome:{available:false,reason:'no_records'},latestItems:{available:false,reason:'no_records'}}})}/>);
   expect(html).toContain('今日 2 分钟');expect(html).toContain('已同步 184 条');expect(html).toContain('0 张');expect(html).toContain('2026-11-15');expect(html).toContain('暂无数据');expect(html).toContain('查看历史对话');expect(html).toContain('查看已同步业务流水');

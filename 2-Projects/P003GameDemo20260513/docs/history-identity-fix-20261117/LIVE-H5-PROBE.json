@@ -1,0 +1,121 @@
+{
+  "pass": true,
+  "at": "2026-11-17T01:40:30.992Z",
+  "session_type": "short-lived server validation session, not real human login",
+  "business_writes": 0,
+  "attempted_business_writes": 0,
+  "response_body_replacements": 0,
+  "page_errors": 0,
+  "requests": [
+    {
+      "path": "/api/profile/bound-devices",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "no_store": false,
+      "body_sha256": "6d9cf17037069a0334e19797dfbcf91fb586f272b0efd5cec6ed131646a38414"
+    },
+    {
+      "path": "/api/auth/wechat/identity",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "no_store": true,
+      "body_sha256": "4781e8c220040c5a8461aa1617d2fe2198df990fd6202ab21ce9c199f593c2f7"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "no_store": true,
+      "body_sha256": "547ce83cacfa691f67dc43f7436a31dd376bf890b51375489f5d99e052bf3d8a"
+    },
+    {
+      "path": "/api/auth/wechat/config",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "no_store": true,
+      "body_sha256": "1ddb2b77b34ef7da5b932eb84800fedd1020b48cdb2a8cc06cf254aa6f032878"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "no_store": true,
+      "body_sha256": "6bdea72cc28e8e3995b495fef8d41c7385101dc4f7a7cb366e8035d00a6131ac",
+      "items": 20,
+      "has_more": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations",
+      "has_cursor": true,
+      "method": "GET",
+      "status": 200,
+      "no_store": true,
+      "body_sha256": "b4cf42f2405d4c8da8af3c909f9bc62c65362f854e7b8ede40dc133969218e58",
+      "items": 20,
+      "has_more": false
+    }
+  ],
+  "checks": {
+    "auth_file_valid": true,
+    "storage_format_verified_in_installed_taro": true,
+    "production_C_dashboard_loaded": true,
+    "today_duration_matches_production": true,
+    "historical_duration_matches_production": true,
+    "history_count_rewards": true,
+    "history_count_inventory": true,
+    "history_count_makeup_cards": true,
+    "history_rewards_and_inventory_visible": true,
+    "wallet_unknown_note": true,
+    "partial_history_note": true,
+    "current_wallet_not_fabricated": true,
+    "wechat_configuration_pending_visible": true,
+    "wechat_app_id_visible": true,
+    "H5_no_wechat_phone_authorization_button": true,
+    "wechat_config_actual_app_id": true,
+    "wechat_missing_app_secret": true,
+    "observations_page_received": true,
+    "observation_rows_match_loaded_pages": true,
+    "pagination_bounded": true,
+    "pagination_new_page": true,
+    "independent_observations_endpoint_and_cursor": true,
+    "observations_no_duplicate_records": true,
+    "logout_clears_displayed_history": true,
+    "logout_clears_taro_session": true,
+    "all_production_responses_200": true,
+    "no_network_failures": true,
+    "no_page_errors": true,
+    "no_attempted_business_writes": true
+  },
+  "screenshots_saved": 0,
+  "index_sha256": "2164355db801ac26810ed124b4d6604c0a2bc23ec8a6fd9ff7954c17c2eed135",
+  "usage": {
+    "today_seconds": 24,
+    "historical_seconds": 5003
+  },
+  "observation_counts": {
+    "rewards": 11,
+    "inventory": 21,
+    "makeup_cards": 5,
+    "progress": 3,
+    "wallet": 0
+  },
+  "wechat": {
+    "app_id": "wx8b0ce82f18ab2f29",
+    "configured": false,
+    "configuration_status": "missing_app_secret",
+    "state": "not_configured",
+    "real_wechat_authorization_performed": false
+  },
+  "observations": {
+    "pages": 2,
+    "displayed_records": 40,
+    "final_has_more": false
+  },
+  "auth_file_removed": true,
+  "production_http_gets": 6
+}

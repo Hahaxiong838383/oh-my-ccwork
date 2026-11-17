@@ -16,6 +16,14 @@ export type Account = {
   phone?: string | null;
 };
 
+export type VerifiedWechatIdentity = { appId: string; openid: string; unionid?: string | null };
+export type AccountWechatIdentity = {
+  account_id: string; app_id: string; openid: string; unionid: string | null; verified_at_ms: number;
+};
+export class AccountWechatIdentityError extends Error {
+  constructor(public readonly code: 'wechat_identity_conflict' | 'wechat_phone_mismatch' | 'account_role_mismatch') { super(code); }
+}
+
 export type InviteCode = {
   code: string;
   account_id: string;
@@ -92,6 +100,19 @@ class AccountStore {
       ON invite_code (account_id);
     `);
     this.migrate();
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS account_wechat_identity (
+        account_id TEXT NOT NULL REFERENCES account(id) ON DELETE CASCADE,
+        app_id TEXT NOT NULL,
+        openid TEXT NOT NULL,
+        unionid TEXT,
+        verified_at_ms INTEGER NOT NULL,
+        PRIMARY KEY (app_id, openid),
+        UNIQUE (account_id, app_id)
+      );
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_account_wechat_union
+      ON account_wechat_identity (app_id, unionid) WHERE unionid IS NOT NULL;
+    `);
   }
 
   /** 老库迁移：幂等补列（生产 accounts.db 建于 phone 列之前）。失败记日志不阻断启动。 */
@@ -226,6 +247,49 @@ class AccountStore {
     }
   }
 
+  findWechatIdentity(accountId: string, appId: string): AccountWechatIdentity | null {
+    return this.db.prepare('SELECT account_id,app_id,openid,unionid,verified_at_ms FROM account_wechat_identity WHERE account_id=? AND app_id=?')
+      .get(accountId, appId) as AccountWechatIdentity | undefined ?? null;
+  }
+
+  /** Only call with server-verified WeChat facts. Identity and phone account are committed together. */
+  upsertWechatPhoneAccountWithStatus(phone: string, identity: VerifiedWechatIdentity, expectedAccountId?: string): { account: Account; isNew: boolean } {
+    const normalized = phone.trim();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      let account = this.findByPhone(normalized);
+      if (expectedAccountId) {
+        const expected = this.findAccount(expectedAccountId);
+        if (!expected || expected.phone !== normalized || account?.id !== expectedAccountId) throw new AccountWechatIdentityError('wechat_phone_mismatch');
+      }
+      if (account && account.role !== 'parent') throw new AccountWechatIdentityError('account_role_mismatch');
+      const owner = this.db.prepare('SELECT account_id FROM account_wechat_identity WHERE app_id=? AND openid=?').get(identity.appId, identity.openid) as {account_id:string}|undefined;
+      if (owner && owner.account_id !== account?.id) throw new AccountWechatIdentityError('wechat_identity_conflict');
+      const current = account ? this.findWechatIdentity(account.id, identity.appId) : null;
+      if (current && (current.openid !== identity.openid || (current.unionid && identity.unionid && current.unionid !== identity.unionid))) throw new AccountWechatIdentityError('wechat_identity_conflict');
+      if (identity.unionid) {
+        const unionOwner = this.db.prepare('SELECT account_id FROM account_wechat_identity WHERE app_id=? AND unionid=?').get(identity.appId, identity.unionid) as {account_id:string}|undefined;
+        if (unionOwner && unionOwner.account_id !== account?.id) throw new AccountWechatIdentityError('wechat_identity_conflict');
+      }
+      const isNew = !account;
+      if (!account) {
+        const accountId = formatAccountId(nextAccountNumber(this.listAccounts()));
+        this.db.prepare("INSERT INTO account(id,nickname,role,created_at,phone) VALUES (?,?,'parent',?,?)")
+          .run(accountId, `家长${normalized.slice(-4)}`, Date.now(), normalized);
+        account = this.findAccount(accountId)!;
+      }
+      this.db.prepare(`INSERT INTO account_wechat_identity(account_id,app_id,openid,unionid,verified_at_ms) VALUES(?,?,?,?,?)
+        ON CONFLICT(account_id,app_id) DO UPDATE SET unionid=COALESCE(excluded.unionid,account_wechat_identity.unionid),verified_at_ms=excluded.verified_at_ms`)
+        .run(account.id, identity.appId, identity.openid, identity.unionid ?? null, Date.now());
+      this.db.exec('COMMIT');
+      return { account, isNew };
+    } catch (error) {
+      this.db.exec('ROLLBACK');
+      if (error instanceof AccountWechatIdentityError) throw error;
+      throw new Error('wechat_account_save_failed');
+    }
+  }
+
   /**
    * 设备 brain 专属账号（运营台 worker brain tab）：id=device-<SN>，role='device'，无邀请码。
    * 幂等：已存在则直接返回现有账号（重复开通不重建）。
@@ -251,6 +315,7 @@ class AccountStore {
     try {
       this.db.exec('BEGIN');
       this.db.prepare(`DELETE FROM invite_code WHERE code = ?`).run(invite.code);
+      this.db.prepare('DELETE FROM account_wechat_identity WHERE account_id = ?').run(invite.account_id);
       this.db.prepare(`DELETE FROM account WHERE id = ?`).run(invite.account_id);
       this.db.exec('COMMIT');
     } catch (error) {

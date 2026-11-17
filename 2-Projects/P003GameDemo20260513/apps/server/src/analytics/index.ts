@@ -4,6 +4,7 @@ import {queryAnalyticsTiers} from './tier-query.js';
 import type {UploadPolicy} from './upload-policy.js';
 import {readBoundedJson} from '../ark/http.js';
 import {readArkHistory} from '../ark/history.js';
+import {createObservationGateway} from './observations-route.js';
 import {historyRequestSchema} from '../ark/contracts.js';
 import type {ArkIdentity} from '../ark/identity.js';
 import {AnalyticsCheckpointer} from './checkpointer.js';
@@ -66,6 +67,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     if(!options.internalSecret||!token||!timingSafeEqual(hash(token),hash(options.internalSecret)))return c.json({ok:false,error_code:'UNAUTHORIZED'},401);
     await next();
   });
+  app.route('/',createObservationGateway({db:options.store.db,deviceKey:sn=>options.reader.arkDeviceKey?.(sn)??'',internalSecret:options.internalSecret,cursorSecret:options.authSecret}));
   app.post('/internal/analytics/ark-summary',async c=>{
     // Independent read-only capability; never turns on the batch upload gate.
     let body:unknown;try{body=await readBoundedJson(c.req.raw,1024);}catch(e){return c.json({ok:false,error_code:'INVALID_QUERY'},(e as {status?:number}).status===413?413:400);}

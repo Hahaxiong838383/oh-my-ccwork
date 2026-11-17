@@ -1,11 +1,18 @@
 import {beforeEach,describe,expect,it,vi} from 'vitest';
 import Taro from '@tarojs/taro';
 import {liveApi} from '../src/services/live-api';
-import {getConversationPage,getBusinessPage} from '../src/services/history-api';
+import {getConversationPage,getBusinessPage,getObservationPage} from '../src/services/history-api';
 vi.mock('@tarojs/taro',()=>({default:{getStorageSync:()=> 'parent-test',request:vi.fn(),removeStorageSync:vi.fn()}}));
 beforeEach(()=>{vi.mocked(Taro.request).mockReset();process.env.TARO_APP_API_BASE_URL='https://kidshub-ai.hahaxiong.cc';});
 const response=(data:any)=>({statusCode:200,header:{},data:{ok:true,data}} as never);
 describe('真实snake_case合同经微信传输层映射',()=>{
+ it('历史奖励/库存/使用时长snake合同可读，不把unknown旧奖励混入当前资产',async()=>{
+  const item={event_id:'old-reward',event_name:'g1.reward_granted',kind:'rewards',occurred_at_ms:1793933632128,received_at_ms:1794830000000,time_status:'reported',source_mode:'unknown',rewards:[{item_id:'E01-DEC-001',quantity:1,kind:'decoration',tank_id:null}]};
+  vi.mocked(Taro.request).mockResolvedValueOnce(response({device:{online:false,updated_at_ms:null},historical_usage:{available:true,total_seconds:902,observed_seconds:0,estimated_seconds:902,from_day:'2026-11-06',to_day:'2026-11-06',daily:[]},observations:{available:true,counts:{rewards:11,inventory:21,makeup_cards:5,progress:3,wallet:0},coverage:{complete:false,first_occurred_at_ms:1793933632128},latest:{rewards:item,makeup_cards:{...item,event_id:'card',kind:'makeup_cards',rewards:undefined,inventory:{item_id:'M-CARD-001',before:1,after:0,delta:-1}}}}}));
+  const d=await liveApi.getSnapshot('dev_c');expect(d.details?.historicalUsage.totalSeconds).toBe(902);expect(d.details?.observations.latest.makeupCards?.inventory?.after).toBe(0);expect(d.details?.ark.available).toBe(false);
+  vi.mocked(Taro.request).mockResolvedValueOnce(response({schema_version:1,items:[item],next_cursor:'opaque+/=',has_more:true,coverage:{complete:false}}));
+  const p=await getObservationPage('dev_c',{limit:20,kind:'rewards',fromDay:'2026-11-06'});expect(p.items[0].rewards[0].itemId).toBe('E01-DEC-001');expect(p.nextCursor).toBe('opaque+/=');expect(vi.mocked(Taro.request).mock.calls[1][0].url).toContain('/observations?limit=20&from_day=2026-11-06&kind=rewards');
+ });
  it('设备离线且快照时间未知仍能读取已有时长、资产、摘要和对话数量',async()=>{
   vi.mocked(Taro.request).mockResolvedValue(response({device:{online:false,updated_at_ms:null,brightness_level:0,present:false,image_distance_m:null,image_distance_state:null},usage:{today:{available:true,focus_minutes:2},daily:[{date:'2026-11-16',available:true,focus_minutes:2}]},ark:{available:true,source_mode:'normal',wallets:{family_coin:0,stardust:null},inventory:{'M-CARD-001':0}},records:{yesterday_income:{available:true,reason:'partial_history',source_mode:'normal',family_coin:99,stardust:null,date:'2026-11-15'},latest_items:{available:false,reason:'no_records',items:[]}},conversations:{available:true,message_count:184,user_message_count:92,assistant_message_count:92,history_complete:false}}));
   const d=await liveApi.getSnapshot('dev_c');expect(d.updatedAtMs).toBeNull();expect(d.details?.usage.today.focusMinutes).toBe(2);expect(d.details?.ark).toMatchObject({familyCoin:0,stardust:null,cards:0});expect(d.details?.income.familyCoin).toBe(99);expect(d.details?.conversations.messageCount).toBe(184);

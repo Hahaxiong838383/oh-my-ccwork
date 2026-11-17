@@ -1,0 +1,15 @@
+{
+  "pass": true,
+  "requests": 6,
+  "observations_pages": 2,
+  "page_errors": [],
+  "checks": [
+    "built H5",
+    "SMS compatibility",
+    "shared history and duration DTO",
+    "verified identity and optional UnionID",
+    "observation pagination",
+    "logout clears data",
+    "no WeChat phone button in H5"
+  ]
+}

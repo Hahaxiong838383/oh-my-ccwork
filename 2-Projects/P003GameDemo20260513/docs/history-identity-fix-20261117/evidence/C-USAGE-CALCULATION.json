@@ -1,0 +1,141 @@
+{
+  "available": true,
+  "reason": "partial_history",
+  "source": "merged_observations",
+  "method": "daily_max_union_v1",
+  "total_seconds": 5003,
+  "total_minutes": 83,
+  "observed_seconds": 0,
+  "estimated_seconds": 5003,
+  "from_day": "2026-11-06",
+  "to_day": "2026-11-17",
+  "daily": [
+    {
+      "date": "2026-11-06",
+      "available": true,
+      "focus_minutes": 21,
+      "total_seconds": 1257,
+      "observed_seconds": 0,
+      "estimated_seconds": 1257,
+      "source": "telemetry.presence_transition+telemetry.posture_round+analytics.reward_progress",
+      "updated_at_ms": 1794749245130,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    },
+    {
+      "date": "2026-11-09",
+      "available": true,
+      "focus_minutes": 14,
+      "total_seconds": 867,
+      "observed_seconds": 0,
+      "estimated_seconds": 867,
+      "source": "telemetry.presence_transition",
+      "updated_at_ms": 1794286608101,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    },
+    {
+      "date": "2026-11-10",
+      "available": true,
+      "focus_minutes": 19,
+      "total_seconds": 1154,
+      "observed_seconds": 0,
+      "estimated_seconds": 1154,
+      "source": "telemetry.presence_transition",
+      "updated_at_ms": 1794304084427,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    },
+    {
+      "date": "2026-11-11",
+      "available": true,
+      "focus_minutes": 5,
+      "total_seconds": 275,
+      "observed_seconds": 0,
+      "estimated_seconds": 275,
+      "source": "telemetry.presence_transition",
+      "updated_at_ms": 1794374124031,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    },
+    {
+      "date": "2026-11-12",
+      "available": true,
+      "focus_minutes": 0,
+      "total_seconds": 9,
+      "observed_seconds": 0,
+      "estimated_seconds": 9,
+      "source": "telemetry.presence_transition",
+      "updated_at_ms": 1794445463613,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    },
+    {
+      "date": "2026-11-16",
+      "available": true,
+      "focus_minutes": 24,
+      "total_seconds": 1417,
+      "observed_seconds": 0,
+      "estimated_seconds": 1417,
+      "source": "telemetry.presence_transition+telemetry.posture_round",
+      "updated_at_ms": 1794824576514,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    },
+    {
+      "date": "2026-11-17",
+      "available": true,
+      "focus_minutes": 0,
+      "total_seconds": 24,
+      "observed_seconds": 0,
+      "estimated_seconds": 24,
+      "source": "telemetry.presence_transition",
+      "updated_at_ms": 1794875091798,
+      "coverage": {
+        "complete": false,
+        "reason": "partial_history",
+        "presence_window_seconds": 300,
+        "posture_window_seconds": 60,
+        "reward_counter_policy": "calendar_day_high_water"
+      }
+    }
+  ],
+  "coverage": {
+    "complete": false,
+    "reason": "partial_history",
+    "presence_window_seconds": 300,
+    "posture_window_seconds": 60,
+    "reward_counter_policy": "calendar_day_high_water"
+  },
+  "updated_at_ms": 1794875091798
+}

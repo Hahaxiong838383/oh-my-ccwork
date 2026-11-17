@@ -1,0 +1,207 @@
+{
+  "at_ms": 1794879206373,
+  "pass": true,
+  "base": "https://kidshub-ai.hahaxiong.cc",
+  "checks": {
+    "admin_login": true,
+    "existing_devices_endpoint": true,
+    "C_current_binding": true,
+    "admin_and_parent_dashboard_200": true,
+    "dashboard_no_store": true,
+    "binding_matches_registry": true,
+    "dashboard_exact_same_source_data": true,
+    "observations_both_200": true,
+    "observations_no_store": true,
+    "observations_same_ids_and_fields": true,
+    "records_both_200": true,
+    "records_no_store": true,
+    "records_same_ids_and_fields": true,
+    "conversations_both_200": true,
+    "conversations_no_store": true,
+    "conversations_same_ids_and_fields": true,
+    "historical_usage_positive": true,
+    "historic_reward_seconds_included": true,
+    "current_C_usage_visible": true,
+    "historical_rewards_inventory_visible": true,
+    "partial_history_truthful": true,
+    "missing_wallets_not_fabricated": true,
+    "actual_wechat_app_id_configured": true,
+    "parent_wechat_identity_read": true,
+    "admin_parent_identity_equal": true,
+    "identity_auth_enforced": true,
+    "unauthenticated_denied_no_store": true,
+    "invalid_query_400": true,
+    "public_admin_exact_bytes": true
+  },
+  "requests": [
+    {
+      "path": "/api/auth/login",
+      "status": 200,
+      "no_store": false
+    },
+    {
+      "path": "/api/admin/devices",
+      "status": 200,
+      "no_store": false
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/dashboard",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/observations?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/records?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/ark/records?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/conversations?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/auth/wechat/config",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/auth/wechat/identity",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/auth/wechat/identity",
+      "status": 401,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/dashboard",
+      "status": 401,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/records?limit=0",
+      "status": 400,
+      "no_store": true
+    }
+  ],
+  "business_writes": 0,
+  "real_unbind_performed": false,
+  "binding_version": 1,
+  "observation": {
+    "conversation_messages": 274,
+    "today_usage_available": true,
+    "today_focus_minutes": 0,
+    "reported_version": "371_mini_008",
+    "upload_configured": true,
+    "upload_effective": true
+  },
+  "observations": {
+    "page_items": 20,
+    "has_more": true,
+    "body_sha256": "f8205421d7f8bedea4419830e264afc36b7119898ef1cb8d649846c6344280eb"
+  },
+  "records": {
+    "page_items": 0,
+    "has_more": false,
+    "body_sha256": "94222f9fb9bcefc4cea7e6210134f1bcabf239ce5bea3ef43ea7e7831f77cf88"
+  },
+  "conversations": {
+    "page_items": 20,
+    "has_more": true,
+    "body_sha256": "25a05e3620838f857c312a7561cdcd5b95491be287ada16f70258906f8020667"
+  },
+  "history": {
+    "counts": {
+      "rewards": 11,
+      "inventory": 21,
+      "makeup_cards": 5,
+      "progress": 3,
+      "wallet": 0
+    },
+    "coverage": {
+      "complete": false,
+      "reason": "retained_observations",
+      "raw_retention_days": 14,
+      "first_occurred_at_ms": 1793931495169,
+      "last_occurred_at_ms": 1794811636513,
+      "first_received_at_ms": 1794749242679,
+      "last_received_at_ms": 1794841246975
+    },
+    "total_seconds": 5003,
+    "observed_seconds": 0,
+    "estimated_seconds": 5003,
+    "days": [
+      {
+        "date": "2026-11-06",
+        "total_seconds": 1257,
+        "source": "telemetry.presence_transition+telemetry.posture_round+analytics.reward_progress"
+      },
+      {
+        "date": "2026-11-09",
+        "total_seconds": 867,
+        "source": "telemetry.presence_transition"
+      },
+      {
+        "date": "2026-11-10",
+        "total_seconds": 1154,
+        "source": "telemetry.presence_transition"
+      },
+      {
+        "date": "2026-11-11",
+        "total_seconds": 275,
+        "source": "telemetry.presence_transition"
+      },
+      {
+        "date": "2026-11-12",
+        "total_seconds": 9,
+        "source": "telemetry.presence_transition"
+      },
+      {
+        "date": "2026-11-16",
+        "total_seconds": 1417,
+        "source": "telemetry.presence_transition+telemetry.posture_round"
+      },
+      {
+        "date": "2026-11-17",
+        "total_seconds": 24,
+        "source": "telemetry.presence_transition"
+      }
+    ],
+    "method": "daily_max_union_v1"
+  },
+  "wechat": {
+    "configured": false,
+    "configuration_status": "missing_app_secret",
+    "state": "not_configured",
+    "openid_saved": false,
+    "unionid_saved": false,
+    "real_wechat_authorization_performed": false
+  },
+  "admin_html_sha256": "aa72315824d1f19926c693eda543e8de2e6de26436255f36b78b71ac73b2e826"
+}
