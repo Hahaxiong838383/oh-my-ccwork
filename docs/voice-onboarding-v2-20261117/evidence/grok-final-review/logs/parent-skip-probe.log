@@ -1,0 +1,68 @@
+{
+  "answers": [
+    {
+      "status": 200,
+      "result": "accepted",
+      "memory_write": "skipped",
+      "q": 1,
+      "action": "answer_result"
+    },
+    {
+      "status": 200,
+      "result": "accepted",
+      "memory_write": "skipped",
+      "q": 2,
+      "action": "answer_result"
+    },
+    {
+      "status": 200,
+      "result": "accepted",
+      "memory_write": "skipped",
+      "q": 3,
+      "action": "answer_result"
+    }
+  ],
+  "beforeParent": {
+    "id": "parent",
+    "account_id": "parent",
+    "nickname": "家长昵称",
+    "birthday": "2014-05-01",
+    "gender": "女",
+    "updated_at": 7,
+    "age_years": null,
+    "age_observed_at": null
+  },
+  "afterParent": {
+    "id": "parent",
+    "account_id": "parent",
+    "nickname": "家长昵称",
+    "birthday": "2014-05-01",
+    "gender": "女",
+    "updated_at": 7,
+    "age_years": null,
+    "age_observed_at": null
+  },
+  "beforeChild": {
+    "id": "child",
+    "account_id": "child",
+    "nickname": "",
+    "birthday": "",
+    "gender": "",
+    "updated_at": 1,
+    "age_years": null,
+    "age_observed_at": null
+  },
+  "afterChild": {
+    "id": "child",
+    "account_id": "child",
+    "nickname": "",
+    "birthday": "",
+    "gender": "",
+    "updated_at": 1,
+    "age_years": null,
+    "age_observed_at": null
+  },
+  "parent_unchanged": true,
+  "child_unchanged": true
+}
+EXIT:0
