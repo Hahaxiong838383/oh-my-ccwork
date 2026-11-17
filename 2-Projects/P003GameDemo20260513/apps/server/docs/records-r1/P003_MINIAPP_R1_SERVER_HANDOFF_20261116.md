@@ -213,3 +213,13 @@ mini009候选wire不是当前线上合同，直接开启会失败；**但可以�
 历史接口回滚：仅核对并恢复`/root/p003-parent-history-20261116/source-backup`中的旧telemetry源码，移除本次新增parent-conversations源码及单条PARENT_CONVERSATION_SCOPE_JSON配置（先核并发漂移），受控重启主Brain并验health；保留既有摘要、数据库、grant和所有业务记录。
 
 署名：codex（OpenAI）| 2026-11-16 21:54:57 北京时间
+
+## 2026-11-17 08:25 · Worker 小程序 Dashboard 已上线
+
+入口：`https://kidshub-ai.hahaxiong.cc/admin/` → Worker 管理 → 小程序 Dashboard。可按SN/public_id/家长账号/手机号搜索，查看与小程序同源的全部当前已接入数据。列表、详情和旧Brain家长解除入口均使用二次确认；按确认时绑定版本条件解绑，陈旧/ABA/重复请求409，不删除Brain或原始历史。
+
+C机 `BJP00326081002000031` / `dev_50b5415662259045` 发布后只读验收：binding_version=1未变，当前历史消息**274条**（昨日186条仅为旧快照），对话首屏20条可继续翻页；当前授权流水首屏0条，今日用时仍缺测null，不能当作真实0。配置与实际上传开关均true；OTA最近自报仍`371_mini_008`。本轮未安装mini010、未补造数据、未真实解绑C，后续实机继续验新增流水/时长。
+
+实现commit `677d519eb87267627fb1e3d702dbd7fd687a92ff`；10文件增量发布、公司Brain重启一次，其他进程、环境与所有绑定不变。后台/家长DTO与历史分页同ID同字段、真实公网页面三GET200/零页面错误均通过。独立审查问题已关闭；新增admin14、解绑70、原配对148、小程序101通过。完整范围和存量检查限制见 `docs/miniapp-admin-20261117/HANDOFF.md`，Downloads交付目录为 `P003_MINIAPP_ADMIN_20261117`。
+
+署名：codex（OpenAI）| 2026-11-17

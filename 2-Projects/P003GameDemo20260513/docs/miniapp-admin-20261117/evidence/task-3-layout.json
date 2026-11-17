@@ -1,0 +1,38 @@
+{
+  ".app-layout": {
+    "x": 0,
+    "width": 1440,
+    "scrollLeft": 0,
+    "scrollWidth": 1440
+  },
+  ".app-aside": {
+    "x": 0,
+    "width": 220,
+    "scrollLeft": 0,
+    "scrollWidth": 220
+  },
+  ".app-main": {
+    "x": 220,
+    "width": 1220,
+    "scrollLeft": 0,
+    "scrollWidth": 1220
+  },
+  ".app-content": {
+    "x": 220,
+    "width": 1220,
+    "scrollLeft": 0,
+    "scrollWidth": 1220
+  },
+  ".kh-wrap": {
+    "x": 244,
+    "width": 1172,
+    "scrollLeft": 0,
+    "scrollWidth": 1170
+  },
+  ".kh-main": {
+    "x": 413,
+    "width": 1002,
+    "scrollLeft": 0,
+    "scrollWidth": 1002
+  }
+}

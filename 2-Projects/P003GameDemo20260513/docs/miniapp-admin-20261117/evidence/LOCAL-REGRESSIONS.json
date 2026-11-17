@@ -1,0 +1,186 @@
+{
+  "pass": true,
+  "complete": true,
+  "results": [
+    {
+      "script": "miniapp-admin",
+      "exit_code": 0,
+      "seconds": 4.72,
+      "log_sha256": "b5e5fda42280aa4597aa13de6f5e3182382cab3f702fd1d2f30243d87da1c7a4",
+      "stats": {
+        "tests": 13,
+        "pass": 13,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "miniapp-unbind",
+      "exit_code": 0,
+      "seconds": 8.05,
+      "log_sha256": "c3906b11e32fa7b08c503d26fd0fc283dfd2bbe77dd3a539135efba1e06a2cf8",
+      "stats": {}
+    },
+    {
+      "script": "pairing",
+      "exit_code": 0,
+      "seconds": 10.24,
+      "log_sha256": "c8db163edb248fc6abcd597735c32d31ecf851ac5687cf5e01cb0d68e287d673",
+      "stats": {}
+    },
+    {
+      "script": "device-registry",
+      "exit_code": 0,
+      "seconds": 8.77,
+      "log_sha256": "3173eb557a8603c0f1a5e2b682d2a00d0d5f2568cb020a3ef1711c075173cea1",
+      "stats": {}
+    },
+    {
+      "script": "device-session",
+      "exit_code": 0,
+      "seconds": 5.97,
+      "log_sha256": "7fdbb51d790b239848f97796bc9873264e3c8eef3fb88346b3aeaf0fa9503599",
+      "stats": {}
+    },
+    {
+      "script": "sms-auth",
+      "exit_code": 0,
+      "seconds": 2.42,
+      "log_sha256": "a7598658e1ffc80c274d30e27b0a096ff5256df7aef2ef59da2575d6e9531cba",
+      "stats": {}
+    },
+    {
+      "script": "sms-login-http",
+      "exit_code": 0,
+      "seconds": 2.32,
+      "log_sha256": "d54b0f49caca6487e53f2f746d94df7a74e9b2f29853efa6492ffda731ec2ba0",
+      "stats": {}
+    },
+    {
+      "script": "device-config",
+      "exit_code": 0,
+      "seconds": 1.65,
+      "log_sha256": "138e8bba1e36003a99877dafc6accf98097ca0d71e70cb6bb1a0caa665b2a53a",
+      "stats": {}
+    },
+    {
+      "script": "telemetry",
+      "exit_code": 0,
+      "seconds": 2.42,
+      "log_sha256": "f67cd5cd2287c93922a2977d13e5e83c23649683ba70b87e7df4452314f4c1fc",
+      "stats": {}
+    },
+    {
+      "script": "mini008-dashboard",
+      "exit_code": 0,
+      "seconds": 2.89,
+      "log_sha256": "594c0de9ef7d908d4956380d229ec3e71f0df6f2ad9fb80f6adb21737c7754c3",
+      "stats": {
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "parent-conversations",
+      "exit_code": 0,
+      "seconds": 2.75,
+      "log_sha256": "450d0ddf69848b7c5007e9c20c76574509bef40e322e22402ca149b094d939e3",
+      "stats": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records",
+      "exit_code": 0,
+      "seconds": 18.16,
+      "log_sha256": "4efcb295c06aa1cc1aed355ca327b7dec8041f12400cd592fabfcaceccf2da09",
+      "stats": {
+        "tests": 32,
+        "pass": 32,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records-legacy-http",
+      "exit_code": 0,
+      "seconds": 3.4,
+      "log_sha256": "839aec3247d56ab2cd300069967bfbfa3a6543ca2bed1d59da69fad6079020e7",
+      "stats": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records-summaries",
+      "exit_code": 0,
+      "seconds": 11.29,
+      "log_sha256": "9d50fec13276b0cbfe2767e51834b4138560993962f97ae0d2020e86df56a755",
+      "stats": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records-legacy-summaries",
+      "exit_code": 0,
+      "seconds": 4.15,
+      "log_sha256": "291648245463584c946f16c8709966e7b2efbc25711246e3dbdd9b2437760047",
+      "stats": {
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-history",
+      "exit_code": 0,
+      "seconds": 3.68,
+      "log_sha256": "43dcee33d33747472c3dd20eec19df93c97fdac74cef29b6e34ebf462d7e5205",
+      "stats": {
+        "tests": 11,
+        "pass": 11,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "profile-store",
+      "exit_code": 0,
+      "seconds": 0.57,
+      "log_sha256": "4b549f083af5ef8d14b1fdcbf2e9a5fad1780f9afbe4d84793afdf28de9e54f4",
+      "stats": {}
+    },
+    {
+      "script": "analytics-admin-auth",
+      "exit_code": 0,
+      "seconds": 2.19,
+      "log_sha256": "978ea5fe9c5b98f80177240057c716d5670e57d21f6c372aaf07ffc68fff2696",
+      "stats": {}
+    },
+    {
+      "script": "search-canary-admin",
+      "exit_code": 0,
+      "seconds": 0.76,
+      "log_sha256": "5af95979013c19794cd8728636c4b8d329652195af1b9a88846b2630e72c253a",
+      "stats": {}
+    },
+    {
+      "script": "listening-admin",
+      "exit_code": 0,
+      "seconds": 2.41,
+      "log_sha256": "a785c2549d667f2e9248a58610540240b87442b433cc720b8de529b0944d70af",
+      "stats": {}
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "commit": "677d519eb87267627fb1e3d702dbd7fd687a92ff",
+  "base_commit": "53239abe",
+  "files": [
+    {
+      "path": "src/device-registry-store.ts",
+      "candidate": "candidate/src/device-registry-store.ts",
+      "target": "/opt/p003/server/src/device-registry-store.ts",
+      "before_sha256": "eb5a64929b5d386da39034c722b759e201c374207f3d064d73e511d5b6d48a10",
+      "after_sha256": "c0eaee6600eccb819d641173610c6f139a25d204586814b4b85a6c7348872ed7"
+    },
+    {
+      "path": "src/miniapp-dashboard.ts",
+      "candidate": "candidate/src/miniapp-dashboard.ts",
+      "target": "/opt/p003/server/src/miniapp-dashboard.ts",
+      "before_sha256": null,
+      "after_sha256": "264e22f5c11607528064c3dab3291bb6ed34fed69d40b5f3450d3d5bae90287c"
+    },
+    {
+      "path": "src/pairing-store.ts",
+      "candidate": "candidate/src/pairing-store.ts",
+      "target": "/opt/p003/server/src/pairing-store.ts",
+      "before_sha256": "2065d85f892b522200079a59066707721e3a9ed48b6db3a1aaa0afb4cb12044b",
+      "after_sha256": "d6f0adf6d351ba998b711bacd49496a2457cd7d5f5cafeb24574d25532ed80db"
+    },
+    {
+      "path": "src/parent-conversations.ts",
+      "candidate": "candidate/src/parent-conversations.ts",
+      "target": "/opt/p003/server/src/parent-conversations.ts",
+      "before_sha256": "33e17148525d71c7277ac34ce7104439caa096fc61b518d35da0a78dfa523ba5",
+      "after_sha256": "265d96152c2c5d6f404ec723d794abebe289bb79e753d1ebd3a9441af7707658"
+    },
+    {
+      "path": "src/routes/admin-data.ts",
+      "candidate": "candidate/src/routes/admin-data.ts",
+      "target": "/opt/p003/server/src/routes/admin-data.ts",
+      "before_sha256": "4952479442d143de5da2e790f7412f92c5c12f84770a94d7af95e63a340bb61f",
+      "after_sha256": "122df1918536582e886120cb446e5e1080be9dc9440b6b6c3cf26ce5ec9479eb"
+    },
+    {
+      "path": "src/routes/miniapp-admin.ts",
+      "candidate": "candidate/src/routes/miniapp-admin.ts",
+      "target": "/opt/p003/server/src/routes/miniapp-admin.ts",
+      "before_sha256": null,
+      "after_sha256": "d6e3e3833f47d16dde9104e28ff59e0f1260fa9b7a448ee6cbc267d590082c99"
+    },
+    {
+      "path": "src/routes/pairing.ts",
+      "candidate": "candidate/src/routes/pairing.ts",
+      "target": "/opt/p003/server/src/routes/pairing.ts",
+      "before_sha256": "ccb89ef6547d77a87309d05b8818004713829719facbdda467f534e68d1cc8e5",
+      "after_sha256": "db69d894f4da93423590a8880905b5edc1dc8d22f76ad73a88c6e93258d39249"
+    },
+    {
+      "path": "src/routes/profile.ts",
+      "candidate": "candidate/src/routes/profile.ts",
+      "target": "/opt/p003/server/src/routes/profile.ts",
+      "before_sha256": "00d70dc5265014e9de95a3420ec96a6df333b07623e25f3d4f33f604f2e92614",
+      "after_sha256": "bc441f4898ddbc5fb3fc8e0159be9331a17ac4172586de7a12ee30c9dbee787c"
+    },
+    {
+      "path": "src/routes/telemetry.ts",
+      "candidate": "candidate/src/routes/telemetry.ts",
+      "target": "/opt/p003/server/src/routes/telemetry.ts",
+      "before_sha256": "9bb9913ab2f6680ee209a0e15d202bdab83fa0f27382ca73a117761a2fba8759",
+      "after_sha256": "eea77ac6b254cfd4ccc3e8b022a08cb4292da52352d7ae787c1bea17e76d4961"
+    },
+    {
+      "path": "admin/index.html",
+      "candidate": "candidate/admin/index.html",
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "before_sha256": "14872ac50c89ccd06cc4ea73cf76e674c0953da6151a28512c75dc16ec9e2bee",
+      "after_sha256": "d46500fdba5dd3be981fc3f7e03c551efd8fd25d5608cc01f456e3fab526023b"
+    }
+  ]
+}

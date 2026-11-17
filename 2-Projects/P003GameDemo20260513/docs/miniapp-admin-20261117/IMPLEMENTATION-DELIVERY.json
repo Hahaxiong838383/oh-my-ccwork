@@ -1,0 +1,133 @@
+{
+  "at": "2026-11-17T08:31:26.042204",
+  "scope": "actual implementation delivery; synthetic screenshots, sanitized real API evidence",
+  "local_directory": "/Users/fu-121/Downloads/P003_MINIAPP_ADMIN_20261117",
+  "air_directory": "/Users/rayman.chen/Downloads/P003_MINIAPP_ADMIN_20261117",
+  "implementation_commit": "677d519eb87267627fb1e3d702dbd7fd687a92ff",
+  "zip": {
+    "name": "P003_MINIAPP_ADMIN_20261117.zip",
+    "bytes": 477464,
+    "sha256": "5d853111d0ffd6037e0f4b47c1fcdc0af85d4eb943efae971433c2e12f723c47"
+  },
+  "files": [
+    {
+      "path": "01-dashboard-desktop-synthetic.png",
+      "sha256": "013ed3229a0533e02992261ef7aa4765396a5bce6c02bc9273cb0aa24b5b1bc0",
+      "bytes": 255270
+    },
+    {
+      "path": "02-dashboard-mobile-synthetic.png",
+      "sha256": "e857574ff0fbebcbe070423c0047df36fa19e51319161030d20c8183ab80be71",
+      "bytes": 180310
+    },
+    {
+      "path": "API.md",
+      "sha256": "0df27e648fc326d184af949f1b3a9504b15d68de4aaf1304a2355024d0cb6d06",
+      "bytes": 3702
+    },
+    {
+      "path": "EVIDENCE.md",
+      "sha256": "3b8cd2941656dd766e2117adffb76928fe718e777422380f60453896e53d0e5d",
+      "bytes": 6338
+    },
+    {
+      "path": "HANDOFF.md",
+      "sha256": "d6ba0c3cc96180e93f0879a63521660e0a327ff35a2ce8d1d4ddf56d830479a3",
+      "bytes": 7118
+    },
+    {
+      "path": "PLAN.md",
+      "sha256": "d8f9f43d64a4c9145fc321f53fb7bb2f0daa744337889284195f847650b85763",
+      "bytes": 14951
+    },
+    {
+      "path": "README.md",
+      "sha256": "990935e24051fcc884a61e3fedbd8e659ca56c0e5d586b0a70db12e80355089b",
+      "bytes": 269
+    },
+    {
+      "path": "evidence/LOCAL-REGRESSIONS.json",
+      "sha256": "db54b9da1bb90efbd56ed2af8fd3cc2fff9dcc64227e2768b93e83c920394529",
+      "bytes": 4749
+    },
+    {
+      "path": "evidence/MANIFEST.json",
+      "sha256": "a824d5ff20deb6c0eda1c409e09e5ccba35fd82fbffd09db04532b016ed032b9",
+      "bytes": 3486
+    },
+    {
+      "path": "evidence/NODE22-TESTS.json",
+      "sha256": "8924e77de9a932334b894770d962f74923a9be61ff50c707332484f7f67f41cc",
+      "bytes": 5470
+    },
+    {
+      "path": "evidence/POST-RELEASE-PROBE.json",
+      "sha256": "ed8873e116c286365817946a8574e7a0b38c6cca4cd165316af1102efb168aaa",
+      "bytes": 2690
+    },
+    {
+      "path": "evidence/PUBLIC-BROWSER.json",
+      "sha256": "01887c550633aa7ab374d8140e6ca156ecdc73f9448f372ae951247614762afb",
+      "bytes": 489
+    },
+    {
+      "path": "evidence/RELEASE.json",
+      "sha256": "19bbaefc29efd391ed04ebe2d13f6363a0084cab05c46b247ef5071ccc2805d4",
+      "bytes": 513
+    },
+    {
+      "path": "evidence/REVIEWED.json",
+      "sha256": "4d47bf29279a3ac225015b83c8902d309c083b0e0f754611c69fd389e5840e3f",
+      "bytes": 370
+    },
+    {
+      "path": "evidence/final-review.md",
+      "sha256": "e2956610f03af2244a200e869205ff9238dcd488686848aaf3fdf89aaa59c34c",
+      "bytes": 6075
+    },
+    {
+      "path": "evidence/progress.md",
+      "sha256": "9eba985d69578b15b99eaf8dd0456d1e4f170698856ff377210f7512625d0a8d",
+      "bytes": 4348
+    },
+    {
+      "path": "evidence/server-review.md",
+      "sha256": "68b4dfb9c844b1b48ca9bc406743ddc3f371e126ec9ff72089a8b1f83fb302a6",
+      "bytes": 9638
+    },
+    {
+      "path": "evidence/task-1-report.md",
+      "sha256": "abc23def121bdb6c3820dfaecf5dfaaaa2ee759a3f3f39948d027fe86fc36edd",
+      "bytes": 8608
+    },
+    {
+      "path": "evidence/task-2-report.md",
+      "sha256": "17357a3e804256e914896b993dd21e51cda9eb297989189498dc327441d215f9",
+      "bytes": 7533
+    },
+    {
+      "path": "evidence/task-3-layout.json",
+      "sha256": "bc357be216549b8d79364646f2d07486cde68063dbd2e8eb6fe685f44c01f336",
+      "bytes": 600
+    },
+    {
+      "path": "evidence/task-3-preserved-functions.json",
+      "sha256": "7c16fe3abc0ea37c19f04d6b1487f2f89d78cdbfc15043fa630171e5455719bc",
+      "bytes": 791
+    },
+    {
+      "path": "evidence/task-3-report.md",
+      "sha256": "3234a916af4933c1ed323be2204ca4d65e40ba0023920b819b55cabea1de5bce",
+      "bytes": 9147
+    },
+    {
+      "path": "evidence/ui-review.md",
+      "sha256": "f8bd7532006c820741fed4244730cdcd09aac785e45008b3eadbf8d689ba3766",
+      "bytes": 7171
+    }
+  ],
+  "both_downloads_verified": true,
+  "air_verified_files": 23,
+  "verified_at": "2026-11-17T08:32:26.327863",
+  "r1_handoff_sha256": "4245e7e42d49b428b8408902019286665ce7025097121cca8e829516db02d509"
+}

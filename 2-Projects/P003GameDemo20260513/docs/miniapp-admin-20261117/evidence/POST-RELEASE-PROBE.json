@@ -1,0 +1,97 @@
+{
+  "at_ms": 1794875146081,
+  "pass": true,
+  "base": "https://kidshub-ai.hahaxiong.cc",
+  "checks": {
+    "admin_login": true,
+    "existing_devices_endpoint": true,
+    "C_current_binding": true,
+    "admin_and_parent_dashboard_200": true,
+    "dashboard_no_store": true,
+    "binding_matches_registry": true,
+    "dashboard_exact_same_source_data": true,
+    "records_both_200": true,
+    "records_no_store": true,
+    "records_same_ids_and_fields": true,
+    "conversations_both_200": true,
+    "conversations_no_store": true,
+    "conversations_same_ids_and_fields": true,
+    "unauthenticated_denied_no_store": true,
+    "invalid_query_400": true,
+    "public_admin_exact_bytes": true
+  },
+  "requests": [
+    {
+      "path": "/api/auth/login",
+      "status": 200,
+      "no_store": false
+    },
+    {
+      "path": "/api/admin/devices",
+      "status": 200,
+      "no_store": false
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/dashboard",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/records?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/ark/records?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/conversations?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/conversations?limit=20",
+      "status": 200,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/dashboard",
+      "status": 401,
+      "no_store": true
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/records?limit=0",
+      "status": 400,
+      "no_store": true
+    }
+  ],
+  "business_writes": 0,
+  "real_unbind_performed": false,
+  "binding_version": 1,
+  "observation": {
+    "conversation_messages": 274,
+    "today_usage_available": false,
+    "today_focus_minutes": null,
+    "reported_version": "371_mini_008",
+    "upload_configured": true,
+    "upload_effective": true
+  },
+  "records": {
+    "page_items": 0,
+    "has_more": false,
+    "body_sha256": "94222f9fb9bcefc4cea7e6210134f1bcabf239ce5bea3ef43ea7e7831f77cf88"
+  },
+  "conversations": {
+    "page_items": 20,
+    "has_more": true,
+    "body_sha256": "25a05e3620838f857c312a7561cdcd5b95491be287ada16f70258906f8020667"
+  },
+  "admin_html_sha256": "d46500fdba5dd3be981fc3f7e03c551efd8fd25d5608cc01f456e3fab526023b"
+}

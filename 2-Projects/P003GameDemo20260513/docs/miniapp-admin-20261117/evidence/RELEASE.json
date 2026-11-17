@@ -1,0 +1,22 @@
+{
+  "started_ms": 1794875110812,
+  "success": true,
+  "manifest_sha256": "a824d5ff20deb6c0eda1c409e09e5ccba35fd82fbffd09db04532b016ed032b9",
+  "before": {
+    "pid": 2227633,
+    "status": "online",
+    "restarts": 7
+  },
+  "files": 10,
+  "database_restore": false,
+  "real_unbind_performed": false,
+  "after": {
+    "pid": 2284194,
+    "status": "online",
+    "restarts": 8
+  },
+  "other_processes_unchanged": true,
+  "bindings_unchanged": true,
+  "environment_unchanged": true,
+  "finished_ms": 1794875114949
+}

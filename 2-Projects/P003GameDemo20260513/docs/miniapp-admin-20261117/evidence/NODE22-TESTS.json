@@ -1,0 +1,203 @@
+{
+  "pass": true,
+  "manifest_sha256": "a824d5ff20deb6c0eda1c409e09e5ccba35fd82fbffd09db04532b016ed032b9",
+  "at_ms": 1794875069168,
+  "node22": "v22.22.2",
+  "node22_scripts_passed": 19,
+  "results": [
+    {
+      "script": "miniapp-admin",
+      "exit_code": 0,
+      "seconds": 3.65,
+      "log_sha256": "b178ec8e10566fd34e540990a3a14293f9847b3d9fa688de49756578792b319e",
+      "stats": {
+        "tests": 14,
+        "pass": 14,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "miniapp-unbind",
+      "exit_code": 0,
+      "seconds": 2.47,
+      "log_sha256": "16d727027eb19fd6cc23393ab94987a09db2183203fc4e7faf2d958c65b2e6d7",
+      "stats": {}
+    },
+    {
+      "script": "pairing",
+      "exit_code": 0,
+      "seconds": 4.62,
+      "log_sha256": "be42b37d5070dce4b9da9a1953e0f7a51ee74420af7dcad823c7bce68333750b",
+      "stats": {}
+    },
+    {
+      "script": "device-registry",
+      "exit_code": 0,
+      "seconds": 3.2,
+      "log_sha256": "1ee4b1ab2fb9c6352cdfde654c7735a978de5f74e03a400c3b33d38fcdc549e0",
+      "stats": {}
+    },
+    {
+      "script": "device-session",
+      "exit_code": 0,
+      "seconds": 1.83,
+      "log_sha256": "4ece4a00029c689dae679b91fbafd48855bf9b93d2ef1c2bbe720449b1b2b313",
+      "stats": {}
+    },
+    {
+      "script": "sms-auth",
+      "exit_code": 0,
+      "seconds": 1.23,
+      "log_sha256": "8fc2c13215764b75c35d21f53e3ddf8f339b33dbdab9acfdf2f7a29d90bab6b8",
+      "stats": {}
+    },
+    {
+      "script": "sms-login-http",
+      "exit_code": 0,
+      "seconds": 2.64,
+      "log_sha256": "a8fb10c99c733893f2c548d1c5a4ef7a99f3647a6a419649596c635a98e23e9c",
+      "stats": {}
+    },
+    {
+      "script": "device-config",
+      "exit_code": 0,
+      "seconds": 1.33,
+      "log_sha256": "a74f9b6e216e26884b8d04bd2222b6fdff7ee0919ed547a997973109886703ee",
+      "stats": {}
+    },
+    {
+      "script": "telemetry",
+      "exit_code": 0,
+      "seconds": 2.74,
+      "log_sha256": "4ddeb093bcbd31428778a6855b7a2637b26da923191c615826ac28c64f06888d",
+      "stats": {}
+    },
+    {
+      "script": "mini008-dashboard",
+      "exit_code": 0,
+      "seconds": 2.55,
+      "log_sha256": "3873602bd4a3ae0ee918149868ef0363c9119fe609078204bc28bf9403f28a36",
+      "stats": {
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "parent-conversations",
+      "exit_code": 0,
+      "seconds": 3.45,
+      "log_sha256": "b5b54550b2dac4315ab3eddb0656cb73227a19fd2fcd47e105618aa890f50c1d",
+      "stats": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records",
+      "exit_code": 0,
+      "seconds": 11.64,
+      "log_sha256": "bdd4b2a16d7344cb1be2c66c2be2691ae5c07a82abe9904da196c334cdfc8b2f",
+      "stats": {
+        "tests": 32,
+        "pass": 32,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records-legacy-http",
+      "exit_code": 0,
+      "seconds": 3.75,
+      "log_sha256": "b60b580d2d91755f98bd242990a76e612c1cd4802f7e6f62904cc6dfdc5083c7",
+      "stats": {
+        "tests": 10,
+        "pass": 10,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records-summaries",
+      "exit_code": 0,
+      "seconds": 4.11,
+      "log_sha256": "70e994984799c406d02aef4af5bf01ba33cfe7c7fbd3678bd1d932aa275f80fc",
+      "stats": {
+        "tests": 15,
+        "pass": 15,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-records-legacy-summaries",
+      "exit_code": 0,
+      "seconds": 5.04,
+      "log_sha256": "6ecadf06216dfa709ede9a84c9dc6c05c85aae2c82eb6cde18ead0abe4203715",
+      "stats": {
+        "tests": 16,
+        "pass": 16,
+        "fail": 0,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "ark-history",
+      "exit_code": 1,
+      "seconds": 0.47,
+      "log_sha256": "5c4efd69d3d5c54b0bec8412692ed16b9b935e21fb720ca7895bdc24c7d99163",
+      "stats": {
+        "tests": 11,
+        "pass": 0,
+        "fail": 11,
+        "skipped": 0
+      }
+    },
+    {
+      "script": "profile-store",
+      "exit_code": 0,
+      "seconds": 0.49,
+      "log_sha256": "ff71369fe9cbe6b5a88b2eb1e48c44393f9867a2c55739333531974a1232ec68",
+      "stats": {}
+    },
+    {
+      "script": "analytics-admin-auth",
+      "exit_code": 0,
+      "seconds": 2.01,
+      "log_sha256": "3dd615df94b169e3475dc74b83fca483a79463f6eacf78a666c0b6a6d7034f69",
+      "stats": {}
+    },
+    {
+      "script": "search-canary-admin",
+      "exit_code": 0,
+      "seconds": 0.57,
+      "log_sha256": "5af95979013c19794cd8728636c4b8d329652195af1b9a88846b2630e72c253a",
+      "stats": {}
+    },
+    {
+      "script": "listening-admin",
+      "exit_code": 0,
+      "seconds": 2.12,
+      "log_sha256": "6dbc6d0f559e1dfc1d4407cd385a841278382867d9a0bcc2a34b882cd2abab27",
+      "stats": {}
+    }
+  ],
+  "runtime_boundary": {
+    "script": "ark-history",
+    "node22_result": "UNSAFE_ANALYTICS_SQLITE_VERSION (unchanged analytics writer safety gate)",
+    "production_analytics_runtime": "/opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node",
+    "production_runtime_tests": 11,
+    "production_runtime_pass": true,
+    "log_sha256": "14a04de030e3cce578b07e485766e52b57b9f720f553d43e9613d02b8701f503"
+  },
+  "test_packaging_retry": {
+    "missing": "docs/records-r1/schema.mjs",
+    "restored_from_commit": "677d519e",
+    "test": "ark-records",
+    "passed": 32
+  }
+}

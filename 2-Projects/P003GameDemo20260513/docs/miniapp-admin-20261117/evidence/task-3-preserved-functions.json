@@ -1,0 +1,22 @@
+{
+  "production_source_sha256": "14872ac50c89ccd06cc4ea73cf76e674c0953da6151a28512c75dc16ec9e2bee",
+  "final_sha256": "d46500fdba5dd3be981fc3f7e03c551efd8fd25d5608cc01f456e3fab526023b",
+  "functions": {
+    "loadHostsStatus": "byte_identical",
+    "loadVoice": "byte_identical",
+    "saveVoice": "byte_identical",
+    "loadPairingPending": "byte_identical",
+    "confirmPairing": "byte_identical",
+    "loadDevices": "byte_identical",
+    "unbindBrain": "byte_identical",
+    "loadP1": "byte_identical",
+    "loadCanary": "byte_identical",
+    "loadRouting": "byte_identical",
+    "loadOta": "byte_identical",
+    "loadPck": "byte_identical",
+    "loadDevcfg": "byte_identical",
+    "loadDiaglog": "byte_identical",
+    "loadRace": "byte_identical",
+    "loadRelease": "byte_identical"
+  }
+}

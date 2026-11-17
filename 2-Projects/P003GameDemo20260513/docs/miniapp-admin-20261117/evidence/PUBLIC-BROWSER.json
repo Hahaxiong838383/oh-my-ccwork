@@ -1,0 +1,22 @@
+{
+  "at_ms": 1794875173680,
+  "pass": true,
+  "public_html": true,
+  "real_unbind_performed": false,
+  "business_writes": 0,
+  "reads": [
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/dashboard",
+      "status": 200
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/records",
+      "status": 200
+    },
+    {
+      "path": "/api/admin/devices/BJP00326081002000031/miniapp/conversations",
+      "status": 200
+    }
+  ],
+  "page_errors": 0
+}

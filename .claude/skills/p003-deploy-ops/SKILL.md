@@ -305,3 +305,10 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 2. **活体值**：worker `/proc/$(systemctl show -p MainPID --value voice-worker-rust)/environ`；server `.env.local`（node `--env-file` 不落 environ，看文件+pm2 args）。
 3. **库表级范围**（`/opt/p003/server/data/*.db`，无 sqlite3 CLI，用 `node -e` + `node:sqlite` readOnly）：`devices.device_registry`（绑定真值，status=active）/ `ota.ota_release.rollout_sns`（空=全量）+ `ota.ota_device_status`（设备自报版本）/ `profile.trait_template|trait_state|relation_state|local_audio_state`（人格线谁有状态）/ `telemetry.*` group by sn / `config.device_config`（scope）。**时间列单位先 `select min,max` 探**：`device_session_log.created_at` 是毫秒，registry `created_at` 是秒。
 4. **逐台填格子**：每项「覆盖 x/N + 开全动作」；空值语义逐门读消费者（`commands_gate` 空=设备房全开；`CANARY_SAY_IDENTITY_ALLOW` 空=全拒；`TELEMETRY_SN_ALLOWLIST` 空=放开但先看 DB status）；名单里不在 registry 的 SN 报「脏」。异常（版本/定性冲突）交川哥定性，不自行处置。
+
+## 小程序 Dashboard 与条件解绑（2026-11-17）
+
+- Worker 顶层 `miniapp` 标签读取 `/api/admin/devices/:sn/miniapp/dashboard|records|conversations`，与 parent 同源；家长原状态码和域降级保持，admin 聚合另核完整授权前后指纹，含 Brain 的 `account_uses` 唯一性。缺测用 `null`，仅 normal 当前资产；历史覆盖和流水总数不能推造。实际交付/运行时证据见 `2-Projects/P003GameDemo20260513/docs/miniapp-admin-20261117/HANDOFF.md`。
+- PATCH parent=null 必须提交弹窗冻结的 `expected_public_id/expected_parent_account_id/expected_binding_version`；陈旧/ABA/重放409。列表、详情与旧 Brain 家长解除入口同步升级；解绑保留 Brain/原始数据。预授权和 fixed-SN 会话存创建代次，最终 claim 用注册表事务返回的版本，不能重读新版本给旧意图盖章；跨库清理只是辅助手段。生产不要用真实测试机解绑来验收取消/409，隔离 SQLite + HTTP 验证。
+- 实际 Vue 页面测试夹具须使用真实 registry `active/disabled`；设备 active=已启用，物品 active=已激活。除预期家长PATCH外断言设备状态写请求为0；覆盖真实401、迟到分页、重新登录和窄屏。resize截图先等待侧栏宽度稳定，测试依赖走环境变量/标准默认，不绑定某台机器的缓存路径。
+- server Node22 与 analytics 专用 Node24 是不同运行时。埋点 writer 的 SQLite 安全门不得为测试放宽；按实际运行时分列回执。发布前保存线上 HTML 和源清单，保留 git 尚未收录的线上功能，再冻结提交增量部署。临时浏览器 token 在 require/解析/启动/关闭异常下也必须清理，真实页面只读验证不落儿童正文。
