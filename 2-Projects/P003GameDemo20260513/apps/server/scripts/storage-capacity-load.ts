@@ -14,6 +14,7 @@ import {createAnalyticsApp} from '../src/analytics/index.js';
 import {ArkStore} from '../src/ark/store.js';
 import {createArkRoutes} from '../src/ark/routes.js';
 import {createLoadAccounting,loadDatabaseCounts} from '../deploy/analytics-smoke-and-load.mjs';
+import {createLoadHealthRecorder} from './storage-load-health.js';
 
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
 assert.ok(['run','client'].includes(mode),'run|client');
@@ -45,10 +46,11 @@ if(mode==='run'){
  const server=serve({fetch:app.fetch,hostname:'127.0.0.1',port:0});if(!server.listening)await once(server,'listening');
  const tokens=await Promise.all(subjects.map(sn=>new SignJWT({kind:'p003-device'}).setSubject(sn).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('48h').sign(new TextEncoder().encode(secret))));
  writeFileSync(join(root,'client-private.json'),JSON.stringify({url:'http://127.0.0.1:'+(server.address() as any).port,tokens}),{mode:0o600});
- const maintenance:any[]=[],health:any[]=[],children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;
+ const maintenance:any[]=[],health=createLoadHealthRecorder(sample=>appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n')),children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;
  const launch=(args:string[],name:string,env=process.env)=>new Promise<number|null>(done=>{const p=spawn(args[0],args.slice(1),{cwd:process.cwd(),env,stdio:['ignore','pipe','pipe']});children.add(p);p.stdout.on('data',x=>appendFileSync(join(root,name+'.stdout'),x));p.stderr.on('data',x=>appendFileSync(join(root,name+'.stderr'),x));p.once('error',e=>appendFileSync(join(root,name+'.stderr'),e.message));p.once('close',code=>{children.delete(p);done(code);});});
  const maintain=async()=>{if(maintaining)return;maintaining=true;const start=Date.now();try{const code=await launch([process.execPath,'--import','tsx','scripts/analytics-rollup.ts'],'maintenance-'+start,{...process.env,ANALYTICS_DB_PATH:path});maintenance.push({start,done:Date.now(),code});}finally{maintaining=false;}};
- const monitor=async()=>{if(monitoring)return;monitoring=true;let sample:any;try{const t=performance.now(),r=await fetch('http://127.0.0.1:'+(server.address() as any).port+'/ready',{signal:AbortSignal.timeout(5000)});sample={at:Date.now(),status:r.status,ms:performance.now()-t,...await r.json()};}catch(e){sample={at:Date.now(),error:String(e)};}finally{health.push(sample);appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n');monitoring=false;}};
+ let monitorError:unknown;
+ const monitor=async()=>{if(monitoring)return;monitoring=true;let sample:any;try{const t=performance.now(),r=await fetch('http://127.0.0.1:'+(server.address() as any).port+'/ready',{signal:AbortSignal.timeout(5000)});sample={at:Date.now(),status:r.status,ms:performance.now()-t,...await r.json()};}catch(e){sample={at:Date.now(),error:String(e)};}finally{try{health.record(sample);}catch(e){monitorError=e;}finally{monitoring=false;}}};
  const timer=setInterval(()=>void monitor(),1000),maintenanceTimer=config.maintenance?setInterval(()=>void maintain(),300000):null;
  let firstMaintenance:ReturnType<typeof setTimeout>|undefined,backupTimer:ReturnType<typeof setTimeout>|undefined,backupPromise:Promise<number|null>|undefined;
  if(config.maintenance)firstMaintenance=setTimeout(()=>void maintain(),2000);
@@ -59,18 +61,20 @@ if(mode==='run'){
   if(firstMaintenance)clearTimeout(firstMaintenance);if(backupTimer)clearTimeout(backupTimer);if(maintenanceTimer)clearInterval(maintenanceTimer);
   while(maintaining)await sleep(100);if(config.maintenance)await maintain();
   const backupCode=backupPromise?await backupPromise:null;
+  clearInterval(timer);while(monitoring)await sleep(10);if(monitorError)throw monitorError;
   if(!existsSync(join(root,'client-result.json'))){writeFileSync(join(root,'FAILURE.json'),JSON.stringify({stage:'client',exit:code,stderr_file:'client.stderr'}));throw new Error('client failed before result; inspect client.stderr');}
   const client=JSON.parse(readFileSync(join(root,'client-result.json'),'utf8')),accounting=createLoadAccounting({expectedEvents:config.devices*config.events,expectedBatches:config.devices*Math.ceil(config.events/config.batch)});
   for(const b of client.completed)accounting.record(b.ack,b.ids);
   const integrity=accounting.report(store.db,client.prefix,before,client.failures),success=client.requests.filter((x:any)=>x.status===200).map((x:any)=>x.ms);
   const arkRows=identities.map((id,i)=>{const current=ark.current(id);return {actor:i,correct:current?.snapshot.wallets.family_coin===100+i&&current?.snapshot.inventory['M-CARD-001']===i%4,source_mode:current?.snapshot.source_mode};});
   const dirty=Number(store.db.prepare('SELECT count(*) n FROM analytics_dirty_day').get()!.n);
-  const result={stage:'T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE',synthetic:true,config,node:process.version,platform:process.platform,client_exit:code,integrity,ark:arkRows,maintenance,backup_exit:backupCode,checkpoint:checkpointer.status(),dirty_days:dirty,acks:{p95:percentile(success,.95),p99:percentile(success,.99),attempts:client.requests.length,statuses:client.requests.reduce((a:any,x:any)=>(a[x.status]=(a[x.status]??0)+1,a),{})},health,duration_ms:client.duration_ms};
+  const result={stage:'T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE',evidence_version:2,synthetic:true,config,node:process.version,platform:process.platform,client_exit:code,integrity,ark:arkRows,maintenance,backup_exit:backupCode,checkpoint:checkpointer.status(),dirty_days:dirty,acks:{p95:percentile(success,.95),p99:percentile(success,.99),attempts:client.requests.length,statuses:client.requests.reduce((a:any,x:any)=>(a[x.status]=(a[x.status]??0)+1,a),{})},health:health.recent(),health_summary:health.summary(),duration_ms:client.duration_ms};
   writeFileSync(join(root,'RESULT.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({root,complete:integrity.complete,acks:result.acks,ark_correct:arkRows.filter(x=>x.correct).length,seconds:client.duration_ms/1000}));
   assert.equal(code,0);assert.ok(integrity.complete);assert.ok(arkRows.every(x=>x.correct));assert.ok(success.length&&result.acks.p95!<=500&&result.acks.p99!<=2000,'ACK latency gate');
   if(config.maintenance)assert.equal(dirty,0);if(config.backup)assert.equal(backupCode,0,'backup must really run');
  }finally{
   clearInterval(timer);if(maintenanceTimer)clearInterval(maintenanceTimer);if(firstMaintenance)clearTimeout(firstMaintenance);if(backupTimer)clearTimeout(backupTimer);
+  while(monitoring)await sleep(10);
   for(const p of children)p.kill('SIGTERM');server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await writer.close();await checkpointer.stop();ark.close();store.close();
  }
 }else{

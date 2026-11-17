@@ -1,0 +1,24 @@
+{
+  "attempt": 2,
+  "first_attempt": "SSH banner timeout; remote Python not reached",
+  "rc": 0,
+  "at": "2026-11-17T02:52:29.955342+00:00",
+  "files": {
+    "/opt/p003/server/src/analytics/index.ts": "2eee1ef0047c1e3025f98d2f3952bb31e437fb69c219c4745718cea4c3e279ba",
+    "/opt/p003/server/src/miniapp-dashboard.ts": "367653c43b3eefe55fe3f95d05c1d19f057f2bdbbe7576d94b61cf31a9196759",
+    "/opt/p003/server/src/routes/telemetry.ts": "6863c588d36ee50065a209fca8d1280425b667cea57c2a59a0a190e4d12b6bca",
+    "/opt/p003/web/dist/admin/index.html": "d47a2b41f19e5b87ac129ca5021f60985264dca7996f3b36ed2b7d58394205ab"
+  },
+  "matches": {
+    "/opt/p003/server/src/analytics/index.ts": true,
+    "/opt/p003/server/src/miniapp-dashboard.ts": true,
+    "/opt/p003/server/src/routes/telemetry.ts": true,
+    "/opt/p003/web/dist/admin/index.html": true
+  },
+  "expected_360_18a23075": {
+    "/opt/p003/server/src/analytics/index.ts": "2eee1ef0047c1e3025f98d2f3952bb31e437fb69c219c4745718cea4c3e279ba",
+    "/opt/p003/server/src/miniapp-dashboard.ts": "367653c43b3eefe55fe3f95d05c1d19f057f2bdbbe7576d94b61cf31a9196759",
+    "/opt/p003/server/src/routes/telemetry.ts": "6863c588d36ee50065a209fca8d1280425b667cea57c2a59a0a190e4d12b6bca",
+    "/opt/p003/web/dist/admin/index.html": "d47a2b41f19e5b87ac129ca5021f60985264dca7996f3b36ed2b7d58394205ab"
+  }
+}
