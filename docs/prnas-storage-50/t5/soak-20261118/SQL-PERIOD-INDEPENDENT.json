@@ -1,0 +1,200 @@
+{
+  "candidate": "9e9b481908c1f62f8c25c95209e68d398f1057a4",
+  "archive_sha256": "75f27c46ff5700fc36348f8a9738c9073d36717f0afa07cc011188457d97837b",
+  "files_verified": 137,
+  "runs": [
+    {
+      "directory": "run01-evidence",
+      "period_ms": 100,
+      "samples": 200,
+      "transport_failures": 0,
+      "p99_ms": 68.7924579999999,
+      "max_ms": 146.24702800000068,
+      "maintenance": {
+        "ok": true,
+        "partial": false,
+        "rebuilt_days": 2,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 2,
+          "failed_days": [],
+          "remaining_dirty_days": 0,
+          "partial": false
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 19.345620000000054,
+          "max_transaction_ms": 19.321851000000038,
+          "budget_exhausted": false
+        },
+        "work_started_at_ms": 1794942311194,
+        "work_finished_at_ms": 1794942311325
+      }
+    },
+    {
+      "directory": "run02-evidence",
+      "period_ms": 100,
+      "samples": 750,
+      "transport_failures": 1,
+      "p99_ms": 46.38162199999988,
+      "max_ms": 135.48200600000018,
+      "maintenance": {
+        "ok": false,
+        "partial": true,
+        "rebuilt_days": 1,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 1,
+          "failed_days": [
+            {
+              "dimension": "occurred",
+              "day": "2026-11-18",
+              "reason": "budget_exceeded"
+            }
+          ],
+          "remaining_dirty_days": 1,
+          "partial": true
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 23.875837999999987,
+          "max_transaction_ms": 23.854454999999973,
+          "budget_exhausted": false
+        },
+        "work_started_at_ms": 1794942428138,
+        "work_finished_at_ms": 1794942468251
+      }
+    },
+    {
+      "directory": "run03-evidence",
+      "period_ms": 10,
+      "samples": 200,
+      "transport_failures": 0,
+      "p99_ms": 102.80140699999993,
+      "max_ms": 112.0643769999997,
+      "maintenance": {
+        "ok": true,
+        "partial": false,
+        "rebuilt_days": 2,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 2,
+          "failed_days": [],
+          "remaining_dirty_days": 0,
+          "partial": false
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 9.718516000000022,
+          "max_transaction_ms": 9.674257000000011,
+          "budget_exhausted": false
+        },
+        "work_started_at_ms": 1794942542218,
+        "work_finished_at_ms": 1794942552000
+      }
+    },
+    {
+      "directory": "run04-evidence",
+      "period_ms": 100,
+      "samples": 200,
+      "transport_failures": 0,
+      "p99_ms": 67.98148899999978,
+      "max_ms": 93.6079749999999,
+      "maintenance": {
+        "ok": true,
+        "partial": false,
+        "rebuilt_days": 2,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 2,
+          "failed_days": [],
+          "remaining_dirty_days": 0,
+          "partial": false
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 2.0999049999999784,
+          "max_transaction_ms": 2.0727320000000304,
+          "budget_exhausted": false
+        },
+        "work_started_at_ms": 1794942660190,
+        "work_finished_at_ms": 1794942669108
+      }
+    },
+    {
+      "directory": "run05-evidence",
+      "period_ms": 10,
+      "samples": 200,
+      "transport_failures": 0,
+      "p99_ms": 80.8589979999997,
+      "max_ms": 81.19061299999976,
+      "maintenance": {
+        "ok": true,
+        "partial": false,
+        "rebuilt_days": 2,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 2,
+          "failed_days": [],
+          "remaining_dirty_days": 0,
+          "partial": false
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 1.4585670000000164,
+          "max_transaction_ms": 1.4377529999999865,
+          "budget_exhausted": false
+        },
+        "work_started_at_ms": 1794942678226,
+        "work_finished_at_ms": 1794942687316
+      }
+    },
+    {
+      "directory": "",
+      "period_ms": 100,
+      "samples": 200,
+      "transport_failures": 0,
+      "p99_ms": 93.24778100000003,
+      "max_ms": 98.32286599999952,
+      "maintenance": {
+        "ok": true,
+        "partial": false,
+        "rebuilt_days": 2,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 2,
+          "failed_days": [],
+          "remaining_dirty_days": 0,
+          "partial": false
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 2.1306410000000255,
+          "max_transaction_ms": 2.1035100000000284,
+          "budget_exhausted": false
+        },
+        "work_started_at_ms": 1794942696736,
+        "work_finished_at_ms": 1794942705961
+      }
+    }
+  ],
+  "conclusion": "NO_CONSISTENT_PERIOD_BENEFIT; sequential warm-copy observations, not complete mixed root cause or acceptance"
+}
