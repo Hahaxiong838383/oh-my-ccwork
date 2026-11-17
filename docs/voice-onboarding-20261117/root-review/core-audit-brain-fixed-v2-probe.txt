@@ -1,0 +1,21 @@
+(node:16046) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"probe":"original-and-covered-negative","text":"等一下","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"再说一遍","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"算了","extraction":{"result":"declined"},"result":{"revision":0,"memory_write":"skipped","result":"declined","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"拒绝","extraction":{"result":"declined"},"result":{"revision":0,"memory_write":"skipped","result":"declined","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"等一等","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"稍等","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"再问一遍","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"没听清","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"original-and-covered-negative","text":"跳过","extraction":{"result":"declined"},"result":{"revision":0,"memory_write":"skipped","result":"declined","missing":["nickname"]},"nickname":""}
+{"probe":"normal-name-positive","text":"星星","extraction":{"result":"value","value":"星星"},"result":{"revision":1,"memory_write":"saved","result":"saved","missing":[]},"nickname":"星星"}
+{"probe":"normal-name-positive","text":"安安","extraction":{"result":"value","value":"安安"},"result":{"revision":1,"memory_write":"saved","result":"saved","missing":[]},"nickname":"安安"}
+{"probe":"normal-name-positive","text":"Emma","extraction":{"result":"value","value":"Emma"},"result":{"revision":1,"memory_write":"saved","result":"saved","missing":[]},"nickname":"Emma"}
+{"probe":"normal-name-positive","text":"我叫星星","extraction":{"result":"value","value":"星星"},"result":{"revision":1,"memory_write":"saved","result":"saved","missing":[]},"nickname":"星星"}
+{"probe":"normal-name-positive","text":"你可以叫我星星","extraction":{"result":"value","value":"星星"},"result":{"revision":1,"memory_write":"saved","result":"saved","missing":[]},"nickname":"星星"}
+{"probe":"normal-name-positive","text":"我的名字是小明","extraction":{"result":"value","value":"小明"},"result":{"revision":1,"memory_write":"saved","result":"saved","missing":[]},"nickname":"小明"}
+{"probe":"same-intent-common-variant","text":"再说一次","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"same-intent-common-variant","text":"没听清楚","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"same-intent-common-variant","text":"稍等一下","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}
+{"probe":"same-intent-common-variant","text":"请重复一遍","extraction":{"result":"unclear"},"result":{"revision":0,"memory_write":"none","result":"unclear","missing":["nickname"]},"nickname":""}

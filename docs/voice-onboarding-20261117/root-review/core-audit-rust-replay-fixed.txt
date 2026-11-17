@@ -1,0 +1,9 @@
+   Compiling review373-input-replay v0.1.0 ($ROOT_REVIEW/core-audit/rust-probe)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 4.03s
+     Running unittests src/lib.rs ($ROOT_REVIEW/core-audit/rust-target/debug/build/review373-input-replay/89ba8be51597d5d4/out/review373_input_replay-89ba8be51597d5d4)
+
+running 1 test
+same state after duplicate audio_complete; fresh answer rejected: false
+test independent::duplicate_audio_complete_clears_fresh_answer_gate ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 39 filtered out; finished in 0.01s

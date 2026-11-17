@@ -4,33 +4,33 @@
   "normalization": "absolute worktree/private paths replaced; trailing whitespace removed; original digest retained",
   "files": [
     {
-      "path": "brain-retest.log",
+      "path": "brain-retest.txt",
       "sha256": "6f7ffc8285d25b8eb9ae7d8a4f67579ad69ee6e87a0dec55383bb68d1f4c9e18",
       "original_sha256": "6f7ffc8285d25b8eb9ae7d8a4f67579ad69ee6e87a0dec55383bb68d1f4c9e18"
     },
     {
-      "path": "worker-retest02.log",
-      "sha256": "70ea5047c036c738077b08db71e2090e8c9d0a4f5cf07773dc259e93f435a4c5",
+      "path": "worker-retest02.txt",
+      "sha256": "a25601e34d62fe98c4efe7850ce8dfd0de640661a01d01a62e3a197a3d262a80",
       "original_sha256": "71d5ba8c14bb52a03d685438fbcb9a2a2b88961545406239b506172e9c89091f"
     },
     {
-      "path": "nickname-red.log",
+      "path": "nickname-red.txt",
       "sha256": "1ff72223525af8bd433e67c18e1dfee30a73e456a16c9aca82d18faca00c41fa",
       "original_sha256": "1400d2c9cdbbb4487ab8c7c27515cbfe1cd9b0a225a2e960d6659ebc60ccf21c"
     },
     {
-      "path": "replay-red02.log",
+      "path": "replay-red02.txt",
       "sha256": "f2c8d72f7a0341006d34f93b5bb66ea797aad3739564ff4b350cb1e61444bde7",
       "original_sha256": "ee4171cd46b87c6827c1a4d4783855841d61dd73c5ace6bfd1f0efc27de20ec8"
     },
     {
-      "path": "brain-fixed02.log",
+      "path": "brain-fixed02.txt",
       "sha256": "7304d0353b2d236dee5ab7bd16573b6453b4317904bc9edc678c3a870ae13291",
       "original_sha256": "7304d0353b2d236dee5ab7bd16573b6453b4317904bc9edc678c3a870ae13291"
     },
     {
-      "path": "worker-fixed.log",
-      "sha256": "8999efc603e186b0d797f36b1bca156dfb358fe935e2fbc5ce81aac65a716515",
+      "path": "worker-fixed.txt",
+      "sha256": "0544f20f4c586e5c4c862578b37b597dd4d9f57ef0fc2d79d816c30857c9cc49",
       "original_sha256": "5ee90baa83ef39420b53a05d4e477309ba131a3f3f933fba4e05f6c0d368cb5c"
     },
     {
@@ -54,17 +54,17 @@
       "original_sha256": "fbba70a746c324ed978f98a2e71ca47c7a31932b7efa03004795a42e3b8a55d4"
     },
     {
-      "path": "core-audit-brain-fixed-v2-probe.log",
+      "path": "core-audit-brain-fixed-v2-probe.txt",
       "sha256": "4b146aabfb59995cd7d5238d3c0062ebe8009e045f39d3526e2273a6e2737706",
       "original_sha256": "4b146aabfb59995cd7d5238d3c0062ebe8009e045f39d3526e2273a6e2737706"
     },
     {
-      "path": "core-audit-rust-replay-fixed.log",
-      "sha256": "91a8a1188d72a31041dd3b4eb6a10a3e144d846e8095cc8f771ebad600408dc7",
+      "path": "core-audit-rust-replay-fixed.txt",
+      "sha256": "a543404a3c4e2ee1b09fd19de0ee7679d2c5d9f5b1e9425d0c2e92daac2fe5bd",
       "original_sha256": "b5048074f7ba68ae13895d3bf086f1a33888cb5bfa7ce42ba3ec920456cf5430"
     },
     {
-      "path": "core-audit-rust-replay-red.log",
+      "path": "core-audit-rust-replay-red.txt",
       "sha256": "53cfdc5a2e7dfb3f8ce65f4405d03c122ce4ec07c6c1f2b282602989ebecae56",
       "original_sha256": "3b019fff9e65e6d610dc303608c29bc8776e1d440015ae932bd06667243e37d1"
     }

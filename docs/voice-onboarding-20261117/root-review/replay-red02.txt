@@ -1,0 +1,22 @@
+   Compiling onboarding-entry-tests v0.1.0 ($WORKTREE/2-Projects/realtime-voice-agent/rust-worker/tools/onboarding-entry-tests)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.41s
+     Running unittests src/lib.rs ($ROOT_REVIEW/cargo-fixed/debug/build/onboarding-entry-tests/d9e05ea1bb3770ad/out/onboarding_entry_tests-d9e05ea1bb3770ad)
+
+running 1 test
+test voice_onboarding::tests::runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not ... FAILED
+
+failures:
+
+---- voice_onboarding::tests::runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not stdout ----
+
+thread 'voice_onboarding::tests::runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not' (280223938) panicked at src/../../../src/voice_onboarding_tests.rs:316:5:
+duplicate audio receipt must not swallow the pending ASR final
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    voice_onboarding::tests::runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 38 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `--lib`

@@ -1,0 +1,140 @@
+TAP version 13
+# (node:91499) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: saved age remains year-precision through existing memory reader
+ok 1 - saved age remains year-precision through existing memory reader
+  ---
+  duration_ms: 110.988709
+  type: 'test'
+  ...
+# [persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: ordinary chat reads observed age and does not demand a fabricated birthday
+ok 2 - ordinary chat reads observed age and does not demand a fabricated birthday
+  ---
+  duration_ms: 360.937666
+  type: 'test'
+  ...
+# Subtest: ordinary basic-field enrichment preserves known age; copying a child profile clears old age
+ok 3 - ordinary basic-field enrichment preserves known age; copying a child profile clears old age
+  ---
+  duration_ms: 14.614417
+  type: 'test'
+  ...
+# (node:91500) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794888063 session=aec8af83-0342-4362-9b12-cdd420d25f84 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=35
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794888064 session=e059d3d5-aa62-45ca-8260-52c7039c3a97 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=voice_onboarding_v1 selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=26
+# [device-session] ok sn=BJP00326060100200003 room=sn-BJP00326060100200003-1794888065 session=a7b68c4f-e7c0-4343-af7c-b2769d467145 trace=synthetic-trace contract=- policy=allowlist policy_src=default supports=- selected_agent="rust-worker" canary_reason=disabled lease_remaining_ms=null lease_age_ms=null lease_jobs=null lease_max_jobs=null lease_registered=null canary_generation="" ttl=3600s ms=12
+# Subtest: actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata
+ok 4 - actual session HTTP negotiates v398, preserves old path and signs same trusted session metadata
+  ---
+  duration_ms: 211.345042
+  type: 'test'
+  ...
+# (node:91501) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: real HTTP/SQLite: natural age commits without invented birthday; replay is idempotent
+ok 5 - real HTTP/SQLite: natural age commits without invented birthday; replay is idempotent
+  ---
+  duration_ms: 480.333417
+  type: 'test'
+  ...
+# Subtest: all known fields skipped, never overwrite
+ok 6 - all known fields skipped, never overwrite
+  ---
+  duration_ms: 183.301709
+  type: 'test'
+  ...
+# Subtest: concurrent rebinding invalidates frozen child
+ok 7 - concurrent rebinding invalidates frozen child
+  ---
+  duration_ms: 96.659916
+  type: 'test'
+  ...
+# Subtest: unclear/refusal never save; cross trace rejected; hard TTL never renews
+ok 8 - unclear/refusal never save; cross trace rejected; hard TTL never renews
+  ---
+  duration_ms: 142.135459
+  type: 'test'
+  ...
+# Subtest: actual SQLite trigger failure never reports saved; transaction rolls back
+ok 9 - actual SQLite trigger failure never reports saved; transaction rolls back
+  ---
+  duration_ms: 95.168833
+  type: 'test'
+  ...
+# Subtest: profile changed concurrently, multiple children, partial knowledge and cancel fence
+ok 10 - profile changed concurrently, multiple children, partial knowledge and cancel fence
+  ---
+  duration_ms: 109.545625
+  type: 'test'
+  ...
+# Subtest: issue-to-begin binding change rejects authorization
+ok 11 - issue-to-begin binding change rejects authorization
+  ---
+  duration_ms: 46.583
+  type: 'test'
+  ...
+# Subtest: partial -> natural gender and nickname; stale revision, wrong field, missing token
+ok 12 - partial -> natural gender and nickname; stale revision, wrong field, missing token
+  ---
+  duration_ms: 103.523166
+  type: 'test'
+  ...
+# Subtest: multiple children never guessed; parent known fields skipped
+ok 13 - multiple children never guessed; parent known fields skipped
+  ---
+  duration_ms: 75.119792
+  type: 'test'
+  ...
+# Subtest: optional capability is default off; listening/search/unknown agent/client cannot get grant
+ok 14 - optional capability is default off; listening/search/unknown agent/client cannot get grant
+  ---
+  duration_ms: 2.09625
+  type: 'test'
+  ...
+# Subtest: RTC metadata grant alone cannot authorize direct profile writes
+ok 15 - RTC metadata grant alone cannot authorize direct profile writes
+  ---
+  duration_ms: 51.129542
+  type: 'test'
+  ...
+# Subtest: ambiguous confirmations and instruction-like nicknames cannot become profile facts
+ok 16 - ambiguous confirmations and instruction-like nicknames cannot become profile facts
+  ---
+  duration_ms: 3.367583
+  type: 'test'
+  ...
+# Subtest: decline closes Brain write authorization immediately
+ok 17 - decline closes Brain write authorization immediately
+  ---
+  duration_ms: 69.993042
+  type: 'test'
+  ...
+# Subtest: a newly issued session invalidates old lesson writes
+ok 18 - a newly issued session invalidates old lesson writes
+  ---
+  duration_ms: 101.120459
+  type: 'test'
+  ...
+# Subtest: unknown placeholder gender and invalid age strings are missing, not known facts
+ok 19 - unknown placeholder gender and invalid age strings are missing, not known facts
+  ---
+  duration_ms: 53.649
+  type: 'test'
+  ...
+# Subtest: two simultaneous HTTP answers with the same revision commit only once
+ok 20 - two simultaneous HTTP answers with the same revision commit only once
+  ---
+  duration_ms: 401.700792
+  type: 'test'
+  ...
+1..20
+# tests 20
+# suites 0
+# pass 20
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4010.737208

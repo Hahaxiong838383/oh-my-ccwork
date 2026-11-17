@@ -1,0 +1,20 @@
+   Compiling review373-input-replay v0.1.0 ($ROOT_REVIEW/core-audit/rust-probe)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.65s
+     Running unittests src/lib.rs ($ROOT_REVIEW/core-audit/rust-target/debug/build/review373-input-replay/89ba8be51597d5d4/out/review373_input_replay-89ba8be51597d5d4)
+
+running 1 test
+same state after duplicate audio_complete; fresh answer rejected: true
+
+thread 'independent::duplicate_audio_complete_clears_fresh_answer_gate' (280203115) panicked at src/lib.rs:43:9:
+duplicate audio_complete must preserve already seen fresh speech
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test independent::duplicate_audio_complete_clears_fresh_answer_gate ... FAILED
+
+failures:
+
+failures:
+    independent::duplicate_audio_complete_clears_fresh_answer_gate
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 38 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `--lib`
