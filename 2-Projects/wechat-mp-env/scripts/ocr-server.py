@@ -34,6 +34,48 @@ def get_engine():
     return _engine
 
 
+def extract_image_bytes(body: bytes, content_type: str) -> bytes:
+    """wx.uploadFile 发的是 multipart/form-data，要剥出文件本身。
+    非 multipart（直接 POST 图片字节）原样返回。"""
+    ct = (content_type or "").lower()
+    if "multipart/form-data" not in ct:
+        return body
+
+    marker = "boundary="
+    idx = ct.find(marker)
+    if idx < 0:
+        return body
+    boundary = content_type[idx + len(marker):].split(";")[0].strip().strip('"')
+    sep = b"--" + boundary.encode()
+
+    # 按 boundary 切段，找含 filename 的那一段
+    parts = body.split(sep)
+    for part in parts:
+        if b"filename=" not in part:
+            continue
+        # 段内：headers \r\n\r\n payload \r\n
+        hdr_end = part.find(b"\r\n\r\n")
+        if hdr_end < 0:
+            continue
+        payload = part[hdr_end + 4:]
+        # 去掉尾部 CRLF
+        if payload.endswith(b"\r\n"):
+            payload = payload[:-2]
+        return payload
+
+    # 兜底：没有 filename 字段就取第一个非空段
+    for part in parts:
+        hdr_end = part.find(b"\r\n\r\n")
+        if hdr_end < 0:
+            continue
+        payload = part[hdr_end + 4:]
+        if payload.endswith(b"\r\n"):
+            payload = payload[:-2]
+        if len(payload) > 1000:
+            return payload
+    return body
+
+
 def run_ocr(data: bytes):
     import numpy as np
     from PIL import Image
@@ -90,8 +132,9 @@ class Handler(BaseHTTPRequestHandler):
         if n > MAX_BYTES:
             return self._json({"ok": False, "error": "too large"}, 413)
 
-        data = self.rfile.read(n)
+        raw = self.rfile.read(n)
         try:
+            data = extract_image_bytes(raw, self.headers.get("Content-Type", ""))
             lines = run_ocr(data)
         except Exception as e:
             return self._json({"ok": False, "error": str(e)[:200]}, 500)
