@@ -80,6 +80,19 @@ adb -s emulator-5554 shell uiautomator dump /sdcard/ui.xml && adb -s emulator-55
 - 卡片圆角 16dp；按钮 3D：底部 4dp 深色硬阴影，按下下沉
 - 字体 Nunito（OFL）替代商業 DIN Next Rounded
 
+## 微信小程序端（2026-11-17 起）
+
+同一套词库/判分/匹配逻辑已移植到微信小程序（`~/MyAgent/2-Projects/P02-英语学习App/miniprogram/`），
+**发音与 OCR 不走微信原生能力，改为家里自建服务**。开发环境、appid 选择、预览码自动化、
+真机 urlCheck 限制、Lucky 反代 —— 全部细节见 **`wechat-mp-ops` skill**。
+
+要点速览：
+- 可用 appid：`wx55e19a8ad4ffc774`（HUD计算助手，已认证已备案）
+- TTS：`https://tts.hahaxiong.cc:8666` → home-studio `:8790`（Piper，5 音色）
+- OCR：`https://ocr.hahaxiong.cc:8666` → home-studio `:8791`（RapidOCR）
+- 真机必须开「开发调试 → 不校验合法域名」（当前用非标端口 8666）
+- 后台配置类操作让川哥自己做（session 碎片化，自动化不可行）
+
 ## 文档索引
 
 `00-项目概览` `02-调研报告` `03-实施方案` `04-核心循环` `05-装机与试用` `06/07-模型评估`
