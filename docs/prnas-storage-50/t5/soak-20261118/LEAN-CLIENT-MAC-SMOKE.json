@@ -1,0 +1,62 @@
+{
+  "integrity": {
+    "batches": 3,
+    "events_accepted": 600,
+    "events_duplicated": 0,
+    "events_acknowledged": 600,
+    "unique_acknowledged_events": 600,
+    "expected_events": 600,
+    "expected_batches": 3,
+    "counts": {
+      "events": 600,
+      "seen": 600,
+      "batches": 3
+    },
+    "database_before": {
+      "events": 0,
+      "seen": 0,
+      "batches": 0
+    },
+    "database_delta": {
+      "events": 600,
+      "seen": 600,
+      "batches": 3
+    },
+    "database_run_events": 600,
+    "database_canonical_matches": 600,
+    "database_seen_matches": 600,
+    "database_integrity": true,
+    "complete": true
+  },
+  "acks": {
+    "attempts": 6,
+    "successes": 3,
+    "statuses": {
+      "200": 3,
+      "429": 1,
+      "503": 2
+    },
+    "p95": 176.74908300000004,
+    "p99": 176.74908300000004,
+    "all_actors_finished": true,
+    "raw_file": "requests.jsonl",
+    "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+  },
+  "query": {
+    "cycles": 6,
+    "failed_cycles": 0,
+    "samples": 18,
+    "p99_ms": 28.07991600000014,
+    "span_ms": 16545,
+    "max_cycle_gap_ms": 5002,
+    "invalid": 0,
+    "receiver_requests": 18,
+    "query_overlapped_maintenance": false,
+    "scope": "persistent ArkRuntime -> SAME Analytics receiver HTTP handling uploads; changing per-device assets"
+  },
+  "dirty": 0,
+  "ark_attempts": 27,
+  "ark_accepted": 27,
+  "failure": null,
+  "log_sha256": "27c04c031d95c0bf5b1ccc9d7dea92d388ecef53e037b56285525abc7f8a1485"
+}

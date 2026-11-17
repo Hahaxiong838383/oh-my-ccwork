@@ -1,0 +1,10 @@
+{
+  "source": "e3541cd5 client branch",
+  "body_bytes": 4515,
+  "body_sha256_before": "be5269bd0ca0f9d403186a1c8f2764ee949577ca649715745ac72f53d0dc5581",
+  "body_sha256_after": "be5269bd0ca0f9d403186a1c8f2764ee949577ca649715745ac72f53d0dc5581",
+  "server_source_changed": false,
+  "resource_budget_unchanged": true,
+  "client_stays_in_same_cgroup": true,
+  "performance_unverified": true
+}

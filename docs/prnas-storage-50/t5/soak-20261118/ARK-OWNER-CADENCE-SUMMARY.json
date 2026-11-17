@@ -1,0 +1,107 @@
+{
+  "candidate": "daa09660326e4bfcdc0948d18dc03afa29ec5a26",
+  "status": "FUNCTIONAL_AND_LATENCY_PASS_RESOURCE_FAIL_NOT_T5",
+  "unit_exit": 0,
+  "full_t5_pass": false,
+  "24h_started": false,
+  "integrity": {
+    "batches": 1500,
+    "events_accepted": 300000,
+    "events_duplicated": 0,
+    "events_acknowledged": 300000,
+    "unique_acknowledged_events": 300000,
+    "expected_events": 300000,
+    "expected_batches": 1500,
+    "counts": {
+      "events": 300000,
+      "seen": 300000,
+      "batches": 1500
+    },
+    "database_before": {
+      "events": 0,
+      "seen": 0,
+      "batches": 0
+    },
+    "database_delta": {
+      "events": 300000,
+      "seen": 300000,
+      "batches": 1500
+    },
+    "database_run_events": 300000,
+    "database_canonical_matches": 300000,
+    "database_seen_matches": 300000,
+    "database_integrity": true,
+    "complete": true
+  },
+  "acks": {
+    "attempts": 18165,
+    "successes": 1500,
+    "statuses": {
+      "200": 1500,
+      "429": 12316,
+      "503": 4349
+    },
+    "p95": 137.21606299991254,
+    "p99": 239.5930529999896,
+    "all_actors_finished": true,
+    "raw_file": "requests.jsonl",
+    "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+  },
+  "query": {
+    "cycles": 5,
+    "failed_cycles": 0,
+    "samples": 250,
+    "p99_ms": 89.12738600000739,
+    "span_ms": 1048156,
+    "max_cycle_gap_ms": 300001,
+    "invalid": 0,
+    "receiver_requests": 250,
+    "query_overlapped_maintenance": true,
+    "scope": "persistent ArkRuntime -> SAME Analytics receiver HTTP handling uploads; changing per-device assets"
+  },
+  "resources": {
+    "samples": 216,
+    "unavailable_samples": 0,
+    "acceptance_unsupported_samples": 0,
+    "cgroup_missing_samples": 0,
+    "observed_ms": 1074083.005892,
+    "required_ms": 86400000,
+    "max_sample_gap_ms": 5035.034401000012,
+    "cpu_average_percent": 10.691190925209163,
+    "mem_available_min_fraction": 0.4679254255678983,
+    "cgroup_memory_peak_fraction": 0.9999593098958334,
+    "cgroup_working_set_peak_fraction": 0.8805084228515625,
+    "cgroup_cpu_average_one_core_percent": 12.684449363096917,
+    "cgroup_cpu_average_quota_percent": 25.368898726193834,
+    "cgroup_cpu_quota_cores": 0.5,
+    "disk_free_min_bytes": 5727670272,
+    "identity_changed": false,
+    "oom_seen": false,
+    "complete_24h_evidence": false,
+    "local_resource_gate": false,
+    "not_covered": [
+      "NAS budget",
+      "voice A/B",
+      "maintenance backlog",
+      "external service restart counters"
+    ]
+  },
+  "dirty": 0,
+  "ark_attempts": 600,
+  "ark_accepted": 600,
+  "source_files_verified": 46,
+  "production_ready_checks": 219,
+  "production_ready_all": true,
+  "bundle": {
+    "file": "/opt/p003/archive-t5-20261117/soak-20261118/ark-owner-cadence-evidence-daa09660.tar.gz",
+    "bytes": 1512612,
+    "sha256": "f0d322df37ca35dab9fc01d26226732db8613ecd45d8e294c6edd9bbcc984e9a",
+    "files": 47
+  },
+  "warnings": [
+    "diagnostic WAL thresholds 64MiB/256MiB are not current production config wiring",
+    "global p99 is 89ms but one 50-query cycle p99=105.8ms",
+    "retry loop is stress generator, not actual Android exponential backoff",
+    "resource peak 88.05% exceeds unchanged 80% gate; no OOM does not make it pass"
+  ]
+}
