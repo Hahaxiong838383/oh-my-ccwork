@@ -57,7 +57,7 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
       store.readSnapshot(()=>{
         const started=performance.now();
         const devices:{key:string;individual:ReturnType<typeof summary>}[]=[];
-        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
+        const result=summarizeFacts(store.db.prepare('SELECT device_key,event_name,session_digest,clock_suspicious,semantic_json,received_at_ms FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
           if(devices.length>=1000)throw new AnalyticsRollupBudgetExceeded();
           devices.push({key,individual});
         });
