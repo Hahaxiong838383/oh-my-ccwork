@@ -24,6 +24,7 @@ import {startSharedQuery} from './storage-shared-query-client.js';
 import {sqlProfiler} from './storage-sql-profile.js';
 import {startArkProducer} from './storage-ark-producer.js';
 import {syntheticSessionId} from './storage-synthetic-identifiers.js';
+import {ANALYTICS_WAL_MAX_BYTES,validateWalMaxBytes} from '../src/analytics/sqlite-policy.mjs';
 
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
 assert.ok(['run','client'].includes(mode),'run|client');
@@ -38,7 +39,7 @@ if(mode==='run'){
  const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',rollup_prefix_index:process.env.T5_ROLLUP_PREFIX_INDEX==='1',synthetic:true,started_ms:Date.now()};
  const productionScheduling=process.env.T5_DIAGNOSTIC_SCHEDULING==='production';
  if(process.env.T5_DIAGNOSTIC_SCHEDULING!==undefined){
-  assert(productionScheduling&&process.platform==='linux'&&soak?.preflight&&process.env.T5_PROFILE_SQL==='1','scheduling experiment is Linux profiled preflight only');
+  assert(productionScheduling&&process.platform==='linux'&&(soak?.preflight||soak?.fullDay)&&process.env.T5_PROFILE_SQL==='1','configured scheduling requires a Linux profiled real-cadence run');
   const stat=readFileSync('/proc/self/stat','utf8'),fields=stat.slice(stat.lastIndexOf(')')+2).split(/\s+/);
   assert.equal(Number(fields[16]),0,'match the observed production receiver nice=0');
   assert(existsSync('/usr/bin/ionice')&&existsSync('/usr/bin/nice'));
@@ -66,9 +67,14 @@ if(mode==='run'){
  Object.assign(config,{reader_query_only:!genericReaderDiagnostic,reader_cache_kib:genericReaderDiagnostic?65536:8192,generic_reader_diagnostic:genericReaderDiagnostic});
  const earlyReclaim=process.env.T5_DIAGNOSTIC_WAL_RECLAIM==='64MiB';
  if(process.env.T5_DIAGNOSTIC_WAL_RECLAIM!==undefined)assert(earlyReclaim&&process.env.T5_PROFILE_SQL==='1'&&soak?.preflight,'WAL target experiment requires a profiled diagnostic preflight');
- Object.assign(config,{checkpoint_reclaim_target_bytes:earlyReclaim?64*1024**2:256*1024**2,writer_wal_hard_limit_bytes:256*1024**2});
+ // Production passes this SAME value to the HTTP gate and checkpointer. Keep
+ // the old split-threshold experiment separate; it is not a deployable profile.
+ const walMax=validateWalMaxBytes(Number(process.env.ANALYTICS_WAL_MAX_BYTES??ANALYTICS_WAL_MAX_BYTES));
+ assert(!earlyReclaim||process.env.ANALYTICS_WAL_MAX_BYTES===undefined,'do not combine diagnostic and production WAL settings');
+ const reclaimTarget=earlyReclaim?64*1024**2:walMax;
+ Object.assign(config,{checkpoint_reclaim_target_bytes:reclaimTarget,writer_wal_hard_limit_bytes:walMax,production_wal_configuration:!earlyReclaim});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
- const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run),...(earlyReclaim?{walMaxBytes:64*1024**2}:{})});
+ const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run),walMaxBytes:reclaimTarget});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
  // Preserve the original exception/HTTP result; isolate SQLite BUSY from other
  // causes of the deliberately generic public 503 without recording any payload.
@@ -85,7 +91,7 @@ if(mode==='run'){
  if(process.env.T5_ARK_SINGLE_WRITER==='1')assert(soak,'single writer requires the persistent Brain topology');
  const minBatchIntervalMs=number(process.env.T5_MIN_BATCH_INTERVAL_MS,0,0,5000);
  Object.assign(config,{min_batch_interval_ms:minBatchIntervalMs});writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
- const app=createAnalyticsApp({store,writer,reader,minBatchIntervalMs,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
+ const app=createAnalyticsApp({store,writer,reader,minBatchIntervalMs,walMaxBytes:walMax,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
  if(!soak)app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>({identity:(sn:string)=>identities.find(i=>i.sn===sn)??null} as any),secret:()=>secret,ceiling:()=>subjects,acceptsCredential:()=>true,isAdmin:()=>false}));
  const profile=process.env.T5_PROFILE_SQL==='1'?sqlProfiler([{name:'analytics',db:store.db},{name:'ark',db:ark.db}],sample=>appendFileSync(join(root,'sql-query-profile.jsonl'),JSON.stringify(sample)+'\n')):null;
  const server=serve({fetch:async request=>{const respond=async()=>{const start=performance.now(),receivedAt=Date.now(),response=await app.fetch(request);if(new URL(request.url).pathname==='/internal/analytics/ark-summary'){
