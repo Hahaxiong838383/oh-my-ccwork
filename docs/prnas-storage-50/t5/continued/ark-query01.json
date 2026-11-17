@@ -1,0 +1,13 @@
+{
+  "synthetic": true,
+  "scope": "actual ArkRuntime -> loopback HTTP -> readArkHistory/SQLite, no supplier or Android",
+  "devices": 2,
+  "samples": 4,
+  "p95_ms": 140.75912500000004,
+  "p99_ms": 140.75912500000004,
+  "invalid_facts": 0,
+  "history_transport_failures": 1,
+  "shortest_internal_deadline_ms": 120,
+  "required_margin_ms": 20,
+  "pass": false
+}

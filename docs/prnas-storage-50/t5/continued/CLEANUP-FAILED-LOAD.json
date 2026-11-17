@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"at_ms\": 1794885954549, \"reason\": \"completed failed synthetic fixture; RESULT/client/logs preserved; original source and reproduction retained\", \"sha256\": \"3c9b59d12c74d463eb7bcbcf2f843d08710e887b2b7ad143e2fcc77063bb1879\", \"files\": [{\"path\": \"/opt/p003/archive-t5-20261117/p003-t5-50x6000-01/analytics.db\", \"size\": 748339200}, {\"path\": \"/opt/p003/archive-t5-20261117/p003-t5-50x6000-01/analytics.db-wal\", \"size\": 0}, {\"path\": \"/opt/p003/archive-t5-20261117/p003-t5-50x6000-01/analytics.db-shm\", \"size\": 32768}], \"free_after_bytes\": 11022106624}\n",
+  "stderr": ""
+}

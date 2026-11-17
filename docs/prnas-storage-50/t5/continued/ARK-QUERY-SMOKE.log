@@ -1,0 +1,16 @@
+{"synthetic":true,"scope":"actual ArkRuntime -> loopback HTTP -> readArkHistory/SQLite, no supplier or Android","devices":2,"samples":4,"p95_ms":140.75912500000004,"p99_ms":140.75912500000004,"invalid_facts":0,"history_transport_failures":1,"shortest_internal_deadline_ms":120,"required_margin_ms":20,"pass":false}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Ark mixed query gate
+    at <anonymous> (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-query-load.ts:42:94) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

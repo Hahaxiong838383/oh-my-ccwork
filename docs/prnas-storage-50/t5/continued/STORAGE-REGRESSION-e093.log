@@ -1,0 +1,9 @@
+
+> server@0.0.1 test:storage
+> node --experimental-sqlite --import tsx scripts/storage-policy.test.ts && node --experimental-sqlite --import tsx scripts/storage-http.test.ts && node --experimental-sqlite --import tsx scripts/storage-concurrency.test.ts && node --experimental-sqlite --import tsx scripts/storage-legacy-scope.test.ts && node --experimental-sqlite --import tsx scripts/storage-analytics-boundaries.test.ts
+
+storage policy: PASS (50 default, 1..1000 strict, 32/33/49/50/51/100, CAS, no device cfg, restart read, safe stop)
+storage HTTP: PASS (auth, strict body, 409 CAS, enabled lower bound, independent reader cache revision, await race, stale refusal, emergency stop)
+storage two-process race: PASS (6 actual SQLite races; config->Ark lock; quota/grants consistent)
+storage legacy scope: PASS (real service, 3 original grants, stop/restart/reenable, immutable env seed, no fourth device, quota clamp)
+PASS: Analytics HTTP/SQLite quota boundaries 32/33/49/50/51/100; synthetic admission, not load proof
