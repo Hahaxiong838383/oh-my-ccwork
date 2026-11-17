@@ -1,0 +1,43 @@
+{
+  "scope": "SCHEDULER_SMOKE_NOT_24H_NOT_NAS",
+  "smoke_ark_accepted": 27,
+  "smoke_pending_without_receipts": 27,
+  "actual_published_backup_overlapped": true,
+  "maintenance_overlapped": true,
+  "normal_mode_integrity_complete": true,
+  "normal_mode_dirty": 0,
+  "evidence": {
+    "soak-schedule-red.log": {
+      "sha256": "f51b159a8abe35e7fd4470936ffb9e3d7ef50208b55230949e94dba9b5b9852c",
+      "bytes": 1952
+    },
+    "soak-schedule-green.log": {
+      "sha256": "dd4685fff95861073dadf1ef182704538821cfccd6a1cd90c660c3800d656bf0",
+      "bytes": 73
+    },
+    "soak-smoke-01.log": {
+      "sha256": "1cf3db99f558e03a37e93b128199902c206d37d6a2abfd1d10b5cccfaa0b3419",
+      "bytes": 387
+    },
+    "soak-smoke-02.log": {
+      "sha256": "7ccee71e92a97bc23f22620e3160b8fff5be39620645ffc8544f05a2e4e8064b",
+      "bytes": 385
+    },
+    "soak-smoke-03.log": {
+      "sha256": "c556d3a626e0e8cf41ae40a1175f3aadb9fb71017168284a0166ef14d096050d",
+      "bytes": 387
+    },
+    "normal-after-soak-01.log": {
+      "sha256": "99a3ea0a53cb0821672b7ea290384f572e783aeb1c4eeadaffe02d96bd77a270",
+      "bytes": 391
+    },
+    "p003-t5-soak-schedule-smoke-03/SOAK-RESULT.json": {
+      "sha256": "abf75b653fb0f652eb058fac110084312ea10179a520df0f41ec145b4b89c877",
+      "bytes": 4025
+    },
+    "p003-t5-soak-schedule-smoke-03/RESULT.json": {
+      "sha256": "58fc634b72e9f60f8828240502a2153bfa51d382fbf7e9c5d452a182334456fa",
+      "bytes": 42822
+    }
+  }
+}

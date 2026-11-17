@@ -19,6 +19,7 @@ import {loadDatabaseCounts} from '../deploy/analytics-smoke-and-load.mjs';
 import {createLoadHealthRecorder} from './storage-load-health.js';
 import {createStreamingAccounting,analyseRequests,readJsonl} from './storage-load-ledger.js';
 import {linuxResources,createResourceRecorder} from './storage-load-resources.js';
+import {soakPlan} from './storage-soak-schedule.js';
 
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
 assert.ok(['run','client'].includes(mode),'run|client');
@@ -28,8 +29,11 @@ const sleep=(ms:number)=>new Promise(r=>setTimeout(r,ms));
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const number=(v:string|undefined,fallback:number,min:number,max:number)=>{const n=Number(v??fallback);assert.ok(Number.isSafeInteger(n)&&n>=min&&n<=max,'invalid numeric parameter');return n;};
 if(mode==='run'){
+ const soak=soakPlan(process.env,Date.now());let runMono=performance.now();
  assert.ok(!existsSync(root),'never reuse or overwrite a run');mkdirSync(root,{recursive:true,mode:0o700});assert.equal(realpathSync(root),root,'resolve parent symlinks first');
  const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',rollup_prefix_index:process.env.T5_ROLLUP_PREFIX_INDEX==='1',synthetic:true,started_ms:Date.now()};
+ if(soak?.fullDay)assert(config.devices===50&&config.events===6000&&config.batch===200&&config.deadline_ms===3600000&&config.maintenance&&config.backup&&config.ark_history_indexes&&config.rollup_prefix_index&&!config.covering_index,'real day requires fixed 50x6000 workload, 1h daily deadline and candidate indexes');
+ Object.assign(config,{soak,continuous_ark:!!soak});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  process.env.DEVICES_DB_PATH=join(root,'devices.db');
  const subjects=Array.from({length:config.devices},(_,i)=>'BJP003999999'+String(i+1).padStart(8,'0'));
@@ -56,17 +60,61 @@ if(mode==='run'){
  const maintain=async()=>{if(maintaining)return;maintaining=true;const start=Date.now();try{const code=await launch([process.execPath,'--import','tsx','scripts/analytics-rollup.ts'],'maintenance-'+start,{...process.env,ANALYTICS_DB_PATH:path});const summaries=[];for await(const row of readJsonl(join(root,'maintenance-'+start+'.stdout')))summaries.push(row);assert.equal(summaries.length,1,'one maintenance report required');maintenance.push({start,done:Date.now(),code,report:summaries[0]});}catch(error){maintenanceError??=error;maintenance.push({start,done:Date.now(),error:String(error)});}finally{maintaining=false;}};
  let monitorError:unknown;
  const monitor=async()=>{if(monitoring)return;monitoring=true;let sample:any;try{const t=performance.now(),r=await fetch('http://127.0.0.1:'+(server.address() as any).port+'/ready',{signal:AbortSignal.timeout(5000)});sample={at:Date.now(),status:r.status,ms:performance.now()-t,...await r.json()};}catch(e){sample={at:Date.now(),error:String(e)};}finally{try{const resource={...linuxResources(root),monotonic_ms:performance.now(),at:Date.now()};appendFileSync(join(root,'resources.jsonl'),JSON.stringify(resource)+'\n');resources.record(resource);health.record(sample);}catch(e){monitorError=e;}finally{monitoring=false;}}};
- const timer=setInterval(()=>void monitor(),1000),maintenanceTimer=config.maintenance?setInterval(()=>void maintain(),300000):null;
+ const timer=setInterval(()=>void monitor(),soak?.monitorIntervalMs??1000),maintenanceTimer=config.maintenance?setInterval(()=>void maintain(),soak?.maintenanceIntervalMs??300000):null;
  let firstMaintenance:ReturnType<typeof setTimeout>|undefined,backupTimer:ReturnType<typeof setTimeout>|undefined,backupPromise:Promise<number|null>|undefined;
  if(config.maintenance)firstMaintenance=setTimeout(()=>void maintain(),2000);
- if(config.backup)backupTimer=setTimeout(()=>{backupPromise=launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup');},5000);
+ if(config.backup&&!soak)backupTimer=setTimeout(()=>{backupPromise=launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup');},5000);
  const before=loadDatabaseCounts(store.db);
+ let arkRounds=0,dailyStarted=0,dailyFinished=0,soakStop=false,soakError:unknown;
+ const archiveReports:any[]=[];
+ // Same test endpoints and existing exporter/Backup API. No production timer is installed.
+ async function archiveCycle(){
+  const began=Date.now(),exportExit=await launch(['python3','scripts/storage-ark-export.py','--db',join(root,'ark.db'),'--root',join(root,'spool')],'ark-export-'+began);
+  assert.equal(exportExit,0,'Ark export failed');
+  let backupExit:number|null=null,backupReport:any=null,backupStarted:number|null=null,backupFinished:number|null=null;
+  if(config.backup&&dailyStarted){backupStarted=Date.now();backupExit=await launch(['python3','scripts/storage-backup-job.py','--database',path,'--root',join(root,'spool')],'backup-'+began);backupFinished=Date.now();assert.equal(backupExit,0,'daily backup job failed');backupReport=JSON.parse(readFileSync(join(root,'backup-'+began+'.stdout'),'utf8'));}
+  const report={began,done:Date.now(),exportExit,backupExit,backupReport,backupStarted,backupFinished};archiveReports.push(report);appendFileSync(join(root,'archive-cycles.jsonl'),JSON.stringify(report)+'\n');
+ }
+ async function produceArk(){
+  const sample=JSON.parse(readFileSync(new URL('../../../docs/ark-brain-20261031/snapshot-v1.example.json',import.meta.url),'utf8'));
+  for(let round=0;!soakStop&&performance.now()-runMono<soak!.durationMs;round++){
+   const due=runMono+round*soak!.arkIntervalMs;while(!soakStop&&performance.now()<due)await sleep(Math.min(1000,due-performance.now()));
+   if(soakStop||performance.now()-runMono>=soak!.durationMs)break;
+   for(const [actor,token]of tokens.entries()){
+    const now=Date.now(),snapshot={...sample,snapshot_id:`soak-${config.started_ms}-${actor}-${round}`,boot_id:`soak-${config.started_ms}`,boot_started_at_ms:config.started_ms-1,captured_at_ms:now,sequence:round+1,logical_day:new Date(now+8*3600000).toISOString().slice(0,10),source_mode:'normal',wallets:{family_coin:round+actor,stardust:null},inventory:{'M-CARD-001':actor%4}};
+    const began=performance.now(),r=await fetch('http://127.0.0.1:'+(server.address()as any).port+'/t5/ark/state',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(5000)}),body=await r.json();
+    appendFileSync(join(root,'ark-continuous.jsonl'),JSON.stringify({at_ms:now,actor,round,snapshot_id:snapshot.snapshot_id,status:r.status,body,ms:performance.now()-began})+'\n');assert.equal(r.status,200);assert.equal(body.status,'accepted');
+   }arkRounds++;
+  }
+ }
+ async function archiveLoop(){
+  while(!soakStop&&performance.now()-runMono<soak!.durationMs){await archiveCycle();const next=performance.now()+soak!.maintenanceIntervalMs;while(!soakStop&&performance.now()<next&&performance.now()-runMono<soak!.durationMs)await sleep(1000);}
+ }
+ await monitor();runMono=performance.now();
+ const arkPromise=soak?produceArk().catch(e=>{soakError??=e;}):null;
+ const archivePromise=soak?archiveLoop().catch(e=>{soakError??=e;}):null;
  try{
+  if(soak)while(performance.now()-runMono<soak.dailyDelayMs){if(soakError)throw soakError;if(monitorError)throw monitorError;await sleep(1000);}
+  dailyStarted=Date.now();
   const code=await launch([process.execPath,'--import','tsx','scripts/storage-capacity-load.ts','client',root],'client');
+  dailyFinished=Date.now();
+  if(soak){
+   while(performance.now()-runMono<soak.durationMs){if(soakError)throw soakError;if(monitorError)throw monitorError;await sleep(1000);}
+   soakStop=true;await arkPromise;await archivePromise;if(soakError)throw soakError;
+   await archiveCycle();
+   if(soak.fullDay){
+    const drainDeadline=performance.now()+3600000;
+    while(Number(ark.db.prepare('SELECT pending_records FROM ark_archive_stats').get()!.pending_records)>0||!archiveReports.some(r=>r.backupReport?.last_offsite_backup_ms)){
+     assert(performance.now()<drainDeadline,'real-day NAS drain deadline exceeded; no synthetic ACK');
+     if(monitorError)throw monitorError;await sleep(30000);await archiveCycle();
+    }
+    const completed=ark.db.prepare("SELECT SUM(record_count) n FROM ark_archive_batch WHERE state='complete'").get();assert.equal(Number(completed!.n),arkRounds*config.devices,'source receipt accounting');
+   }
+  }
   if(firstMaintenance)clearTimeout(firstMaintenance);if(backupTimer)clearTimeout(backupTimer);if(maintenanceTimer)clearInterval(maintenanceTimer);
   while(maintaining)await sleep(100);if(config.maintenance)await maintain();
   const backupCode=backupPromise?await backupPromise:null;
-  clearInterval(timer);while(monitoring)await sleep(10);if(monitorError)throw monitorError;
+  clearInterval(timer);while(monitoring)await sleep(10);await monitor();if(monitorError)throw monitorError;
   if(!existsSync(join(root,'client-result.json'))){writeFileSync(join(root,'FAILURE.json'),JSON.stringify({stage:'client',exit:code,stderr_file:'client.stderr'}));throw new Error('client failed before result; inspect client.stderr');}
   const client=JSON.parse(readFileSync(join(root,'client-result.json'),'utf8'));assert.equal(client.evidence_version,3,'streamed client evidence required');
   const accounting=createStreamingAccounting({...config,prefix:client.prefix});
@@ -74,14 +122,20 @@ if(mode==='run'){
   const integrity=accounting.report(store.db,before,client.failures);
   const requests=await analyseRequests(join(root,'requests.jsonl'),join(root,'request-analysis.db'),config);
   const evidenceConsistent=requests.attempts===client.attempts&&requests.successes===client.completed_batches&&accounting.totals().batches===client.completed_batches;
-  const arkRows=identities.map((id,i)=>{const current=ark.current(id);return {actor:i,correct:current?.snapshot.wallets.family_coin===100+i&&current?.snapshot.inventory['M-CARD-001']===i%4,source_mode:current?.snapshot.source_mode};});
+  const arkRows=identities.map((id,i)=>{const current=ark.current(id);return {actor:i,correct:current?.snapshot.wallets.family_coin===(soak?arkRounds-1+i:100+i)&&current?.snapshot.inventory['M-CARD-001']===i%4&&(!soak||current?.snapshot.wallets.stardust===null),source_mode:current?.snapshot.source_mode};});
   const dirty=Number(store.db.prepare('SELECT count(*) n FROM analytics_dirty_day').get()!.n);
   const result={stage:'T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE',evidence_version:3,synthetic:true,config,node:process.version,platform:process.platform,client_exit:code,integrity,ark:arkRows,maintenance,maintenance_error:maintenanceError?String(maintenanceError):null,backup_exit:backupCode,checkpoint:checkpointer.status(),dirty_days:dirty,acks:requests,evidence_consistent:evidenceConsistent,health:health.recent(),health_summary:health.summary(),resources:resources.summary(86400000),duration_ms:client.duration_ms};
   writeFileSync(join(root,'RESULT.json'),JSON.stringify(result,null,2));console.log(JSON.stringify({root,complete:integrity.complete,acks:result.acks,ark_correct:arkRows.filter(x=>x.correct).length,seconds:client.duration_ms/1000}));
+  if(soak){
+   const evidence={full_day_requested:soak.fullDay,elapsed_ms:performance.now()-runMono,plan:soak,daily_started_ms:dailyStarted,daily_finished_ms:dailyFinished,ark_rounds:arkRounds,ark_accepted:arkRounds*config.devices,archive_cycles:archiveReports,archive_stats:ark.db.prepare('SELECT * FROM ark_archive_stats').get(),maintenance_overlapped_daily:maintenance.some(m=>m.start<=dailyFinished&&m.done>=dailyStarted),backup_overlapped_daily:archiveReports.some(m=>m.backupReport?.state==='published'&&m.backupStarted<=dailyFinished&&m.backupFinished>=dailyStarted),resource_gate:result.resources.local_resource_gate,full_t5_pass:false};
+   writeFileSync(join(root,'SOAK-RESULT.json'),JSON.stringify(evidence,null,2));assert(arkRounds>0);
+   if(soak.fullDay){assert(evidence.elapsed_ms>=86400000);assert(result.resources.local_resource_gate,'real-day resource gate failed');assert(evidence.maintenance_overlapped_daily&&evidence.backup_overlapped_daily,'mixed overlap required');}
+  }
   assert.equal(code,0);assert.ok(integrity.complete);assert.ok(arkRows.every(x=>x.correct));assert.ok(evidenceConsistent&&requests.all_actors_finished,'request evidence completeness');assert.ok(requests.successes&&result.acks.p95!<=500&&result.acks.p99!<=2000,'ACK latency gate');
-  if(config.maintenance){assert.equal(maintenanceError,undefined,'maintenance evidence failed');assert.ok(maintenance.every(r=>r.code===0&&!r.report?.rollup_error&&!r.report?.prune_error),'maintenance process failed');assert.equal(dirty,0);}if(config.backup)assert.equal(backupCode,0,'backup must really run');
+  if(config.maintenance){assert.equal(maintenanceError,undefined,'maintenance evidence failed');assert.ok(maintenance.every(r=>r.code===0&&!r.report?.rollup_error&&!r.report?.prune_error),'maintenance process failed');assert.equal(dirty,0);}if(config.backup&&!soak)assert.equal(backupCode,0,'backup must really run');
  }catch(error){writeFileSync(join(root,'FAILURE.json'),JSON.stringify({stage:'run',error:String(error),synthetic:true}));throw error;}finally{
   clearInterval(timer);if(maintenanceTimer)clearInterval(maintenanceTimer);if(firstMaintenance)clearTimeout(firstMaintenance);if(backupTimer)clearTimeout(backupTimer);
+  soakStop=true;await arkPromise;await archivePromise;
   while(monitoring)await sleep(10);
   for(const p of children)p.kill('SIGTERM');server.closeAllConnections();await new Promise<void>(r=>server.close(()=>r()));await writer.close();await checkpointer.stop();ark.close();store.close();
  }
@@ -95,7 +149,7 @@ if(mode==='run'){
  const progress=setInterval(()=>console.log(JSON.stringify({progress:true,at:Date.now(),completed_batches:completed,attempts})),20000);
  const actors=await Promise.allSettled(privateConfig.tokens.map(async(token:string,actor:number)=>{
   const stamp=Date.now(),snapshot={...sample,snapshot_id:prefix+'-ark-'+actor,boot_id:prefix,boot_started_at_ms:stamp-1,captured_at_ms:stamp,sequence:1,logical_day:new Date(stamp+8*3600000).toISOString().slice(0,10),wallets:{family_coin:100+actor,stardust:actor+1},inventory:{'M-CARD-001':actor%4}};
-  const ar=await fetch(privateConfig.url+'/t5/ark/state',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(20000)});const aj=await ar.json();arkRequests.push({actor,status:ar.status,result:aj});assert.equal(ar.status,200);assert.equal(aj.status,'accepted');
+  if(!config.continuous_ark){const ar=await fetch(privateConfig.url+'/t5/ark/state',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify(snapshot),signal:AbortSignal.timeout(20000)});const aj=await ar.json();arkRequests.push({actor,status:ar.status,result:aj});assert.equal(ar.status,200);assert.equal(aj.status,'accepted');}
   for(let offset=0;offset<config.events;offset+=config.batch){
    const events=Array.from({length:Math.min(config.batch,config.events-offset)},(_,i)=>{const n=offset+i,spec=catalog[n%catalog.length];return {schema_version:1,client_event_id:prefix+'-'+actor+'-'+n,event_name:spec.eventName,occurred_at_ms:started,session_id:hash(prefix+'-'+actor).slice(0,32),sequence:n,priority:'normal',context:{},properties:structuredClone(spec.sample)};});
    const ids=events.map(e=>e.client_event_id),body=JSON.stringify({schema_version:1,batch_id:prefix+'-'+actor+'-'+offset,sent_at_ms:started,client:{component:'synthetic-t5'},events});

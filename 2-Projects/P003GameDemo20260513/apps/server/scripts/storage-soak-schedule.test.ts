@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {soakPlan} from './storage-soak-schedule.js';
+const at=(s:string)=>Date.parse(s);
+assert.equal(soakPlan({},at('2026-11-18T01:00:00+08:00')),null);
+const plan=soakPlan({T5_SOAK:'1'},at('2026-11-18T01:00:00+08:00'))!;
+assert.equal(plan.durationMs,86400000);assert.equal(plan.dailyDelayMs,22*3600000);assert.equal(plan.maintenanceIntervalMs,300000);assert.equal(plan.arkIntervalMs,50000);assert.equal(plan.fullDay,true);
+assert.equal(soakPlan({T5_SOAK:'1'},at('2026-11-18T23:00:00+08:00'))!.dailyDelayMs,0);
+assert.equal(soakPlan({T5_SOAK:'1'},at('2026-11-18T23:30:00+08:00'))!.dailyDelayMs,23.5*3600000);
+const smoke=soakPlan({T5_SOAK_SMOKE:'1'},at('2026-11-18T01:00:00+08:00'))!;assert.equal(smoke.fullDay,false);assert(smoke.durationMs<86400000);
+assert.throws(()=>soakPlan({T5_SOAK:'1',T5_SOAK_SMOKE:'1'},Date.now()));
+assert.throws(()=>soakPlan({T5_SOAK:'1'},NaN));
+console.log('PASS CST 23:00 scheduling, exact real-day duration, smoke never full-day');
