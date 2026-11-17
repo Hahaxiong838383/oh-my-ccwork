@@ -38,7 +38,7 @@ if(mode==='run'){
  // No automatic index migration is added to production service startup.
  if(config.covering_index)store.db.exec('CREATE INDEX t5_experiment_cover ON analytics_rollup_fact(dimension,day,device_key,received_at_ms,id_digest,event_name,session_digest,clock_suspicious,semantic_json)');
  if(config.ark_history_indexes)installArkHistoryIndexes(store.db);
- const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path);
+ const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run)});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
  writeFileSync(join(root,'control.json'),'{"enabled":true}',{mode:0o600});

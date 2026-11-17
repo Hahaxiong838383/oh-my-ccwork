@@ -4,7 +4,7 @@ import {queryAnalyticsTiers} from './tier-query.js';
 import type {UploadPolicy} from './upload-policy.js';
 import {readBoundedJson} from '../ark/http.js';
 import {readArkHistory} from '../ark/history.js';
-import {historyRequestSchema} from '../ark/contracts.js';
+import {historyRequestSchema,unknownHistory} from '../ark/contracts.js';
 import type {ArkIdentity} from '../ark/identity.js';
 import {AnalyticsCheckpointer} from './checkpointer.js';
 import {ANALYTICS_WAL_MAX_BYTES,validateWalMaxBytes} from './sqlite-policy.mjs';
@@ -31,7 +31,7 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
 type Reader={storageControls?:()=>ReturnType<AnalyticsDeviceReader['storageControls']>;uploadPolicy?():UploadPolicy|null;arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readCredentialState:DeviceCredentialStateReader;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
-export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;bodyTimeoutMs?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
+export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>&Partial<Pick<AnalyticsWriter,'fatalExit'|'withCheckpoint'>>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;bodyTimeoutMs?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
   const rpm=options.globalRpm??LIMITS.defaultGlobalRpm;if(!Number.isInteger(rpm)||rpm<1||rpm>60000)throw new Error('INVALID_ANALYTICS_GLOBAL_RPM');
@@ -65,6 +65,12 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     const hash=(s:string)=>createHash('sha256').update(s).digest();
     if(!options.internalSecret||!token||!timingSafeEqual(hash(token),hash(options.internalSecret)))return c.json({ok:false,error_code:'UNAUTHORIZED'},401);
     await next();
+  });
+  app.post('/internal/analytics/ark-warmup',async c=>{
+    let body:unknown;try{body=await readBoundedJson(c.req.raw,1024);}catch(e){return c.json({ok:false,error_code:'INVALID_QUERY'},(e as {status?:number}).status===413?413:400);}
+    if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).length)return c.json({ok:false,error_code:'INVALID_QUERY'},400);
+    c.header('Cache-Control','no-store');
+    return c.json(unknownHistory());
   });
   app.post('/internal/analytics/ark-summary',async c=>{
     // Independent read-only capability; never turns on the batch upload gate.
@@ -149,7 +155,7 @@ export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=
   if(port!==3006&&port!==3306)throw new Error('INVALID_ANALYTICS_LISTEN_PORT');
   const configuredInterval=process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS;
   if(configuredInterval!==undefined&&(!/^\d+$/.test(configuredInterval)||Number(configuredInterval)<100||Number(configuredInterval)>10000))throw new Error('INVALID_ANALYTICS_CHECKPOINT_INTERVAL_MS');
-  const checkpointer=new AnalyticsCheckpointer(options.store.path,{walMaxBytes:options.walMaxBytes,nodePath:process.env.ANALYTICS_NODE_PATH??process.execPath,intervalMs:configuredInterval===undefined?10000:Number(configuredInterval)});
+  const checkpointer=new AnalyticsCheckpointer(options.store.path,{walMaxBytes:options.walMaxBytes,nodePath:process.env.ANALYTICS_NODE_PATH??process.execPath,intervalMs:configuredInterval===undefined?10000:Number(configuredInterval),runExclusive:run=>options.writer?.withCheckpoint?options.writer.withCheckpoint(run):run()});
   options.checkpointStatus=()=>checkpointer.status();
   // Validate configuration before creating a thread that would outlive a failed startup.
   const app=createAnalyticsApp(options);
@@ -163,10 +169,20 @@ export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=
   const signal=()=>{void stop().then(()=>process.exit(0),()=>{console.error('[analytics] SHUTDOWN_STORAGE_UNAVAILABLE');process.exit(1);});};
   function stop(){
     if(stopped)return stopped;
-    stopped=(async()=>{process.removeListener('SIGTERM',signal);process.removeListener('SIGINT',signal);server.close();try{await writer.close();}finally{if('closeAllConnections' in server)server.closeAllConnections();await checkpointer.stop();options.store.close();}})();
+    stopped=(async()=>{process.removeListener('SIGTERM',signal);process.removeListener('SIGINT',signal);server.close();try{await writer.close();}catch(error){
+      // A close deadline is not proof that a SQLite transaction has stopped.
+      if(writer.fatalExit)await writer.fatalExit;
+      throw error;
+    }finally{if('closeAllConnections' in server)server.closeAllConnections();await checkpointer.stop();options.store.close();}})();
     return stopped;
   }
   process.once('SIGTERM',signal);process.once('SIGINT',signal);
+  // The existing process supervisor owns replacement. Do not leave a live, permanently
+  // unready HTTP process behind, or start a second writer beside an unknown commit.
+  void writer.fatalExit?.then(()=>{
+    console.error('[analytics] WRITER_FAILED_DRAINED_RESTART');
+    void stop().then(()=>process.exit(1),()=>process.exit(1));
+  });
   return {server,checkpointer,writer,stop};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){

@@ -1,4 +1,5 @@
 import {arkRoute} from './routes/ark.js';
+import {warmArkHistory} from './ark/warmup.js';
 import {arkFactsRoute} from './ark/proxy.js';
 import {arkAuthorizedSubjects,arkService} from './ark/service.js';
 import { serve } from '@hono/node-server';
@@ -92,6 +93,12 @@ app.route('/v1/internal/listening', createLazyListeningRoute(()=>createListening
 app.use('/admin/*', serveStatic({ root: '../web/public' }));
 app.get('/admin', (c) => c.redirect('/admin/'));
 
+// Run in the actual facts process, before accepting requests. Failure only degrades
+// history reads; no device/grant is created and normal chat keeps its original path.
+if(!process.env.ARK_FACTS_PROXY_URL){
+  const warmup=await warmArkHistory({internalUrl:process.env.ARK_ANALYTICS_INTERNAL_URL??'http://127.0.0.1:3006',internalSecret:process.env.ANALYTICS_INTERNAL_SECRET??''});
+  console.log('[ark] history startup '+warmup.status);
+}
 const server = serve(
   {
     fetch: app.fetch,

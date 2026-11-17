@@ -52,6 +52,8 @@ export class AnalyticsWriter {
   private closedReply=false;
   private nextId=0;
   private pending?:Pending;
+  private checkpoint=false;
+  private idleResolve?:()=>void;
   private closePromise?:Promise<void>;
   private closeResolve?:()=>void;
   private closeReject?:(error:AnalyticsStorageUnavailable)=>void;
@@ -59,6 +61,9 @@ export class AnalyticsWriter {
   private closeSettled=false;
   private readonly closeTimeoutMs:number;
   private readonly jobTimeoutMs:number;
+  private resolveFatalExit!:()=>void;
+  /** Only resolves after an unrecoverable failure AND actual thread exit. Never replays a job. */
+  readonly fatalExit=new Promise<void>(resolve=>{this.resolveFatalExit=resolve;});
 
   constructor(path:string,options:AnalyticsWriterOptions={}) {
     this.closeTimeoutMs=timeoutOption(options.closeTimeoutMs,30_000);
@@ -73,16 +78,29 @@ export class AnalyticsWriter {
       this.worker.on('exit',code=>this.onExit(code));
     }catch{
       this.failed=true;this.exited=true;
+      this.resolveFatalExit();
     }
   }
 
   get ready():boolean{return this.receivedReady&&!this.failed&&!this.closing&&!this.exited;}
-  /** Remains true after a deadline until the real worker operation ends. */
-  get busy():boolean{return this.pending!==undefined;}
+  /** Also blocks admission while a checkpoint waits for or owns the disk write phase. */
+  get busy():boolean{return this.pending!==undefined||this.checkpoint;}
+
+  async withCheckpoint(run:()=>Promise<void>):Promise<void>{
+    if(this.failed||this.closing||this.exited)throw new AnalyticsStorageUnavailable();
+    if(this.checkpoint)throw new AnalyticsWriterBusy();
+    // Occupy admission synchronously, before waiting for the current durable transaction.
+    this.checkpoint=true;
+    try{
+      if(this.pending)await new Promise<void>(resolve=>{this.idleResolve=resolve;});
+      if(this.failed||this.closing||this.exited)throw new AnalyticsStorageUnavailable();
+      await run();
+    }finally{this.idleResolve=undefined;this.checkpoint=false;}
+  }
 
   settle(context:AnalyticsDeviceContext,batch:AnalyticsBatch,requestId:string,serializedBatch?:string,transport?:AnalyticsTransport):Promise<AnalyticsBatchAck> {
     if(!this.ready)return Promise.reject(new AnalyticsStorageUnavailable());
-    if(this.pending)return Promise.reject(new AnalyticsWriterBusy());
+    if(this.busy)return Promise.reject(new AnalyticsWriterBusy());
     return new Promise((resolve,reject)=>{
       let expectedIds:Set<string>;
       try{
@@ -132,7 +150,7 @@ export class AnalyticsWriter {
     if(!pending)return;
     clearTimeout(pending.timer);
     if(!pending.settled){pending.settled=true;pending.reject(new AnalyticsStorageUnavailable(busy));}
-    if(clear)this.pending=undefined;
+    if(clear){this.pending=undefined;this.idleResolve?.();}
   }
 
   private onMessage(message:unknown):void {
@@ -148,6 +166,7 @@ export class AnalyticsWriter {
       if(!pending||message.id!==pending.id||typeof message.ok!=='boolean'||(message.ok?!validAck(message.ack,pending):typeof message.busy!=='boolean')){this.fail();return;}
       clearTimeout(pending.timer);
       this.pending=undefined;
+      this.idleResolve?.();
       if(!pending.settled){
         pending.settled=true;
         if(message.ok)pending.resolve(message.ack as AnalyticsBatchAck);
@@ -187,6 +206,7 @@ export class AnalyticsWriter {
     this.rejectPending(true);
     void this.close().catch(()=>{});
     this.finishClose(this.cleanExit);
+    if(this.failed)this.resolveFatalExit();
   }
 
   private finishClose(success:boolean):void {

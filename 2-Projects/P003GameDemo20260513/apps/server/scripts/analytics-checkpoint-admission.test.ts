@@ -1,0 +1,50 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {setTimeout as delay} from 'node:timers/promises';
+import {serve} from '@hono/node-server';
+import {SignJWT} from 'jose';
+import {AnalyticsStore} from '../src/analytics/store.js';
+import {AnalyticsWriter} from '../src/analytics/writer.js';
+import {AnalyticsCheckpointer} from '../src/analytics/checkpointer.js';
+import {createAnalyticsApp} from '../src/analytics/index.js';
+
+const dir=mkdtempSync(join(tmpdir(),'analytics-checkpoint-admission-'));
+const store=new AnalyticsStore(join(dir,'analytics.db')),writer=new AnalyticsWriter(store.path);
+const control=join(dir,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
+const until=async(test:()=>boolean)=>{const deadline=Date.now()+7000;while(!test()){assert.ok(Date.now()<deadline,'checkpoint admission timeout');await delay(5);}};
+const app=createAnalyticsApp({store,writer,reader:{readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'checkpoint-synthetic',active:true,uploadEnabled:true,uploadHourCst:0})},authSecret:'checkpoint-test-only',internalSecret:'checkpoint-internal-only',controlPath:control,allowSubjects:['checkpoint-synthetic'],diskFreeBytes:()=>20*1024**3});
+const server=serve({fetch:app.fetch,hostname:'127.0.0.1',port:0});
+await new Promise<void>(resolve=>server.listening?resolve():server.once('listening',resolve));
+const address=server.address();assert.ok(address&&typeof address!=='string');const base='http://127.0.0.1:'+address.port;
+const token=await new SignJWT({kind:'p003-device'}).setSubject('checkpoint-synthetic').setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode('checkpoint-test-only'));
+const stamp=Date.now();
+const post=(id:string)=>fetch(base+'/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':id},body:JSON.stringify({schema_version:1,batch_id:id,sent_at_ms:stamp,client:{},events:[{schema_version:1,client_event_id:id,event_name:'app.bridge_ready',occurred_at_ms:stamp,session_id:'test',sequence:1,priority:'normal',context:{},properties:{}}]})});
+const controllers:AnalyticsCheckpointer[]=[];
+const checkpoint=(nodePath?:string)=>{const cp=new AnalyticsCheckpointer(store.path,{nodePath,runExclusive:run=>writer.withCheckpoint(run)});controllers.push(cp);return cp;};
+try{
+ await until(()=>writer.ready);
+ store.db.exec('BEGIN IMMEDIATE');const pending=post('active-write');await until(()=>writer.busy);
+ const cp=checkpoint();cp.start();
+ assert.equal(cp.status().worker_pid,null,'checkpoint must wait for the active durable writer before spawning');
+ assert.equal((await fetch(base+'/health')).status,200);
+ store.db.exec('COMMIT');const first=await pending;assert.equal(first.status,200);await first.json();
+ await until(()=>cp.status().worker_pid!==null);const pid=cp.status().worker_pid!;process.kill(pid,'SIGSTOP');
+ const at=performance.now(),blocked=await post('during-checkpoint');assert.equal(blocked.status,503);assert.equal(blocked.headers.get('Retry-After'),'5');assert.equal((await blocked.json()).error_code,'ANALYTICS_OVERLOADED');
+ assert.ok(performance.now()-at<500,'checkpoint pressure must reject promptly rather than queue a write');
+ assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_event WHERE client_event_id='during-checkpoint'").get()!.n,0);
+ assert.equal((await fetch(base+'/health')).status,200,'HTTP stays responsive during checkpoint');
+ process.kill(pid,'SIGCONT');await until(()=>cp.status().last_success_ms!==null&&!writer.busy);
+ const retried=await post('during-checkpoint');assert.equal(retried.status,200);assert.deepEqual((await retried.json()).accepted_event_ids,['during-checkpoint']);await cp.stop();
+ const failed=checkpoint('/nonexistent-analytics-test-node');failed.start();await until(()=>failed.status().failures===1&&!writer.busy);
+ const afterError=await post('after-checkpoint-error');assert.equal(afterError.status,200);await afterError.json();await failed.stop();
+ store.db.exec('BEGIN IMMEDIATE');const last=post('stop-while-writer-busy');await until(()=>writer.busy);
+ const stopped=checkpoint();stopped.start();await stopped.stop();store.db.exec('COMMIT');assert.equal((await last).status,200);
+ await until(()=>!writer.busy);assert.equal(stopped.status().worker_pid,null,'stop while waiting must not spawn a later checkpoint');
+ console.log('analytics checkpoint admission: PASS (drain current write, prompt 503, no overlapping checkpoint, recovery after error/stop)');
+}finally{
+ if(store.db.isTransaction)store.db.exec('ROLLBACK');
+ await Promise.all(controllers.map(cp=>cp.stop()));await writer.close();
+ server.closeAllConnections();await new Promise<void>(resolve=>server.close(()=>resolve()));store.close();rmSync(dir,{recursive:true,force:true});
+}

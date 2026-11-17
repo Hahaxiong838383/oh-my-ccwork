@@ -7,12 +7,13 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  if(!/^[a-f0-9]{64}$/.test(key)||!Number.isSafeInteger(notBefore)||notBefore>now)return unknownHistory();
  return store.readSnapshot(()=>{
  const indexes=arkHistoryReadIndexes(store.db);
- const columns=`e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,b.client_json`;
+ const eventColumns=`e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json`;
+ const columns=`${eventColumns},b.client_json`;
  type Row={event_name:string;occurred_at_ms:number;received_at_ms:number;clock_suspicious:number;properties_json:string;client_json:string|null};
  // Seek the relevant event families before inspecting GM properties. Without the hint SQLite
  // favors received-time ordering and reads all unrelated device events before LIMIT can apply.
  // Optional covering indexes are installed offline; old DBs use the existing selective index.
- const evidence=store.db.prepare(`SELECT ${columns} FROM analytics_event e INDEXED BY ${indexes.evidence} LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
+ const evidence=store.db.prepare(`SELECT ${eventColumns},NULL AS client_json FROM analytics_event e INDEXED BY ${indexes.evidence}
  WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=?
  AND e.event_name IN ('g1.logical_day_changed','g1.command_failed','g1.runtime_command_completed','g1.gift_became_available','g1.gift_claimed','g1.reward_granted')
  AND (e.event_name='g1.logical_day_changed' OR json_extract(e.properties_json,'$.gm_override')=1 OR json_extract(e.properties_json,'$.source_mode')='gm'
@@ -57,7 +58,7 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  // Separate bounded day scan: reward grants are not wallet deltas; aggregated diagnostics never enter.
  const today=cstDay(now),start=Date.parse(today+'T00:00:00+08:00');
  if(normal.has(today)&&!gmDays.has(today)){
-  const rows=store.db.prepare(`SELECT ${columns},e.session_id FROM analytics_event e INDEXED BY ${indexes.daily} LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
+  const rows=store.db.prepare(`SELECT ${eventColumns},NULL AS client_json,e.session_id FROM analytics_event e INDEXED BY ${indexes.daily}
    WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=? AND e.occurred_at_ms>=? AND e.occurred_at_ms<=?
    AND e.event_name IN ('g1.progress_checkpoint','g1.reward_granted') ORDER BY e.occurred_at_ms,e.client_event_id LIMIT 513`)
    .all(key,Math.max(notBefore,start),now,Math.max(notBefore,start),now) as (Row&{session_id:string|null})[];

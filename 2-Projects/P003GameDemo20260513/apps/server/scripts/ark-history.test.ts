@@ -18,6 +18,21 @@ function fixture(){const root=mkdtempSync(join(tmpdir(),'ark-history-')),store=n
  const wallet=(n:number,at=NOW-1000,received=NOW,key=KEY)=>add('g1.wallet_balance_changed',{item_id:'C-FAMILY-001',before:0,after:n,delta:n},at,received,key);
  return {store,add,normal,wallet,done(){store.close();rmSync(root,{recursive:true,force:true});}};
 }
+test('only asset history reads batch metadata; evidence and daily use event facts alone',()=>{const f=fixture();try{
+ f.normal();f.wallet(17);
+ f.add('g1.progress_checkpoint',{logical_day:'2026-10-31',elapsed_seconds:600,checkpoint_minutes:10,completed_slots:1,current_slot:1});
+ const plans:{sql:string;details:string[]}[]=[];
+ const observed={readSnapshot:f.store.readSnapshot.bind(f.store),db:{prepare(sql:string){const statement=f.store.db.prepare(sql);return {all(...args:any[]){
+  if(sql.includes('FROM analytics_event'))plans.push({sql,details:(f.store.db.prepare('EXPLAIN QUERY PLAN '+sql).all(...args) as {detail:string}[]).map(x=>x.detail)});
+  return statement.all(...args);
+ }};}}} as unknown as AnalyticsStore;
+ const result=readArkHistory(observed,KEY,NOW-5000,NOW);
+ assert.equal(result.wallets.family_coin?.content_version,'test-content');assert.equal(result.daily?.progress_seconds,600);
+ assert.equal(plans.length,3);
+ assert.equal(plans[0].details.some(x=>/SEARCH b |SCAN b /.test(x)),false,'negative evidence must not fetch unused batch metadata');
+ assert.equal(plans[1].details.some(x=>/SEARCH b |SCAN b /.test(x)),true,'asset content_version must retain the batch lookup');
+ assert.equal(plans[2].details.some(x=>/SEARCH b |SCAN b /.test(x)),false,'daily facts must not fetch unused batch metadata');
+}finally{f.done();}});
 test('history keeps unknown distinct from zero and never uses a 12-character alias',()=>{const f=fixture();try{
  f.normal();f.wallet(99,NOW-1000,NOW,OTHER);assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).status,'unknown');
  f.wallet(0);const h=readArkHistory(f.store,KEY,NOW-5000,NOW);assert.equal(h.wallets.family_coin?.value,0);assert.equal(h.wallets.stardust,null);
