@@ -18,7 +18,7 @@ output_levels: L1
 | 更新通道 | 内网 `http://192.168.1.133:8899` → Lucky `https://wordpath.hahaxiong.cc:8666` → VPS `https://142.11.225.39.sslip.io/wordpath` |
 | APK 归档 | `/data/home-studio/artifacts/english-app/WordPath-<ver>.apk`，飞牛2 `/vol1/1000/文件临时缓存/` |
 | 模拟器 | `emulator-5554`（AOSP API30，无 KVM/GMS，冷启动 20–30s） |
-| 当前版本 | 0.9.1（versionCode 21），156.2MB，APK 内置 Piper joe-medium-int8 |
+| 当前版本 | 0.9.2（versionCode 22），156.2MB，APK 内置 Piper joe-medium-int8 |
 
 ## 构建 / 发布（照做不出错）
 
@@ -115,3 +115,28 @@ adb -s emulator-5554 shell uiautomator dump /sdcard/ui.xml && adb -s emulator-55
 
 App 存的是域名不是 IP，换 DNS 指向不用发版；只有换端口/路径才需要改默认地址。
 公网 IPv6 由 Lucky DDNS 维护（V6 取址必须是 `netInterface`，细节见 lucky-reverse-proxy 技能）。
+
+## 首页「常驻统计栏」约定（0.9.2）
+
+- 顶部 🔥 连胜 / ⚡ 积分必须常驻：放在 `HomeScreen` 最外层 `Column` 的第一行，**不能**放进
+  `verticalScroll` 的内容里。
+- 正确结构：
+
+```kotlin
+Column(Modifier.fillMaxSize()) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp)) { /* 统计胶囊 */ }
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) { /* 正文 */ }
+}
+```
+
+- 给用户看的数据（积分、余额、倒计时）默认按常驻处理；页面正文才滚动。改完在模拟器划到底截图确认，
+  不要只看首屏。
+
+## 发版检查清单（照序执行）
+
+1. `app/build.gradle.kts` 同时改 `versionCode` 与 `versionName`；
+2. `./gradlew testDebugUnitTest assembleDebug`；
+3. `python3 content/publish_update.py --apk … --version-code N --version-name X.Y.Z --notes "…" --sync-public`；
+4. 归档 `WordPath-<ver>-debug.apk` 到 `/data/home-studio/artifacts/english-app/` + 传飞牛2；
+5. 回读三处 `update.json` 的 versionCode 是否一致；
+6. 模拟器 `install -r` 启动、截图；必要时走一遍「设置→检查更新→下载→安装」。
