@@ -13,7 +13,7 @@ try {
  fact(store,'first');assert.equal(rollup.rollupDirtyDays(store,now),1);fact(store,'second');
  // A real second SQLite writer commits while aggregation reads. Old BEGIN IMMEDIATE blocks it.
  const original=store.db.prepare.bind(store.db);let concurrent=false;
- store.db.prepare=((sql:string)=>{const st=original(sql);if(sql.startsWith('SELECT * FROM analytics_rollup_fact')){const iterate=st.iterate.bind(st);st.iterate=function*(...args:any[]){for(const row of iterate(...args)){if(!concurrent){other.transaction(()=>fact(other,'late'));concurrent=true;}yield row;}} as any;}return st;}) as any;
+ store.db.prepare=((sql:string)=>{const st=original(sql);if(sql.startsWith('SELECT ')&&sql.includes('FROM analytics_rollup_fact')){const iterate=st.iterate.bind(st);st.iterate=function*(...args:any[]){for(const row of iterate(...args)){if(!concurrent){other.transaction(()=>fact(other,'late'));concurrent=true;}yield row;}} as any;}return st;}) as any;
  const raced=rollup.rollupDirtyDaysWithStatus(store,now);store.db.prepare=original;
  assert.equal(concurrent,true,'aggregation must not hold a writer lock');
  assert.equal(raced.rebuilt_days,0,'snapshot upgrade must reject a stale summary');

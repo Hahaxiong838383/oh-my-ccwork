@@ -1,0 +1,56 @@
+{
+  "at": "2026-11-17T00:14:11.377178+00:00",
+  "note": "hash guard and atomic replace; not OS CAS or multi-file transaction",
+  "entries": [
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+      "before_sha256": "d2e9b0af1adbc85eba68589ad5ee994b9c9b8edfd50535b251dc3e1474653e7b",
+      "candidate_sha256": "f0614697f7b820c50d619d9d197b57df234de61b5330769b7fcbc6b354f180e0",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/0.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/0.candidate",
+      "status": "written_verified",
+      "after_sha256": "f0614697f7b820c50d619d9d197b57df234de61b5330769b7fcbc6b354f180e0",
+      "lines": 2741
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/status.md",
+      "before_sha256": "76e2ae8622a5567a2bf453dc493939911c4afb7ab693ded49b9754916fbc6c9f",
+      "candidate_sha256": "33e2aa45b792b786cb4a5e7f44d08e960003aefac3be04c0defca306af9284ea",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/1.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/1.candidate",
+      "status": "written_verified",
+      "after_sha256": "33e2aa45b792b786cb4a5e7f44d08e960003aefac3be04c0defca306af9284ea",
+      "lines": 49
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+      "before_sha256": "bea43b80fa6a830f7fd3a51e26092d787eb4d9f1d555870ff2b352747f30bb7f",
+      "candidate_sha256": "d597543019f9f15a1e0e1e70099a80b952d9c761cac52bdabc1ad26ee4fb268e",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/2.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/2.candidate",
+      "status": "written_verified",
+      "after_sha256": "d597543019f9f15a1e0e1e70099a80b952d9c761cac52bdabc1ad26ee4fb268e",
+      "lines": 79
+    },
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/.claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+      "before_sha256": "a95c4232bd032fb8316c25586550d4a93445a7a709547aced17136c4f9c29d74",
+      "candidate_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/3.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/3.candidate",
+      "status": "written_verified",
+      "after_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+      "lines": 44
+    },
+    {
+      "path": "/Users/fu-121/mycc/.claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+      "before_sha256": "a95c4232bd032fb8316c25586550d4a93445a7a709547aced17136c4f9c29d74",
+      "candidate_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/4.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/memory-checkpoint/4.candidate",
+      "status": "written_verified",
+      "after_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+      "lines": 44
+    }
+  ]
+}

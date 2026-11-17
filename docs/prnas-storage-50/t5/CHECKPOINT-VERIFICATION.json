@@ -1,0 +1,23 @@
+{
+  "at": "2026-11-17T00:14:26.388349+00:00",
+  "runtime": "Node 24.19.0",
+  "t4_manifest_verified": 39,
+  "t4_manifest_mismatches": 0,
+  "tests": [
+    {
+      "script": "analytics-maintenance.test.ts",
+      "exit_code": 0
+    },
+    {
+      "script": "analytics-t4.test.ts",
+      "exit_code": 0
+    },
+    {
+      "script": "analytics-t4-run-budget.test.ts",
+      "exit_code": 0
+    }
+  ],
+  "runtime_source": "rollup.ts unchanged from HEAD 084eee66 after reverting failed experiment",
+  "production_changed": false,
+  "t5_status": "FAIL / unfinished; upload success is not whole-phase success"
+}

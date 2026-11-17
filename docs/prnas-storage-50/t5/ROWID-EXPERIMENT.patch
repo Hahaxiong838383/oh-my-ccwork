@@ -1,0 +1,58 @@
+diff --git a/2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts b/2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts
+index 907814df..6d97ad92 100644
+--- a/2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts
++++ b/2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts
+@@ -18,25 +18,29 @@ function summary(counts:Counts,devices:number,sessions:number,rewards:number){
+     groups:{activity:select(['app.']),g1_flow:select(['g1.experience','g1.phase','g1.screen','g1.semantic','g1.runtime_command']),logical_day_ecotank:select(['g1.logical','g1.progress','g1.route','g1.ecotank','g1.historical']),rewards_makeup:select(['g1.reward','g1.gift','g1.makeup']),settings:select(['settings.']),voice_state:select(['voice.']),command_failures:[...failures].map(([key,count])=>{const [command,error_code]=JSON.parse(key);return {command,error_code,count};}).sort((a,b)=>b.count-a.count||compareText(a.command,b.command)||compareText(a.error_code,b.error_code)).slice(0,100)},data_cutoff_ms:counts.last};
+ }
+ function summarizeFacts(facts:Iterable<Fact>,started:number,budget:RollupBudget,onDevice:(key:string,result:ReturnType<typeof summary>)=>void){
+-  const global=newCounts();let current:string|null=null,individual=newCounts(),sessions=new Set<string>(),rewards=new Set<string>(),devices=0,totalSessions=0,totalRewards=0;
++  const global=newCounts();
++  // Scan selected rowids in physical order. Interleaved devices must retain independent
++  // counters; no raw facts are buffered. Distinct identifiers remain bounded by maxFactsPerDay.
++  const byDevice=new Map<string,{counts:Counts;sessions:Set<string>;rewards:Set<string>}>();
+   const checkBudget=()=>{if(global.facts>budget.maxFactsPerDay||performance.now()-started>budget.maxDayMs)throw new AnalyticsRollupBudgetExceeded();};
+-  const finishDevice=()=>{
+-    if(current===null)return;checkBudget();
+-    onDevice(current,summary(individual,1,sessions.size,rewards.size));
+-    // Keys are scoped to the device, so global distinct counts are sums of device counts.
+-    devices++;totalSessions+=sessions.size;totalRewards+=rewards.size;
+-  };
+   for(const fact of facts){
+-    if(current!==fact.device_key){finishDevice();current=fact.device_key;individual=newCounts();sessions=new Set();rewards=new Set();}
+-    const semantic=JSON.parse(fact.semantic_json) as Record<string,unknown>; // Exactly once per fact.
+-    addFact(global,fact,semantic);addFact(individual,fact,semantic);
+-    if(fact.event_name==='app.session_started')sessions.add(fact.session_digest);
+-    if(fact.event_name==='g1.reward_granted'&&semantic.reward_instance_digest)rewards.add(String(semantic.reward_instance_digest));
++    let device=byDevice.get(fact.device_key);
++    if(!device){
++      if(byDevice.size>=1000)throw new AnalyticsRollupBudgetExceeded();
++      device={counts:newCounts(),sessions:new Set(),rewards:new Set()};byDevice.set(fact.device_key,device);
++    }
++    const semantic=JSON.parse(fact.semantic_json) as Record<string,unknown>;
++    addFact(global,fact,semantic);addFact(device.counts,fact,semantic);
++    if(fact.event_name==='app.session_started')device.sessions.add(fact.session_digest);
++    if(fact.event_name==='g1.reward_granted'&&semantic.reward_instance_digest)device.rewards.add(String(semantic.reward_instance_digest));
+     if(global.facts>budget.maxFactsPerDay||global.facts%256===0)checkBudget();
+   }
+-  finishDevice();checkBudget();
+-  // Only the current device's distinct sets are retained, never raw fact arrays or all-device sets.
+-  return summary(global,devices,totalSessions,totalRewards);
++  let totalSessions=0,totalRewards=0;
++  for(const [key,d] of byDevice){
++    checkBudget();onDevice(key,summary(d.counts,1,d.sessions.size,d.rewards.size));
++    totalSessions+=d.sessions.size;totalRewards+=d.rewards.size;
++  }
++  checkBudget();return summary(global,byDevice.size,totalSessions,totalRewards);
+ }
+ export function rollupDirtyDays(store:AnalyticsStore,now=Date.now(),limit=16,budget?:RollupBudget):number{
+   return rollupDirtyDaysWithStatus(store,now,limit,budget).rebuilt_days;
+@@ -57,7 +61,7 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
+       store.readSnapshot(()=>{
+         const started=performance.now();
+         const devices:{key:string;individual:ReturnType<typeof summary>}[]=[];
+-        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
++        const result=summarizeFacts(store.db.prepare('SELECT device_key,event_name,session_digest,clock_suspicious,semantic_json,received_at_ms FROM analytics_rollup_fact WHERE rowid IN (SELECT rowid FROM analytics_rollup_fact WHERE dimension=? AND day=?) ORDER BY rowid').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
+           if(devices.length>=1000)throw new AnalyticsRollupBudgetExceeded();
+           devices.push({key,individual});
+         });
