@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "released_at_ms": 1794913437041,
+  "code_commit": "78c4bea653c0227b5fe7d3aa04481a77b5d7d7fa",
+  "before_sha256": "43ad4d70e9d238e9254f3c9594caa64f9ac111c383ff978f477d2c41756ed9ae",
+  "after_sha256": "fc509cedacd83b66bce0e59666fae2c862dbfcad1368357443fe31f929e0b98d",
+  "files_changed": [
+    "admin/index.html"
+  ],
+  "server_restart": false,
+  "protocol_changes": false,
+  "database_changes": false,
+  "environment_changes": false
+}

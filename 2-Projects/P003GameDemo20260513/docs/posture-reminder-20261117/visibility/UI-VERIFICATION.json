@@ -1,0 +1,20 @@
+{
+  "pass": true,
+  "verified_at": "2026-11-17T19:03:02.411719+08:00",
+  "steps": 22,
+  "miniapp_requests": 52,
+  "page_errors": [],
+  "business_writes": "Only isolated fixture unbind writes; no production access",
+  "files": [
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html",
+      "sha256": "fc509cedacd83b66bce0e59666fae2c862dbfcad1368357443fe31f929e0b98d"
+    },
+    {
+      "path": "2-Projects/P003GameDemo20260513/apps/web/scripts/test-miniapp-admin-ui.cjs",
+      "sha256": "5c9fa3dd674f596be4fb1adb85fc0f548135ee3e9a86bce6b07469394d98ee26"
+    }
+  ],
+  "red_log": "/Users/fu-121/.local/state/p003-posture-visible-20261117-red.log",
+  "green_log": "/Users/fu-121/.local/state/p003-posture-visible-20261117-green.log"
+}
