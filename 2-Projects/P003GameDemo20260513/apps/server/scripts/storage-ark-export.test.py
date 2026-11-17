@@ -54,7 +54,11 @@ for(let n=1;n<=Number(process.argv[2]);n++)s.accept(i,{...f,snapshot_id:'s-'+n,b
         clean=self.m.clean_payload
         def mutate_after_validation(*a):
             clean(*a)
-            with sqlite3.connect(self.db) as db:db.execute('UPDATE ark_archive_outbox SET envelope=? WHERE id=1',('{}',))
+            with sqlite3.connect(self.db) as db:
+                before=db.execute('SELECT envelope FROM ark_archive_outbox WHERE id=1').fetchone()[0]
+                after=before.replace('"family_coin":1','"family_coin":9')
+                self.assertNotEqual(before,after);self.assertEqual(len(before.encode()),len(after.encode()))
+                db.execute('UPDATE ark_archive_outbox SET envelope=? WHERE id=1',(after,))
         self.m.clean_payload=mutate_after_validation
         with self.assertRaisesRegex(ValueError,'archive_mapping_changed'):self.cycle()
         self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_outbox')[0][0],3)
@@ -109,6 +113,13 @@ for(let n=1;n<=Number(process.argv[2]);n++)s.accept(i,{...f,snapshot_id:'s-'+n,b
             with self.assertRaisesRegex(ValueError,'archive_claim_changed'):self.m.claim(ChangedPrefix(),1)
             self.assertEqual(raw.execute('SELECT count(*) FROM ark_archive_batch').fetchone()[0],0)
             self.assertEqual(raw.execute('SELECT count(*) FROM ark_archive_outbox WHERE batch_id IS NULL').fetchone()[0],3)
+    def test_claim_spans_already_owned_gap_without_reassigning_it(self):
+        with sqlite3.connect(self.db,isolation_level=None) as db:
+            db.row_factory=sqlite3.Row
+            db.execute("UPDATE ark_archive_outbox SET batch_id='older' WHERE id=2")
+            aid=self.m.claim(db,1)
+            self.assertEqual(db.execute('SELECT record_count,first_id,last_id FROM ark_archive_batch WHERE archive_id=?',(aid,)).fetchone()[:],(2,1,3))
+            self.assertEqual([tuple(r) for r in db.execute('SELECT id,batch_id FROM ark_archive_outbox ORDER BY id')],[(1,aid),(2,'older'),(3,aid)])
     def test_parallel_job_lock_refuses(self):
         import fcntl
         self.spool.mkdir();f=(self.spool/'.ark-export.lock').open('w');fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)

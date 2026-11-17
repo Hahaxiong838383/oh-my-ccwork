@@ -1,0 +1,93 @@
+{
+  "review": "ark-accept-vs-export-contention",
+  "mode": "read_only_git_show",
+  "candidate": "10d0dc5514671c85c9224d84eff224700172c2cc",
+  "business_src": "3b09cde5",
+  "business_files_diff_empty": [
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/store.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/routes.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/src/ark/archive.ts",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.py"
+  ],
+  "harness_only_delta": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts logs accept name/code/errcode",
+  "cloud_wal64_untouched": true,
+  "ssh": false,
+  "load": false,
+  "agents": false,
+  "source_edits": false,
+  "gzip_in_export_path": false,
+  "fsync_rename_inside_begin_immediate": false,
+  "json_reparse_inside_begin_immediate": true,
+  "export_success_with_accept_busy_reject_possible": true,
+  "v2_http_503_is_sqlite_busy": "not_established",
+  "same_content_retry_idempotent_after_lock_release": true,
+  "soak_client_retries_ark_post": false,
+  "causal_chain": [
+    "archiveLoop spawns storage-ark-export.py on the same ark.db while produceArk POSTs /t5/ark/state",
+    "ArkStore sets PRAGMA busy_timeout=15 and accept takes BEGIN IMMEDIATE",
+    "node:sqlite busy failure is Error code ERR_SQLITE_ERROR errcode 5 message database is locked",
+    "routes.ts rethrows that message; onError maps it and every other unexpected error to HTTP 503 ark_dependency_unavailable",
+    "export sqlite timeout is 100ms plus a 1s SQLITE_BUSY retry budget, so the export transaction can commit after accept already failed",
+    "finish() calls batch_payload() while BEGIN IMMEDIATE is held; spool fsync/rename/sha in publish_prepared run before the following one-statement transaction"
+  ],
+  "lock_holders": {
+    "claim_sql_up_to_1000_updates": "storage-ark-export.py:48-60",
+    "finish_json_reparse_then_delete": "storage-ark-export.py:96-102",
+    "short_sql_transactions": ["92", "119", "138", "140", "153", "168"],
+    "outside_sqlite_lock": ["storage-ark-export.py:116-118", "storage-archive.py:174-198"]
+  },
+  "http_map": {
+    "archive_buffer_full": "503 with its own error string",
+    "stale_conflict_before_grant": 409,
+    "clock_invalid": 400,
+    "sqlite_busy_and_any_other_thrown_error": "503 ark_dependency_unavailable",
+    "same_body_also_covers": ["not_authorized thrown inside accept", "archive_sequence_exhausted", "statfsSync throw from archivePolicy before BEGIN"]
+  },
+  "idempotency": {
+    "site": "store.ts:71",
+    "requires": ["same snapshot_id", "same sequence", "same canonicalJson"],
+    "effect": "duplicate, original received_at_ms, no second outbox row",
+    "still_needs_write_lock": true,
+    "client": "produceArk asserts 200 and does not retry"
+  },
+  "v2": {
+    "file": "/Users/fu-121/.local/state/p003-t5-soak-20261118/v2-cadence-evidence-3b09cde5/ark-continuous.jsonl",
+    "rows": 302,
+    "http_200": 301,
+    "http_503": 1,
+    "error": "ark_dependency_unavailable",
+    "actor": 1,
+    "round": 6,
+    "snapshot_id": "soak-1794945146859-1-6",
+    "at_ms": 1794945449980,
+    "ms": 2086.5281759999925,
+    "previous_request_overlapped": false,
+    "ms_min": 5.648755,
+    "ms_p50": 12.032705,
+    "ms_p95": 170.60586,
+    "successes_slower_than_15ms": 90,
+    "errcode_recorded": false
+  },
+  "reviewer_host_busy_probe": {
+    "applies_to_cloud": false,
+    "platform": "darwin",
+    "node": "v22.14.0",
+    "python_sqlite": "3.46.0",
+    "pragma_busy_timeout_15_waited_ms": [545.2, 551.3, 561.7],
+    "note": "Export tests already require Linux for real busy deadlines. Configured 15 is not this host's wall clock, and 2086ms matches neither 15ms nor this ~550ms probe."
+  },
+  "minimal_fix": {
+    "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py",
+    "change": "In finish(), compare envelopes before BEGIN IMMEDIATE. Inside the transaction check only COUNT(*), MIN(id), MAX(id), SUM(bytes), then DELETE/UPDATE.",
+    "forbidden": ["raise accept busy_timeout", "global lock", "new service", "move fsync into the transaction"],
+    "residual": "claim() of up to 1000 updates and every COMMIT wal fsync can still exceed the peer busy wait if the db volume is slow"
+  },
+  "negative_tests": [
+    "Linux: block inside publish_prepared fsync/rename and assert a busy_timeout=15 BEGIN IMMEDIATE does not return errcode 5",
+    "Linux: block inside finish() while BEGIN IMMEDIATE is held; HTTP 503 ark_dependency_unavailable AND errcode 5 AND code ERR_SQLITE_ERROR",
+    "Control: throw new Error('forced_non_busy') yields the same HTTP body and must not satisfy errcode===5; a 503-only assertion fails the test",
+    "After the holder releases, the same snapshot commits once: accepted if the busy attempt did not commit, duplicate with unchanged received_at_ms and no extra outbox row if it did"
+  ],
+  "next_cloud_discriminator": "10d harness ark-accept-errors.jsonl sqlite_code===5 is SQLITE_BUSY; null sqlite_code is a different exception that shares the public 503"
+}

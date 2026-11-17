@@ -5,8 +5,15 @@ if(!path){console.error('[analytics-maintenance] MISSING_ANALYTICS_DB_PATH');pro
 let store:AnalyticsStore|undefined,rollup:RollupStatus|undefined,pruned:Awaited<ReturnType<typeof pruneAnalyticsCycle>>|undefined;
 let rollupError:string|undefined,pruneError:string|undefined;
 let workStartedAt:number|undefined,workFinishedAt:number|undefined;
+let cacheKiB:number|undefined;
 try{
   store=new AnalyticsStore(path);
+  // Streaming background maintenance shares the host with latency-sensitive reads.
+  // It does not need the ingestion writer's 64MiB pager cache. Keep transactions,
+  // rollup budgets and all cursors unchanged; unused clean pages remain OS-cacheable.
+  store.db.exec('PRAGMA cache_size=-8192; PRAGMA shrink_memory');
+  cacheKiB=-Number(store.db.prepare('PRAGMA cache_size').get()!.cache_size);
+  if(cacheKiB!==8192)throw new Error('ANALYTICS_MAINTENANCE_CACHE_MISMATCH');
   workStartedAt=Date.now();
   // Commit bounded short TTL transactions before aggregation.
   // External timeout/kill during rollup cannot skip already completed pruning.
@@ -17,5 +24,5 @@ try{
 finally{workFinishedAt=Date.now();store?.close();}
 // Partial aggregation is an executed bounded maintenance run; preserve JSON status for the scheduler.
 // Fatal storage/metadata/prune failures return nonzero, but pruning has already been independently attempted.
-console.log(JSON.stringify({ok:!rollupError&&!pruneError&&!rollup?.partial,partial:rollup?.partial??false,rebuilt_days:rollup?.rebuilt_days??0,rollup,pruned,rollup_error:rollupError,prune_error:pruneError,work_started_at_ms:workStartedAt,work_finished_at_ms:workFinishedAt}));
+console.log(JSON.stringify({ok:!rollupError&&!pruneError&&!rollup?.partial,partial:rollup?.partial??false,rebuilt_days:rollup?.rebuilt_days??0,rollup,pruned,rollup_error:rollupError,prune_error:pruneError,work_started_at_ms:workStartedAt,work_finished_at_ms:workFinishedAt,cache_kib:cacheKiB}));
 if(rollupError||pruneError)process.exitCode=1;

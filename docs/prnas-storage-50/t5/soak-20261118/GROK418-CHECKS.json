@@ -1,0 +1,67 @@
+{
+  "verdict": "no_reproducible_blocker",
+  "candidate": "5be3fb4b63ca96ccf7465217cd9582e10f56e7a5",
+  "base": "10d0dc5514671c85c9224d84eff224700172c2cc",
+  "scope": [
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py",
+    "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.test.py"
+  ],
+  "blobs_match_worktree": {
+    "storage-ark-export.py": "98a04db14f5c7376c0b685ca1535f7ce4d873f7a",
+    "storage-ark-export.test.py": "f850457d4e4f00fc8c947ca77c5d5ed67baea2ae"
+  },
+  "probe_runtime": {
+    "python": "3.12.2",
+    "sqlite": "3.46.0",
+    "recorded_image_libsqlite": "3.40.1-2+deb12u2",
+    "cloud_sqlite_reprobed": false
+  },
+  "wal64": {
+    "path": "docs/prnas-storage-50/t5/soak-20261118/WAL64-MIXED-INDEPENDENT.json",
+    "candidate": "10d0dc5514671c85c9224d84eff224700172c2cc",
+    "http_503": 1849,
+    "ark_sqlite_code": 5,
+    "history_failures": 12,
+    "worst_query_wall_ms": 1212.1479970000219,
+    "reclaimed_checkpoint_completions": 30,
+    "applies_to_this_diff": false
+  },
+  "checks": [
+    {
+      "id": "concurrent_append",
+      "result": "pass",
+      "evidence": "预读在 BEGIN IMMEDIATE 之外。设备 id 来自 sqlite_sequence+1，大于 last_id。内存库二次 claim 只领走新 id 4，id 1 与 id 3 的 batch_id 保持不变。"
+    },
+    {
+      "id": "existing_batch_gap",
+      "result": "pass",
+      "evidence": "真实 claim()：id 2 为 older，id 1 与 id 3 同批，record_count=2，first_id=1，last_id=3，id 2 的 batch_id 仍为 older。提交里的空隙测试把 MAX_BYTES 截在 id 1，没有自己跑跨空隙区间。"
+    },
+    {
+      "id": "autoincrement",
+      "result": "pass",
+      "evidence": "archive.ts 显式插入 sqlite_sequence+1。AUTOINCREMENT 不复用已删除 id。新行落在 id<=last_id 之外。区间内幻影插入触发 archive_claim_changed，批次计数 0，三行 batch_id 均为 NULL。"
+    },
+    {
+      "id": "update_returning_py312",
+      "result": "pass",
+      "evidence": "Python 3.12.2 上候选 SQL 的 RETURNING id,bytes 被 fetchall 成 Row，并完成认领与回滚。RETURNING 自 SQLite 3.35.0 起存在；已记录镜像为 3.40.1。本次未在云主机重测 sqlite_version。"
+    },
+    {
+      "id": "equal_length_tamper",
+      "result": "pass",
+      "evidence": "finish 在写事务内比较两次 SELECT * 的 Row。等长替换 envelope 且 bytes 不变时，Row 不相等，删除和 complete 不会提交。claim 的 RETURNING 只核 id/bytes，清单哈希来自之后的整行读取。"
+    },
+    {
+      "id": "idempotent_claim",
+      "result": "pass",
+      "evidence": "已认领行带 batch_id，下一次前缀选择不到。探测中第二次 claim 没有改写第一次的三行映射。"
+    },
+    {
+      "id": "ack_order",
+      "result": "pass",
+      "evidence": "顺序仍是 clean_payload，然后同一写事务内全列比较、DELETE、state=complete、last_ack_ms。比较失败由 transaction() rollback。与 10d0dc55 一样，文件删除发生在该数据库事务之前。"
+    }
+  ],
+  "blockers": []
+}

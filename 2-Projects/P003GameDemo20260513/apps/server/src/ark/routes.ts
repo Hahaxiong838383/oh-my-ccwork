@@ -4,6 +4,7 @@ import {snapshotSchema,settingsSchema} from './contracts.js';
 import {readBoundedJson,ArkHttpError} from './http.js';
 import type {ArkRuntime} from './runtime.js';
 import type {ArkStore} from './store.js';
+import {retryArkBusy} from './busy-retry.js';
 type Options={store:()=>ArkStore;runtime:()=>ArkRuntime;ceiling:()=>string[];secret:()=>string;acceptsCredential:(sn:string,iat:number)=>boolean;isAdmin:(header:string)=>boolean};
 export function createArkRoutes(o:Options){
  const app=new Hono(),hits=new Map<string,number[]>();
@@ -22,7 +23,14 @@ export function createArkRoutes(o:Options){
   if(!latest||g?.grant_id!==grant.grant_id)return c.json({ok:false,error:'not_authorized'},403);
   // Recheck revocation after awaited request body; failing dependency returns 503.
   if(!await verifyDeviceCredential(c.req.header('authorization'),o.secret(),o.acceptsCredential))return c.json({ok:false,error:'invalid_device_credential'},401);
-  try{return c.json({ok:true,...o.store().accept(latest,parsed.data,Date.now())});}
+  try{return await retryArkBusy(async retry=>{
+   if(retry){
+    if(!await verifyDeviceCredential(c.req.header('authorization'),o.secret(),o.acceptsCredential))return c.json({ok:false,error:'invalid_device_credential'},401);
+    const current=o.runtime().identity(credential.sn),currentGrant=current&&o.store().grant(current);
+    if(!current||current.sn!==latest.sn||current.account_id!==latest.account_id||current.epoch!==latest.epoch||currentGrant?.grant_id!==grant.grant_id||!o.ceiling().includes(credential.sn))return c.json({ok:false,error:'not_authorized'},403);
+   }
+   return c.json({ok:true,...o.store().accept(latest,parsed.data,Date.now())});
+  });}
   catch(e){const code=(e as Error).message;if(code==='archive_buffer_full'){c.header('Retry-After','60');return c.json({ok:false,error:code},503);}if(['stale','conflict','before_grant'].includes(code))return c.json({ok:false,error:code},409);if(code==='clock_invalid')return c.json({ok:false,error:code},400);throw e;}
  });
  app.use('/admin/*',async(c,next)=>{if(!o.isAdmin(c.req.header('authorization')??''))return c.json({ok:false,error:'admin_required'},403);await next();});

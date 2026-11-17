@@ -1,0 +1,18 @@
+{
+  "candidate": "5be3fb4b63ca96ccf7465217cd9582e10f56e7a5",
+  "verified_files": 545,
+  "tests": {
+    "export-tests": {
+      "exit": 0,
+      "sha256": "e36761f2b30ac78f3d967fbdaf2b7ff3c3e0b94c9ad9ff3d7e8e0872b7736130",
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/claim-linux-export-tests.log",
+      "tail": "................\n----------------------------------------------------------------------\nRan 16 tests in 6.350s\n\nOK\n"
+    },
+    "ark-lock": {
+      "exit": 0,
+      "sha256": "52511a921d7b9ebff3d94892f25b5eabf8a28d8927968eca2d8f54e349742a5a",
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/claim-linux-ark-lock.log",
+      "tail": "{\"scope\":\"LOCAL_SYNTHETIC_WRITER_LOCK_NOT_CLOUD_ROOT_CAUSE\",\"node\":\"v24.19.0\",\"sqlite\":\"3.53.3\",\"held_ms\":250,\"response_status\":503,\"error\":\"ark_dependency_unavailable\",\"first_ms\":122.644792,\"errors\":[{\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"}],\"no_write_on_failure\":true,\"retry_accepted\":true,\"duplicate_idempotent\":true}\n"
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "logs": {
+    "ark-busy-retry-red.log": {
+      "sha256": "9d4f510a722cafb128de0c4715ec2cb85f8421881785782b852e29dc59e87ce0",
+      "bytes": 3754
+    },
+    "ark-busy-retry-green-final.log": {
+      "sha256": "9507a132814b7e2e77c42e3067ada8e3b7e99d8ee22fd9d288b591afe0058ec8",
+      "bytes": 749
+    },
+    "ark-busy-full-regression.log": {
+      "sha256": "c0849ffc73b053d31b1c8ad4168a51b09d6e42f95499cfd412020812a920a8f4",
+      "bytes": 11933
+    },
+    "maintenance-cache-regression.log": {
+      "sha256": "1170cc063d3eb916d1cd01043d12d7c39cd69458570103f8add76313f50b9d52",
+      "bytes": 3104
+    },
+    "ark-retry-tsc.log": {
+      "sha256": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
+      "bytes": 1267
+    },
+    "export-same-length-tamper-final.log": {
+      "sha256": "0ab6b8adedbb1d4bf47b81d731a2ce832d9644c02a7b2356e8a7612e00107019",
+      "bytes": 98
+    },
+    "export-spanning-gap.log": {
+      "sha256": "1ad13de8256d7626d2a1d58f6035f2fb139de650265ca384ab64ed92a4b63b64",
+      "bytes": 98
+    }
+  },
+  "production_changed": false,
+  "linux_candidate_tests": "PENDING",
+  "full_mix": "PENDING"
+}

@@ -1,0 +1,45 @@
+{
+  "status": "FAIL_INTERRUPTED_MIX_ARK_BUSY_AND_HISTORY",
+  "candidate": "5be3fb4b63ca96ccf7465217cd9582e10f56e7a5",
+  "verified_files": 34,
+  "ack_unique_accepted": 300000,
+  "attempts": 3480,
+  "http": {
+    "503": 1980,
+    "200": 1500
+  },
+  "ack_p95_ms": 155.4570320000057,
+  "ack_p99_ms": 223.75593700000172,
+  "queries": 150,
+  "history_failures": 18,
+  "query_p99_ms": 137.72861200000625,
+  "invalid_assets": 0,
+  "ark_attempts": 301,
+  "ark_failure": [
+    {
+      "at_ms": 1794947342069,
+      "actor": 0,
+      "round": 6,
+      "snapshot_id": "soak-1794947039271-0-6",
+      "status": 503,
+      "body": {
+        "ok": false,
+        "error": "ark_dependency_unavailable"
+      },
+      "ms": 875.4493040000089
+    }
+  ],
+  "ark_errors": [
+    {
+      "at_ms": 1794947342942,
+      "name": "Error",
+      "code": "ERR_SQLITE_ERROR",
+      "sqlite_code": 5
+    }
+  ],
+  "working_set_peak": 0.8641713460286459,
+  "oom": 0,
+  "full_600s_completed": false,
+  "24h": "NOT_STARTED",
+  "production_changed": false
+}
