@@ -1,5 +1,6 @@
 import { AnalyticsStore,AnalyticsRollupBudgetExceeded,AnalyticsStorageUnavailable,cstDay,DAY_MS } from './store.js';
 import {pruneAnalyticsTiers} from './tiers.js';
+import {hasRollupPrefixIndex,ROLLUP_PREFIX_INDEX} from './rollup-index.js';
 type Fact={fact_rowid:number;device_key:string;event_name:string;session_digest:string;clock_suspicious:number;semantic_json:string;received_at_ms:number};
 export type RollupBudget={maxFactsPerDay:number;maxDayMs:number;maxRunMs?:number};
 export type RollupStatus={attempted_days:number;rebuilt_days:number;failed_days:{dimension:string;day:string;reason:"budget_exceeded"|"storage_unavailable"|"concurrent_write"}[];remaining_dirty_days:number;partial:boolean};
@@ -33,14 +34,16 @@ function deviceKeys(store:AnalyticsStore,dimension:string,day:string):string[]{
   if(keys.size>1000)throw new AnalyticsRollupBudgetExceeded();
   return [...keys].sort(compareText);
 }
-function buildDevice(store:AnalyticsStore,dimension:string,day:string,key:string,base:Stage|undefined,check:()=>void,maxFacts:number){
+function buildDevice(store:AnalyticsStore,dimension:string,day:string,key:string,base:Stage|undefined,check:()=>void,maxFacts:number,paged:boolean){
   const previous=base?JSON.parse(base.summary_json) as StoredDevice:undefined;
   const counts:Counts=previous?{...previous.counts,failures:new Map(previous.counts.failures)}:newCounts();
-  const sessions=new Set<string>(),rewards=new Set<string>();let cursor=base?.folded_rowid??0;
+  const sessions=new Set<string>(),rewards=new Set<string>();let cursor=base?.folded_rowid??0,rows=0,more=false;
   // Rowids are stable under supported writes/migrations. Any delete/update of
   // this device invalidates its prefix, including deletion followed by rowid reuse.
   // The old received-time cursor would miss a late event when the clock moves back.
-  for(const fact of store.db.prepare('SELECT rowid fact_rowid,device_key,event_name,session_digest,clock_suspicious,semantic_json,received_at_ms FROM analytics_rollup_fact WHERE dimension=? AND day=? AND device_key=? AND rowid>? ORDER BY received_at_ms,id_digest').iterate(dimension,day,key,cursor) as Iterable<Fact>){
+  const sql='SELECT rowid fact_rowid,device_key,event_name,session_digest,clock_suspicious,semantic_json,received_at_ms FROM analytics_rollup_fact'+(paged?' INDEXED BY '+ROLLUP_PREFIX_INDEX:'')+' WHERE dimension=? AND day=? AND device_key=? AND rowid>? ORDER BY '+(paged?'rowid LIMIT 513':'received_at_ms,id_digest');
+  for(const fact of store.db.prepare(sql).iterate(dimension,day,key,cursor) as Iterable<Fact>){
+    if(paged&&rows===512){more=true;break;}rows++;
     const semantic=JSON.parse(fact.semantic_json) as Record<string,unknown>;
     addFact(counts,fact,semantic);cursor=Math.max(cursor,fact.fact_rowid);
     if(fact.event_name==='app.session_started')sessions.add(fact.session_digest);
@@ -49,23 +52,24 @@ function buildDevice(store:AnalyticsStore,dimension:string,day:string,key:string
     if(counts.facts%256===0)check();
   }
   check();
-  return {cursor,data:{counts:{...counts,failures:[...counts.failures]},sessions:previous?.sessions??0,rewards:previous?.rewards??0} as StoredDevice,sessions,rewards};
+  return {cursor,more,data:{counts:{...counts,failures:[...counts.failures]},sessions:previous?.sessions??0,rewards:previous?.rewards??0} as StoredDevice,sessions,rewards};
 }
 function rebuildDay(store:AnalyticsStore,dimension:string,day:string,now:number,budget:RollupBudget){
   const started=performance.now();
   const check=()=>{if(performance.now()-started>budget.maxDayMs)throw new AnalyticsRollupBudgetExceeded();};
+  const paged=hasRollupPrefixIndex(store.db);
   const keys=store.readSnapshot(()=>deviceKeys(store,dimension,day));
   let facts=0,conflict=false;
   for(const key of keys){
+   for(;;){
     check();
     const computed=store.readSnapshot(()=>{
       const source=sourceState(store,dimension,day,key),stage=readStage(store,dimension,day,key);
       const base=stage?.mutation===source.mutation?stage:undefined;
       if(base&&base.revision===source.revision)return {source,stage,base,data:JSON.parse(base.summary_json) as StoredDevice,cached:true as const};
-      return {source,stage,base,...buildDevice(store,dimension,day,key,base,check,budget.maxFactsPerDay-facts),cached:false as const};
+      return {source,stage,base,...buildDevice(store,dimension,day,key,base,check,budget.maxFactsPerDay-facts,paged),cached:false as const};
     });
-    facts+=computed.data.counts.facts;
-    if(facts>budget.maxFactsPerDay)throw new AnalyticsRollupBudgetExceeded();
+    if(facts+computed.data.counts.facts>budget.maxFactsPerDay)throw new AnalyticsRollupBudgetExceeded();
     check();
     if(!computed.cached){
       // New inserts can follow this snapshot without destroying its valid
@@ -78,11 +82,14 @@ function rebuildDay(store:AnalyticsStore,dimension:string,day:string,now:number,
         for(const digest of computed.sessions)computed.data.sessions+=Number(remember.run(dimension,day,key,'session',digest).changes);
         for(const digest of computed.rewards)computed.data.rewards+=Number(remember.run(dimension,day,key,'reward',digest).changes);
         store.db.prepare('INSERT OR IGNORE INTO analytics_rollup_source VALUES (?,?,?,0,0)').run(dimension,day,key);
-        store.db.prepare('INSERT INTO analytics_rollup_device_stage VALUES (?,?,?,?,?,?,?) ON CONFLICT(dimension,day,device_key) DO UPDATE SET revision=excluded.revision,mutation=excluded.mutation,folded_rowid=excluded.folded_rowid,summary_json=excluded.summary_json').run(dimension,day,key,computed.source.revision,computed.source.mutation,computed.cursor,JSON.stringify(computed.data));
+        store.db.prepare('INSERT INTO analytics_rollup_device_stage VALUES (?,?,?,?,?,?,?) ON CONFLICT(dimension,day,device_key) DO UPDATE SET revision=excluded.revision,mutation=excluded.mutation,folded_rowid=excluded.folded_rowid,summary_json=excluded.summary_json').run(dimension,day,key,computed.more?-1:computed.source.revision,computed.source.mutation,computed.cursor,JSON.stringify(computed.data));
         check();return true;
       });
-      if(!saved)conflict=true;
+      if(!saved){conflict=true;break;}
+      if(computed.more)continue;
     }
+    facts+=computed.data.counts.facts;break;
+   }
   }
   if(conflict)throw new ConcurrentRollupWrite();
   check();
@@ -131,6 +138,15 @@ export function rollupDirtyDaysWithStatus(store:AnalyticsStore,now=Date.now(),li
     if(performance.now()-runStarted>=runBudget)break;
     status.attempted_days++;
     try{
+      // Bounded TTL can leave an expired day's newly marked dirty key behind.
+      // Never republish the partially deleted facts as a complete historical day.
+      if(day<cstDay(now-90*DAY_MS)){
+        store.transaction(()=>{
+          store.db.prepare('DELETE FROM analytics_dirty_day WHERE dimension=? AND day=?').run(dimension,day);
+          store.db.prepare('DELETE FROM analytics_rollup_retry WHERE dimension=? AND day=?').run(dimension,day);
+        });
+        continue;
+      }
       rebuildDay(store,dimension,day,now,budget);
       status.rebuilt_days++;
     }catch(error){

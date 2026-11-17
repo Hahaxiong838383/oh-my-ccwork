@@ -8,6 +8,7 @@ import {createHash,randomBytes} from 'node:crypto';
 import {serve} from '@hono/node-server';
 import {SignJWT} from 'jose';
 import {AnalyticsStore} from '../src/analytics/store.js';
+import {installRollupPrefixIndex} from '../src/analytics/rollup-index.js';
 import {AnalyticsWriter} from '../src/analytics/writer.js';
 import {AnalyticsCheckpointer} from '../src/analytics/checkpointer.js';
 import {createAnalyticsApp} from '../src/analytics/index.js';
@@ -28,7 +29,7 @@ const hash=(s:string)=>createHash('sha256').update(s).digest('hex');
 const number=(v:string|undefined,fallback:number,min:number,max:number)=>{const n=Number(v??fallback);assert.ok(Number.isSafeInteger(n)&&n>=min&&n<=max,'invalid numeric parameter');return n;};
 if(mode==='run'){
  assert.ok(!existsSync(root),'never reuse or overwrite a run');mkdirSync(root,{recursive:true,mode:0o700});assert.equal(realpathSync(root),root,'resolve parent symlinks first');
- const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',synthetic:true,started_ms:Date.now()};
+ const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',rollup_prefix_index:process.env.T5_ROLLUP_PREFIX_INDEX==='1',synthetic:true,started_ms:Date.now()};
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  process.env.DEVICES_DB_PATH=join(root,'devices.db');
  const subjects=Array.from({length:config.devices},(_,i)=>'BJP003999999'+String(i+1).padStart(8,'0'));
@@ -38,6 +39,7 @@ if(mode==='run'){
  // No automatic index migration is added to production service startup.
  if(config.covering_index)store.db.exec('CREATE INDEX t5_experiment_cover ON analytics_rollup_fact(dimension,day,device_key,received_at_ms,id_digest,event_name,session_digest,clock_suspicious,semantic_json)');
  if(config.ark_history_indexes)installArkHistoryIndexes(store.db);
+ if(config.rollup_prefix_index)installRollupPrefixIndex(store.db);
  const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run)});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
