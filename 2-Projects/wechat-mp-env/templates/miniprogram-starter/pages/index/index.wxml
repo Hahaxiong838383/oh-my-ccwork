@@ -1,0 +1,7 @@
+<view class="page">
+  <view class="card">
+    <text class="h1">{{title}}</text>
+    <text class="hint">改代码 → preview.mjs 出二维码 → 手机扫</text>
+    <button class="btn" bindtap="onTap">点我 +1（{{taps}}）</button>
+  </view>
+</view>

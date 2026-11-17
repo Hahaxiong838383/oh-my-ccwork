@@ -1,0 +1,13 @@
+{
+  "name": "wechat-mp-env",
+  "private": true,
+  "version": "1.0.0",
+  "description": "home-studio 微信小程序开发/发布环境（工具链 + 脚本 + 模板）",
+  "scripts": {
+    "preview": "node scripts/preview.mjs",
+    "upload": "node scripts/upload.mjs"
+  },
+  "devDependencies": {
+    "miniprogram-ci": "^2.1.31"
+  }
+}

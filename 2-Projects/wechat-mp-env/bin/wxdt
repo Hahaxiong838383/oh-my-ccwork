@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# wxdt — 打开微信开发者工具（GUI）
+#
+# 前置：必须有图形会话。三种情况：
+#   a) 坐在本机前登录了 GNOME 桌面 → 直接在桌面终端里跑本脚本
+#   b) 远程 ssh → 用 ssh -X（X11 转发），或先起 VNC/RDP/selkies 桌面
+#   c) 完全无头 → 不要用 IDE，改用 miniprogram-ci（scripts/preview.mjs / upload.mjs）
+set -uo pipefail
+
+MP_ENV="${MP_ENV:-$HOME/mycc/2-Projects/wechat-mp-env}"
+LAUNCHER="$MP_ENV/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin/bin/wechat-devtools"
+
+if [[ ! -x "$LAUNCHER" ]]; then
+  echo "[x] 找不到启动器：$LAUNCHER" >&2
+  echo "    重新安装：$MP_ENV/scripts/install-devtools.sh" >&2
+  exit 2
+fi
+
+if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+  cat >&2 <<'EOF'
+[!] 没有图形显示（DISPLAY / WAYLAND_DISPLAY 都为空）。
+
+微信开发者工具是 Electron 桌面程序，必须要 X/Wayland。选一个：
+  1. 本机登录桌面后在终端里跑（最简单）
+  2. ssh -X 连进来（X11 转发，慢但能用）
+  3. 远程桌面：VNC / RDP / 浏览器桌面
+  4. 完全不看界面：用 miniprogram-ci
+       node ~/mycc/2-Projects/wechat-mp-env/scripts/preview.mjs
+       node ~/mycc/2-Projects/wechat-mp-env/scripts/upload.mjs -v 1.0.0
+EOF
+  exit 3
+fi
+
+# 桌面会话里常见的缩放问题：高分屏可加 --force-device-scale-factor
+exec "$LAUNCHER" "$@"

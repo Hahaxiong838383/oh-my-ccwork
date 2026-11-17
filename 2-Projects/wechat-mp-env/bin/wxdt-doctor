@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# wxdt-doctor — 微信小程序环境自检
+#
+# 一条命令回答：工具装没装好、能不能开窗、CI 通道能不能用、密钥在哪、磁盘够不够。
+set -uo pipefail
+
+MP_ENV="${MP_ENV:-$HOME/mycc/2-Projects/wechat-mp-env}"
+ROOT="$MP_ENV/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin"
+ok()   { printf '  \033[32m✓\033[0m %s\n' "$*"; }
+warn() { printf '  \033[33m!\033[0m %s\n' "$*"; }
+bad()  { printf '  \033[31m✗\033[0m %s\n' "$*"; }
+
+echo "=== 微信小程序环境自检（home-studio） ==="
+echo
+
+echo "[1] 开发者工具"
+if [[ -x "$ROOT/electron/electron" ]]; then
+  ok "运行时: $ROOT"
+  VER="$(dpkg-deb -f "$(ls -1t "$MP_ENV"/downloads/*.deb 2>/dev/null | head -1)" Version 2>/dev/null || echo '?')"
+  echo "     版本: $VER"
+  MISSING="$(ldd "$ROOT/electron/electron" 2>/dev/null | grep -c 'not found' || true)"
+  [[ "$MISSING" == "0" ]] && ok "共享库: 0 缺失" || bad "共享库: $MISSING 个缺失"
+else
+  bad "未安装（跑 scripts/install-devtools.sh）"
+fi
+
+echo
+echo "[2] 图形显示（IDE 窗口 / 扫码登录必需）"
+if [[ -n "${DISPLAY:-}" || -n "${WAYLAND_DISPLAY:-}" ]]; then
+  ok "DISPLAY=${DISPLAY:-} WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-}"
+else
+  warn "当前 shell 没有 DISPLAY —— IDE 不能在这里开窗"
+  echo "     本机可用 X socket: $(ls /tmp/.X11-unix/ 2>/dev/null | tr '\n' ' ')"
+  echo "     这些属于 gdm（登录界面），不属于当前用户；需本机登录桌面 / ssh -X / 远程桌面"
+fi
+
+echo
+echo "[3] CLI 子命令"
+if [[ -x "$MP_ENV/bin/wxdt-cli" ]]; then
+  ok "包装器: $MP_ENV/bin/wxdt-cli"
+  CLI_OUT="$(timeout 30 "$MP_ENV/bin/wxdt-cli" islogin 2>&1 || true)"
+  if echo "$CLI_OUT" | grep -qiE "服务端口|service port"; then
+    warn "IDE 未运行或服务端口关闭 —— 先 wxdt 开 IDE，并在 设置→安全设置 打开服务端口"
+  elif echo "$CLI_OUT" | grep -qiE "not login|未登录|请先登录"; then
+    warn "IDE 在线但未登录 → wxdt-cli login -f terminal"
+  elif echo "$CLI_OUT" | grep -qiE "error|✖"; then
+    warn "CLI 返回异常，原始输出：$(echo "$CLI_OUT" | grep -iE 'error|✖' | head -2 | tr '\n' ' ')"
+  else
+    ok "CLI 可调用（登录态正常或已连通 IDE）"
+  fi
+else
+  bad "缺少 bin/wxdt-cli"
+fi
+
+echo
+echo "[4] CI 通道（miniprogram-ci）"
+if [[ -d "$MP_ENV/node_modules/miniprogram-ci" ]]; then
+  V="$(node -p "require('$MP_ENV/node_modules/miniprogram-ci/package.json').version" 2>/dev/null || echo '?')"
+  ok "miniprogram-ci $V"
+else
+  bad "未安装 → cd $MP_ENV && pnpm add -D miniprogram-ci"
+fi
+KEYS="$(ls -1 "$HOME/.mycc-secrets"/private.*.key 2>/dev/null | wc -l)"
+if [[ "$KEYS" -gt 0 ]]; then
+  ok "上传密钥: $KEYS 个（$HOME/.mycc-secrets/）"
+else
+  warn "没有上传密钥（后台生成后放 $HOME/.mycc-secrets/private.<appid>.key，chmod 600）"
+fi
+
+echo
+echo "[5] 磁盘与输出目录"
+OUT=/data/home-studio/artifacts
+if mountpoint -q /data 2>/dev/null || [[ -d /data/home-studio ]]; then
+  ok "/data 可用，产物目录 $OUT ($(df -h /data | tail -1 | awk '{print $4}') 可用)"
+else
+  warn "/data 未挂载 —— 二维码/产物会退到根盘"
+fi
+echo "     根盘剩余: $(df -h / | tail -1 | awk '{print $4}')（$(df -h / | tail -1 | awk '{print $5}') 已用）"
+
+echo
+echo "[6] Node"
+echo "     $(node -v 2>/dev/null || echo '缺 node')  $(pnpm -v 2>/dev/null | sed 's/^/pnpm /')"
+
+echo
+echo "提示: 详细用法见 $MP_ENV/docs/WORKFLOW.md；踩坑见 docs/PITFALLS.md"

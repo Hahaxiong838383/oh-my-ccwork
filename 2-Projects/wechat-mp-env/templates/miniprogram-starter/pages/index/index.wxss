@@ -1,0 +1,5 @@
+.page { padding: 48rpx 32rpx; }
+.card { background: #fff; border-radius: 24rpx; padding: 48rpx 32rpx; display: flex; flex-direction: column; gap: 24rpx; }
+.h1 { font-size: 40rpx; font-weight: 600; }
+.hint { font-size: 26rpx; color: #888; }
+.btn { margin-top: 24rpx; background: #07c160; color: #fff; border-radius: 12rpx; }

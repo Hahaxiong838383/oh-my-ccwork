@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# wxdt-cli — 微信开发者工具 CLI 包装（home-studio 用户级安装）
+#
+# 为什么需要这层包装：
+#   1) 上游 bin/node 用 `electron -e "<bootstrap>" "$@"` 转发参数，导致第一个位置参数
+#      （也就是子命令 login/preview/upload）被 yargs 当成 --electron 的值吃掉，
+#      表现是「任何子命令都只打印 help」。这里绕过它，直接以 ELECTRON_RUN_AS_NODE 调
+#      cli/index.js，子命令才能生效。
+#   2) 统一 APPDATA（上游 GUI 与 CLI 脚本对 APPDATA 的取值不一致，差一个 /app 层级）。
+#   3) 无图形会话时给出明确提示，而不是让人对着 ENOENT 猜。
+#
+# 用法与官方一致：
+#   wxdt-cli login -f terminal
+#   wxdt-cli islogin
+#   wxdt-cli preview --project <dir> --qr-output <png>
+#   wxdt-cli upload  --project <dir> -v 1.0.0 -d "note"
+#   wxdt-cli open    --project <dir>
+set -uo pipefail
+
+MP_ENV="${MP_ENV:-$HOME/mycc/2-Projects/wechat-mp-env}"
+ROOT="$MP_ENV/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files/bin"
+
+if [[ ! -x "$ROOT/electron/electron" ]]; then
+  echo "[x] 找不到开发者工具运行时：$ROOT/electron/electron" >&2
+  echo "    重新安装：$MP_ENV/scripts/install-devtools.sh" >&2
+  exit 2
+fi
+
+APP_NAME=wechat-devtools
+DATA_DIR="${XDG_CONFIG_HOME:-$HOME/.config}"
+export WECHAT_DEVTOOLS_DIR="$ROOT/electron"
+export APPDATA="$DATA_DIR/$APP_NAME/app"
+export USERPROFILE="$APPDATA"
+export PATH="$ROOT/bin:$ROOT/electron:$PATH"
+mkdir -p "$APPDATA/Default" 2>/dev/null || true
+
+# 子命令里需要真正开窗的（open/auto/auto-replay/auto-preview），没有 X 直接提示
+NEEDS_GUI=0
+for a in "$@"; do
+  case "$a" in
+    open|auto|auto-replay|auto-preview) NEEDS_GUI=1 ;;
+  esac
+done
+if [[ "$NEEDS_GUI" == "1" && -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
+  echo "[!] 当前 shell 没有图形显示（DISPLAY/WAYLAND_DISPLAY 都为空）。" >&2
+  echo "    这类命令要在图形会话里跑：本机登录桌面后开终端，或 ssh -X / 远程桌面。" >&2
+  echo "    纯无头场景请改用 miniprogram-ci：node $MP_ENV/scripts/preview.mjs" >&2
+fi
+
+cd "$ROOT" || exit 2
+export ELECTRON_RUN_AS_NODE=1
+exec "$ROOT/electron/electron" \
+  "$ROOT/resources/app.asar.unpacked/js/common/cli/index.js" "$@"

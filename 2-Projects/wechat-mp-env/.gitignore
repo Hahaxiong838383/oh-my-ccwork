@@ -1,0 +1,5 @@
+node_modules/
+app/
+app.bak/
+app.failed.*
+downloads/*.deb
