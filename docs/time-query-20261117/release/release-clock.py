@@ -1,0 +1,98 @@
+from pathlib import Path
+import os,sys,json,hashlib,subprocess,time,fcntl,tempfile,shutil,sqlite3,urllib.request
+D=Path('/root/p003-clock-release-20261117');I=int(sys.argv[1]);APPLY='--apply' in sys.argv
+ROOTS=['/opt/p003/server','/opt/p003/search-canary-20261021/brain','/opt/p003/listening-canary-20261030/brain'];PORTS=[3001,3007,3008];UNITS=[None,'p003-search-brain.service','p003-listening-brain.service'];R=Path(ROOTS[I]);port=PORTS[I]
+sha=lambda p:hashlib.sha256(p.read_bytes()).hexdigest() if p.exists() else None
+
+def atomic(p,b,mode=0o600):
+ fd,tmp=tempfile.mkstemp(dir=p.parent,prefix='.clock-release-')
+ try:
+  with os.fdopen(fd,'wb') as f:os.fchmod(f.fileno(),mode);f.write(b);f.flush();os.fsync(f.fileno())
+  os.replace(tmp,p)
+ finally:
+  if os.path.exists(tmp):os.unlink(tmp)
+def write(p,r):atomic(p,(json.dumps(r,indent=2)+'\n').encode())
+def pm2():return {p['name']:{'pid':p['pid'],'status':p['pm2_env']['status'],'restarts':p['pm2_env']['restart_time']} for p in json.loads(subprocess.check_output(['pm2','jlist']))}
+def service(i):
+ if i==0:return pm2()['p003-voice']
+ fields=dict(x.split('=',1) for x in subprocess.check_output(['systemctl','show',UNITS[i],'-p','MainPID','-p','NRestarts','-p','ActiveState'],text=True).splitlines());return {'pid':int(fields['MainPID']),'restarts':int(fields['NRestarts']),'status':fields['ActiveState']}
+def health():
+ with urllib.request.urlopen('http://127.0.0.1:'+str(port)+'/health',timeout=2) as r:return r.status==200 and json.load(r).get('status')=='ok'
+def restart():
+ args=['pm2','restart','p003-voice'] if I==0 else ['systemctl','restart',UNITS[I]]
+ subprocess.run(args,check=True,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE,timeout=40)
+ for _ in range(60):
+  time.sleep(.5)
+  try:
+   if health():return
+  except Exception:pass
+ raise RuntimeError('health did not recover')
+def bindings():
+ rows={}
+ for root in ROOTS:
+  p=Path(root)/'data/devices.db'
+  if p.exists():
+   with sqlite3.connect('file:'+str(p)+'?mode=ro',uri=True) as db:rows[root]=db.execute('SELECT sn,public_id,account_id,parent_account_id,binding_version,status FROM device_registry ORDER BY sn').fetchall()
+ return hashlib.sha256(json.dumps(rows,separators=(',',':')).encode()).hexdigest()
+def idle():
+ r=subprocess.run(['/usr/bin/node','--env-file=.env.local',str(D/'idle-probe.mjs')],cwd=ROOTS[0],capture_output=True,text=True,timeout=20)
+ assert r.returncode==0,'live room authority unavailable'
+ x=json.loads(r.stdout);assert x['verified'] and x['idle'],'active rooms: retry release later'
+ sockets=subprocess.check_output(['ss','-Htn','state','established','sport','=',':'+str(port)],text=True)
+ assert not sockets.strip(),'active HTTP streams: retry release later'
+ return x
+with Path('/root/p003-miniapp-admin-20261117/release.lock').open('a') as lock:
+ fcntl.flock(lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
+ proof=json.loads((D/'NODE22-TESTS.json').read_text());assert proof['pass'] and proof['complete'] and proof['node']=='v22.22.2'
+ manifest=json.loads((D/'candidate/MANIFEST.json').read_text());rows=[x for x in manifest if x['pool']==str(R)];assert len(rows)==4
+ for row in rows:
+  assert sha(R/row['path'])==row['before_sha256'],'target drift'
+  assert sha(D/'candidate'/str(I)/row['path'])==row['after_sha256'],'candidate drift'
+ source_before=json.loads((D/'SOURCE-BEFORE.json').read_text());targets={x['path'] for x in manifest}
+ for root,files in source_before.items():
+  for p,h in files.items():
+   if p not in targets:assert sha(Path(root)/p)==h,'unrelated source drift since tests'
+ s=service(I);assert s['pid']>0 and s['status'] in ('online','active');assert Path('/proc/'+str(s['pid'])+'/cwd').resolve()==R
+ time_state=subprocess.check_output(['timedatectl','show','-p','NTPSynchronized','-p','Timezone'],text=True);assert 'NTPSynchronized=yes' in time_state
+ idle_state=idle();pre={'pool':I,'source':s,'idle':idle_state,'node':proof['node'],'ntp':time_state,'manifest_sha256':sha(D/'candidate/MANIFEST.json')}
+ if not APPLY:print(json.dumps({'dry_run':True,**pre}));sys.exit(0)
+ receipt_path=D/f'RELEASE-{I}.json';assert not receipt_path.exists(),'prior pool receipt: inspect before action'
+ bdir=D/f'backup-{I}';bdir.mkdir(mode=0o700);modes={}
+ for n,row in enumerate(rows):
+  p=R/row['path'];modes[row['path']]=p.stat().st_mode&0o777 if p.exists() else 0o644
+  if p.exists():shutil.copy2(p,bdir/str(n));assert sha(bdir/str(n))==row['before_sha256']
+ write(bdir/'MANIFEST.json',{'rows':rows,'modes':modes,'pre':pre})
+ envfiles=[Path(root)/n for root in ROOTS for n in ['.env.local','canary.env'] if (Path(root)/n).exists()];envhashes={str(p):sha(p) for p in envfiles};before_pm2=pm2();before_services=[service(i) for i in range(3)];bound=bindings()
+ receipt={'started_ms':int(time.time()*1000),'pool':I,'success':False,'pre':pre,'backup':str(bdir),'database_restore':False,'before_services':before_services}
+ write(receipt_path,receipt);applied=[]
+ try:
+  for row in rows:
+   p=R/row['path'];assert sha(p)==row['before_sha256'],'concurrent target drift';atomic(p,(D/'candidate'/str(I)/row['path']).read_bytes(),modes[row['path']]);applied.append(row)
+  restart();current=service(I)
+  env=dict(os.environ)
+  if I:
+   raw=Path('/proc/'+str(current['pid'])+'/environ').read_bytes()
+   env.update(dict(x.decode().split('=',1) for x in raw.split(b'\0') if b'=' in x))
+  env['PORT']=str(port);env['CLOCK_PROBE_RESULT']=str(D/f'PROBE-{I}.json')
+  args=['/usr/bin/node']+(['--env-file=.env.local'] if I==0 else [])+['--experimental-sqlite',str(D/'live-clock-probe.mjs')]
+  with (D/f'PROBE-{I}.private.log').open('wb') as f:r=subprocess.run(args,cwd=R,env=env,stdout=f,stderr=subprocess.STDOUT,timeout=200)
+  assert r.returncode==0,'actual HTTP probe failed; inspect private result'
+  probe=json.loads((D/f'PROBE-{I}.json').read_text());assert probe['pass'] and probe['cleanup']
+  for row in rows:assert sha(R/row['path'])==row['after_sha256'],'after source mismatch'
+  assert all(sha(Path(p))==h for p,h in envhashes.items()),'environment changed';assert bindings()==bound,'device bindings changed'
+  after_pm2=pm2();assert {k:v for k,v in after_pm2.items() if not(I==0 and k=='p003-voice')}=={k:v for k,v in before_pm2.items() if not(I==0 and k=='p003-voice')},'unrelated PM2 change'
+  after_services=[service(i) for i in range(3)];assert all(after_services[i]==before_services[i] for i in range(3) if i!=I),'unrelated Brain change'
+  receipt.update(success=True,after_services=after_services,probe_sha256=sha(D/f'PROBE-{I}.json'),environment_unchanged=True,bindings_unchanged=True)
+ except BaseException as e:
+  receipt['error_type']=type(e).__name__;receipt['error']=str(e)[:160]
+  assert all(sha(R/x['path'])==x['after_sha256'] for x in applied),'foreign drift prevents automatic rollback'
+  for n,row in enumerate(rows):
+   if row not in applied:continue
+   p=R/row['path']
+   if row['before_sha256'] is None:p.unlink()
+   else:atomic(p,(bdir/str(n)).read_bytes(),modes[row['path']])
+  if applied:restart()
+  receipt['rolled_back']=True
+  raise
+ finally:
+  receipt['finished_ms']=int(time.time()*1000);write(receipt_path,receipt);print(json.dumps(receipt))
