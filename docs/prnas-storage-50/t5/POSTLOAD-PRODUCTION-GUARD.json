@@ -1,0 +1,35 @@
+{
+  "protected": {
+    "src/routes/ark.ts": "ad6231c2d37781542e2e46438e1bf8777743059bd94ccce2d7014358ff218e10",
+    "src/routes/telemetry.ts": "9bb9913ab2f6680ee209a0e15d202bdab83fa0f27382ca73a117761a2fba8759",
+    "src/ark/records-store.ts": "20735e483bd01c0263a0d268dd85a2f72a552669319fa525acb1f53d133391f9",
+    "src/ark/records-contract.ts": "c0669a969d5ff05d588c84aecbf6f2d8efb8de650be064e8c0f6bdf06c0e5685",
+    "src/analytics/rollup.ts": "916727cb51f237199f6d962bdbe30d388ad1c9122d686cdf23c4528c76aa0ac6",
+    "src/analytics/capacity.ts": "510530b3bb83739ba132077fbaca53bd46869a7d88aa314acc1091ea2b830583",
+    "data/analytics-control.json": "a050ef06ea542b8fd8781f1e945f9adcd03c7ae5190719e66ba826e2059fce12"
+  },
+  "free_bytes": 12340690944,
+  "processes": [
+    {
+      "name": "p003-voice",
+      "pid": 2227633,
+      "restarts": 7,
+      "status": "online"
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1856264,
+      "restarts": 0,
+      "status": "online"
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 2075980,
+      "restarts": 2,
+      "status": "online"
+    }
+  ],
+  "t5_units": "  UNIT                       LOAD   ACTIVE SUB    DESCRIPTION\n● p003-t5-50x6000-01.service loaded failed failed /opt/p003/server/.runtime/node-v24.19.0-linux-x64/bin/node --max-old-space-size=384 --import tsx scripts/storage-capacity-load.ts run /opt/p003/archive-t5-20261117/p003-t5-50x6000-01\n\nLegend: LOAD   → Reflects whether the unit definition was properly loaded.\n        ACTIVE → The high-level unit activation state, i.e. generalization of SUB.\n        SUB    → The low-level unit activation state, values depend on unit type.\n\n1 loaded units listed.\nTo show all installed unit files use 'systemctl list-unit-files'.\n",
+  "protected_changed": [],
+  "process_baseline_equal": true
+}
