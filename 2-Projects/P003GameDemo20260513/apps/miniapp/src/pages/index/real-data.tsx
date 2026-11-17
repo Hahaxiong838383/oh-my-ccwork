@@ -5,6 +5,7 @@ import { liveApi } from '../../services/live-api';
 import { LiveDataController, snapshotView } from '../../services/live-data';
 import { Card, Empty, Field, Heading, Primary } from './components';
 import RealDetails from './real-details';
+import WeeklyReportPanel from './weekly-report';
 
 export default function RealDataHome() {
   const [controller] = useState(() => new LiveDataController(liveApi));
@@ -89,6 +90,7 @@ export default function RealDataHome() {
             </>}
           </> : !state.error && <Text className="muted">暂无设备数据</Text>}
         </Card>}
+        {currentDevice && <WeeklyReportPanel key={`weekly:${state.selectedId}`} publicId={state.selectedId} deviceLabel={`${currentDevice.note || '读写台'} · 尾号 ${currentDevice.sn.slice(-6)}`} onAccessLost={status=>{if(status===401)logout();else void controller.refresh();}}/>}
         {currentDevice && !state.busy && state.snapshot && <RealDetails key={state.selectedId} publicId={state.selectedId} details={state.snapshot.details} onAccessLost={status=>{if(status===401)logout();else void controller.refresh();}}/>}
       </>}
     </View>

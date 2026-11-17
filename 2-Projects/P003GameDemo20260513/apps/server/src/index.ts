@@ -1,3 +1,4 @@
+import {startWeeklyReportScheduler} from './weekly-report-service.js';
 import {arkRoute} from './routes/ark.js';
 import {arkFactsRoute} from './ark/proxy.js';
 import {arkService} from './ark/service.js';
@@ -44,6 +45,7 @@ import { generateListeningContent,readListeningPersonality } from './listening-c
 const app = new Hono();
 // Additive schema is checked at startup; no device is automatically enrolled in BLE identity policy.
 getBleBindingStore();
+startWeeklyReportScheduler();
 const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));

@@ -1,3 +1,4 @@
+import {readAdminWeeklyReport,WeeklyReportError} from '../weekly-report-service.js';
 import {Hono} from 'hono';
 import {isValidToken,isAdminRole} from './auth.js';
 import {readAdminMiniappDashboardWithHistory,readAdminMiniappObservations,readAdminMiniappRecords,readAdminMiniappConversations,MiniappReadError} from '../miniapp-dashboard.js';
@@ -22,7 +23,12 @@ miniappAdminRoute.get('/devices/:sn/miniapp/dashboard',async c=>{
 miniappAdminRoute.get('/devices/:sn/miniapp/observations',async c=>c.json(await readAdminMiniappObservations(c.req.param('sn'),new URL(c.req.url).searchParams)));
 miniappAdminRoute.get('/devices/:sn/miniapp/records',c=>c.json({ok:true,data:readAdminMiniappRecords(c.req.param('sn'),new URL(c.req.url).searchParams)}));
 miniappAdminRoute.get('/devices/:sn/miniapp/conversations',c=>c.json({ok:true,data:readAdminMiniappConversations(c.req.param('sn'),new URL(c.req.url).searchParams)}));
+miniappAdminRoute.get('/devices/:sn/miniapp/weekly-report',async c=>{
+ const tz=c.req.query('timezone');
+ if(tz&&tz!=='Asia/Shanghai')return c.json({ok:false,error:'invalid_timezone'},400);
+ return c.json(await readAdminWeeklyReport(c.req.param('sn'),c.req.query('week_start')));
+});
 miniappAdminRoute.onError((error,c)=>{
- if(error instanceof MiniappReadError||error instanceof RecordsError||error instanceof HistoryError||error instanceof ObservationError)return c.json({ok:false,error:error.message},error.status);
+ if(error instanceof WeeklyReportError||error instanceof MiniappReadError||error instanceof RecordsError||error instanceof HistoryError||error instanceof ObservationError)return c.json({ok:false,error:error.message},error.status);
  return c.json({ok:false,error:'dashboard_dependency_unavailable'},503);
 });

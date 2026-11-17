@@ -1,7 +1,8 @@
+import {readParentWeeklyReport,WeeklyReportError} from '../weekly-report-service.js';
 import {recordsParentRoute} from '../ark/records-service.js';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { telemetryStore, dayOf } from '../telemetry-store.js';
+import { telemetryStore } from '../telemetry-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { verifyDeviceCredential } from './device-session.js';
 import { verifyAuthToken } from '../auth-jwt.js';
@@ -201,7 +202,7 @@ deviceTelemetryRoute.post('/', async (c) => {
 export const parentTelemetryRoute = new Hono<{ Variables: { accountId: string; authRole: string } }>();
 
 parentTelemetryRoute.use('*', async (c, next) => {
-  if (c.req.path.endsWith('/ark/records') || c.req.path.endsWith('/dashboard') || c.req.path.endsWith('/conversations')) c.header('Cache-Control', 'no-store');
+  if (c.req.path.endsWith('/ark/records') || c.req.path.endsWith('/dashboard') || c.req.path.endsWith('/conversations') || c.req.path.endsWith('/weekly-report')) c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const auth = await verifyAuthToken(token);
@@ -211,23 +212,10 @@ parentTelemetryRoute.use('*', async (c, next) => {
   await next();
 });
 
-/** public_id → 本家长绑定的设备；不是自己的/不存在 → null（对外一律 404 不泄露存在性）。 */
-function ownedDevice(publicId: string, accountId: string) {
-  const dev = deviceRegistryStore.getByPublicId(publicId);
-  if (!dev || dev.parent_account_id !== accountId) return null;
-  return dev;
-}
-
 function tzGuard(c: { req: { query: (k: string) => string | undefined } }): string | null {
   const tz = c.req.query('timezone');
   if (tz && tz !== 'Asia/Shanghai') return null; // P0 聚合固定 +8；给错时区数据不如显式拒绝
   return tz ?? 'Asia/Shanghai';
-}
-
-function dateAdd(day: string, deltaDays: number): string {
-  return new Date(Date.parse(`${day}T00:00:00+08:00`) + deltaDays * 86400_000 + 8 * 3600_000)
-    .toISOString()
-    .slice(0, 10);
 }
 
 parentTelemetryRoute.route('/', recordsParentRoute);
@@ -252,38 +240,12 @@ parentTelemetryRoute.get('/:publicId/dashboard', async (c) => {
   }
 });
 
-parentTelemetryRoute.get('/:publicId/weekly-report', (c) => {
+parentTelemetryRoute.get('/:publicId/weekly-report', async (c) => {
+  c.header('Cache-Control','no-store');
   if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
-  const dev = ownedDevice(c.req.param('publicId'), c.get('accountId'));
-  if (!dev) return c.json({ ok: false, error: 'not_found' }, 404);
-
-  const weekStart = c.req.query('week_start');
-  if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
-    return c.json({ ok: false, error: 'bad_request', message: 'week_start 须为 YYYY-MM-DD' }, 400);
+  try { return c.json(await readParentWeeklyReport(c.req.param('publicId'),c.get('accountId'),c.get('authRole'),c.req.query('week_start'))); }
+  catch(error){
+    if(error instanceof WeeklyReportError)return c.json({ok:false,error:error.message},error.status);
+    return c.json({ok:false,error:'weekly_report_dependency_unavailable'},503);
   }
-  // 默认本周一（Asia/Shanghai）
-  const today = dayOf(Date.now());
-  const dow = (new Date(`${today}T00:00:00+08:00`).getUTCDay() + 6) % 7; // 周一=0
-  const from = weekStart ?? dateAdd(today, -dow);
-  const to = dateAdd(from, 6);
-  const daily = telemetryStore.dailyRange(dev.sn, from, to);
-
-  const correct = daily.reduce((s, d) => s + d.correct_rounds, 0);
-  const deviated = daily.reduce((s, d) => s + d.deviated_rounds, 0);
-  const denom = correct + deviated; // no_person/failed 不进分母（合同 §7.2）
-  return c.json({
-    ok: true,
-    data: {
-      week_start: from,
-      eye_health_rate: denom > 0 ? Math.round((correct / denom) * 100) : null,
-      guarded_minutes: Math.round(daily.reduce((s, d) => s + d.guarded_ms, 0) / 60_000),
-      posture_alert_count: daily.reduce((s, d) => s + d.reminder_played, 0),
-      percentile: null,
-      highlights: [], // P1：server 聚合生成文案
-      data_quality: {
-        valid_posture_rounds: denom,
-        missing_hours: null, // P0 未实现——返回 null 不撒谎（不给假 0）
-      },
-    },
-  });
 });

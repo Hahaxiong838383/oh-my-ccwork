@@ -830,6 +830,9 @@ textarea { width: 100%; min-height: 130px; padding: 12px; border-radius: 12px; b
 .live-days > view { display: flex; justify-content: space-between; padding: 8px 0; gap: 12px; border-bottom: 1px solid #edf0f2; }
 .live-history { margin-top: 12px; }
 .live-history-filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.live-weekly-metrics { display: flex; flex-direction: column; gap: 12px; margin: 16px 0; }
+.live-weekly-metrics > view { border: 1px solid #edf0f2; border-radius: 12px; padding: 12px; }
+.live-weekly-report .notice { display: block; line-height: 1.7; margin-top: 12px; }
 .live-history-entry { padding: 14px 0; border-bottom: 1px solid #edf0f2; }
 .live-history-content { display: block; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 8px; line-height: 1.6; }
 .live-record-id { overflow-wrap: anywhere; }
