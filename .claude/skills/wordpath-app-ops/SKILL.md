@@ -18,6 +18,7 @@ output_levels: L1
 | 更新通道 | 内网 `http://192.168.1.133:8899` → Lucky `https://wordpath.hahaxiong.cc:8666` → VPS `https://142.11.225.39.sslip.io/wordpath` |
 | APK 归档 | `/data/home-studio/artifacts/english-app/WordPath-<ver>.apk`，飞牛2 `/vol1/1000/文件临时缓存/` |
 | 模拟器 | `emulator-5554`（AOSP API30，无 KVM/GMS，冷启动 20–30s） |
+| 当前版本 | 0.9.1（versionCode 21），156.2MB，APK 内置 Piper joe-medium-int8 |
 
 ## 构建 / 发布（照做不出错）
 
@@ -83,3 +84,34 @@ adb -s emulator-5554 shell uiautomator dump /sdcard/ui.xml && adb -s emulator-55
 
 `00-项目概览` `02-调研报告` `03-实施方案` `04-核心循环` `05-装机与试用` `06/07-模型评估`
 `10-UX多邻国改造` `11-反编译环境-JADX` `12-路径地图与安装权限` `13-返回与全屏兼容` `14-中文练字模块`
+
+## Android 14+ 下载闪退（0.9.1 修）
+
+- 现象：点「下载新版本」立刻闪退，更新永远完不成；服务端 journal 同时刻出现 `ConnectionResetError`。
+- 根因：API 34 起前台服务必须声明类型，WorkManager `setForeground()` 未传
+  `FOREGROUND_SERVICE_TYPE_DATA_SYNC` → `MissingForegroundServiceTypeException`，进程被杀。
+- 修法：`ForegroundInfo(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)`（API 29+）
+  + 清单 `<service android:name="androidx.work.impl.foreground.SystemForegroundService"
+  android:foregroundServiceType="dataSync" tools:replace="android:foregroundServiceType" />`
+  + `FOREGROUND_SERVICE`、`FOREGROUND_SERVICE_DATA_SYNC` 权限。
+- 诊断口诀：**客户端闪退 + 服务端 ConnectionResetError 同一秒 = 下载被客户端中断**，先查前台服务/权限，不要先怀疑网络。
+
+## UX 结构（0.9.0 起，方案 A）
+
+- 固定底栏：今天 / 练习 / 错词（角标）/ 我的；任务页（选词、听写、批改、结果、练字批改）隐藏底栏。
+- 今天：连胜/积分 → 「继续这一组」CTA → 今日目标 → 学习路径；不再有相机/相册/快捷入口。
+- 练习：教材版本 → 年级（七上–九上）→ 拍课本/相册 → 单元列表 → 语文练字入口。
+- 我的：语音 / 更新 / 学习 三组；根页无返回箭头。
+- 拍摄只在三处：练习（拍课本）、听写完成页（拍作业）、练字页（拍字帖）。
+- 设计文档 `17-UX信息架构重构方案.md`、落地记录 `18-UX方案A落地.md`、预览图 `docs/ux-preview/`。
+
+## 更新通道（含 DNS）
+
+| 通道 | 地址 |
+|---|---|
+| 内网 | `http://192.168.1.133:8899` |
+| 公网 | `https://wordpath.hahaxiong.cc:8666`（域名 A → 家宽 IP，AAAA → NAS GUA） |
+| 备用 | `https://142.11.225.39.sslip.io/wordpath` |
+
+App 存的是域名不是 IP，换 DNS 指向不用发版；只有换端口/路径才需要改默认地址。
+公网 IPv6 由 Lucky DDNS 维护（V6 取址必须是 `netInterface`，细节见 lucky-reverse-proxy 技能）。

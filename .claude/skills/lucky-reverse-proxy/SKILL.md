@@ -97,3 +97,46 @@ App 里有 VPS IPv4 备用通道自动回退。
   3. `PUT` 同一个完整对象
 - 修复 https 上游 502：对相应条目设 `LocationInsecureSkipVerify = true`，再整条 PUT；不要动全局
   `baseconfigure.InsecureSkipVerify`（那是另一层开关，改了会扩大影响面）。
+
+## DDNS 维护（IPv4/IPv6）与「解析报错」排查（2026-11-17 实战）
+
+### API 入口
+
+| 动作 | 路径 |
+|---|---|
+| 任务列表 | `GET /api/ddnstasklist` → `{data:[…]}` |
+| 单任务 | `GET /api/ddns/task/{TaskKey}` |
+| 保存整条 | `PUT /api/ddns?key={TaskKey}`（body 是完整任务对象） |
+| 立即同步 | `GET /api/ddns/manualSync/{TaskKey}`（`ret:4 isSyncing` = 正在跑） |
+| 最近日志 | `GET /api/ddns/lastlogs`、`GET /api/ddns/logs` |
+| 网卡清单 | `GET /api/netinterfaces`（`IPv6NewInterfaces` 里有 eno1 的 GUA） |
+| 取址测试 | `GET /api/ipregtest?iptype=6&netinterface=eno1&ipreg=` |
+
+### 取址方式枚举（必须是源码里的值）
+
+- 合法：`netInterface`、`url`（脚本：`script` / `odhcpd`，视版本）
+- **非法**：`interface`、`fromNetInterface`、`fromUrl` → 日志「不支持的 IP 获取方式 xxx」
+- 依据：Lucky 源码 `module/ddns/conf/ddns.go` 里 `if d.GetType == "netInterface"`
+
+### 典型故障：AAAA 停在旧前缀
+
+现象：路由 IPv6 正常、LAN 有 GUA，但 Lucky 日志持续
+「所有 IPv6 公网 IP 查询接口均失败」，域名 IPv6 访问 `000`，`dig AAAA` 指向一个 NAS 上已不存在的地址。
+
+根因：IPv6 取址配成 URL 列表（`v6.66666.host`、`myip6.ipip.net`、`6.ipw.cn`、`v6.ip.sb` …），
+这些接口在 NAS 上实测全 `000`；取不到新 IP 时 Lucky **不会**改写 AAAA，记录就停在旧前缀。
+
+修法：
+
+1. `V6QueryIPType="netInterface"`、`V6NetInterface="eno1"`（直接读网卡 GUA，不依赖外部接口）；
+2. `V4QueryIPType="url"`、`V4QueryUrl="https://myip.ipip.net/s"`（国内可用的纯文本回显）；
+3. 需要新记录时在 `Records[]` 里加 `SyncRecordData{type:"AAAA", ipv6Address:"{ipv6Addr}", SubDomainName:...}`；
+4. `PUT /api/ddns?key=…` 保存 → `manualSync` → 查 `lastlogs` 确认不再报错；
+5. `dig +short AAAA 域名 @223.5.5.5 @1.1.1.1 @8.8.8.8` 三处一致即生效。
+
+### 验证 IPv6 的正确姿势
+
+- 从有 IPv6 的机器（VPS `racknerd`）测：`curl -6 -s -o /dev/null -w '%{http_code}' https://域名:8666/update.json`
+- DNS 还没刷新时用地址兜底：`curl -6 --resolve '域名:8666:[IPv6]' …`
+- 直连 `https://[IPv6]:8666/` 不带 Host/SNI 会返回 404，这是路由按域名分发，不是故障
+- 别在本机下结论：家宽无 IPv6 hairpin，本机测公网 IPv6 一定是 000
