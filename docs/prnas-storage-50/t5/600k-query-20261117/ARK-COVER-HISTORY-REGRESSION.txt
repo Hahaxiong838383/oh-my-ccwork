@@ -1,0 +1,24 @@
+✔ history keeps unknown distinct from zero and never uses a 12-character alias (84.674458ms)
+✔ latest value uses event occurrence time, not delayed batch receipt or sum(delta) (48.063042ms)
+✔ historical ownership watermark and suspicious clocks are fail-closed (89.027334ms)
+✔ GM marker poisons logical day, absent marker is unknown, truncated never yields a balance (67.920209ms)
+✔ retention and query limit cannot turn partial unknown history into confident facts (2053.869375ms)
+✔ known inventory uses absolute quantity; unknown asset IDs never leak (42.640042ms)
+✔ same occurrence-time conflicting absolute values are unknown, never resolved by upload order (42.7185ms)
+✔ truncated or impossible receipt-time normal markers cannot authorize later unmarked facts (48.84675ms)
+✔ GM evidence before the authorization watermark and with future clock still excludes its logical day (114.00975ms)
+✔ thousands of unrelated valid events cannot hide wallet state or GM veto (273.126416ms)
+✔ uppercase and slash-separated GM source tokens veto normal-day history (228.364792ms)
+✔ daily awards deduplicate stable instances; checkpoints are progress only, never wallet deltas (53.130583ms)
+✔ daily absent/GM/owner/day changes do not become zero; resets are unknown (53.733916ms)
+✔ bad award row invalidates the observed award subtotal instead of silently omitting it (111.604042ms)
+✔ history selects event families through the existing selective index, preserving exact facts (961.867792ms)
+✔ offline history indexes preserve data, are idempotent, and a conflicting definition rolls back (46.615583ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4382.027042

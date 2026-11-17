@@ -1,0 +1,338 @@
+{
+  "RESULT.json": {
+    "stage": "T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE",
+    "evidence_version": 3,
+    "synthetic": true,
+    "config": {
+      "devices": 50,
+      "events": 12000,
+      "batch": 200,
+      "seed": 17,
+      "deadline_ms": 7200000,
+      "maintenance": true,
+      "backup": true,
+      "covering_index": true,
+      "synthetic": true,
+      "started_ms": 1794886291340
+    },
+    "node": "v24.19.0",
+    "platform": "linux",
+    "client_exit": 0,
+    "integrity": {
+      "batches": 3000,
+      "events_accepted": 600000,
+      "events_duplicated": 0,
+      "events_acknowledged": 600000,
+      "unique_acknowledged_events": 600000,
+      "expected_events": 600000,
+      "expected_batches": 3000,
+      "counts": {
+        "events": 600000,
+        "seen": 600000,
+        "batches": 3000
+      },
+      "database_before": {
+        "events": 0,
+        "seen": 0,
+        "batches": 0
+      },
+      "database_delta": {
+        "events": 600000,
+        "seen": 600000,
+        "batches": 3000
+      },
+      "database_run_events": 600000,
+      "database_canonical_matches": 600000,
+      "database_seen_matches": 600000,
+      "database_integrity": true,
+      "complete": true
+    },
+    "ark": {
+      "samples": 50,
+      "correct": 50
+    },
+    "maintenance": [
+      {
+        "start": 1794886294635,
+        "done": 1794886297334,
+        "code": 0,
+        "report": {
+          "ok": true,
+          "partial": false,
+          "rebuilt_days": 0,
+          "rollup": {
+            "attempted_days": 0,
+            "rebuilt_days": 0,
+            "failed_days": [],
+            "remaining_dirty_days": 0,
+            "partial": false
+          },
+          "pruned": {
+            "events": 0,
+            "batches": 0,
+            "facts": 0,
+            "chunks": 1,
+            "elapsed_ms": 1.6370210000000043,
+            "max_transaction_ms": 1.609136000000035,
+            "budget_exhausted": false
+          }
+        }
+      },
+      {
+        "start": 1794886592635,
+        "done": 1794886635858,
+        "code": 1,
+        "report": {
+          "ok": false,
+          "partial": true,
+          "rebuilt_days": 1,
+          "rollup": {
+            "attempted_days": 2,
+            "rebuilt_days": 1,
+            "failed_days": [
+              {
+                "dimension": "occurred",
+                "day": "2026-11-17",
+                "reason": "concurrent_write"
+              }
+            ],
+            "remaining_dirty_days": 1,
+            "partial": true
+          },
+          "prune_error": "ANALYTICS_PRUNE_FAILED"
+        }
+      },
+      {
+        "start": 1794886892635,
+        "done": 1794886950558,
+        "code": 0,
+        "report": {
+          "ok": false,
+          "partial": true,
+          "rebuilt_days": 1,
+          "rollup": {
+            "attempted_days": 2,
+            "rebuilt_days": 1,
+            "failed_days": [
+              {
+                "dimension": "received",
+                "day": "2026-11-17",
+                "reason": "concurrent_write"
+              }
+            ],
+            "remaining_dirty_days": 1,
+            "partial": true
+          },
+          "pruned": {
+            "events": 0,
+            "batches": 0,
+            "facts": 0,
+            "chunks": 1,
+            "elapsed_ms": 197.60953700000005,
+            "max_transaction_ms": 197.58689099999992,
+            "budget_exhausted": false
+          }
+        }
+      },
+      {
+        "start": 1794887192635,
+        "done": 1794887253770,
+        "code": 0,
+        "report": {
+          "ok": false,
+          "partial": true,
+          "rebuilt_days": 0,
+          "rollup": {
+            "attempted_days": 2,
+            "rebuilt_days": 0,
+            "failed_days": [
+              {
+                "dimension": "occurred",
+                "day": "2026-11-17",
+                "reason": "budget_exceeded"
+              },
+              {
+                "dimension": "received",
+                "day": "2026-11-17",
+                "reason": "budget_exceeded"
+              }
+            ],
+            "remaining_dirty_days": 2,
+            "partial": true
+          },
+          "pruned": {
+            "events": 0,
+            "batches": 0,
+            "facts": 0,
+            "chunks": 1,
+            "elapsed_ms": 18.379265000000032,
+            "max_transaction_ms": 18.345926000000077,
+            "budget_exhausted": false
+          }
+        }
+      },
+      {
+        "start": 1794887492647,
+        "done": 1794887554058,
+        "code": 0,
+        "report": {
+          "ok": false,
+          "partial": true,
+          "rebuilt_days": 0,
+          "rollup": {
+            "attempted_days": 2,
+            "rebuilt_days": 0,
+            "failed_days": [
+              {
+                "dimension": "occurred",
+                "day": "2026-11-17",
+                "reason": "budget_exceeded"
+              },
+              {
+                "dimension": "received",
+                "day": "2026-11-17",
+                "reason": "budget_exceeded"
+              }
+            ],
+            "remaining_dirty_days": 2,
+            "partial": true
+          },
+          "pruned": {
+            "events": 0,
+            "batches": 0,
+            "facts": 0,
+            "chunks": 1,
+            "elapsed_ms": 125.60588699999994,
+            "max_transaction_ms": 125.566284,
+            "budget_exhausted": false
+          }
+        }
+      },
+      {
+        "start": 1794887645231,
+        "done": 1794887705637,
+        "code": 0,
+        "report": {
+          "ok": false,
+          "partial": true,
+          "rebuilt_days": 0,
+          "rollup": {
+            "attempted_days": 2,
+            "rebuilt_days": 0,
+            "failed_days": [
+              {
+                "dimension": "occurred",
+                "day": "2026-11-17",
+                "reason": "budget_exceeded"
+              },
+              {
+                "dimension": "received",
+                "day": "2026-11-17",
+                "reason": "budget_exceeded"
+              }
+            ],
+            "remaining_dirty_days": 2,
+            "partial": true
+          },
+          "pruned": {
+            "events": 0,
+            "batches": 0,
+            "facts": 0,
+            "chunks": 1,
+            "elapsed_ms": 9.990152000000023,
+            "max_transaction_ms": 9.960530000000006,
+            "budget_exhausted": false
+          }
+        }
+      }
+    ],
+    "backup_exit": 0,
+    "checkpoint": {
+      "enabled": true,
+      "running": true,
+      "worker_pid": 2313796,
+      "interval_ms": 10000,
+      "timeout_ms": 30000,
+      "stale_after_ms": 60000,
+      "last_attempt_ms": 1794887739955,
+      "last_completed_ms": 1794887703063,
+      "last_success_ms": 1794887703063,
+      "last_result": {
+        "ok": true,
+        "sqlite_version": "3.53.3",
+        "busy": 0,
+        "log_frames": 1,
+        "checkpointed_frames": 1,
+        "duration_ms": 0.07776400000000194,
+        "reclaimed": false,
+        "reclaim_busy": false
+      },
+      "last_error": null,
+      "failures": 0,
+      "timeouts": 0,
+      "stale": false,
+      "stalled": false
+    },
+    "dirty_days": 2,
+    "acks": {
+      "attempts": 9839,
+      "successes": 3000,
+      "statuses": {
+        "200": 3000,
+        "503": 6839
+      },
+      "p95": 525.9235509999562,
+      "p99": 1738.3392660000827,
+      "all_actors_finished": true,
+      "raw_file": "requests.jsonl",
+      "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+    },
+    "evidence_consistent": true,
+    "health_summary": {
+      "samples": 1410,
+      "retained_samples": 256,
+      "tail_capacity": 256,
+      "truncated": true,
+      "failed_samples": 461,
+      "status_counts": {
+        "200": 949,
+        "503": 461
+      },
+      "first_at_ms": 1794886294232,
+      "last_at_ms": 1794887704863,
+      "rss_peak_bytes": 304898048,
+      "wal_peak_bytes": 272043632,
+      "disk_free_min_bytes": 8804651008,
+      "raw_file": "health.jsonl",
+      "duration_interpretation": "sample timestamps; not continuous uptime or pressure duration"
+    },
+    "resources": {
+      "samples": 1410,
+      "unavailable_samples": 0,
+      "observed_ms": 1410616.281032,
+      "required_ms": 86400000,
+      "max_sample_gap_ms": 2391.3859249999996,
+      "cpu_average_percent": 18.014382234136974,
+      "mem_available_min_fraction": 0.45840659162784675,
+      "disk_free_min_bytes": 8804651008,
+      "identity_changed": false,
+      "oom_seen": false,
+      "complete_24h_evidence": false,
+      "local_resource_gate": false,
+      "not_covered": [
+        "NAS budget",
+        "voice A/B",
+        "maintenance backlog",
+        "external service restart counters"
+      ]
+    },
+    "duration_ms": 1350168
+  },
+  "FAILURE.json": {
+    "stage": "run",
+    "error": "AssertionError [ERR_ASSERTION]: ACK latency gate",
+    "synthetic": true
+  },
+  "unit": "Result=exit-code\nExecMainStatus=1\nMemoryPeak=805416960\nActiveState=failed",
+  "guard_last": "{\"at_ms\": 1794887745764, \"terminal\": \"failed\"}"
+}

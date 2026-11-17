@@ -1,0 +1,102 @@
+{
+  "scope": "synthetic isolated load and query failures preserved; not full T5 acceptance",
+  "normalization": "paths and trailing whitespace only; source digests retained",
+  "files": [
+    {
+      "path": "600K-COMPACT-RESULT.json",
+      "sha256": "2a571203f4b39dffb85efa27e04e5d6df5bf490591bf38f88df997681a739ca2",
+      "source_sha256": "2a571203f4b39dffb85efa27e04e5d6df5bf490591bf38f88df997681a739ca2"
+    },
+    {
+      "path": "ARK-QUERY-PLAN.json",
+      "sha256": "d130eac0ec2f29b30b99cdcf0467db486c605b059db1d079be263143b47ce4b5",
+      "source_sha256": "a17eeba4bf03d9bb029fac4d8bcf8e550cf14d064051d838542e702298d980ea"
+    },
+    {
+      "path": "QUERY03-ANALYSIS.json",
+      "sha256": "cde821f4a743cb0f1f25959d57008024977e585db26285d091c53ce7f62f94ca",
+      "source_sha256": "b9e7a5c74f5009a530b5bc43296b2fb566cbfaaaf18671bff6a2d0751e7936cd"
+    },
+    {
+      "path": "ARK-QUERY-AB-START.json",
+      "sha256": "852d95e3f809c340ef80c7c3665d5055cf1f5c757d91372adf4c47f556ce8020",
+      "source_sha256": "276a57c7ccb551404a84d26a534f0c41ee75767aba21c9de5eb5decf80f45448"
+    },
+    {
+      "path": "ARK-QUERY-AB-MID02.json",
+      "sha256": "0a905da61f82bf7e05245cf0895754a111f32b05fb58ddcbdf9e74a12520246e",
+      "source_sha256": "4d6372d5657aa789672d8a0254591d1e8f645d59edd16cbd966bab976efdd6e0"
+    },
+    {
+      "path": "ARK-QUERY-AB-END.json",
+      "sha256": "6a61d8aec8d43cd151fce2de7a4367daa54396fa0289a72d372a86ed953650ca",
+      "source_sha256": "059ddc5abea587ad1ab04448f7a6b72fed0909e7ac7c87d28ab4dd2b76887366"
+    },
+    {
+      "path": "MAINTENANCE-CATCHUP-START.json",
+      "sha256": "8e66e4095d4267648bfc4624b5a957c1892e2feb879e5b797edc67a1c27792c5",
+      "source_sha256": "bb73396b50df623fa2bd1158d04fcf37e9023b9dfd1a1ceec9672f7cc134e4fc"
+    },
+    {
+      "path": "MAINTENANCE-CATCHUP-END-AND-PROFILE-START.json",
+      "sha256": "419ba239df71669db0dc70db987be50eea8ba769d4885b10b918b94ff6397a12",
+      "source_sha256": "bb34d724bbc949b9259e01f6b781e47fa9c268e2e495de89f0d3524bce032d84"
+    },
+    {
+      "path": "ARK-COVER-PROFILE-POLL.json",
+      "sha256": "479d4b38a41c8838950ba6c775c97f56b2b19a8a7abb5a6a88f1b0b76cf1cc9f",
+      "source_sha256": "e0f1216dd315ce98900173c60c7d5d7a8b559ec0883a172c88a4ced824767b44"
+    },
+    {
+      "path": "ARK-COVER-PROFILE-START02.json",
+      "sha256": "3c6fdb3175f2a1f1c4558e560a08bb2084b001abe0cd49a2343e87969801a19c",
+      "source_sha256": "0b574971dab9e5562d77c79976abc601ebbe3dd43c8f30a42667f710153f3c63"
+    },
+    {
+      "path": "ARK-INDEX-RED.txt",
+      "sha256": "59202e8ee85c98041e8179527360cc2b782f25e6f27fc68e11811ef8b014d24d",
+      "source_sha256": "0081db74864cdc3f73c3696b02fb8cac5d6fc08fb76bad9975388141c08fde2b"
+    },
+    {
+      "path": "ARK-INDEX-GREEN.txt",
+      "sha256": "cfc96b30583e927161020ebd128ca7d426e0c642a3eb26715dcf61bc82174aff",
+      "source_sha256": "cfc96b30583e927161020ebd128ca7d426e0c642a3eb26715dcf61bc82174aff"
+    },
+    {
+      "path": "ARK-COVER-PROFILE-POLL03.json",
+      "sha256": "5fb727c4eb0f77474fa2890e740d590d04adf38feafe61d2d43637296f1a9672",
+      "source_sha256": "9170bea0142f0b1414c70de933c3d1383f8731a585fcdb838fb8bd9fc6f87ac9"
+    },
+    {
+      "path": "ARK-QUERY-COVER-END.json",
+      "sha256": "8f27c7d6786aec25b169471d3204f2e62d6bd17cc748efbf05080f1aae22e5cc",
+      "source_sha256": "129cd582a09f7ab30be43898982daacfee5d3b225edfb9d6523a3370ba0a574f"
+    },
+    {
+      "path": "ARK-COVER-FAILURES.json",
+      "sha256": "6749f5af9b8287f6e430d8efa703707f1dbc64f778047cfb7383d1f91578fb64",
+      "source_sha256": "c5eb2f82ef6c0a14f5af7e202e47be321120f7d36b11318d02ee4558287fd609"
+    },
+    {
+      "path": "ARK-COVER-ALL-REGRESSION.txt",
+      "sha256": "39cd772026d6fd81f10973ee6705cbd51a339cdf3b4632417120dfd14338203c",
+      "source_sha256": "39cd772026d6fd81f10973ee6705cbd51a339cdf3b4632417120dfd14338203c"
+    },
+    {
+      "path": "ARK-COVER-HISTORY-REGRESSION.txt",
+      "sha256": "3971d97a5685cc03abc2213ea6b647bfeab0594636ffb4e6e73a50efec10c27c",
+      "source_sha256": "3971d97a5685cc03abc2213ea6b647bfeab0594636ffb4e6e73a50efec10c27c"
+    },
+    {
+      "path": "ARK-COVER-MIXED-SMOKE.txt",
+      "sha256": "ab87c398ab6c11e3a4f9899013ad3797bab1787e2e2381c6051a2a58bcd41813",
+      "source_sha256": "ab87c398ab6c11e3a4f9899013ad3797bab1787e2e2381c6051a2a58bcd41813"
+    },
+    {
+      "path": "ARK-COVER-MIXED-SMOKE-RESULT.json",
+      "sha256": "53c2e41e41cb60f67a9d00b79c94b382c273c4465ed4685ee20a94eb5d95bb6e",
+      "source_sha256": "b950ca1158ac334e0a3d26b21fbefa8690c95f042f44e74c63a07e03a027c9cd",
+      "projection": "health tail omitted; complete summary retained"
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+✔ history keeps unknown distinct from zero and never uses a 12-character alias (282.826083ms)
+✔ latest value uses event occurrence time, not delayed batch receipt or sum(delta) (148.345125ms)
+✔ historical ownership watermark and suspicious clocks are fail-closed (153.567542ms)
+✔ GM marker poisons logical day, absent marker is unknown, truncated never yields a balance (190.087333ms)
+✔ retention and query limit cannot turn partial unknown history into confident facts (4255.96475ms)
+✔ known inventory uses absolute quantity; unknown asset IDs never leak (255.982917ms)
+✔ same occurrence-time conflicting absolute values are unknown, never resolved by upload order (171.579709ms)
+✔ truncated or impossible receipt-time normal markers cannot authorize later unmarked facts (235.386083ms)
+✔ GM evidence before the authorization watermark and with future clock still excludes its logical day (215.105292ms)
+✔ thousands of unrelated valid events cannot hide wallet state or GM veto (841.333833ms)
+✔ uppercase and slash-separated GM source tokens veto normal-day history (307.9485ms)
+✔ daily awards deduplicate stable instances; checkpoints are progress only, never wallet deltas (129.100167ms)
+✔ daily absent/GM/owner/day changes do not become zero; resets are unknown (244.089708ms)
+✔ bad award row invalidates the observed award subtotal instead of silently omitting it (461.18575ms)
+✖ history selects event families through the existing selective index, preserving exact facts (2140.739875ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 14
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10175.5305
+
+✖ failing tests:
+
+test at scripts/ark-history.test.ts:1:9773
+✖ history selects event families through the existing selective index, preserving exact facts (2140.739875ms)
+  AssertionError [ERR_ASSERTION]: must seek relevant events instead of scanning every device event: SEARCH e USING INDEX analytics_ark_device_received (device_key=? AND received_at_ms>? AND received_at_ms<?)
+      at TestContext.<anonymous> ($WORKTREE/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts:80:33)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'SEARCH e USING INDEX analytics_ark_device_received (device_key=? AND received_at_ms>? AND received_at_ms<?)',
+    expected: /event_name=\?/,
+    operator: 'match',
+    diff: 'simple'
+  }
