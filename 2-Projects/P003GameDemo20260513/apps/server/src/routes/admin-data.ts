@@ -1,4 +1,5 @@
 import { listeningAdminRoute } from './listening-admin.js';
+import { miniappAdminRoute } from './miniapp-admin.js';
 import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
 import { Hono } from 'hono';
 import { canaryAdminRoute } from '../search-canary-status.js';
@@ -58,6 +59,8 @@ import { resolveExtractLlm, callExtractionLlm } from '../llm-extract.js';
 const adminDataRoute = new Hono();
 
 adminDataRoute.use('*', async (c, next) => {
+  // Apply before authentication so denied dashboard responses cannot be cached.
+  if (/\/devices\/[^/]+\/miniapp(?:\/|$)/.test(c.req.path)) c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   if (!token || !isValidToken(token)) {
@@ -82,6 +85,7 @@ adminDataRoute.use('*', async (c, next) => {
 });
 
 adminDataRoute.route('/search-canary', canaryAdminRoute);
+adminDataRoute.route('/', miniappAdminRoute);
 adminDataRoute.route('/worker-voice/listening', listeningAdminRoute);
 
 // 列所有孩子档案 + 关联设备（按账号聚合）
@@ -237,11 +241,11 @@ function applyPreauth(sn: string, phone: string, days: number, by: string): Prea
   if (!device) return { ok: false, error: '设备不在台账中' };
   const acct = existing ?? accountStore.upsertPhoneAccount(phone);
   if (device.parent_account_id && device.parent_account_id !== acct.id) return { ok: false, error: '该设备已绑定其他家长，换绑请走现役解绑/换绑流程' };
-  if (!device.parent_account_id) {
-    deviceRegistryStore.setParentAccountId(sn, acct.id);
-    console.log(`[admin-brain] parent bound=${acct.id} sn=${sn} via=preauth${existing ? '' : '(预建账号)'}`);
-  }
-  const p = pairingStore.setPreauth(sn, acct.id, phone, Date.now() + days * 86_400_000, by);
+  const bound = deviceRegistryStore.bindParent(sn, acct.id, false, { parentAccountId: device.parent_account_id, bindingVersion: device.binding_version });
+  if (!bound.ok) return { ok: false, error: '绑定已变化，请刷新后重新确认' };
+  const p = pairingStore.setPreauth(sn, acct.id, phone, Date.now() + days * 86_400_000, by, Date.now(), {
+    parentAccountId: bound.device.parent_account_id, bindingVersion: bound.device.binding_version,
+  });
   const ann = pairingStore.findAnnounce(sn);
   const auto = ann && ann.expires_at > Date.now() ? tryAutoConfirm(sn, ann.nonce_hash, ann.device_pk, 'late_preauth') : null;
   console.log(`[pairing] preauth set sn=${sn} days=${days} by=${by} late_announce=${ann ? 'yes' : 'no'} auto=${auto?.reason ?? '-'}`);
@@ -333,7 +337,7 @@ adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
     } else {
       return c.json({ ok: false, error: '需要家长手机号（该设备尚未绑定家长）' }, 400);
     }
-    const r = manualConfirm(sn, parentAccountId, opUser(c));
+    const r = manualConfirm(sn, parentAccountId, opUser(c), true);
     if (!r.done) {
       const msg: Record<string, string> = {
         no_announce: '设备近 10 分钟没有自报上线，等它联网后再试',
@@ -346,7 +350,6 @@ adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
       };
       return c.json({ ok: false, error: msg[r.reason] ?? r.reason, reason: r.reason }, r.reason === 'no_announce' ? 404 : 409);
     }
-    if (!device.parent_account_id) deviceRegistryStore.setParentAccountId(sn, parentAccountId);
     return c.json({ ok: true, session_id: r.sessionId, parent_account_id: parentAccountId });
   } catch (error) {
     console.error(`[pairing] admin-confirm failed sn=${c.req.param('sn')}`, error);
@@ -964,12 +967,38 @@ adminDataRoute.patch('/devices/:sn/parent', async (c) => {
     const sn = c.req.param('sn').trim();
     const device = deviceRegistryStore.get(sn);
     if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
-    const body = (await c.req.json().catch(() => ({}))) as { parent_account_id?: unknown };
+    const body = (await c.req.json().catch(() => ({}))) as { parent_account_id?: unknown; expected_public_id?: unknown; expected_parent_account_id?: unknown; expected_binding_version?: unknown; note?: unknown };
     const raw = body.parent_account_id;
     if (raw !== null && typeof raw !== 'string') {
       return c.json({ ok: false, error: 'parent_account_id 须为字符串或 null' }, 400);
     }
     const parentId = typeof raw === 'string' ? raw.trim() : null;
+    if (raw !== null && !parentId) return c.json({ ok: false, error: 'parent_account_id 须为非空字符串或 null' }, 400);
+    if (parentId === null) {
+      const audit = (result: string, afterVersion: number) => console.log('[admin-parent-unbind] ' + JSON.stringify({
+        admin: opUser(c), sn, before_binding_version: Number.isSafeInteger(body.expected_binding_version) ? body.expected_binding_version : null,
+        after_binding_version: afterVersion, at_ms: Date.now(), result,
+        note: typeof body.note === 'string' && body.note.length <= 200 ? body.note : '',
+      }));
+      if (typeof body.expected_public_id !== 'string' || !body.expected_public_id.trim()
+        || typeof body.expected_parent_account_id !== 'string' || !body.expected_parent_account_id.trim()
+        || !Number.isSafeInteger(body.expected_binding_version) || (body.expected_binding_version as number) < 0
+        || (body.note !== undefined && (typeof body.note !== 'string' || body.note.length > 200))) {
+        audit('invalid_conditions', device.binding_version);
+        return c.json({ ok: false, error: 'invalid_unbind_conditions', message: '解绑条件缺失或无效，请刷新后重新确认' }, 400);
+      }
+      const result = deviceRegistryStore.unbindParent(sn, { publicId: body.expected_public_id,
+        parentAccountId: body.expected_parent_account_id, bindingVersion: body.expected_binding_version as number });
+      if (!result.ok) {
+        audit('binding_changed', deviceRegistryStore.get(sn)?.binding_version ?? device.binding_version);
+        return c.json({ ok: false, error: 'binding_changed', message: '绑定已变化，请刷新后重新确认' }, 409);
+      }
+      // Cleanup cannot roll back the authority transaction. Late writes still fail the final generation CAS.
+      try { pairingStore.invalidateBindingIntents(sn, body.expected_binding_version as number); }
+      catch { console.error(`[admin-parent-unbind] intent_cleanup_failed sn=${sn}`); }
+      audit('unbound', result.device.binding_version);
+      return c.json({ ok: true, parent_account_id: null, synced_profile: false, binding_version: result.device.binding_version });
+    }
     // P0 人格成长生命周期（codex 3.2）：换绑到不同家长≈换孩子场景，清设备账号的关系状态
     // （新孩子不继承上一名孩子的关系温度）。纯解绑(→null)不清——可能是误操作/迁移中间态，
     // 显式重建走 DELETE /devices/:sn/relation-state。
@@ -993,8 +1022,6 @@ adminDataRoute.patch('/devices/:sn/parent', async (c) => {
       if (device.account_id && !profileStore.getProfile(device.account_id)) {
         syncedProfile = Boolean(profileStore.copyProfile(parentId, device.account_id));
       }
-    } else {
-      deviceRegistryStore.setParentAccountId(sn, null);
     }
     console.log(`[admin-brain] parent ${parentId ? 'bound=' + parentId : 'unbound'} sn=${sn} synced_profile=${syncedProfile}`);
     return c.json({ ok: true, parent_account_id: parentId, synced_profile: syncedProfile });

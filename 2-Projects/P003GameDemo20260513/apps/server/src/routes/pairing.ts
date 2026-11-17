@@ -126,23 +126,20 @@ parentPairingRoute.post('/confirm', async (c) => {
   const accountId = c.get('accountId');
   // 恢复合同（2026-09-17）：confirm 前置绑定检查——他人扫已绑定设备当场 409 不建会话（此前要等设备 claim 409、
   // 家长 H5 轮询到过期才知道，09-17 11:46 实证 29 次轮询）；台账外/停用 404。claim 侧同名判定保留（confirm→claim 之间后台改绑的竞态）。
-  let relation: 'new' | 'owner' | undefined;
-  {
-    const device = deviceRegistryStore.get(sn);
-    if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
-    if (device.parent_account_id && device.parent_account_id !== accountId) {
-      console.log(`[pairing] confirm rejected sn=${sn} reason=sn_bound_by_other`);
-      return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
-    }
-    relation = device.parent_account_id ? 'owner' : 'new';
+  const device = deviceRegistryStore.get(sn);
+  if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
+  if (device.parent_account_id && device.parent_account_id !== accountId) {
+    console.log(`[pairing] confirm rejected sn=${sn} reason=sn_bound_by_other`);
+    return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
   }
+  const relation = device.parent_account_id ? 'owner' : 'new';
   const prior = pairingStore.findSessionByNonce(parsed.data.nonce);
   if (prior && (prior.account_id !== accountId || prior.sn !== sn || prior.device_pk !== parsed.data.pk
-    || (prior.binding_version !== null && prior.binding_version !== deviceRegistryStore.get(sn)!.binding_version)
+    || (prior.binding_version === null || prior.binding_version !== device.binding_version)
     || (prior.claimed_at && Date.now() - prior.claimed_at >= IDEMPOTENT_WINDOW_MS))) {
     return c.json({ ok: false, error: 'nonce_used' }, 409);
   }
-  const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk, deviceRegistryStore.get(sn)!.binding_version);
+  const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk, device.binding_version, device.parent_account_id);
   console.log(`[pairing] confirm account=${accountId} sn=${sn} session=${sessionId} relation=${relation ?? '-'}`);
   return c.json({ ok: true, session_id: sessionId, ...(relation ? { relation } : {}) });
 });
@@ -158,7 +155,7 @@ parentPairingRoute.get('/status', (c) => {
     if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
     if ((device.parent_account_id && device.parent_account_id !== accountId)
       || (row.claimed_at && device.parent_account_id !== accountId)
-      || (row.binding_version !== null && row.binding_version !== device.binding_version)) {
+      || (row.binding_version === null || row.binding_version !== device.binding_version)) {
       return c.json({ ok: false, error: 'binding_changed' }, 409);
     }
     if (row.claimed_at) {
@@ -307,7 +304,8 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
     || (row.claimed_at && current.parent_account_id !== row.account_id)) {
     return c.json({ ok: false, code: 'sn_bound_by_other' }, 409);
   }
-  if (row.binding_version !== null && row.binding_version !== current.binding_version) {
+  if (row.binding_version === null || row.binding_version !== current.binding_version
+    || (!row.claimed_at && row.binding_parent_account_id !== current.parent_account_id)) {
     return c.json({ ok: false, code: 'binding_changed' }, 409);
   }
   const stillOwned = (version: number) => {
@@ -349,9 +347,12 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   // claim 的 SN 必须与 confirm 固定的 SN 一致；不一致按 pairing_pending（不确认 nonce 存在性）
   if (row.sn !== sn) return c.json({ ok: false, code: 'pairing_pending' }, 404);
 
-  const bind = performSnBinding(row.account_id, sn);
+  const bind = performSnBinding(row.account_id, sn, false, {
+    parentAccountId: row.binding_parent_account_id, bindingVersion: row.binding_version,
+  });
   if (!bind.ok) {
     if (bind.error === 'sn_not_available') return c.json({ ok: false, code: 'sn_not_allowed' }, 403);
+    if (bind.error === 'binding_changed') return c.json({ ok: false, code: 'binding_changed' }, 409);
     return c.json({ ok: false, code: 'sn_bound_by_other' }, 409);
   }
   // 恢复合同（2026-09-17）：绑定结局按「凭据历史」判——同家长重绑且该 SN 此前签过凭据（claim 会话或后台手签）
@@ -360,7 +361,7 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   const hadCredentialBefore = pairingStore.lastClaimedSessionBySn(sn) !== null || Boolean(deviceRegistryStore.get(sn)?.credential_issued_at);
   const bindingOutcome: BindingOutcome = bind.alreadyBound && hadCredentialBefore ? 'existing_binding_recovery' : 'new';
   const brainState = bind.brainState;
-  const bindingVersion = deviceRegistryStore.get(sn)!.binding_version;
+  const bindingVersion = bind.bindingVersion;
   const { jwt, expMs, iatSec } = await signDeviceCredential(sn, conf.authSecret, { sessionId: row.session_id, bindingVersion });
   if (!stillOwned(bindingVersion)) return c.json({ ok: false, code: 'binding_changed' }, 409);
   const enc = encryptCredential(devicePk, nonce, sn, jwt);
@@ -445,17 +446,19 @@ export function tryAutoConfirm(sn: string, nonceHash: string, devicePkB64: strin
   const device = deviceRegistryStore.get(sn);
   if (!device || device.status !== 'active') return { done: false, reason: 'sn_not_available' };
   if (device.parent_account_id && device.parent_account_id !== preauth.parent_account_id) return { done: false, reason: 'sn_bound_by_other' };
+  if (preauth.binding_version === null || preauth.binding_version !== device.binding_version
+    || preauth.binding_parent_account_id !== device.parent_account_id) return { done: false, reason: 'binding_changed' };
   // 本 nonce 已 claim（announce 行残留）：再确认会撞 nonce_hash 主键，温和拒绝
   if (pairingStore.findSessionByHash(nonceHash)?.claimed_at) return { done: false, reason: 'already_claimed' };
   const existing = pairingStore.findUnclaimedSessionBySn(sn);
   if (existing) return { done: false, reason: existing.nonce_hash === nonceHash ? 'already_confirmed' : 'other_session' };
-  const { sessionId } = pairingStore.confirmSessionByHash(preauth.parent_account_id, sn, nonceHash, devicePkB64, 'preauth', preauth.created_at);
+  const { sessionId } = pairingStore.confirmSessionByHash(preauth.parent_account_id, sn, nonceHash, devicePkB64, 'preauth', preauth.created_at, preauth.binding_version, preauth.binding_parent_account_id);
   console.log(`[pairing] preauth-confirm sn=${sn} session=${sessionId} trigger=${trigger} by=${preauth.created_by || '-'}`);
   return { done: true, reason: 'confirmed', sessionId };
 }
 
 /** 后台一键确认：拿 announce 存下的 hash + pk，以指定家长账号确认。不覆盖已存在的未认领会话（家长优先）。 */
-export function manualConfirm(sn: string, parentAccountId: string, by: string): AutoConfirmResult {
+export function manualConfirm(sn: string, parentAccountId: string, by: string, bindImmediately = false): AutoConfirmResult {
   if (requiresBleProof(sn)) return { done: false, reason: 'device_proof_required' };
   const ann = pairingStore.findAnnounce(sn);
   if (!ann || ann.expires_at <= Date.now()) return { done: false, reason: 'no_announce' };
@@ -466,7 +469,13 @@ export function manualConfirm(sn: string, parentAccountId: string, by: string): 
   if (pairingStore.findSessionByHash(ann.nonce_hash)?.claimed_at) return { done: false, reason: 'already_claimed' };
   const existing = pairingStore.findUnclaimedSessionBySn(sn);
   if (existing) return { done: false, reason: existing.nonce_hash === ann.nonce_hash ? 'already_confirmed' : 'other_session' };
-  const { sessionId } = pairingStore.confirmSessionByHash(parentAccountId, sn, ann.nonce_hash, ann.device_pk, 'admin');
+  let binding = device;
+  if (bindImmediately) {
+    const bound = deviceRegistryStore.bindParent(sn, parentAccountId, false, { parentAccountId: device.parent_account_id, bindingVersion: device.binding_version });
+    if (!bound.ok) return { done: false, reason: bound.error };
+    binding = bound.device;
+  }
+  const { sessionId } = pairingStore.confirmSessionByHash(parentAccountId, sn, ann.nonce_hash, ann.device_pk, 'admin', null, binding.binding_version, binding.parent_account_id);
   console.log(`[pairing] admin-confirm sn=${sn} session=${sessionId} by=${by}`);
   return { done: true, reason: 'confirmed', sessionId };
 }

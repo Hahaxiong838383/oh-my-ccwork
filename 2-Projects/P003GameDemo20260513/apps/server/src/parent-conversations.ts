@@ -22,7 +22,7 @@ const CursorSchema=z.object({v:z.literal(1),scope:identifier,filter:identifier,w
 type Cursor=z.infer<typeof CursorSchema>;
 type Stats={message_count:number;user_message_count:number;assistant_message_count:number;first_message_at_ms:number|null;last_message_at_ms:number|null};
 type Message={id:string;role:'user'|'assistant';text:string;ts:number};
-class HistoryError extends Error {constructor(public status:400|401|404|410|503,code:string){super(code);}}
+export class HistoryError extends Error {constructor(public status:400|401|404|410|503,code:string){super(code);}}
 const unavailable=(reason:'not_enabled'|'dependency_unavailable')=>({available:false,reason,source:'conversation',history_complete:false,
  message_count:null,user_message_count:null,assistant_message_count:null,first_message_at_ms:null,last_message_at_ms:null});
 function configuredScope():Scope|null {
@@ -122,15 +122,19 @@ export function parentConversationSummary(publicId:string,owner:string,role:stri
  }
  catch(error){return unavailable(error instanceof HistoryError&&error.status===404?'not_enabled':'dependency_unavailable');}
 }
+/** Trusted server-side consumer supplies the actual account role; no synthetic JWT. */
+export function readParentConversations(publicId:string,owner:string,role:string,params:URLSearchParams){
+ if(role!=='parent'||accountStore.findAccount(owner)?.role!=='parent')throw new HistoryError(401,'unauthorized');
+ const scope=scopeFor(publicId,owner);
+ if([...params.keys()].some(key=>params.getAll(key).length!==1))throw new HistoryError(400,'invalid_query');
+ const parsed=QuerySchema.safeParse(Object.fromEntries(params));if(!parsed.success)throw new HistoryError(400,'invalid_query');
+ return historyReader().page(scope,parsed.data);
+}
 export const parentConversationsRoute=new Hono();
 parentConversationsRoute.use('/:publicId/conversations',async(c,next)=>{c.header('Cache-Control','no-store');await next();});
 parentConversationsRoute.get('/:publicId/conversations',async c=>{
  const auth=await verifyAuthToken(/^Bearer\s+(.+)$/i.exec(c.req.header('authorization')?.trim()??'')?.[1]);
- if(!auth||auth.role!=='parent'||accountStore.findAccount(auth.accountId)?.role!=='parent')throw new HistoryError(401,'unauthorized');
- const scope=scopeFor(c.req.param('publicId'),auth.accountId);
- const params=new URL(c.req.url).searchParams;
- if([...params.keys()].some(key=>params.getAll(key).length!==1))throw new HistoryError(400,'invalid_query');
- const parsed=QuerySchema.safeParse(Object.fromEntries(params));if(!parsed.success)throw new HistoryError(400,'invalid_query');
- return c.json({ok:true,data:historyReader().page(scope,parsed.data)});
+ if(!auth||auth.role!=='parent')throw new HistoryError(401,'unauthorized');
+ return c.json({ok:true,data:readParentConversations(c.req.param('publicId'),auth.accountId,auth.role,new URL(c.req.url).searchParams)});
 });
 parentConversationsRoute.onError((error,c)=>{const e=error instanceof HistoryError?error:new HistoryError(503,'conversation_dependency_unavailable');return c.json({ok:false,error:e.message},e.status);});

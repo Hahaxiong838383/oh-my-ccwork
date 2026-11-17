@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { profileStore } from '../profile-store.js';
 import { verifyAuthToken } from '../auth-jwt.js';
-import { deviceRegistryStore } from '../device-registry-store.js';
+import { deviceRegistryStore, type BindingExpectation } from '../device-registry-store.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { accountStore } from '../account-store.js';
 import { kickoffLocalAudioOnce } from '../local-audio-generator.js';
@@ -115,11 +115,12 @@ export function performSnBinding(
   parentAccountId: string,
   sn: string,
   createUnknown = false,
+  expected?: BindingExpectation,
 ):
-  | { ok: true; brainAccountId: string | null; brainState: 'ready' | 'initializing'; syncedProfile: boolean; alreadyBound: boolean }
-  | { ok: false; error: 'sn_not_available' | 'sn_taken' | 'device_proof_required' } {
+  | { ok: true; bindingVersion: number; brainAccountId: string | null; brainState: 'ready' | 'initializing'; syncedProfile: boolean; alreadyBound: boolean }
+  | { ok: false; error: 'sn_not_available' | 'sn_taken' | 'device_proof_required' | 'binding_changed' } {
   if (requiresBleProof(sn)) return { ok: false, error: 'device_proof_required' };
-  const binding = deviceRegistryStore.bindParent(sn, parentAccountId, createUnknown);
+  const binding = deviceRegistryStore.bindParent(sn, parentAccountId, createUnknown, expected);
   if (!binding.ok) return binding;
   const { device, alreadyBound } = binding;
   // 绑定即接入大脑：未开通 brain 的设备自动开通（建 device 账号 + 关联 + 建档）
@@ -140,10 +141,10 @@ export function performSnBinding(
       const k = kickoffLocalAudioOnce(brainAccountId, 'sn-binding');
       if (k !== 'started') console.log(`[local-audio] kickoff ${k} account=${brainAccountId} reason=sn-binding`);
     }
-    return { ok: true, brainAccountId, brainState: 'ready', syncedProfile, alreadyBound };
+    return { ok: true, bindingVersion: device.binding_version, brainAccountId, brainState: 'ready', syncedProfile, alreadyBound };
   } catch {
     console.error('[profile] bound; Brain initialization pending');
-    return { ok: true, brainAccountId, brainState: 'initializing', syncedProfile: false, alreadyBound };
+    return { ok: true, bindingVersion: device.binding_version, brainAccountId, brainState: 'initializing', syncedProfile: false, alreadyBound };
   }
 }
 

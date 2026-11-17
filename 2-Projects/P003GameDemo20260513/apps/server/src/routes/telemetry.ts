@@ -1,12 +1,12 @@
-import {recordsParentRoute,recordsDashboard} from '../ark/records-service.js';
+import {recordsParentRoute} from '../ark/records-service.js';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { telemetryStore, dayOf } from '../telemetry-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { verifyDeviceCredential } from './device-session.js';
 import { verifyAuthToken } from '../auth-jwt.js';
-import { dashboardArk } from '../ark/dashboard.js';
-import {parentConversationsRoute,parentConversationSummary} from '../parent-conversations.js';
+import {readParentDashboard, MiniappReadError} from '../miniapp-dashboard.js';
+import {parentConversationsRoute} from '../parent-conversations.js';
 
 /**
  * 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824 + CC 实施计划）。
@@ -59,7 +59,6 @@ const DeviceCommandDataSchema = z
   .strict();
 const MAX_EVENTS_PER_BATCH = 50;
 const RATE_PER_HOUR = 240; // 2026-08-25 提额:设备默认 30s 上传=120次/h,原 60 不到节奏一半(恢复后30分钟打满全 429);240=2倍余量,防风暴语义仍在
-const ONLINE_WINDOW_MS = 10 * 60_000; // 心跳 5min 的两倍
 
 const SnapshotSchema = z.object({
   snapshot_id: z.string().min(1).max(80),
@@ -235,70 +234,11 @@ parentTelemetryRoute.route('/', parentConversationsRoute);
 parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
   c.header('Cache-Control', 'no-store');
   if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
-  const dev = ownedDevice(c.req.param('publicId'), c.get('accountId'));
-  if (!dev) return c.json({ ok: false, error: 'not_found' }, 404);
-
-  const now = Date.now();
-  const today = dayOf(now);
-  const weekFrom = dateAdd(today, -6);
-  const daily = telemetryStore.dailyRange(dev.sn, weekFrom, today);
-  const todayRow = daily.find((d) => d.date === today);
-  const snap = telemetryStore.latestSnapshot(dev.sn);
-  const p = snap?.payload;
-
-  // 周日均：只除以已经过的自然日数（合同 §7.1：避免未来天数稀释）
-  const totalFocusMin = Math.round(daily.reduce((s, d) => s + d.focus_ms, 0) / 60_000);
-  const elapsedDays = daily.filter((d) => d.date < today).length || 1;
-
-  const usageDaily = telemetryStore.usageRange(dev.sn, weekFrom, today);
-  let ark: ReturnType<typeof dashboardArk>;
-  let records: ReturnType<typeof recordsDashboard>;
-  try { ark = dashboardArk(dev.sn); records = recordsDashboard(c.req.param('publicId'), c.get('accountId')); }
-  catch { return c.json({ ok: false, error: 'dashboard_dependency_unavailable' }, 503); }
-  const currentOwner = ownedDevice(c.req.param('publicId'), c.get('accountId'));
-  if (!currentOwner || currentOwner.sn !== dev.sn) return c.json({ ok: false, error: 'not_found' }, 404);
-
-  return c.json({
-    ok: true,
-    data: {
-      ark,
-      records,
-      conversations: parentConversationSummary(c.req.param('publicId'), c.get('accountId'), c.get('authRole')),
-      usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',
-        today: usageDaily[usageDaily.length - 1], daily: usageDaily },
-      device: {
-        updated_at_ms: snap?.server_received_ms ?? null,
-        online: snap ? now - snap.server_received_ms < ONLINE_WINDOW_MS : false,
-        lid_open: p?.lid_open ?? null,
-        present: p?.present ?? null,
-        brightness_level: p?.brightness_level ?? null,
-        color_mode: p?.color_mode ?? null,
-        image_distance_m: p?.image_distance_m ?? null,
-        image_distance_state: p?.image_distance_state ?? null,
-      },
-      today: {
-        focus_minutes: Math.round((todayRow?.focus_ms ?? 0) / 60_000),
-        guarded_minutes: Math.round((todayRow?.guarded_ms ?? 0) / 60_000),
-        posture_alert_count: todayRow?.reminder_played ?? 0,
-      },
-      week: {
-        total_focus_minutes: totalFocusMin,
-        daily_average_focus_minutes: Math.round(
-          daily.filter((d) => d.date < today).reduce((s, d) => s + d.focus_ms, 0) / 60_000 / elapsedDays,
-        ),
-        daily: (() => {
-          const map = new Map(daily.map((d) => [d.date, d]));
-          const out: Array<{ date: string; focus_minutes: number }> = [];
-          for (let i = -6; i <= 0; i += 1) {
-            const day = dateAdd(today, i);
-            out.push({ date: day, focus_minutes: Math.round((map.get(day)?.focus_ms ?? 0) / 60_000) });
-          }
-          return out;
-        })(),
-      },
-      availability: { night_reward: false, percentile: false },
-    },
-  });
+  try { return c.json({ok:true, data:readParentDashboard(c.req.param('publicId'), c.get('accountId'), c.get('authRole'))}); }
+  catch (error) {
+    if (error instanceof MiniappReadError) return c.json({ok:false,error:error.message}, error.status);
+    return c.json({ok:false,error:'dashboard_dependency_unavailable'},503);
+  }
 });
 
 parentTelemetryRoute.get('/:publicId/weekly-report', (c) => {

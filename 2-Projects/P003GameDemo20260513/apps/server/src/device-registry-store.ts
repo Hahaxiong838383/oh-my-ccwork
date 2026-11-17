@@ -66,6 +66,8 @@ function resolveDbPath(): string {
   return resolve(process.cwd(), raw);
 }
 
+export type BindingExpectation = { parentAccountId: string | null; bindingVersion: number };
+
 class DeviceRegistryStore {
   private readonly db: DatabaseSync;
   private arkEpochReady = false;
@@ -365,10 +367,25 @@ class DeviceRegistryStore {
     return Number(r.changes) > 0;
   }
 
+  /** Admin unbind is a compare-and-swap; a replay never advances the generation. */
+  unbindParent(sn: string, expected: BindingExpectation & { publicId: string }):
+    | { ok: true; device: DeviceRecord }
+    | { ok: false; error: 'binding_changed' } {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const device = this.db.prepare(`UPDATE device_registry SET parent_account_id=NULL,
+        binding_version=binding_version+1,updated_at=?
+        WHERE sn=? AND public_id=? AND parent_account_id=? AND binding_version=?
+        RETURNING *`).get(Date.now(), sn, expected.publicId, expected.parentAccountId, expected.bindingVersion) as DeviceRecord | undefined;
+      this.db.exec('COMMIT');
+      return device ? { ok: true, device } : { ok: false, error: 'binding_changed' };
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
+  }
+
   /** 普通家长绑定：创建与归属检查同一事务；不复活停用/删除记录，不覆盖其他 owner。 */
-  bindParent(sn: string, accountId: string, createUnknown = false):
+  bindParent(sn: string, accountId: string, createUnknown = false, expected?: BindingExpectation):
     | { ok: true; device: DeviceRecord; alreadyBound: boolean }
-    | { ok: false; error: 'sn_not_available' | 'sn_taken' | 'device_proof_required' } {
+    | { ok: false; error: 'sn_not_available' | 'sn_taken' | 'device_proof_required' | 'binding_changed' } {
     this.db.exec('BEGIN IMMEDIATE');
     try {
       let device = this.get(sn);
@@ -378,6 +395,7 @@ class DeviceRegistryStore {
       let result: ReturnType<DeviceRegistryStore['bindParent']>;
       if (this.isBleBindingRequired(sn)) result = { ok: false, error: 'device_proof_required' };
       else if (!device || device.status !== 'active') result = { ok: false, error: 'sn_not_available' };
+      else if (expected && (device.parent_account_id !== expected.parentAccountId || device.binding_version !== expected.bindingVersion)) result = { ok: false, error: 'binding_changed' };
       else if (device.parent_account_id && device.parent_account_id !== accountId) result = { ok: false, error: 'sn_taken' };
       else {
         const alreadyBound = device.parent_account_id === accountId;
