@@ -61,3 +61,7 @@ Worker 管理新增独立「小程序 Dashboard」，仅 admin 可用，不受 B
 - 以注册表条件事务为解绑权威，跨库意图清理辅助；不声称多库原子提交或全量撤销legacy设备凭据。
 - HTML采用线上完整底座，保留尚未纳入旧git的既有功能；发布失败只回滚本次源码，禁止用备份库覆盖新收到的数据。
 - 共享记忆3份已原子替换并回读，RECENT_EVENTS保持79行；私有备份`~/.local/state/p003-miniapp-admin-20261117/memory-backup/`，记忆不随代码push。运维skill已补充可复用规则。
+
+## 2026-11-17 08:49 · 历史完整性复核补充
+
+用户指出历史不能只算聊天，复核确认：旧Analytics中C有21库存变更/11奖励/5补勤卡变化/3奖励进度，尚未接入小程序Dashboard；新R1表0不等于全部历史为0。家族币/星尘当前为unknown来源下的null，实际余额待C原档核实；focus_segment为0且mini008开盖枚举缺陷修复尚未安装。微信live仍短信登录，无code2Session/身份落库，生产微信AppID/Secret未配置；后台相关行是静态文案。上轮“验收通过”仅指新增后台功能与现有接口一致，不能代表这些历史数据和微信身份已补齐。此次仅核查未发布修复。完整报告见 `docs/history-identity-audit-20261117/AUDIT.md`。
