@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {DatabaseSync} from 'node:sqlite';
+import {sqlProfiler} from './storage-sql-profile.js';
+const db=new DatabaseSync(':memory:'),samples:any[]=[];
+const profile=sqlProfiler([{name:'test',db}],s=>samples.push(s));
+db.prepare('SELECT 1 n').get();assert.equal(samples.length,0);
+const value='bound-value-must-not-appear';
+assert.equal(await profile.run('normal',async()=>db.prepare('SELECT ? n').get(value)!.n),value);
+assert(!JSON.stringify(samples).includes(value));
+assert(samples[0].statements.every((s:any)=>s.wall_ms>=0&&s.thread_cpu_ms>=0));
+if(process.platform==='linux')assert(samples[0].statements.every((s:any)=>Number.isSafeInteger(s.thread_read_bytes)&&s.thread_read_bytes>=0&&Number.isSafeInteger(s.thread_read_calls)&&s.thread_read_calls>=0));
+else assert(samples[0].statements.every((s:any)=>s.thread_read_bytes===null));
+await assert.rejects(profile.run('failure',async()=>db.prepare('SELECT * FROM missing').get()),/no such table/);
+assert.equal(samples[1].statements[0].error,'ERR_SQLITE_ERROR');
+await profile.run('bounded',async()=>{for(let i=0;i<100;i++)db.prepare('SELECT 1').get();});
+assert.equal(samples[2].statements.length,64);assert.equal(samples[2].omitted,136);
+db.close();console.log(JSON.stringify({pass:true,platform:process.platform,scope:'profiler preserves results/errors, hides parameters, bounds samples and reads thread IO; not performance'}));
