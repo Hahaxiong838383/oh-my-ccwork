@@ -2447,6 +2447,9 @@ impl Orchestrator {
                 let before=self.onboarding.as_ref().map(|o|o.generation());
                 if let Some(o)=self.onboarding.as_mut() { o.control(ev,identity,false); }
                 if local_lesson && before!=self.onboarding.as_ref().map(|o|o.generation()) {
+                    // Local prompts use continuous RTC, never the ordinary ordered first-turn buffer.
+                    // Retire that buffer through the existing switch, instead of losing answers until begin_timeout.
+                    if ev.payload["action"] == "begin" { self.request_phase_switch("voice_onboarding_v2".into()); }
                     self.onboarding_deferred=None;
                     self.hard_abort_current();
                     if let Some(sp)=self.spec.take(){sp.task.abort();}

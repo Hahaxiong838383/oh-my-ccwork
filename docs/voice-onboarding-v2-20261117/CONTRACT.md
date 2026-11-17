@@ -54,3 +54,5 @@ review/01-freeze.md是建议，不是最终接口：保留result/memory_write字
 ## 回滚
 
 源码回退点rollback/p003-voice-onboarding-v2-pre-20261117=81cbd0b10be15037f8f3fe0ea4846eb6bac6236b。本轮未上线、未改开关、未访问真实画像。未来配置先关闭v2版本门；已拿v2租约的房间≤180秒继续兼容处理，排空后回旧Worker。新增protocol_version/question_state列保留，旧代码忽略；不回灌数据库、不删除真实画像、不清绑定。
+
+追加自检：若房间协商了ordered首句，真实v2 begin借用既有phase switch立即转连续RTC，清退旧首句缓存，不回灌本地提示回声；仅教学begin触发，普通房间首句机制不变。客户端按既有session.input_phase处理rtc，reason=voice_onboarding_v2。不再等待begin_timeout才开始接收教学答案。
