@@ -1,0 +1,28 @@
+
+running 23 tests
+test voice_onboarding::tests::cancel_before_deferred_begin_prevents_late_lesson_start ... ok
+test voice_onboarding::tests::cancellation_during_actual_http_does_not_commit_late_answer ... ok
+test voice_onboarding::tests::duplicates_conflicts_and_old_audio_never_replay ... ok
+test voice_onboarding::tests::entry_parser_and_trust_fences ... ok
+test voice_onboarding::tests::every_phase_can_finish_or_cancel_without_waiting_for_audio ... ok
+test voice_onboarding::tests::full_missing_flow_all_questions_then_exit_and_strict_revisions ... ok
+test voice_onboarding::tests::input_gate_keeps_exit_but_drops_playback_answers_and_late_asr ... ok
+test voice_onboarding::tests::known_profile_exit_and_normal_chat_keep_room ... ok
+test voice_onboarding::tests::no_answer_until_audio_complete_and_saved_only_after_brain ... ok
+test voice_onboarding::tests::quiet_failed_audio_decline_and_listening_exclusion ... ok
+test voice_onboarding::tests::refuse_failure_and_cancel_reject_late_saved_reply ... ok
+test voice_onboarding::tests::retired_audio_and_old_revision_do_not_advance ... ok
+test voice_onboarding::tests::runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not ... ok
+test voice_onboarding::tests::ttl_is_fixed_and_cancel_invalidates_late_save ... ok
+test voice_onboarding::tests::v2_expiry_does_not_turn_into_completion_or_open_chat ... ok
+test voice_onboarding::tests::v2_failure_and_decline_do_not_release_chat_isolation ... ok
+test voice_onboarding::tests::v2_fixed_three_questions_no_prompt_and_independent_memory_result ... ok
+test voice_onboarding::tests::v2_real_http_sqlite_serial_controls_and_retired_delayed_answer ... ok
+test voice_onboarding::tests::v2_runtime_duplicate_keeps_fresh_vad_and_no_echo_exit ... ok
+test voice_onboarding::tests::v2_signed_metadata_uses_an_independent_client_owned_protocol ... ok
+test voice_onboarding::tests::v2_skip_and_stale_result_cannot_reopen_question_or_write_twice ... ok
+test voice_onboarding::tests::v2_trust_revision_audio_failure_and_simulation ... ok
+test voice_onboarding::tests::worker_control_transport_to_real_brain_http_and_sqlite ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 618 filtered out; finished in 4.78s
+

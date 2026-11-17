@@ -1,0 +1,15 @@
+   Compiling voice-rust-worker v0.1.0 (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/realtime-voice-agent/rust-worker)
+warning: method `chat` is never used
+   --> src/llm.rs:642:18
+    |
+590 | impl Llm {
+    | -------- method in this implementation
+...
+642 |     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_tex...
+    |                  ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `voice-rust-worker` (bin "voice-rust-worker" test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1m 11s
+  Executable unittests src/main.rs (2-Projects/realtime-voice-agent/rust-worker/target/debug/build/voice-rust-worker/38f59fa62e4a216d/out/voice_rust_worker-38f59fa62e4a216d)

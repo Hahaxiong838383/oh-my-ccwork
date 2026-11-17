@@ -1,0 +1,73 @@
+{
+  "candidate_sha": "40233116448c23922f08b702728c2afbb7f029f2",
+  "baseline_sha": "81cbd0b10be15037f8f3fe0ea4846eb6bac6236b",
+  "verdict": "not_accepted",
+  "stage": "code",
+  "blocker_count": 1,
+  "shared_tree_modified_by_reviewer": false,
+  "worktree_head_during_review": "da3109f7385d56d5b2829959ef4f54aa5b9a8b19",
+  "note": "Acceptance is only the candidate SHA. Later commit da3109f and dirty worktree docs/tests were not treated as part of this SHA.",
+  "commands": [
+    {
+      "name": "node_onboarding",
+      "cwd": "git archive of candidate apps/server, node_modules symlinked from the worktree",
+      "command": "PATH=/Users/fu-121/.local/node-v24/bin:$PATH node --import tsx --test scripts/voice-onboarding.test.ts scripts/voice-onboarding-session.test.ts scripts/voice-onboarding-memory.test.ts scripts/voice-onboarding-v2.test.ts",
+      "exit_code": 0,
+      "result": "28 passed, 0 failed, duration_ms 19771"
+    },
+    {
+      "name": "rust_entry",
+      "cwd": "2-Projects/realtime-voice-agent/rust-worker/tools/onboarding-entry-tests",
+      "command": "CARGO_HOME=$W/.voice-onboarding-build/cargo RUSTUP_HOME=$W/.voice-onboarding-build/rustup PATH=/Users/fu-121/.local/node-v24/bin:$CARGO_HOME/bin:$PATH CARGO_TARGET_DIR=$REVIEW/entry-target CARGO_NET_OFFLINE=true cargo test --offline --locked -- --test-threads=8",
+      "exit_code": 0,
+      "result": "47 passed, 0 failed, 2.36s; doc-tests 0. Production voice_onboarding blobs matched the candidate before compile. pipeline.rs is not in this harness."
+    },
+    {
+      "name": "parent_skip_probe",
+      "command": "node --import tsx against candidate store: parent facts cause accepted+skipped and no row changes",
+      "exit_code": 0,
+      "result": "three answers accepted/skipped; parent and child rows unchanged"
+    }
+  ],
+  "hashes_sha256": {
+    "rust-worker/src/voice_onboarding.rs": "c1a42c0a7539877d4f8fca1c842e792832862aef1a4eb638d32428f654444266",
+    "rust-worker/src/voice_onboarding_v2.rs": "cb431f1053b95a106f601ef5c07c1936b24764e6118b2558076609ed52d68420",
+    "rust-worker/src/pipeline.rs": "a52725ce4dcb29adbe54c1e21654d17cfb37665c300cf3537efff2e4ba5a7208",
+    "apps/server/src/voice-onboarding-store.ts": "93a8d064acd8f0b20ba43c4a4fd4bd3425bc4e60d1a51188c8feb5eade6a578f"
+  },
+  "blockers": [
+    {
+      "id": "ordered-first-turn-rtc-drop",
+      "evidence": "source",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+      "sha": "40233116448c23922f08b702728c2afbb7f029f2",
+      "summary": "v2 begin isolates the lesson and aborts ordinary turns, but does not call request_phase_switch. While ordered_first_turn_active(), the audio loop drops RTC frames before VAD/speech(), so fresh VAD cannot see teaching answers until the ordered generation ends or, only when phase is Idle, ORDERED_BEGIN_TIMEOUT_MS (default 2500) fires begin_timeout.",
+      "lines": [
+        "1294-1314",
+        "1523-1525",
+        "2442-2454",
+        "3179-3186"
+      ]
+    }
+  ],
+  "unverified": [
+    "New Android package is not built and was not run on a device.",
+    "No live RTC, vendor ASR, or AEC acceptance.",
+    "ASR is Final(String) only. fresh VAD plus the question-type gate does not prove every cross-question acoustic late result.",
+    "Server cannot prove 4A/4B audio actually played.",
+    "Full-repo tsc was not rerun. listening-content.ts is outside the candidate diff.",
+    "Orchestrator was not executed. The entry harness does not compile pipeline.rs."
+  ],
+  "contract_points_tested_ok": [
+    "independent v2 gate default off; v1 remains version 1",
+    "internal /v2/step; result and memory_write are separate",
+    "known child or parent facts stay, accepted+skipped, no birthday invented",
+    "answer_result request_id is the audio_complete id",
+    "question order 1 then 2 then 3",
+    "duplicate audio_complete keeps fresh VAD",
+    "expiry reports expired and does not forge finished",
+    "single-question failure keeps isolation",
+    "skip/cancel fence late HTTP; real SQLite does not keep the retired age",
+    "old lesson, trace, binding, and worker auth reject writes"
+  ]
+}

@@ -1,0 +1,109 @@
+{
+  "runtime_candidate": "42df1d0320aec5338c9d1be2c11de6e514966944",
+  "main_v2_candidate": "40233116448c23922f08b702728c2afbb7f029f2",
+  "rollback": "81cbd0b10be15037f8f3fe0ea4846eb6bac6236b",
+  "brain_pass": 30,
+  "entry_pass": 47,
+  "full_worker_40233116": {
+    "pass": 635,
+    "failed": 4,
+    "ignored": 2
+  },
+  "full_worker_failed_names_match_baseline": true,
+  "known_failed_names": [
+    "room_cleanup::tests::business_intent_requires_healthy_retry_and_survives_job_drop",
+    "voice_connect::tests::cname_target_in_additional_is_not_discarded_as_no_addresses",
+    "voice_connect::tests::diagnostic_cancelled_tcp_loser_keeps_connection_and_subscriber",
+    "voice_connect::tests::diagnostic_records_refused_address_then_success_with_same_connection"
+  ],
+  "final_da3109f7_regression": {
+    "ordered_pass": 42,
+    "onboarding_pass": 23,
+    "full_compile": true
+  },
+  "tsc": "FAIL one pre-existing GeminiLlmClient.abort error, exact baseline text match",
+  "production_changed": false,
+  "android_new_apk": "NOT_PROVIDED",
+  "real_RTC_ASR_AEC": "NOT_RUN",
+  "files": {
+    "brain-final-30.txt": "cf5936593962a2c37aaa9aa4615ebe59624d7a49499b20d170e0e4cf79a30cce",
+    "brain-red02.txt": "cce6c8eaf5a5b9a33fd8559ea3f2aaa9d95706d5412805f8d073ad20965f3c13",
+    "brain-typecheck.txt": "1e1bfc72ecb3e28e002a1ff4d4463813394ee6a5ed9b4ba48437176f07704288",
+    "grok-delta-review/REVIEW.json": "d3b3468a0c09f6258ed91c964adc36380928613708486228a71add22ea2062dc",
+    "grok-delta-review/REVIEW.md": "5ba3a7ae6f151792a843edab67ee6fa7b7c6d6b0cd70f4f440494b0b19792445",
+    "grok-exit-delta/REVIEW.md": "2e4fa7a8beb6de151df5bcdcea5a9779afd1efac1c7454d7bb7958a1321254a1",
+    "grok-exit-delta/review.json": "00f7dcf0303abc966fa9d89bff7caf8b9a3287e95fd03918c404f5e5cf0530bd",
+    "grok-final-review/REVIEW.md": "d5655852d852af2346c891b9bbc2ac28e1b4a58b72ecadeffe30f5c269cf9824",
+    "grok-final-review/logs/node-tests.log": "497b6aea545a9cdc0377c2cc4c83c218e0e10db7d64bc2067adc4e898705bf54",
+    "grok-final-review/logs/parent-skip-probe.log": "9a95df9c641b973e30e2d23de7c746c3498609ad2dd268a652ac5806b09cb421",
+    "grok-final-review/logs/rust-entry-tests.log": "19aad6aaf20fb5b03d0bca159cc6d4112ee4f7de12aa505496b662ee65ec9c0e",
+    "grok-final-review/review.json": "b8afdaa7b8da784e29e4d68009f96e9787285494afcf0d2104c7df589f84af10",
+    "worker-42df-full-onboarding.txt": "91677b9a00053cde2ce92f3ccb704bf467b92a57a687b16c0737d8b6375dfb52",
+    "worker-final-build.txt": "b1c70e637f905980e08f8b250d4572434b595649153d3f8bb2932a42a27d0149",
+    "worker-final-exit-pending.txt": "d51c002378cd117e589efa0e90b427f097fc8ed33c50bd13df5801e73225c451",
+    "worker-final-onboarding.txt": "e12d0222f063cba850d3861a4fd3eaeaca8a22248e8b3024a1ffee17df1dc1a9",
+    "worker-final-ordered.txt": "06de181a6e11df032ad959635b45c75745d143b867d76def6f6b47a2f91c726b",
+    "worker-full-build-local.txt": "bd8ba207d0e28ba96f4be036963f4dbffd27f7d9ede139ef0f87b6ab11e8481c",
+    "worker-full-tests.txt": "90ded05c05dc5541f6cfb7e3ebf6a7866ceea08eb088cddd9068cae84ab9b537",
+    "worker-real-http.txt": "d6225aeeae312ccbcf8d79ce9a3bac628c376d98d44721da02a2b6a05f8d773f"
+  },
+  "final_42df1d0_regression": {
+    "entry_pass": 47,
+    "onboarding_pass": 23,
+    "full_compile": true
+  },
+  "reviews": [
+    {
+      "session": 379,
+      "candidate": "40233116",
+      "result": "NOT_ACCEPTED: ordered-first-turn-rtc-drop; original record preserved"
+    },
+    {
+      "session": 380,
+      "candidate": "da3109f7",
+      "result": "source_matches_intent; ordered blocker source fix reviewed, live pipeline NOT_RUN"
+    },
+    {
+      "session": 381,
+      "candidate": "42df1d03",
+      "result": "no_code_blocker in pending-exit delta; independently ran 1 focused test, not full suite"
+    }
+  ],
+  "review_source_hash_verification": [
+    {
+      "candidate": "40233116448c23922f08b702728c2afbb7f029f2",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding.rs",
+      "sha256": "c1a42c0a7539877d4f8fca1c842e792832862aef1a4eb638d32428f654444266"
+    },
+    {
+      "candidate": "40233116448c23922f08b702728c2afbb7f029f2",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding_v2.rs",
+      "sha256": "cb431f1053b95a106f601ef5c07c1936b24764e6118b2558076609ed52d68420"
+    },
+    {
+      "candidate": "40233116448c23922f08b702728c2afbb7f029f2",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+      "sha256": "a52725ce4dcb29adbe54c1e21654d17cfb37665c300cf3537efff2e4ba5a7208"
+    },
+    {
+      "candidate": "40233116448c23922f08b702728c2afbb7f029f2",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/src/voice-onboarding-store.ts",
+      "sha256": "93a8d064acd8f0b20ba43c4a4fd4bd3425bc4e60d1a51188c8feb5eade6a578f"
+    },
+    {
+      "candidate": "42df1d0320aec5338c9d1be2c11de6e514966944",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding.rs",
+      "sha256": "7caaec83888f45c75659315af59243fe1badb8bed4aa78f73be35e747af0c8d4"
+    },
+    {
+      "candidate": "42df1d0320aec5338c9d1be2c11de6e514966944",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding_tests.rs",
+      "sha256": "b4a6f3d1527ac74a5d9f73c2ab33397d7b37094a81a99262b8244c54234898a9"
+    },
+    {
+      "candidate": "42df1d0320aec5338c9d1be2c11de6e514966944",
+      "file": "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding_v2.rs",
+      "sha256": "4f9396b1db4a386bb5c5dfef59c9d987bde571ad39a2426d66d7a1d0a2e95bac"
+    }
+  ]
+}

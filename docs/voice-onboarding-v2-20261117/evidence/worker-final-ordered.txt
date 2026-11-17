@@ -1,0 +1,47 @@
+
+running 42 tests
+test business_runtime::tests::expired_ordered_generation_allows_one_rtc_handoff_without_renewing_upload ... ok
+test ordered_pcm::tests::b23_budget_env_overrides ... ok
+test ordered_pcm::tests::b23_no_final_is_no_task_under_v1_failed_legacy ... ok
+test ordered_pcm::tests::b23_session_mismatch_rejects_begin_message_only ... ok
+test ordered_pcm::tests::b23_task_and_failed_results_carry_outcome_and_next ... ok
+test ordered_pcm::tests::b23_wake_only_is_no_task_under_v1_but_commit_legacy ... ok
+test ordered_pcm::tests::b25_late_begin_after_timeout_is_message_level_rejected ... ok
+test ordered_pcm::tests::b25_no_task_reason_distinguishes_wake_only_from_no_final ... ok
+test ordered_pcm::tests::b25_rejected_messages_are_rate_limited ... ok
+test ordered_pcm::tests::cancel_discards_held_finals_and_is_terminal ... ok
+test ordered_pcm::tests::conflicting_begin_is_rejected_without_cancelling_active ... ok
+test ordered_pcm::tests::device_identity_is_derived_from_sn_room_only ... ok
+test ordered_pcm::tests::duplicate_chunk_is_idempotent_and_overlap_conflict_fails ... ok
+test ordered_pcm::tests::end_candidate_fires_on_noisy_floor_with_adaptive_gate ... ok
+test ordered_pcm::tests::end_candidate_fires_once_after_final_and_trailing_quiet ... ok
+test ordered_pcm::tests::end_candidate_negative_anchors ... ok
+test ordered_pcm::tests::end_candidate_requires_more_than_wake_word ... ok
+test ordered_pcm::tests::end_candidate_survives_digital_zero_preroll ... ok
+test ordered_pcm::tests::evidence_carries_device_clocks_and_first_submit ... ok
+test ordered_pcm::tests::evidence_dump_positive_path ... ok
+test ordered_pcm::tests::evidence_records_timeline_relative_to_begin ... ok
+test ordered_pcm::tests::fake_vendor_finals_before_and_after_end_commit_once_at_stream_end ... ok
+test ordered_pcm::tests::input_mode_default_is_rtc ... ok
+test ordered_pcm::tests::interrupted_stream_never_commits_held_finals ... ok
+test ordered_pcm::tests::keep_from_crops_only_prefix ... ok
+test ordered_pcm::tests::kotlin_fixtures_parse_and_run_through_session ... ok
+test ordered_pcm::tests::local_receipt_ack_echoes_accepted_when_enabled ... ok
+test ordered_pcm::tests::local_receipt_ack_echoes_ignored_when_disabled_and_absent_when_undeclared ... ok
+test ordered_pcm::tests::missing_seq_is_single_terminal_failure ... ok
+test ordered_pcm::tests::over_cap_and_timeout_fail_whole_generation ... ok
+test ordered_pcm::tests::packet_total_size_limit ... ok
+test ordered_pcm::tests::queue_full_counts_and_fails_generation ... ok
+test ordered_pcm::tests::receipt_done_after_commit_releases_once ... ok
+test ordered_pcm::tests::receipt_done_before_end_is_remembered ... ok
+test ordered_pcm::tests::receipt_done_played_zero_marks_declined_but_still_releases ... ok
+test ordered_pcm::tests::receipt_done_wrong_identity_or_after_cancel_is_ignored ... ok
+test ordered_pcm::tests::routing_wake_variants_are_scoped_to_trusted_first_turn_and_complete_text ... ok
+test ordered_pcm::tests::six_seconds_backlog_is_retained ... ok
+test ordered_pcm::tests::stream_end_without_drain_or_finals_fails ... ok
+test ordered_pcm::tests::tail_samples_are_flushed_exactly ... ok
+test ordered_pcm::tests::wire_roundtrip_and_errors ... ok
+test ordered_pcm::tests::wrong_trace_and_missing_boundary_and_playback_overlap ... ok
+
+test result: ok. 42 passed; 0 failed; 0 ignored; 0 measured; 599 filtered out; finished in 1.35s
+

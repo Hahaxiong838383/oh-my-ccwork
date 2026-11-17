@@ -1,0 +1,94 @@
+{
+  "candidate_sha": "42df1d0320aec5338c9d1be2c11de6e514966944",
+  "baseline_sha": "da3109f7385d56d5b2829959ef4f54aa5b9a8b19",
+  "parent_is_baseline": true,
+  "verdict": "no_code_blocker",
+  "one_line": "没有代码阻断。pending 且 phase=ready 时 fresh VAD 可走到 Exit，第二次 answer 不入队；v1 与 speaking/answered/skipped/expired 阻断仍在。真人 ASR 未验。",
+  "blocker_count": 0,
+  "shared_tree_modified_by_reviewer": false,
+  "ssh_or_deploy": false,
+  "out_of_scope": [
+    "protocol body 40233116448c23922f08b702728c2afbb7f029f2",
+    "ordered first-turn RTC drop on da3109f, pipeline.rs:1294"
+  ],
+  "diff": {
+    "files": 3,
+    "insertions": 16,
+    "deletions": 2,
+    "paths": [
+      "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding.rs",
+      "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding_tests.rs",
+      "2-Projects/realtime-voice-agent/rust-worker/src/voice_onboarding_v2.rs"
+    ]
+  },
+  "hashes_sha256_match_git": {
+    "rust-worker/src/voice_onboarding.rs": "7caaec83888f45c75659315af59243fe1badb8bed4aa78f73be35e747af0c8d4",
+    "rust-worker/src/voice_onboarding_tests.rs": "b4a6f3d1527ac74a5d9f73c2ab33397d7b37094a81a99262b8244c54234898a9",
+    "rust-worker/src/voice_onboarding_v2.rs": "4f9396b1db4a386bb5c5dfef59c9d987bde571ad39a2426d66d7a1d0a2e95bac"
+  },
+  "logic": {
+    "blocks_input_v2": "voice_onboarding.rs:100 active && phase != ready",
+    "blocks_input_v1_unchanged": "voice_onboarding.rs:102-107",
+    "answer_v2_pending_guard": "voice_onboarding_v2.rs:176",
+    "fresh_speech_cleared_only_when_blocked": "voice_onboarding.rs:618-620",
+    "pipeline_vad_gate": "pipeline.rs:1334-1336",
+    "pipeline_final_exit": "pipeline.rs:2037-2041",
+    "pipeline_exit_cancels_inflight": "pipeline.rs:3134-3135 and voice_onboarding.rs:535-540"
+  },
+  "commands": [
+    {
+      "name": "v2_runtime_duplicate",
+      "binary": ".voice-onboarding-build/entry-cargo/debug/build/onboarding-entry-tests/d9e05ea1bb3770ad/out/onboarding_entry_tests-d9e05ea1bb3770ad",
+      "args": [
+        "v2_runtime_duplicate",
+        "--test-threads=1"
+      ],
+      "exit_code": 0,
+      "stdout": "running 1 test\ntest voice_onboarding::tests::v2_runtime_duplicate_keeps_fresh_vad_and_no_echo_exit ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.01s\n",
+      "network": "http://127.0.0.1:1/v1 unreachable synthetic",
+      "not_a_full_47": true
+    }
+  ],
+  "blockers": [],
+  "unverified": [
+    "No live microphone, vendor ASR, AEC, or device RTC.",
+    "Exit final that arrives after reply_v2 sets phase=answered is still dropped by the answered gate (voice_onboarding_v2.rs:230).",
+    "A non-exit final during pending clears speech_seen in Runtime::answer (voice_onboarding.rs:584); a later exit final in that same fresh-speech window would Drop.",
+    "pipeline.rs was read, not executed. The entry binary does not compile it.",
+    "ordered_first_turn_active() at pipeline.rs:1294 can still discard RTC frames before this VAD gate. That commit is da3109 and was not re-judged.",
+    "Root 47/47 log was not used as this review's pass."
+  ],
+  "profile_probe": {
+    "fixed": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/root-next-profile/profile-first-request.mjs",
+    "original": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-next-review/profile-first-request.mjs",
+    "added_lines": 2,
+    "added_at": [
+      "253",
+      "254"
+    ],
+    "masks_errors": false,
+    "independent_capture": "python subprocess, full stdout, temp db with only analytics_event(device_key), T5_PROFILE_ALLOW_SMALL=1, no cloud",
+    "original_result": {
+      "exit": 0,
+      "ok": true,
+      "error": null,
+      "phase_object_errors": 10,
+      "phase_errors_field": false
+    },
+    "fixed_result": {
+      "exit": 4,
+      "ok": false,
+      "error": "PROFILE_PHASE_FAILED",
+      "phase_object_errors": 10,
+      "phase_errors_field": 10
+    },
+    "phase_error_text": "no such index: analytics_ark_device_event_received",
+    "check_failed_phase_mjs_this_session": "Node v22.14.0 spawnSync returned 8192 truncated bytes and JSON.parse threw. That rerun was not used as the exit-code evidence.",
+    "stored_red_green_matches_independent_capture": true,
+    "profile_selftest_rerun": false,
+    "stored_selftest_root": {
+      "status": 0,
+      "no_phase_error": true
+    }
+  }
+}

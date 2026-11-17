@@ -1,0 +1,152 @@
+✖ v2 fixed questions, independent memory outcome, exact replay; no question/cue chosen by server (81.159084ms)
+✖ known profile never suppresses the three questions or overwrites existing fields (130.0395ms)
+✖ all silent, declined and unrecognized progress only on client commands; old answer cannot save (50.813583ms)
+✖ valid answer with actual SQLite write failure remains accepted/failed and next question works (49.860542ms)
+✖ playback, forged worker, old lesson/trace, revision, duplicate different request and simulation cannot save (40.866042ms)
+✖ rebinding and 180s expiration refuse writes; cancel before begin fences late requests (63.981834ms)
+✖ cancel before begin and finish at any question release server authority without a profile write (29.9925ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 0
+ℹ fail 7
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 460.353417
+
+✖ failing tests:
+
+test at scripts/voice-onboarding-v2.test.ts:1:2786
+✖ v2 fixed questions, independent memory outcome, exact replay; no question/cue chosen by server (81.159084ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  1 !== 2
+  
+      at <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:30:9)
+      at fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 1,
+    expected: 2,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/voice-onboarding-v2.test.ts:1:4087
+✖ known profile never suppresses the three questions or overwrites existing fields (130.0395ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:42:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/voice-onboarding-v2.test.ts:1:4680
+✖ all silent, declined and unrecognized progress only on client commands; old answer cannot save (50.813583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at open (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:26:47)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:47:26)
+      at async fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/voice-onboarding-v2.test.ts:1:5431
+✖ valid answer with actual SQLite write failure remains accepted/failed and next question works (49.860542ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at open (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:26:47)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:54:26)
+      at async fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/voice-onboarding-v2.test.ts:1:6074
+✖ playback, forged worker, old lesson/trace, revision, duplicate different request and simulation cannot save (40.866042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 403
+  
+      at <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:59:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 403,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/voice-onboarding-v2.test.ts:1:7005
+✖ rebinding and 180s expiration refuse writes; cancel before begin fences late requests (63.981834ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 409
+  
+      at <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:73:64)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 409,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/voice-onboarding-v2.test.ts:1:7509
+✖ cancel before begin and finish at any question release server authority without a profile write (29.9925ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  404 !== 200
+  
+      at <anonymous> (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:77:9)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async fixture (/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts:27:6)
+      at async Test.run (node:internal/test_runner/test:1389:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 404,
+    expected: 200,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

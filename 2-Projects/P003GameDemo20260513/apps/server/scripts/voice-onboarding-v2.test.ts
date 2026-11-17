@@ -76,3 +76,16 @@ test('rebinding and 180s expiration refuse writes; cancel before begin fences la
 test('cancel before begin and finish at any question release server authority without a profile write',()=>fixture(async({post,p}:any)=>{
  assert.equal((await post('cancel',0,0)).status,200);assert.equal((await post('begin',0,0)).status,410);assert.equal(p.prepare('SELECT age_years FROM family_member').get().age_years,null);
 }));
+test('all three silent questions finish without inventing any profile fact',()=>fixture(async({post,p,open}:any)=>{
+ await post('begin',0,0);
+ for(let q=1;q<=3;q++){const r=(q-1)*3+1;await open(q,r);assert.equal((await post('question_skipped',q,r+2)).status,200);}
+ assert.equal((await post('finish',3,10)).body.result,'finished');
+ const row=p.prepare('SELECT nickname,gender,birthday,age_years FROM family_member').get();
+ assert.deepEqual({...row},{nickname:'',gender:'',birthday:'',age_years:null});
+}));
+test('SQLite ignored update is not reported saved',()=>fixture(async({post,p,open}:any)=>{
+ await post('begin',0,0);await open(1,1);
+ p.exec("CREATE TRIGGER ignore_age BEFORE UPDATE OF age_years ON family_member BEGIN SELECT RAISE(IGNORE); END");
+ const r=await post('answer',1,2,{text:'八岁'});assert.equal(r.body.result,'accepted');assert.equal(r.body.memory_write,'failed');
+ assert.equal(p.prepare('SELECT age_years FROM family_member').get().age_years,null);
+}));
