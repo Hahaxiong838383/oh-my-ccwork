@@ -1,0 +1,38 @@
+{
+  "result": "PASS_FINAL_600K_REAL_SSH_NAS_RESTORE",
+  "runtime": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "archive_id": "831209708dec4da38494638fde3416fc",
+  "bytes": 2124611584,
+  "sha256": "e9b94f0bcb9609247176f6ac4a8ca26ccbccbcc358c3e43d0b8e520be9615154",
+  "events": 600000,
+  "tables": {
+    "analytics_batch": 3000,
+    "analytics_day": 2,
+    "analytics_device_day": 100,
+    "analytics_diagnostic_usage": 0,
+    "analytics_dirty_day": 0,
+    "analytics_event": 600000,
+    "analytics_event_seen": 600000,
+    "analytics_meta": 6,
+    "analytics_rollup_device_stage": 100,
+    "analytics_rollup_distinct": 200,
+    "analytics_rollup_fact": 1200000,
+    "analytics_rollup_retry": 0,
+    "analytics_rollup_source": 100,
+    "analytics_settlement": 600000,
+    "analytics_tier_day": 2850,
+    "analytics_tier_event": 0,
+    "analytics_transport": 3000,
+    "analytics_transport_day": 50
+  },
+  "source_and_nas_receipt_exact": true,
+  "independent_restore_inode": true,
+  "transport_verify_restore_elapsed_ms": 375351,
+  "proof_sha256": "6d67d7037f6eefbabc09423a600b73846c00f8116e1a42704d85e72480073e29",
+  "limits": [
+    "closed synthetic DB adoption, not live BackupAPI or mature mixed load",
+    "opaque source_range mtime_ns numeric value rounded by JS; authoritative source timestamp is private source.json and full payload hash unchanged",
+    "not Ark one-hour outage, not 24h or full T5"
+  ],
+  "full_t5_pass": false
+}

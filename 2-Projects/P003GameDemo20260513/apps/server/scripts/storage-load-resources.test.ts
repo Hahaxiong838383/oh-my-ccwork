@@ -18,3 +18,18 @@ for(const kind of ['good','oom','restart','low-memory','high-cpu','disk-low','mi
 if(process.platform!=='linux')assert.equal(linuxResources('/tmp').supported,false);
 const unavailable=createResourceRecorder();unavailable.record({supported:false});assert.equal(unavailable.summary(86400000).cgroup_memory_peak_fraction,null);assert.equal(unavailable.summary(86400000).cgroup_cpu_average_one_core_percent,null);
 console.log('PASS resource parser/counters: exact CPU weights, OOM/restart/gap/short/unknown/memory/disk fail closed; accelerated only, not 24h');
+// Host averages must not hide saturation of the isolated test's cgroup quota.
+for(const kind of ['quota-good','quota-cpu','quota-cpu-boundary','quota-memory','quota-missing','quota-zero','quota-changed','memory-limit-changed']){
+ const r=createResourceRecorder();
+ for(let n=0;n<=8640;n++)r.record({...base,monotonic_ms:n*10000,cpu_total:n*1000,cpu_idle:n*900,
+  cgroup_cpu_usage_usec:n*(kind==='quota-cpu'?4000000:kind==='quota-cpu-boundary'?3500000:1000000),cgroup_cpu_quota_cores:kind==='quota-missing'?null:kind==='quota-zero'?0:.5,
+  ...(kind==='quota-memory'?{cgroup_memory_bytes:801}:{}),
+  ...(kind==='quota-good'?{cgroup_memory_bytes:800}:{}),
+  ...(kind==='quota-changed'&&n>100?{cgroup_cpu_quota_cores:1}:{}),
+  ...(kind==='memory-limit-changed'&&n>100?{cgroup_memory_limit_bytes:2000}:{}),
+ });
+ const summary=r.summary(86400000);
+ assert.equal(summary.local_resource_gate,kind==='quota-good',kind+' quota gate');
+ if(kind==='quota-good'){assert.equal(summary.cgroup_cpu_average_quota_percent,20);assert.equal(summary.cgroup_memory_peak_fraction,.8);}
+}
+console.log('PASS quota CPU, cgroup memory headroom, unknown and changed quota fail closed');

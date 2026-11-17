@@ -1,0 +1,8 @@
+{
+  "status": "PASS_SYNTHETIC_COUNTER_TEST_NOT_REAL_24H",
+  "negative_control": "host10percent/cgroup80percent incorrectly accepted by old recorder",
+  "fixed": "CPU normalized by explicit cgroup quota <70%; cgroup memory peak <=80%; missing or changing limits fail closed; original host/disk/24h guards retained",
+  "red_sha256": "792405159c8637ae1959aec036c35d4efaa804db0b15323229dd5a15a9089cdb",
+  "green_sha256": "4690851dc38d6dc6870dfc6d5f712e5e7cd508df52253ae72a207d045d96d11e",
+  "runtime_changed": false
+}

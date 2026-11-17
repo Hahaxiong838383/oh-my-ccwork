@@ -34,7 +34,7 @@ export function createResourceRecorder(){
   assert(Number.isFinite(sample.monotonic_ms)&&sample.monotonic_ms>=0);
   assert(Number.isFinite(sample.mem_available_bytes)&&sample.mem_total_bytes>0&&sample.disk_free_bytes>=0,'invalid resource sample');
   if(!first)first=sample;
-  const groupValid=Number.isFinite(sample.cgroup_memory_bytes)&&sample.cgroup_memory_bytes>=0&&Number.isFinite(sample.cgroup_memory_limit_bytes)&&sample.cgroup_memory_limit_bytes>0&&Number.isSafeInteger(sample.cgroup_cpu_usage_usec)&&sample.cgroup_cpu_usage_usec>=0;
+  const groupValid=Number.isFinite(sample.cgroup_memory_bytes)&&sample.cgroup_memory_bytes>=0&&Number.isFinite(sample.cgroup_memory_limit_bytes)&&sample.cgroup_memory_limit_bytes>0&&Number.isSafeInteger(sample.cgroup_cpu_usage_usec)&&sample.cgroup_cpu_usage_usec>=0&&Number.isFinite(sample.cgroup_cpu_quota_cores)&&sample.cgroup_cpu_quota_cores>0;
   if(!groupValid)groupMissing++;
   else groupMemoryMax=Math.max(groupMemoryMax,sample.cgroup_memory_bytes/sample.cgroup_memory_limit_bytes);
   if(last){
@@ -43,13 +43,14 @@ export function createResourceRecorder(){
    cpuTotal+=total;cpuBusy+=total-idle;maxGap=Math.max(maxGap,gap);
    if(groupValid&&Number.isSafeInteger(last.cgroup_cpu_usage_usec)){const usec=sample.cgroup_cpu_usage_usec-last.cgroup_cpu_usage_usec;assert(usec>=0,'cgroup CPU counter regressed');groupUsec+=usec;groupWallMs+=gap;}
   }
-  identityChanged ||= ['boot_id','pid','cgroup'].some(k=>sample[k]!==first[k]);
+  identityChanged ||= ['boot_id','pid','cgroup','cgroup_memory_limit_bytes','cgroup_cpu_quota_cores'].some(k=>sample[k]!==first[k]);
   oom ||= sample.oom>first.oom||sample.oom_kill>first.oom_kill;
   minMemory=Math.min(minMemory??1,sample.mem_available_bytes/sample.mem_total_bytes);
   minDisk=Math.min(minDisk??Infinity,sample.disk_free_bytes);last=sample;
  },summary(requiredMs:number){
   const elapsed=first&&last?last.monotonic_ms-first.monotonic_ms:0,avg=cpuTotal?100*cpuBusy/cpuTotal:null;
+  const groupAvg=groupWallMs&&first?.cgroup_cpu_quota_cores>0?100*groupUsec/(groupWallMs*1000*first.cgroup_cpu_quota_cores):null;
   const complete=requiredMs>=86400000&&elapsed>=requiredMs&&samples>1&&unavailable===0&&groupMissing===0&&maxGap<=10000&&avg!==null&&!identityChanged&&!oom;
-  return {samples,unavailable_samples:unavailable,cgroup_missing_samples:groupMissing,observed_ms:elapsed,required_ms:requiredMs,max_sample_gap_ms:maxGap,cpu_average_percent:avg,mem_available_min_fraction:minMemory,cgroup_memory_peak_fraction:groupMissing+unavailable===samples?null:groupMemoryMax,cgroup_cpu_average_one_core_percent:groupWallMs?100*groupUsec/(groupWallMs*1000):null,cgroup_cpu_quota_cores:last?.cgroup_cpu_quota_cores??null,disk_free_min_bytes:minDisk,identity_changed:identityChanged,oom_seen:oom,complete_24h_evidence:complete,local_resource_gate:complete&&avg!<70&&minMemory!>=.2&&minDisk!>=4.5*1024**3,not_covered:['NAS budget','voice A/B','maintenance backlog','external service restart counters']};
+  return {samples,unavailable_samples:unavailable,cgroup_missing_samples:groupMissing,observed_ms:elapsed,required_ms:requiredMs,max_sample_gap_ms:maxGap,cpu_average_percent:avg,mem_available_min_fraction:minMemory,cgroup_memory_peak_fraction:groupMissing+unavailable===samples?null:groupMemoryMax,cgroup_cpu_average_one_core_percent:groupWallMs?100*groupUsec/(groupWallMs*1000):null,cgroup_cpu_average_quota_percent:groupAvg,cgroup_cpu_quota_cores:last?.cgroup_cpu_quota_cores??null,disk_free_min_bytes:minDisk,identity_changed:identityChanged,oom_seen:oom,complete_24h_evidence:complete,local_resource_gate:complete&&avg!<70&&groupAvg!==null&&groupAvg<70&&groupMemoryMax<=.8&&minMemory!>=.2&&minDisk!>=4.5*1024**3,not_covered:['NAS budget','voice A/B','maintenance backlog','external service restart counters']};
  }};
 }
