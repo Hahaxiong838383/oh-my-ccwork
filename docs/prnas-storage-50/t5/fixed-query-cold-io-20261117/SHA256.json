@@ -1,0 +1,104 @@
+[
+  {
+    "file": "query-start.json",
+    "sha256": "67b4a3db4d9f2c6d8ce184b075c222b6d8ffaf64f889f627bbd77176d633932e",
+    "source": "ARK-QUERY-FIXED-START02.json",
+    "byte_exact": true
+  },
+  {
+    "file": "query-result.json",
+    "sha256": "6a2b4b8ccc7da8b8a2a2f63d802f3b0889fe67c053022518c6050d3fa69fd191",
+    "source": "ARK-QUERY-FIXED-POLL02.json",
+    "byte_exact": true
+  },
+  {
+    "file": "query-failure-and-scan.json",
+    "sha256": "93cdd46d319de8065789e89a7bef9119a74afd8e16f3579f8085926388c41b5f",
+    "source": "FIXED-QUERY-AND-ROLLUP-PROFILE.json",
+    "byte_exact": true
+  },
+  {
+    "file": "maintenance-after-scan.json",
+    "sha256": "c57124c597ca6ad89061c1954047e2f5d1a4b7353883381fc54a4a2406e346f9",
+    "source": "MAINTENANCE-WARM-END.json",
+    "byte_exact": true
+  },
+  {
+    "file": "isolation-final.json",
+    "sha256": "6902ad3a0e9a3891a5d67f932150677ed2d8ba6ec5e905ce9e0828cecf5d5489",
+    "source": "FINAL-ISOLATION-CHECK.json",
+    "byte_exact": true
+  },
+  {
+    "file": "block-inventory.json",
+    "sha256": "fd9493b1777ead9ef9bb15d7009c0d32ac83bd3cb9cc9b1a67bcb1e887bd06bf",
+    "source": "BLOCK-RESOURCE-INVENTORY.json",
+    "byte_exact": true
+  },
+  {
+    "file": "instance-type.json",
+    "sha256": "b0a12af3807bb30ac0e7e07e48318df40e82f0e0ecde38e0431a5f2d4d386ffe",
+    "source": "CLOUD-INSTANCE-TYPE.json",
+    "byte_exact": true
+  },
+  {
+    "file": "maintenance-review.md",
+    "sha256": "ac67a30a28872679efe1216e4ce2517f1457c5787a37e434ba6faf518e984c3c",
+    "source": "maintenance-review/REPORT.md",
+    "byte_exact": true
+  },
+  {
+    "file": "maintenance-evidence.json",
+    "sha256": "6a9c120ead4c7578e6c81276095b8b514638cf9563a8867b105b2f2b6b4481d4",
+    "source": "maintenance-review/EVIDENCE.json",
+    "byte_exact": true
+  },
+  {
+    "file": "not-applied-narrow.patch",
+    "sha256": "8ac5f6f09b28d920ee77cc5ae04ff0c4d2e9e51031673036b05dd80ef8564d3d",
+    "source": "maintenance-review/rollup-narrow.patch",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-review.md",
+    "sha256": "2aafaf944541e2385a355bb36d69948c1e7d97a192463d4a2f0f423da8fae075",
+    "source": "grok-cover-review/REPORT.md",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-probe.json",
+    "sha256": "56af2d9e1784feb8d5dd4d49513e90461224037bbaaea989b0ea9da9d14a3628",
+    "source": "grok-cover-review/probe-result.json",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-original-SHA256.txt",
+    "sha256": "aa0c2a9e05791e19ceb0fcb34d494b76f9aef86d964461406b0bcfe2949af75c",
+    "source": "grok-cover-review/SHA256.txt",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-ark-initial.txt",
+    "sha256": "9e401bb6643e388337a2c4a853d25cb7be47241379fb86e64d715d59665dea4f",
+    "source": "grok-cover-review/ark-full.txt",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-ark-state-rerun.txt",
+    "sha256": "2c674bf30e69a7122310e32e19c56871a77cacc871ec2dca1f0f5daa52d8065d",
+    "source": "grok-cover-review/ark-state-rerun.txt",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-history-cover.txt",
+    "sha256": "0a160bff6bdc5ae2e1695dcd153d59f76ce8950e77093dba3bcba68834b06c99",
+    "source": "grok-cover-review/ark-history-cover.txt",
+    "byte_exact": true
+  },
+  {
+    "file": "grok-history-default.txt",
+    "sha256": "44445c8202850ba4287cb3649aa261167f2553d9fceebf9593b5648cbeab0c32",
+    "source": "grok-cover-review/ark-history-default.txt",
+    "byte_exact": true
+  }
+]

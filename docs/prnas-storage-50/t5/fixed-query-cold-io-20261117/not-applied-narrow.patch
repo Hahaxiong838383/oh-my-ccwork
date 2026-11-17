@@ -1,0 +1,11 @@
+--- a/2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts
++++ b/2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts
+@@ -57,7 +57,7 @@
+       store.readSnapshot(()=>{
+         const started=performance.now();
+         const devices:{key:string;individual:ReturnType<typeof summary>}[]=[];
+-        const result=summarizeFacts(store.db.prepare('SELECT * FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
++        const result=summarizeFacts(store.db.prepare('SELECT device_key,event_name,session_digest,clock_suspicious,semantic_json,received_at_ms FROM analytics_rollup_fact WHERE dimension=? AND day=? ORDER BY device_key,received_at_ms,id_digest').iterate(dimension,day) as Iterable<Fact>,started,budget,(key,individual)=>{
+           if(devices.length>=1000)throw new AnalyticsRollupBudgetExceeded();
+           devices.push({key,individual});
+         });

@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"instance/instance-type\": {\"status\": 200, \"value\": \"ecs.e-c1m2.large\"}, \"region-id\": {\"status\": 200, \"value\": \"cn-hongkong\"}, \"zone-id\": {\"status\": 200, \"value\": \"cn-hongkong-d\"}}\n",
+  "stderr": ""
+}

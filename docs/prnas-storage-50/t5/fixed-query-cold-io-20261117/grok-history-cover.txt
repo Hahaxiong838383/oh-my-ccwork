@@ -1,0 +1,24 @@
+[32m✔ history keeps unknown distinct from zero and never uses a 12-character alias [90m(68.2715ms)[39m[39m
+[32m✔ latest value uses event occurrence time, not delayed batch receipt or sum(delta) [90m(49.059042ms)[39m[39m
+[32m✔ historical ownership watermark and suspicious clocks are fail-closed [90m(45.516667ms)[39m[39m
+[32m✔ GM marker poisons logical day, absent marker is unknown, truncated never yields a balance [90m(75.594709ms)[39m[39m
+[32m✔ retention and query limit cannot turn partial unknown history into confident facts [90m(1879.073417ms)[39m[39m
+[32m✔ known inventory uses absolute quantity; unknown asset IDs never leak [90m(48.223208ms)[39m[39m
+[32m✔ same occurrence-time conflicting absolute values are unknown, never resolved by upload order [90m(50.002708ms)[39m[39m
+[32m✔ truncated or impossible receipt-time normal markers cannot authorize later unmarked facts [90m(49.546167ms)[39m[39m
+[32m✔ GM evidence before the authorization watermark and with future clock still excludes its logical day [90m(82.050459ms)[39m[39m
+[32m✔ thousands of unrelated valid events cannot hide wallet state or GM veto [90m(285.094792ms)[39m[39m
+[32m✔ uppercase and slash-separated GM source tokens veto normal-day history [90m(196.069333ms)[39m[39m
+[32m✔ daily awards deduplicate stable instances; checkpoints are progress only, never wallet deltas [90m(66.385875ms)[39m[39m
+[32m✔ daily absent/GM/owner/day changes do not become zero; resets are unknown [90m(49.960584ms)[39m[39m
+[32m✔ bad award row invalidates the observed award subtotal instead of silently omitting it [90m(125.964084ms)[39m[39m
+[32m✔ history selects event families through the existing selective index, preserving exact facts [90m(926.877917ms)[39m[39m
+[32m✔ offline history indexes preserve data, are idempotent, and a conflicting definition rolls back [90m(43.148667ms)[39m[39m
+[34mℹ tests 16[39m
+[34mℹ suites 0[39m
+[34mℹ pass 16[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 4089.567542[39m

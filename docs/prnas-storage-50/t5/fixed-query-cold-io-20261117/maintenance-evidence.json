@@ -1,0 +1,118 @@
+{
+  "base": "65c86916e1e6a64352ec75d3c2b6eebb364e649a",
+  "patch_sha256": "8ac5f6f09b28d920ee77cc5ae04ff0c4d2e9e51031673036b05dd80ef8564d3d",
+  "source_before_sha256": "e3f0e452f4c7fa799570fb9efed446559f36524a23305cda358e1eb162027be5",
+  "source_after_sha256": "eb652974fa779a7463d61ea8e5cbc6dd6e5a45d427cb3259d45dccb31b5ea161",
+  "comparison_rows": [
+    {
+      "name": "baseline",
+      "ms": 27615.149665999998,
+      "cpu": {
+        "user": 14031695,
+        "system": 4729011
+      },
+      "status": {
+        "attempted_days": 2,
+        "rebuilt_days": 2,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "sha256": "7cf65c2c4c209ceb27ad0a93afcb5e741eefed0c3c9e40df64d29c404b0b336f",
+      "facts": {
+        "n": 1200000
+      },
+      "rss": 168083456
+    },
+    {
+      "name": "candidate",
+      "ms": 22573.492208000003,
+      "cpu": {
+        "user": 12203894,
+        "system": 3941746
+      },
+      "status": {
+        "attempted_days": 2,
+        "rebuilt_days": 2,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "sha256": "7cf65c2c4c209ceb27ad0a93afcb5e741eefed0c3c9e40df64d29c404b0b336f",
+      "facts": {
+        "n": 1200000
+      },
+      "rss": 181731328
+    },
+    {
+      "name": "candidate",
+      "ms": 22863.139792,
+      "cpu": {
+        "user": 12036065,
+        "system": 3793067
+      },
+      "status": {
+        "attempted_days": 2,
+        "rebuilt_days": 2,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "sha256": "7cf65c2c4c209ceb27ad0a93afcb5e741eefed0c3c9e40df64d29c404b0b336f",
+      "facts": {
+        "n": 1200000
+      },
+      "rss": 182501376
+    },
+    {
+      "name": "baseline",
+      "ms": 24305.657416999995,
+      "cpu": {
+        "user": 13660075,
+        "system": 3768735
+      },
+      "status": {
+        "attempted_days": 2,
+        "rebuilt_days": 2,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "sha256": "7cf65c2c4c209ceb27ad0a93afcb5e741eefed0c3c9e40df64d29c404b0b336f",
+      "facts": {
+        "n": 1200000
+      },
+      "rss": 208125952
+    },
+    {
+      "name": "fact-budget-rollback",
+      "status": {
+        "attempted_days": 2,
+        "rebuilt_days": 0,
+        "failed_days": [
+          {
+            "dimension": "occurred",
+            "day": "2026-11-17",
+            "reason": "budget_exceeded"
+          },
+          {
+            "dimension": "received",
+            "day": "2026-11-17",
+            "reason": "budget_exceeded"
+          }
+        ],
+        "remaining_dirty_days": 2,
+        "partial": true
+      },
+      "summary_unchanged": true
+    }
+  ],
+  "mean_wall_ms": {
+    "baseline": 25960.403541499996,
+    "candidate": 22718.316000000003
+  },
+  "mean_cpu_ms": {
+    "baseline": 18094.758,
+    "candidate": 15987.385999999999
+  }
+}

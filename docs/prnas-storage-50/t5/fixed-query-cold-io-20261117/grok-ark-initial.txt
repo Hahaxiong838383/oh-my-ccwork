@@ -1,0 +1,187 @@
+[32m✔ 当前G1奖励问句优先召回有效专注与领取边界，不借旧夜航解释 [90m(12.691875ms)[39m[39m
+[32m✔ 静态资源用途保留独立双钱包和现实奖励约定边界 [90m(0.80525ms)[39m[39m
+[32m✔ 外部游戏及普通闲聊不会被G1状态召回污染 [90m(0.855584ms)[39m[39m
+[32m✔ ordinary classroom rewards are not game state or knowledge requests [90m(1.173208ms)[39m[39m
+[34mℹ tests 4[39m
+[34mℹ suites 0[39m
+[34mℹ pass 4[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 39.700625[39m
+[32m✔ identity epoch ignores settings timestamp but catches ABA binding and reactivation [90m(59.622417ms)[39m[39m
+[32m✔ revocation and delete/recreate invalidate already accepted state [90m(54.516333ms)[39m[39m
+[32m✔ absent identity/epoch never falls back to an env or parent account [90m(37.326333ms)[39m[39m
+[32m✔ default closed and disabled gate cannot disclose or accept state [90m(39.534334ms)[39m[39m
+[32m✔ snapshot accepts real zero and unknown separately; current duplicate never renews timestamp [90m(39.958042ms)[39m[39m
+[32m✔ same ID different payload conflicts, superseded sequences remain stale [90m(39.046833ms)[39m[39m
+[32m✔ new boot requires strictly newer boot start, old boot cannot return [90m(40.179542ms)[39m[39m
+[32m✔ future clock, boot after capture, pre-grant capture and captured-time reversal rejected [90m(44.289792ms)[39m[39m
+[32m✔ arbitrary text, extra identity, invalid numbers and inconsistent reward shapes are rejected [90m(2.997041ms)[39m[39m
+[32m✔ GM, unknown source, stale and cross-day snapshots never become live countdown [90m(59.297459ms)[39m[39m
+[32m✔ reward kinds and paused/claimable/claimed/complete/unknown remain distinct [90m(42.51625ms)[39m[39m
+[31m✖ versioned Android example conforms to executable v1 schema [90m(1.14725ms)[39m[39m
+[32m✔ one resolved value per asset; newer occurrence wins across sources, equal-time disagreement is unknown [90m(39.661375ms)[39m[39m
+[32m✔ unchanged grants and snapshots survive repeated saves and enrolling another device [90m(42.18325ms)[39m[39m
+[32m✔ single-device authorization cannot revive another rebound device; full settings use CAS [90m(42.448791ms)[39m[39m
+[32m✔ Ark settings migration survives reopening the store [90m(19.288667ms)[39m[39m
+[34mℹ tests 16[39m
+[34mℹ suites 0[39m
+[34mℹ pass 15[39m
+[34mℹ fail 1[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 649.700792[39m
+
+[31m✖ failing tests:[39m
+
+test at scripts/ark-state.test.ts:2:7188
+[31m✖ versioned Android example conforms to executable v1 schema [90m(1.14725ms)[39m[39m
+  Error: ENOENT: no such file or directory, open '/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json'
+  [90m    at readFileSync (node:fs:484:20)[39m
+      at TestContext.<anonymous> [90m(/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/[39mscripts/ark-state.test.ts:71:91[90m)[39m
+  [90m    at Test.runInAsyncScope (node:async_hooks:227:14)[39m
+  [90m    at Test.run (node:internal/test_runner/test:1382:25)[39m
+  [90m    at Test.processPendingSubtests (node:internal/test_runner/test:960:18)[39m
+  [90m    at Test.postRun (node:internal/test_runner/test:1522:19)[39m
+  [90m    at Test.run (node:internal/test_runner/test:1447:12)[39m
+  [90m    at async Test.processPendingSubtests (node:internal/test_runner/test:960:7)[39m {
+    errno: [33m-2[39m,
+    code: [32m'ENOENT'[39m,
+    syscall: [32m'open'[39m,
+    path: [32m'/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/docs/ark-brain-20261031/snapshot-v1.example.json'[39m
+  }
+[32m✔ history keeps unknown distinct from zero and never uses a 12-character alias [90m(58.009542ms)[39m[39m
+[32m✔ latest value uses event occurrence time, not delayed batch receipt or sum(delta) [90m(34.693791ms)[39m[39m
+[32m✔ historical ownership watermark and suspicious clocks are fail-closed [90m(31.911958ms)[39m[39m
+[32m✔ GM marker poisons logical day, absent marker is unknown, truncated never yields a balance [90m(28.90825ms)[39m[39m
+[32m✔ retention and query limit cannot turn partial unknown history into confident facts [90m(1306.136834ms)[39m[39m
+[32m✔ known inventory uses absolute quantity; unknown asset IDs never leak [90m(34.975333ms)[39m[39m
+[32m✔ same occurrence-time conflicting absolute values are unknown, never resolved by upload order [90m(33.935ms)[39m[39m
+[32m✔ truncated or impossible receipt-time normal markers cannot authorize later unmarked facts [90m(31.448042ms)[39m[39m
+[32m✔ GM evidence before the authorization watermark and with future clock still excludes its logical day [90m(82.719083ms)[39m[39m
+[32m✔ thousands of unrelated valid events cannot hide wallet state or GM veto [90m(162.865334ms)[39m[39m
+[32m✔ uppercase and slash-separated GM source tokens veto normal-day history [90m(141.928583ms)[39m[39m
+[32m✔ daily awards deduplicate stable instances; checkpoints are progress only, never wallet deltas [90m(46.864625ms)[39m[39m
+[32m✔ daily absent/GM/owner/day changes do not become zero; resets are unknown [90m(29.460583ms)[39m[39m
+[32m✔ bad award row invalidates the observed award subtotal instead of silently omitting it [90m(97.839583ms)[39m[39m
+[32m✔ history selects event families through the existing selective index, preserving exact facts [90m(582.273459ms)[39m[39m
+[32m✔ offline history indexes preserve data, are idempotent, and a conflicting definition rolls back [90m(59.52825ms)[39m[39m
+[34mℹ tests 16[39m
+[34mℹ suites 0[39m
+[34mℹ pass 16[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 2795.009625[39m
+[32m✔ ordinary chat and static purposes cause zero identity or internal queries [90m(33.07025ms)[39m[39m
+[32m✔ parent/anonymous/override/feedback/wrong-room cannot read device facts [90m(13.2775ms)[39m[39m
+ark_total_body_timeout_ms=135.41
+[32m✔ query timeout includes body parsing and degrades to unknown within total budget [90m(155.540334ms)[39m[39m
+[32m✔ late rebinding invalidates in-flight facts; malformed or oversized responses fail closed [90m(67.134833ms)[39m[39m
+[32m✔ dynamic turns and their answers cannot reach later/idle extraction windows; normal profile statements remain [90m(3.756417ms)[39m[39m
+[32m✔ multiple short followups retain the game topic; explicit topic switch stops both queries and stale context [90m(1.727709ms)[39m[39m
+[32m✔ audit exclusion metadata survives even when an isolated answer contains no recognizable resource words [90m(0.274666ms)[39m[39m
+[34mℹ tests 7[39m
+[34mℹ suites 0[39m
+[34mℹ pass 7[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 287.44725[39m
+[memory] extract scheduler mode=turn allowlist=""
+[32m✔ real HTTP: default closed, admin authorization and active identity scope [90m(277.6395ms)[39m[39m
+[32m✔ real HTTP: Bearer isolation, byte limit, schema, duplicate timestamp, conflict, stale and rate limit [90m(155.410958ms)[39m[39m
+[32m✔ real internal HTTP: token, subject/account/epoch, malformed and oversized requests; upload remains shut [90m(61.973458ms)[39m[39m
+[curriculum-kg] 加载失败（降级为不注入）: ENOENT: no such file or directory, open '/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/tmp/ark-http-IhPDMe/absent/nodes.json'
+[custom-llm] 记忆注入 account=device-BJP00399999999999901
+[persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[ark-direct] {"room":"sn-BJP00399999999999901-1793430000","response_id":"chatcmpl-7tglbg55e2","typed_facts":false}
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[32m✔ real custom-llm SSE: static/ordinary zero queries; prompt has authorized zero balance and source timestamps [90m(122.247459ms)[39m[39m
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[32m✔ real SSE: stale history removed; followup requeries; admin preview same source; parent cannot query [90m(76.540333ms)[39m[39m
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[memory] 兴趣候选无证据/证据不符被拒 1 项
+[memory] account=device-BJP00399999999999901 画像更新: interests
+[32m✔ actual persistence: audit retained; current/later/idle windows skip dynamic extraction; ordinary interest still persists [90m(32.879625ms)[39m[39m
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[ark-direct] {"room":"sn-BJP00399999999999901-1793430001","response_id":"chatcmpl-fty3510u3k","typed_facts":true}
+[custom-llm] 匿名（无 token） [kb]
+[custom-llm] 匿名（无 token） [kb]
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[32m✔ main JWT-only callback retains verified facts with zero upstream model calls [90m(89.676ms)[39m[39m
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[ark-direct] {"room":"sn-BJP00399999999999901-1793430001","response_id":"chatcmpl-xh0i45sf4j","typed_facts":false}
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[ark-direct] {"room":"sn-BJP00399999999999901-1793430001","response_id":"chatcmpl-0skxxlzdrz","typed_facts":false}
+[custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+[persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+[ark-direct] {"room":"sn-BJP00399999999999901-1793430001","response_id":"chatcmpl-mzqc6b0edu","typed_facts":false}
+[custom-llm] 匿名（无 token） [kb]
+[32m✔ v384 split usage: authenticated SSE is finite; ordinary fallback recalls the same knowledge [90m(45.810709ms)[39m[39m
+[32m✔ disable/reactivation and credential revocation invalidate grants without restart [90m(10.837083ms)[39m[39m
+[34mℹ tests 9[39m
+[34mℹ suites 0[39m
+[34mℹ pass 9[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 917.126708[39m
+[32m✔ proxy requires dedicated token and exact scope; returns bounded trusted facts [90m(82.868667ms)[39m[39m
+[32m✔ proxy cannot use remote URLs, unknown subjects, redirects, malformed or oversized responses [90m(3.550208ms)[39m[39m
+[32m✔ proxy total deadline covers slow fetch/body and revocation suppresses in-flight facts [90m(307.869625ms)[39m[39m
+[32m✔ authority deadline includes facts and client rejects elapsed time even before timers run [90m(504.756875ms)[39m[39m
+[34mℹ tests 4[39m
+[34mℹ suites 0[39m
+[34mℹ pass 4[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 910.963416[39m
+[32m✔ isolated Brain uses current authority grants independently of search SN scope; trusted worker/state question required; never opens ark.db [90m(79.2725ms)[39m[39m
+[34mℹ tests 1[39m
+[34mℹ suites 0[39m
+[34mℹ pass 1[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 114.141375[39m
+[32m✔ accepted stardust and dedicated card balance are readable and independently selected [90m(82.940458ms)[39m[39m
+[32m✔ new readers preserve real zero, ownership watermark, full device identity and source veto [90m(172.553292ms)[39m[39m
+[32m✔ same-time conflict across dedicated/general inventory and stardust never uses upload order [90m(38.568291ms)[39m[39m
+[32m✔ daily answer selects exactly requested resource, never wallet or another reward [90m(92.212708ms)[39m[39m
+[32m✔ natural reward questions actually pass static shortcut and ask facts; outside topics stay chat [90m(3.752083ms)[39m[39m
+[32m✔ no eligibility/price data is not guessed from the card count or static knowledge [90m(1.057917ms)[39m[39m
+[32m✔ new readers use latest occurrence, ignore future rows and do not sum deltas [90m(42.529333ms)[39m[39m
+[32m✔ natural next reward uses fresh facts, expired facts cannot report countdown [90m(3.619584ms)[39m[39m
+[32m✔ sharing a reward experience stays conversation, not a personal data query [90m(0.708042ms)[39m[39m
+[32m✔ question particles belong to the reward clause, not narrative adverbs or another clause [90m(1.634417ms)[39m[39m
+[34mℹ tests 10[39m
+[34mℹ suites 0[39m
+[34mℹ pass 10[39m
+[34mℹ fail 0[39m
+[34mℹ cancelled 0[39m
+[34mℹ skipped 0[39m
+[34mℹ todo 0[39m
+[34mℹ duration_ms 475.963833[39m

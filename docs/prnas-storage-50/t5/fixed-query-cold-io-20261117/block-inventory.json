@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"dmi_product\": \"Alibaba Cloud ECS\", \"block\": \"NAME   TYPE        SIZE MODEL MOUNTPOINT\\nvda    disk 42949672960       \\n\\u251c\\u2500vda1 part     1048576       \\n\\u251c\\u2500vda2 part   209715200       /boot/efi\\n\\u2514\\u2500vda3 part 42737843712       /\\n\"}\n",
+  "stderr": ""
+}

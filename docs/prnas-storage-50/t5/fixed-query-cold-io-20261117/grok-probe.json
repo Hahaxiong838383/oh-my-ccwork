@@ -1,0 +1,300 @@
+{
+  "node": "v24.19.0",
+  "event_lists": {
+    "query": [
+      [
+        "g1.logical_day_changed",
+        "g1.command_failed",
+        "g1.runtime_command_completed",
+        "g1.gift_became_available",
+        "g1.gift_claimed",
+        "g1.reward_granted"
+      ],
+      [
+        "g1.wallet_balance_changed",
+        "g1.inventory_changed",
+        "g1.makeup_card_balance_changed"
+      ],
+      [
+        "g1.progress_checkpoint",
+        "g1.reward_granted"
+      ]
+    ],
+    "index": {
+      "evidence": [
+        "g1.logical_day_changed",
+        "g1.command_failed",
+        "g1.runtime_command_completed",
+        "g1.gift_became_available",
+        "g1.gift_claimed",
+        "g1.reward_granted"
+      ],
+      "assets": [
+        "g1.wallet_balance_changed",
+        "g1.inventory_changed",
+        "g1.makeup_card_balance_changed"
+      ],
+      "daily": [
+        "g1.progress_checkpoint",
+        "g1.reward_granted"
+      ]
+    },
+    "evidence_equal": true,
+    "assets_equal": true,
+    "daily_equal": true
+  },
+  "startup_creates_new_indexes": false,
+  "empty": {
+    "before_status": "unknown",
+    "created": {
+      "created": [
+        "analytics_ark_evidence_cover_v1",
+        "analytics_ark_assets_cover_v1",
+        "analytics_ark_daily_cover_v1"
+      ]
+    },
+    "again": {
+      "created": []
+    },
+    "after_status": "unknown",
+    "is_transaction": false,
+    "sqlite": "3.53.3",
+    "stored": {
+      "analytics_ark_evidence_cover_v1": {
+        "equal": true,
+        "stored_length": 366,
+        "expected_length": 366
+      },
+      "analytics_ark_assets_cover_v1": {
+        "equal": true,
+        "stored_length": 307,
+        "expected_length": 307
+      },
+      "analytics_ark_daily_cover_v1": {
+        "equal": true,
+        "stored_length": 267,
+        "expected_length": 267
+      }
+    }
+  },
+  "fallback": {
+    "indexes": {
+      "evidence": "analytics_ark_device_event_received",
+      "assets": "analytics_ark_device_event_received",
+      "daily": "analytics_ark_device_event_received"
+    },
+    "hinted_coin": 777,
+    "stripped_coin": 777,
+    "hinted_card": 4,
+    "stripped_card": 4,
+    "hinted_daily_progress": 300,
+    "stripped_daily_progress": 300,
+    "hinted_reward_qty": 20,
+    "stripped_reward_qty": 20,
+    "equal": true,
+    "other_coin": 12345,
+    "noise": {
+      "ok": true,
+      "n": 3000
+    },
+    "family_indexed": 602,
+    "family_table": 602,
+    "pages": {
+      "page_count": 576
+    },
+    "page_size": {
+      "page_size": 4096
+    },
+    "plans": [
+      {
+        "detail": [
+          "SEARCH e USING INDEX analytics_ark_device_event_received (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING INDEX analytics_ark_device_event_received (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING INDEX analytics_ark_device_event_received (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING INDEX analytics_ark_device_event_received (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING INDEX analytics_ark_device_event_received (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING INDEX analytics_ark_device_event_received (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      }
+    ]
+  },
+  "cover": {
+    "indexes": {
+      "evidence": "analytics_ark_evidence_cover_v1",
+      "assets": "analytics_ark_assets_cover_v1",
+      "daily": "analytics_ark_daily_cover_v1"
+    },
+    "hinted_coin": 777,
+    "stripped_coin": 777,
+    "hinted_card": 4,
+    "stripped_card": 4,
+    "hinted_daily_progress": 300,
+    "stripped_daily_progress": 300,
+    "hinted_reward_qty": 20,
+    "stripped_reward_qty": 20,
+    "equal": true,
+    "other_coin": 12345,
+    "noise": {
+      "ok": false,
+      "error": "no query solution"
+    },
+    "family_indexed": 602,
+    "family_table": 602,
+    "pages": {
+      "page_count": 639
+    },
+    "page_size": {
+      "page_size": 4096
+    },
+    "plans": [
+      {
+        "detail": [
+          "SEARCH e USING COVERING INDEX analytics_ark_evidence_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING COVERING INDEX analytics_ark_assets_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING COVERING INDEX analytics_ark_daily_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING COVERING INDEX analytics_ark_evidence_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING COVERING INDEX analytics_ark_assets_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      },
+      {
+        "detail": [
+          "SEARCH e USING COVERING INDEX analytics_ark_daily_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)",
+          "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN",
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      }
+    ]
+  },
+  "overflow_daily": {
+    "daily": null,
+    "status": "unknown"
+  },
+  "gm_isolation": {
+    "poisoned_status": "unknown",
+    "poisoned_coin": null,
+    "other_status": "available",
+    "other_coin": 44
+  },
+  "narrow_partial": {
+    "read": {
+      "ok": false,
+      "error": "no query solution"
+    },
+    "install": {
+      "threw": "ARK_HISTORY_INDEX_DEFINITION_CONFLICT",
+      "is_transaction": false
+    },
+    "after": {
+      "error": "no query solution",
+      "is_transaction": false
+    },
+    "evidence_daily_left": 0
+  },
+  "refuse_nested": {
+    "inside": {
+      "threw": "ARK_HISTORY_INDEX_REQUIRES_OWN_TRANSACTION"
+    },
+    "cover_count": 0,
+    "is_transaction": false,
+    "still_reads": "unknown"
+  },
+  "timing": {
+    "rounds": 300,
+    "schema_lookup_ms": 22.774,
+    "schema_per_ms": 0.0759,
+    "history_read_ms": 256.604,
+    "history_per_ms": 0.8553
+  },
+  "cli": {
+    "rel_status": 1,
+    "missing_flag_status": 1,
+    "missing_file_status": 1,
+    "first": {
+      "status": 0,
+      "signal": null,
+      "ms": 524.4,
+      "stdout": "{\"created\":[\"analytics_ark_evidence_cover_v1\",\"analytics_ark_assets_cover_v1\",\"analytics_ark_daily_cover_v1\"]}\n",
+      "stderr": ""
+    },
+    "second": {
+      "status": 0,
+      "signal": null,
+      "ms": 358.2,
+      "stdout": "{\"created\":[]}\n",
+      "stderr": ""
+    },
+    "wal_bytes": 0,
+    "visible_with_wal": 3,
+    "coin_after_cli": 9,
+    "db_only_copy_visible": 3,
+    "dir_status": 1,
+    "dir_stderr": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history-indexes.ts:9\nconst db=new DatabaseSync(resolve(path));\n         ^\n\nError: unable to open database file\n    at <anonymous> \u001b[90m(/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/\u001b[39mscripts/ark-history-indexes.ts:9:10\u001b[90m)\u001b[39m",
+    "empty_status": 1,
+    "empty_stderr": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/src/ark/history-indexes.ts:18\n   db.exec(sql);created.push(name);\n      ^\n\nError: no such table: main.analytics_event\n    at installArkHistoryIndexes \u001b[90m(/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/\u001b[39msrc/ark/history-indexes.ts:18:7\u001b[90m)\u001b[39m",
+    "locked": {
+      "status": 1,
+      "signal": null,
+      "ms": 304.5,
+      "stdout": "",
+      "stderr": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/src/ark/history-indexes.ts:12\n const created:string[]=[];db.exec('BEGIN IMMEDIATE');\n                              ^\n\nError: database is locked\n    at installArkHistoryIndexes \u001b[90m(/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-cover-review/sha-65c86916/2-Projects/P003GameDemo20260513/apps/server/\u001b[39msrc/ark/history-indexes.ts:12:31\u001b[90m)\u001b[39m"
+    }
+  }
+}
