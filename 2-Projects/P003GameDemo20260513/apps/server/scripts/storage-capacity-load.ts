@@ -46,6 +46,13 @@ if(mode==='run'){
  if(config.covering_index)store.db.exec('CREATE INDEX t5_experiment_cover ON analytics_rollup_fact(dimension,day,device_key,received_at_ms,id_digest,event_name,session_digest,clock_suspicious,semantic_json)');
  if(config.ark_history_indexes)installArkHistoryIndexes(store.db);
  if(config.rollup_prefix_index)installRollupPrefixIndex(store.db);
+ // Match startAnalyticsServer's foreground connection; only the separate writer
+ // may mutate Analytics. A generic AnalyticsStore defaults to a 64MiB writer cache.
+ store.db.exec('PRAGMA query_only=ON; PRAGMA cache_size=-8192; PRAGMA shrink_memory');
+ assert.equal(store.db.prepare('PRAGMA query_only').get()!.query_only,1);
+ assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,-8192);
+ Object.assign(config,{reader_query_only:true,reader_cache_kib:8192});
+ writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run)});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
