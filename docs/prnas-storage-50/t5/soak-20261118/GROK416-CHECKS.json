@@ -1,0 +1,160 @@
+{
+  "review": "history-cold-9e9-63de-20261118",
+  "at": "2026-11-18T04:04:55+08:00",
+  "readonly": true,
+  "ssh": false,
+  "started_other_agents": false,
+  "changed_business_src": false,
+  "ran_load": false,
+  "purchased": false,
+  "deployed": false,
+  "touched_360_or_373": false,
+  "production_changed": false,
+  "adopt_10ms_period": false,
+  "cache_shrink_recommended": false,
+  "esbuild_removal_recommended": false,
+  "v2_index_as_stall_fix": false,
+  "drop_mixed_load": false,
+  "raise_gates": false,
+  "profile_history_source": {
+    "candidate": "9e9b481908c1f62f8c25c95209e68d398f1057a4",
+    "history_blobs_also_at": [
+      "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+      "63de5fcf28fa7e5bb65cf3bae709b67d901679b9"
+    ],
+    "io_measurement_commit": "63de5fcf28fa7e5bb65cf3bae709b67d901679b9"
+  },
+  "head_observed_while_writing": "7bf7fcfb7851ad0dbaa092a7a6dcfbc3ba1c5b7b",
+  "later_commits_not_under_test": [
+    {
+      "commit": "3b09cde505065be7732d85686acd8863251a3aaf",
+      "effect": "evidence cover v2 only; assets index unchanged"
+    },
+    {
+      "commit": "7bf7fcfb7851ad0dbaa092a7a6dcfbc3ba1c5b7b",
+      "effect": "test-only T5_DIAGNOSTIC_WAL_RECLAIM=64MiB checkpointer walMaxBytes; writer hard limit stays 256MiB"
+    },
+    {
+      "commit": "10d0dc5514671c85c9224d84eff224700172c2cc",
+      "effect": "test-only ark.accept error-code log; reclaim hook unchanged"
+    }
+  ],
+  "gates_unchanged": {
+    "client_abort_ms": 120,
+    "history_accept_ms": 125,
+    "round_p99_ms": 100,
+    "cpu_quota": "50%",
+    "memory_max": "768M",
+    "working_set_max": 0.8,
+    "foreground_cache_kib": 65536,
+    "writer_wal_hard_limit_bytes": 268435456,
+    "ack_complete_required": true
+  },
+  "covering": {
+    "sqlite_explain": "3.53.3",
+    "evidence_plan": "SEARCH USING COVERING INDEX analytics_ark_evidence_cover_v1",
+    "assets_plan": "SEARCH USING COVERING INDEX analytics_ark_assets_cover_v1",
+    "open_read_count_each": 1,
+    "deferred_seek": false,
+    "temp_btree_order_by": true,
+    "evidence_function_opcodes": 14,
+    "assets_function_opcodes": 0
+  },
+  "measured_9e9": {
+    "status": "FAIL_MIXED_QUERY_AND_MEMORY",
+    "query_id": "mixed-query-1794943114841-0",
+    "request_wall_ms": 2495.842803000007,
+    "main_thread_cpu_ms": 14.657,
+    "sql_wall_fraction": 0.9719649078395607,
+    "evidence_all_wall_ms": 1485.0468020000262,
+    "evidence_all_cpu_ms": 6.067,
+    "assets_all_wall_ms": 939.6935539999977,
+    "assets_all_cpu_ms": 3.138,
+    "history_failures": 30,
+    "events_acknowledged": 300000,
+    "dirty_rows": 0,
+    "working_set_peak_fraction": 0.9940897623697916,
+    "working_set_peak_bytes": 800546816,
+    "gap_to_80_percent_bytes": 156301722,
+    "memory_max_events_in_stall_bucket": 157,
+    "checkpoint_running_at_nearest_health": true,
+    "wal_bytes": 242532072,
+    "reclaimed": false
+  },
+  "measured_63de": {
+    "status": "FAIL_COMPLETE_MIX",
+    "query_id": "mixed-query-1794944395216-0",
+    "evidence_all_wall_ms": 921.4334460000391,
+    "evidence_all_cpu_ms": 4.056,
+    "evidence_thread_read_bytes": 208896,
+    "evidence_thread_read_calls": 93,
+    "assets_all_wall_ms": 29.10264300002018,
+    "assets_thread_read_bytes": 86016,
+    "history_failures": 21,
+    "query_p99_ms": 161.2876539999852,
+    "events_acknowledged": 300000,
+    "dirty_rows": 0,
+    "working_set_peak_fraction": 0.9997100830078125,
+    "checkpoint_completed_ms": 1794944396951,
+    "checkpoint_duration_ms": 3373.8274109999998,
+    "checkpoint_frames": 20349,
+    "wal_bytes": 241209552,
+    "reclaimed": false,
+    "io_pressure_full_delta_usec": 2752835
+  },
+  "v2_in_flight_snapshot": {
+    "final": false,
+    "at_ms": 1794945505606,
+    "query_id": "mixed-query-1794945449461-1",
+    "evidence_v2_wall_ms": 165.98476299998583,
+    "evidence_v2_read_bytes": 20480,
+    "assets_v1_wall_ms": 649.9069810000365,
+    "assets_v1_read_bytes": 77824,
+    "wchan": "folio_wait_bit_common",
+    "task_state": "D",
+    "wal_resident_bytes": 154189824,
+    "db_resident_bytes": 150786048,
+    "anon_bytes": 453095424
+  },
+  "candidate": {
+    "change": "one later run with T5_DIAGNOSTIC_WAL_RECLAIM=64MiB",
+    "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts",
+    "commit": "7bf7fcfb7851ad0dbaa092a7a6dcfbc3ba1c5b7b",
+    "checkpointer_wal_max_bytes": 67108864,
+    "writer_wal_hard_limit_bytes": 268435456,
+    "history_sql_change": false,
+    "run_in_parallel_with_v2_or_8mib": false,
+    "promises_working_set_under_0_8": false,
+    "promises_p99_under_100ms": false
+  },
+  "falsify_if": [
+    "wal_bytes<=67108864 and reclaimed=true while an evidence or assets all() still exceeds 500ms with read_bytes<1MiB",
+    "all() returns busy or sql_busy rises during TRUNCATE",
+    "read_bytes>8MiB on the slow all() with only a few milliseconds of thread CPU"
+  ],
+  "evidence_sha256": {
+    "PROFILE-MIXED-INDEPENDENT.json": "fdf08baf6ac97a06408e77447979419f56c5e114d89d2de1118a18c5f3435f22",
+    "profile-cadence-evidence-9e9b4819/RESULT.json": "f00285ae3905611379408337025e2446ab8547d7a4797b6839969188ee3c8d96",
+    "profile-cadence-evidence-9e9b4819/FAILURE.json": "7f2d81efed3dda660037eb60a36d1e664152a5a27e1d217bdb734b694c4563cf",
+    "profile-cadence-evidence-9e9b4819/sql-query-profile.jsonl": "2a308fe53bc559edd8368cbdf3d6e1029d13f771ebd04a3561e77e495d85ca07",
+    "profile-cadence-evidence-9e9b4819/resources.jsonl": "a53ab91f24a34f36acbba95c7e9afce91513a78b76db0ee93a1ca0ce2d7454de",
+    "profile-cadence-evidence-9e9b4819/health.jsonl": "33fcfc5adb34b60713bd262a7c433f05a184d543d3f6a48ecbfea9dd98787798",
+    "profile-cadence-evidence-9e9b4819/control/profile-cadence-guard.jsonl": "1e739f3045c47ca94da689a4f8073fd7bb25366ca4544805b669432e1ff0962d",
+    "profile-cadence-evidence-9e9b4819/maintenance-1794943114841.stdout": "08b9ac24c848916e305798f17b143721d7eec7f321cd11f3f6ab68a4c4fcf2da",
+    "IO-MIXED-INDEPENDENT.json": "9cba92ca1c5631c4669e0ebf4873f223b23ca515061421574be5edc0b7d49d8c",
+    "io-cadence-evidence-63de5fcf/sql-query-profile.jsonl": "102ffea8f349e967dcd212f8f3017f8cf019e2ab567a4adede8d08ddac4abcc5",
+    "io-cadence-evidence-63de5fcf/health.jsonl": "ad0377f29c42fe6c2345cfbab8757a666750b7f3c9be3da9e54082a973cb19c0",
+    "io-cadence-evidence-63de5fcf/resources.jsonl": "aa8ded04bc8624ad5aa9aa263f778967e4909ccfb06e6f02d423ae8ee3ae3dfd",
+    "io-cadence-evidence-63de5fcf/control/io-cadence-guard.jsonl": "d776b170bec02fc9a5769bd9526242911e79a95f9b434d3b7c51e274aac5111b",
+    "HISTORY-SQL-EXPLAIN.json": "e3628290946207a730fe609f6e7fd89648e6207b1fb78c38a9f5c91c64c34370",
+    "ORDER-INDEX-COMPARISON.json": "6b081277ef58f1b77a8586807f8cde6d9e1aa7b32359b7475517d80af0347247",
+    "FILTERED-INDEX-COMPARISON.json": "cd312c16d9e5f94ba3979c8bc907d5d20436f36d8c2c43dc18c4e4ecfdda1370",
+    "V2-LATEST-SUMMARY.json": "9e5610dd9912f6d356f09ca3ce5ee89357e1b7bc60441b4465ae6da7f3fa458c",
+    "V2-WAIT-QUERY-CORRELATION.json": "7e62c95b219dbc0c6eb82dca45a8ce5a1ec312e710d19584dcad2eab82e22c3f",
+    "V2-RESIDENCY-1794945371703.json": "9fbb4f68d127b55acb811f9cdbc66ea363a20ca148896faf1c232df6ee07d260",
+    "review-sql-cpu/REVIEW.md": "731685172c4ee7704a3437fe4ef48e2c4d528192f8b48bd4867c7da9abdca627",
+    "shared-cadence-evidence-193bf990/resources.jsonl": "6716da992edf0470b8dfd25f07c6848c9a547ecbb75d9a22e13653a39dfee47e",
+    "REVIEW.md": "cd50dff779ed7fae5fd8df37b62fd8d12991639c07ddb3d96985d6503078f641"
+  },
+  "head_at_delivery": "10d0dc5514671c85c9224d84eff224700172c2cc"
+}

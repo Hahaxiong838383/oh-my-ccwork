@@ -1,0 +1,102 @@
+{
+  "query": {
+    "id": "mixed-query-1794945449461-1",
+    "started_at_ms": 1794945450873,
+    "statements": [
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "71252f4dcd3e16b74d02f73a2db05ccd75e8df8bdc7b049d2bc346ade6b04f74",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY analytics_ark_as",
+        "started_at_ms": 1794945451040,
+        "wall_ms": 649.9069810000365,
+        "thread_cpu_ms": 2.007,
+        "thread_read_bytes": 77824,
+        "thread_read_calls": 39,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "3b02b3b9b692a98575ce2d80aea287daaf1029f75fbc543b24d9f9db6ad971c0",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json FROM analytics_event e INDEXED BY analytics_ark_evidence_cover_v2 WHE",
+        "started_at_ms": 1794945450874,
+        "wall_ms": 165.98476299998583,
+        "thread_cpu_ms": 0.74,
+        "thread_read_bytes": 20480,
+        "thread_read_calls": 14,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "get",
+        "sql_hash": "b7e0b9b7c45e0e7391d0eb7bbd2758ef85b8ba5b2bb03d4c5a798627fdc3408f",
+        "sql": "SELECT enabled,revision FROM ark_settings WHERE id=1",
+        "started_at_ms": 1794945450873,
+        "wall_ms": 0.25112800003262237,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 4,
+        "error": null
+      }
+    ],
+    "omitted": 0,
+    "finished_at_ms": 1794945451693,
+    "wall_ms": 820.1392099999939,
+    "main_thread_cpu_during_request_ms": 6.288
+  },
+  "overlap": [
+    {
+      "at_ms": 1794945450972,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720239 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 1 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214736314\nwchar: 22430921\nsyscr: 44565\nsyscw: 28852\nread_bytes: 6975488\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451072,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720255 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 0 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214785982\nwchar: 22430921\nsyscr: 44585\nsyscw: 28852\nread_bytes: 6991872\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451173,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720256 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 1 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214806462\nwchar: 22430921\nsyscr: 44590\nsyscw: 28852\nread_bytes: 7012352\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451273,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720268 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 1 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214843326\nwchar: 22430921\nsyscr: 44599\nsyscw: 28852\nread_bytes: 7024640\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451373,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720269 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 1 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214851518\nwchar: 22430921\nsyscr: 44601\nsyscw: 28852\nread_bytes: 7032832\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451473,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720276 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 1 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214876094\nwchar: 22430921\nsyscr: 44607\nsyscw: 28852\nread_bytes: 7041024\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451574,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720280 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 1 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214888382\nwchar: 22430921\nsyscr: 44610\nsyscw: 28852\nread_bytes: 7053312\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    },
+    {
+      "at_ms": 1794945451674,
+      "stat": "2482996 (MainThread) D 1 2482996 2482996 0 -1 4194560 720286 257192 0 0 3855 498 506 273 35 15 14 0 797606923 38125056000 73987 18446744073709551615 7606272 52430497 140722299753984 0 0 0 0 16781312 83458 0 0 0 17 0 0 0 0 0 0 111965664 112154912 713564160 140722299755739 140722299755930 140722299755930 140722299756477 0\n",
+      "wchan": "folio_wait_bit_common",
+      "io": "rchar: 214904766\nwchar: 22430921\nsyscr: 44614\nsyscw: 28852\nread_bytes: 7061504\nwrite_bytes: 14811136\ncancelled_write_bytes: 4096\n"
+    }
+  ],
+  "sample_range": [
+    1794945446854,
+    1794945491925
+  ]
+}

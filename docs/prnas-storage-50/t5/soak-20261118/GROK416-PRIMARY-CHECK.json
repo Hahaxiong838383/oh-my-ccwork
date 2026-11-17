@@ -1,0 +1,31 @@
+{
+  "evidence_sha_match": [
+    "PROFILE-MIXED-INDEPENDENT.json",
+    "profile-cadence-evidence-9e9b4819/RESULT.json",
+    "profile-cadence-evidence-9e9b4819/FAILURE.json",
+    "profile-cadence-evidence-9e9b4819/sql-query-profile.jsonl",
+    "profile-cadence-evidence-9e9b4819/resources.jsonl",
+    "profile-cadence-evidence-9e9b4819/health.jsonl",
+    "profile-cadence-evidence-9e9b4819/control/profile-cadence-guard.jsonl",
+    "profile-cadence-evidence-9e9b4819/maintenance-1794943114841.stdout",
+    "IO-MIXED-INDEPENDENT.json",
+    "io-cadence-evidence-63de5fcf/sql-query-profile.jsonl",
+    "io-cadence-evidence-63de5fcf/health.jsonl",
+    "io-cadence-evidence-63de5fcf/resources.jsonl",
+    "io-cadence-evidence-63de5fcf/control/io-cadence-guard.jsonl",
+    "HISTORY-SQL-EXPLAIN.json",
+    "ORDER-INDEX-COMPARISON.json",
+    "FILTERED-INDEX-COMPARISON.json",
+    "V2-WAIT-QUERY-CORRELATION.json",
+    "V2-RESIDENCY-1794945371703.json",
+    "review-sql-cpu/REVIEW.md",
+    "shared-cadence-evidence-193bf990/resources.jsonl",
+    "REVIEW.md"
+  ],
+  "not_reproducible_hash": [
+    "V2-LATEST-SUMMARY.json"
+  ],
+  "adopted": "WAL64 single-variable test only",
+  "qualification": "Thread folio waits proven; untruncated WAL/checkpoint overlap not yet isolated causation. mincore residency does not prove cgroup ownership. Mutable V2-LATEST-SUMMARY snapshot SHA differs: its evidence excluded; use hashed V2 raw bundle and primary V2-MIXED-INDEPENDENT. V2 stopped early Ark503; not passed.",
+  "production_changed": false
+}

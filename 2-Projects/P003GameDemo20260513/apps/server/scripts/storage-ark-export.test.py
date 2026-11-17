@@ -49,6 +49,66 @@ for(let n=1;n<=Number(process.argv[2]);n++)s.accept(i,{...f,snapshot_id:'s-'+n,b
         with sqlite3.connect(self.db) as db:db.execute('UPDATE ark_archive_outbox SET envelope=? WHERE id=1',('{}',))
         with self.assertRaises(ValueError):self.cycle()
         self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_outbox')[0][0],3)
+    def test_ack_race_after_validation_keeps_rows_and_does_not_mark_complete(self):
+        self.cycle();m=self.manifest();self.ack(m)
+        clean=self.m.clean_payload
+        def mutate_after_validation(*a):
+            clean(*a)
+            with sqlite3.connect(self.db) as db:db.execute('UPDATE ark_archive_outbox SET envelope=? WHERE id=1',('{}',))
+        self.m.clean_payload=mutate_after_validation
+        with self.assertRaisesRegex(ValueError,'archive_mapping_changed'):self.cycle()
+        self.assertEqual(self.sql('SELECT count(*) FROM ark_archive_outbox')[0][0],3)
+        self.assertNotEqual(self.sql('SELECT state FROM ark_archive_batch')[0][0],'complete')
+    def test_claim_reads_before_write_lock_and_leaves_concurrent_append_for_next_batch(self):
+        # The device may append while the exporter selects its bounded prefix.
+        # Read/page waits must not hold the write lock needed by that device.
+        with sqlite3.connect(self.db,isolation_level=None) as raw:
+            raw.row_factory=sqlite3.Row
+            class ConcurrentAppend:
+                def __init__(self):self.appended=False
+                def execute(inner,sql,args=()):
+                    if sql.startswith('SELECT id,bytes FROM ark_archive_outbox'):
+                        self.assertFalse(raw.in_transaction,'pending selection must not hold device write lock')
+                        cursor=raw.execute(sql,args)
+                        rows=cursor.fetchall()
+                        with sqlite3.connect(self.db) as device:
+                            device.execute('INSERT INTO ark_archive_outbox(grant_id,received_at_ms,envelope,bytes,reserved_bytes) SELECT grant_id,received_at_ms,envelope,bytes,reserved_bytes FROM ark_archive_outbox WHERE id=3')
+                        inner.appended=True
+                        class Rows:
+                            def fetchall(self):return rows
+                            def __iter__(self):return iter(rows)
+                        return Rows()
+                    return raw.execute(sql,args)
+                def commit(inner):return raw.commit()
+                def rollback(inner):return raw.rollback()
+            connection=ConcurrentAppend();aid=self.m.claim(connection,1)
+            self.assertTrue(connection.appended)
+            self.assertEqual(raw.execute('SELECT record_count,first_id,last_id FROM ark_archive_batch WHERE archive_id=?',(aid,)).fetchone()[:],(3,1,3))
+            self.assertEqual(raw.execute('SELECT batch_id FROM ark_archive_outbox WHERE id=4').fetchone()[0],None)
+    def test_claim_preserves_byte_limit_and_skips_already_claimed_gap(self):
+        with sqlite3.connect(self.db,isolation_level=None) as db:
+            db.row_factory=sqlite3.Row
+            db.execute("UPDATE ark_archive_outbox SET batch_id='older' WHERE id=2")
+            size=db.execute('SELECT bytes FROM ark_archive_outbox WHERE id=1').fetchone()[0]
+            from unittest.mock import patch
+            with patch.object(self.m,'MAX_BYTES',size):aid=self.m.claim(db,1)
+            self.assertEqual(db.execute('SELECT record_count,first_id,last_id FROM ark_archive_batch WHERE archive_id=?',(aid,)).fetchone()[:],(1,1,1))
+            self.assertEqual(db.execute('SELECT batch_id FROM ark_archive_outbox WHERE id=2').fetchone()[0],'older')
+            self.assertIsNone(db.execute('SELECT batch_id FROM ark_archive_outbox WHERE id=3').fetchone()[0])
+    def test_claim_changed_prefix_rolls_back_batch_and_all_mappings(self):
+        with sqlite3.connect(self.db,isolation_level=None) as raw:
+            raw.row_factory=sqlite3.Row
+            class ChangedPrefix:
+                def execute(inner,sql,args=()):
+                    if sql=='BEGIN IMMEDIATE':
+                        with sqlite3.connect(self.db) as other:
+                            other.execute('UPDATE ark_archive_outbox SET bytes=bytes+1 WHERE id=2')
+                    return raw.execute(sql,args)
+                def commit(inner):return raw.commit()
+                def rollback(inner):return raw.rollback()
+            with self.assertRaisesRegex(ValueError,'archive_claim_changed'):self.m.claim(ChangedPrefix(),1)
+            self.assertEqual(raw.execute('SELECT count(*) FROM ark_archive_batch').fetchone()[0],0)
+            self.assertEqual(raw.execute('SELECT count(*) FROM ark_archive_outbox WHERE batch_id IS NULL').fetchone()[0],3)
     def test_parallel_job_lock_refuses(self):
         import fcntl
         self.spool.mkdir();f=(self.spool/'.ark-export.lock').open('w');fcntl.flock(f,fcntl.LOCK_EX|fcntl.LOCK_NB)

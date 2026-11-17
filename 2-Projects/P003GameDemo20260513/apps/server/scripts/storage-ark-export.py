@@ -46,21 +46,25 @@ def transaction(db,fn):
         db.rollback();raise
 
 def claim(db,now):
+    # Only the device appends rows; exporters are serialized by .ark-export.lock.
+    # Fetch the bounded prefix before reserving the write lock, so cold-page
+    # reads do not reject incoming device snapshots. Recheck it atomically below.
+    rows=[];size=0
+    for row in db.execute('SELECT id,bytes FROM ark_archive_outbox WHERE batch_id IS NULL ORDER BY id LIMIT ?', (MAX_ROWS,)).fetchall():
+        if row['bytes']>MAX_BYTES:raise ValueError('archive_row_too_large')
+        if size+row['bytes']>MAX_BYTES:break
+        rows.append((row['id'],row['bytes']));size+=row['bytes']
+    if not rows:return None
+    aid=uuid.uuid4().hex
     def run():
-        rows=[];size=0
-        for row in db.execute('SELECT id,bytes FROM ark_archive_outbox WHERE batch_id IS NULL ORDER BY id LIMIT ?', (MAX_ROWS,)):
-            if row['bytes']>MAX_BYTES:raise ValueError('archive_row_too_large')
-            if size+row['bytes']>MAX_BYTES:break
-            rows.append(row['id']);size+=row['bytes']
-        if not rows:return None
-        aid=uuid.uuid4().hex
-        db.execute("INSERT INTO ark_archive_batch VALUES(?,?,'claimed',NULL,?,?,?,?,NULL)",(aid,now,len(rows),size,rows[0],rows[-1]))
-        for rid in rows:db.execute('UPDATE ark_archive_outbox SET batch_id=? WHERE id=? AND batch_id IS NULL',(aid,rid))
+        db.execute("INSERT INTO ark_archive_batch VALUES(?,?,'claimed',NULL,?,?,?,?,NULL)",(aid,now,len(rows),size,rows[0][0],rows[-1][0]))
+        changed=db.execute('UPDATE ark_archive_outbox SET batch_id=? WHERE batch_id IS NULL AND id>=? AND id<=? RETURNING id,bytes',(aid,rows[0][0],rows[-1][0])).fetchall()
+        if sorted((row['id'],row['bytes']) for row in changed)!=rows:raise ValueError('archive_claim_changed')
         return aid
     return transaction(db,run)
 
-def batch_payload(db,b):
-    rows=db.execute('SELECT * FROM ark_archive_outbox WHERE batch_id=? ORDER BY id',(b['archive_id'],)).fetchall()
+def batch_payload(db,b,rows=None):
+    if rows is None:rows=db.execute('SELECT * FROM ark_archive_outbox WHERE batch_id=? ORDER BY id',(b['archive_id'],)).fetchall()
     if len(rows)!=b['record_count'] or not rows or rows[0]['id']!=b['first_id'] or rows[-1]['id']!=b['last_id']:raise ValueError('archive_mapping_mismatch')
     chunks=[]
     for row in rows:
@@ -84,7 +88,8 @@ def clean_payload(spool,m,work):
 
 def process_batch(db,spool,work,aid):
     b=db.execute('SELECT * FROM ark_archive_batch WHERE archive_id=?',(aid,)).fetchone()
-    payload=batch_payload(db,b)
+    rows=db.execute('SELECT * FROM ark_archive_outbox WHERE batch_id=? ORDER BY id',(aid,)).fetchall()
+    payload=batch_payload(db,b,rows)
     m={'schema_version':1,'archive_id':aid,'kind':'ark_checkpoint','created_at_ms':b['created_at_ms'],'record_count':b['record_count'],'bytes':len(payload),'sha256':hashlib.sha256(payload).hexdigest(),'source_range':{'format':'ark_jsonl','format_version':1,'lines':b['record_count'],'first_id':b['first_id'],'last_id':b['last_id']}}
     if b['manifest']:
         if json.loads(b['manifest'])!=m:raise ValueError('archive_manifest_mapping_mismatch')
@@ -94,8 +99,11 @@ def process_batch(db,spool,work,aid):
     if receipt:
         clean_payload(spool,m,work)
         def finish():
-            # Writer only appends unbatched rows; verify mappings again in short transaction.
-            if batch_payload(db,b)!=payload:raise ValueError('archive_mapping_changed')
+            # Verify every original column, but keep JSON parsing, hashing and
+            # concatenation outside the device's write lock. A changed mapping
+            # or payload still aborts before any outbox deletion.
+            current=db.execute('SELECT * FROM ark_archive_outbox WHERE batch_id=? ORDER BY id',(aid,)).fetchall()
+            if current!=rows:raise ValueError('archive_mapping_changed')
             db.execute('DELETE FROM ark_archive_outbox WHERE batch_id=?',(aid,))
             db.execute("UPDATE ark_archive_batch SET state='complete',verified_at_ms=? WHERE archive_id=?",(receipt['verified_at_ms'],aid))
             db.execute('UPDATE ark_archive_stats SET last_ack_ms=MAX(COALESCE(last_ack_ms,0),?) WHERE id=1',(receipt['verified_at_ms'],))

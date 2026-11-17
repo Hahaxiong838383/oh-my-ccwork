@@ -1,0 +1,47 @@
+{
+  "status": "FAIL_INTERRUPTED_MIX_ARK_503_AND_HISTORY",
+  "candidate": "3b09cde505065be7732d85686acd8863251a3aaf",
+  "verified_files": 33,
+  "ack_unique_accepted": 300000,
+  "duplicate": 0,
+  "rejected": 0,
+  "attempts": 4034,
+  "http": {
+    "503": 2534,
+    "200": 1500
+  },
+  "ack_p95_ms": 384.26373800000147,
+  "ack_p99_ms": 715.7858750000014,
+  "queries": 150,
+  "history_failures": 17,
+  "invalid_assets": 0,
+  "query_p99_ms": 124.08161500003189,
+  "ark_attempts": 302,
+  "ark_accepted": 301,
+  "ark_failure": [
+    {
+      "at_ms": 1794945449980,
+      "actor": 1,
+      "round": 6,
+      "snapshot_id": "soak-1794945146859-1-6",
+      "status": 503,
+      "body": {
+        "ok": false,
+        "error": "ark_dependency_unavailable"
+      },
+      "ms": 2086.5281759999925
+    }
+  ],
+  "working_set_peak": 0.9731038411458334,
+  "oom": 0,
+  "dirty_rows": 2,
+  "published_day_totals": {
+    "occurred": 200,
+    "received": 200
+  },
+  "full_600s_completed": false,
+  "final_raw_count_independent": "NOT_YET_QUERIED",
+  "24h": "NOT_STARTED",
+  "production_changed": false,
+  "source_bundle_sha256": "ab8b109ad9022f3a459f88b0baf2cd610db203246645c0b577bfb363c50b6237"
+}

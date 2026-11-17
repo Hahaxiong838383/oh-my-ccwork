@@ -1,0 +1,77 @@
+{
+  "status": "FAIL_INTERRUPTED_MIX_ARK_BUSY_AND_HISTORY",
+  "candidate": "10d0dc5514671c85c9224d84eff224700172c2cc",
+  "verified_files": 34,
+  "ack_unique_accepted": 300000,
+  "attempts": 3349,
+  "http": {
+    "503": 1849,
+    "200": 1500
+  },
+  "ack_p95_ms": 126.94821600000068,
+  "ack_p99_ms": 192.44288600000436,
+  "queries": 150,
+  "history_failures": 12,
+  "query_p99_ms": 131.5441390000051,
+  "invalid_assets": 0,
+  "ark_attempts": 302,
+  "ark_failure": [
+    {
+      "at_ms": 1794946419398,
+      "actor": 1,
+      "round": 6,
+      "snapshot_id": "soak-1794946116527-1-6",
+      "status": 503,
+      "body": {
+        "ok": false,
+        "error": "ark_dependency_unavailable"
+      },
+      "ms": 1558.906186999986
+    }
+  ],
+  "ark_errors": [
+    {
+      "at_ms": 1794946420917,
+      "name": "Error",
+      "code": "ERR_SQLITE_ERROR",
+      "sqlite_code": 5
+    }
+  ],
+  "working_set_peak": 0.8776092529296875,
+  "dirty_rows": 2,
+  "reclaimed_checkpoint_completions": 30,
+  "worst_query": {
+    "id": "mixed-query-1794946419199-0",
+    "wall_ms": 1212.1479970000219,
+    "main_cpu_ms": 9.115,
+    "statements": [
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "71252f4dcd3e16b74d02f73a2db05ccd75e8df8bdc7b049d2bc346ade6b04f74",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY analytics_ark_as",
+        "started_at_ms": 1794946419664,
+        "wall_ms": 890.0332900000503,
+        "thread_cpu_ms": 2.539,
+        "thread_read_bytes": 90112,
+        "thread_read_calls": 39,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "3b02b3b9b692a98575ce2d80aea287daaf1029f75fbc543b24d9f9db6ad971c0",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json FROM analytics_event e INDEXED BY analytics_ark_evidence_cover_v2 WHE",
+        "started_at_ms": 1794946419405,
+        "wall_ms": 259.05403799994383,
+        "thread_cpu_ms": 1.312,
+        "thread_read_bytes": 28672,
+        "thread_read_calls": 16,
+        "error": null
+      }
+    ]
+  },
+  "full_600s_completed": false,
+  "24h": "NOT_STARTED",
+  "production_changed": false
+}

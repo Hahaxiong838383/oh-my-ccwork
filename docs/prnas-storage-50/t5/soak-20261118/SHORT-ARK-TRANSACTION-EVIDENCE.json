@@ -1,0 +1,25 @@
+{
+  "scope": "LOCAL_TESTS_NOT_LINUX_MIX_PASS",
+  "logs": {
+    "export-claim-red.log": {
+      "sha256": "2a36237932b47c628ff9b2d5a022dbfb1bebddcc9117603b13e7515a13216701",
+      "bytes": 2068
+    },
+    "export-claim-green-final.log": {
+      "sha256": "fa108b4c2bacbb893eb430bfd0e0173649099139b054beae9da12479a83d156e",
+      "bytes": 126
+    },
+    "export-short-txn-green.log": {
+      "sha256": "5ecdd9ed01d28c3dadde64cab1e46b47d9d17cc2421a9cf14cdf3950b9f47431",
+      "bytes": 127
+    },
+    "ark-lock-local.stderr": {
+      "sha256": "cfda6e34e2790c15c95a1086720ef5db98e91a0ba3a1bf126ba7913306e52625",
+      "bytes": 681
+    },
+    "ark-lock-local-final.stderr": {
+      "sha256": "36ae7e5100e7838f33f8c3bfb81cd2d6d2a106aacbf39d8f4ac5287e8e7bdbcd",
+      "bytes": 522
+    }
+  }
+}
