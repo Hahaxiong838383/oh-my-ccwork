@@ -82,7 +82,9 @@ if(mode==='run'){
  writeFileSync(join(root,'control.json'),'{"enabled":true}',{mode:0o600});
  const deadline=Date.now()+30000;while(!writer.ready){assert.ok(Date.now()<deadline,'writer readiness timeout');await sleep(10);}checkpointer.start();
  const reader={arkDeviceKey:hash,readArkAuthorization:(sn:string)=>{const id=identities.find(i=>i.sn===sn),g=id&&ark.grant(id);return id&&g?{...id,not_before_ms:g.not_before_ms}:null;},readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:hash(sn),active:subjects.includes(sn),uploadEnabled:true,uploadHourCst:23})};
- const app=createAnalyticsApp({store,writer,reader,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
+ const minBatchIntervalMs=number(process.env.T5_MIN_BATCH_INTERVAL_MS,0,0,5000);
+ Object.assign(config,{min_batch_interval_ms:minBatchIntervalMs});writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
+ const app=createAnalyticsApp({store,writer,reader,minBatchIntervalMs,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
  if(!soak)app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>({identity:(sn:string)=>identities.find(i=>i.sn===sn)??null} as any),secret:()=>secret,ceiling:()=>subjects,acceptsCredential:()=>true,isAdmin:()=>false}));
  const profile=process.env.T5_PROFILE_SQL==='1'?sqlProfiler([{name:'analytics',db:store.db},{name:'ark',db:ark.db}],sample=>appendFileSync(join(root,'sql-query-profile.jsonl'),JSON.stringify(sample)+'\n')):null;
  const server=serve({fetch:async request=>{const respond=async()=>{const start=performance.now(),receivedAt=Date.now(),response=await app.fetch(request);if(new URL(request.url).pathname==='/internal/analytics/ark-summary'){

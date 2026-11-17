@@ -1,3 +1,4 @@
+import {createBatchPacer} from './pacing.js';
 import {capacityReader} from './capacity.js';
 import {readAnalyticsBody,AnalyticsBodyError} from './http-body.js';
 import {queryAnalyticsTiers} from './tier-query.js';
@@ -31,12 +32,13 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
 type Reader={storageControls?:()=>ReturnType<AnalyticsDeviceReader['storageControls']>;uploadPolicy?():UploadPolicy|null;arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readCredentialState:DeviceCredentialStateReader;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
-export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>&Partial<Pick<AnalyticsWriter,'fatalExit'|'withCheckpoint'>>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;bodyTimeoutMs?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
+export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>&Partial<Pick<AnalyticsWriter,'fatalExit'|'withCheckpoint'>>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;minBatchIntervalMs?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;bodyTimeoutMs?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
   const rpm=options.globalRpm??LIMITS.defaultGlobalRpm;if(!Number.isInteger(rpm)||rpm<1||rpm>60000)throw new Error('INVALID_ANALYTICS_GLOBAL_RPM');
   if(options.allowSubjects.length>1000)throw new Error('ANALYTICS_ALLOWLIST_LIMIT');
   const walMax=validateWalMaxBytes(options.walMaxBytes??ANALYTICS_WAL_MAX_BYTES);
+  const minBatchIntervalMs=options.minBatchIntervalMs??0,pacer=createBatchPacer(minBatchIntervalMs);
   const app=new Hono(),deviceHits=new Map<string,number[]>(),globalHits:number[]=[],durations:number[]=[];
   let inFlight=0,storageFailures=0,sqlBusy=0,requests=0;
   const diskFree=options.diskFreeBytes??(()=>{const info=statfsSync(options.store.path);return Number(info.bavail)*Number(info.bsize);});
@@ -56,7 +58,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     try{meta=options.store.db.prepare('SELECT key,value FROM analytics_meta').all() as {key:string;value:string}[];}catch{storageReady=false;}
     const checkpoint=options.checkpointStatus?.()??null;
     if(options.writer&&!options.writer.ready)storageReady=false;
-    return {ok:true,alive:true,ready:dependenciesReady&&storageReady&&(checkpoint===null||(!checkpoint.stale&&checkpoint.enabled))&&walReadable&&walBytes<walMax&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:control.subjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,wal_max_bytes:walMax,wal_pressure:!walReadable||walBytes>=walMax,sqlite_version:options.store.sqliteVersion,sqlite_version_safe:true,sqlite_synchronous:2,sqlite_wal_autocheckpoint:0,checkpoint,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_rollup_attempt_ms:Number(meta.find(m=>m.key==='last_rollup_attempt_ms')?.value)||null,last_rollup_partial_ms:Number(meta.find(m=>m.key==='last_rollup_partial_ms')?.value)||null,rollup_status:meta.find(m=>m.key==='last_rollup_status')?.value??null,rollup_failed_days:Number(meta.find(m=>m.key==='last_rollup_failed_days')?.value)||0,rollup_remaining_dirty_days:Number(meta.find(m=>m.key==='last_rollup_remaining_dirty_days')?.value)||0,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
+    return {ok:true,alive:true,ingest_min_interval_ms:minBatchIntervalMs,ready:dependenciesReady&&storageReady&&(checkpoint===null||(!checkpoint.stale&&checkpoint.enabled))&&walReadable&&walBytes<walMax&&control.valid&&freeBytes!==null&&freeBytes>=LIMITS.diskStopBytes,dependencies_ready:dependenciesReady,storage_ready:storageReady,gate_enabled:control.enabled,control_valid:control.valid,allowlist_count:control.subjects.length,in_flight:inFlight,requests,storage_failures:storageFailures,sql_busy:sqlBusy,rss_bytes:process.memoryUsage().rss,wal_bytes:walBytes,wal_max_bytes:walMax,wal_pressure:!walReadable||walBytes>=walMax,sqlite_version:options.store.sqliteVersion,sqlite_version_safe:true,sqlite_synchronous:2,sqlite_wal_autocheckpoint:0,checkpoint,disk_free_bytes:freeBytes,disk_warning:freeBytes!==null&&freeBytes<LIMITS.diskWarnBytes,processing_p95_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.95))]:null,processing_p99_ms:sorted.length?sorted[Math.min(sorted.length-1,Math.floor(sorted.length*.99))]:null,last_rollup_success_ms:Number(meta.find(m=>m.key==='last_rollup_success_ms')?.value)||null,last_rollup_attempt_ms:Number(meta.find(m=>m.key==='last_rollup_attempt_ms')?.value)||null,last_rollup_partial_ms:Number(meta.find(m=>m.key==='last_rollup_partial_ms')?.value)||null,rollup_status:meta.find(m=>m.key==='last_rollup_status')?.value??null,rollup_failed_days:Number(meta.find(m=>m.key==='last_rollup_failed_days')?.value)||0,rollup_remaining_dirty_days:Number(meta.find(m=>m.key==='last_rollup_remaining_dirty_days')?.value)||0,last_backup_success_ms:Number(meta.find(m=>m.key==='last_backup_success_ms')?.value)||null};
   };
   app.get('/health',c=>c.json({ok:true,alive:true}));
   app.get('/ready',c=>{const value=health();return c.json(value,value.ready?200:503);});
@@ -121,6 +123,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
     if(options.store.walBytes()>=walMax)return error('ANALYTICS_WAL_PRESSURE',503,10);
     if(diskFree()<LIMITS.diskStopBytes)return error('ANALYTICS_DISK_PRESSURE',503,60);
     if(process.memoryUsage().rss>512*1024**2)return error('ANALYTICS_MEMORY_PRESSURE',503,60);
+    const pacingWait=pacer.retryAfter();if(pacingWait)return error('ANALYTICS_RATE_LIMITED',429,pacingWait);
     globalHits.push(now);hits.push(now);deviceHits.set(context.deviceKey,hits);inFlight++;
     try{
       const transport=await readAnalyticsBody(c.req.raw,options.bodyTimeoutMs);
@@ -134,6 +137,9 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
       if(options.store.walBytes()>=walMax)return error('ANALYTICS_WAL_PRESSURE',503,10);
       if(options.writer&&!options.writer.ready)return error('ANALYTICS_STORAGE_UNAVAILABLE',503,30);
       if(options.writer?.busy)return error('ANALYTICS_OVERLOADED',503,5);
+      // Atomically reserve only after body and current authorization checks.
+      // Deferred requests receive no ACK and stay in the device's durable queue.
+      const pacingWait=pacer.acquire();if(pacingWait)return error('ANALYTICS_RATE_LIMITED',429,pacingWait);
       // Transfer the original JSON text: structuredClone can overflow on a deeply invalid event
       // before the worker can settle it as a per-event rejection alongside valid events.
       const measured={encoding:transport.encoding,wireBytes:transport.wireBytes,inflatedBytes:transport.inflatedBytes};
@@ -148,7 +154,7 @@ export function analyticsOptionsFromEnv():AnalyticsAppOptions{
   const required=(key:string)=>{const value=process.env[key];if(!value)throw new Error('MISSING_'+key);return value;};
   const devicesPath=required('ANALYTICS_DEVICES_DB_PATH'),configPath=required('ANALYTICS_CONFIG_DB_PATH');
   const allow=(process.env.ANALYTICS_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean);
-  return {store:new AnalyticsStore(required('ANALYTICS_DB_PATH')),reader:new AnalyticsDeviceReader({devicesPath,configPath,arkPath:process.env.ARK_DB_PATH?resolve(process.env.ARK_DB_PATH):undefined,deviceKeySecret:required('ANALYTICS_DEVICE_KEY_SECRET'),envAllow:(process.env.DEVICE_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean)}),authSecret:required('AUTH_JWT_SECRET'),internalSecret:required('ANALYTICS_INTERNAL_SECRET'),controlPath:required('ANALYTICS_CONTROL_PATH'),allowSubjects:allow,walMaxBytes:Number(process.env.ANALYTICS_WAL_MAX_BYTES??ANALYTICS_WAL_MAX_BYTES),globalRpm:Number(process.env.ANALYTICS_GLOBAL_RPM??600)};
+  return {store:new AnalyticsStore(required('ANALYTICS_DB_PATH')),reader:new AnalyticsDeviceReader({devicesPath,configPath,arkPath:process.env.ARK_DB_PATH?resolve(process.env.ARK_DB_PATH):undefined,deviceKeySecret:required('ANALYTICS_DEVICE_KEY_SECRET'),envAllow:(process.env.DEVICE_SN_ALLOW??'').split(',').map(s=>s.trim()).filter(Boolean)}),authSecret:required('AUTH_JWT_SECRET'),internalSecret:required('ANALYTICS_INTERNAL_SECRET'),controlPath:required('ANALYTICS_CONTROL_PATH'),allowSubjects:allow,walMaxBytes:Number(process.env.ANALYTICS_WAL_MAX_BYTES??ANALYTICS_WAL_MAX_BYTES),globalRpm:Number(process.env.ANALYTICS_GLOBAL_RPM??600),minBatchIntervalMs:Number(process.env.ANALYTICS_MIN_BATCH_INTERVAL_MS??0)};
 }
 /** One lifecycle for production (3006) and the explicitly isolated staging listener (3306). */
 export function startAnalyticsServer(options:AnalyticsAppOptions,port:3006|3306=3006){
