@@ -1,0 +1,76 @@
+{
+  "status": "FAIL_MIXED_QUERY_AND_MEMORY_NOT_24H",
+  "candidate": "193bf990b3d15192815254ebeb31375a87a7eb2b",
+  "evidence_files": 41,
+  "integrity": {
+    "batches": 1500,
+    "events_accepted": 300000,
+    "events_duplicated": 0,
+    "events_acknowledged": 300000,
+    "unique_acknowledged_events": 300000,
+    "expected_events": 300000,
+    "expected_batches": 1500,
+    "counts": {
+      "events": 300000,
+      "seen": 300000,
+      "batches": 1500
+    },
+    "database_before": {
+      "events": 0,
+      "seen": 0,
+      "batches": 0
+    },
+    "database_delta": {
+      "events": 300000,
+      "seen": 300000,
+      "batches": 1500
+    },
+    "database_run_events": 300000,
+    "database_canonical_matches": 300000,
+    "database_seen_matches": 300000,
+    "database_integrity": true,
+    "complete": true
+  },
+  "query_samples": 250,
+  "query_transport_failures": 29,
+  "query_p99_ms": 132.0393879999756,
+  "query_max_ms": 178.3484569999855,
+  "dirty_rows": [],
+  "days": [
+    {
+      "dimension": "occurred",
+      "day": "2026-11-18"
+    },
+    {
+      "dimension": "received",
+      "day": "2026-11-18"
+    }
+  ],
+  "device_rows": 100,
+  "resource_gate": {
+    "samples": 132,
+    "unavailable_samples": 0,
+    "cgroup_missing_samples": 0,
+    "observed_ms": 653063.268489,
+    "required_ms": 86400000,
+    "max_sample_gap_ms": 5288.603011000028,
+    "cpu_average_percent": 11.493397228619505,
+    "mem_available_min_fraction": 0.47494036077128565,
+    "cgroup_memory_peak_fraction": 1,
+    "cgroup_working_set_peak_fraction": 0.9672597249348959,
+    "cgroup_cpu_average_one_core_percent": 14.043458333247964,
+    "cgroup_cpu_average_quota_percent": 28.086916666495927,
+    "cgroup_cpu_quota_cores": 0.5,
+    "disk_free_min_bytes": 7360057344,
+    "identity_changed": false,
+    "oom_seen": false,
+    "complete_24h_evidence": false,
+    "local_resource_gate": false,
+    "not_covered": [
+      "NAS budget",
+      "voice A/B",
+      "maintenance backlog",
+      "external service restart counters"
+    ]
+  }
+}

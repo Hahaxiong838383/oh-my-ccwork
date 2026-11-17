@@ -21,6 +21,7 @@ import {createStreamingAccounting,analyseRequests,readJsonl} from './storage-loa
 import {linuxResources,createResourceRecorder} from './storage-load-resources.js';
 import {soakPlan} from './storage-soak-schedule.js';
 import {startSharedQuery} from './storage-shared-query-client.js';
+import {sqlProfiler} from './storage-sql-profile.js';
 
 const mode=process.argv[2],root=resolve(process.argv[3]??'');
 assert.ok(['run','client'].includes(mode),'run|client');
@@ -53,10 +54,11 @@ if(mode==='run'){
  const reader={arkDeviceKey:hash,readArkAuthorization:(sn:string)=>{const id=identities.find(i=>i.sn===sn),g=id&&ark.grant(id);return id&&g?{...id,not_before_ms:g.not_before_ms}:null;},readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:(sn:string)=>({deviceKey:hash(sn),active:subjects.includes(sn),uploadEnabled:true,uploadHourCst:23})};
  const app=createAnalyticsApp({store,writer,reader,authSecret:secret,internalSecret:secret,controlPath:join(root,'control.json'),allowSubjects:subjects,checkpointStatus:()=>checkpointer.status()});
  app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>({identity:(sn:string)=>identities.find(i=>i.sn===sn)??null} as any),secret:()=>secret,ceiling:()=>subjects,acceptsCredential:()=>true,isAdmin:()=>false}));
- const server=serve({fetch:async request=>{const start=performance.now(),receivedAt=Date.now(),response=await app.fetch(request);if(new URL(request.url).pathname==='/internal/analytics/ark-summary'){
+ const profile=process.env.T5_PROFILE_SQL==='1'?sqlProfiler([{name:'analytics',db:store.db},{name:'ark',db:ark.db}],sample=>appendFileSync(join(root,'sql-query-profile.jsonl'),JSON.stringify(sample)+'\n')):null;
+ const server=serve({fetch:async request=>{const respond=async()=>{const start=performance.now(),receivedAt=Date.now(),response=await app.fetch(request);if(new URL(request.url).pathname==='/internal/analytics/ark-summary'){
   const ms=performance.now()-start;response.headers.set('X-T5-Service-Ms',String(ms));response.headers.set('X-T5-Receiver-Pid',String(process.pid));
   appendFileSync(join(root,'shared-reader.jsonl'),JSON.stringify({received_at_ms:receivedAt,done_at_ms:Date.now(),query_id:request.headers.get('X-T5-Query-Id'),ms,status:response.status,receiver_pid:process.pid})+'\n');
- }return response;},hostname:'127.0.0.1',port:0});if(!server.listening)await once(server,'listening');
+ }return response;};return profile&&new URL(request.url).pathname==='/internal/analytics/ark-summary'?profile.run(request.headers.get('X-T5-Query-Id')??'missing',respond):respond();},hostname:'127.0.0.1',port:0});if(!server.listening)await once(server,'listening');
  const tokens=await Promise.all(subjects.map(sn=>new SignJWT({kind:'p003-device'}).setSubject(sn).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('48h').sign(new TextEncoder().encode(secret))));
  writeFileSync(join(root,'client-private.json'),JSON.stringify({url:'http://127.0.0.1:'+(server.address() as any).port,tokens}),{mode:0o600});
  const resources=createResourceRecorder(),maintenance:any[]=[],health=createLoadHealthRecorder(sample=>appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n')),children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;let maintenanceError:unknown;
