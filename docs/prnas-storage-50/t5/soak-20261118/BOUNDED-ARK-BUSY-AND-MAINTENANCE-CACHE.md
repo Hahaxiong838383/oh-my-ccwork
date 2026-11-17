@@ -8,7 +8,9 @@
 - 后台analytics-rollup连接页缓存从通用writer的64MiB改为8MiB，并回读记录cache_kib。目标是减少与HTTP/入库并行时的匿名内存及页缓存重复；真实I/O收益待同条件混合验证。writer64MiB、FULL、250ms、8s和统计时间/事实预算不变。
 - 本次没有启用mmap；SQLite官方列出SIGBUS/I/O错误处理差异，当前不引入该额外故障模式。https://www.sqlite.org/mmap.html
 
-本机：旧路由8用例中的瞬时忙锁和撤销场景先RED；新8项HTTP/预算用例GREEN。现有9组Ark、13组Analytics回归exit0。全仓tsc仍12项历史错误，未宣称通过。新增跨空隙与等长正文篡改各自定向GREEN。正式Linux候选和完整混合待验，24h未开始。
+本机：旧路由的瞬时忙锁和撤销场景先RED（当时6项）；补齐后的新8项HTTP/预算用例GREEN。现有9组Ark、13组Analytics回归exit0。全仓tsc仍12项历史错误，未宣称通过。新增跨空隙与等长正文篡改各自定向GREEN。
+
+Linux固定候选16716936已核547文件：Python归档17/17、HTTP忙锁8/8、维护实际cache_kib=8192均通过。额外真实SQLite第二连接持锁：250ms锁返回503（3次BUSY、86.60ms），未写入，释放后原包accepted；45ms锁实际遇到1次BUSY后200（50.74ms），同包重放duplicate。首轮物理测试误把仅sequence变化当新增资产检查点，归档按原5分钟去重只留1条，故断言失败；改合成资产值后复测，保留首次失败及后续日志，业务代码未因此改变。完整混合仍待验，24h未开始。
 
 回滚：路由/新helper/后台脚本还原到5be3；Python归档缩短事务可独立保留，整个本轮总回滚点10d0dc55。无schema迁移，无整库回灌。生产业务、设备范围与教学窗不变。
 

@@ -1,0 +1,33 @@
+{
+  "candidate": "16716936d57315dc529d9aac25f3432cde3d1e0c",
+  "verified_files": 547,
+  "tests": {
+    "export-tests": {
+      "exit": 0,
+      "sha256": "ac85e41cdaf60abc4a6e7355b10371798f0ed66516a05065313fc6f7c0f28b7b",
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/bounded-linux-export-tests.log",
+      "tail": ".................\n----------------------------------------------------------------------\nRan 17 tests in 10.824s\n\nOK\n"
+    },
+    "busy-http": {
+      "exit": 0,
+      "sha256": "11bc14186ddee0a7c210584fc6dd67ada934129693c9304470a5c9c61bc09324",
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/bounded-linux-busy-http.log",
+      "tail": "\u2714 transient SQLite BUSY yields then accepts exactly one snapshot; same content stays duplicate (214.606274ms)\n\u2714 persistent BUSY is bounded, does not create records, and remains a retryable failure (94.640044ms)\n\u2714 non-BUSY dependency failure is not retried (51.021803ms)\n\u2714 a consumed retry budget never starts a fresh window (90.655312ms)\n\u2714 SQLite IO failure is never mistaken for BUSY (0.286276ms)\n\u2714 retry rechecks credential after yielding, before another write (63.276062ms)\n\u2714 retry rechecks owner after yielding, before another write (77.623553ms)\n\u2714 retry rechecks grant after yielding, before another write (65.920922ms)\n\u2139 tests 8\n\u2139 suites 0\n\u2139 pass 8\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 665.155635\n"
+    },
+    "physical-busy": {
+      "exit": 1,
+      "sha256": "29d583c0cb9b21cfd16c797aa4ad2cf3f06727756f0b16cb491486aecfda6fec",
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/bounded-linux-physical-busy.log",
+      "tail": "node:internal/modules/run_main:107\n    triggerUncaughtException(\n    ^\n\nAssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n1 !== 2\n\n    at file:///opt/p003/archive-t5-20261117/soak-20261118/candidate-bounded-16716936/2-Projects/P003GameDemo20260513/apps/server/[eval1]:16:156\n    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {\n  generatedMessage: true,\n  code: 'ERR_ASSERTION',\n  actual: 1,\n  expected: 2,\n  operator: 'strictEqual',\n  diff: 'simple'\n}\n\nNode.js v24.19.0\n"
+    },
+    "cache-smoke": {
+      "exit": 0,
+      "sha256": "6ab1413bddfde5782a97e4eda9a2fe3fd02bf1a6aa58c89d83d80aefe9fc03bc",
+      "maintenance": [
+        "{\"ok\":true,\"partial\":false,\"rebuilt_days\":0,\"rollup\":{\"attempted_days\":0,\"rebuilt_days\":0,\"failed_days\":[],\"remaining_dirty_days\":0,\"partial\":false},\"pruned\":{\"events\":0,\"batches\":0,\"facts\":0,\"chunks\":1,\"elapsed_ms\":1.323648999999989,\"max_transaction_ms\":1.3022459999999967,\"budget_exhausted\":false},\"work_started_at_ms\":1794948064398,\"work_finished_at_ms\":1794948064403,\"cache_kib\":8192}\n",
+        "{\"ok\":true,\"partial\":false,\"rebuilt_days\":2,\"rollup\":{\"attempted_days\":2,\"rebuilt_days\":2,\"failed_days\":[],\"remaining_dirty_days\":0,\"partial\":false},\"pruned\":{\"events\":0,\"batches\":0,\"facts\":0,\"chunks\":1,\"elapsed_ms\":1.237245999999999,\"max_transaction_ms\":1.2154789999999878,\"budget_exhausted\":false},\"work_started_at_ms\":1794948063799,\"work_finished_at_ms\":1794948063818,\"cache_kib\":8192}\n"
+      ],
+      "tail": "{\"root\":\"/opt/p003/archive-t5-20261117/p003-t5-bounded-smoke-01\",\"complete\":true,\"acks\":{\"attempts\":1,\"successes\":1,\"statuses\":{\"200\":1},\"p95\":52.29319899999996,\"p99\":52.29319899999996,\"all_actors_finished\":true,\"raw_file\":\"requests.jsonl\",\"method\":\"exact disk ORDER BY, floor(n*p), no exclusions from attempt counts\"},\"ark_correct\":1,\"seconds\":2.176}\n"
+    }
+  }
+}

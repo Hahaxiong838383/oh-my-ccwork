@@ -1,0 +1,107 @@
+{
+  "verdict": "NOT_ACCEPTED",
+  "mix_pass": false,
+  "production_release": false,
+  "source_modified": false,
+  "ssh": false,
+  "cloud_load": false,
+  "subagents": false,
+  "head": "16716936d57315dc529d9aac25f3432cde3d1e0c",
+  "base": "5be3fb4b63ca96ccf7465217cd9582e10f56e7a5",
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "sqlite": "3.53.3",
+    "default_node_not_used": "/usr/local/bin/node v22.14.0"
+  },
+  "blobs": {
+    "busy-retry.ts": "281613051a3b440ae963a4850a8e7b7609ea97ba",
+    "routes.ts": "62ed6d2f7b17919bfbf2c8bd24abde12a996756a",
+    "analytics-rollup.ts": "9fd0550fe8f31b68369cae69618ee30377aa7350"
+  },
+  "claim8": {
+    "file": "docs/prnas-storage-50/t5/soak-20261118/CLAIM8-MIXED-INDEPENDENT.json",
+    "candidate": "5be3fb4b63ca96ccf7465217cd9582e10f56e7a5",
+    "status": "FAIL_INTERRUPTED_MIX_ARK_BUSY_AND_HISTORY",
+    "ark_failure_count": 1,
+    "ark_error_count": 1,
+    "ark_sqlite_code": 5,
+    "ark_http_status": 503,
+    "ark_error_body": "ark_dependency_unavailable",
+    "history_failures": 18,
+    "http_503_field": 1980,
+    "http_200_field": 1500,
+    "note": "http.503 1980 is a separate field. It is not added to the 1 Ark failure. 1849 is the older WAL64/10d0dc55 Analytics count and is not this Ark count."
+  },
+  "checks": {
+    "max_attempts_3_in_source": {
+      "pass": true,
+      "evidence": "busy-retry.ts throws when attempt>=2; delays are 10 then 20"
+    },
+    "only_busy_low8_eq_5": {
+      "pass": true,
+      "evidence": "real lock errcode 5 matches the predicate; real constraint errcode 1555 low8 19 attempts=1; synthetic errcode 10 attempts=1"
+    },
+    "unbounded_retry": {
+      "pass": true,
+      "evidence": "no reset of started; no queue; POST /state only"
+    },
+    "authority_recheck_before_second_write": {
+      "pass": true,
+      "evidence": "Node24 ark-busy-http.test.ts credential/owner/grant: 401 or 403, accept calls stay 1"
+    },
+    "aba_grant_id": {
+      "pass": true,
+      "evidence": "readArkIdentity returns a new row object; authorize/configure rotate grant_id when account or epoch changes; retry compares the original grant_id"
+    },
+    "committed_replay_duplicate": {
+      "pass": true,
+      "evidence": "throw after durable COMMIT then retry: status duplicate, ark_current 1, ark_archive_outbox 1, isTransaction false, commits 2"
+    },
+    "precommit_busy_single_row": {
+      "pass": true,
+      "evidence": "throw before first ark_current insert then retry: status accepted, inserts 2, current 1, outbox 1, isTransaction false"
+    },
+    "residual_transaction_on_failed_begin": {
+      "pass": true,
+      "evidence": "BEGIN IMMEDIATE against a held lock leaves isTransaction false"
+    },
+    "synthetic_http_8": {
+      "pass": true,
+      "evidence": "node v24.19.0 ark-busy-http.test.ts tests 8 pass 0 fail duration_ms 448.423459"
+    },
+    "real_busy_reaches_retry": {
+      "pass": false,
+      "evidence": "PRAGMA busy_timeout reads 15 but BEGIN IMMEDIATE wall was 442-562ms; retryArkBusy attempts=1 because elapsed already exceeds the shared 80ms budget. timeout 0 returned in 0.2ms. Synthetic tests do not take the lock."
+    },
+    "maintenance_cache_8mib_readback": {
+      "pass": true,
+      "evidence": "cache_size=-8192 read back as -8192, negated 8192; second connection on the same file stayed at default -2000"
+    },
+    "writer64_and_rollup_budget_unchanged": {
+      "pass": true,
+      "evidence": "git diff 5be3fb4b..16716936 empty for analytics/store.ts, sqlite-policy.mjs, rollup.ts, writer.ts, ark/store.ts"
+    },
+    "linux_real_busy_wall": {
+      "pass": false,
+      "evidence": "not measured; no SSH. Do not infer Linux sleep from this macOS curve or from a NAS image."
+    },
+    "history_18_fixed": {
+      "pass": false,
+      "evidence": "CLAIM8 history_failures 18; this diff does not change history SQL"
+    },
+    "mix_passed": {
+      "pass": false,
+      "evidence": "CLAIM8 remains FAIL for 5be3; 16716936 has no new mixed run"
+    }
+  },
+  "busy_timeout_wall_ms_macos_node24": {
+    "0": 0.2,
+    "1": 56,
+    "5": 273,
+    "15": "442-562",
+    "20": 695,
+    "100": 1380,
+    "250": 2327
+  }
+}

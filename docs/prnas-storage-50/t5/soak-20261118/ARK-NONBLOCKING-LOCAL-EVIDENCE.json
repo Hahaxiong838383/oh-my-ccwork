@@ -1,0 +1,39 @@
+{
+  "scope": "macOS_Node24_NOT_LINUX_NOT_MIXED_PASS",
+  "files": {
+    "ark-zero-busy-red.log": {
+      "sha256": "9bcba417834e6e576f5314282b818ade13ec2b798fc95b05d185c48a0500d731",
+      "bytes": 2575,
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-zero-busy-red.log"
+    },
+    "ark-zero-busy-green.log": {
+      "sha256": "3c9fd93d80682742ea6f2779e0f290296e6a19e2c314e6f32eb1fd1d9fa90e7f",
+      "bytes": 968,
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-zero-busy-green.log"
+    },
+    "ark-zero-busy-physical-macos.log": {
+      "sha256": "be93461288fc3409f0f13cd997be5181b28564a4b08b75bb15e029034f6fda9e",
+      "bytes": 521,
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-zero-busy-physical-macos.log"
+    },
+    "ark-zero-busy-physical-macos-v2.log": {
+      "sha256": "5c4f1475b05a9472dbe83ee0e6342a72d992b765c467568b928c339c450dae7f",
+      "bytes": 1568,
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-zero-busy-physical-macos-v2.log"
+    },
+    "ark-zero-busy-physical-macos-v3.log": {
+      "sha256": "fca4806e7155466f02aaee5740fd2517d83371db3787fc89cb0b1259bf031a47",
+      "bytes": 1615,
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-zero-busy-physical-macos-v3.log"
+    },
+    "ark-zero-six-full-regression.log": {
+      "sha256": "f239845fd2b6a06f67ec61650c06895ee1b721c8aa377a38f5bece86d0012173",
+      "bytes": 12965,
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-zero-six-full-regression.log"
+    }
+  },
+  "full_regression_exit": 0,
+  "final_targeted_tests": 10,
+  "targeted_failures": 0,
+  "initial_failed_tests": 2
+}

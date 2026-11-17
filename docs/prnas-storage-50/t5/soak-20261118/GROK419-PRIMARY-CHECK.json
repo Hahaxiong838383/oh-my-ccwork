@@ -1,0 +1,12 @@
+{
+  "review_scope": "macOS code review; not Linux deployment gate",
+  "blobs_verified": {
+    "busy-retry.ts": "281613051a3b440ae963a4850a8e7b7609ea97ba",
+    "routes.ts": "62ed6d2f7b17919bfbf2c8bd24abde12a996756a",
+    "analytics-rollup.ts": "9fd0550fe8f31b68369cae69618ee30377aa7350"
+  },
+  "review_sha256": "04dd18209941a08b0c84643b6d4614c14a200e5fbfd4aa7452a13deb8d06da9f",
+  "linux_physical_evidence": "bounded-linux-evidence/BOUNDED-PHYSICAL-V2-RESULT.json",
+  "correction": "Linux real second-connection lock was measured by primary; reviewer did not have the later evidence. Mac 15ms callback wall time is not a Linux inference. Current mixed still fails independently.",
+  "mixed_candidate": "16716936d57315dc529d9aac25f3432cde3d1e0c"
+}

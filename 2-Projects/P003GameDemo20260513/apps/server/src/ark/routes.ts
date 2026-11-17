@@ -29,7 +29,7 @@ export function createArkRoutes(o:Options){
     const current=o.runtime().identity(credential.sn),currentGrant=current&&o.store().grant(current);
     if(!current||current.sn!==latest.sn||current.account_id!==latest.account_id||current.epoch!==latest.epoch||currentGrant?.grant_id!==grant.grant_id||!o.ceiling().includes(credential.sn))return c.json({ok:false,error:'not_authorized'},403);
    }
-   return c.json({ok:true,...o.store().accept(latest,parsed.data,Date.now())});
+   return c.json({ok:true,...o.store().tryAccept(latest,parsed.data,Date.now())});
   });}
   catch(e){const code=(e as Error).message;if(code==='archive_buffer_full'){c.header('Retry-After','60');return c.json({ok:false,error:code},503);}if(['stale','conflict','before_grant'].includes(code))return c.json({ok:false,error:code},409);if(code==='clock_invalid')return c.json({ok:false,error:code},400);throw e;}
  });

@@ -1,0 +1,16 @@
+✔ transient SQLite BUSY yields then accepts exactly one snapshot; same content stays duplicate (214.606274ms)
+✔ persistent BUSY is bounded, does not create records, and remains a retryable failure (94.640044ms)
+✔ non-BUSY dependency failure is not retried (51.021803ms)
+✔ a consumed retry budget never starts a fresh window (90.655312ms)
+✔ SQLite IO failure is never mistaken for BUSY (0.286276ms)
+✔ retry rechecks credential after yielding, before another write (63.276062ms)
+✔ retry rechecks owner after yielding, before another write (77.623553ms)
+✔ retry rechecks grant after yielding, before another write (65.920922ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 665.155635

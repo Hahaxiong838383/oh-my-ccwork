@@ -1,0 +1,1 @@
+{"root":"/opt/p003/archive-t5-20261117/p003-t5-bounded-smoke-01","complete":true,"acks":{"attempts":1,"successes":1,"statuses":{"200":1},"p95":52.29319899999996,"p99":52.29319899999996,"all_actors_finished":true,"raw_file":"requests.jsonl","method":"exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"},"ark_correct":1,"seconds":2.176}

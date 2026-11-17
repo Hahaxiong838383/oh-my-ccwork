@@ -1,0 +1,9 @@
+{
+  "exit": 0,
+  "log": "/opt/p003/archive-t5-20261117/soak-20261118/bounded-linux-physical-busy-v2.log",
+  "log_sha256": "8b7e76d471d160064cd58a57ca5d9d62094205517eb2892fb914b8beaaeb4b22",
+  "script_sha256": "38436150907c65e16527bbb72de93c8da58deaa748da734aa2ee9bb21f212d61",
+  "stdout": "{\"scope\":\"LINUX_SYNTHETIC_REAL_HTTP_AND_SQLITE_LOCKS_NOT_LOAD_PASS\",\"node\":\"v24.19.0\",\"sqlite\":\"3.53.3\",\"results\":[{\"held_ms\":250,\"status\":503,\"wall_ms\":86.603812,\"sqlite_busy_attempts\":3,\"records\":2},{\"held_ms\":45,\"status\":200,\"wall_ms\":50.74298399999998,\"sqlite_busy_attempts\":1,\"records\":3}]}\n",
+  "stderr": "",
+  "prior_failure": "test changed only sequence; archive suppresses unchanged asset checkpoint within 5 minutes; v2 varies family_coin and keeps original assertions"
+}

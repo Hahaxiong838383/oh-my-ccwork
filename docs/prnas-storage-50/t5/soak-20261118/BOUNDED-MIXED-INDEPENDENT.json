@@ -1,0 +1,411 @@
+{
+  "candidate": "16716936d57315dc529d9aac25f3432cde3d1e0c",
+  "scope": "FAILED_MIXED_DIAGNOSTIC_NOT_DEPLOYED",
+  "done": {
+    "started_ms": 1794948380904,
+    "done_ms": 1794948819317,
+    "status": "Result=exit-code\nExecMainStatus=1\nMemoryPeak=712830976\nCPUUsageNSec=79609389000\nActiveState=failed\n",
+    "guard_stop": null,
+    "candidate": "16716936d57315dc529d9aac25f3432cde3d1e0c",
+    "FAILURE.json": {
+      "stage": "run",
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n\n503 !== 200\n",
+      "synthetic": true
+    }
+  },
+  "ark_total": 302,
+  "ark_failure": [
+    {
+      "at_ms": 1794948684655,
+      "actor": 1,
+      "round": 6,
+      "snapshot_id": "soak-1794948381779-1-6",
+      "status": 503,
+      "body": {
+        "ok": false,
+        "error": "ark_dependency_unavailable"
+      },
+      "ms": 1605.2175660000066
+    }
+  ],
+  "ark_busy_errors": [
+    {
+      "at_ms": 1794948686186,
+      "name": "Error",
+      "code": "ERR_SQLITE_ERROR",
+      "sqlite_code": 5
+    },
+    {
+      "at_ms": 1794948686257,
+      "name": "Error",
+      "code": "ERR_SQLITE_ERROR",
+      "sqlite_code": 5
+    }
+  ],
+  "query_samples": 150,
+  "query_transport_failures": 13,
+  "query_invalid": 0,
+  "query_p99": 148.07369099999778,
+  "working_set_peak": 0.77923583984375,
+  "occupancy_peak": 0.8609415690104166,
+  "slowest_query": {
+    "id": "mixed-query-1794948683957-0",
+    "started_at_ms": 1794948684657,
+    "statements": [
+      {
+        "database": "ark",
+        "phase": "prepare",
+        "sql_hash": "b7e0b9b7c45e0e7391d0eb7bbd2758ef85b8ba5b2bb03d4c5a798627fdc3408f",
+        "sql": "SELECT enabled,revision FROM ark_settings WHERE id=1",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.05739999999059364,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "get",
+        "sql_hash": "b7e0b9b7c45e0e7391d0eb7bbd2758ef85b8ba5b2bb03d4c5a798627fdc3408f",
+        "sql": "SELECT enabled,revision FROM ark_settings WHERE id=1",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.04842499998630956,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "prepare",
+        "sql_hash": "930af83192511eaa26786b788e2ef365ef76ba30a116147deb2077ecd93ad92b",
+        "sql": "SELECT sn FROM ark_grant ORDER BY sn",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.05156100000021979,
+        "thread_cpu_ms": 1,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "all",
+        "sql_hash": "930af83192511eaa26786b788e2ef365ef76ba30a116147deb2077ecd93ad92b",
+        "sql": "SELECT sn FROM ark_grant ORDER BY sn",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.05782000004546717,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "prepare",
+        "sql_hash": "1bd460a4da87c759fd43761021895f2f4e82bac194c8a198f436c687ae0ff52e",
+        "sql": "SELECT * FROM ark_grant WHERE sn=? AND account_id=? AND epoch=?",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.04461300000548363,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "get",
+        "sql_hash": "1bd460a4da87c759fd43761021895f2f4e82bac194c8a198f436c687ae0ff52e",
+        "sql": "SELECT * FROM ark_grant WHERE sn=? AND account_id=? AND epoch=?",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.02423599996836856,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "exec",
+        "sql_hash": "a8402858d4f1e1d27afee976520485ebb4b96a5387355b823f0d0b8079729032",
+        "sql": "BEGIN",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.010869999998249114,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "prepare",
+        "sql_hash": "74b1e1572f486550efd7738287eb349beb7df4ec4e85e5835f0fd73f41dbefbd",
+        "sql": "SELECT name FROM sqlite_schema WHERE type='index' AND tbl_name='analytics_event' AND name IN (?,?,?,?)",
+        "started_at_ms": 1794948684658,
+        "wall_ms": 0.03365200001280755,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "74b1e1572f486550efd7738287eb349beb7df4ec4e85e5835f0fd73f41dbefbd",
+        "sql": "SELECT name FROM sqlite_schema WHERE type='index' AND tbl_name='analytics_event' AND name IN (?,?,?,?)",
+        "started_at_ms": 1794948684659,
+        "wall_ms": 0.09847700002137572,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 5,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "prepare",
+        "sql_hash": "3b02b3b9b692a98575ce2d80aea287daaf1029f75fbc543b24d9f9db6ad971c0",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json FROM analytics_event e INDEXED BY analytics_ark_evidence_cover_v2 WHE",
+        "started_at_ms": 1794948684659,
+        "wall_ms": 0.11718000000109896,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "3b02b3b9b692a98575ce2d80aea287daaf1029f75fbc543b24d9f9db6ad971c0",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json FROM analytics_event e INDEXED BY analytics_ark_evidence_cover_v2 WHE",
+        "started_at_ms": 1794948684659,
+        "wall_ms": 265.71755999996094,
+        "thread_cpu_ms": 0.857,
+        "thread_read_bytes": 24576,
+        "thread_read_calls": 16,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "prepare",
+        "sql_hash": "71252f4dcd3e16b74d02f73a2db05ccd75e8df8bdc7b049d2bc346ade6b04f74",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY analytics_ark_as",
+        "started_at_ms": 1794948684925,
+        "wall_ms": 0.11309299996355549,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "71252f4dcd3e16b74d02f73a2db05ccd75e8df8bdc7b049d2bc346ade6b04f74",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY analytics_ark_as",
+        "started_at_ms": 1794948684925,
+        "wall_ms": 819.4940630000201,
+        "thread_cpu_ms": 2.32,
+        "thread_read_bytes": 86016,
+        "thread_read_calls": 38,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "exec",
+        "sql_hash": "79663c1d3b43ceaf9ee728e501c64b57ae2e4d6cb36ff5c65eddcda1de27342f",
+        "sql": "COMMIT",
+        "started_at_ms": 1794948685747,
+        "wall_ms": 0.022838000033516437,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      }
+    ],
+    "omitted": 0,
+    "finished_at_ms": 1794948685775,
+    "wall_ms": 1117.7134689999511,
+    "main_thread_cpu_during_request_ms": 8.762
+  },
+  "slowest_wait_samples": [
+    {
+      "at_ms": 1794948684756,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210430224\nwchar: 22742196\nsyscr: 40192\nsyscw: 24437\nread_bytes: 6385664\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948684856,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210438416\nwchar: 22742196\nsyscr: 40194\nsyscw: 24437\nread_bytes: 6393856\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948684956,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210467604\nwchar: 22742196\nsyscr: 40209\nsyscw: 24437\nread_bytes: 6402048\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685057,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210479892\nwchar: 22742196\nsyscr: 40212\nsyscw: 24437\nread_bytes: 6410240\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685157,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210492180\nwchar: 22742196\nsyscr: 40215\nsyscw: 24437\nread_bytes: 6418432\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685258,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210504468\nwchar: 22742196\nsyscr: 40218\nsyscw: 24437\nread_bytes: 6430720\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685358,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210524948\nwchar: 22742196\nsyscr: 40223\nsyscw: 24437\nread_bytes: 6443008\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685458,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210533140\nwchar: 22742196\nsyscr: 40225\nsyscw: 24437\nread_bytes: 6451200\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685559,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210565908\nwchar: 22742196\nsyscr: 40233\nsyscw: 24437\nread_bytes: 6463488\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685659,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 210578196\nwchar: 22742196\nsyscr: 40236\nsyscw: 24437\nread_bytes: 6471680\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794948685760,
+      "pid": 2495274,
+      "state": "D",
+      "wchan": "do_get_write_access",
+      "thread_io": "rchar: 210607255\nwchar: 22742196\nsyscr: 40249\nsyscw: 24437\nread_bytes: 6483968\nwrite_bytes: 14786560\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    }
+  ],
+  "slowest_wait_counts": {
+    "folio_wait_bit_common": 10,
+    "do_get_write_access": 1
+  },
+  "maintenance": [
+    {
+      "file": "maintenance-1794948405898.stdout",
+      "ok": true,
+      "partial": false,
+      "rebuilt_days": 2,
+      "rollup": {
+        "attempted_days": 2,
+        "rebuilt_days": 2,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "pruned": {
+        "events": 0,
+        "batches": 0,
+        "facts": 0,
+        "chunks": 1,
+        "elapsed_ms": 1.3456429999999955,
+        "max_transaction_ms": 1.3268110000000206,
+        "budget_exhausted": false
+      },
+      "work_started_at_ms": 1794948406765,
+      "work_finished_at_ms": 1794948406786,
+      "cache_kib": 8192
+    },
+    {
+      "file": "maintenance-1794948385958.stdout",
+      "ok": true,
+      "partial": false,
+      "rebuilt_days": 0,
+      "rollup": {
+        "attempted_days": 0,
+        "rebuilt_days": 0,
+        "failed_days": [],
+        "remaining_dirty_days": 0,
+        "partial": false
+      },
+      "pruned": {
+        "events": 0,
+        "batches": 0,
+        "facts": 0,
+        "chunks": 1,
+        "elapsed_ms": 1.118633999999986,
+        "max_transaction_ms": 1.0847760000000335,
+        "budget_exhausted": false
+      },
+      "work_started_at_ms": 1794948386373,
+      "work_finished_at_ms": 1794948386380,
+      "cache_kib": 8192
+    },
+    {
+      "file": "maintenance-1794948683957.stdout",
+      "ok": false,
+      "partial": true,
+      "rebuilt_days": 0,
+      "rollup": {
+        "attempted_days": 2,
+        "rebuilt_days": 0,
+        "failed_days": [
+          {
+            "dimension": "occurred",
+            "day": "2026-11-18",
+            "reason": "budget_exceeded"
+          },
+          {
+            "dimension": "received",
+            "day": "2026-11-18",
+            "reason": "budget_exceeded"
+          }
+        ],
+        "remaining_dirty_days": 2,
+        "partial": true
+      },
+      "pruned": {
+        "events": 0,
+        "batches": 0,
+        "facts": 0,
+        "chunks": 1,
+        "elapsed_ms": 118.1073530000001,
+        "max_transaction_ms": 118.08581000000004,
+        "budget_exhausted": false
+      },
+      "work_started_at_ms": 1794948684996,
+      "work_finished_at_ms": 1794948745498,
+      "cache_kib": 8192
+    }
+  ]
+}

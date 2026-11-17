@@ -55,6 +55,13 @@ export class ArkStore{
   const r=this.db.prepare('SELECT body,received_at_ms FROM ark_current WHERE sn=? AND grant_id=?').get(i.sn,g.grant_id) as {body:string;received_at_ms:number}|undefined;
   return r?{snapshot:snapshotSchema.parse(JSON.parse(r.body)),received_at_ms:r.received_at_ms}:null;
  }
+ /** HTTP owns asynchronous retry. Never sleep in SQLite's busy callback on that path. */
+ tryAccept(i:ArkIdentity,snapshot:ArkSnapshot,now:number){
+  const previous=Number(this.db.prepare('PRAGMA busy_timeout').get()!.timeout);
+  this.db.exec('PRAGMA busy_timeout=0');
+  try{return this.accept(i,snapshot,now);}
+  finally{this.db.exec(`PRAGMA busy_timeout=${previous}`);}
+ }
  accept(i:ArkIdentity,snapshot:ArkSnapshot,now:number):{status:'accepted'|'duplicate';received_at_ms:number}{
   // Config is read before taking the Ark write lock (config -> Ark lock order).
   const archive=this.archivePolicy?.();

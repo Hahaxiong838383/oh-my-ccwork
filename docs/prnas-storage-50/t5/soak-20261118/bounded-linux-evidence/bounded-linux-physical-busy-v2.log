@@ -1,0 +1,1 @@
+{"scope":"LINUX_SYNTHETIC_REAL_HTTP_AND_SQLITE_LOCKS_NOT_LOAD_PASS","node":"v24.19.0","sqlite":"3.53.3","results":[{"held_ms":250,"status":503,"wall_ms":86.603812,"sqlite_busy_attempts":3,"records":2},{"held_ms":45,"status":200,"wall_ms":50.74298399999998,"sqlite_busy_attempts":1,"records":3}]}

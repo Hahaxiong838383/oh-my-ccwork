@@ -29,7 +29,7 @@ test('transient SQLite BUSY yields then accepts exactly one snapshot; same conte
  }finally{await f.close();}
 });
 test('persistent BUSY is bounded, does not create records, and remains a retryable failure',async()=>{
- const f=await fixture();try{f.fail(()=>{throw busy();});const r=await f.post();assert.equal(r.status,503);assert.equal((await r.json()).error,'ark_dependency_unavailable');assert.ok(f.calls()>=1&&f.calls()<=3);assert.equal(f.count(),0);assert.equal(f.store.current(f.original),null);
+ const f=await fixture();try{f.fail(()=>{throw busy();});const r=await f.post();assert.equal(r.status,503);assert.equal((await r.json()).error,'ark_dependency_unavailable');assert.ok(f.calls()>=1&&f.calls()<=6);assert.equal(f.count(),0);assert.equal(f.store.current(f.original),null);
  }finally{await f.close();}
 });
 test('non-BUSY dependency failure is not retried',async()=>{
@@ -40,6 +40,22 @@ test('a consumed retry budget never starts a fresh window',async()=>{
 });
 test('SQLite IO failure is never mistaken for BUSY',async()=>{
  let calls=0;await assert.rejects(retryArkBusy(async()=>{calls++;throw Object.assign(new Error('disk error'),{code:'ERR_SQLITE_ERROR',errcode:10});}));assert.equal(calls,1);
+});
+test('HTTP acceptance does not synchronously wait for a SQLite lock and restores the connection policy',async()=>{
+ const f=await fixture();try{
+  assert.equal(f.store.db.prepare('PRAGMA busy_timeout').get()!.timeout,15);
+  f.fail(()=>{assert.equal(f.store.db.prepare('PRAGMA busy_timeout').get()!.timeout,0);if(f.calls()===1)throw busy();});
+  const r=await f.post();assert.equal(r.status,200);assert.equal(f.calls(),2);
+  assert.equal(f.store.db.prepare('PRAGMA busy_timeout').get()!.timeout,15);assert.equal(f.count(),1);
+ }finally{await f.close();}
+});
+test('HTTP acceptance restores the original connection timeout after non-BUSY failure',async()=>{
+ const f=await fixture();try{
+  f.store.db.exec('PRAGMA busy_timeout=7');let observed:number|undefined;
+  f.fail(()=>{observed=Number(f.store.db.prepare('PRAGMA busy_timeout').get()!.timeout);throw new Error('forced_non_busy');});
+  assert.equal((await f.post()).status,503);assert.equal(observed,0);
+  assert.equal(f.store.db.prepare('PRAGMA busy_timeout').get()!.timeout,7);assert.equal(f.count(),0);
+ }finally{await f.close();}
 });
 for(const change of ['credential','owner','grant'] as const)test('retry rechecks '+change+' after yielding, before another write',async()=>{
  const f=await fixture();try{f.fail(()=>{if(f.calls()===1){if(change==='credential')f.revoke();else if(change==='owner')f.rebind();else f.store.configure(false,[],Date.now());throw busy();}});
