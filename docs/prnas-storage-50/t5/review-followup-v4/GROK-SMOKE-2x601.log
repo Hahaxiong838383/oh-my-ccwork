@@ -1,0 +1,28 @@
+===SMOKE START 2026-11-17T03:31:03Z===
+dir=/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-stream-v3-review/p003-t5-grok-v3-review-2x601
+node=/Users/fu-121/.local/node-v24/bin/node v24.19.0
+cwd=/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server
+{"root":"/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-stream-v3-review/p003-t5-grok-v3-review-2x601","complete":true,"acks":{"attempts":9,"successes":8,"statuses":{"200":8,"503":1},"p95":131.13995899999998,"p99":131.13995899999998,"all_actors_finished":true,"raw_file":"requests.jsonl","method":"exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"},"ark_correct":2,"seconds":13.501}
+===SMOKE EXIT 0 2026-11-17T03:31:19Z===
+total 8976
+drwx------  21 fu-121  staff      672 Nov 17 11:31 [34m.[39;49m[0m
+drwx------   8 fu-121  staff      256 Nov 17 11:31 [34m..[39;49m[0m
+-rw-------   1 fu-121  staff    29761 Nov 17 11:31 RESULT.json
+-rw-------   1 fu-121  staff  4124672 Nov 17 11:31 analytics.db
+-rw-------   1 fu-121  staff    65536 Nov 17 11:31 ark.db
+-rw-------   1 fu-121  staff       62 Nov 17 11:31 backup.stderr
+-rw-------   1 fu-121  staff      928 Nov 17 11:31 backup.stdout
+-rw-------   1 fu-121  staff      407 Nov 17 11:31 client-private.json
+-rw-------   1 fu-121  staff      405 Nov 17 11:31 client-result.json
+-rw-------   1 fu-121  staff       43 Nov 17 11:31 client.stdout
+-rw-------   1 fu-121  staff    40822 Nov 17 11:31 completed.jsonl
+-rw-------   1 fu-121  staff      210 Nov 17 11:31 config.json
+-rw-------   1 fu-121  staff       16 Nov 17 11:31 control.json
+-rw-------   1 fu-121  staff    69632 Nov 17 11:31 devices.db
+-rw-------   1 fu-121  staff    17428 Nov 17 11:31 health.jsonl
+-rw-------   1 fu-121  staff      299 Nov 17 11:31 maintenance-1794886266570.stdout
+-rw-------   1 fu-121  staff      300 Nov 17 11:31 maintenance-1794886278848.stdout
+-rw-------   1 fu-121  staff    12288 Nov 17 11:31 request-analysis.db
+-rw-------   1 fu-121  staff      907 Nov 17 11:31 requests.jsonl
+-rw-------   1 fu-121  staff     1931 Nov 17 11:31 resources.jsonl
+drwx------   9 fu-121  staff      288 Nov 17 11:31 [34mspool[39;49m[0m

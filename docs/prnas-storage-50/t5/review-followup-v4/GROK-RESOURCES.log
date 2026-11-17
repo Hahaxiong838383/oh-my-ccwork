@@ -1,0 +1,3 @@
+===RUN RESOURCES 2026-11-17T03:30:48Z===
+PASS resource parser/counters: exact CPU weights, OOM/restart/gap/short/unknown/memory/disk fail closed; accelerated only, not 24h
+===EXIT 0===

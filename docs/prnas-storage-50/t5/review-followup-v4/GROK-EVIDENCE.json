@@ -1,0 +1,214 @@
+{
+  "audit": "grok-stream-v3-review",
+  "role": "independent_readonly_tool_review",
+  "not_deployment_acceptance": true,
+  "t5_overall": "NOT_PASSED",
+  "tool_candidate_local": "PASS",
+  "verified_device_tier": 14,
+  "go_live": false,
+  "fixed_sha": "e0931608b26586f79e6c27f8743c313b5a567d3f",
+  "head_start": "e0931608b26586f79e6c27f8743c313b5a567d3f",
+  "head_end": "e0931608b26586f79e6c27f8743c313b5a567d3f",
+  "head_subject": "test(p003): bound T5 load evidence and verify fifty-device fact isolation",
+  "prior_audit": {
+    "session": 374,
+    "path": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-gates-audit",
+    "head": "b6facc1b315b76852d1ee93b120ab2d1e30a5a50"
+  },
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "sqlite_unflagged": true,
+    "NODE_OPTIONS": null
+  },
+  "node_modules": "symlink to p003-brain-search-tools-20261021 server node_modules; no install",
+  "actions_not_taken": [
+    "source_edit",
+    "deploy",
+    "ssh",
+    "production_write",
+    "dependency_install",
+    "overwrite_main13_stream_v3",
+    "overwrite_grok_gates_audit",
+    "load_production_health"
+  ],
+  "six_files_porcelain_start": [],
+  "six_files_porcelain_end": [],
+  "other_tree_drift_not_evidence": [
+    "M docs/prnas-storage-50/t5/STATUS.md",
+    "?? 2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-query-load.ts",
+    "?? docs/prnas-storage-50/t5/grok-gates-audit/"
+  ],
+  "blobs": {
+    "scripts/storage-capacity-load.ts": {
+      "blob": "59b23d3befd6f261b7fb3f892edd51b444e4c306",
+      "sha256": "7972535613ce976a2a3bf86d084d240aff9bae40fbf4ab9e4236e5f1277becb3"
+    },
+    "scripts/storage-load-ledger.ts": {
+      "blob": "3e4779a70932a556b60c1d198c81acf8da866b02",
+      "sha256": "160b6f81e333f618f05ed1f1aa6c2fbffe9e91add0ccbd2b9828cb444f3d48fa"
+    },
+    "scripts/storage-load-ledger.test.ts": {
+      "blob": "4f322c73df6d7f4b122b981b2106aac929868385",
+      "sha256": "2f8b8eff92aa04b655a40cef2de2a6baf8163bd5ccd2c0f9af8850b883eefc33"
+    },
+    "scripts/storage-load-resources.ts": {
+      "blob": "e8a665488c884448c17b2175bfe40362caf4cf10",
+      "sha256": "6a6e3b79580a9effe4ceaacf7440dce1d4ade0aa28457aba691d6101da142439"
+    },
+    "scripts/storage-load-resources.test.ts": {
+      "blob": "418adc81e6d784dc58fea4b81151254c57f9d0c9",
+      "sha256": "f2e01e95dbb307a2c91db180fb413ee3c6114fbd60c78d1db87a1a1cbe203410"
+    },
+    "scripts/storage-fifty-facts.test.ts": {
+      "blob": "858b9dc6f734ba81a2c944b97cc0d0db08144b49",
+      "sha256": "009dfccbb8b09692dabd68b488d49b65b78394ec96e39ad97c84137e02fa1912"
+    }
+  },
+  "suites": {
+    "ledger": {
+      "command": "node --experimental-sqlite --import tsx scripts/storage-load-ledger.test.ts",
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "exit": 0,
+      "started_at": "2026-11-17T03:30:47Z",
+      "log": "LEDGER.log",
+      "sha256": "ed3e242ebf41f3ea3114df2be16f2bd2b73d3c91b475bab3f501e41fba3155d3"
+    },
+    "resources": {
+      "command": "node --experimental-sqlite --import tsx scripts/storage-load-resources.test.ts",
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "exit": 0,
+      "started_at": "2026-11-17T03:30:48Z",
+      "log": "RESOURCES.log",
+      "sha256": "e3c1c9da394cb333976835c251ab352c167fd5bc0c040e78ee5f63e9237e1c15"
+    },
+    "fifty_facts": {
+      "command": "node --experimental-sqlite --import tsx scripts/storage-fifty-facts.test.ts",
+      "cwd": "2-Projects/P003GameDemo20260513/apps/server",
+      "exit": 0,
+      "started_at": "2026-11-17T03:30:49Z",
+      "log": "FIFTY-FACTS.log",
+      "sha256": "e21980a498cbbd9e43cd6d80abcdd9bb8267bd5d3412b0db2c0907ae07db845a",
+      "matrix": {
+        "gm": 10,
+        "unknown": 10,
+        "normal": 30,
+        "normal_family_coin_null": 10,
+        "normal_family_coin_zero": 10,
+        "normal_card_null": 8,
+        "normal_card_zero": 0,
+        "normal_claimable_zero": 10,
+        "stardust_zero_or_null": 0,
+        "owner_epoch_checked": true,
+        "config_rollback_not_old_binary": true
+      }
+    }
+  },
+  "independent_smoke": {
+    "dir": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/grok-stream-v3-review/p003-t5-grok-v3-review-2x601",
+    "unique_p003_t5": true,
+    "overwrote_main13": false,
+    "env": {
+      "T5_DEVICES": 2,
+      "T5_EVENTS": 601,
+      "T5_BATCH": 200,
+      "T5_SEED": 17,
+      "T5_MAINTENANCE": "1",
+      "T5_BACKUP": "1",
+      "T5_COVERING_INDEX": "1"
+    },
+    "started_at": "2026-11-17T03:31:03Z",
+    "ended_at": "2026-11-17T03:31:19Z",
+    "exit": 0,
+    "duration_ms": 13501,
+    "stage": "T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE",
+    "evidence_version": 3,
+    "platform": "darwin",
+    "integrity_complete": true,
+    "evidence_consistent": true,
+    "events": 1202,
+    "seen": 1202,
+    "batches": 8,
+    "dirty_days": 0,
+    "facts": 2404,
+    "attempts": 9,
+    "successes": 8,
+    "status_200": 8,
+    "status_503": 1,
+    "ack_p95_ms": 131.13995899999998,
+    "ack_p99_ms": 131.13995899999998,
+    "ark_correct": 2,
+    "ark_source_mode": [
+      "normal",
+      "normal"
+    ],
+    "backup_exit": 0,
+    "backup_archive_id": "0948d5eb6c6c4037920570433adaadd0",
+    "backup_snapshot_events": 600,
+    "mac_resources_supported": false,
+    "resource_samples": 14,
+    "unavailable_samples": 14,
+    "complete_24h_evidence": false,
+    "local_resource_gate": false,
+    "required_ms": 86400000,
+    "health_samples": 14,
+    "health_tail_capacity": 256,
+    "client_has_unbounded_arrays": false,
+    "result_sha256": "eb0e9fb2ffe12e21522cbe54042b83495f56f44631499fe34293741602cab66f",
+    "requests_sha256": "6db16c4338d128b96402c34ecf3f159a3c9d6b6935c6b969496c586c436a93b6",
+    "completed_sha256": "d41131115f12835d15dbefe8a6ea13050995ae90abe9cd226f1e1debc339ffd3",
+    "resources_jsonl_sha256": "776a93e4c2647c1c36572fae6af3b60484a154382c84347297c50dbdd3e2f588",
+    "smoke_log_sha256": "d3592807dcc7b362c499febc3fa9714a04cc42de6d74e94d3c1b501f3c15afd7"
+  },
+  "blockers_for_this_tool_candidate": [],
+  "non_blocking": [
+    {
+      "id": "N1",
+      "topic": "cgroup_cpu_and_mem_gate_layer",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-resources.ts:14-47",
+      "repro": "Read linuxResources(): host /proc/stat and MemAvailable; cgroup_memory_bytes sampled but unused in summary(). local_resource_gate uses host CPU% and host MemAvailable fraction. On Linux a unit at MemoryMax can still pass host RAM>=20%. Darwin path returns supported=false and cannot close A14."
+    },
+    {
+      "id": "N2",
+      "topic": "maintenance_timer_unhandled_and_nonzero_code",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts:52,55,78",
+      "repro": "void maintain() on setTimeout/setInterval. maintain() throws if stdout is not exactly one JSONL object; throw is not assigned to monitorError. analytics-rollup.ts sets exitCode=1 on prune/rollup error but still prints JSON; harness stores code and only asserts final dirty===0. This 2x601 both rounds code=0."
+    },
+    {
+      "id": "N3",
+      "topic": "fifty_matrix_card_zero_absent",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-fifty-facts.test.ts:25-26",
+      "repro": "card=n%4===0?null:n so n=0 is GM+null. Count over n=0..49: normal_card_zero=0. family_coin 0 exists at n=4 (normal). stardust always 200+n."
+    },
+    {
+      "id": "N4",
+      "topic": "rollback_reopen_default_limit_1000",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-fifty-facts.test.ts:45-47",
+      "repro": "new ArkStore(path) without admission uses limit??1000 in src/ark/store.ts. Test preserves 50 rows after clearFlag; it does not authorize a 51st against verified tier 14. Console already states configuration rollback, not old-code rollback."
+    },
+    {
+      "id": "N5",
+      "topic": "one_hz_ready_noise",
+      "file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts:54-55",
+      "repro": "setInterval(monitor,1000) still hits /ready at 1Hz. Ring is bounded; 24h observation cost remains. Incremental 2x601 is 14 samples."
+    }
+  ],
+  "t5_still_open": [
+    "A06 600k and mature overlap",
+    "A07 84k RSS and live health delta; mature/600k ACK",
+    "A08 90d net prune/lock p99 on mature disk",
+    "A09 Ark query p99 on target IO",
+    "A10 real voice AB",
+    "A11 1h NAS cut + 24h drain",
+    "A14 24h wall clock with Linux cgroup CPU/mem/OOM",
+    "A15 full regression suites rebound to this SHA",
+    "40GiB root cannot hold 44.87GB mature fixture"
+  ],
+  "mac_supported_false_is_not_production_defect": true,
+  "short_sample_is_not_24h": true,
+  "report_sha256": "80163185bc7e01369bea9cc6ba9e1b65ccdf6c9ad71f5adc80505fdb448d3a3c",
+  "head_end_repo": "1b6c149513f16119c501960bb8b2c332b93ea7a3",
+  "head_end_repo_subject": "test(p003): measure actual Ark history query path and preserve T5 failures",
+  "six_files_diff_pin_to_head_end": "empty",
+  "pin_is_ancestor_of_head_end": true
+}

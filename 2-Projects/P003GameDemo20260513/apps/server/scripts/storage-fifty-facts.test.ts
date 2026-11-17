@@ -22,8 +22,8 @@ const expectations:any[]=[];
 try{
  config.setFlag(VERIFIED_PROFILE_KEY,JSON.stringify({version:1,analytics_devices:50,ark_devices:50,evidence:'SYNTHETIC-FIFTY-NOT-CAPACITY-PASS',candidate:'test',validated_at_ms:now}),'test');
  for(const [n,id] of identities.entries()){
-  ark.authorize(id,now-10000);const mode=n%5===0?'gm':n%5===1?'unknown':'normal',coin=n%3===0?null:n%3===1?0:100+n,card=n%4===0?null:n;
-  const snapshot=snapshotSchema.parse({schema_version:1,snapshot_id:'fifty-'+n,captured_at_ms:now,boot_id:'boot-'+n,boot_started_at_ms:now-1000,sequence:1,logical_day:day,config_revision:'test',content_version:'synthetic',source_mode:mode,wallets:{family_coin:coin,stardust:200+n},inventory:{'M-CARD-001':card},progress:{timer_state:'running',next_reward:{status:'locked',kind:'currency',item_id:'C-FAMILY-001',stage_id:'S-'+n,remaining_seconds:60+n},claimable_count:n%3}});
+  ark.authorize(id,now-10000);const mode=n%5===0?'gm':n%5===1?'unknown':'normal',coin=n%3===0?null:n%3===1?0:100+n,card=n%4===0?null:n%4===3?0:n;
+  const snapshot=snapshotSchema.parse({schema_version:1,snapshot_id:'fifty-'+n,captured_at_ms:now,boot_id:'boot-'+n,boot_started_at_ms:now-1000,sequence:1,logical_day:day,config_revision:'test',content_version:'synthetic',source_mode:mode,wallets:{family_coin:coin,stardust:n%3===0?null:n%3===1?0:200+n},inventory:{'M-CARD-001':card},progress:{timer_state:'running',next_reward:{status:'locked',kind:'currency',item_id:'C-FAMILY-001',stage_id:'S-'+n,remaining_seconds:60+n},claimable_count:n%3}});
   assert.equal(ark.accept(id,snapshot,now).status,'accepted');
   const events=[['g1.logical_day_changed',{previous_logical_day:yesterday,logical_day:day,previous_usage_day_index:1,usage_day_index:2,gm_override:mode==='gm'}],['g1.progress_checkpoint',{logical_day:day,elapsed_seconds:300+n,checkpoint_minutes:5,completed_slots:0,current_slot:0}],['g1.reward_granted',{logical_day:day,tank_id:'TANK-001',reward_instance_id:'reward-'+n,source_kind:'progress_stage',source_id:'REGULAR-01',rewards:[{kind:'currency',item_id:'C-FAMILY-001',quantity:n+1,tank_id:''}]}]] as const;
   const ack=settleAnalyticsBatch(analytics,{deviceKey:key(id.sn),active:true,uploadEnabled:true,uploadHourCst:23},{schema_version:1,batch_id:'fifty-'+n,sent_at_ms:now,client:{},events:events.map(([event_name,properties],j)=>({schema_version:1,client_event_id:'fifty-'+n+'-'+j,event_name,occurred_at_ms:now-100+j,session_id:'fixture-'+n,sequence:j,priority:'normal',context:{},properties}))},'fifty-'+n,now);
@@ -31,7 +31,7 @@ try{
   const current=ark.current(id)!;assert.deepEqual(current.snapshot,snapshot);
   const history=readArkHistory(analytics,key(id.sn),now-10000,now),facts=resolveArkFacts({snapshot:current,history},now);
   if(mode==='normal'){
-   assert.equal(facts.assets.family_coin?.value??null,coin);assert.equal(facts.assets.stardust?.value,200+n);assert.equal(facts.assets.makeup_card?.value??null,card);
+   assert.equal(facts.assets.family_coin?.value??null,coin);assert.equal(facts.assets.stardust?.value??null,n%3===0?null:n%3===1?0:200+n);assert.equal(facts.assets.makeup_card?.value??null,card);
    assert.equal(facts.progress?.remaining_seconds,60+n);assert.equal(facts.progress?.claimable_count,n%3);
    assert.equal(facts.daily?.progress_seconds,300+n);assert.deepEqual(facts.daily?.rewards,[{item_id:'C-FAMILY-001',quantity:n+1}]);
   }else{assert.equal(facts.assets.family_coin,null);assert.equal(facts.assets.stardust,null);assert.equal(facts.assets.makeup_card,null);assert.equal(facts.progress,null);assert.equal(facts.daily,undefined);}
@@ -46,6 +46,8 @@ try{
  const reopened=new ArkStore(join(root,'ark.db'));
  try{assert.equal(reopened.settings().subjects.length,50);for(const {id,snapshot} of expectations)assert.deepEqual(reopened.current(id)!.snapshot,snapshot);}finally{reopened.close();}
  assert.equal(before(),original,'rollback cannot drop >32 grants/snapshots/seen/accepted outbox');
+ assert.throws(()=>ark.authorize({sn:'BJP00399999900000051',account_id:'new-51',epoch:1},now+1),/STORAGE_CAPACITY_LIMIT/);
+ assert.equal(before(),original,'rejected new grant must preserve all existing data');
  const id=identities[2],newIdentity={...id,account_id:'replacement-owner',epoch:2};ark.authorize(newIdentity,now+1);
  assert.equal(ark.current(id),null);assert.equal(ark.current(newIdentity),null);
  assert.equal(ark.db.prepare('SELECT count(*) n FROM ark_archive_outbox').get()!.n,50);

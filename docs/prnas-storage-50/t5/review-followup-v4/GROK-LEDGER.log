@@ -1,0 +1,3 @@
+===RUN LEDGER 2026-11-17T03:30:47Z===
+PASS streaming ledger: exact IDs/device/seen/delta, lost ACK, non-full batches, bounded lines, corrupt evidence and retry order, exact disk percentiles
+===EXIT 0===

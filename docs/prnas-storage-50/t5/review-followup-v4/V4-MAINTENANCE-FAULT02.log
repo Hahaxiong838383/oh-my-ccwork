@@ -1,0 +1,30 @@
+{"root":"/Users/fu-121/.local/state/p003-t5-v4-fault02","complete":true,"acks":{"attempts":9,"successes":8,"statuses":{"200":8,"503":1},"p95":269.4717079999996,"p99":269.4717079999996,"all_actors_finished":true,"raw_file":"requests.jsonl","method":"exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"},"ark_correct":2,"seconds":14.102}
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: maintenance evidence failed
++ actual - expected
+
++ SyntaxError: Unexpected token 'o', "not-json-fo"... is not valid JSON
++     at JSON.parse (<anonymous>)
++     at readJsonl (/Users/fu-121/.local/state/p003-prnas-t5-20261117/v4-fault-candidate/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-ledger.ts:18:218)
++     at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
++     at async maintain (/Users/fu-121/.local/state/p003-prnas-t5-20261117/v4-fault-candidate/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts:52:280)
+- undefined
+
+    at <anonymous> (/Users/fu-121/.local/state/p003-prnas-t5-20261117/v4-fault-candidate/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts:78:33)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: SyntaxError: Unexpected token 'o', "not-json-fo"... is not valid JSON
+      at JSON.parse (<anonymous>)
+      at readJsonl (/Users/fu-121/.local/state/p003-prnas-t5-20261117/v4-fault-candidate/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-ledger.ts:18:218)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async maintain (/Users/fu-121/.local/state/p003-prnas-t5-20261117/v4-fault-candidate/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts:52:280),
+  expected: undefined,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0
