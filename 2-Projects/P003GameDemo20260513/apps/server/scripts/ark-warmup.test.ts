@@ -1,6 +1,6 @@
 /** Real independent processes, production Analytics lifecycle and history-only facts. */
 import assert from 'node:assert/strict';
-import {mkdtempSync,rmSync,writeFileSync} from 'node:fs';
+import {mkdtempSync,rmSync,writeFileSync,existsSync} from 'node:fs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 import {fork,type ChildProcess} from 'node:child_process';
@@ -17,7 +17,7 @@ const config={internalUrl:url,internalSecret:secret};
 if(mode==='reader'){
  const {startAnalyticsServer}=await import('../src/analytics/index.js');
  const store=new AnalyticsStore(join(dir,'analytics.db')),ark=new ArkStore(join(dir,'ark.db'));
- const reader={acceptsCredential:()=>false,readCredentialState:()=>({binding:null,revokedThroughSec:null}),readiness:()=>true,
+ const reader={acceptsCredential:()=>false,readCredentialState:()=>({binding:null,revokedThroughSec:null}),readiness:()=>existsSync(join(dir,'dependency-ready')),
   readAnalyticsDeviceContext:()=>({deviceKey:key,active:false,uploadEnabled:false,uploadHourCst:23}),arkDeviceKey:()=>key,
   readArkAuthorization:()=>({...identity,not_before_ms:ark.grant(identity)!.not_before_ms})};
  const service=startAnalyticsServer({store,reader,authSecret:secret,internalSecret:secret,controlPath:join(dir,'control.json'),allowSubjects:[],diskFreeBytes:()=>20*1024**3},3306);
@@ -47,6 +47,9 @@ if(mode==='reader'){
   const events=[['g1.logical_day_changed',{previous_logical_day:cstDay(now-86400000),logical_day:day,previous_usage_day_index:1,usage_day_index:2,gm_override:false}],['g1.wallet_balance_changed',{item_id:'C-FAMILY-001',before:0,after:17,delta:17}],['g1.progress_checkpoint',{logical_day:day,elapsed_seconds:600,checkpoint_minutes:10,completed_slots:1,current_slot:1}]].map(([name,properties],i)=>({schema_version:1,client_event_id:'warm'+i,event_name:name,occurred_at_ms:now-3000+i*500,session_id:'s',sequence:i,priority:'normal',context:{},properties}));
   const ack=settleAnalyticsBatch(store,{deviceKey:key,active:true,uploadEnabled:true,uploadHourCst:23},{schema_version:1,batch_id:'warm-batch',sent_at_ms:now,client:{content_version:'warm-content'},events} as any,'warm-rid',now);assert.equal(ack.rejected.length,0);store.close();
   const reader=child('reader');await deadline(once(reader.p,'message'));
+  const {warmArkHistory}=await import('../src/ark/warmup.js');
+  assert.equal((await warmArkHistory(config)).status,'degraded','an HTTP socket is not actual dependency readiness');
+  writeFileSync(join(dir,'dependency-ready'),'ready');
   const endpoint=url+'/internal/analytics/ark-warmup';
   const request=(body:string,token=secret)=>fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json','X-Analytics-Internal-Token':token},body});
   let r=await request('{}');assert.equal(r.status,200,'production warmup endpoint');assert.equal(r.headers.get('cache-control'),'no-store');assert.deepEqual(await r.json(),unknownHistory());
@@ -54,7 +57,6 @@ if(mode==='reader'){
   for(const b of ['null','[]','{"subject":"'+identity.sn+'"}']){r=await request(b);assert.equal(r.status,400);await r.body?.cancel();}
   r=await request(' '.repeat(1025));assert.equal(r.status,413);await r.body?.cancel();
   for(let i=0;i<3;i++){const c=child('client');const [code]=await deadline(once(c.p,'exit'));assert.equal(code,0,c.logs());console.log(c.logs().trim());}
-  const {warmArkHistory}=await import('../src/ark/warmup.js');
   for(const bad of ['https://127.0.0.1:3306','http://example.com','http://user@127.0.0.1:3306'])assert.equal((await warmArkHistory({...config,internalUrl:bad})).status,'skipped');
   assert.equal((await warmArkHistory({...config,internalSecret:''})).status,'skipped');
   assert.equal((await warmArkHistory({...config,internalSecret:'wrong'})).status,'degraded');
