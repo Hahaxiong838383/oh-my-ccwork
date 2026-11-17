@@ -1,0 +1,69 @@
+{
+  "scope": "LOCAL_FILTER_INDEX_HYPOTHESIS_ONLY",
+  "root": "/tmp/codeg-acp/2883-c07035a6/p003-t5-order-index-amh933hj",
+  "results": [
+    {
+      "index": "analytics_ark_evidence_cover_v1",
+      "rows": 263,
+      "vm_steps_approx": 67900,
+      "warm_ms_uncontrolled": 7.457666099071503,
+      "plan": [
+        [
+          4,
+          0,
+          0,
+          "SEARCH e USING COVERING INDEX analytics_ark_evidence_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)"
+        ],
+        [
+          106,
+          0,
+          0,
+          "USE TEMP B-TREE FOR ORDER BY"
+        ]
+      ],
+      "pages": {
+        "allocated": 398,
+        "page_size": 4096
+      },
+      "result_sha256": "ca3585330fce8261a2f0d1a7bee2b89701d7dfc32f9893aee4c7ab05626d3302"
+    },
+    {
+      "index": "experimental_evidence",
+      "rows": 263,
+      "vm_steps_approx": 63600,
+      "warm_ms_uncontrolled": 4.758957773447037,
+      "plan": [
+        [
+          4,
+          0,
+          0,
+          "SEARCH e USING COVERING INDEX experimental_evidence (device_key=? AND received_at_ms>? AND received_at_ms<?)"
+        ]
+      ],
+      "pages": {
+        "allocated": 394,
+        "page_size": 4096
+      },
+      "result_sha256": "ca3585330fce8261a2f0d1a7bee2b89701d7dfc32f9893aee4c7ab05626d3302"
+    },
+    {
+      "index": "experimental_filtered",
+      "rows": 263,
+      "vm_steps_approx": 2600,
+      "warm_ms_uncontrolled": 1.261458732187748,
+      "plan": [
+        [
+          4,
+          0,
+          0,
+          "SEARCH e USING COVERING INDEX experimental_filtered (device_key=? AND received_at_ms>? AND received_at_ms<?)"
+        ]
+      ],
+      "pages": {
+        "allocated": 67,
+        "page_size": 4096
+      },
+      "result_sha256": "ca3585330fce8261a2f0d1a7bee2b89701d7dfc32f9893aee4c7ab05626d3302"
+    }
+  ]
+}

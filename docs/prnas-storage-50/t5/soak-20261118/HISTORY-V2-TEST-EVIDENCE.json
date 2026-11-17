@@ -1,0 +1,31 @@
+{
+  "logs": {
+    "history-v2-default.log": {
+      "sha256": "d45983a4fc5d208f8e4aca2547a99ad6f02ffe8a98f91037f96ccb10cb1be013",
+      "bytes": 2048
+    },
+    "history-v2-cover.log": {
+      "sha256": "e5310bbc3f14055b8f0f95be730eeba045b57edf81b478ff72c6ed445be5d78c",
+      "bytes": 3294
+    },
+    "history-v2-cover-final.log": {
+      "sha256": "91f1da0f2cb293ce7496d7bca31904fec1e8d7509f9915b9e40706e5ec120e71",
+      "bytes": 2154
+    },
+    "history-v2-ark-regression.log": {
+      "sha256": "6348b3eeb53f5a32d2a03d6f6f56761e665dd5e6b25b9faae93eb2820099f975",
+      "bytes": 7098
+    },
+    "history-v2-ark-regression-final.log": {
+      "sha256": "37700e1b19634c367f41f314ecc0f562782985c423aad8830f1a8f7b2ae3110e",
+      "bytes": 11930
+    }
+  },
+  "cover_final": {
+    "tests": 20,
+    "passed": 20
+  },
+  "ark_regression_final": "exit0 all9scripts",
+  "initial_fixture_failure": "new legacy-upgrade test used command=normal, outside client enum; corrected seed to g1.open_experience then directly mutated synthetic DB for legacy-marker tests; initial logs retained",
+  "full_linux_mixed": "NOT_RUN"
+}

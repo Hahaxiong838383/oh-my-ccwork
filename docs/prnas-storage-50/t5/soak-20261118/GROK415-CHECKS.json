@@ -1,0 +1,109 @@
+{
+  "review": "sql-cpu-period-9e9b4819-20261118",
+  "at": "2026-11-18T03:24:51+08:00",
+  "readonly": true,
+  "ssh": false,
+  "started_other_agents": false,
+  "changed_business_src": false,
+  "ran_load": false,
+  "production_changed": false,
+  "production_root_cause_located": false,
+  "hour24_started": false,
+  "hour24_passed": false,
+  "adopt_10ms_period": false,
+  "fixed_measurement_commit": "9e9b481908c1f62f8c25c95209e68d398f1057a4",
+  "later_commit_not_under_test": {
+    "commit": "773c0f18d64ff18050d265d6887e4e5139ec9edb",
+    "effect": "storage-capacity-load.ts sets query_only and cache_size=-8192",
+    "period_experiment_used_it": false
+  },
+  "gates_unchanged": {
+    "client_abort_ms": 120,
+    "history_accept_ms": 125,
+    "round_p99_ms": 100,
+    "cpu_quota": "50%",
+    "memory_max": "768M",
+    "ack_complete_required": true
+  },
+  "evidence_sha256": {
+    "SQL-DIAG-01-EVIDENCE.json": "37e76ad1f21a6e313902102c87dd891319ec83287a6d08b8a8e6c9996e11da89",
+    "SQL-DIAG-02-OBSERVED.json": "af106b9d2ae7b24b214676d844336b674eb504af0b891249d7d49934c0192e7c",
+    "SQL-DIAG-02-FINAL.json": "4cb952060b5aab5af7f0bd1dd5e78777cd5c47220d13dcfa1b176a50df109bf6",
+    "SHARED-CADENCE-INDEPENDENT-FAILURE.json": "2edd879b61ab521e31cb20059a236d3e836e344a55c9b8897e9f9f35059e92bb",
+    "shared-cadence-evidence-193bf990/resources.jsonl": "6716da992edf0470b8dfd25f07c6848c9a547ecbb75d9a22e13653a39dfee47e",
+    "sql-diag-evidence-01-06.tar.gz": "75f27c46ff5700fc36348f8a9738c9073d36717f0afa07cc011188457d97837b"
+  },
+  "original_mixed": {
+    "candidate": "193bf990b3d15192815254ebeb31375a87a7eb2b",
+    "query_samples": 250,
+    "history_transport_failures": 29,
+    "query_p99_ms": 132.0393879999756,
+    "events_acknowledged": 300000,
+    "dirty_rows": 0,
+    "resource_samples": 132,
+    "cgroup_memory_limit_bytes": 805306368,
+    "cgroup_memory_peak_fraction": 1,
+    "cgroup_working_set_peak_fraction": 0.9672597249348959,
+    "memory_max_events_first": 0,
+    "memory_max_events_last": 8530,
+    "oom": 0,
+    "host_mem_available_min_fraction": 0.47494036077128565,
+    "cgroup_cpu_quota_cores": 0.5,
+    "throttle_or_pressure_fields_present": false,
+    "reproduced_by_copy_runs": false
+  },
+  "copy_runs": [
+    {"run": 1, "period_ms": 100, "samples": 200, "transport_failures": 0, "failing_round": "diag-mixed-0", "round_p99_ms": 146.24702800000068, "round_pass": false, "memory_max_events": 0},
+    {"run": 2, "period_ms": 100, "samples": 750, "transport_failures": 1, "failing_round": "diag-mixed-0", "round_p99_ms": 135.48200600000018, "round_pass": false, "memory_max_events": 0, "memory_current_peak_bytes": 764080128, "working_set_peak_fraction": 0.4058888753255208, "maintenance_window_ms": 40113, "budget_exceeded_days": 1},
+    {"run": 3, "period_ms": 10, "samples": 200, "transport_failures": 0, "failing_round": "diag-mixed-0", "round_p99_ms": 112.0643769999997, "round_pass": false, "memory_max_events": 0, "cpu_max": "5000 10000", "nr_periods": 1557, "nr_throttled": 1175, "throttled_usec": 8054302, "memory_pressure_total_usec": 0},
+    {"run": 4, "period_ms": 100, "samples": 200, "transport_failures": 0, "round_pass": true, "max_client_ms": 93.6079749999999, "memory_max_events": 0},
+    {"run": 5, "period_ms": 10, "samples": 200, "transport_failures": 0, "round_pass": true, "max_client_ms": 81.19061299999976, "memory_max_events": 0},
+    {"run": 6, "period_ms": 100, "samples": 200, "transport_failures": 0, "round_pass": true, "max_client_ms": 98.32286599999952, "memory_max_events": 0, "max_sample_server_ms": 14.344565999999759, "max_sample_client_minus_server_ms": 83.9783}
+  ],
+  "statement_82_13": {
+    "run": 2,
+    "query_id": "diag-mixed-0-31",
+    "sql_hash_prefix": "e088d0955f78",
+    "phase": "all",
+    "wall_ms": 82.121,
+    "thread_cpu_ms": 13.059,
+    "request_wall_ms": 91.18440100000043,
+    "client_ms": 135.48200600000018,
+    "entry_ms": 50,
+    "server_ms": 91.07553100000041,
+    "client_status": null,
+    "nearby_cgroup_memory_bytes": 221995008,
+    "nearby_memory_max_events": 0,
+    "queue_amplification_shown": false
+  },
+  "experiment_can_separate": {
+    "confirmed_period_manipulation": true,
+    "stable_10ms_latency_benefit": false,
+    "separates_cfs_period_from_in_call_sleep": false,
+    "separates_original_memory_max_regime": false,
+    "client_p99_equals_server_sql": false,
+    "reason": "Trivial statements still show 25-40ms off-CPU at both periods. Client ms includes same-cgroup ArkStore. Copy never increments memory.max. No per-statement throttled_usec."
+  },
+  "not_next": {
+    "shorten_cpu_period": "rejected by runs 3-6",
+    "increase_cpu_quota": "out of scope",
+    "relax_gates": "out of scope",
+    "cut_cache_64mib_to_8mib": "at most 56MiB; original working set would remain about 0.894 of memory.max if the pager were fully resident",
+    "slow_maintenance_cadence": "warm runs still stall after short successful rebuilds; avoiding overlap does not identify the stall"
+  },
+  "next_falsifier": {
+    "action": "Pair existing profile logs from the in-flight full-mix run at 9e9b4819. Do not change period, cache, cadence, or quota.",
+    "fields": ["entry_ms = received_at_ms - sent_at_ms", "handler_ms", "gap_ms = max statement wall_ms - thread_cpu_ms"],
+    "if_entry_gt_120_and_gap_lt_20": "failure is before this SQL; test previous done_at against this sent_at",
+    "if_entry_lt_30_and_gap_gt_50": "stall is inside the sync call; one later run may read throttled_usec and memory.events max outside that statement only",
+    "if_client_exceeds_entry_plus_handler_by_30ms": "score as client ArkStore, not server SQL"
+  },
+  "thread_cpu_usage": {
+    "api": "process.threadCpuUsage delta, microseconds to ms",
+    "includes": "current thread user+system on-CPU time",
+    "excludes": ["CFS throttle", "busy_timeout sleep", "IO/D-state", "other threads", "other processes in the cgroup"],
+    "wall_includes_sha256_after_cpu_sample": true,
+    "request_level_cpu_includes_other_work_during_await": true,
+    "zero_means_zero_microsecond_delta": true
+  }
+}

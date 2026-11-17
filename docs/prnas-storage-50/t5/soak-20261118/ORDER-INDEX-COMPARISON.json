@@ -1,0 +1,90 @@
+{
+  "scope": "LOCAL_SQL_PLAN_HYPOTHESIS_ONLY_NOT_MIXED_OR_COLD_IO",
+  "root": "/tmp/codeg-acp/2883-c07035a6/p003-t5-order-index-amh933hj",
+  "sqlite": "3.45.1",
+  "rows": 60000,
+  "results": [
+    {
+      "query": "evidence",
+      "runs": [
+        {
+          "kind": "old",
+          "rows": 263,
+          "vm_steps_approx": 67900,
+          "ms_warm_uncontrolled": 5.841749720275402,
+          "plan": [
+            [
+              4,
+              0,
+              0,
+              "SEARCH e USING COVERING INDEX analytics_ark_evidence_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)"
+            ],
+            [
+              106,
+              0,
+              0,
+              "USE TEMP B-TREE FOR ORDER BY"
+            ]
+          ],
+          "result_sha256": "ca3585330fce8261a2f0d1a7bee2b89701d7dfc32f9893aee4c7ab05626d3302"
+        },
+        {
+          "kind": "ordered",
+          "rows": 263,
+          "vm_steps_approx": 63600,
+          "ms_warm_uncontrolled": 26.03816706687212,
+          "plan": [
+            [
+              4,
+              0,
+              0,
+              "SEARCH e USING COVERING INDEX experimental_evidence (device_key=? AND received_at_ms>? AND received_at_ms<?)"
+            ]
+          ],
+          "result_sha256": "ca3585330fce8261a2f0d1a7bee2b89701d7dfc32f9893aee4c7ab05626d3302"
+        }
+      ]
+    },
+    {
+      "query": "assets",
+      "runs": [
+        {
+          "kind": "old",
+          "rows": 513,
+          "vm_steps_approx": 18900,
+          "ms_warm_uncontrolled": 1.8027909100055695,
+          "plan": [
+            [
+              4,
+              0,
+              0,
+              "SEARCH e USING COVERING INDEX analytics_ark_assets_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)"
+            ],
+            [
+              55,
+              0,
+              0,
+              "USE TEMP B-TREE FOR ORDER BY"
+            ]
+          ],
+          "result_sha256": "8deb8c96fff34f5b349af7402642f796b5c313f6d8a8d897ad96214679fc326f"
+        },
+        {
+          "kind": "ordered",
+          "rows": 513,
+          "vm_steps_approx": 7700,
+          "ms_warm_uncontrolled": 0.9791674092411995,
+          "plan": [
+            [
+              4,
+              0,
+              0,
+              "SEARCH e USING COVERING INDEX experimental_assets (device_key=? AND occurred_at_ms>? AND occurred_at_ms<?)"
+            ]
+          ],
+          "result_sha256": "8deb8c96fff34f5b349af7402642f796b5c313f6d8a8d897ad96214679fc326f"
+        }
+      ]
+    }
+  ]
+}

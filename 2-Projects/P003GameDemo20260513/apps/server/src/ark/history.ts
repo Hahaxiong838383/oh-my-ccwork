@@ -1,5 +1,5 @@
 import type {AnalyticsStore} from '../analytics/store.js';
-import {arkHistoryReadIndexes} from './history-indexes.js';
+import {arkHistoryReadIndexes,ARK_EVIDENCE_FILTER} from './history-indexes.js';
 import {cstDay,daySchema,dailyFactSchema,unknownHistory,type ArkHistory} from './contracts.js';
 const DAY=86400000;
 /** Full device key only. Bounded raw facts; rollups, request IDs and aliases are never authority. */
@@ -15,10 +15,7 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  const evidence=store.db.prepare(`SELECT ${eventColumns},NULL AS client_json FROM analytics_event e INDEXED BY ${indexes.evidence}
  WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=?
  AND e.event_name IN ('g1.logical_day_changed','g1.command_failed','g1.runtime_command_completed','g1.gift_became_available','g1.gift_claimed','g1.reward_granted')
- AND (e.event_name='g1.logical_day_changed' OR json_extract(e.properties_json,'$.gm_override')=1 OR json_extract(e.properties_json,'$.source_mode')='gm'
- OR lower(coalesce(json_extract(e.properties_json,'$.command'),'')||' '||coalesce(json_extract(e.properties_json,'$.source_kind'),'')) GLOB '*gm*'
- OR lower(coalesce(json_extract(e.properties_json,'$.command'),'')||' '||coalesce(json_extract(e.properties_json,'$.source_kind'),'')) GLOB '*debug*'
- OR lower(coalesce(json_extract(e.properties_json,'$.command'),'')||' '||coalesce(json_extract(e.properties_json,'$.source_kind'),'')) GLOB '*test*')
+ AND (${ARK_EVIDENCE_FILTER})
  ORDER BY e.received_at_ms DESC LIMIT 513`).all(key,now-14*DAY,now) as Row[];
  if(evidence.length>512)return unknownHistory('query_limit');
  const facts=store.db.prepare(`SELECT ${eventColumns},NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY ${indexes.assets}

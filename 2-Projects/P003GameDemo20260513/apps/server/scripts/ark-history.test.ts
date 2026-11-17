@@ -18,6 +18,45 @@ function fixture(){const root=mkdtempSync(join(tmpdir(),'ark-history-')),store=n
  const wallet=(n:number,at=NOW-1000,received=NOW,key=KEY)=>add('g1.wallet_balance_changed',{item_id:'C-FAMILY-001',before:0,after:n,delta:n},at,received,key);
  return {store,add,normal,wallet,done(){store.close();rmSync(root,{recursive:true,force:true});}};
 }
+test('offline evidence index filters normal non-markers and serves ordered facts without sorting',()=>{const f=fixture();try{
+ f.normal();f.wallet(17);installArkHistoryIndexes(f.store.db);
+ const original=f.store.db.prepare.bind(f.store.db),plans:string[]=[],evidenceSql:string[]=[];
+ const observed={readSnapshot:f.store.readSnapshot.bind(f.store),db:{prepare(sql:string){const st=original(sql);return {all(...args:any[]){
+  if(sql.includes('NULL AS client_json FROM analytics_event')){evidenceSql.push(sql);plans.push(...(original('EXPLAIN QUERY PLAN '+sql).all(...args) as {detail:string}[]).map(r=>r.detail));}
+  return st.all(...args);
+ },get:(...args:any[])=>st.get(...args)};}}} as unknown as AnalyticsStore;
+ assert.equal(readArkHistory(observed,KEY,NOW-5000,NOW).wallets.family_coin?.value,17);
+ assert.equal(evidenceSql.length,1);assert(plans.some(p=>p.includes('COVERING INDEX')));
+ assert(!plans.some(p=>p.includes('TEMP B-TREE')),'evidence should stream in receive order without sorting');
+ const definition=original('SELECT sql FROM sqlite_schema WHERE name=?').get(ARK_HISTORY_INDEXES.evidence.name)!.sql as string;
+ assert.match(definition,/gm_override/,'normal command/gift/reward rows must not occupy the evidence index');
+ assert.doesNotMatch(definition,/batch_attempt_id|session_id|client_event_id/,'evidence needs no batch/client/session payload');
+}finally{f.done();}});
+test('filtered evidence upgrade and rollback preserve legacy GM, watermark and unknown semantics',()=>{
+ for(const marker of [{command:'normal'},{command:'stigma'},{command:'GM'},{command:'foo+DEBUG'},{source_kind:'TEST@tool'},{source_mode:'gm'},{gm_override:true}]){
+  const f=fixture();try{
+   f.store.db.exec(`DROP INDEX IF EXISTS ${ARK_HISTORY_INDEXES.evidence.name}`);
+   const events=ARK_HISTORY_INDEXES.evidence.events.map(e=>"'"+e+"'").join(',');
+   f.store.db.exec(`CREATE INDEX analytics_ark_evidence_cover_v1 ON analytics_event(device_key,event_name,received_at_ms DESC,occurred_at_ms DESC,clock_suspicious,properties_json,batch_attempt_id,session_id,client_event_id) WHERE event_name IN (${events})`);
+   f.normal();f.wallet(17);
+   f.add('g1.command_failed',{command:'g1.open_experience',error_code:'test'},NOW-900);
+   f.store.db.prepare("UPDATE analytics_event SET properties_json=? WHERE event_name='g1.command_failed'").run(JSON.stringify(marker));
+   assert.equal(arkHistoryReadIndexes(f.store.db).evidence,'analytics_ark_evidence_cover_v1');
+   const before=[NOW-5000,NOW-500].map(since=>readArkHistory(f.store,KEY,since,NOW));
+   installArkHistoryIndexes(f.store.db);
+   assert.equal(arkHistoryReadIndexes(f.store.db).evidence,ARK_HISTORY_INDEXES.evidence.name);
+   assert.deepEqual([NOW-5000,NOW-500].map(since=>readArkHistory(f.store,KEY,since,NOW)),before);
+   // Committed data mutation must immediately update membership, not leave a stale projection.
+   f.store.db.prepare("UPDATE analytics_event SET properties_json=? WHERE event_name='g1.command_failed'").run('{"command":"gm"}');
+   assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).status,'unknown');
+   f.store.db.prepare("DELETE FROM analytics_event WHERE event_name='g1.command_failed'").run();
+   assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).wallets.family_coin?.value,17);
+   f.store.db.exec(`DROP INDEX ${ARK_HISTORY_INDEXES.evidence.name}`);
+   assert.equal(arkHistoryReadIndexes(f.store.db).evidence,'analytics_ark_evidence_cover_v1');
+   assert.equal(readArkHistory(f.store,KEY,NOW-5000,NOW).wallets.family_coin?.value,17);
+  }finally{f.done();}
+ }
+});
 test('only asset history reads batch metadata; evidence and daily use event facts alone',()=>{const f=fixture();try{
  f.normal();f.wallet(17);
  f.add('g1.progress_checkpoint',{logical_day:'2026-10-31',elapsed_seconds:600,checkpoint_minutes:10,completed_slots:1,current_slot:1});
@@ -100,13 +139,13 @@ test('history selects event families through the existing selective index, prese
  f.store.transaction(()=>{for(let i=0;i<12000;i++)insert.run(KEY,'index-noise'+i,'voice.session_state_changed',NOW-500,NOW,'s',i,'normal','{}','{}',row.batch_attempt_id,'2026-10-31','2026-10-31',0);});
  const plans:string[]=[];
  const instrument=(removeHint:boolean)=>({readSnapshot:f.store.readSnapshot.bind(f.store),db:{prepare(sql:string){
-  if(removeHint)sql=sql.replace(/ INDEXED BY analytics_ark_(?:device_event_received|(?:evidence|assets|daily)_cover_v1)/g,'');
+  if(removeHint)sql=sql.replace(/ INDEXED BY analytics_ark_(?:device_event_received|(?:evidence|assets|daily)_cover_v[12])/g,'');
   const statement=f.store.db.prepare(sql);
   return {all(...args:any[]){if(!removeHint)plans.push(...(f.store.db.prepare('EXPLAIN QUERY PLAN '+sql).all(...args) as {detail:string}[]).filter(r=>r.detail.startsWith('SEARCH e ')).map(r=>r.detail));return statement.all(...args);},get(...args:any[]){return statement.get(...args);}};
  }}} as unknown as AnalyticsStore);
  const previous=readArkHistory(instrument(true),KEY,NOW-5000,NOW),current=readArkHistory(instrument(false),KEY,NOW-5000,NOW);
  assert.deepEqual(current,previous);assert.equal(current.wallets.family_coin?.value,21);assert.equal(plans.length,3);
- for(const plan of plans)assert.match(plan,/event_name=\?/,`must seek relevant events instead of scanning every device event: ${plan}`);
+ for(const plan of plans)assert.match(plan,/event_name=\?|COVERING INDEX analytics_ark_evidence_cover_v2/,`must seek relevant events or the filtered evidence index: ${plan}`);
 }finally{f.done();}});
 
 test('offline history indexes preserve data, are idempotent, and a conflicting definition rolls back',()=>{const f=fixture();try{
