@@ -1,0 +1,49 @@
+{
+  "candidate": "2620f3746f9b275a45eb0d8172adefb056c482aa",
+  "before_bytes": 1998299136,
+  "after_bytes": 2112741376,
+  "runs": [
+    {
+      "label": "install",
+      "exit": 0,
+      "result": {
+        "changed": true,
+        "index": "analytics_rollup_device_rowid"
+      },
+      "error": "",
+      "stderr": ""
+    },
+    {
+      "label": "read",
+      "exit": 0,
+      "result": {
+        "n": 100000,
+        "devices": 50,
+        "ms": 10452.622094,
+        "cpu": {
+          "user": 466880,
+          "system": 177666
+        },
+        "io0": "rchar: 89442\nwchar: 17\nsyscr: 87\nsyscw: 10\nread_bytes: 53248\nwrite_bytes: 32768\ncancelled_write_bytes: 0\n",
+        "io1": "rchar: 69733836\nwchar: 25\nsyscr: 17093\nsyscw: 11\nread_bytes: 95113216\nwrite_bytes: 32768\ncancelled_write_bytes: 0\n",
+        "plan": [
+          {
+            "id": 5,
+            "parent": 0,
+            "notused": 49,
+            "detail": "SEARCH analytics_rollup_fact USING INDEX analytics_rollup_device_rowid (dimension=? AND day=? AND device_key=? AND rowid>?)"
+          }
+        ]
+      },
+      "error": "",
+      "stderr": ""
+    }
+  ],
+  "production_ready": true,
+  "guard": {
+    "samples": 22,
+    "all_ready": true,
+    "minimum_free_bytes": 5663498240
+  },
+  "scope": "isolated original600k offline index + cold-advised100k tail, not mixed acceptance"
+}

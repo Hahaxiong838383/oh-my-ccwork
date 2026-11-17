@@ -1,0 +1,8 @@
+{
+  "candidate": "85cbf6720932e1d65ab0011714e2475f0b66e1e0",
+  "review_json_sha256": "3b52dbf4bda7eca31aa20dd82d000bf91a40d09065a706eb8c00ad96a11a73b5",
+  "review_md_sha256": "f0f5f6f08dbc9f95bd32bf7db03e12dd55ac4a4ab89c4998e13e4a1059831eb9",
+  "verified_logs": 10,
+  "finding": "expired-day-partial-prune-republish",
+  "not_final_candidate": true
+}

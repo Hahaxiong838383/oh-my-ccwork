@@ -1,0 +1,230 @@
+{
+  "status": "FAIL_DIRTY2",
+  "candidate": "2620f3746f9b275a45eb0d8172adefb056c482aa",
+  "accepted": 600000,
+  "acks": {
+    "attempts": 9988,
+    "successes": 3000,
+    "statuses": {
+      "200": 3000,
+      "503": 6988
+    },
+    "p95": 197.93006199999945,
+    "p99": 364.6354250000004,
+    "all_actors_finished": true,
+    "raw_file": "requests.jsonl",
+    "method": "exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"
+  },
+  "recomputed_ack_p95": 197.93006199999945,
+  "recomputed_ack_p99": 364.6354250000004,
+  "batch_elapsed_p95_ms": 49123.859819000005,
+  "batch_elapsed_p99_ms": 77583.72246700001,
+  "client_duration_ms": 1039111,
+  "dirty_days": 2,
+  "maintenance": [
+    {
+      "start": 1794927263734,
+      "done": 1794927266225,
+      "code": 0,
+      "report": {
+        "ok": true,
+        "partial": false,
+        "rebuilt_days": 0,
+        "rollup": {
+          "attempted_days": 0,
+          "rebuilt_days": 0,
+          "failed_days": [],
+          "remaining_dirty_days": 0,
+          "partial": false
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 2.877271999999948,
+          "max_transaction_ms": 2.8463869999998224,
+          "budget_exhausted": false
+        }
+      }
+    },
+    {
+      "start": 1794927561733,
+      "done": 1794927570723,
+      "code": 0,
+      "report": {
+        "ok": false,
+        "partial": true,
+        "rebuilt_days": 0,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 0,
+          "failed_days": [
+            {
+              "dimension": "occurred",
+              "day": "2026-11-17",
+              "reason": "concurrent_write"
+            },
+            {
+              "dimension": "received",
+              "day": "2026-11-17",
+              "reason": "concurrent_write"
+            }
+          ],
+          "remaining_dirty_days": 2,
+          "partial": true
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 9.482921000000033,
+          "max_transaction_ms": 9.453376000000048,
+          "budget_exhausted": false
+        }
+      }
+    },
+    {
+      "start": 1794927861733,
+      "done": 1794927871059,
+      "code": 0,
+      "report": {
+        "ok": false,
+        "partial": true,
+        "rebuilt_days": 0,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 0,
+          "failed_days": [
+            {
+              "dimension": "occurred",
+              "day": "2026-11-17",
+              "reason": "concurrent_write"
+            },
+            {
+              "dimension": "received",
+              "day": "2026-11-17",
+              "reason": "concurrent_write"
+            }
+          ],
+          "remaining_dirty_days": 2,
+          "partial": true
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 139.27443600000004,
+          "max_transaction_ms": 139.254679,
+          "budget_exhausted": false
+        }
+      }
+    },
+    {
+      "start": 1794928161733,
+      "done": 1794928172035,
+      "code": 0,
+      "report": {
+        "ok": false,
+        "partial": true,
+        "rebuilt_days": 0,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 0,
+          "failed_days": [
+            {
+              "dimension": "occurred",
+              "day": "2026-11-17",
+              "reason": "concurrent_write"
+            },
+            {
+              "dimension": "received",
+              "day": "2026-11-17",
+              "reason": "concurrent_write"
+            }
+          ],
+          "remaining_dirty_days": 2,
+          "partial": true
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 314.307496,
+          "max_transaction_ms": 314.2874189999999,
+          "budget_exhausted": false
+        }
+      }
+    },
+    {
+      "start": 1794928302769,
+      "done": 1794928363098,
+      "code": 0,
+      "report": {
+        "ok": false,
+        "partial": true,
+        "rebuilt_days": 0,
+        "rollup": {
+          "attempted_days": 2,
+          "rebuilt_days": 0,
+          "failed_days": [
+            {
+              "dimension": "received",
+              "day": "2026-11-17",
+              "reason": "budget_exceeded"
+            },
+            {
+              "dimension": "occurred",
+              "day": "2026-11-17",
+              "reason": "budget_exceeded"
+            }
+          ],
+          "remaining_dirty_days": 2,
+          "partial": true
+        },
+        "pruned": {
+          "events": 0,
+          "batches": 0,
+          "facts": 0,
+          "chunks": 1,
+          "elapsed_ms": 4.908066000000019,
+          "max_transaction_ms": 4.889276999999993,
+          "budget_exhausted": false
+        }
+      }
+    }
+  ],
+  "checkpoint": {
+    "enabled": true,
+    "running": true,
+    "worker_pid": 2419534,
+    "interval_ms": 10000,
+    "timeout_ms": 30000,
+    "stale_after_ms": 60000,
+    "last_attempt_ms": 1794928423577,
+    "last_completed_ms": 1794928362035,
+    "last_success_ms": 1794928362035,
+    "last_result": {
+      "ok": true,
+      "sqlite_version": "3.53.3",
+      "busy": 0,
+      "log_frames": 194,
+      "checkpointed_frames": 194,
+      "duration_ms": 5.511573999999996,
+      "reclaimed": false,
+      "reclaim_busy": false
+    },
+    "last_error": null,
+    "failures": 0,
+    "timeouts": 0,
+    "stale": true,
+    "stalled": false
+  },
+  "error_counts": {
+    "ANALYTICS_OVERLOADED": 6988
+  },
+  "raw_bundle_sha256": "5bda98431462c23eac43b43e388ff4801e119d2165e4464b6390307f7709f2e1"
+}

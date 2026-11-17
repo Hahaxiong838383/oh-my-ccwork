@@ -1,0 +1,8 @@
+{
+  "candidate/src/analytics/rollup.ts": "2bc161b71a1bc3e760c0ee82dddaa71ef4e7aa900bcecf91fb56e9585fae2604",
+  "candidate/src/analytics/store.ts": "9c9f253ca987ccefdc61fd37166acd7c9b202256aaf97043ca85cb4ce91cb105",
+  "candidate/src/analytics/tiers.ts": "3d780a9ae31949778bd16afafd129f105bb3caf51ca7394c7408342d98a644b7",
+  "reference/src/analytics/rollup.ts": "eb652974fa779a7463d61ea8e5cbc6dd6e5a45d427cb3259d45dccb31b5ea161",
+  "reference/src/analytics/store.ts": "2b82b906d86005f9d323d6f48ec288276ea62625c0afcdc23a444a9090346f1f",
+  "reference/src/analytics/tiers.ts": "3d780a9ae31949778bd16afafd129f105bb3caf51ca7394c7408342d98a644b7"
+}

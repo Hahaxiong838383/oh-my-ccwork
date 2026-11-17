@@ -1,0 +1,148 @@
+{
+  "candidate": "2620f3746f9b275a45eb0d8172adefb056c482aa",
+  "reference": "bc3fe193552021470070b97387818eab41ea8f63",
+  "seed": 20261117,
+  "rounds": [
+    {
+      "round": 0,
+      "partial": true,
+      "source_facts": 6654,
+      "device_days": 37,
+      "exact": true
+    },
+    {
+      "round": 1,
+      "partial": true,
+      "source_facts": 6934,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 2,
+      "partial": true,
+      "source_facts": 7214,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 3,
+      "partial": true,
+      "source_facts": 7494,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 4,
+      "partial": true,
+      "source_facts": 7650,
+      "device_days": 37,
+      "exact": true
+    },
+    {
+      "round": 5,
+      "partial": true,
+      "source_facts": 7930,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 6,
+      "partial": true,
+      "source_facts": 8210,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 7,
+      "partial": true,
+      "source_facts": 8490,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 8,
+      "partial": true,
+      "source_facts": 8639,
+      "device_days": 37,
+      "exact": true
+    },
+    {
+      "round": 9,
+      "partial": true,
+      "source_facts": 8919,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 10,
+      "partial": true,
+      "source_facts": 9199,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 11,
+      "partial": true,
+      "source_facts": 9479,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 12,
+      "partial": true,
+      "source_facts": 9633,
+      "device_days": 37,
+      "exact": true
+    },
+    {
+      "round": 13,
+      "partial": true,
+      "source_facts": 9913,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 14,
+      "partial": true,
+      "source_facts": 10193,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 15,
+      "partial": true,
+      "source_facts": 10473,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 16,
+      "partial": true,
+      "source_facts": 10623,
+      "device_days": 37,
+      "exact": true
+    },
+    {
+      "round": 17,
+      "partial": true,
+      "source_facts": 10903,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 18,
+      "partial": true,
+      "source_facts": 11183,
+      "device_days": 40,
+      "exact": true
+    },
+    {
+      "round": 19,
+      "partial": true,
+      "source_facts": 11463,
+      "device_days": 40,
+      "exact": true
+    }
+  ],
+  "status": "PASS"
+}

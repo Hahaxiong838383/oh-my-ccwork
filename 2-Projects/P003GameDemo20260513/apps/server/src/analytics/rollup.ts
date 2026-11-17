@@ -20,6 +20,19 @@ function summary(counts:Counts,devices:number,sessions:number,rewards:number){
 }
 type StoredDevice={counts:Omit<Counts,'failures'>&{failures:[string,number][]};sessions:number;rewards:number};
 class ConcurrentRollupWrite extends Error {}
+const lockBackoff=new Int32Array(new SharedArrayBuffer(4));
+const isBusy=(error:unknown)=>error instanceof AnalyticsStorageUnavailable?error.busy:[5,6].includes(Number((error as {errcode?:number})?.errcode)&255);
+function waitForWriter(error:unknown,check:()=>void){
+  if(!isBusy(error))throw error;
+  check();
+  // Only the standalone maintenance process waits here. Reuse the existing
+  // day deadline, release every transaction, and avoid spinning on a busy DB.
+  Atomics.wait(lockBackoff,0,0,10);
+  check();
+}
+function retryWriter<T>(run:()=>T,check:()=>void):T{
+  for(;;){try{return run();}catch(error){waitForWriter(error,check);}}
+}
 type Source={revision:number;mutation:number};
 type Stage=Source&{folded_rowid:number;summary_json:string};
 const sourceState=(store:AnalyticsStore,dimension:string,day:string,key:string):Source=>(store.db.prepare('SELECT revision,mutation FROM analytics_rollup_source WHERE dimension=? AND day=? AND device_key=?').get(dimension,day,key) as Source|undefined)??{revision:0,mutation:0};
@@ -63,6 +76,7 @@ function rebuildDay(store:AnalyticsStore,dimension:string,day:string,now:number,
   for(const key of keys){
    for(;;){
     check();
+    try{
     const computed=store.readSnapshot(()=>{
       const source=sourceState(store,dimension,day,key),stage=readStage(store,dimension,day,key);
       const base=stage?.mutation===source.mutation?stage:undefined;
@@ -89,13 +103,18 @@ function rebuildDay(store:AnalyticsStore,dimension:string,day:string,now:number,
       if(computed.more)continue;
     }
     facts+=computed.data.counts.facts;break;
+    }catch(error){
+      // Recompute from the last committed stage: a failed COMMIT may have
+      // mutated the temporary distinct counters before SQLite rolled back.
+      waitForWriter(error,check);
+    }
    }
   }
   if(conflict)throw new ConcurrentRollupWrite();
   check();
   // Publish a whole day only when every device cache matches its authoritative
   // source revision. A newly arriving device has no cache and also blocks this.
-  const published=store.transaction(()=>{
+  const published=retryWriter(()=>store.transaction(()=>{
     const rows=store.db.prepare('SELECT s.device_key,s.revision,s.mutation,c.revision cached_revision,c.mutation cached_mutation,c.summary_json FROM analytics_rollup_source s LEFT JOIN analytics_rollup_device_stage c ON c.dimension=s.dimension AND c.day=s.day AND c.device_key=s.device_key WHERE s.dimension=? AND s.day=? ORDER BY s.device_key').all(dimension,day) as {device_key:string;revision:number;mutation:number;cached_revision:number|null;cached_mutation:number|null;summary_json:string|null}[];
     if(rows.some(r=>r.cached_revision!==r.revision||r.cached_mutation!==r.mutation||r.summary_json===null))return false;
     if(rows.length>1000)throw new AnalyticsRollupBudgetExceeded();
@@ -121,7 +140,7 @@ function rebuildDay(store:AnalyticsStore,dimension:string,day:string,now:number,
     store.db.prepare('DELETE FROM analytics_dirty_day WHERE dimension=? AND day=?').run(dimension,day);
     store.db.prepare('DELETE FROM analytics_rollup_retry WHERE dimension=? AND day=?').run(dimension,day);
     return true;
-  });
+  }),check);
   if(!published)throw new ConcurrentRollupWrite();
 }
 export function rollupDirtyDays(store:AnalyticsStore,now=Date.now(),limit=16,budget?:RollupBudget):number{

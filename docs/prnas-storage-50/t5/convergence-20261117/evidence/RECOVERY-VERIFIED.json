@@ -1,0 +1,17 @@
+{
+  "status": "PASS_ORIGINAL_600K_CONVERGENCE_NOT_FRESH_MIXED",
+  "candidate": "85cbf6720932e1d65ab0011714e2475f0b66e1e0",
+  "dimensions": 2,
+  "events_per_dimension": 600000,
+  "device_summaries": 100,
+  "source_rows": 100,
+  "stage_rows": 100,
+  "distinct_rows": 200,
+  "dirty": 0,
+  "runs_ms": [
+    60065.09296,
+    15183.126366
+  ],
+  "source_backup_sha256": "42fe5fa0ca5303ff2a23e0951ffbf50ab0c427d93b43fa72182d75b35284e2a0",
+  "output_sha256": "7e9c796b43da5e7c64016d695fe21a13c44e37d4855af6f4ea11a5d5af719391"
+}
