@@ -1,0 +1,20 @@
+{
+  "result": "PASS_INDEPENDENT_259200_OUTBOX_MODEL",
+  "records": 259200,
+  "devices": 50,
+  "records_per_device": 5184,
+  "body_hashes_verified": 259200,
+  "unknown_stardust_preserved": true,
+  "body_bytes": 218386560,
+  "reserved_bytes": 1451422080,
+  "average_envelope_bytes": 842.5407407407407,
+  "actual_directory_bytes": 300604988,
+  "published_packets": 20,
+  "published_rows": 20000,
+  "unpublished_rows": 239200,
+  "fake_or_real_acks": 0,
+  "elapsed_s": 21.811749832704663,
+  "result_sha256": "800db6fa9dbf9fead7704cbbd260aec891934590d89adef77ee4f83c65f856bd",
+  "scope": "Mac fixed-runtime store capacity model; no real72h wall clock, no combined1h outage or full NAS drain",
+  "full_t5_pass": false
+}

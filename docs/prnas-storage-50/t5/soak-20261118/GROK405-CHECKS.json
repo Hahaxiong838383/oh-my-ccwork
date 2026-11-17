@@ -1,0 +1,282 @@
+{
+  "verdict": "PASS_SCOPED",
+  "p0": [],
+  "p1": [],
+  "fixed_head": "1a0ed70330fce2ddfc95e0ec86083f4313f9cfb9",
+  "commit_subject": "test(p003): enforce cgroup headroom and record NAS restore",
+  "worktree_clean": true,
+  "log_sha256": "4690851dc38d6dc6870dfc6d5f712e5e7cd508df52253ae72a207d045d96d11e",
+  "log_sha256_covers": "stdout of the specified node command, 209 bytes, trailing newline included",
+  "test_stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "test_stderr_bytes": 0,
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "cwd": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server",
+    "command": "/Users/fu-121/.local/node-v24/bin/node --import tsx scripts/storage-load-resources.test.ts",
+    "exit_code": 0,
+    "stdout": "PASS resource parser/counters: exact CPU weights, OOM/restart/gap/short/unknown/memory/disk fail closed; accelerated only, not 24h\nPASS quota CPU, cgroup memory headroom, unknown and changed quota fail closed\n"
+  },
+  "source_files": {
+    "storage-load-resources.ts": {
+      "sha256": "96ec2aa6853e899c42196e52a5b7f0e005c01bc97b6009021c7230e8dc0b09d1",
+      "git_blob": "eaf368f62fc832ee03781dee8dd5847481989ff5"
+    },
+    "storage-load-resources.test.ts": {
+      "sha256": "dab3c7726f647af075692a864e1e8bf681e22c41c03a37fd975b7f0a9ebf4fab",
+      "git_blob": "05cff486ea452dc491290dd6c4872e40f8c60138"
+    }
+  },
+  "task_a": {
+    "original_gates_unchanged": {
+      "required_ms_min": 86400000,
+      "elapsed_gte_required": true,
+      "max_sample_gap_ms_lte": 10000,
+      "unavailable_samples_must_be_zero": true,
+      "host_cpu_average_percent_lt": 70,
+      "host_mem_available_min_fraction_gte": 0.2,
+      "disk_free_min_bytes_gte": "4.5*1024**3",
+      "oom_and_oom_kill_delta_from_first_sample": true,
+      "identity_still_includes": [
+        "boot_id",
+        "pid",
+        "cgroup"
+      ]
+    },
+    "added_gates": {
+      "quota_cpu_average_percent_lt": 70,
+      "group_memory_peak_fraction_lte": 0.8,
+      "quota_missing_or_non_positive_fail_closed": true,
+      "quota_or_memory_limit_change_fail_closed": true
+    },
+    "oracle": [
+      {
+        "kind": "quota-good",
+        "gate": true,
+        "complete_24h_evidence": true,
+        "host_cpu": 10,
+        "quota_cpu": 20,
+        "one_core_cpu": 10,
+        "group_memory_peak": 0.8,
+        "identity_changed": false,
+        "cgroup_missing_samples": 0
+      },
+      {
+        "kind": "quota-cpu",
+        "gate": false,
+        "complete_24h_evidence": true,
+        "host_cpu": 10,
+        "quota_cpu": 80,
+        "one_core_cpu": 40,
+        "group_memory_peak": 0.4,
+        "identity_changed": false,
+        "cgroup_missing_samples": 0
+      },
+      {
+        "kind": "quota-cpu-boundary",
+        "gate": false,
+        "complete_24h_evidence": true,
+        "host_cpu": 10,
+        "quota_cpu": 70,
+        "one_core_cpu": 35,
+        "group_memory_peak": 0.4,
+        "identity_changed": false,
+        "cgroup_missing_samples": 0
+      },
+      {
+        "kind": "quota-memory",
+        "gate": false,
+        "complete_24h_evidence": true,
+        "host_cpu": 10,
+        "quota_cpu": 20,
+        "one_core_cpu": 10,
+        "group_memory_peak": 0.801,
+        "identity_changed": false,
+        "cgroup_missing_samples": 0
+      },
+      {
+        "kind": "quota-missing",
+        "gate": false,
+        "complete_24h_evidence": false,
+        "host_cpu": 10,
+        "quota_cpu": null,
+        "one_core_cpu": null,
+        "group_memory_peak": null,
+        "identity_changed": false,
+        "cgroup_missing_samples": 8641
+      },
+      {
+        "kind": "quota-zero",
+        "gate": false,
+        "complete_24h_evidence": false,
+        "host_cpu": 10,
+        "quota_cpu": null,
+        "one_core_cpu": null,
+        "group_memory_peak": null,
+        "identity_changed": false,
+        "cgroup_missing_samples": 8641
+      },
+      {
+        "kind": "quota-changed",
+        "gate": false,
+        "complete_24h_evidence": false,
+        "host_cpu": 10,
+        "quota_cpu": 20,
+        "one_core_cpu": 10,
+        "group_memory_peak": 0.4,
+        "identity_changed": true,
+        "cgroup_missing_samples": 0
+      },
+      {
+        "kind": "memory-limit-changed",
+        "gate": false,
+        "complete_24h_evidence": false,
+        "host_cpu": 10,
+        "quota_cpu": 20,
+        "one_core_cpu": 10,
+        "group_memory_peak": 0.4,
+        "identity_changed": true,
+        "cgroup_missing_samples": 0
+      }
+    ],
+    "closed_form_quota_percent": {
+      "good": 20,
+      "quota_cpu": 80,
+      "boundary": 70,
+      "boundary_lt_70": false
+    },
+    "memory_boundary": {
+      "800_over_1000_equals_0_8": true,
+      "801_over_1000_lte_0_8": false
+    },
+    "host_or_one_core_would_mask_quota_cpu": true,
+    "quota_average_uses_first_sample_quota": true,
+    "official_test_keeps_old_fail_kinds": [
+      "oom",
+      "restart",
+      "low-memory",
+      "high-cpu",
+      "disk-low",
+      "missing",
+      "group-missing",
+      "gap",
+      "short"
+    ]
+  },
+  "task_b": {
+    "files": {
+      "NAS-FINAL-INDEPENDENT.json": {
+        "bytes": 2468,
+        "sha256": "6d67d7037f6eefbabc09423a600b73846c00f8116e1a42704d85e72480073e29"
+      },
+      "NAS-FINAL-VERIFIED.json": {
+        "bytes": 1437,
+        "sha256": "8e9aaf8db79e4ba523cbb943f34640a117e0fbe73db893f73d5986797d64f0ae"
+      },
+      "outage-observation-01.json": {
+        "bytes": 1376,
+        "sha256": "678a106a23898a0175c3c00f4943b69022d8b3202959c0f31d8268599e1f3fc7"
+      },
+      "LOCAL-FINAL-RESTORE.json": {
+        "bytes": 8530,
+        "sha256": "b90c4a5cfc32bdb513cb8ecfc1188eea5e4b63af691d4c0df04f4c91c72e644d"
+      }
+    },
+    "proof_sha256_matches_independent_file": true,
+    "payload_sha256": "e9b94f0bcb9609247176f6ac4a8ca26ccbccbcc358c3e43d0b8e520be9615154",
+    "payload_sha256_fields_equal": [
+      "local.source_sha256",
+      "verified.sha256",
+      "manifest.sha256",
+      "receipt.sha256",
+      "restore.sha256",
+      "independent_restore_sha256",
+      "outage.receipt.sha256"
+    ],
+    "payload_bytes": 2124611584,
+    "payload_rehashed_from_archive": false,
+    "archive_id": "831209708dec4da38494638fde3416fc",
+    "runtime_candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+    "export_mode": "closed_synthetic_db_adoption",
+    "receipt_source_equals_outage_ack": true,
+    "receipt_verified_at_ms": 1794932739348,
+    "record_count": 3009408,
+    "table_count": 18,
+    "table_mismatches": [],
+    "tables": {
+      "analytics_batch": 3000,
+      "analytics_day": 2,
+      "analytics_device_day": 100,
+      "analytics_diagnostic_usage": 0,
+      "analytics_dirty_day": 0,
+      "analytics_event": 600000,
+      "analytics_event_seen": 600000,
+      "analytics_meta": 6,
+      "analytics_rollup_device_stage": 100,
+      "analytics_rollup_distinct": 200,
+      "analytics_rollup_fact": 1200000,
+      "analytics_rollup_retry": 0,
+      "analytics_rollup_source": 100,
+      "analytics_settlement": 600000,
+      "analytics_tier_day": 2850,
+      "analytics_tier_event": 0,
+      "analytics_transport": 3000,
+      "analytics_transport_day": 50
+    },
+    "table_sources_equal": [
+      "local.counts",
+      "verified.tables",
+      "manifest.source_range.tables",
+      "independent_counts"
+    ],
+    "events_field_equals_analytics_event": true,
+    "restore_integrity_check": "ok",
+    "local_integrity_check": "ok",
+    "local_sqlite": "3.53.3",
+    "local_scope": "LOCAL_EXACT_RESTORE_NOT_NAS_PRODUCT_FLOW",
+    "distinct_inodes_attested": true,
+    "inode_numbers_present": false,
+    "supervisor": {
+      "outer_exit": 0,
+      "exit": 0,
+      "timed_out": false,
+      "started_at_ms": 1794932531583,
+      "finished_at_ms": 1794932906934,
+      "wall_ms": 375351,
+      "verified_transport_verify_restore_elapsed_ms": 375351,
+      "wall_matches_verified": true,
+      "stderr": "nodejs sqlite ExperimentalWarning only"
+    },
+    "local_restore_elapsed_s": 153.45480108261108,
+    "receipt_inside_supervisor_window": true,
+    "start_to_receipt_ms": 207765,
+    "receipt_to_finish_ms": 167586,
+    "phase_split_labeled_in_evidence": false,
+    "artifact_result_label": "PASS_FINAL_600K_REAL_SSH_NAS_RESTORE",
+    "artifact_result_label_adopted": false,
+    "full_t5_pass": false,
+    "outage": {
+      "used_as": "source receipt ACK only",
+      "exit": 0,
+      "active_state": "active",
+      "main_pid": 2445221,
+      "systemd_result_field": "success",
+      "rounds": 2,
+      "accepted": 100,
+      "last_ack_ms": null,
+      "at_ms": 1794932967117,
+      "ms_after_supervisor_finish": 60183,
+      "announced_pass": false
+    }
+  },
+  "limits": [
+    "accelerated resource-gate unit test, not a 24h host sample",
+    "stopped-write synthetic 600k-event export, 3009408 rows across 18 tables",
+    "not live BackupAPI, not a mature mixed workload, not a full T5 pass",
+    "one-hour outage observation still active and is not a pass",
+    "payload bytes were not re-hashed from the archive",
+    "distinct restore inodes are attested, not recomputed from inode numbers",
+    "NAS duration is one 375351 ms supervisor wall clock; local restore is a separate 153.45480108261108 s",
+    "latest supervisor exit 0 only; earlier packaging startup failures were not reopened"
+  ]
+}

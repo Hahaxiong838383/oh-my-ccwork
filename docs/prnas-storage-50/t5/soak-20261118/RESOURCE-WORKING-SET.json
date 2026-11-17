@@ -1,0 +1,40 @@
+{
+  "scope": "RESOURCE_ACCOUNTING_ONLY_NOT_24H",
+  "business_src_changed": false,
+  "running_outage_harness_changed": false,
+  "deduct_formula": "max(0,min(current,inactive_file)-file_dirty-file_writeback)",
+  "red": "clean-cache false!==true",
+  "green": "PASS resource parser/counters: exact CPU weights, OOM/restart/gap/short/unknown/memory/disk fail closed; accelerated only, not 24h\nPASS quota CPU, cgroup memory headroom, unknown and changed quota fail closed\nPASS clean inactive cache is available; dirty/writeback/active/unknown memory is never counted as free\n",
+  "evidence": [
+    {
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/resource-cache-red.log",
+      "sha256": "1f63d5269464ca71934d3d5cb5fe6ab821b6318b27af0a60ac70d233b8b7f041",
+      "bytes": 871
+    },
+    {
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/resource-cache-green.log",
+      "sha256": "1c61066e72e0d1b8cf0d872d6fc6f749a4a20f953b9e0d778657623e5f60cc52",
+      "bytes": 312
+    },
+    {
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/CACHE-PROBE-RAW.json",
+      "sha256": "f14e1482b01f3b944dbcf9d055e6e3f17f9e76a601ea443e5945713250346bad",
+      "bytes": 6671
+    },
+    {
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/CACHE-PROBE-REPLAY.json",
+      "sha256": "dda0897ce2349551e5462ccee6b08f5de71a71894c8b0046e4233025f5dffd42",
+      "bytes": 3854
+    },
+    {
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/review-memory-discussion/REVIEW.md",
+      "sha256": "98f84c105aecced659584a5e76f5b3dcf67ced37189c689cc2842fa22c771915",
+      "bytes": 13590
+    },
+    {
+      "private_path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/review-memory-discussion/CHECKS.json",
+      "sha256": "c1270c5effbd1eeb2c1665f161b3a2a2f5a269d3e84fe78197bcd13f347274c2",
+      "bytes": 8359
+    }
+  ]
+}

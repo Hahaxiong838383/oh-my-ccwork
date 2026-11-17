@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
-import {parseLinuxResources,createResourceRecorder,linuxResources} from './storage-load-resources.js';
+import {parseLinuxResources,parseCgroupMemoryStat,createResourceRecorder,linuxResources} from './storage-load-resources.js';
+assert.deepEqual(parseCgroupMemoryStat('inactive_file 82\nfile_dirty 7\nfile_writeback 1\nactive_file 900\n'),{cgroup_inactive_file_bytes:82,cgroup_file_dirty_bytes:7,cgroup_file_writeback_bytes:1});
+for(const bad of ['inactive_file 82\nfile_dirty 7','inactive_file -1\nfile_dirty 7\nfile_writeback 1','inactive_file 82\nfile_dirty wat\nfile_writeback 1'])assert.throws(()=>parseCgroupMemoryStat(bad));
 const parsed=parseLinuxResources('cpu  10 0 20 70 10 0 0 0 0 0\n','MemTotal: 1000 kB\nMemAvailable: 400 kB\n');
 assert.equal(parsed.cpu_total,110);assert.equal(parsed.cpu_idle,80);assert.equal(parsed.mem_available_bytes,409600);
 assert.throws(()=>parseLinuxResources('cpu 1 2','MemTotal: 100 kB'));
 assert.throws(()=>parseLinuxResources('cpu 1 2 3 4 5 6 7 8','MemTotal: 100 kB'));
-const base={supported:true,boot_id:'synthetic',pid:123,cgroup:'/synthetic',mem_available_bytes:400,mem_total_bytes:1000,disk_free_bytes:10*1024**3,oom:0,oom_kill:0,cgroup_memory_bytes:400,cgroup_memory_limit_bytes:1000,cgroup_cpu_quota_cores:1};
+const base={supported:true,boot_id:'synthetic',pid:123,cgroup:'/synthetic',mem_available_bytes:400,mem_total_bytes:1000,disk_free_bytes:10*1024**3,oom:0,oom_kill:0,cgroup_memory_bytes:400,cgroup_memory_limit_bytes:1000,cgroup_cpu_quota_cores:1,cgroup_inactive_file_bytes:0,cgroup_file_dirty_bytes:0,cgroup_file_writeback_bytes:0};
 // Accelerated counter test, explicitly not a real-day durability result.
 for(const kind of ['good','oom','restart','low-memory','high-cpu','disk-low','missing','group-missing','gap','short']){
  const r=createResourceRecorder();
@@ -33,3 +35,22 @@ for(const kind of ['quota-good','quota-cpu','quota-cpu-boundary','quota-memory',
  if(kind==='quota-good'){assert.equal(summary.cgroup_cpu_average_quota_percent,20);assert.equal(summary.cgroup_memory_peak_fraction,.8);}
 }
 console.log('PASS quota CPU, cgroup memory headroom, unknown and changed quota fail closed');
+for(const [kind,patch,pass]of [
+ ['clean-cache',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:820},true],
+ ['dirty-cache',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:820,cgroup_file_dirty_bytes:700,cgroup_file_writeback_bytes:100},false],
+ ['active-cache-not-reclaimed',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:0},false],
+ ['missing-stat',{cgroup_file_dirty_bytes:undefined},false],
+ ['negative-stat',{cgroup_file_writeback_bytes:-1},false],
+ ['dirty-exceeds-inactive',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:20,cgroup_file_dirty_bytes:500},false],
+ ['zero-current',{cgroup_memory_bytes:0},true],
+ ['headroom-boundary',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:199},true],
+ ['headroom-below-boundary',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:198},false],
+ ['inconsistent-counters-retain-dirty',{cgroup_memory_bytes:999,cgroup_inactive_file_bytes:2000,cgroup_file_dirty_bytes:801},false],
+ ['missing-oom',{oom:undefined},false],
+]as const){
+ const r=createResourceRecorder();
+ for(let n=0;n<=8640;n++)r.record({...base,...patch,monotonic_ms:n*10000,cpu_total:n*1000,cpu_idle:n*900,cgroup_cpu_usage_usec:n*1000000});
+ const result=r.summary(86400000);assert.equal(result.local_resource_gate,pass,kind);
+ if(kind==='clean-cache'){assert.equal(result.cgroup_memory_peak_fraction,.999);assert.equal((result as any).cgroup_working_set_peak_fraction,.179);}
+}
+console.log('PASS clean inactive cache is available; dirty/writeback/active/unknown memory is never counted as free');

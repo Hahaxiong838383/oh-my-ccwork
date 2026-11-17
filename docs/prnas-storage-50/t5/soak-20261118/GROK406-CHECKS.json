@@ -1,0 +1,237 @@
+{
+  "review": "cross-discussion-404-p0-and-a14-working-set-20261118",
+  "at": "2026-11-18T01:00:14+08:00",
+  "readonly_source": true,
+  "ssh": false,
+  "started_other_agents": false,
+  "changed_business_src": false,
+  "changed_running_1h_files": false,
+  "production_changed": false,
+  "head": "1a0ed70330fce2ddfc95e0ec86083f4313f9cfb9",
+  "running_harness": "4aed8139ea665a529d94d29e8e9c677bff549a34",
+  "runtime_candidate": "b1ce23aecf2a699c55f81942c76ee05ca48fa5f1",
+  "scope": [
+    "404 review-outage P0 topology",
+    "A14 cgroup headroom versus conservative working set"
+  ],
+  "out_of_scope": [
+    "P1 signal and logging",
+    "prior NAS startup failures",
+    "24h ratification",
+    "full T5"
+  ],
+  "p0": [
+    {
+      "id": "drain-blocks-isolated-producer",
+      "stance": "revoke_for_this_topology",
+      "agree_with": "主13",
+      "oppose": "404 fix that deletes the recovery drain and treats missing receipts as success",
+      "still_true_outside_this_run": "An unattached non-smoke producer still waits up to 2h and then fails closed if no matching receipt arrives.",
+      "recovery_pass": false,
+      "full_t5_pass": false,
+      "evidence": [
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-outage-load.ts:33-34,36-43,68-81",
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py:71-80",
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.py:210-240",
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-nas-transfer.sh:37-41",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/outage-cloud-driver.py:8,14-19",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/outage-nas-runner.py:17-28",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/outage-gate.py:10-13",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/STATE.json",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/outage-observation-01.json",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/outage-observation-02.json"
+      ]
+    },
+    {
+      "id": "gateway-spool-allowlist",
+      "stance": "revoke_for_this_authorized_reuse",
+      "agree_with": "主13",
+      "oppose": "404 fix that rejects every T5_OUTAGE_SPOOL",
+      "shared_directory_remains": true,
+      "analytics_package_selected": false,
+      "evidence": [
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-outage-load.ts:33-34",
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-ark-export.py:34,54-61,100-116",
+        "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-archive.py:79-86",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/outage-nas-runner.py:23",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/ark-72h-model.mts:42",
+        "/Users/fu-121/.local/state/p003-t5-soak-20261118/NAS-FINAL-VERIFIED.json"
+      ]
+    }
+  ],
+  "hashes": {
+    "storage-ark-outage-load.ts": "636da4e4bb056b2b55aaebd9200df720b1bfb8641212c62de08d6ad58e7b4088",
+    "matches_OUTAGE-CANDIDATE.harness_sha256": true,
+    "outage-nas-runner.py": "7483ef7c8b4d9fb0c3ebc87d8d8e1dcad4b144748f6ea9fe13f94597c7585f84",
+    "matches_nas_setup_runner": true,
+    "outage-gate.py": "e843127d662f895058906d715a57125d93ace111f7d1b213ebc9f0f09dfb8c9f",
+    "matches_nas_setup_bin_ssh": true,
+    "storage-nas-transfer.sh": "d9fa3c8ec0a2b94784c9b18e8da7657253c1f1d0ffd39716cef2be02689445d0",
+    "storage-nas-pull.sh": "b1cc9d804d342f1ad739c0d3c1fb0379833f998d92c83289c4d52e5653895602",
+    "storage-load-resources.ts": "96ec2aa6853e899c42196e52a5b7f0e005c01bc97b6009021c7230e8dc0b09d1"
+  },
+  "running_1h": {
+    "status": "RUNNING",
+    "started_ms": 1794932870011,
+    "earliest_reconnect_ms": 1794936470011,
+    "last_ack_during_observations": null,
+    "recovery_claimed": false,
+    "remote_OUTAGE-START.json_read": false,
+    "note": "Local driver source sets T5_OUTAGE_SPOOL. Remote OUTAGE-START.json was not copied locally and was not fetched."
+  },
+  "memory": {
+    "stance": "agree_conservative_working_set",
+    "oppose": [
+      "raw memory.current/limit<=0.8 as the cgroup pass bit",
+      "kernel memory.peak/limit or memory.events max==0 as the pass bit",
+      "kubelet subtraction of all inactive_file including dirty and writeback",
+      "subtracting active_file",
+      "defaulting missing stat fields to 0",
+      "ratifying fresh 600k, this probe, or the running 1h as 24h"
+    ],
+    "keep": [
+      "host MemAvailable/MemTotal>=0.2",
+      "cgroup CPU quota average<70",
+      "OOM and oom_kill delta from first sample",
+      "boot_id pid cgroup memory limit and CPU quota identity",
+      "disk free >= 4.5GiB",
+      "existing ACK and query latency gates",
+      "complete_24h_evidence requires elapsed>=86400000"
+    ],
+    "formula": {
+      "deduct": "min(current, max(0, inactive_file - file_dirty - file_writeback))",
+      "working": "current - deduct",
+      "pass_iff": "working * 5 <= limit * 4",
+      "denominator": "memory.max",
+      "not_subtracted": [
+        "active_file",
+        "anon",
+        "shmem",
+        "slab",
+        "kernel",
+        "dirty",
+        "writeback"
+      ]
+    },
+    "probe": {
+      "file": "/Users/fu-121/.local/state/p003-t5-soak-20261118/CACHE-PROBE-RAW.json",
+      "exit": 0,
+      "file_removed": true,
+      "after_read": {
+        "raw_fraction": 0.99981689453125,
+        "working_fraction": 0.17950439453125,
+        "conservative_equals_working_because_dirty_and_writeback_are_zero": true,
+        "file_dirty": 0,
+        "file_writeback": 0,
+        "active_file": 0,
+        "oom": 0,
+        "oom_kill": 0,
+        "memory_events_max": 814,
+        "memory_peak_equals_limit": true
+      },
+      "after_unlink_raw_fraction": 0.183349609375,
+      "proves_app_latency": false,
+      "proves_24h": false,
+      "cpu_quota_recorded_in_json": false
+    },
+    "docs": [
+      "https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html",
+      "https://kubernetes.io/docs/concepts/scheduling-eviction/node-pressure-eviction/"
+    ],
+    "current_gate_file": "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-resources.ts",
+    "current_gate_lines": "8-10,24-26,39,54",
+    "cgroup_memory_peak_fraction_reads": "memory.current / memory.max, not memory.peak",
+    "change_running_code_now": false
+  },
+  "minimum_boundary_tests": [
+    {
+      "id": "replay-after-read",
+      "expect_raw_gate": false,
+      "expect_working_gate": true,
+      "complete_24h_evidence": false
+    },
+    {
+      "id": "dirty-inactive-must-fail",
+      "limit": 1000,
+      "current": 900,
+      "inactive_file": 800,
+      "file_dirty": 800,
+      "file_writeback": 0,
+      "working": 900,
+      "pass": false
+    },
+    {
+      "id": "writeback-inactive-must-fail",
+      "limit": 1000,
+      "current": 900,
+      "inactive_file": 800,
+      "file_dirty": 0,
+      "file_writeback": 800,
+      "working": 900,
+      "pass": false
+    },
+    {
+      "id": "active-file-stays-charged",
+      "limit": 1000,
+      "current": 900,
+      "inactive_file": 0,
+      "active_file": 900,
+      "working": 900,
+      "pass": false
+    },
+    {
+      "id": "integer-boundary-pass",
+      "limit": 1000,
+      "current": 800,
+      "inactive_file": 0,
+      "working": 800,
+      "pass": true
+    },
+    {
+      "id": "integer-boundary-fail",
+      "limit": 1000,
+      "current": 801,
+      "inactive_file": 0,
+      "working": 801,
+      "pass": false
+    },
+    {
+      "id": "clamp-not-probe-expression",
+      "limit": 100,
+      "current": 100,
+      "inactive_file": 150,
+      "file_dirty": 80,
+      "file_writeback": 0,
+      "deduct": 70,
+      "working": 30
+    },
+    {
+      "id": "dirty-exceeds-inactive",
+      "inactive_file": 10,
+      "file_dirty": 40,
+      "current": 50,
+      "deduct": 0,
+      "working": 50
+    },
+    {
+      "id": "inactive-exceeds-current",
+      "inactive_file_gt_current": true,
+      "file_dirty": 0,
+      "working": 0
+    },
+    {
+      "id": "missing-or-negative-stat-fails",
+      "default_zero": false
+    },
+    {
+      "id": "host-memavailable-independent",
+      "group_working_fraction": 0.1,
+      "host_fraction_0_199_pass": false,
+      "host_fraction_0_2_pass": true
+    },
+    {
+      "id": "short-sample-not-24h",
+      "complete_24h_evidence": false
+    }
+  ]
+}

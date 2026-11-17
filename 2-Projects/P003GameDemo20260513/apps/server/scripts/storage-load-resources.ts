@@ -10,6 +10,13 @@ export function parseLinuxResources(stat:string,meminfo:string){
  return {cpu_total:ticks.reduce((a,b)=>a+b,0),cpu_idle:ticks[3]+ticks[4],mem_total_bytes:mem.MemTotal,mem_available_bytes:mem.MemAvailable};
 }
 
+export function parseCgroupMemoryStat(text:string){
+ const values=Object.fromEntries(text.trim().split('\n').map(line=>line.trim().split(/\s+/)));
+ const result={cgroup_inactive_file_bytes:Number(values.inactive_file),cgroup_file_dirty_bytes:Number(values.file_dirty),cgroup_file_writeback_bytes:Number(values.file_writeback)};
+ assert(Object.values(result).every(n=>Number.isSafeInteger(n)&&n>=0),'cgroup memory.stat evidence required');
+ return result;
+}
+
 /** Observation only. Non-Linux evidence is explicitly unavailable, never a pass. */
 export function linuxResources(root:string){
  if(process.platform!=='linux')return {supported:false,platform:process.platform,reason:'Linux /proc and cgroup evidence required'};
@@ -23,20 +30,26 @@ export function linuxResources(root:string){
  const cpu=Object.fromEntries(read(join(group,'cpu.stat')).trim().split('\n').map(x=>{const [k,v]=x.split(' ');return [k,Number(v)];}));
  const max=read(join(group,'memory.max')).trim(),[quota,period]=read(join(group,'cpu.max')).trim().split(' ');
  assert(Number.isSafeInteger(cpu.usage_usec)&&cpu.usage_usec>=0,'cgroup CPU evidence required');
- return {supported:true,...resources,boot_id:read('/proc/sys/kernel/random/boot_id').trim(),pid:process.pid,cgroup:path,cgroup_memory_bytes:Number(read(join(group,'memory.current')).trim()),cgroup_memory_limit_bytes:max==='max'?null:Number(max),cgroup_cpu_usage_usec:cpu.usage_usec,cgroup_cpu_quota_cores:quota==='max'?null:Number(quota)/Number(period),oom:events.oom,oom_kill:events.oom_kill,disk_free_bytes:Number(disk.bavail)*Number(disk.bsize)};
+ return {supported:true,...resources,...parseCgroupMemoryStat(read(join(group,'memory.stat'))),boot_id:read('/proc/sys/kernel/random/boot_id').trim(),pid:process.pid,cgroup:path,cgroup_memory_bytes:Number(read(join(group,'memory.current')).trim()),cgroup_memory_limit_bytes:max==='max'?null:Number(max),cgroup_cpu_usage_usec:cpu.usage_usec,cgroup_cpu_quota_cores:quota==='max'?null:Number(quota)/Number(period),oom:events.oom,oom_kill:events.oom_kill,cgroup_memory_max_events:events.max,disk_free_bytes:Number(disk.bavail)*Number(disk.bsize)};
 }
 
 /** Bounded totals and extrema; raw samples are persisted by the caller. */
 export function createResourceRecorder(){
- let first:any,last:any,samples=0,unavailable=0,cpuBusy=0,cpuTotal=0,minMemory:number|null=null,minDisk:number|null=null,identityChanged=false,oom=false,maxGap=0,groupMissing=0,groupMemoryMax=0,groupUsec=0,groupWallMs=0;
+ let first:any,last:any,samples=0,unavailable=0,cpuBusy=0,cpuTotal=0,minMemory:number|null=null,minDisk:number|null=null,identityChanged=false,oom=false,maxGap=0,groupMissing=0,groupMemoryMax=0,workingSetMax=0,groupUsec=0,groupWallMs=0;
  return {record(sample:any){
   samples++;if(sample.supported!==true){unavailable++;return;}
   assert(Number.isFinite(sample.monotonic_ms)&&sample.monotonic_ms>=0);
   assert(Number.isFinite(sample.mem_available_bytes)&&sample.mem_total_bytes>0&&sample.disk_free_bytes>=0,'invalid resource sample');
   if(!first)first=sample;
-  const groupValid=Number.isFinite(sample.cgroup_memory_bytes)&&sample.cgroup_memory_bytes>=0&&Number.isFinite(sample.cgroup_memory_limit_bytes)&&sample.cgroup_memory_limit_bytes>0&&Number.isSafeInteger(sample.cgroup_cpu_usage_usec)&&sample.cgroup_cpu_usage_usec>=0&&Number.isFinite(sample.cgroup_cpu_quota_cores)&&sample.cgroup_cpu_quota_cores>0;
+  const groupValid=['cgroup_memory_bytes','cgroup_inactive_file_bytes','cgroup_file_dirty_bytes','cgroup_file_writeback_bytes','oom','oom_kill'].every(k=>Number.isSafeInteger(sample[k])&&sample[k]>=0)&&Number.isSafeInteger(sample.cgroup_memory_limit_bytes)&&sample.cgroup_memory_limit_bytes>0&&Number.isSafeInteger(sample.cgroup_cpu_usage_usec)&&sample.cgroup_cpu_usage_usec>=0&&Number.isFinite(sample.cgroup_cpu_quota_cores)&&sample.cgroup_cpu_quota_cores>0;
   if(!groupValid)groupMissing++;
-  else groupMemoryMax=Math.max(groupMemoryMax,sample.cgroup_memory_bytes/sample.cgroup_memory_limit_bytes);
+  else {
+   // Retain dirty/writeback even when the asynchronously read counters disagree.
+   // Raw occupancy remains diagnostic; only clean inactive cache counts as available.
+   const reclaimable=Math.max(0,Math.min(sample.cgroup_memory_bytes,sample.cgroup_inactive_file_bytes)-sample.cgroup_file_dirty_bytes-sample.cgroup_file_writeback_bytes);
+   groupMemoryMax=Math.max(groupMemoryMax,sample.cgroup_memory_bytes/sample.cgroup_memory_limit_bytes);
+   workingSetMax=Math.max(workingSetMax,(sample.cgroup_memory_bytes-reclaimable)/sample.cgroup_memory_limit_bytes);
+  }
   if(last){
    const total=sample.cpu_total-last.cpu_total,idle=sample.cpu_idle-last.cpu_idle,gap=sample.monotonic_ms-last.monotonic_ms;
    assert(total>=0&&idle>=0&&idle<=total&&gap>=0,'resource counters regressed');
@@ -51,6 +64,6 @@ export function createResourceRecorder(){
   const elapsed=first&&last?last.monotonic_ms-first.monotonic_ms:0,avg=cpuTotal?100*cpuBusy/cpuTotal:null;
   const groupAvg=groupWallMs&&first?.cgroup_cpu_quota_cores>0?100*groupUsec/(groupWallMs*1000*first.cgroup_cpu_quota_cores):null;
   const complete=requiredMs>=86400000&&elapsed>=requiredMs&&samples>1&&unavailable===0&&groupMissing===0&&maxGap<=10000&&avg!==null&&!identityChanged&&!oom;
-  return {samples,unavailable_samples:unavailable,cgroup_missing_samples:groupMissing,observed_ms:elapsed,required_ms:requiredMs,max_sample_gap_ms:maxGap,cpu_average_percent:avg,mem_available_min_fraction:minMemory,cgroup_memory_peak_fraction:groupMissing+unavailable===samples?null:groupMemoryMax,cgroup_cpu_average_one_core_percent:groupWallMs?100*groupUsec/(groupWallMs*1000):null,cgroup_cpu_average_quota_percent:groupAvg,cgroup_cpu_quota_cores:last?.cgroup_cpu_quota_cores??null,disk_free_min_bytes:minDisk,identity_changed:identityChanged,oom_seen:oom,complete_24h_evidence:complete,local_resource_gate:complete&&avg!<70&&groupAvg!==null&&groupAvg<70&&groupMemoryMax<=.8&&minMemory!>=.2&&minDisk!>=4.5*1024**3,not_covered:['NAS budget','voice A/B','maintenance backlog','external service restart counters']};
+  return {samples,unavailable_samples:unavailable,cgroup_missing_samples:groupMissing,observed_ms:elapsed,required_ms:requiredMs,max_sample_gap_ms:maxGap,cpu_average_percent:avg,mem_available_min_fraction:minMemory,cgroup_memory_peak_fraction:groupMissing+unavailable===samples?null:groupMemoryMax,cgroup_working_set_peak_fraction:groupMissing+unavailable===samples?null:workingSetMax,cgroup_cpu_average_one_core_percent:groupWallMs?100*groupUsec/(groupWallMs*1000):null,cgroup_cpu_average_quota_percent:groupAvg,cgroup_cpu_quota_cores:last?.cgroup_cpu_quota_cores??null,disk_free_min_bytes:minDisk,identity_changed:identityChanged,oom_seen:oom,complete_24h_evidence:complete,local_resource_gate:complete&&avg!<70&&groupAvg!==null&&groupAvg<70&&workingSetMax<=.8&&minMemory!>=.2&&minDisk!>=4.5*1024**3,not_covered:['NAS budget','voice A/B','maintenance backlog','external service restart counters']};
  }};
 }

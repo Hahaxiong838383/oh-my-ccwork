@@ -1,0 +1,121 @@
+{
+  "scope": "REAL_MEMORY_VALUES_WITH_SYNTHETIC_OTHER_COUNTERS_NOT_24H",
+  "rows": [
+    {
+      "phase": "before",
+      "summary": {
+        "samples": 1,
+        "unavailable_samples": 0,
+        "cgroup_missing_samples": 0,
+        "observed_ms": 0,
+        "required_ms": 86400000,
+        "max_sample_gap_ms": 0,
+        "cpu_average_percent": null,
+        "mem_available_min_fraction": 0.4,
+        "cgroup_memory_peak_fraction": 0.16864013671875,
+        "cgroup_working_set_peak_fraction": 0.16864013671875,
+        "cgroup_cpu_average_one_core_percent": null,
+        "cgroup_cpu_average_quota_percent": null,
+        "cgroup_cpu_quota_cores": 0.1,
+        "disk_free_min_bytes": 10737418240,
+        "identity_changed": false,
+        "oom_seen": false,
+        "complete_24h_evidence": false,
+        "local_resource_gate": false,
+        "not_covered": [
+          "NAS budget",
+          "voice A/B",
+          "maintenance backlog",
+          "external service restart counters"
+        ]
+      }
+    },
+    {
+      "phase": "after_write_fsync",
+      "summary": {
+        "samples": 1,
+        "unavailable_samples": 0,
+        "cgroup_missing_samples": 0,
+        "observed_ms": 0,
+        "required_ms": 86400000,
+        "max_sample_gap_ms": 0,
+        "cpu_average_percent": null,
+        "mem_available_min_fraction": 0.4,
+        "cgroup_memory_peak_fraction": 0.9981689453125,
+        "cgroup_working_set_peak_fraction": 0.2012939453125,
+        "cgroup_cpu_average_one_core_percent": null,
+        "cgroup_cpu_average_quota_percent": null,
+        "cgroup_cpu_quota_cores": 0.1,
+        "disk_free_min_bytes": 10737418240,
+        "identity_changed": false,
+        "oom_seen": false,
+        "complete_24h_evidence": false,
+        "local_resource_gate": false,
+        "not_covered": [
+          "NAS budget",
+          "voice A/B",
+          "maintenance backlog",
+          "external service restart counters"
+        ]
+      }
+    },
+    {
+      "phase": "after_read",
+      "summary": {
+        "samples": 1,
+        "unavailable_samples": 0,
+        "cgroup_missing_samples": 0,
+        "observed_ms": 0,
+        "required_ms": 86400000,
+        "max_sample_gap_ms": 0,
+        "cpu_average_percent": null,
+        "mem_available_min_fraction": 0.4,
+        "cgroup_memory_peak_fraction": 0.99981689453125,
+        "cgroup_working_set_peak_fraction": 0.17950439453125,
+        "cgroup_cpu_average_one_core_percent": null,
+        "cgroup_cpu_average_quota_percent": null,
+        "cgroup_cpu_quota_cores": 0.1,
+        "disk_free_min_bytes": 10737418240,
+        "identity_changed": false,
+        "oom_seen": false,
+        "complete_24h_evidence": false,
+        "local_resource_gate": false,
+        "not_covered": [
+          "NAS budget",
+          "voice A/B",
+          "maintenance backlog",
+          "external service restart counters"
+        ]
+      }
+    },
+    {
+      "phase": "after_own_file_removed",
+      "summary": {
+        "samples": 1,
+        "unavailable_samples": 0,
+        "cgroup_missing_samples": 0,
+        "observed_ms": 0,
+        "required_ms": 86400000,
+        "max_sample_gap_ms": 0,
+        "cpu_average_percent": null,
+        "mem_available_min_fraction": 0.4,
+        "cgroup_memory_peak_fraction": 0.183349609375,
+        "cgroup_working_set_peak_fraction": 0.183349609375,
+        "cgroup_cpu_average_one_core_percent": null,
+        "cgroup_cpu_average_quota_percent": null,
+        "cgroup_cpu_quota_cores": 0.1,
+        "disk_free_min_bytes": 10737418240,
+        "identity_changed": false,
+        "oom_seen": false,
+        "complete_24h_evidence": false,
+        "local_resource_gate": false,
+        "not_covered": [
+          "NAS budget",
+          "voice A/B",
+          "maintenance backlog",
+          "external service restart counters"
+        ]
+      }
+    }
+  ]
+}
