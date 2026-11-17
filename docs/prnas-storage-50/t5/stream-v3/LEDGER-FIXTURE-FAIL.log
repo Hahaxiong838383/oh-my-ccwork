@@ -1,0 +1,39 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: load ACK rejected
++ actual - expected
+
++ [
++   {
++     client_event_id: 'load-t5-ledger-0-0',
++     reason: 'client_event_id_conflict'
++   },
++   {
++     client_event_id: 'load-t5-ledger-0-1',
++     reason: 'client_event_id_conflict'
++   }
++ ]
+- []
+
+    at Object.record (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-ledger.ts:32:36)
+    at <anonymous> (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-load-ledger.test.ts:19:72) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: [
+    {
+      client_event_id: 'load-t5-ledger-0-0',
+      reason: 'client_event_id_conflict'
+    },
+    {
+      client_event_id: 'load-t5-ledger-0-1',
+      reason: 'client_event_id_conflict'
+    }
+  ],
+  expected: [],
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.19.0

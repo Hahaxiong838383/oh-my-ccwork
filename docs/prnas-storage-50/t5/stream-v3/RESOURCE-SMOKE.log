@@ -1,0 +1,1 @@
+{"root":"/Users/fu-121/.local/state/p003-t5-stream-resource-smoke-20261117-01","complete":true,"acks":{"attempts":9,"successes":8,"statuses":{"200":8,"503":1},"p95":153.3561669999999,"p99":153.3561669999999,"all_actors_finished":true,"raw_file":"requests.jsonl","method":"exact disk ORDER BY, floor(n*p), no exclusions from attempt counts"},"ark_correct":2,"seconds":13.464}

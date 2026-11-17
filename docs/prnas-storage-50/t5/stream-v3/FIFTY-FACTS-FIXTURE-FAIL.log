@@ -1,0 +1,13 @@
+/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-fifty-facts.test.ts:42
+ const before=()=>JSON.stringify({grants:ark.db.prepare('SELECT * FROM ark_grants ORDER BY sn').all(),current:ark.db.prepare('SELECT * FROM ark_current ORDER BY sn').all(),history:ark.db.prepare('SELECT * FROM ark_archive_outbox ORDER BY id').all(),seen:analytics.db.prepare('SELECT * FROM analytics_event_seen ORDER BY device_key,id_digest').all()});
+                                                ^
+
+Error: no such table: ark_grants
+    at before (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-fifty-facts.test.ts:42:49)
+    at <anonymous> (/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/2-Projects/P003GameDemo20260513/apps/server/scripts/storage-fifty-facts.test.ts:43:17) {
+  code: 'ERR_SQLITE_ERROR',
+  errcode: 1,
+  errstr: 'SQL logic error'
+}
+
+Node.js v24.19.0
