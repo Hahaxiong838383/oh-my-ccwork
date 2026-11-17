@@ -1,0 +1,36 @@
+{
+  "at": "2026-11-17T00:55:48.215888+00:00",
+  "note": "hash guard and atomic replacement, not OS CAS or multi-file transaction; unchanged lines preserved",
+  "entries": [
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+      "before_sha256": "c0d7e574247cc9c55b5864e8872f4e10e5f1ab98c08ae0d5d200af8b43adb46f",
+      "candidate_sha256": "3ddef490c86b4aa0bc44ccd812f2c04458d87966bf90818c92b80180873b2e0a",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t4-recheck-20261117/memory/memory-items.md.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t4-recheck-20261117/memory/memory-items.md.candidate",
+      "lines": 2746,
+      "status": "written_verified",
+      "after_sha256": "3ddef490c86b4aa0bc44ccd812f2c04458d87966bf90818c92b80180873b2e0a"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/status.md",
+      "before_sha256": "33e2aa45b792b786cb4a5e7f44d08e960003aefac3be04c0defca306af9284ea",
+      "candidate_sha256": "e7963f128a0297c422caa842ce5d517c0337ade06db6b2f123a62e0da68b2036",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t4-recheck-20261117/memory/status.md.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t4-recheck-20261117/memory/status.md.candidate",
+      "lines": 49,
+      "status": "written_verified",
+      "after_sha256": "e7963f128a0297c422caa842ce5d517c0337ade06db6b2f123a62e0da68b2036"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+      "before_sha256": "20d476bafd3fed571d83073358caad917c30a22927ce9181bab9a437bcbbceff",
+      "candidate_sha256": "68c39380287a13d5c28cd119629e55fcbcebd0791fa8f0d73cc0920a94ee878c",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t4-recheck-20261117/memory/RECENT_EVENTS.md.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t4-recheck-20261117/memory/RECENT_EVENTS.md.candidate",
+      "lines": 79,
+      "status": "written_verified",
+      "after_sha256": "68c39380287a13d5c28cd119629e55fcbcebd0791fa8f0d73cc0920a94ee878c"
+    }
+  ]
+}

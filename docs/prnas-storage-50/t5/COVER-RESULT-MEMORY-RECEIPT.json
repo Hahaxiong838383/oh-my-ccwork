@@ -1,0 +1,57 @@
+{
+  "at": "2026-11-17T00:56:54.717127+00:00",
+  "reference_basis": "actual original-scan >47s versus covering ~4.6s; full mixed load now independently parsed; no mature-scale claim",
+  "entries": [
+    {
+      "path": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116/.claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+      "before_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+      "candidate_sha256": "f0179e7ae66fb9496b2dfcc54dfc78d63ef6a4a9b552927609f6291c39d481d3",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/0.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/0.candidate",
+      "status": "written_verified",
+      "lines": 50,
+      "after_sha256": "f0179e7ae66fb9496b2dfcc54dfc78d63ef6a4a9b552927609f6291c39d481d3"
+    },
+    {
+      "path": "/Users/fu-121/mycc/.claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+      "before_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+      "candidate_sha256": "f0179e7ae66fb9496b2dfcc54dfc78d63ef6a4a9b552927609f6291c39d481d3",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/1.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/1.candidate",
+      "status": "written_verified",
+      "lines": 50,
+      "after_sha256": "f0179e7ae66fb9496b2dfcc54dfc78d63ef6a4a9b552927609f6291c39d481d3"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/memory-items.md",
+      "before_sha256": "3ddef490c86b4aa0bc44ccd812f2c04458d87966bf90818c92b80180873b2e0a",
+      "candidate_sha256": "eb88e84f47207e0789ae8605669dd1f0e67608796f1efadd1a1b5b0c72932635",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/2.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/2.candidate",
+      "status": "written_verified",
+      "lines": 2746,
+      "after_sha256": "eb88e84f47207e0789ae8605669dd1f0e67608796f1efadd1a1b5b0c72932635"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/status.md",
+      "before_sha256": "e7963f128a0297c422caa842ce5d517c0337ade06db6b2f123a62e0da68b2036",
+      "candidate_sha256": "71f4df80a321c3b26f8a59ce7e122b4fc979412fea06b42188f94df02754973d",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/3.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/3.candidate",
+      "status": "written_verified",
+      "lines": 49,
+      "after_sha256": "71f4df80a321c3b26f8a59ce7e122b4fc979412fea06b42188f94df02754973d"
+    },
+    {
+      "path": "/Users/fu-121/.mycc-global/0-System/RECENT_EVENTS.md",
+      "before_sha256": "68c39380287a13d5c28cd119629e55fcbcebd0791fa8f0d73cc0920a94ee878c",
+      "candidate_sha256": "fc83b08863ac3cd187caa67810b3751401beb870bba0f602c4c51d63995eb4bc",
+      "backup": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/4.before",
+      "candidate": "/Users/fu-121/.local/state/p003-prnas-t5-20261117/cover-result-memory/4.candidate",
+      "status": "written_verified",
+      "lines": 79,
+      "after_sha256": "fc83b08863ac3cd187caa67810b3751401beb870bba0f602c4c51d63995eb4bc"
+    }
+  ],
+  "note": "Hash guard plus atomic replace, not OS CAS or multi-file transaction"
+}

@@ -1,0 +1,25 @@
+{
+  "at": "2026-11-17T00:54:21.395232+00:00",
+  "head": "a3f2b9822257940270051c3c7f47d0e24fa7a2f4",
+  "t4_runtime": "d6b875db81d5f88a620db6fd13c0839fd1471d36",
+  "evidence_verified": 39,
+  "mismatches": [],
+  "tests": [
+    {
+      "script": "analytics-maintenance.test.ts",
+      "exit": 0,
+      "log_sha256": "b434d881f21dd11665e16720f2c4807e4ab4b6fb44c9b06afc8aa15712dc3670"
+    },
+    {
+      "script": "analytics-t4.test.ts",
+      "exit": 0,
+      "log_sha256": "338693b8229f811f2a9779bb3c68820adbdf337e066603e1154fc673491e6b73"
+    },
+    {
+      "script": "analytics-t4-run-budget.test.ts",
+      "exit": 0,
+      "log_sha256": "fe0db08d47ca66e36e02417229308b8604529d7757f650215e2701c2543e204d"
+    }
+  ],
+  "production_mutated": false
+}

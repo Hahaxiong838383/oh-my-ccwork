@@ -1,0 +1,13 @@
+{
+  "skill": ".claude/skills/p003-deploy-ops/references/prnas-checkpoint-capacity.md",
+  "live_copy_equal": true,
+  "existing_committed_lessons": [
+    "10行/1批限制",
+    "同一DEFERRED快照与dirty",
+    "五副本/180天/永久seen",
+    "冷暖缓存与失败证据分离"
+  ],
+  "this_turn": "复核既有T4规则；根据新增T5真实红绿证据补覆盖索引成本/混合负载/重新建基线参考",
+  "prior_sha256": "68cd379180e052a3f1f296e442c57a3a4b2400dbc46742b47effc7c58c763b42",
+  "sha256": "f0179e7ae66fb9496b2dfcc54dfc78d63ef6a4a9b552927609f6291c39d481d3"
+}
