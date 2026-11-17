@@ -301,25 +301,39 @@ fn input_gate_keeps_exit_but_drops_playback_answers_and_late_asr() {
 fn runtime_duplicate_audio_receipt_preserves_fresh_speech_but_new_cue_does_not() {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let meta = json!({"version":1,"grant":"a".repeat(64),"expires_at_ms":epoch_ms()+600000});
-    let mut r = Runtime::from_metadata(Some(&meta),Some("trace"),Some("session"),Some("dev-synthetic"),"http://127.0.0.1:1/v1","token=synthetic").unwrap();
+    let mut r = Runtime::from_metadata(
+        Some(&meta),
+        Some("trace"),
+        Some("session"),
+        Some("dev-synthetic"),
+        "http://127.0.0.1:1/v1",
+        "token=synthetic",
+    )
+    .unwrap();
     ready(&mut r.session);
-    done(&mut r.session,2,2);
-    let mut ack=req(3,"audio_complete");
-    ack.payload["audio_token"]=r.session.state["audio_token"].clone();
-    ack.payload["audio_status"]=json!("complete");
-    r.control(&ack,Some("dev-synthetic"),false);
+    done(&mut r.session, 2, 2);
+    let mut ack = req(3, "audio_complete");
+    ack.payload["audio_token"] = r.session.state["audio_token"].clone();
+    ack.payload["audio_status"] = json!("complete");
+    r.control(&ack, Some("dev-synthetic"), false);
     assert!(r.reject_asr()); // New cue completion must require new speech.
-    r.speech();assert!(!r.reject_asr());
-    let state=r.session.state.clone();
-    r.control(&ack,Some("dev-synthetic"),false);
-    assert_eq!(r.session.state,state);
-    assert!(!r.reject_asr(),"duplicate audio receipt must not swallow the pending ASR final");
-    r.control(&req(1,"begin"),Some("dev-synthetic"),false);
-    assert!(!r.reject_asr(),"duplicate begin is also side-effect free");
-    r.control(&req(4,"request_exit_prompt"),Some("dev-synthetic"),false);
+    r.speech();
+    assert!(!r.reject_asr());
+    let state = r.session.state.clone();
+    r.control(&ack, Some("dev-synthetic"), false);
+    assert_eq!(r.session.state, state);
+    assert!(
+        !r.reject_asr(),
+        "duplicate audio receipt must not swallow the pending ASR final"
+    );
+    r.control(&req(1, "begin"), Some("dev-synthetic"), false);
+    assert!(!r.reject_asr(), "duplicate begin is also side-effect free");
+    r.control(&req(4, "request_exit_prompt"), Some("dev-synthetic"), false);
     assert!(r.reject_asr()); // A genuinely new playback invalidates old VAD.
-    done(&mut r.session,5,5);
-    assert!(r.reject_asr());r.speech();assert!(!r.reject_asr());
+    done(&mut r.session, 5, 5);
+    assert!(r.reject_asr());
+    r.speech();
+    assert!(!r.reject_asr());
 }
 #[test]
 fn full_missing_flow_all_questions_then_exit_and_strict_revisions() {
@@ -475,4 +489,365 @@ fn cancel_before_deferred_begin_prevents_late_lesson_start() {
         );
         assert!(!s.active());
     }
+}
+
+#[test]
+fn v2_signed_metadata_uses_an_independent_client_owned_protocol() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let metadata = json!({"version":2,"grant":"a".repeat(64),"expires_at_ms":epoch_ms()+60000});
+    let r = Runtime::from_metadata(
+        Some(&metadata),
+        Some("trace"),
+        Some("session"),
+        Some("dev-synthetic"),
+        "http://127.0.0.1:1/v1",
+        "token=synthetic",
+    );
+    assert!(r.is_some(), "signed v2 capability needs its own runtime");
+}
+
+fn req2(rev: u64, action: &str, q: u64) -> control::Envelope {
+    let mut e = req(rev as i64 + 1, action);
+    e.payload = json!({"v":2,"trace_id":"trace","session_id":"session","lesson_id":"lesson","request_id":format!("v2-{rev}"),"revision":rev,"question_index":q,"action":action});
+    e
+}
+fn session2() -> Session {
+    let mut s = session();
+    s.version = 2;
+    s
+}
+fn control2(s: &mut Session, rev: u64, action: &str, q: u64) -> Vec<Effect> {
+    s.control(&req2(rev, action, q), Some("dev-synthetic"), rev, false)
+}
+fn response2(body: &Value, result: &str, memory: &str) -> Value {
+    let mut v = body.clone();
+    v.as_object_mut().unwrap().remove("text");
+    v["action"] = json!("answer_result");
+    v["result"] = json!(result);
+    v["memory_write"] = json!(memory);
+    v
+}
+fn answer_body(s: &mut Session, text: &str) -> Value {
+    s.answer(text, 10)
+        .into_iter()
+        .find_map(|e| {
+            if let Effect::Brain(v) = e {
+                Some(v)
+            } else {
+                None
+            }
+        })
+        .unwrap()
+}
+#[test]
+fn v2_fixed_three_questions_no_prompt_and_independent_memory_result() {
+    let mut s = session2();
+    control2(&mut s, 0, "begin", 0);
+    for (q, text, memory) in [
+        (1, "八岁", "saved"),
+        (2, "我是女孩", "failed"),
+        (3, "叫我星星", "skipped"),
+    ] {
+        let rev = (q - 1) * 2 + 1;
+        control2(&mut s, rev, "question_started", q);
+        assert!(s.answer(text, rev).is_empty());
+        control2(&mut s, rev + 1, "audio_complete", q);
+        let b = answer_body(&mut s, text);
+        s.brain_reply(response2(&b, "accepted", memory), 11);
+        assert_eq!(s.state["result"], "accepted");
+        assert_eq!(s.state["memory_write"], memory);
+        assert_eq!(s.state["request_id"], format!("v2-{}", rev + 1));
+        for key in [
+            "audio_prompt",
+            "audio_token",
+            "missing",
+            "text",
+            "age_years",
+            "nickname",
+            "birthday",
+            "gender",
+        ] {
+            assert!(s.state.get(key).is_none());
+        }
+        assert!(s.active());
+        assert!(s.blocks_input());
+        assert!(s.answer(text, 12).is_empty());
+    }
+    control2(&mut s, 7, "finish", 3);
+    assert!(!s.active());
+    assert_eq!(s.state["result"], "finished");
+}
+#[test]
+fn v2_skip_and_stale_result_cannot_reopen_question_or_write_twice() {
+    let mut s = session2();
+    control2(&mut s, 0, "begin", 0);
+    control2(&mut s, 1, "question_started", 1);
+    control2(&mut s, 2, "audio_complete", 1);
+    let b = answer_body(&mut s, "八岁");
+    control2(&mut s, 3, "question_skipped", 1);
+    control2(&mut s, 4, "question_started", 2);
+    assert!(
+        s.brain_reply(response2(&b, "accepted", "saved"), 12)
+            .is_empty()
+    );
+    assert_eq!(s.phase, "speaking");
+    assert!(control2(&mut s, 5, "question_started", 1).is_empty());
+    assert!(control2(&mut s, 5, "question_started", 4).is_empty());
+    assert!(
+        s.control(
+            &req2(2, "audio_complete", 1),
+            Some("dev-synthetic"),
+            13,
+            false
+        )
+        .iter()
+        .all(|e| !matches!(e, Effect::Brain(_)))
+    );
+    assert_eq!(s.phase, "speaking");
+}
+#[test]
+fn v2_failure_and_decline_do_not_release_chat_isolation() {
+    for result in ["failed", "declined", "unrecognized"] {
+        let mut s = session2();
+        control2(&mut s, 0, "begin", 0);
+        control2(&mut s, 1, "question_started", 1);
+        control2(&mut s, 2, "audio_complete", 1);
+        let b = answer_body(&mut s, "不告诉你");
+        if result == "failed" {
+            s.brain_failure();
+        } else {
+            s.brain_reply(
+                response2(
+                    &b,
+                    result,
+                    if result == "declined" {
+                        "skipped"
+                    } else {
+                        "none"
+                    },
+                ),
+                12,
+            );
+        }
+        assert!(s.active());
+        assert!(s.blocks_input());
+        assert_eq!(s.state["result"], result);
+        control2(&mut s, 3, "question_started", 2);
+        assert_eq!(s.phase, "speaking");
+    }
+}
+#[test]
+fn v2_expiry_does_not_turn_into_completion_or_open_chat() {
+    let mut s = session2();
+    control2(&mut s, 0, "begin", 0);
+    let out = s.control(&req2(1, "finish", 0), Some("dev-synthetic"), 180000, false);
+    assert!(!out.is_empty());
+    assert_eq!(s.state["result"], "expired");
+    assert!(!s.active());
+    assert!(
+        s.control(&req2(2, "finish", 0), Some("dev-synthetic"), 180001, false)
+            .is_empty()
+    );
+    assert_eq!(s.state["result"], "expired");
+    let mut s = session2();
+    control2(&mut s, 0, "begin", 0);
+    s.tick(180000);
+    assert!(s.active());
+    assert!(s.blocks_input());
+    assert_eq!(s.deadline(), None);
+    assert!(s.tick(180001).is_empty());
+}
+#[test]
+fn v2_trust_revision_audio_failure_and_simulation() {
+    let mut s = session2();
+    let mut e = req2(0, "begin", 0);
+    e.payload["simulation"] = json!(true);
+    assert!(s.control(&e, Some("dev-synthetic"), 0, false).is_empty());
+    assert!(
+        s.control(&req2(0, "begin", 0), Some("intruder"), 0, false)
+            .is_empty()
+    );
+    control2(&mut s, 0, "begin", 0);
+    assert!(control2(&mut s, 1, "question_started", 2).is_empty());
+    control2(&mut s, 1, "question_started", 1);
+    let mut bad = req2(2, "audio_complete", 1);
+    bad.payload["trace_id"] = json!("old");
+    assert!(s.control(&bad, Some("dev-synthetic"), 2, false).is_empty());
+    let mut fail = req2(2, "audio_complete", 1);
+    fail.payload["audio_status"] = json!("failed");
+    let fx = s.control(&fail, Some("dev-synthetic"), 2, false);
+    assert!(
+        fx.iter()
+            .any(|e| matches!(e,Effect::Brain(v) if v["action"]=="question_skipped"))
+    );
+    assert!(s.blocks_input());
+    assert!(s.active());
+}
+#[tokio::test]
+async fn v2_runtime_duplicate_keeps_fresh_vad_and_no_echo_exit() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let meta = json!({"version":2,"grant":"a".repeat(64),"expires_at_ms":epoch_ms()+60000});
+    let mut r = Runtime::from_metadata(
+        Some(&meta),
+        Some("trace"),
+        Some("session"),
+        Some("dev-synthetic"),
+        "http://127.0.0.1:1/v1",
+        "token=synthetic",
+    )
+    .unwrap();
+    for (rev, a, q) in [(0, "begin", 0), (1, "question_started", 1)] {
+        r.control(&req2(rev, a, q), Some("dev-synthetic"), false);
+    }
+    assert_eq!(r.input_route(true), InputRoute::Drop);
+    r.control(&req2(2, "audio_complete", 1), Some("dev-synthetic"), false);
+    r.speech();
+    r.control(&req2(2, "audio_complete", 1), Some("dev-synthetic"), false);
+    assert!(r.speech_seen);
+    assert_eq!(r.input_route(true), InputRoute::Exit);
+    r.answer("八岁");
+    assert!(r.session.pending);
+    r.control(
+        &req2(3, "question_skipped", 1),
+        Some("dev-synthetic"),
+        false,
+    );
+    assert!(!r.speech_seen);
+    assert!(!r.queue.iter().any(|v| v["action"] == "answer"));
+    r.control(&req2(4, "cancel", 1), Some("dev-synthetic"), false);
+    assert!(!r.active());
+    assert!(r.queue.is_empty());
+}
+
+#[tokio::test]
+async fn v2_real_http_sqlite_serial_controls_and_retired_delayed_answer() {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    use std::{
+        io::{BufRead, BufReader},
+        process::{Command, Stdio},
+    };
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .ancestors()
+        .find(|p| p.join("docs/voice-onboarding-20261117/TASK.md").exists())
+        .unwrap();
+    let mut child = FixtureChild(
+        Command::new("node")
+            .args([
+                "--import",
+                "tsx",
+                "scripts/voice-onboarding-worker-fixture.ts",
+            ])
+            .env("SYNTHETIC_ONBOARDING_VERSION", "2")
+            .env("SYNTHETIC_ANSWER_DELAY_MS", "400")
+            .current_dir(root.join("2-Projects/P003GameDemo20260513/apps/server"))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let mut line = String::new();
+    BufReader::new(child.stdout.take().unwrap())
+        .read_line(&mut line)
+        .unwrap();
+    let setup: Value = serde_json::from_str(&line).unwrap();
+    let mut r = Runtime::from_metadata(
+        Some(&setup["metadata"]),
+        Some("trace"),
+        Some("session"),
+        Some("dev-synthetic"),
+        setup["base"].as_str().unwrap(),
+        setup["query"].as_str().unwrap(),
+    )
+    .unwrap();
+    // Deliberately no HTTP wait between local control events. Ordering must be owned by Runtime.
+    for (rev, a, q) in [
+        (0, "begin", 0),
+        (1, "question_started", 1),
+        (2, "audio_complete", 1),
+    ] {
+        r.control(&req2(rev, a, q), Some("dev-synthetic"), false);
+    }
+    r.speech();
+    r.answer("八岁");
+    let url = format!(
+        "{}/synthetic-observation",
+        setup["base"].as_str().unwrap().trim_end_matches("/v1")
+    );
+    let client = reqwest::Client::new();
+    let mut seen = false;
+    for _ in 0..100 {
+        r.poll().await;
+        let v: Value = client.get(&url).send().await.unwrap().json().await.unwrap();
+        if v["answerReceived"] == 1 {
+            seen = true;
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(seen);
+    r.control(
+        &req2(3, "question_skipped", 1),
+        Some("dev-synthetic"),
+        false,
+    );
+    for (rev, a, q) in [(4, "question_started", 2), (5, "audio_complete", 2)] {
+        r.control(&req2(rev, a, q), Some("dev-synthetic"), false);
+    }
+    r.speech();
+    r.answer("我是女孩");
+    let mut result = false;
+    for _ in 0..200 {
+        let events = r.poll().await;
+        for e in events {
+            if e["payload"]["action"] == "answer_result" {
+                assert_eq!(e["payload"]["question_index"], 2);
+                assert_eq!(e["payload"]["request_id"], "v2-5");
+                assert_eq!(e["payload"]["memory_write"], "saved");
+                result = true;
+            }
+        }
+        if result {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert!(result);
+    let v: Value = client.get(&url).send().await.unwrap().json().await.unwrap();
+    assert!(
+        v["age_years"].is_null(),
+        "retired late answer must fail against committed skip"
+    );
+    assert_eq!(v["birthday"], "");
+    assert_eq!(v["gender"], "女孩");
+    r.control(
+        &req2(6, "question_started", 3),
+        Some("dev-synthetic"),
+        false,
+    );
+    r.control(&req2(7, "audio_complete", 3), Some("dev-synthetic"), false);
+    r.speech();
+    r.answer("叫我星星");
+    for _ in 0..200 {
+        r.poll().await;
+        if r.session.phase == "answered" {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    assert_eq!(r.session.state["memory_write"], "saved");
+    r.control(&req2(8, "finish", 3), Some("dev-synthetic"), false);
+    assert!(!r.active());
+    for _ in 0..40 {
+        r.poll().await;
+        if r.pending.is_none() {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let v: Value = client.get(&url).send().await.unwrap().json().await.unwrap();
+    assert_eq!(v["nickname"], "星星");
+    drop(r);
+    drop(child.stdin.take());
+    assert!(child.wait().unwrap().success());
 }

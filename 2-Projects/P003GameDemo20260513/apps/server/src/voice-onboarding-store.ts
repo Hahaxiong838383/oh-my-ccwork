@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { z } from "zod";
+import type {StepV2,QuestionV2} from './voice-onboarding-v2.js';
 
 const id = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/);
 export const stepSchema = z
@@ -135,6 +136,9 @@ export class VoiceOnboardingStore {
    snapshot TEXT,closed INTEGER NOT NULL DEFAULT 0);
    CREATE TABLE IF NOT EXISTS voice_onboarding_receipt(session_id TEXT,request_id TEXT,hash TEXT NOT NULL,reply TEXT NOT NULL,
    PRIMARY KEY(session_id,request_id));`);
+    const sessionCols=this.db.prepare('PRAGMA table_info(voice_onboarding_session)').all() as {name:string}[];
+    if(!sessionCols.some(c=>c.name==='protocol_version'))this.db.exec('ALTER TABLE voice_onboarding_session ADD COLUMN protocol_version INTEGER NOT NULL DEFAULT 1');
+    if(!sessionCols.some(c=>c.name==='question_state'))this.db.exec('ALTER TABLE voice_onboarding_session ADD COLUMN question_state TEXT');
   }
   close() {
     this.db.close();
@@ -203,6 +207,7 @@ export class VoiceOnboardingStore {
     trace_id: string;
     room: string;
     expires_at_ms: number;
+    version?: 1 | 2;
   }) {
     const grant = randomBytes(32).toString("hex");
     this.tx(() => {
@@ -212,7 +217,7 @@ export class VoiceOnboardingStore {
         .run(input.sn);
       this.db
         .prepare(
-          "INSERT INTO voice_onboarding_session(session_id,trace_id,room,sn,grant_hash,expires,snapshot) VALUES(?,?,?,?,?,?,?)",
+          "INSERT INTO voice_onboarding_session(session_id,trace_id,room,sn,grant_hash,expires,snapshot,protocol_version) VALUES(?,?,?,?,?,?,?,?)",
         )
         .run(
           input.session_id,
@@ -222,9 +227,10 @@ export class VoiceOnboardingStore {
           digest(grant),
           input.expires_at_ms,
           JSON.stringify(snapshot),
+          input.version??1,
         );
     });
-    return { version: 1, grant, expires_at_ms: input.expires_at_ms };
+    return { version: input.version??1, grant, expires_at_ms: input.expires_at_ms };
   }
   step(grant: string, input: Step) {
     return this.tx(() => {
@@ -233,6 +239,7 @@ export class VoiceOnboardingStore {
         .get(input.session_id) as any;
       if (!s || s.grant_hash !== digest(grant) || s.trace_id !== input.trace_id)
         throw new OnboardingError("unauthorized", 403);
+      if(s.protocol_version!==1)throw new OnboardingError('protocol_mismatch');
       const now = this.now();
       if (now >= s.expires || (s.deadline !== null && now >= s.deadline))
         throw new OnboardingError("expired", 410);
@@ -362,6 +369,73 @@ export class VoiceOnboardingStore {
           JSON.stringify(reply),
         );
       return reply;
+    });
+  }
+
+  stepV2(grant:string,input:StepV2){
+    return this.tx(()=>{
+      const s=this.db.prepare('SELECT * FROM voice_onboarding_session WHERE session_id=?').get(input.session_id) as any;
+      if(!s||s.grant_hash!==digest(grant)||s.trace_id!==input.trace_id)throw new OnboardingError('unauthorized',403);
+      if(s.protocol_version!==2)throw new OnboardingError('protocol_mismatch');
+      const now=this.now();
+      if(now>=s.expires||(s.deadline!==null&&now>=s.deadline))throw new OnboardingError('expired',410);
+      if(s.lesson_id!==null&&s.lesson_id!==input.lesson_id)throw new OnboardingError('lesson_mismatch');
+      const prior=this.db.prepare('SELECT * FROM voice_onboarding_receipt WHERE session_id=? AND request_id=?').get(input.session_id,input.request_id) as any;
+      if(prior){if(prior.hash!==digest(input))throw new OnboardingError('request_conflict');return JSON.parse(prior.reply);}
+      if(s.closed)throw new OnboardingError('closed',410);
+      if((this.db.prepare('SELECT count(*) n FROM voice_onboarding_receipt WHERE session_id=?').get(input.session_id) as any).n>=128)throw new OnboardingError('request_limit');
+      let q:QuestionV2=s.question_state?JSON.parse(s.question_state):{index:0,phase:'idle'};
+      let result='ack',memory_write='none';
+      if(input.action==='finish'||input.action==='cancel'){
+        if(input.revision<s.revision)throw new OnboardingError('stale_revision');
+        this.db.prepare('UPDATE voice_onboarding_session SET closed=1,lesson_id=coalesce(lesson_id,?),revision=? WHERE session_id=?').run(input.lesson_id,input.revision,input.session_id);
+        result=input.action==='finish'?'finished':'cancelled';
+      }else{
+        const snap=this.snapshot(s.sn),initial=JSON.parse(s.snapshot);
+        if(JSON.stringify(snap.binding)!==JSON.stringify(initial.binding)||snap.child.id!==initial.child.id)throw new OnboardingError('binding_changed');
+        if(input.action==='begin'){
+          if(s.lesson_id!==null)throw new OnboardingError('already_started');
+          this.db.prepare('UPDATE voice_onboarding_session SET lesson_id=?,deadline=?,question_state=? WHERE session_id=?').run(input.lesson_id,Math.min(now+180000,s.expires),JSON.stringify(q),input.session_id);
+        }else{
+          if(!s.lesson_id)throw new OnboardingError('not_started');
+          if(input.action==='answer'){
+            if(input.revision!==s.revision||input.question_index!==q.index||q.phase!=='ready')throw new OnboardingError('stale_question');
+            const field=fields[q.index-1],parsed=extractAnswer(field,input.text!);
+            if(parsed.result==='value'){
+              result='accepted';
+              // Existing parent/child facts remain authoritative. Fixed local questions still run.
+              if(!this.missing(snap).includes(field))memory_write='skipped';
+              else{
+                this.db.exec('SAVEPOINT onboarding_profile_write');
+                try{
+                  const update=field==='age'?this.db.prepare('UPDATE profile.family_member SET age_years=?,age_observed_at=?,updated_at=? WHERE id=?').run(parsed.value,now,now,snap.child.id)
+                  :this.db.prepare(`UPDATE profile.family_member SET ${field}=?,updated_at=? WHERE id=?`).run(parsed.value,now,snap.child.id);
+                  if(Number(update.changes)!==1)throw new Error('profile_write_not_committed');
+                  this.db.exec('RELEASE onboarding_profile_write');memory_write='saved';
+                }catch{
+                  this.db.exec('ROLLBACK TO onboarding_profile_write');this.db.exec('RELEASE onboarding_profile_write');memory_write='failed';
+                }
+              }
+            }else{result=parsed.result==='declined'?'declined':'unrecognized';memory_write=parsed.result==='declined'?'skipped':'none';}
+            q.phase='answered';
+          }else{
+            if(input.revision<=s.revision)throw new OnboardingError('stale_revision');
+            if(input.action==='question_started'){
+              if(input.question_index!==q.index+1)throw new OnboardingError('stale_question');
+              q={index:input.question_index,phase:'speaking'};
+            }else{
+              if(input.question_index!==q.index)throw new OnboardingError('stale_question');
+              if(input.action==='audio_complete'){
+                if(q.phase!=='speaking')throw new OnboardingError('unexpected_audio');q.phase='ready';
+              }else q.phase='skipped';
+            }
+          }
+          this.db.prepare('UPDATE voice_onboarding_session SET revision=?,question_state=? WHERE session_id=?').run(input.revision,JSON.stringify(q),input.session_id);
+        }
+      }
+      const reply={v:2,session_id:input.session_id,trace_id:input.trace_id,lesson_id:input.lesson_id,request_id:input.request_id,question_index:input.question_index,revision:input.revision,action:input.action==='answer'?'answer_result':'ack',result,memory_write};
+      this.db.prepare('INSERT INTO voice_onboarding_receipt VALUES(?,?,?,?)').run(input.session_id,input.request_id,digest(input),JSON.stringify(reply));
+      return reply; // The caller receives saved only after the enclosing transaction COMMIT.
     });
   }
 }

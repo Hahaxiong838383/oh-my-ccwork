@@ -2020,7 +2020,7 @@ impl Orchestrator {
     }
 
     fn on_interim(&mut self, t: String) {
-        if self.onboarding.as_ref().is_some_and(|o|o.reject_asr()) { return; }
+        if self.onboarding.as_ref().is_some_and(|o|o.reject_asr() || (o.is_v2() && o.active())) { return; }
         if self.session_close.active() { return; }
         self.contract.user_transcript_interim();
         self.tr.user_interim(&t);
@@ -2044,6 +2044,11 @@ impl Orchestrator {
             }
         }
         if self.session_close.active() { return; }
+        if self.onboarding.as_ref().is_some_and(|o|o.is_v2() && o.active()) {
+            self.contract.user_transcript_final(); self.tr.user_final(&t);
+            if let Some(o)=self.onboarding.as_mut(){o.answer(&t);}
+            return; // Fixed lesson answers never enter ordinary turn batching/search/LLM/TTS.
+        }
         self.contract.user_transcript_final();
         // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
         // 门关着或空 final → 原路立即发(空 final 在端侧不启动等待,且 turn_gate 也不收它)。
@@ -2434,11 +2439,20 @@ impl Orchestrator {
                 if matches!(ev.payload["action"].as_str(),Some("cancel"|"finish")) {
                     self.onboarding_deferred=None;
                 }
-                if ev.payload["action"] == "begin" && (self.agent_turn.is_some() || self.ordered_first_turn_active() || !self.turn_gate.pending().is_empty() || !self.latest_interim.is_empty()) {
+                let local_lesson=self.onboarding.as_ref().is_some_and(|o|o.is_v2());
+                if !local_lesson && ev.payload["action"] == "begin" && (self.agent_turn.is_some() || self.ordered_first_turn_active() || !self.turn_gate.pending().is_empty() || !self.latest_interim.is_empty()) {
                     if self.onboarding.is_some() && self.onboarding_deferred.is_none() { self.onboarding_deferred=Some((ev.clone(),identity.map(str::to_owned),Instant::now())); }
                     return;
                 }
+                let before=self.onboarding.as_ref().map(|o|o.generation());
                 if let Some(o)=self.onboarding.as_mut() { o.control(ev,identity,false); }
+                if local_lesson && before!=self.onboarding.as_ref().map(|o|o.generation()) {
+                    self.onboarding_deferred=None;
+                    self.hard_abort_current();
+                    if let Some(sp)=self.spec.take(){sp.task.abort();}
+                    self.turn_gate=TurnGate::new(self.turn_gate.min_delay,self.turn_gate.max_delay,self.turn_gate.unlikely_threshold);
+                    self.latest_interim.clear();self.pf.reset();
+                }
             },
             control::Inbound::CanarySay => self.on_canary_say(ev, identity),
             // command_word(2026-08-18 晚合同):VAD 芯片 label 经 Android 转发,

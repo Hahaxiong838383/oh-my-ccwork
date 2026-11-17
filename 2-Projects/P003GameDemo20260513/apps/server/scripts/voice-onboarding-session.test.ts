@@ -78,6 +78,16 @@ test("actual session HTTP negotiates v398, preserves old path and signs same tru
     assert.equal(meta.voice_onboarding.version, 1);
     assert.match(meta.voice_onboarding.grant, /^[a-f0-9]{64}$/);
     assert.equal(active.grant, undefined);
+    assert.equal((await post(["voice_onboarding_v2"])).voice_onboarding_contract, undefined);
+    process.env.VOICE_ONBOARDING_V2_ENABLED="1";
+    for(const supports of [["voice_onboarding_v2"],["voice_onboarding_v1","voice_onboarding_v2"]]){
+      const v2=await post(supports);
+      assert.deepEqual(v2.voice_onboarding_contract,{version:2,capability:"voice_onboarding_v2"});
+      const m=JSON.parse((decodeJwt(v2.token).roomConfig as any).agents[0].metadata);
+      assert.equal(m.voice_onboarding.version,2);
+      assert.equal((db.prepare('SELECT protocol_version FROM voice_onboarding_session WHERE session_id=?').get(v2.session_id) as any).protocol_version,2);
+    }
+    delete process.env.VOICE_ONBOARDING_V2_ENABLED;
     assert.equal((await post([])).voice_onboarding_contract, undefined);
     assert.equal(
       (

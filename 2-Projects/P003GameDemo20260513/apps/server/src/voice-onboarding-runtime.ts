@@ -3,6 +3,10 @@ import { existsSync } from "node:fs";
 import { DatabaseSync } from "node:sqlite";
 import { VoiceOnboardingStore } from "./voice-onboarding-store.js";
 let store: VoiceOnboardingStore | undefined;
+export function voiceOnboardingVersion(supports:string[],env=process.env):1|2|null{
+  if(env.VOICE_ONBOARDING_V2_ENABLED==='1'&&supports.includes('voice_onboarding_v2'))return 2;
+  return supports.includes('voice_onboarding_v1')?1:null;
+}
 export function getVoiceOnboardingStore() {
   return (store ??= new VoiceOnboardingStore(
     resolve(process.env.DEVICES_DB_PATH?.trim() || "./data/devices.db"),
@@ -23,7 +27,7 @@ export function voiceOnboardingEligible(
     env.VOICE_ONBOARDING_ENABLED === "1" &&
     input.normal &&
     !input.listening &&
-    input.supports.includes("voice_onboarding_v1") &&
+    voiceOnboardingVersion(input.supports,env)!==null &&
     Boolean(env.VOICE_ONBOARDING_WORKER_AGENT) &&
     input.agent === env.VOICE_ONBOARDING_WORKER_AGENT &&
     (env.VOICE_ONBOARDING_SN_ALLOW ?? "")
@@ -70,7 +74,7 @@ export function issueVoiceOnboarding(input: {
   }
   if (!voiceOnboardingEligible(input)) return null;
   try {
-    return getVoiceOnboardingStore().issue(input);
+    return getVoiceOnboardingStore().issue({...input,version:voiceOnboardingVersion(input.supports)!});
   } catch {
     return null;
   }

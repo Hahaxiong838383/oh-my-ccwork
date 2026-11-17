@@ -430,7 +430,7 @@ deviceSessionRoute.post('/session', async (c) => {
     session_id: sessionId,
     expires_at_ms: expSec * 1000,
     expected_agent_name: agentName,
-    ...(voiceOnboarding ? {voice_onboarding_contract:{version:1,capability:'voice_onboarding_v1'}} : {}),
+    ...(voiceOnboarding ? {voice_onboarding_contract:{version:voiceOnboarding.version,capability:`voice_onboarding_v${voiceOnboarding.version}`}} : {}),
     ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,

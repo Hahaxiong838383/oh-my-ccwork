@@ -22,6 +22,7 @@ p.exec(
 );
 const store = new VoiceOnboardingStore(devices, profile);
 const metadata = store.issue({
+  version: process.env.SYNTHETIC_ONBOARDING_VERSION === "2" ? 2 : 1,
   sn: "synthetic",
   session_id: "session",
   trace_id: "trace",
@@ -36,7 +37,7 @@ const token = await new SignJWT({ accountId: "worker-service", role: "device" })
   .sign(new TextEncoder().encode(process.env.AUTH_JWT_SECRET));
 let answerReceived = 0;
 const app = new Hono();
-app.use("/v1/internal/voice-onboarding/step", async (c, next) => {
+app.use("/v1/internal/voice-onboarding/*", async (c, next) => {
   const body = await c.req.json();
   if (body.action === "answer") {
     answerReceived++;

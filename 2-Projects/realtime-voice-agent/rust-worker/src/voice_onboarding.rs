@@ -2,7 +2,7 @@
 use crate::control;
 use serde_json::{Value, json};
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     time::{Duration, Instant},
 };
 
@@ -32,6 +32,10 @@ pub enum Effect {
 }
 
 pub struct Session {
+    version: u8,
+    question: u64,
+    phase: String,
+    answer_request: Option<String>,
     trace: String,
     session: String,
     identity: String,
@@ -58,6 +62,10 @@ fn valid_id(s: &str) -> bool {
 impl Session {
     pub fn new(trace: String, session: String, identity: String) -> Self {
         Self {
+            version: 1,
+            question: 0,
+            phase: "idle".into(),
+            answer_request: None,
             trace,
             session,
             identity,
@@ -80,9 +88,16 @@ impl Session {
         self.started.is_some() && !self.terminal
     }
     pub fn deadline(&self) -> Option<u64> {
-        self.started.map(|n| n + 180000)
+        if self.version == 2 && self.phase == "expired" {
+            None
+        } else {
+            self.started.map(|n| n + 180000)
+        }
     }
     pub fn blocks_input(&self) -> bool {
+        if self.version == 2 {
+            return self.active() && (self.phase != "ready" || self.pending);
+        }
         self.active()
             && (self.pending
                 || self.state["stage"]
@@ -127,9 +142,15 @@ impl Session {
         out
     }
     pub fn cancel(&mut self) -> Vec<Effect> {
+        if self.version == 2 {
+            return self.close_v2();
+        }
         self.end("completed")
     }
     pub fn tick(&mut self, now: u64) -> Vec<Effect> {
+        if self.version == 2 {
+            return self.tick_v2(now);
+        }
         if self.active() && self.deadline().is_some_and(|d| now >= d) {
             self.end("failed")
         } else {
@@ -142,7 +163,7 @@ impl Session {
             && e.lane.as_deref() == Some("voice_onboarding")
             && e.trace_id == self.trace
             && identity == Some(self.identity.as_str())
-            && e.payload["v"] == 1
+            && e.payload["v"] == self.version
             && e.payload["session_id"] == self.session
     }
     /// Same trusted production entry used by pipeline. Duplicate keys never execute a second side effect.
@@ -153,6 +174,9 @@ impl Session {
         now: u64,
         listening: bool,
     ) -> Vec<Effect> {
+        if self.version == 2 {
+            return self.control_v2(e, identity, now, listening);
+        }
         if !self.trusted_origin(e, identity) {
             return vec![];
         }
@@ -260,6 +284,9 @@ impl Session {
         self.emit("question_speaking", memory, Some(cue))
     }
     pub fn answer(&mut self, text: &str, now: u64) -> Vec<Effect> {
+        if self.version == 2 {
+            return self.answer_v2(text, now);
+        }
         let expired = self.tick(now);
         if !expired.is_empty() {
             return expired;
@@ -281,9 +308,15 @@ impl Session {
         vec![Effect::Brain(body)]
     }
     pub fn brain_failure(&mut self) -> Vec<Effect> {
+        if self.version == 2 {
+            return self.failure_v2();
+        }
         self.end("failed")
     }
     pub fn brain_reply(&mut self, value: Value, now: u64) -> Vec<Effect> {
+        if self.version == 2 {
+            return self.reply_v2(value, now);
+        }
         let expired = self.tick(now);
         if !expired.is_empty() {
             return expired;
@@ -351,6 +384,9 @@ pub struct Runtime {
     grant: String,
     client: reqwest::Client,
     pending: Option<tokio::task::JoinHandle<Option<Value>>>,
+    queue: VecDeque<Value>,
+    in_flight: Option<Value>,
+    out_seq: u64,
     out: Vec<Value>,
     expires: i64,
     worker_token: String,
@@ -368,7 +404,7 @@ impl Runtime {
         let m = meta?;
         let grant = m["grant"].as_str()?;
         let expires = m["expires_at_ms"].as_i64()?;
-        if m["version"] != 1
+        if ![json!(1), json!(2)].contains(&m["version"])
             || grant.len() != 64
             || !grant.bytes().all(|b| b.is_ascii_hexdigit())
             || base.is_empty()
@@ -382,11 +418,16 @@ impl Runtime {
             .1
             .into_owned();
         Some(Self {
-            session: Session::new(trace?.into(), session?.into(), identity?.into()),
+            session: {
+                let mut s = Session::new(trace?.into(), session?.into(), identity?.into());
+                s.version = m["version"].as_u64()? as u8;
+                s
+            },
             origin: Instant::now(),
             endpoint: format!(
-                "{}/internal/voice-onboarding/step",
-                base.trim_end_matches('/')
+                "{}/internal/voice-onboarding/{}step",
+                base.trim_end_matches('/'),
+                if m["version"] == 2 { "v2/" } else { "" }
             ),
             grant: grant.into(),
             client: reqwest::Client::builder()
@@ -394,6 +435,9 @@ impl Runtime {
                 .build()
                 .ok()?,
             pending: None,
+            queue: VecDeque::new(),
+            in_flight: None,
+            out_seq: 0,
             out: vec![],
             expires,
             worker_token,
@@ -409,7 +453,17 @@ impl Runtime {
     pub fn blocks_input(&self) -> bool {
         self.session.blocks_input()
     }
+    pub fn generation(&self) -> (u64, bool, bool) {
+        (self.session.revision, self.active(), self.blocks_input())
+    }
+    pub fn is_v2(&self) -> bool {
+        self.session.version == 2
+    }
     pub fn input_route(&self, exit: bool) -> InputRoute {
+        // Local question/4A/4B audio may itself say an exit word.
+        if self.is_v2() && self.active() && (self.blocks_input() || !self.speech_seen) {
+            return InputRoute::Drop;
+        }
         route_input(self.active(), self.blocks_input(), self.speech_seen, exit)
     }
     pub fn reject_asr(&self) -> bool {
@@ -421,23 +475,95 @@ impl Runtime {
         }
     }
     pub fn deadline(&self) -> Option<Instant> {
-        self.active()
-            .then(|| self.origin + Duration::from_millis(self.session.deadline().unwrap()))
+        if self.active() {
+            self.session
+                .deadline()
+                .map(|d| self.origin + Duration::from_millis(d))
+        } else {
+            None
+        }
+    }
+    fn start_http(&mut self, body: Value) {
+        let client = self.client.clone();
+        let url = self.endpoint.clone();
+        let grant = self.grant.clone();
+        let token = self.worker_token.clone();
+        self.in_flight = Some(body.clone());
+        self.pending = Some(tokio::spawn(async move {
+            let response = client
+                .post(url)
+                .header("x-p003-onboarding-grant", grant)
+                .header("x-p003-worker-token", token)
+                .json(&body)
+                .send()
+                .await
+                .ok()?;
+            if !response.status().is_success() {
+                return None;
+            }
+            response.json().await.ok()
+        }));
+    }
+    fn pump(&mut self) {
+        if self.pending.is_none() {
+            if let Some(body) = self.queue.pop_front() {
+                self.start_http(body);
+            }
+        }
     }
     fn apply(&mut self, effects: Vec<Effect>) {
         for effect in effects {
-            match effect{
-  Effect::State(v)=>self.out.push(json!({"trace_id":self.session.trace,"ts_ms":epoch_ms(),"src":"worker","type":"voice_onboarding.state","lane":"voice_onboarding","seq":v["revision"],"payload":v})),
-  Effect::Brain(body)=>{
-   if let Some(p)=self.pending.take(){p.abort();}
-   let client=self.client.clone();let url=self.endpoint.clone();let grant=self.grant.clone();let worker_token=self.worker_token.clone();
-   self.pending=Some(tokio::spawn(async move{let response=client.post(url).header("x-p003-onboarding-grant",grant).header("x-p003-worker-token",worker_token).json(&body).send().await.ok()?;if !response.status().is_success(){return None;}response.json().await.ok()}));
-  },
- }
+            match effect {
+                Effect::State(v) => {
+                    self.out_seq += 1;
+                    let seq = if self.is_v2() {
+                        json!(self.out_seq)
+                    } else {
+                        v["revision"].clone()
+                    };
+                    self.out.push(json!({"trace_id":self.session.trace,"ts_ms":epoch_ms(),"src":"worker","type":"voice_onboarding.state","lane":"voice_onboarding","seq":seq,"payload":v}));
+                }
+                Effect::Brain(body) => {
+                    if !self.is_v2() {
+                        if let Some(p) = self.pending.take() {
+                            p.abort();
+                        }
+                        self.start_http(body);
+                    } else {
+                        let action = body["action"].as_str().unwrap_or("");
+                        if ["finish", "cancel"].contains(&action) {
+                            self.queue.clear();
+                            if let Some(p) = self.pending.take() {
+                                p.abort();
+                            }
+                            self.in_flight = None;
+                        } else if ["question_started", "question_skipped"].contains(&action) {
+                            // Retire old answers, but preserve ordered begin/start/playback control writes.
+                            self.queue.retain(|b| b["action"] != "answer");
+                            if self
+                                .in_flight
+                                .as_ref()
+                                .is_some_and(|b| b["action"] == "answer")
+                            {
+                                if let Some(p) = self.pending.take() {
+                                    p.abort();
+                                }
+                                self.in_flight = None;
+                            }
+                        }
+                        if self.queue.len() < 16 {
+                            self.queue.push_back(body);
+                        }
+                    }
+                }
+            }
         }
+        self.pump();
     }
     pub fn control(&mut self, e: &control::Envelope, identity: Option<&str>, listening: bool) {
-        if epoch_ms() >= self.expires {
+        if epoch_ms() >= self.expires
+            && !(self.is_v2() && matches!(e.payload["action"].as_str(), Some("finish" | "cancel")))
+        {
             return;
         }
         let before = (self.session.revision, self.active(), self.blocks_input());
@@ -462,7 +588,13 @@ impl Runtime {
         self.apply(effects);
     }
     pub async fn poll(&mut self) -> Vec<Value> {
-        let effects = if epoch_ms() >= self.expires {
+        let effects = if self.is_v2() {
+            self.session.tick(if epoch_ms() >= self.expires {
+                u64::MAX
+            } else {
+                self.now()
+            })
+        } else if epoch_ms() >= self.expires {
             self.session.brain_failure()
         } else {
             self.session.tick(self.now())
@@ -470,9 +602,15 @@ impl Runtime {
         self.apply(effects);
         if self.pending.as_ref().is_some_and(|p| p.is_finished()) {
             let value = self.pending.take().unwrap().await.ok().flatten();
-            let effects = match value {
-                Some(v) => self.session.brain_reply(v, self.now()),
-                None => self.session.brain_failure(),
+            let body = self.in_flight.take();
+            let effects = if self.is_v2() && body.as_ref().is_some_and(|b| b["action"] != "answer")
+            {
+                vec![]
+            } else {
+                match value {
+                    Some(v) => self.session.brain_reply(v, self.now()),
+                    None => self.session.brain_failure(),
+                }
             };
             self.apply(effects);
         }
@@ -498,3 +636,5 @@ fn epoch_ms() -> i64 {
 #[cfg(test)]
 #[path = "voice_onboarding_tests.rs"]
 mod tests;
+#[path = "voice_onboarding_v2.rs"]
+mod v2;
