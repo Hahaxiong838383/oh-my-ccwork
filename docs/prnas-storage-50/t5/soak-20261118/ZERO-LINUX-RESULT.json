@@ -1,0 +1,18 @@
+{
+  "candidate": "708a3149cbfd868d7f54c6595cb568f878cbcd70",
+  "files_verified": 547,
+  "tests": {
+    "http": {
+      "exit": 0,
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/zero-linux-http.log",
+      "sha256": "633a7ae5d379e3300ba9eb2487c9ed322b587de645d72c1a18eb17b6a769b6b6",
+      "output": "\u2714 transient SQLite BUSY yields then accepts exactly one snapshot; same content stays duplicate (222.459377ms)\n\u2714 persistent BUSY is bounded, does not create records, and remains a retryable failure (116.470618ms)\n\u2714 non-BUSY dependency failure is not retried (50.673261ms)\n\u2714 a consumed retry budget never starts a fresh window (90.490429ms)\n\u2714 SQLite IO failure is never mistaken for BUSY (0.329869ms)\n\u2714 HTTP acceptance does not synchronously wait for a SQLite lock and restores the connection policy (65.75816ms)\n\u2714 HTTP acceptance restores the original connection timeout after non-BUSY failure (53.691883ms)\n\u2714 retry rechecks credential after yielding, before another write (61.469333ms)\n\u2714 retry rechecks owner after yielding, before another write (62.517904ms)\n\u2714 retry rechecks grant after yielding, before another write (64.913302ms)\n\u2139 tests 10\n\u2139 suites 0\n\u2139 pass 10\n\u2139 fail 0\n\u2139 cancelled 0\n\u2139 skipped 0\n\u2139 todo 0\n\u2139 duration_ms 795.985207\n"
+    },
+    "physical": {
+      "exit": 0,
+      "log": "/opt/p003/archive-t5-20261117/soak-20261118/zero-linux-physical.log",
+      "sha256": "4e92ce4fed0404575886b3c591cc4690c72c7c9c4e04d6354d06c27aa57ccb0e",
+      "output": "{\"held\":250,\"sequence\":2,\"expected\":503,\"status\":503,\"ms\":62.10176200000001,\"body\":{\"ok\":false,\"error\":\"ark_dependency_unavailable\"},\"errors\":[{\"at_ms\":1794949591724,\"elapsed_ms\":0.0403699999999958,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949591735,\"elapsed_ms\":0.04274899999995796,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949591746,\"elapsed_ms\":0.04015199999997776,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949591756,\"elapsed_ms\":0.05783499999995456,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949591767,\"elapsed_ms\":0.041577000000074804,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949591778,\"elapsed_ms\":0.03679399999998623,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"}]}\n{\"held\":45,\"sequence\":3,\"expected\":200,\"status\":200,\"ms\":51.343143000000055,\"body\":{\"ok\":true,\"status\":\"accepted\",\"received_at_ms\":1794949592055},\"errors\":[{\"at_ms\":1794949592012,\"elapsed_ms\":0.04668900000001486,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949592023,\"elapsed_ms\":0.038990000000012515,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949592034,\"elapsed_ms\":0.038174000000026354,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"},{\"at_ms\":1794949592045,\"elapsed_ms\":0.03516300000001138,\"timeout\":0,\"code\":\"ERR_SQLITE_ERROR\",\"sqlite_code\":5,\"name\":\"Error\"}]}\n{\"scope\":\"REAL_HTTP_AND_SQLITE_LOCKS_NOT_LOAD_PASS\",\"platform\":\"linux\",\"node\":\"v24.19.0\",\"sqlite\":\"3.53.3\",\"results\":[{\"held_ms\":250,\"status\":503,\"wall_ms\":62.10176200000001,\"sqlite_busy_attempts\":6,\"records\":2},{\"held_ms\":45,\"status\":200,\"wall_ms\":51.343143000000055,\"sqlite_busy_attempts\":4,\"records\":3}]}\n"
+    }
+  }
+}

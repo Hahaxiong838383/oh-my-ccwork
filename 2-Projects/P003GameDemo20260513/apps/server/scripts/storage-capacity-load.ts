@@ -34,6 +34,14 @@ if(mode==='run'){
  const soak=soakPlan(process.env,Date.now());let runMono=performance.now();
  assert.ok(!existsSync(root),'never reuse or overwrite a run');mkdirSync(root,{recursive:true,mode:0o700});assert.equal(realpathSync(root),root,'resolve parent symlinks first');
  const config={devices:number(process.env.T5_DEVICES,50,1,1000),events:number(process.env.T5_EVENTS,6000,1,60000),batch:number(process.env.T5_BATCH,200,1,200),seed:number(process.env.T5_SEED,17,1,2147483647),deadline_ms:number(process.env.T5_DEADLINE_MS,3600000,1000,172800000),maintenance:process.env.T5_MAINTENANCE==='1',backup:process.env.T5_BACKUP==='1',covering_index:process.env.T5_COVERING_INDEX==='1',ark_history_indexes:process.env.T5_ARK_HISTORY_INDEXES==='1',rollup_prefix_index:process.env.T5_ROLLUP_PREFIX_INDEX==='1',synthetic:true,started_ms:Date.now()};
+ const productionScheduling=process.env.T5_DIAGNOSTIC_SCHEDULING==='production';
+ if(process.env.T5_DIAGNOSTIC_SCHEDULING!==undefined){
+  assert(productionScheduling&&process.platform==='linux'&&soak?.preflight&&process.env.T5_PROFILE_SQL==='1','scheduling experiment is Linux profiled preflight only');
+  const stat=readFileSync('/proc/self/stat','utf8'),fields=stat.slice(stat.lastIndexOf(')')+2).split(/\s+/);
+  assert.equal(Number(fields[16]),0,'match the observed production receiver nice=0');
+  assert(existsSync('/usr/bin/ionice')&&existsSync('/usr/bin/nice'));
+ }
+ Object.assign(config,{scheduling_diagnostic:productionScheduling?'foreground_nice0_background_nice10_be7':null});
  if(soak?.fullDay||soak?.preflight)assert(config.devices===50&&config.events===6000&&config.batch===200&&config.deadline_ms===3600000&&config.maintenance&&config.backup&&config.ark_history_indexes&&config.rollup_prefix_index&&!config.covering_index,'real cadence requires fixed 50x6000 workload, 1h daily deadline and candidate indexes');
  Object.assign(config,{soak,continuous_ark:!!soak,receiver_pid:process.pid});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
@@ -81,7 +89,13 @@ if(mode==='run'){
  const tokens=await Promise.all(subjects.map(sn=>new SignJWT({kind:'p003-device'}).setSubject(sn).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('48h').sign(new TextEncoder().encode(secret))));
  writeFileSync(join(root,'client-private.json'),JSON.stringify({url:'http://127.0.0.1:'+(server.address() as any).port,tokens}),{mode:0o600});
  const resources=createResourceRecorder(),maintenance:any[]=[],health=createLoadHealthRecorder(sample=>appendFileSync(join(root,'health.jsonl'),JSON.stringify(sample)+'\n')),children=new Set<ReturnType<typeof spawn>>();let maintaining=false,monitoring=false;let maintenanceError:unknown;
- const launch=(args:string[],name:string,env=process.env)=>new Promise<number|null>(done=>{const p=spawn(args[0],args.slice(1),{cwd:process.cwd(),env,stdio:['ignore','pipe','pipe']});children.add(p);p.stdout.on('data',x=>appendFileSync(join(root,name+'.stdout'),x));p.stderr.on('data',x=>appendFileSync(join(root,name+'.stderr'),x));p.once('error',e=>appendFileSync(join(root,name+'.stderr'),e.message));p.once('close',code=>{children.delete(p);done(code);});});
+ const launch=(args:string[],name:string,env=process.env)=>new Promise<number|null>(done=>{
+  const background=productionScheduling&&args.some(a=>['scripts/analytics-rollup.ts','scripts/storage-backup-job.py','scripts/storage-ark-export.py'].includes(a));
+  const command=background?['/usr/bin/ionice','-c','2','-n','7','/usr/bin/nice','-n','10',...args]:args;
+  const p=spawn(command[0],command.slice(1),{cwd:process.cwd(),env,stdio:['ignore','pipe','pipe']});children.add(p);
+  if(productionScheduling)appendFileSync(join(root,'scheduling-launches.jsonl'),JSON.stringify({at_ms:Date.now(),pid:p.pid,name,background,requested_nice:background?10:0,requested_ioprio:background?'best-effort:7':'inherited'})+'\n');
+  p.stdout.on('data',x=>appendFileSync(join(root,name+'.stdout'),x));p.stderr.on('data',x=>appendFileSync(join(root,name+'.stderr'),x));p.once('error',e=>appendFileSync(join(root,name+'.stderr'),e.message));p.once('close',code=>{children.delete(p);done(code);});
+ });
  let queryService:Awaited<ReturnType<typeof startSharedQuery>>|undefined;
  if(soak)try{queryService=await startSharedQuery(root,'http://127.0.0.1:'+(server.address()as any).port,secret);}catch(error){
   writeFileSync(join(root,'FAILURE.json'),JSON.stringify({stage:'query_service_start',error:String(error)}));server.closeAllConnections();server.close();await writer.close();await checkpointer.stop();ark.close();store.close();throw error;

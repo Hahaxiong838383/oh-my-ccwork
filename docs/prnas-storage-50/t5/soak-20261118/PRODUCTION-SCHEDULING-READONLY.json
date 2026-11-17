@@ -1,0 +1,11 @@
+{
+  "pid": "2296315",
+  "nice": 0,
+  "priority": 20,
+  "ps": "    PID  NI PRI COMMAND\n2296315   0  19 node /opt/p003/\n",
+  "ionice": "none: prio 0\n",
+  "background_units": {
+    "p003-analytics-rollup.service": "Nice=10\nIOSchedulingClass=2\nIOSchedulingPriority=7\n",
+    "p003-analytics-backup.service": "Nice=10\nIOSchedulingClass=2\nIOSchedulingPriority=7\n"
+  }
+}

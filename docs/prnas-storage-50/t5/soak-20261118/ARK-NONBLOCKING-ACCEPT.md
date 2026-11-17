@@ -10,7 +10,9 @@ Grok419 在 macOS 实测 busy_timeout=15 的同步调用耗时442–562ms；主1
 
 验证：新增两项HTTP策略/恢复用例在旧实现先失败；新10项通过。真实macOS双连接持锁：250ms锁在约73.81ms返回503，6次BUSY，每次SQLite调用约0.03–0.09ms；释放后原包accepted；45ms锁在约54.42ms接受，重复提交duplicate，归档条数准确。首次4次指数退避的两轮失败日志保留。物理探针早期输出scope字面量含LINUX，但上述运行平台为macOS；以实际运行路径/平台为准，不算Linux证据。后续探针应显式输出platform。
 
-尚待：固定新候选的Linux真实持锁、同条件混合、24小时及全部T5门。同步历史查询的磁盘等待仍单独追查，不能因busy_timeout=0就称已根治。
+Linux固定候选708a3149、547文件SHA核验通过：10项HTTP通过；真实持锁250ms返回503（62.10ms、6次BUSY），45ms锁后接受（51.34ms、4次BUSY）；SQLite每次遇锁立即返回约0.035–0.058ms，释放后重放幂等。完整原输出和哈希见ZERO-LINUX-RESULT.json。
+
+尚待：同条件混合、24小时及全部T5门。同步历史查询的磁盘等待仍单独追查，不能因busy_timeout=0就称已根治。
 
 回滚：本次store.tryAccept、route接线、retry helper和测试可逐文件回到16716936；不迁移schema、不回灌数据库。尚未部署生产。
 
