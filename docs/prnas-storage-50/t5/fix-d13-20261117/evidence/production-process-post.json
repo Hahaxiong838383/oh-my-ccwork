@@ -1,0 +1,29 @@
+[
+  {
+    "name": "p003-voice",
+    "pid": 2369553,
+    "restart": 16,
+    "status": "online",
+    "autorestart": true,
+    "kill_timeout": null,
+    "cwd": "/opt/p003/server"
+  },
+  {
+    "name": "kidshub-voice",
+    "pid": 1856264,
+    "restart": 0,
+    "status": "online",
+    "autorestart": true,
+    "kill_timeout": null,
+    "cwd": "/opt/kidshub-personal/server"
+  },
+  {
+    "name": "p003-analytics",
+    "pid": 2296315,
+    "restart": 3,
+    "status": "online",
+    "autorestart": true,
+    "kill_timeout": 35000,
+    "cwd": "/opt/p003/server"
+  }
+]

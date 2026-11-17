@@ -1,0 +1,185 @@
+{
+  "review": "p003-t5-candidate-61332160",
+  "created_at": "2026-11-17T19:39:25+08:00",
+  "candidate_sha": "61332160fe603b98a3b8cb3141b2ceab4a9db203",
+  "baseline_sha": "24dbad37ae0b289418307d4db9cbbe5bd45acf77",
+  "parent_sha": "24dbad37ae0b289418307d4db9cbbe5bd45acf77",
+  "subject": "fix(p003): drain failed writer and warm Ark history reads",
+  "diff_stat": {
+    "files": 13,
+    "insertions": 312,
+    "deletions": 18
+  },
+  "head_at_delivery": {
+    "sha": "07f8b55246d4767beb0af6244e9a7cc81eb26042",
+    "subject": "test(p003): verify deferred metadata stays in the same read snapshot",
+    "reviewed": false,
+    "tested": false,
+    "commits_after_candidate": [
+      {
+        "sha": "afc2bec31d73656c27df552278c4057c85e5de7e",
+        "parent_sha": "61332160fe603b98a3b8cb3141b2ceab4a9db203",
+        "subject": "perf(p003): await reader readiness and defer asset metadata reads"
+      },
+      {
+        "sha": "07f8b55246d4767beb0af6244e9a7cc81eb26042",
+        "parent_sha": "afc2bec31d73656c27df552278c4057c85e5de7e",
+        "subject": "test(p003): verify deferred metadata stays in the same read snapshot"
+      }
+    ],
+    "diff_stat_vs_candidate": {
+      "files": 4,
+      "insertions": 44,
+      "deletions": 11
+    },
+    "note": "assets 点查、/ready 轮询和同快照测试不在 61332160 结论内。"
+  },
+  "verdict": "scoped_checks_pass_not_t5_pass",
+  "defect_requiring_source_change": false,
+  "t5_passed": false,
+  "production_passed": false,
+  "cloud_600k_measured_this_round": false,
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "execPath": "/Users/fu-121/.local/node-v24/bin/node"
+  },
+  "archive": {
+    "root": "/Users/fu-121/.local/state/p003-t5-fix-d13-20261117/review-candidate/tree",
+    "method": "git archive of candidate apps/server",
+    "node_modules": "symlink to /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules",
+    "blob_bytes_match_candidate": true
+  },
+  "file_sha256": {
+    "package.json": "b8c4290c9d8f2b2681237d1edecfb31305685475a7927eb43945621f645a66f0",
+    "scripts/analytics-checkpoint-admission.test.ts": "0216290cb42894c6fa45704d805479d6cb221702bbc68fa4a3cab5bc43e61f32",
+    "scripts/analytics-recovery.test.ts": "06f1b963bf50986d9c4e8ae1f671e121a390b223f959bf304ea8d03e8ed9a963",
+    "scripts/ark-history.test.ts": "67367a2ce1de343c8cdd41bc90b477da539408688f8c4c3927b0f49bcbb8ad92",
+    "scripts/ark-warmup.test.ts": "00660f038f48656170e48c6a291cc01120d6bfa14aaa2f00228e4922b08477c3",
+    "scripts/storage-capacity-load.ts": "00002bc9f0f8c35829cb1b4f978e3c90bda67c01bc2d019dadd326b16f519fcc",
+    "src/analytics/checkpointer.ts": "68a03f21bd96a186c4208d927487cd87e069e771b672b79fdf2159fe0ebc8a21",
+    "src/analytics/index.ts": "90585694d05f3de6710d524566d662734585ea8c36d97e3726507e47f2ef640d",
+    "src/analytics/writer.ts": "a2fa72ce6f61ed6e4dde6c5dc223116176573b334f1f88e901c6023381f19263",
+    "src/ark/history.ts": "2a7b189203a4b4292da0622644443bd6fb9fc86969d340f1b48972f38f523f33",
+    "src/ark/warmup.ts": "69756623777a2b553a6712029a32e880cc6c3d7d6608690d3ec7c51128146ad5",
+    "src/index.ts": "3ffa8aced203a65b90f955c98c85efc1bc238b2b921640f3b99001e4db513c97",
+    "docs/prnas-storage-50/t5/fix-d13-20261117/PLAN.md": "b6a4b714f6ae7939b0033d362125b7580ee5cfec995cbe57a8bd4024549f2498"
+  },
+  "tests": [
+    {
+      "id": "analytics-recovery",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/analytics-recovery.test.ts",
+      "exit_code": 0,
+      "log": "logs/analytics-recovery.log",
+      "log_sha256": "c7b9be8fec4d7a1f9bce15b849a7e38fcfc3e08c2e46840c07aa3919289d3ac0",
+      "covers": [
+        "503 before commit marker",
+        "process still alive at 503",
+        "exit 1 after late commit",
+        "40ms close timeout still commits then exit 1",
+        "replay dup leaves event/seen/rollup unchanged",
+        "SIGTERM exit 0"
+      ]
+    },
+    {
+      "id": "analytics-checkpoint-admission",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/analytics-checkpoint-admission.test.ts",
+      "exit_code": 0,
+      "log": "logs/analytics-checkpoint-admission.log",
+      "log_sha256": "e8b88f0ce77a725cf8c01cf501c1cdd729f6eda7a45efaa00c2d00de51700fd2",
+      "covers": [
+        "wait for current write before spawn",
+        "503 ANALYTICS_OVERLOADED Retry-After 5 while checkpoint stopped",
+        "health 200",
+        "no event row for rejected id",
+        "unlock after checkpoint error",
+        "stop while waiting does not spawn later"
+      ]
+    },
+    {
+      "id": "ark-history",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/ark-history.test.ts",
+      "exit_code": 0,
+      "log": "logs/ark-history.log",
+      "log_sha256": "516ce466b8b0df6bb3258312017135e5bee08e043ea20f912cc868ecd1663e4d",
+      "result": {
+        "pass": 17,
+        "fail": 0
+      },
+      "covers": [
+        "evidence and daily have no batch search",
+        "assets keep batch lookup and content_version",
+        "offline cover index idempotence and conflicting-definition rollback"
+      ]
+    },
+    {
+      "id": "ark-warmup",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/ark-warmup.test.ts",
+      "exit_code": 0,
+      "log": "logs/ark-warmup.log",
+      "log_sha256": "ae310bc0161dd788916e866042dc84ec7c1425909cbba2801b176a03c1b71476",
+      "first_history_ms": [
+        20.477208,
+        27.151792,
+        30.678584
+      ],
+      "covers": [
+        "real HTTP warmup route",
+        "strict empty body and token",
+        "8MiB reader via startAnalyticsServer",
+        "synthetic first adoption under 125ms",
+        "degraded after server stop",
+        "event and seen counts stay 3"
+      ]
+    }
+  ],
+  "verified": [
+    "service exit 1 only after failed writer thread exit, including the 40ms close-timeout case",
+    "late commit then same-id same-hash replay does not increase event, seen, or rollup fact",
+    "ordinary SIGTERM remains exit 0",
+    "checkpoint occupies admission before the child exists, 503s promptly, and clears busy after error and after stop",
+    "evidence/daily dejoin only; assets LEFT JOIN remains in this SHA",
+    "120 and 125 unchanged in runtime.ts versus 24dbad37",
+    "warmup is one bounded localhost POST and the constant route does not call ArkStore"
+  ],
+  "unverified": [
+    "cloud 600k single-200 ACK p95<=500ms and p99<=2s",
+    "query p99<=100ms with zero failures over 1000 real HTTP requests",
+    "SQL busy errcode 5/6 runtime: inspected, not executed",
+    "same id different hash client_event_id_conflict",
+    "analytics_batch row count before process exit",
+    "implementer-reported test:analytics, test:analytics-capacity, test:ark, test:storage, test:analytics-v375, and tsc byte match",
+    "v2 evidence index pages and EQP",
+    "Brain src/index.ts startup await, because its default URL is 127.0.0.1:3006",
+    "grant table row count; route source has no grant call and the test did not query grants",
+    "successors afc2bec31d73656c27df552278c4057c85e5de7e and 07f8b55246d4767beb0af6244e9a7cc81eb26042"
+  ],
+  "original_hard_gates": {
+    "single_http_200_ack_p95_ms_max": 500,
+    "single_http_200_ack_p99_ms_max": 2000,
+    "request_abort_ms": 120,
+    "history_adoption_ms": 125,
+    "query_p99_ms_max": 100,
+    "query_failures_max": 0,
+    "measured_this_review": false
+  },
+  "not_an_original_hard_gate": {
+    "logical_batch_e2e_p95_ms_max_2s": "设计评审建议的洗数界限。用户既有 2 秒门是单次 HTTP 200 的 p99。本评审不把它写成既有硬门。"
+  },
+  "disclosure_required_on_future_600k": [
+    "attempts, http 200, connection failures",
+    "503 counts by error_code",
+    "ANALYTICS_OVERLOADED split by slot-busy versus checkpoint interval",
+    "Retry-After on every 503",
+    "logical-batch e2e including 503, connection failure, Retry-After sleep, and restart_delay, reported beside the 200 percentiles"
+  ],
+  "scope": {
+    "source_modified_by_reviewer": false,
+    "ssh": false,
+    "deploy": false,
+    "port_3006_bound": false,
+    "device_03800006": "not touched",
+    "voice_window_until": "2026-11-20T18:43:00+08:00"
+  },
+  "review_md_sha256": "68f792c262b79bce1b56e341e4b8ab3d9dd5bb486efe1296b3d4f5453ed5e327"
+}

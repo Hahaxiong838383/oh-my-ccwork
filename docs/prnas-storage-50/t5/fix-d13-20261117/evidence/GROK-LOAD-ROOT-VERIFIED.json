@@ -1,0 +1,8 @@
+{
+  "review_md_sha256": "976a35cba7441378e73cdfc4d9ae309f719b85be97ce4339dfd0e46999aa6c91",
+  "review_json_sha256": "d02b0e19d62cb5506fe45c77062d70ad8c31677dfbe617996b63e67d9beb1a25",
+  "raw_requests_and_completed_sha_match": true,
+  "counts_and_percentiles_match_root": true,
+  "scoped_verdict_agreed": true,
+  "overall_t5_passed": false
+}

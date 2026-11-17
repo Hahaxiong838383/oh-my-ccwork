@@ -1,0 +1,14 @@
+[
+  {
+    "name": "ark-v2",
+    "exit": 0
+  },
+  {
+    "name": "history-v1-cover",
+    "exit": 0
+  },
+  {
+    "name": "typecheck-v2",
+    "exit": 2
+  }
+]

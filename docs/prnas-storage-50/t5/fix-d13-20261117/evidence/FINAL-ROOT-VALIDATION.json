@@ -1,0 +1,39 @@
+{
+  "status": "SCOPED_D1_D3_FIX_VERIFIED_T5_OVERALL_FAIL",
+  "final_test_sha": "1e4878f509840fb24007fdc561e5d69569d92363",
+  "runtime_sha": "afc2bec31d73656c27df552278c4057c85e5de7e",
+  "accepted": 600000,
+  "duplicated": 0,
+  "devices": 50,
+  "ledger_complete": true,
+  "request_statistics": {
+    "attempts": 10299,
+    "successes": 3000,
+    "statuses": {
+      "503": 7299,
+      "200": 3000
+    },
+    "errors": {
+      "ANALYTICS_OVERLOADED": 6753,
+      "ANALYTICS_WAL_PRESSURE": 546
+    },
+    "ack_p95_ms": 204.03806099994108,
+    "ack_p99_ms": 506.5188049999997,
+    "batch_with_retries_p95_ms": 58974.329860000056,
+    "batch_with_retries_p99_ms": 107906.81901699991,
+    "batch_with_retries_max_ms": 182574.5684,
+    "duration_ms": 1142477
+  },
+  "disk_min_guard_bytes": 5741899776,
+  "production_guard_samples": 254,
+  "production_guard_all_ready": true,
+  "production_pids_restarts_same": true,
+  "storage_failures_max": 0,
+  "checkpoint_failures_max": 0,
+  "checkpoint_timeouts_max": 0,
+  "ark_current_correct": 50,
+  "dirty_days": 2,
+  "remaining_reason": "maintenance received/occurred budget_exceeded; full unit exit1",
+  "auxiliary_collector_v1": "300s timeout, phase uninstrumented, not a passing quick_check",
+  "production_deployed": false
+}

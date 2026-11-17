@@ -1,0 +1,83 @@
+{
+  "runtime_candidate": "afc2bec31d73656c27df552278c4057c85e5de7e",
+  "test_head": "07f8b55246d4767beb0af6244e9a7cc81eb26042",
+  "scope": "cloud isolated; original600k fixture clone; production lifecycle3306; oneCPU/768MiB includes client+server+writer+checkpointer; fadvise is a hint, not proof of fully cold cache",
+  "gate": {
+    "p99_ms": 100,
+    "failures": 0,
+    "abort_ms": 120,
+    "adopt_ms": 125
+  },
+  "runs": [
+    {
+      "name": "v2-final-0",
+      "samples": 1000,
+      "first": {
+        "round": 0,
+        "actor": 0,
+        "status": 200,
+        "body_complete": true,
+        "schema": true,
+        "adopted": true,
+        "headers_ms": 25.731573000000026,
+        "body_ms": 28.77372699999978,
+        "gate_ms": 29.976010999999744,
+        "ms": 32.72323099999994,
+        "ok": true
+      },
+      "p95_ms": 18.255162999997992,
+      "p99_ms": 26.407460000000356,
+      "failures": 0,
+      "pass": true
+    },
+    {
+      "name": "v2-final-1",
+      "samples": 1000,
+      "first": {
+        "round": 0,
+        "actor": 0,
+        "status": 200,
+        "body_complete": true,
+        "schema": true,
+        "adopted": true,
+        "headers_ms": 72.64344099999994,
+        "body_ms": 78.663994,
+        "gate_ms": 80.18322000000012,
+        "ms": 82.96229600000015,
+        "ok": true
+      },
+      "p95_ms": 17.93044199999713,
+      "p99_ms": 24.970807000001514,
+      "failures": 0,
+      "pass": true
+    },
+    {
+      "name": "v2-final-2",
+      "samples": 1000,
+      "first": {
+        "round": 0,
+        "actor": 0,
+        "status": 200,
+        "body_complete": true,
+        "schema": true,
+        "adopted": true,
+        "headers_ms": 67.29075499999999,
+        "body_ms": 70.52557000000002,
+        "gate_ms": 71.8568879999998,
+        "ms": 74.71096299999999,
+        "ok": true
+      },
+      "p95_ms": 18.05416699999978,
+      "p99_ms": 25.262571000000207,
+      "failures": 0,
+      "pass": true
+    }
+  ],
+  "evidence_sha256": {
+    "QUERY-V2-RUNS.json": "27167fa0a4b90741833fd90d8d55f80b698e484846890015a945654c58ab197b",
+    "PROFILE-RUNS.json": "8f2091c7f63ad99062675f969fb25211ba444fc4cb41da1bb8ef7d72dd895fd4",
+    "QUERY-RUNS.json": "bd40cd90544693e6e9051b54b6983d4fce2c78828832cd5caa7d031b2458fd4c",
+    "CANDIDATE-V2.json": "6836c725a0288a0010bae966456f8c18d48ef4250e29be48aa779147b47ca0e2"
+  },
+  "production_changed": false
+}

@@ -1,0 +1,37 @@
+{
+  "verified": true,
+  "archive": "/Users/fu-121/.local/state/p003-t5-fix-d13-20261117/evidence/full-evidence.tar.gz",
+  "sha256": "072836f0113f3cd25d1dc081da1bf796e73c08108420e8b4119d3644a6980110",
+  "bytes": 2335548,
+  "manifest": "/Users/fu-121/.local/state/p003-t5-fix-d13-20261117/cloud-full-evidence/d13-fix-20261117/FULL-EVIDENCE-MANIFEST.json",
+  "manifest_sha256": "54237392ee4e7837796a20b04a29dde91a192897be4457c75ed0906bc5bf6db6",
+  "verified_files": 28,
+  "independent_requests": {
+    "attempts": 10299,
+    "successes": 3000,
+    "statuses": {
+      "503": 7299,
+      "200": 3000
+    },
+    "errors": {
+      "ANALYTICS_OVERLOADED": 6753,
+      "ANALYTICS_WAL_PRESSURE": 546
+    },
+    "ack_p95_ms": 204.03806099994108,
+    "ack_p99_ms": 506.5188049999997,
+    "batch_with_retries_p95_ms": 58974.329860000056,
+    "batch_with_retries_p99_ms": 107906.81901699991,
+    "batch_with_retries_max_ms": 182574.5684,
+    "duration_ms": 1142477
+  },
+  "db_readonly": {
+    "counts": {
+      "analytics_event": 600000,
+      "analytics_event_seen": 600000,
+      "analytics_batch": 3000,
+      "analytics_dirty_day": 2,
+      "analytics_rollup_fact": 1200000
+    },
+    "quick_check": "NOT_COMPLETED: auxiliary collector v1 hit 300s limit; no phase instrumentation in that attempt"
+  }
+}

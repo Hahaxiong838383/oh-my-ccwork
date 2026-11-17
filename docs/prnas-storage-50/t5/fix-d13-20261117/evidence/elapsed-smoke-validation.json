@@ -1,0 +1,58 @@
+{
+  "complete": true,
+  "test_sha": "1e4878f509840fb24007fdc561e5d69569d92363",
+  "requests": 5,
+  "results": [
+    {
+      "actor": 1,
+      "offset": 0,
+      "attempt": 0,
+      "status": 503,
+      "ms": 28.571291999999858,
+      "batch_elapsed_ms": 28.580625000000055,
+      "retry_ms": 5000,
+      "error": "ANALYTICS_OVERLOADED"
+    },
+    {
+      "actor": 0,
+      "offset": 0,
+      "attempt": 0,
+      "status": 200,
+      "ms": 130.33024999999998,
+      "batch_elapsed_ms": 130.34345799999983,
+      "retry_ms": 0,
+      "error": null
+    },
+    {
+      "actor": 0,
+      "offset": 200,
+      "attempt": 0,
+      "status": 200,
+      "ms": 16.570208000000093,
+      "batch_elapsed_ms": 16.587165999999797,
+      "retry_ms": 0,
+      "error": null
+    },
+    {
+      "actor": 1,
+      "offset": 0,
+      "attempt": 1,
+      "status": 200,
+      "ms": 80.14425000000028,
+      "batch_elapsed_ms": 5111.552167,
+      "retry_ms": 0,
+      "error": null
+    },
+    {
+      "actor": 1,
+      "offset": 200,
+      "attempt": 0,
+      "status": 200,
+      "ms": 14.356499999999869,
+      "batch_elapsed_ms": 14.371791999999914,
+      "retry_ms": 0,
+      "error": null
+    }
+  ],
+  "note": "only new field batch_elapsed_ms; success after actual 503 and 5-second Retry-After measured"
+}

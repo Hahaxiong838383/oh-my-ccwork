@@ -1,0 +1,44 @@
+[
+  {
+    "folder": "review-candidate",
+    "review_json_sha256": "ab35c4a9f0dde9893a6b91dd9df13b01f3aed4caaf171ade2bd5ef9a35b5a015",
+    "review_md_sha256": "68f792c262b79bce1b56e341e4b8ab3d9dd5bb486efe1296b3d4f5453ed5e327",
+    "logs_verified": [
+      {
+        "file": "review-candidate/logs/analytics-recovery.log",
+        "sha256": "c7b9be8fec4d7a1f9bce15b849a7e38fcfc3e08c2e46840c07aa3919289d3ac0"
+      },
+      {
+        "file": "review-candidate/logs/analytics-checkpoint-admission.log",
+        "sha256": "e8b88f0ce77a725cf8c01cf501c1cdd729f6eda7a45efaa00c2d00de51700fd2"
+      },
+      {
+        "file": "review-candidate/logs/ark-history.log",
+        "sha256": "516ce466b8b0df6bb3258312017135e5bee08e043ea20f912cc868ecd1663e4d"
+      },
+      {
+        "file": "review-candidate/logs/ark-warmup.log",
+        "sha256": "ae310bc0161dd788916e866042dc84ec7c1425909cbba2801b176a03c1b71476"
+      }
+    ]
+  },
+  {
+    "folder": "review-final",
+    "review_json_sha256": "9f5460cd570649d6386d59737d65a4b25f7cde1c29fa5c08f4c6683792ce94c7",
+    "review_md_sha256": "31bedfb364b8271644f5adfc9da39465a0864618d06d5ec82b779ee4fb5c62be",
+    "logs_verified": [
+      {
+        "file": "review-final/logs/ark-history.log",
+        "sha256": "9f1f13824d47c7620c9e2b09e0c6d5edad2c7388388aa983522c779100c719c2"
+      },
+      {
+        "file": "review-final/logs/ark-history-cover.log",
+        "sha256": "5844d7baf1cdbb518a8a1c4d110ef735bf768de5e19fc1d095357842ce17c513"
+      },
+      {
+        "file": "review-final/logs/ark-warmup.log",
+        "sha256": "21a1fabe9672c903de91f68ce5903a7dd549d8f12181ef1b66db68622e710623"
+      }
+    ]
+  }
+]

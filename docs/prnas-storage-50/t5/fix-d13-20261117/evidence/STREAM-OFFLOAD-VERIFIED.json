@@ -1,0 +1,23 @@
+{
+  "source": "/opt/p003/archive-t5-20261117/p003-t5-d13-fix-halfcore-2",
+  "files": [
+    {
+      "name": "analytics.db",
+      "bytes": 2316656640,
+      "sha256": "25947299e38ee3880fafc42977dadbeee789147f5bc37d8d3ebe9d9a23dc234a"
+    },
+    {
+      "name": "analytics.db-wal",
+      "bytes": 203441512,
+      "sha256": "d96a0c4c883fd41089b45529ad09c33695602aeaf78aa0cb0ed5418af0602ce0"
+    },
+    {
+      "name": "analytics.db-shm",
+      "bytes": 425984,
+      "sha256": "bdb7a5ce72b26a56b74f51179059935dfce4426219d694d1d2daa5b4ddf614e8"
+    }
+  ],
+  "archive": "/Users/fu-121/.local/state/p003-t5-fix-d13-20261117/retained-cloud-databases/halfcore-2-guard-stop.tar.gz",
+  "archive_bytes": 549982254,
+  "archive_sha256": "8c23ad6f561b5d0fe7552ea5fde0e50120a3767cedd0e7609471b18ef41e40d8"
+}

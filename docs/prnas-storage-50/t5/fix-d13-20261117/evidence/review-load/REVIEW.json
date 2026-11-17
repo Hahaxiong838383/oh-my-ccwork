@@ -1,0 +1,271 @@
+{
+  "review": "p003-t5-load-1e4878f5",
+  "created_at": "2026-11-17T21:07:00+08:00",
+  "reviewer": "independent-load-acceptance",
+  "sha": "1e4878f509840fb24007fdc561e5d69569d92363",
+  "parent_sha": "07f8b55246d4767beb0af6244e9a7cc81eb26042",
+  "runtime_src_same_as": "afc2bec31d73656c27df552278c4057c85e5de7e",
+  "already_reviewed": {
+    "recovery_checkpoint_sha": "61332160fe603b98a3b8cb3141b2ceab4a9db203",
+    "history_warmup_sha": "07f8b55246d4767beb0af6244e9a7cc81eb26042"
+  },
+  "verdict": "ack_pass_maintenance_dirty_fail_t5_not_pass",
+  "t5_passed": false,
+  "production_passed": false,
+  "real_devices": false,
+  "fixture": "isolated synthetic p003-t5-fix-50x12000-01, empty db, 50 fake identities",
+  "ssh": false,
+  "source_modified": false,
+  "regressions_rerun": false,
+  "marker_verified_flag_accepted_as_verdict": false,
+  "project_1_recovery": {
+    "verdict": "cited_independent_pass",
+    "source": "review-candidate Grok392 on 61332160",
+    "blobs_same_on_613_and_1e487": {
+      "src/analytics/writer.ts": "90d14c0096f0c07cb90a73356440a68d55db4546",
+      "src/analytics/checkpointer.ts": "1c9c23d954cc9cc6327ba61e286e161aaa0f700c",
+      "scripts/analytics-recovery.test.ts": "e5eeaaf46a9f3f5574ce5a0db82ae62a40794f88",
+      "scripts/analytics-checkpoint-admission.test.ts": "cf672e200f43b4ef2da8bc15c17b355615633feb"
+    },
+    "logs_sha256_match_prior_review": true,
+    "rerun_this_round": false
+  },
+  "code_delta": {
+    "files_vs_07f8": [
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/storage-capacity-load.ts"
+    ],
+    "insertions": 3,
+    "deletions": 1,
+    "src_diff_vs_afc2_files": 0,
+    "local_src_sha256_match_FULL_SOURCE_VERIFIED_expected": "216/216",
+    "remote_tree_re_read": false,
+    "batch_elapsed_ms": "performance.now from first attempt of the batch to the end of the current attempt; success rows include Retry-After sleep; inter-batch 2s sleep is outside it",
+    "request_ms": "single HTTP attempt only"
+  },
+  "elapsed_smoke": {
+    "verdict": "pass",
+    "requests_sha256": "c1187348beece9da273101566702870b8b9b6096051ffb806d556943de72b0d0",
+    "validation_matches_requests": true,
+    "lines": 5,
+    "statuses": {
+      "200": 4,
+      "503": 1
+    },
+    "success_batches": 4,
+    "retry_success_batch_elapsed_ms": 5111.552167,
+    "retry_success_request_ms": 80.14425000000028,
+    "implied_retry_gap_ms": 5002.827292,
+    "completed_unique_ids": 402,
+    "db_readonly": {
+      "events": 402,
+      "seen": 402,
+      "batches": 4,
+      "quick_check": "ok"
+    }
+  },
+  "ack_600k": {
+    "verdict": "pass",
+    "requests_sha256": "dee7f5504c78ca81008bbd2a996d263dff4c608f3ce8f212cf9084386ffacf3d",
+    "completed_sha256": "bb0950f81891970f3329a1abf80d4e0c40466278cd93db8cb7ae87d89fe792b3",
+    "lines": 10299,
+    "order_violations": 0,
+    "statuses": {
+      "200": 3000,
+      "503": 7299
+    },
+    "errors_non_200": {
+      "ANALYTICS_OVERLOADED": 6753,
+      "ANALYTICS_WAL_PRESSURE": 546
+    },
+    "first_line": {
+      "actor": 2,
+      "offset": 0,
+      "attempt": 0,
+      "status": 503,
+      "ms": 1115.2242759999995
+    },
+    "percentile": "ascending, index min(n-1, floor(n*p)); 503 timings stay in the status histogram and are not inserted into the 200 sample",
+    "n_200": 3000,
+    "p95_index": 2850,
+    "p99_index": 2970,
+    "ack_p95_ms": 204.03806099994108,
+    "ack_p99_ms": 506.5188049999997,
+    "ack_max_ms": 1787.8877149999998,
+    "limits": {
+      "p95_ms": 500,
+      "p99_ms": 2000
+    },
+    "batch_elapsed_success_p95_ms": 58974.329860000056,
+    "batch_elapsed_success_p99_ms": 107906.81901699991,
+    "batch_elapsed_success_max_ms": 182574.5684,
+    "success_on_attempt_0": 1173,
+    "success_after_retry": 1827,
+    "max_attempt_index": 33,
+    "client_duration_ms": 1142477,
+    "client_duration_le_2h": true,
+    "driver_wall_ms": 1275064,
+    "resource_observed_ms": 1202992.2556,
+    "completed": {
+      "batches": 3000,
+      "unique_ids": 600000,
+      "accepted": 600000,
+      "duplicated": 0,
+      "rejected": 0,
+      "actors_at_12000": 50,
+      "partition_exact": true
+    }
+  },
+  "project_3_query": {
+    "verdict": "pass",
+    "rerun_http": false,
+    "method": "all samples including the first line, floor(n*p), failures==0 and p99<=100",
+    "candidate": "afc2bec31d73656c27df552278c4057c85e5de7e",
+    "runs": [
+      {
+        "name": "v2-final-0",
+        "n": 1000,
+        "failures": 0,
+        "first_ms": 32.72323099999994,
+        "p95_ms": 18.255162999997992,
+        "p99_ms": 26.407460000000356,
+        "max_ms": 70.35997099999804
+      },
+      {
+        "name": "v2-final-1",
+        "n": 1000,
+        "failures": 0,
+        "first_ms": 82.96229600000015,
+        "p95_ms": 17.93044199999713,
+        "p99_ms": 24.970807000001514,
+        "max_ms": 82.96229600000015
+      },
+      {
+        "name": "v2-final-2",
+        "n": 1000,
+        "failures": 0,
+        "first_ms": 74.71096299999999,
+        "p95_ms": 18.05416699999978,
+        "p99_ms": 25.262571000000207,
+        "max_ms": 74.71096299999999
+      }
+    ]
+  },
+  "maintenance": {
+    "verdict": "fail",
+    "item": "dirty_days",
+    "dirty_days": 2,
+    "process_codes": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "final_failed_days": [
+      {
+        "dimension": "occurred",
+        "day": "2026-11-17",
+        "reason": "budget_exceeded"
+      },
+      {
+        "dimension": "received",
+        "day": "2026-11-17",
+        "reason": "budget_exceeded"
+      }
+    ],
+    "earlier_concurrent_write": {
+      "dimension": "occurred",
+      "day": "2026-11-17"
+    },
+    "assert": "2 !== 0",
+    "client_exit": 0,
+    "unit": {
+      "Result": "exit-code",
+      "ExecMainStatus": 1,
+      "ActiveState": "failed",
+      "MemoryPeak": 805376000,
+      "CPUUsageNSec": 231178107000,
+      "guard_stop": null
+    }
+  },
+  "backup": {
+    "process_exit": 0,
+    "finished_600k_backup": false,
+    "checked_at": "2026-11-17T20:32:28.949+08:00",
+    "record_count": 1067,
+    "analytics_event": 200,
+    "analytics_batch": 1
+  },
+  "db_readonly": {
+    "counts_in_manifest": {
+      "analytics_event": 600000,
+      "analytics_event_seen": 600000,
+      "analytics_batch": 3000,
+      "analytics_dirty_day": 2,
+      "analytics_rollup_fact": 1200000
+    },
+    "quick_check": "NOT_COMPLETED: auxiliary collector v1 hit 300s limit; no phase instrumentation in that attempt",
+    "quick_check_passed": false,
+    "database_file_in_download": false,
+    "result_integrity_complete": true,
+    "database_before": {
+      "events": 0,
+      "seen": 0,
+      "batches": 0
+    }
+  },
+  "guard": {
+    "verdict": "held",
+    "lines": 254,
+    "production_ready_true": 254,
+    "free_min_bytes": 5741899776,
+    "below_5gib": 0,
+    "five_gib": 5368709120
+  },
+  "fixture_health": {
+    "lines": 1202,
+    "status_200": 1064,
+    "status_503": 138,
+    "storage_failures_max": 0,
+    "sql_busy_max": 0,
+    "disk_warning_samples": 1202,
+    "disk_free_min_bytes": 5741883392,
+    "wal_peak_bytes": 271503912,
+    "wal_max_bytes": 268435456,
+    "checkpoint_failures": 0,
+    "checkpoint_timeouts": 0,
+    "checkpoint_stale_final": true,
+    "checkpoint_running_final": true,
+    "stale_health_samples": 4
+  },
+  "resources": {
+    "cpu_quota_cores": 0.5,
+    "memory_max": "768M",
+    "cgroup_memory_peak_fraction": 1,
+    "oom_seen": false,
+    "complete_24h_evidence": false,
+    "not_covered": [
+      "NAS budget",
+      "voice A/B",
+      "maintenance backlog",
+      "external service restart counters"
+    ]
+  },
+  "archive": {
+    "tar_sha256": "072836f0113f3cd25d1dc081da1bf796e73c08108420e8b4119d3644a6980110",
+    "tar_bytes": 2335548,
+    "manifest_sha256": "54237392ee4e7837796a20b04a29dde91a192897be4457c75ed0906bc5bf6db6",
+    "manifest_files_checked": 28,
+    "manifest_sha_mismatches": 0,
+    "manifest_missing": 0
+  },
+  "unverified_for_overall_t5": [
+    "mature or 90-day database",
+    "voice A/B",
+    "24h resource gate",
+    "sqlite quick_check",
+    "backup of the finished 600k database",
+    "production 3006 and real devices"
+  ],
+  "review_md_sha256": "976a35cba7441378e73cdfc4d9ae309f719b85be97ce4339dfd0e46999aa6c91"
+}

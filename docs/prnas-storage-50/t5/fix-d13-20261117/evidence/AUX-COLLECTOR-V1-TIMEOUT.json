@@ -1,0 +1,5 @@
+{
+  "exit": 1,
+  "out": "",
+  "err": "Running as unit: p003-t5-d13-collect-full.service; invocation ID: 58647d82f35a45c69e33c012b54aa49c\nFinished with result: timeout\nMain processes terminated with: code=killed/status=TERM\nService runtime: 5min 23ms\nCPU time consumed: 10.669s\nMemory peak: 384.0M\nMemory swap peak: 0B\n"
+}

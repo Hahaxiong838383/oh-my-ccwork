@@ -1,0 +1,161 @@
+{
+  "review": "p003-t5-final-07f8b552",
+  "created_at": "2026-11-17T19:53:35+08:00",
+  "final_sha": "07f8b55246d4767beb0af6244e9a7cc81eb26042",
+  "parent_sha": "afc2bec31d73656c27df552278c4057c85e5de7e",
+  "already_reviewed_sha": "61332160fe603b98a3b8cb3141b2ceab4a9db203",
+  "subject": "test(p003): verify deferred metadata stays in the same read snapshot",
+  "runtime_src_same_as": "afc2bec31d73656c27df552278c4057c85e5de7e",
+  "runtime_src_diff_vs_parent": {
+    "files": 1,
+    "path": "2-Projects/P003GameDemo20260513/apps/server/scripts/ark-history.test.ts",
+    "insertions": 11,
+    "deletions": 0
+  },
+  "diff_vs_61332160": {
+    "files": 4,
+    "insertions": 44,
+    "deletions": 11
+  },
+  "verdict": "scoped_increment_pass",
+  "blocked": false,
+  "blockers": [],
+  "defect_requiring_source_change": false,
+  "t5_passed": false,
+  "production_passed": false,
+  "cloud_rerun": false,
+  "node": {
+    "path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "execPath": "/Users/fu-121/.local/node-v24/bin/node"
+  },
+  "archive": {
+    "root": "/Users/fu-121/.local/state/p003-t5-fix-d13-20261117/review-final/tree",
+    "method": "git archive of 07f8b552 apps/server",
+    "node_modules": "symlink to /Users/fu-121/.codex/worktrees/p003-brain-search-tools-20261021/2-Projects/P003GameDemo20260513/apps/server/node_modules",
+    "blob_bytes_match_final_sha": true,
+    "extra_fixture_extracted": false
+  },
+  "blobs_same_as_613": {
+    "src/analytics/writer.ts": "90d14c0096f0c07cb90a73356440a68d55db4546",
+    "src/ark/runtime.ts": "9cee37b22aecf3ea0f56935b566be0b2a522ac61",
+    "src/analytics/index.ts": "baf5a8fff6f5a9ac3887963860fd5a96ddbcbdc7",
+    "src/index.ts": "ad636858a13fd3d55322fe50fa50a0e0f08f8033"
+  },
+  "file_sha256": {
+    "src/ark/history.ts": "d877e618b69b6eb2826919ce408084e9fc29c940c3f2b146fff9e4ea9131fe6c",
+    "src/ark/warmup.ts": "727c04fbfd5b5a605eeddad03493c86a2b89115957d50c7837e28eae62056d4b",
+    "scripts/ark-history.test.ts": "70bd5050f3858cf195e84e1aef2d3488a0519dffb8bad71c96a56aa41b524555",
+    "scripts/ark-warmup.test.ts": "c1c1874b43743669fc40e65c94f13ec8bfbe4b5a48637326c43acd8d6d1b6c08"
+  },
+  "git_blobs_history_warmup_same_on_afc_and_07f8": {
+    "src/ark/history.ts": "7c4eb5e6688f4e070732c73782c952678a7ebc70",
+    "src/ark/warmup.ts": "54365b3421da8c70cbbf668970cea0bd05ea6852"
+  },
+  "tests": [
+    {
+      "id": "ark-history",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/ark-history.test.ts",
+      "exit_code": 0,
+      "log": "logs/ark-history.log",
+      "log_sha256": "9f1f13824d47c7620c9e2b09e0c6d5edad2c7388388aa983522c779100c719c2",
+      "result": {
+        "pass": 18,
+        "fail": 0,
+        "duration_ms": 3260.380584
+      }
+    },
+    {
+      "id": "ark-history-cover",
+      "command": "ARK_HISTORY_TEST_COVER=1 /Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/ark-history.test.ts",
+      "exit_code": 0,
+      "log": "logs/ark-history-cover.log",
+      "log_sha256": "5844d7baf1cdbb518a8a1c4d110ef735bf768de5e19fc1d095357842ce17c513",
+      "result": {
+        "pass": 18,
+        "fail": 0,
+        "duration_ms": 3693.122
+      }
+    },
+    {
+      "id": "ark-warmup",
+      "command": "/Users/fu-121/.local/node-v24/bin/node --experimental-sqlite --import tsx scripts/ark-warmup.test.ts",
+      "exit_code": 0,
+      "log": "logs/ark-warmup.log",
+      "log_sha256": "21a1fabe9672c903de91f68ce5903a7dd549d8f12181ef1b66db68622e710623",
+      "first_history_ms": [
+        27.012207999999987,
+        27.940832999999998,
+        30.11820799999998
+      ],
+      "log_note": "The leading node version line was filled after the run from the same binary. Test stdout, EXIT:0, and the 3306 line were not edited. This SHA is of the file after that one-line fill."
+    }
+  ],
+  "passed": [
+    "asset facts no longer LEFT JOIN analytics_batch; evidence and daily still have no batch search",
+    "content_version point-read only after GM, ownership, clock, and value checks, inside the same readSnapshot, via a request-local Map",
+    "new test lazy batch metadata shares the read snapshot: concurrent batch update does not pierce the open snapshot; the next readArkHistory sees the new value. 18 tests, 0 failures, both with and without ARK_HISTORY_TEST_COVER=1",
+    "tie, 513, and daily grant-row checks still pass and their source matches 613",
+    "null and bad JSON predicates match 613; no dedicated fixture for those two",
+    "warmup polls /ready inside the shared 1s budget, then POSTs the constant empty body; no grant in warmup.ts; not-ready returns degraded and the test process continues",
+    "runtime.ts 120 and 125 are unchanged versus 613"
+  ],
+  "unverified": [
+    "cloud figures were read, not re-run, and are same-machine synthetic isolation, not production and not overall T5",
+    "QUERY-V2 3x1000 zero failures, p99 26.407460000000356 / 24.970807000001514 / 25.262571000000207, first ms 32.72323099999994 / 82.96229600000015 / 74.71096299999999, candidate recorded as afc2bec",
+    "PROFILE-RUNS are 50-sample runs against the 613 candidate directory",
+    "QUERY-RUNS fix-final 1000-sample runs each have 1 failure and pass false; they predate v2",
+    "single HTTP 200 ACK p95<=500ms and p99<=2s, and the 600k row gate",
+    "production 3006, PM2, voice window, device 03800006",
+    "Brain src/index.ts process was not started; its blob matches 613 and serve() follows warmup unconditionally",
+    "empty batch row, bad client_json fixture, and a grant_id change between the two runtime grant() calls",
+    "613 writer drain, checkpoint admission, and recovery tests were not re-run",
+    "implementer full-suite test:ark, tsc, and capacity runs"
+  ],
+  "cloud_evidence_read_only": {
+    "dir": "/Users/fu-121/.local/state/p003-t5-fix-d13-20261117/cloud-evidence/d13-fix-20261117",
+    "QUERY-V2-RUNS": [
+      {
+        "name": "v2-final-0",
+        "exit": 0,
+        "samples": 1000,
+        "failures": 0,
+        "pass": true,
+        "p99_ms": 26.407460000000356,
+        "first_ms": 32.72323099999994
+      },
+      {
+        "name": "v2-final-1",
+        "exit": 0,
+        "samples": 1000,
+        "failures": 0,
+        "pass": true,
+        "p99_ms": 24.970807000001514,
+        "first_ms": 82.96229600000015
+      },
+      {
+        "name": "v2-final-2",
+        "exit": 0,
+        "samples": 1000,
+        "failures": 0,
+        "pass": true,
+        "p99_ms": 25.262571000000207,
+        "first_ms": 74.71096299999999
+      }
+    ],
+    "CANDIDATE-V2": {
+      "candidate": "afc2bec31d73656c27df552278c4057c85e5de7e",
+      "archive_sha256": "bed5559d75377a397e1b563f336461121a1ff20ebcd5a086510ac68838cd9093"
+    },
+    "scope": "same-machine synthetic observation-only runtime copy; not production; not overall T5"
+  },
+  "scope": {
+    "source_modified_by_reviewer": false,
+    "ssh": false,
+    "deploy": false,
+    "writer_rereviewed": false,
+    "port_3006_bound": false,
+    "port_3306_free_after_test": true
+  },
+  "review_md_sha256": "31bedfb364b8271644f5adfc9da39465a0864618d06d5ec82b779ee4fb5c62be"
+}
