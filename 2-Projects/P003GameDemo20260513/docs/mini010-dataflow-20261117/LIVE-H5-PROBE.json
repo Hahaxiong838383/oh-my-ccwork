@@ -1,0 +1,265 @@
+{
+  "pass": true,
+  "at": "2026-11-17T07:40:11.862Z",
+  "session_type": "short-lived server validation session, not real human login",
+  "business_writes": 0,
+  "attempted_business_writes": 0,
+  "response_body_replacements": 0,
+  "page_errors": 0,
+  "requests": [
+    {
+      "path": "/api/auth/wechat/identity",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:13.762Z",
+      "request_id": "miniapp-1794901213442-77id2c1s",
+      "no_store": true,
+      "body_sha256": "4781e8c220040c5a8461aa1617d2fe2198df990fd6202ab21ce9c199f593c2f7"
+    },
+    {
+      "path": "/api/profile/bound-devices",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:13.772Z",
+      "request_id": "miniapp-1794901213446-71mu70xv",
+      "no_store": false,
+      "body_sha256": "6d9cf17037069a0334e19797dfbcf91fb586f272b0efd5cec6ed131646a38414"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:13.921Z",
+      "request_id": "miniapp-1794901213789-l4bhyop6",
+      "no_store": true,
+      "body_sha256": "42bf43f329a1a4c758a965755f36ecb01375a6d68697138cb2f3e4de6364535d"
+    },
+    {
+      "path": "/api/auth/wechat/identity",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:14.945Z",
+      "request_id": "miniapp-1794901214865-n7c4zs88",
+      "no_store": true,
+      "body_sha256": "4781e8c220040c5a8461aa1617d2fe2198df990fd6202ab21ce9c199f593c2f7"
+    },
+    {
+      "path": "/api/profile/bound-devices",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:14.949Z",
+      "request_id": "miniapp-1794901214866-py5y3cxh",
+      "no_store": false,
+      "body_sha256": "6d9cf17037069a0334e19797dfbcf91fb586f272b0efd5cec6ed131646a38414"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:15.361Z",
+      "request_id": "miniapp-1794901215099-q2r3qcxm",
+      "no_store": true,
+      "body_sha256": "42bf43f329a1a4c758a965755f36ecb01375a6d68697138cb2f3e4de6364535d"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:15.656Z",
+      "request_id": "miniapp-1794901215572-0b3kyyni",
+      "no_store": true,
+      "body_sha256": "97829369a181f7f289c61835f431a4d8cb3497c8e96242785641a107bcba8d93",
+      "items": 20,
+      "has_more": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations",
+      "has_cursor": true,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T07:40:16.143Z",
+      "request_id": "miniapp-1794901216048-mqvfi7hj",
+      "no_store": true,
+      "body_sha256": "b4cf42f2405d4c8da8af3c909f9bc62c65362f854e7b8ede40dc133969218e58",
+      "items": 20,
+      "has_more": false
+    }
+  ],
+  "checks": {
+    "auth_file_valid": true,
+    "storage_format_verified_in_installed_taro": true,
+    "production_C_dashboard_loaded": true,
+    "today_duration_matches_production": true,
+    "historical_duration_matches_production": true,
+    "history_count_rewards": true,
+    "history_count_inventory": true,
+    "history_count_makeup_cards": true,
+    "history_rewards_and_inventory_visible": true,
+    "wallet_unknown_note": true,
+    "partial_history_note": true,
+    "H5_no_wechat_phone_authorization_button": true,
+    "color_mode_is_existing_enum": true,
+    "color_mode_matches_production": true,
+    "led_state_matches_production": true,
+    "focus_state_matches_production": true,
+    "initial_reported_state_received": true,
+    "initial_source_label_matches": true,
+    "initial_reported_logical_day_matches": true,
+    "initial_non_normal_not_normal_asset": true,
+    "initial_non_normal_not_counted_as_income": true,
+    "initial_metric_家族币": true,
+    "initial_metric_星尘": true,
+    "initial_metric_补勤卡": true,
+    "initial_zero_is_present_and_not_missing": true,
+    "initial_timer_state_visible": true,
+    "initial_next_reward_state_visible": true,
+    "initial_claimable_count_visible": true,
+    "recent_activity_is_ark_records": true,
+    "known_13_R1_records_in_preview": true,
+    "recent_activity_no_duplicate_ids": true,
+    "preview_row_count_matches_dashboard": true,
+    "preview_row_f8d2f984ca56": true,
+    "preview_row_9f2fe08857bd": true,
+    "preview_row_b43d059ed35e": true,
+    "preview_row_fd16f31c1788": true,
+    "preview_row_df16233eb85f": true,
+    "preview_row_8ad30c34cfde": true,
+    "preview_row_ef92c67c37a1": true,
+    "preview_row_18748d4347d8": true,
+    "preview_row_70aafee55b2b": true,
+    "preview_row_d692859f5428": true,
+    "preview_row_1264101e931f": true,
+    "preview_row_5b844b67bcdd": true,
+    "preview_row_4cb026abe200": true,
+    "real_time_and_nightly_sections_are_separate": true,
+    "historical_grants_1108_received": true,
+    "grant_6e93e229f7be": true,
+    "grant_cda0c313df51": true,
+    "grant_2ca330660a5d": true,
+    "grant_12507c5d1206": true,
+    "grant_41db7c609542": true,
+    "GM_rows_keep_source": true,
+    "refresh_sent_new_dashboard_GET": true,
+    "refresh_C_dashboard_retained": true,
+    "refreshed_reported_state_received": true,
+    "refreshed_source_label_matches": true,
+    "refreshed_reported_logical_day_matches": true,
+    "refreshed_non_normal_not_normal_asset": true,
+    "refreshed_non_normal_not_counted_as_income": true,
+    "refreshed_metric_家族币": true,
+    "refreshed_metric_星尘": true,
+    "refreshed_metric_补勤卡": true,
+    "refreshed_zero_is_present_and_not_missing": true,
+    "refreshed_timer_state_visible": true,
+    "refreshed_next_reward_state_visible": true,
+    "refreshed_claimable_count_visible": true,
+    "observations_page_received": true,
+    "observation_rows_match_loaded_pages": true,
+    "pagination_bounded": true,
+    "pagination_new_page": true,
+    "independent_observations_endpoint_and_cursor": true,
+    "observations_no_duplicate_records": true,
+    "nightly_history_read_at_least_two_pages": true,
+    "logout_clears_displayed_history": true,
+    "logout_clears_taro_session": true,
+    "all_production_responses_200": true,
+    "no_network_failures": true,
+    "no_page_errors": true,
+    "no_attempted_business_writes": true
+  },
+  "screenshots_saved": 0,
+  "index_sha256": "db5d29b63e67e7b2850faa7956a9b6778febe5e9649d34e3b20b7d1a7e22cb5e",
+  "usage": {
+    "today_seconds": 7719,
+    "historical_seconds": 12698
+  },
+  "observation_counts": {
+    "rewards": 11,
+    "inventory": 21,
+    "makeup_cards": 5,
+    "progress": 3,
+    "wallet": 0
+  },
+  "wechat": {
+    "state": "not_configured",
+    "configured": false,
+    "real_wechat_authorization_performed": false
+  },
+  "device": {
+    "color_mode": "normal",
+    "led_enabled": false,
+    "focus_active": false,
+    "updated_at_ms": 1794900851462
+  },
+  "reported_state": {
+    "source_mode": "gm",
+    "logical_day": "2026-11-12",
+    "captured_at_ms": 1794901186397,
+    "received_at_ms": 1794901197361,
+    "wallets": {
+      "family_coin": 600,
+      "stardust": 0
+    },
+    "inventory": {
+      "M-CARD-001": 1
+    },
+    "progress": {
+      "timer_state": "stopped",
+      "next_reward": {
+        "status": "day_complete",
+        "kind": "unknown",
+        "item_id": null,
+        "stage_id": null,
+        "remaining_seconds": null
+      },
+      "claimable_count": 0
+    }
+  },
+  "recent_activity": {
+    "preview_records": 13,
+    "has_more": false,
+    "gm_records": 5,
+    "baseline_records": 1,
+    "grant_records_for_20261108": 5,
+    "record_ids_sha256": "54d3b7fcc56edbb4f59ff712b92d604e39f61e8dd5dbffd26c17351e5d620e7a"
+  },
+  "refreshed_reported_state": {
+    "source_mode": "gm",
+    "logical_day": "2026-11-12",
+    "captured_at_ms": 1794901186397,
+    "received_at_ms": 1794901197361,
+    "wallets": {
+      "family_coin": 600,
+      "stardust": 0
+    },
+    "inventory": {
+      "M-CARD-001": 1
+    },
+    "progress": {
+      "timer_state": "stopped",
+      "next_reward": {
+        "status": "day_complete",
+        "kind": "unknown",
+        "item_id": null,
+        "stage_id": null,
+        "remaining_seconds": null
+      },
+      "claimable_count": 0
+    }
+  },
+  "dashboard_gets": 2,
+  "observations": {
+    "pages": 2,
+    "displayed_records": 40,
+    "final_has_more": false
+  },
+  "auth_file_removed": true,
+  "production_http_gets": 8
+}

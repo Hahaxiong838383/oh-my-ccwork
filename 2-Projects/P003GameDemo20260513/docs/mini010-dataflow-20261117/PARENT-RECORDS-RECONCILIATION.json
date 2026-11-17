@@ -1,0 +1,12 @@
+{
+  "pass": true,
+  "http_status": 200,
+  "read_at_ms": 1794901281583,
+  "request_id": "mini010-records-check-1794901281453",
+  "endpoint": "https://kidshub-ai.hahaxiong.cc/v1/parent/devices/dev_50b5415662259045/ark/records?limit=20",
+  "record_count": 13,
+  "raw_records_matched": 13,
+  "has_more": false,
+  "parent_A_confirmed": true,
+  "business_writes": 0
+}

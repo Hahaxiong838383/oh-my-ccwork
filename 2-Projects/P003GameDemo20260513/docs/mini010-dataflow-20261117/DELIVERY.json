@@ -1,0 +1,26 @@
+{
+  "air_verified": true,
+  "files": [
+    {
+      "file": "P003_MINI010_DATAFLOW_SERVER_20261117.zip",
+      "bytes": 4869307,
+      "sha256": "c80454138fdbe8555d6e3e62572b32527f47f60f3ebdbcf3a8bf3323111de248"
+    },
+    {
+      "file": "P003_MINI010_DATAFLOW_SERVER_RECEIPT_20261117.md",
+      "bytes": 15011,
+      "sha256": "d81ce54d0e8ab83003589209b526de4c51a86e3a179b6c5468dbce1b7eb1ed32"
+    },
+    {
+      "file": "P003_MINIAPP_R1_SERVER_HANDOFF_20261116.md",
+      "bytes": 34492,
+      "sha256": "2fec855c0c684bfff123f2b50da4bdc9045202c77edd7c234ccb51bdd47e83df"
+    }
+  ],
+  "studio_verified": true,
+  "source_commit": "f4c885e2287a3c5ebdcc759dec6bb69daa5689aa",
+  "delivery_paths": [
+    "/Users/fu-121/Downloads",
+    "/Users/rayman.chen/Downloads"
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "started_ms": 1794901069922,
+  "pass": true,
+  "node_version": "v22.22.2",
+  "tests": [
+    {
+      "name": "mini008-dashboard",
+      "returncode": 0,
+      "log_sha256": "8e8392a1e488389242e75e284d8543abba6b1d73d4138d6ce73fa5156e583796"
+    },
+    {
+      "name": "miniapp-admin",
+      "returncode": 0,
+      "log_sha256": "5a2fee55e655961af12c3756de13db32604a030c0813cd748d2ac771c8db0617"
+    },
+    {
+      "name": "miniapp-unbind",
+      "returncode": 0,
+      "log_sha256": "c774147ec1217ab3662311e00fdc70b91de587645de4ec70b27e46bb7faa32a8"
+    },
+    {
+      "name": "history-dashboard",
+      "returncode": 0,
+      "log_sha256": "381852b9d5c2de8c8afab4f612f56d31ac843e8da05f7351bac9b944b57d21c6"
+    },
+    {
+      "name": "history-gateway",
+      "returncode": 0,
+      "log_sha256": "c1a797cd36091e65311bd222bc7211812c586dcba48e5e13ff1b8cf0d325d1f3"
+    },
+    {
+      "name": "history-scope",
+      "returncode": 0,
+      "log_sha256": "4d661389298cb0d3e53b21664f4650602915cd82e3d4528145721fb68021f3fd"
+    },
+    {
+      "name": "telemetry",
+      "returncode": 0,
+      "log_sha256": "55a922bbc0a0d04a82329e2877002cdb32d29b9a33007422c9b30c2d72478aac"
+    },
+    {
+      "name": "ark-records",
+      "returncode": 0,
+      "log_sha256": "5181b2cc82e8f363dc7a36fd77756808a942a8b20683680c6c1c339a8bd72c6a"
+    },
+    {
+      "name": "ark-records-legacy",
+      "returncode": 0,
+      "log_sha256": "2378f0832c91802acd8821ad079dd25e007374a15e05ffd6cf46e61fa546a236"
+    },
+    {
+      "name": "ark-records-legacy-http",
+      "returncode": 0,
+      "log_sha256": "e93561d460b8868224cc0774b2a3451b7eaac7b35e0c5ed3f08e65e43cbfb54a"
+    },
+    {
+      "name": "ark-records-legacy-config",
+      "returncode": 0,
+      "log_sha256": "05892e487868a5f9cd9f9c4613d13a756af9c0ef946ce893ce71058727ab46ef"
+    },
+    {
+      "name": "ark-records-legacy-summaries",
+      "returncode": 0,
+      "log_sha256": "81ceb127c2a12332452ad46f1932d233932a0a928f22c0a66212f6bb10489d04"
+    },
+    {
+      "name": "ark-records-summaries",
+      "returncode": 0,
+      "log_sha256": "4ac688333275b91bd11d9c26d7ed6de01e70c27493d474342940e6770eb5349b"
+    }
+  ],
+  "manifest_sha256": "0af671454699ab4a15493b75d31b02d2f394a8a26e9588a1dd0a622938663c86",
+  "finished_ms": 1794901110274
+}

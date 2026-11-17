@@ -1,0 +1,49 @@
+{
+  "recorded_at": "2026-11-17T07:31:25.728830+00:00",
+  "runtime": "node v24.19.0",
+  "tests": {
+    "command": "vitest run --threads false",
+    "suites": 14,
+    "passed": 115,
+    "failed": 0
+  },
+  "typecheck": {
+    "command": "tsc --noEmit",
+    "exit_code": 0
+  },
+  "build": {
+    "h5": {
+      "exit_code": 0,
+      "files": 9
+    },
+    "weapp": {
+      "exit_code": 0,
+      "files": 17
+    }
+  },
+  "browser": {
+    "command": "node scripts/test-history-identity-h5.cjs",
+    "fixture": "synthetic-only; all business requests intercepted locally",
+    "pass": true,
+    "requests": 9,
+    "dashboard_reads": 2,
+    "observations_pages": 2,
+    "page_errors": []
+  },
+  "scope_limits": [
+    "not WeChat publication",
+    "not real iPhone authorization",
+    "not C production response replay",
+    "active liveHomeView source not available in this worktree"
+  ],
+  "source_sha256": {
+    "src/services/business-record.ts": "5a7799d36dc0a0bfdbbd0bc2b333bf06171d55a38a6d7ca510f9d41801ddf1a2",
+    "src/services/history-api.ts": "8f96f0ce38aa60107551aa80847547e12b0e3954b64e9ddf9f20450416c86ed9",
+    "src/services/live-api.ts": "0e38f5e1dc3ccf3596fcba5e63783b9b49d2b21d9219a3466e80a41028a68641",
+    "src/services/live-data.ts": "8a3d627f10fc4f634cd308d7e270ab512e822a2e24214ab722eba20fe7a2b8ac",
+    "src/services/real-details.ts": "3a4784dad85a8fb937463553207f5e5153d1cfcb5333b7b0013b7d175f069712",
+    "src/pages/index/real-data.tsx": "4e837a408b2d92385dab4956ad157e0396651f6acfd06e61ffb69aa74195ee62",
+    "src/pages/index/real-details.tsx": "41f04d41dcfe2addd4a2e940363c482bfee0db131072d1cb1c902b5aec4a009e",
+    "scripts/test-history-identity-h5.cjs": "b2b6a3c16a29ac5a3f7abfca83e123ef45c81d81569765569a9778183b5b2f76"
+  }
+}

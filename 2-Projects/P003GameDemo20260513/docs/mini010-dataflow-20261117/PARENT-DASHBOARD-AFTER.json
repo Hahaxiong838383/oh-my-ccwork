@@ -1,0 +1,163 @@
+{
+  "parent_A_confirmed": true,
+  "original_binding_unchanged": true,
+  "auth_mode": "server_signed_short_lived_session_existing_parent_role",
+  "request_method": "GET",
+  "request_id": "mini010-dataflow-check-1794901146226",
+  "endpoint": "https://kidshub-ai.hahaxiong.cc/v1/parent/devices/dev_50b5415662259045/dashboard?timezone=Asia/Shanghai",
+  "http_status": 200,
+  "read_started_at_ms": 1794901146226,
+  "read_at_ms": 1794901146457,
+  "read_at_beijing": "2026-11-17T15:39:06.457+08:00",
+  "business_writes": 0,
+  "data": {
+    "device": {
+      "updated_at_ms": 1794900851462,
+      "captured_at_ms": 1794900824109,
+      "online": true,
+      "lid_open": false,
+      "present": false,
+      "led_enabled": false,
+      "brightness_level": 3,
+      "color_mode": "normal",
+      "image_distance_m": 2,
+      "image_distance_state": "valid",
+      "focus_active": false,
+      "presence_state": "absent",
+      "presence_source": "camera_landmarks"
+    },
+    "ark": {
+      "available": false,
+      "reason": "non_normal",
+      "source_mode": null,
+      "snapshot_id": null,
+      "captured_at_ms": null,
+      "received_at_ms": null,
+      "wallets": {
+        "family_coin": null,
+        "stardust": null
+      },
+      "inventory": {
+        "M-CARD-001": null
+      },
+      "reported_state": {
+        "source": "device.ark.state",
+        "source_mode": "gm",
+        "snapshot_id": "ark-4904df882ef744db-1488",
+        "logical_day": "2026-11-12",
+        "captured_at_ms": 1794901126404,
+        "received_at_ms": 1794901137361,
+        "wallets": {
+          "family_coin": 600,
+          "stardust": 0
+        },
+        "inventory": {
+          "M-CARD-001": 1
+        },
+        "progress": {
+          "timer_state": "stopped",
+          "next_reward": {
+            "status": "day_complete",
+            "kind": "unknown",
+            "item_id": null,
+            "stage_id": null,
+            "remaining_seconds": null
+          },
+          "claimable_count": 0
+        }
+      }
+    },
+    "records": {
+      "schema_version": 1,
+      "coverage": {
+        "kind": "received_records",
+        "complete": false,
+        "reason": "partial_history",
+        "min_occurred_at_ms": 1794883557030,
+        "max_occurred_at_ms": 1794898413314,
+        "first_received_at_ms": 1794883562443,
+        "last_received_at_ms": 1794898416885,
+        "coverage_from_ms": 1794883557030,
+        "dropped_records": 0
+      },
+      "updated_at_ms": 1794898416885,
+      "yesterday_income": {
+        "available": false,
+        "reason": "no_records",
+        "date": "2026-11-16",
+        "timezone": "Asia/Shanghai",
+        "source_mode": null,
+        "family_coin": null,
+        "stardust": null,
+        "occurred_from_ms": null,
+        "occurred_to_ms": null,
+        "received_at_ms": null
+      },
+      "latest_items": {
+        "available": false,
+        "reason": "non_normal",
+        "source_mode": null,
+        "record_id": null,
+        "save_id": null,
+        "occurred_at_ms": null,
+        "received_at_ms": null,
+        "items": []
+      },
+      "recent_activity": {
+        "source": "ark_records",
+        "available": true,
+        "item_count": 13,
+        "record_ids": [
+          "save-8da60f9a985d9f16addb154537a14186:13",
+          "save-8da60f9a985d9f16addb154537a14186:12",
+          "save-8da60f9a985d9f16addb154537a14186:11",
+          "save-8da60f9a985d9f16addb154537a14186:10",
+          "save-8da60f9a985d9f16addb154537a14186:9",
+          "save-8da60f9a985d9f16addb154537a14186:8",
+          "save-8da60f9a985d9f16addb154537a14186:7",
+          "save-8da60f9a985d9f16addb154537a14186:6",
+          "save-8da60f9a985d9f16addb154537a14186:5",
+          "save-8da60f9a985d9f16addb154537a14186:4",
+          "save-8da60f9a985d9f16addb154537a14186:3",
+          "save-8da60f9a985d9f16addb154537a14186:2",
+          "save-8da60f9a985d9f16addb154537a14186:1"
+        ],
+        "has_more": false,
+        "coverage": {
+          "kind": "received_records",
+          "complete": false,
+          "reason": "partial_history",
+          "min_occurred_at_ms": 1794883557030,
+          "max_occurred_at_ms": 1794898413314,
+          "first_received_at_ms": 1794883562443,
+          "last_received_at_ms": 1794898416885,
+          "coverage_from_ms": 1794883557030,
+          "dropped_records": 0
+        }
+      }
+    },
+    "usage": {
+      "source": "merged_observations",
+      "timezone": "Asia/Shanghai",
+      "today": {
+        "date": "2026-11-17",
+        "available": true,
+        "focus_minutes": 129,
+        "total_seconds": 7719,
+        "observed_seconds": 6989,
+        "estimated_seconds": 730,
+        "source": "telemetry.focus_segment+telemetry.presence_transition+telemetry.posture_round",
+        "updated_at_ms": 1794900821337,
+        "coverage": {
+          "complete": false,
+          "reason": "partial_history",
+          "presence_window_seconds": 300,
+          "posture_window_seconds": 60,
+          "reward_counter_policy": "calendar_day_high_water"
+        }
+      }
+    }
+  },
+  "pass": true,
+  "evidence_note": "recent_activity.items bodies omitted in this redacted receipt; production API returns all fields; counts and IDs verified against SQLite"
+}

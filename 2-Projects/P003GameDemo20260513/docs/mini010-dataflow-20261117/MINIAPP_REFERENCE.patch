@@ -1,0 +1,406 @@
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/docs/mini010-light-rewards-20261117.md b/2-Projects/P003GameDemo20260513/apps/miniapp/docs/mini010-light-rewards-20261117.md
+new file mode 100644
+index 00000000..f3c30d6f
+--- /dev/null
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/docs/mini010-light-rewards-20261117.md
+@@ -0,0 +1,45 @@
++# mini010 色温、游戏与实时奖励接入
++
++日期：2026-11-17。此文件描述本仓 `RealDataHome` 的补齐；附件所称现役 `liveHomeView` 不在本工作树，不能以本次构建冒称现役小程序已发布。
++
++设备上传 URL、合同、ACK 和字段均不变。以下是家长 dashboard 的读取映射，使用现有家长权限；后台收到 ACK 不等于旧页面已经消费新增查询字段。
++
++| dashboard 路径（原始 JSON） | 读取与展示 |
++|---|---|
++| `data.device.color_mode` | `cool=冷光`、`normal=常规`、`warm=暖光`；`null` 或未知枚举为暂无数据。按原上报值展示，不反向补偿端侧映射错误。 |
++| `data.device.led_enabled` | `true=已开灯`、`false=已关灯`，缺失/null 为暂无数据。 |
++| `data.device.focus_active` | `true=计时中`、`false=未计时`，缺失/null 为暂无数据。 |
++| `data.ark.reported_state` | null 表示没有当前授权下可展示的已上报快照；有值时按原样展示资产、游戏日、采样时间、接收时间和来源。 |
++| `reported_state.wallets` / `inventory` | 家族币 `family_coin`、星尘 `stardust`、补勤卡 `M-CARD-001`；0 显示0，null 保持暂无数据。 |
++| `reported_state.progress` | `timer_state`、`claimable_count`，以及 `next_reward.status/stage_id/remaining_seconds`。剩余秒数是采样值，页面不自行倒计时推算。 |
++| `data.records.recent_activity.items` | 最近最多20条已入库业务流水，字段与现有 `/ark/records` 分页一致；每笔保留 `source_mode`、物理发生/接收时间、`logical_day`。 |
++| 业务项 `grants` / `inventory_changes` | 逐领取记录展示 `resolved_rewards`，按 before/after 展示库存；领取逻辑日来自每条 grant，不用物理11月17日替换历史游戏日。 |
++| `data.observations` | 继续表示夜间同步的历史观测，与实时业务记录分栏，不混加两条链路的记录数或金额。 |
++
++`reported_state.source_mode=gm` 显示“测试来源（GM）”，unknown 显示“来源未核实”。这两类保留设备实际上传值，但不计入正常收益。既有 `ark.available/wallets`、`yesterday_income`、`latest_items` 仍为正常来源摘要；不能把它们的 `non_normal/null` 误报为未收到上传。
++
++实时领取、奖励、钱包变化可立即出现在“历史奖励与道具 → 实时业务记录”。夜批埋点尚未上传时，下方历史观测条数可以保持不变。两者不需要互相等待。baseline 仍表示已有资产，不计新增收益。
++
++本仓传输层统一执行 `snakeToCamel`：组件读取 `colorMode`、`reportedState`、`sourceMode`、`recentActivity`、`resolvedRewards` 等 camelCase 字段。现场前端若直接消费原始 JSON 则使用表中的 snake_case，不要混用两种层级。现有“刷新”重新查询 dashboard；切账号、切设备和退出继续丢弃迟到响应。
++
++构建入口：
++
++```sh
++TARO_APP_DATA_MODE=live TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:h5
++TARO_APP_DATA_MODE=live TARO_APP_API_BASE_URL=https://kidshub-ai.hahaxiong.cc npm run build:weapp
++```
++
++输出为 `dist/h5` 和 `dist/weapp`。本次交付是源码和构建产物；微信开发者工具上传、审核/体验版发布和手机真实页面验证单独记账。端侧 MCU 冷光/常规名称对调仍须其原代码修复，本仓不悄悄交换接收到的枚举。
++
++## 本仓验证（2026-11-17）
++
++| 验证 | 结果 |
++|---|---|
++| Node v24.19.0，`vitest run --threads false` | 14 套、115 项全部通过；先复现新增字段被丢弃，再完成修复。 |
++| `tsc --noEmit` | 通过。 |
++| live H5 / weapp 构建 | 通过，分别9 / 17个文件。 |
++| 已构建 H5 浏览器回归 | 合成身份、全部业务请求在本地拦截：9请求、2次 dashboard、2页历史观测，页面错误0；暖光、GM资产、奖励阶段、实时库存和刷新后数值更新均可见。 |
++
++浏览器回归只证明本仓页面正确消费合同，不是 iPhone 真实家长登录、当前 C 机响应或微信发布证明。生产接口与实机对账由服务端本轮回执分别记录。
++
++署名：codex（OpenAI）| 2026-11-17
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/scripts/test-history-identity-h5.cjs b/2-Projects/P003GameDemo20260513/apps/miniapp/scripts/test-history-identity-h5.cjs
+index 55989285..381f1e7c 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/scripts/test-history-identity-h5.cjs
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/scripts/test-history-identity-h5.cjs
+@@ -8,7 +8,7 @@ const root=path.resolve(__dirname,'../dist/h5');
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));let browser;
+  try{
+   browser=await chromium.launch({headless:true,...process.env.P003_CHROMIUM_PATH?{executablePath:process.env.P003_CHROMIUM_PATH}:{}});
+-  const page=await browser.newPage({viewport:{width:390,height:844}}),requests=[],errors=[];
++  const page=await browser.newPage({viewport:{width:390,height:844}}),requests=[],errors=[];let dashboardReads=0;
+   page.on('pageerror',e=>errors.push(String(e)));page.setDefaultTimeout(10000);
+   await page.route('https://kidshub-ai.hahaxiong.cc/**',async route=>{
+    const request=route.request(),url=new URL(request.url());
+@@ -17,7 +17,12 @@ const root=path.resolve(__dirname,'../dist/h5');
+    if(url.pathname==='/api/auth/sms/verify')data={ok:true,token:'synthetic-parent-token'};
+    else if(url.pathname==='/api/profile/bound-devices')data={ok:true,devices:[fixture.devices[0]]};
+    else if(url.pathname==='/api/auth/wechat/identity')data={ok:true,wechat_identity:fixture.dashboard(fixture.devices[0]).wechat_identity};
+-   else if(url.pathname.endsWith('/dashboard')){data=fixture.dashboard(fixture.devices[0]);data.data.usage.today.total_seconds=24;data.data.usage.today.focus_minutes=0;data.data.historical_usage.total_seconds=5003;}
++   else if(url.pathname.endsWith('/dashboard')){
++    data=fixture.dashboard(fixture.devices[0]);data.data.usage.today.total_seconds=24;data.data.usage.today.focus_minutes=0;data.data.historical_usage.total_seconds=5003;
++    Object.assign(data.data.device,{color_mode:'warm',led_enabled:true,focus_active:false});
++    data.data.ark={available:false,reason:'non_normal',reported_state:{source:'device.ark.state',source_mode:'gm',snapshot_id:'synthetic-snapshot',logical_day:'2026-11-08',captured_at_ms:1794898399000,received_at_ms:1794898400000,wallets:{family_coin:123+(dashboardReads++),stardust:0},inventory:{'M-CARD-001':2},progress:{timer_state:'paused',claimable_count:1,next_reward:{status:'claimable',kind:'currency',item_id:'C-FAMILY-001',stage_id:'REGULAR-05',remaining_seconds:0}}}};
++    data.data.records.recent_activity={available:true,reason:'partial_history',items:[{record_id:'synthetic-realtime-grant',save_id:'synthetic-save',sequence:2,source_mode:'gm',reason:'gm_adjustment',logical_day:'2026-11-08',occurred_at_ms:1794898399000,received_at_ms:1794898400000,time_status:'reported',resource_changes:[],item_changes:[],grants:[{reward_instance_id:'synthetic-grant',source_kind:'progress_stage',source_id:'REGULAR-05',logical_day:'2026-11-08',resolved_rewards:[{item_id:'synthetic-new-decoration',quantity:1,kind:'decoration'}]}],inventory_changes:[{item_id:'synthetic-new-decoration',before:null,after:{quantity:1,status:'pending_activation'}}]}],has_more:false,next_cursor:null};
++   }
+    else if(url.pathname.endsWith('/observations'))data=fixture.observations(url.searchParams.get('cursor'));
+    else if(url.pathname.endsWith('/conversations'))data=fixture.conversations(url.searchParams.get('cursor'));
+    else if(url.pathname.endsWith('/ark/records'))data=fixture.records(url.searchParams.get('cursor'));
+@@ -29,6 +34,9 @@ const root=path.resolve(__dirname,'../dist/h5');
+   await page.getByText('已同步历史 83 分 23 秒',{exact:true}).waitFor();
+   const body=await page.locator('body').innerText();
+   for(const value of ['今日 24 秒','微信身份已验证','wx_fixture','微信暂未返回 UnionID','历史奖励与道具','history_decor_0','1 → 0','不能据此认定家族币或星尘为 0'])assert(body.includes(value),value);
++  for(const value of ['暖光','已开灯','未计时','测试来源（GM）','游戏日 2026-11-08','不计入正常收益','可领取 · REGULAR-05','上报时距下一奖励 0 秒','实时业务记录','夜间同步的历史观测','synthetic-new-decoration × 1','库存 · synthetic-new-decoration：0 → 1'])assert(body.includes(value),value);
++  await page.getByText('刷新',{exact:true}).click();
++  await page.getByText('124',{exact:true}).waitFor();assert.equal(dashboardReads,2,'刷新重新查询最新游戏快照');
+   assert(!body.includes('微信手机号授权登录'),'H5 不展示微信专属手机号按钮');
+   await page.getByText('查看全部已同步历史',{exact:true}).click();await page.getByText('加载更多',{exact:true}).waitFor();
+   await page.getByText('加载更多',{exact:true}).click();await page.getByText('已显示本次查询全部已同步记录',{exact:true}).waitFor();
+@@ -39,6 +47,6 @@ const root=path.resolve(__dirname,'../dist/h5');
+   assert(!(await page.locator('body').innerText()).includes('history_decor_0'));
+   assert.equal(errors.length,0,errors.join('\n'));
+   assert.equal(requests.filter(x=>x.method==='POST').length,1,'仅合成短信验证，不发送短信或微信授权');
+-  console.log(JSON.stringify({pass:true,requests:requests.length,observations_pages:requests.filter(x=>x.path.endsWith('/observations')).length,page_errors:errors,checks:['built H5','SMS compatibility','shared history and duration DTO','verified identity and optional UnionID','observation pagination','logout clears data','no WeChat phone button in H5']},null,2));
++  console.log(JSON.stringify({pass:true,requests:requests.length,dashboard_reads:dashboardReads,observations_pages:requests.filter(x=>x.path.endsWith('/observations')).length,page_errors:errors,checks:['built H5','SMS compatibility','shared history and duration DTO','verified identity and optional UnionID','color and lighting','reported GM assets and game state separated from normal income','realtime grants and inventory alongside nightly observations','refresh updates reported state','observation pagination','logout clears data','no WeChat phone button in H5']},null,2));
+  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
+ })().catch(e=>{console.error(e);process.exitCode=1;});
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-data.tsx b/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-data.tsx
+index 5733f419..3a8454dc 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-data.tsx
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-data.tsx
+@@ -79,6 +79,9 @@ export default function RealDataHome() {
+               {view.availability === 'stale' && <Text className="notice">近期未收到上报，以下为上次记录。</Text>}
+               <View className="live-metrics">
+                 <View><Text className="metric-label">亮度</Text><Text className="live-metric-value">{view.brightness}</Text></View>
++                <View><Text className="metric-label">灯光</Text><Text className="live-metric-value">{view.lighting}</Text></View>
++                <View><Text className="metric-label">色温</Text><Text className="live-metric-value">{view.colorMode}</Text></View>
++                <View><Text className="metric-label">使用计时</Text><Text className="live-metric-value">{view.focus}</Text></View>
+                 <View><Text className="metric-label">在位状态</Text><Text className="live-metric-value">{view.presence}</Text></View>
+                 <View><Text className="metric-label">视距</Text><Text className="live-metric-value">{view.distance}</Text></View>
+               </View>
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-details.tsx b/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-details.tsx
+index cda4437a..d0786c60 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-details.tsx
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/pages/index/real-details.tsx
+@@ -1,7 +1,7 @@
+ import {useEffect,useState} from 'react';
+ import {Button,Picker,Text,View} from '@tarojs/components';
+ import {Card,Heading} from './components';
+-import {dashboardDetails,detailsView,unavailableText,type DashboardDetails} from '../../services/real-details';
++import {dashboardDetails,detailsView,sourceModeText,unavailableText,type DashboardDetails} from '../../services/real-details';
+ import {HistoryController,type HistoryQuery,type HistoryPage} from '../../services/live-history';
+ import {getBusinessPage,getConversationPage,getObservationPage,type BusinessItem,type ConversationItem} from '../../services/history-api';
+ import {durationText,observationKindLabel,observationKinds,type Observation} from '../../services/observations';
+@@ -9,7 +9,7 @@ import {durationText,observationKindLabel,observationKinds,type Observation} fro
+ const time=(value:number|null|undefined)=>value?new Date(value).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'}):'时间未知';
+ const itemState=(state:string)=>state==='active'?'已启用':state==='pending_activation'?'待激活':'状态未知';
+ const reasonLabel:Record<string,string>={reward_claim:'领取奖励',tank_unlock:'解锁生态缸',makeup_card_use:'使用补勤卡',resource_spend:'资源消费',item_activation:'物品激活',gm_adjustment:'测试调整',unknown:'原因未知'};
+-const resourceLabel:Record<string,string>={family_coin:'家族币',stardust:'星尘','M-CARD-001':'补勤卡','C-FAMILY-001':'家族币','C-STARDUST-001':'星尘'};
++const resourceLabel:Record<string,string>={family_coin:'家族币',stardust:'星尘','M-CARD-001':'补勤卡','C-FAMILY-001':'家族币','C-COIN-001':'家族币','C-STARDUST-001':'星尘'};
+ 
+ export function ConversationRow({item}:{item:ConversationItem}){return <View className="live-history-entry"><Text className="row-title">{item.role==='user'?'孩子':'小可'}</Text><Text className="small-note">{time(item.ts)}</Text><Text className="live-history-content" selectable>{item.text}</Text></View>;}
+ export function BusinessRow({item}:{item:BusinessItem}){
+@@ -17,7 +17,7 @@ export function BusinessRow({item}:{item:BusinessItem}){
+  const title=baseline?'历史基线':legacy&&item.reason==='unknown'?'业务变更':reasonLabel[item.reason]||'业务记录';
+  return <View className="live-history-entry">
+   <Text className="row-title">{title}{item.sourceMode!=='normal'?` · ${item.sourceMode==='gm'?'测试来源':'来源未知'}`:''}</Text>
+-  <Text className="small-note">{item.timeStatus==='reported'?time(item.occurredAtMs):'发生时间待确认'}</Text>
++  <Text className="small-note">{item.timeStatus==='reported'?`发生 ${time(item.occurredAtMs)}`:'发生时间待确认'} · 接收 {time(item.receivedAtMs)}{item.logicalDay?` · 游戏日 ${item.logicalDay}`:''}</Text>
+   {baseline?<>
+    <Text className="small-note">接入时已有状态，不计入新增收益或新获得。</Text>
+    {item.baseline?<>
+@@ -26,13 +26,32 @@ export function BusinessRow({item}:{item:BusinessItem}){
+    </>:<Text className="small-note">暂无基线资产数据</Text>}
+   </>:<>
+    {item.resourceChanges.map(x=><Text className="live-history-content" key={x.resourceId}>{resourceLabel[x.resourceId]||x.resourceId}：{x.delta>0?'+':''}{x.delta}</Text>)}
+-   {item.itemChanges.map(x=><Text className="live-history-content" key={x.itemInstanceId}>{x.operation==='activated'?'激活':x.operation==='acquired'?'获得':'状态变化'} · {x.itemId||x.itemInstanceId}{x.quantity!==undefined?` × ${x.quantity}`:''} · {itemState(x.state)}</Text>)}
+-   {item.inventoryStateChanges?.map(x=><Text className="live-history-content" key={`state:${x.itemId}`}>状态变化 · {x.itemId} · {itemState(x.fromState)} → {itemState(x.toState)}</Text>)}
++   {item.grants?.map(g=><View key={g.rewardInstanceId}><Text className="small-note">已领取 {g.sourceId}{g.logicalDay?` · 游戏日 ${g.logicalDay}`:''}</Text>{g.resolvedRewards.map((r,i)=><Text className="live-history-content" key={`${g.rewardInstanceId}:${i}`}>{resourceLabel[r.itemId]||r.itemId} × {r.quantity}</Text>)}</View>)}
++   {item.inventoryChanges?.map(x=><Text className="live-history-content" key={`inventory:${x.itemId}`}>库存 · {resourceLabel[x.itemId]||x.itemId}：{x.before?.quantity??0} → {x.after?.quantity??0}{x.after?.status?` · ${itemState(x.after.status)}`:''}</Text>)}
++   {!item.inventoryChanges?.length&&item.itemChanges.map(x=><Text className="live-history-content" key={x.itemInstanceId}>{x.operation==='activated'?'激活':x.operation==='acquired'?'获得':'状态变化'} · {x.itemId||x.itemInstanceId}{x.quantity!==undefined?` × ${x.quantity}`:''} · {itemState(x.state)}</Text>)}
++   {!item.inventoryChanges?.length&&item.inventoryStateChanges?.map(x=><Text className="live-history-content" key={`state:${x.itemId}`}>状态变化 · {x.itemId} · {itemState(x.fromState)} → {itemState(x.toState)}</Text>)}
++   {item.makeupGrants?.map((x,i)=><Text className="live-history-content" key={`makeup-grant:${i}`}>补勤授予 · {x.tankId}</Text>)}
++   {item.makeupUses?.map((x,i)=><Text className="live-history-content" key={`makeup-use:${i}`}>使用补勤卡 · 游戏日 {x.logicalDay}{x.tankId?` · ${x.tankId}`:''}</Text>)}
+   </>}
+   <Text className="small-note live-record-id" selectable>记录 {item.recordId}</Text>
+  </View>;
+ }
+ 
++export function ReportedStateCard({state}:{state:NonNullable<DashboardDetails['reportedState']>}) {
++ const p=state.progress,r=p.nextReward;
++ const value=(n:number|null,suffix='')=>n===null?'暂无数据':`${n}${suffix}`;
++ const timer=({running:'计时中',paused:'已暂停',stopped:'已停止'} as Record<string,string>)[p.timerState]||'暂无数据';
++ const reward=({locked:'进行中',claimable:'可领取',claimed:'已领取',day_complete:'当日奖励已完成'} as Record<string,string>)[r.status]||'暂无数据';
++ return <Card><Heading title="设备已上报资产与游戏状态"/>
++  <Text className="row-title">{sourceModeText(state.sourceMode)} · 游戏日 {state.logicalDay||'未知'}</Text>
++  {state.sourceMode!=='normal'&&<Text className="small-note">以下保留设备实际上传值；测试或未核实来源不计入正常收益。</Text>}
++  <View className="live-metrics"><View><Text className="metric-label">家族币</Text><Text className="live-metric-value">{value(state.familyCoin)}</Text></View><View><Text className="metric-label">星尘</Text><Text className="live-metric-value">{value(state.stardust)}</Text></View><View><Text className="metric-label">补勤卡</Text><Text className="live-metric-value">{value(state.cards,' 张')}</Text></View></View>
++  <Text className="row-title">奖励进度 · {timer}</Text><Text className="paragraph">{reward}{r.stageId?` · ${r.stageId}`:''} · 待领取 {value(p.claimableCount,' 个')}</Text>
++  {r.remainingSeconds!==null&&<Text className="small-note">上报时距下一奖励 {durationText(r.remainingSeconds)}</Text>}
++  <Text className="small-note">采样 {time(state.capturedAtMs)} · 接收 {time(state.receivedAtMs)}；这是最近上报状态，刷新后读取新值。</Text>
++ </Card>;
++}
++
+ export function ObservationRow({item}:{item:Observation}){return <View className="live-history-entry">
+  <Text className="row-title">{observationKindLabel(item.kind)}</Text><Text className="small-note">{item.timeStatus==='clock_suspect'?'设备时间待确认':time(item.occurredAtMs)} · 接收 {time(item.receivedAtMs)}</Text>
+  {item.rewards.map((r,i)=><Text className="live-history-content" key={`${r.itemId}:${i}`}>{resourceLabel[r.itemId]||r.itemId} × {r.quantity??'数量未知'}</Text>)}
+@@ -64,10 +83,17 @@ export default function RealDetails({details,publicId,onAccessLost}:{details?:Da
+  const d=details||dashboardDetails({}),v=detailsView(d);const [showConversations,setShowConversations]=useState(false);const [showRecords,setShowRecords]=useState(false);const [showObservations,setShowObservations]=useState(false);
+  return <>
+   <Card><Heading title="使用时长"/><Text className="live-metric-value">已同步历史 {v.historicalUsage}</Text><Text className="small-note">按使用片段、在位姿态窗口与奖励进度保守合并，重叠不重复累计；只包含已同步历史。</Text>{d.historicalUsage.available&&<><Text className="small-note">{d.historicalUsage.fromDay} 至 {d.historicalUsage.toDay} · 有效使用片段 {durationText(d.historicalUsage.observedSeconds)} · 补充用时 {durationText(d.historicalUsage.estimatedSeconds)}</Text><View className="live-days">{d.historicalUsage.daily.map(x=><View key={x.date}><Text>{x.date}</Text><Text>{x.available?(x.totalSeconds!==null?durationText(x.totalSeconds):`${x.focusMinutes} 分钟`):'暂无数据'}{x.estimatedSeconds&&x.estimatedSeconds>0?' · 含进度/在位估算':''}</Text></View>)}</View></>}<Text className="row-title">今日 {v.today}</Text><Text className="small-note">近 7 日；缺测日期保持暂无数据。</Text><View className="live-days">{v.daily.map(x=><View key={x.date}><Text>{x.date}</Text><Text>{x.value}</Text></View>)}</View>{!v.daily.length&&<Text className="paragraph muted">近 7 日暂无已同步数据</Text>}</Card>
+-  <Card><Heading title="历史奖励与道具"/>{d.observations.available?<><View className="live-metrics"><View><Text className="metric-label">奖励记录</Text><Text className="live-metric-value">{d.observations.counts.rewards??'未知'} 条</Text></View><View><Text className="metric-label">库存变化</Text><Text className="live-metric-value">{d.observations.counts.inventory??'未知'} 条</Text></View><View><Text className="metric-label">补勤卡变化</Text><Text className="live-metric-value">{d.observations.counts.makeupCards??'未知'} 条</Text></View></View><Text className="small-note">已同步发生时间：{time(d.observations.coverage.firstOccurredAtMs)} 至 {time(d.observations.coverage.lastOccurredAtMs)}。历史可能不完整，记录数不是累计获得数量。</Text>{d.observations.latest.rewards&&<ObservationRow item={d.observations.latest.rewards}/>} {d.observations.latest.inventory&&<ObservationRow item={d.observations.latest.inventory}/>} {d.observations.latest.makeupCards&&<ObservationRow item={d.observations.latest.makeupCards}/>} {d.observations.latest.wallet&&<ObservationRow item={d.observations.latest.wallet}/>} {d.observations.latest.progress&&<ObservationRow item={d.observations.latest.progress}/>}<Text className="small-note">{d.observations.counts.wallet===0?'已同步历史中未采集到钱包变化，不能据此认定家族币或星尘为 0。':'历史钱包变化与当前余额分别显示。'}</Text></>:<Text className="paragraph muted">{unavailableText(d.observations.reason)}</Text>}<Button className="link-button" onClick={()=>setShowObservations(x=>!x)}>{showObservations?'收起历史奖励与道具':'查看全部已同步历史'}</Button>{showObservations&&<HistoryViewer key={`${publicId}:observations`} publicId={publicId} kind="observations" onAccessLost={onAccessLost}/>}</Card>
+-  <Card><Heading title="设备资产快照"/><View className="live-metrics"><View><Text className="metric-label">家族币</Text><Text className="live-metric-value">{v.familyCoin}</Text></View><View><Text className="metric-label">星尘</Text><Text className="live-metric-value">{v.stardust}</Text></View><View><Text className="metric-label">补勤卡</Text><Text className="live-metric-value">{v.cards}</Text></View></View><Text className="small-note">{d.ark.available?`采样于 ${time(d.ark.capturedAtMs)}；不是实时余额。`:unavailableText(d.ark.reason)}</Text></Card>
+-  <Card><Heading title="昨日已上报收益"/><Text className="small-note">{d.income.date||'北京时间昨天'} · 仅含已同步奖励收入，不是完整收益。</Text><View className="live-metrics"><View><Text className="metric-label">家族币</Text><Text className="live-metric-value">{v.incomeFamilyCoin}</Text></View><View><Text className="metric-label">星尘</Text><Text className="live-metric-value">{v.incomeStardust}</Text></View></View>{!d.income.available&&<Text className="small-note">{unavailableText(d.income.reason)}</Text>}</Card>
+-  <Card><Heading title="最近已同步获得物品"/><Text className="small-note">当前授权下全部存档、全部缸的获得记录；不是当前库存。</Text>{v.latestItems.map(x=><View className="live-history-entry" key={x.itemInstanceId}><Text className="row-title">{x.itemId} × {x.quantity===null?'数量未知':x.quantity}</Text><Text className="small-note">{x.itemKind==='avatar_decoration'?'小可装饰':x.itemKind==='tank_component'?'生态缸组件':'物品'} · {itemState(x.state)}</Text></View>)}{!d.latest.available&&<Text className="paragraph muted">{unavailableText(d.latest.reason)}</Text>}{d.latest.available&&<Text className="small-note">获得于 {time(d.latest.occurredAtMs)}</Text>}<Button className="link-button" onClick={()=>setShowRecords(x=>!x)}>{showRecords?'收起业务流水':'查看已同步业务流水'}</Button>{showRecords&&<HistoryViewer key={`${publicId}:records`} publicId={publicId} kind="records" onAccessLost={onAccessLost}/>}</Card>
++  <Card><Heading title="历史奖励与道具"/>
++   <Text className="row-title">实时业务记录</Text><Text className="small-note">上传成功的领取、钱包和道具变更可在此查询；与下方夜间历史观测分开展示，不重复合计。</Text>
++   {d.recentActivity.items.map(item=><BusinessRow key={item.recordId} item={item}/>)}
++   {!d.recentActivity.items.length&&<Text className="paragraph muted">{unavailableText(d.recentActivity.reason||'no_records')}</Text>}
++   <Button className="link-button" onClick={()=>setShowRecords(x=>!x)}>{showRecords?'收起业务流水':'查看已同步业务流水'}</Button>{showRecords&&<HistoryViewer key={`${publicId}:records`} publicId={publicId} kind="records" onAccessLost={onAccessLost}/>}
++   <Text className="row-title">夜间同步的历史观测</Text><Text className="small-note">历史埋点按设备调度上传；本次实时领取请先看上方业务记录。以下条数不含上方实时记录。</Text>
++   {d.observations.available?<><View className="live-metrics"><View><Text className="metric-label">奖励记录</Text><Text className="live-metric-value">{d.observations.counts.rewards??'未知'} 条</Text></View><View><Text className="metric-label">库存变化</Text><Text className="live-metric-value">{d.observations.counts.inventory??'未知'} 条</Text></View><View><Text className="metric-label">补勤卡变化</Text><Text className="live-metric-value">{d.observations.counts.makeupCards??'未知'} 条</Text></View></View><Text className="small-note">已同步发生时间：{time(d.observations.coverage.firstOccurredAtMs)} 至 {time(d.observations.coverage.lastOccurredAtMs)}。历史可能不完整，记录数不是累计获得数量。</Text>{d.observations.latest.rewards&&<ObservationRow item={d.observations.latest.rewards}/>} {d.observations.latest.inventory&&<ObservationRow item={d.observations.latest.inventory}/>} {d.observations.latest.makeupCards&&<ObservationRow item={d.observations.latest.makeupCards}/>} {d.observations.latest.wallet&&<ObservationRow item={d.observations.latest.wallet}/>} {d.observations.latest.progress&&<ObservationRow item={d.observations.latest.progress}/>}<Text className="small-note">{d.observations.counts.wallet===0?'已同步历史中未采集到钱包变化，不能据此认定家族币或星尘为 0。':'历史钱包变化与当前余额分别显示。'}</Text></>:<Text className="paragraph muted">{unavailableText(d.observations.reason)}</Text>}<Button className="link-button" onClick={()=>setShowObservations(x=>!x)}>{showObservations?'收起历史奖励与道具':'查看全部已同步历史'}</Button>{showObservations&&<HistoryViewer key={`${publicId}:observations`} publicId={publicId} kind="observations" onAccessLost={onAccessLost}/>}</Card>
++  {d.reportedState&&<ReportedStateCard state={d.reportedState}/>}
++  <Card><Heading title="正常来源资产摘要"/><View className="live-metrics"><View><Text className="metric-label">家族币</Text><Text className="live-metric-value">{v.familyCoin}</Text></View><View><Text className="metric-label">星尘</Text><Text className="live-metric-value">{v.stardust}</Text></View><View><Text className="metric-label">补勤卡</Text><Text className="live-metric-value">{v.cards}</Text></View></View><Text className="small-note">{d.ark.available?`采样于 ${time(d.ark.capturedAtMs)}；不是实时余额。`:unavailableText(d.ark.reason)}</Text></Card>
++  <Card><Heading title="昨日正常来源收益"/><Text className="small-note">{d.income.date||'北京时间昨天'} · 仅含正常来源、已同步奖励收入；测试记录和历史游戏日领取在上方实时业务记录查看。</Text><View className="live-metrics"><View><Text className="metric-label">家族币</Text><Text className="live-metric-value">{v.incomeFamilyCoin}</Text></View><View><Text className="metric-label">星尘</Text><Text className="live-metric-value">{v.incomeStardust}</Text></View></View>{!d.income.available&&<Text className="small-note">{unavailableText(d.income.reason)}</Text>}</Card>
++  <Card><Heading title="最近正常来源获得物品"/><Text className="small-note">当前授权下全部存档、全部缸的获得记录；不是当前库存。</Text>{v.latestItems.map(x=><View className="live-history-entry" key={x.itemInstanceId}><Text className="row-title">{x.itemId} × {x.quantity===null?'数量未知':x.quantity}</Text><Text className="small-note">{x.itemKind==='avatar_decoration'?'小可装饰':x.itemKind==='tank_component'?'生态缸组件':'物品'} · {itemState(x.state)}</Text></View>)}{!d.latest.available&&<Text className="paragraph muted">{unavailableText(d.latest.reason)}</Text>}{d.latest.available&&<Text className="small-note">获得于 {time(d.latest.occurredAtMs)}</Text>}</Card>
+   <Card><Heading title="对话历史"/><Text className="live-metric-value">{v.conversationCount}</Text><Text className="small-note">已同步的设备对话，历史可能不完整。{d.conversations.available?`最近记录：${time(d.conversations.lastMessageAtMs)}`:unavailableText(d.conversations.reason)}</Text><Button className="link-button" onClick={()=>setShowConversations(x=>!x)}>{showConversations?'收起对话记录':'查看历史对话'}</Button>{showConversations&&<HistoryViewer key={`${publicId}:conversations`} publicId={publicId} kind="conversations" onAccessLost={onAccessLost}/>}</Card>
+  </>;
+ }
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/business-record.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/business-record.ts
+new file mode 100644
+index 00000000..571f14dd
+--- /dev/null
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/business-record.ts
+@@ -0,0 +1,23 @@
++import { ApiError } from './api-error';
++
++export type BusinessItem = {
++ recordId:string;saveId:string;sequence:number;sourceMode:string;reason:string;logicalDay?:string|null;
++ occurredAtMs:number|null;receivedAtMs:number;timeStatus:string;
++ resourceChanges:{resourceId:string;delta:number}[];
++ itemChanges:{operation:string;itemInstanceId:string;itemId?:string;quantity?:number;state:string}[];
++ format?:string;recordKind?:'baseline'|'business_commit';authorizationSource?:string;originVerified?:boolean;
++ baseline?:{wallets:{familyCoin:number|null;stardust:number|null;'M-CARD-001':number|null};items:{itemId:string;quantity:number|null;state:string;itemKind?:string}[]};
++ inventoryStateChanges?:{itemId:string;fromState:string;toState:string;quantity:number|null}[];
++ grants?:{rewardInstanceId:string;sourceKind:string;sourceId:string;logicalDay:string;resolvedRewards:{itemId:string;kind:string;quantity:number}[]}[];
++ inventoryChanges?:{itemId:string;before:{quantity:number;status:string}|null;after:{quantity:number;status:string}|null}[];
++ makeupGrants?:{tankId:string}[];
++ makeupUses?:{tankId:string|null;logicalDay:string;usageDayIndex:number}[];
++};
++
++/** Same read shape is used by dashboard previews and the existing paged records API. */
++export function businessItem(value:unknown):BusinessItem {
++ if(!value||typeof value!=='object'||Array.isArray(value))throw new ApiError(502,{error:'invalid_record'});
++ const r=value as Record<string,unknown>;
++ if(typeof r.recordId!=='string'||typeof r.saveId!=='string'||!Number.isSafeInteger(r.sequence)||!Array.isArray(r.resourceChanges)||!Array.isArray(r.itemChanges))throw new ApiError(502,{error:'invalid_record'});
++ return r as BusinessItem;
++}
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/history-api.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/history-api.ts
+index 07fa3b42..4b73554d 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/history-api.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/history-api.ts
+@@ -1,12 +1,9 @@
+ import {ApiError,apiRequest} from './api';
+ import type {HistoryPage,HistoryQuery} from './live-history';
+ import { observation, type Observation } from './observations';
++import { businessItem, type BusinessItem } from './business-record';
++export type { BusinessItem } from './business-record';
+ export type ConversationItem={id:string;role:'user'|'assistant';text:string;ts:number};
+-export type BusinessItem={recordId:string;saveId:string;sequence:number;sourceMode:string;reason:string;occurredAtMs:number|null;receivedAtMs:number;timeStatus:string;resourceChanges:{resourceId:string;delta:number}[];itemChanges:{operation:string;itemInstanceId:string;itemId?:string;quantity?:number;state:string}[];
+- format?:string;recordKind?:'baseline'|'business_commit';authorizationSource?:string;originVerified?:boolean;
+- baseline?:{wallets:{familyCoin:number|null;stardust:number|null;'M-CARD-001':number|null};items:{itemId:string;quantity:number|null;state:string;itemKind?:string}[]};
+- inventoryStateChanges?:{itemId:string;fromState:string;toState:string;quantity:number|null}[];
+-};
+ const object=(v:unknown):Record<string,any>=>{if(!v||typeof v!=='object'||Array.isArray(v))throw new ApiError(502,{error:'invalid_history'});return v as Record<string,any>;};
+ function params(q:HistoryQuery){const values:Record<string,string>={limit:String(q.limit)};if(q.cursor)values.cursor=q.cursor;if(q.fromDay)values.from_day=q.fromDay;if(q.toDay)values.to_day=q.toDay;if(q.kind)values.kind=q.kind;return Object.entries(values).map(([k,v])=>`${k}=${encodeURIComponent(v)}`).join('&');}
+ async function getPage(publicId:string,kind:string,q:HistoryQuery){const result=object(await apiRequest(`/v1/parent/devices/${encodeURIComponent(publicId)}/${kind}?${params(q)}`));const d=object(result.data);if(result.ok!==true||d.schemaVersion!==1||!Array.isArray(d.items)||typeof d.hasMore!=='boolean'||!(d.nextCursor===null||typeof d.nextCursor==='string')||(d.hasMore&&!d.nextCursor))throw new ApiError(502,{error:'invalid_history'});return d;}
+@@ -15,7 +12,7 @@ export async function getConversationPage(publicId:string,q:HistoryQuery):Promis
+  for(const k of ['messageCount','userMessageCount','assistantMessageCount'])if(!Number.isSafeInteger(d[k])||d[k]<0)throw new ApiError(502,{error:'invalid_history_count'});return {items,nextCursor:d.nextCursor,hasMore:d.hasMore,messageCount:d.messageCount,userMessageCount:d.userMessageCount,assistantMessageCount:d.assistantMessageCount,historyComplete:false};
+ }
+ export async function getBusinessPage(publicId:string,q:HistoryQuery):Promise<HistoryPage<BusinessItem>>{
+- const d=await getPage(publicId,'ark/records',q);const items=d.items.map((v:unknown)=>{const r=object(v);if(typeof r.recordId!=='string'||typeof r.saveId!=='string'||!Number.isSafeInteger(r.sequence)||!Array.isArray(r.resourceChanges)||!Array.isArray(r.itemChanges))throw new ApiError(502,{error:'invalid_record'});return r as BusinessItem;});return {items,nextCursor:d.nextCursor,hasMore:d.hasMore,historyComplete:false};
++ const d=await getPage(publicId,'ark/records',q);return {items:d.items.map(businessItem),nextCursor:d.nextCursor,hasMore:d.hasMore,historyComplete:false};
+ }
+ export async function getObservationPage(publicId:string,q:HistoryQuery):Promise<HistoryPage<Observation>>{
+  const d=await getPage(publicId,'observations',q);return {items:d.items.map(observation),nextCursor:d.nextCursor,hasMore:d.hasMore,historyComplete:false};
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-api.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-api.ts
+index 9ac4b118..1ffa78fe 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-api.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-api.ts
+@@ -55,6 +55,9 @@ export const liveApi: LiveDataApi = {
+     const data = object(result.data);
+     const row = object(data.device);
+     if (typeof row.online !== 'boolean' || !Object.prototype.hasOwnProperty.call(row, 'updatedAtMs')) throw new ApiError(502, { error: 'invalid_response' });
+-    return { online: row.online, updatedAtMs: numberOrNull(row.updatedAtMs), present: typeof row.present === 'boolean' ? row.present : null, brightnessLevel: numberOrNull(row.brightnessLevel), imageDistanceM: numberOrNull(row.imageDistanceM), imageDistanceState: typeof row.imageDistanceState === 'string' ? row.imageDistanceState : null, ...(['usage','ark','records','conversations','historicalUsage','observations'].some(key=>key in data)?{details:dashboardDetails(data)}:{}) };
++    return { online: row.online, updatedAtMs: numberOrNull(row.updatedAtMs), present: typeof row.present === 'boolean' ? row.present : null, brightnessLevel: numberOrNull(row.brightnessLevel),
++      colorMode: ['cool','normal','warm'].includes(row.colorMode as string) ? row.colorMode as 'cool'|'normal'|'warm' : null,
++      ledEnabled: typeof row.ledEnabled==='boolean'?row.ledEnabled:null,focusActive:typeof row.focusActive==='boolean'?row.focusActive:null,
++      imageDistanceM: numberOrNull(row.imageDistanceM), imageDistanceState: typeof row.imageDistanceState === 'string' ? row.imageDistanceState : null, ...(['usage','ark','records','conversations','historicalUsage','observations'].some(key=>key in data)?{details:dashboardDetails(data)}:{}) };
+   },
+ };
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-data.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-data.ts
+index a431b5fc..95560dd5 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-data.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/live-data.ts
+@@ -7,6 +7,9 @@ export type DeviceSnapshot = {
+   updatedAtMs: number | null;
+   present: boolean | null;
+   brightnessLevel: number | null;
++  colorMode?: 'cool' | 'normal' | 'warm' | null;
++  ledEnabled?: boolean | null;
++  focusActive?: boolean | null;
+   imageDistanceM: number | null;
+   imageDistanceState: string | null;
+ };
+@@ -30,6 +33,9 @@ export function snapshotView(snapshot: DeviceSnapshot | null) {
+     availability: !received ? 'no_data' : snapshot!.online ? 'available' : 'stale',
+     onlineText: !received ? '尚无上报' : snapshot!.online ? '近期有上报' : '近期未上报',
+     brightness: received && snapshot!.brightnessLevel !== null ? `${snapshot!.brightnessLevel} 档` : '暂无数据',
++    colorMode: received && snapshot!.colorMode ? {cool:'冷光',normal:'常规',warm:'暖光'}[snapshot!.colorMode] : '暂无数据',
++    lighting: received && typeof snapshot!.ledEnabled === 'boolean' ? snapshot!.ledEnabled ? '已开灯' : '已关灯' : '暂无数据',
++    focus: received && typeof snapshot!.focusActive === 'boolean' ? snapshot!.focusActive ? '计时中' : '未计时' : '暂无数据',
+     presence: !received || snapshot!.present === null ? '暂无数据' : snapshot!.present ? '有人' : '无人',
+     distance: received && snapshot!.imageDistanceState === 'valid' && snapshot!.imageDistanceM !== null ? `${snapshot!.imageDistanceM} 米` : '暂无数据',
+   };
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/real-details.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/real-details.ts
+index 3d2d9a88..1946bcf1 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/real-details.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/src/services/real-details.ts
+@@ -1,4 +1,5 @@
+ import { durationText, observationSummary } from './observations';
++import { businessItem } from './business-record';
+ type Obj = Record<string, unknown>;
+ const obj = (v: unknown): Obj => v && typeof v === 'object' && !Array.isArray(v) ? v as Obj : {};
+ const text = (v: unknown) => typeof v === 'string' ? v : '';
+@@ -9,11 +10,14 @@ export function dashboardDetails(value: unknown) {
+  const data=obj(value),usage=obj(data.usage),ark=obj(data.ark),wallets=obj(ark.wallets),inventory=obj(ark.inventory),records=obj(data.records),income=obj(records.yesterdayIncome),latest=obj(records.latestItems),conversations=obj(data.conversations);
+  const day=(v:unknown)=>{const d=obj(v);return {date:text(d.date),available:d.available===true,focusMinutes:count(d.focusMinutes),totalSeconds:count(d.totalSeconds),observedSeconds:count(d.observedSeconds),estimatedSeconds:count(d.estimatedSeconds),source:text(d.source),updatedAtMs:count(d.updatedAtMs)};};
+  const history=obj(data.historicalUsage);
++ const reported=obj(ark.reportedState),reportedWallets=obj(reported.wallets),reportedInventory=obj(reported.inventory),progress=obj(reported.progress),reward=obj(progress.nextReward),recent=obj(records.recentActivity);
+  const items:AcquiredItem[]=list(latest.items).map(v=>{const i=obj(v);return {itemInstanceId:text(i.itemInstanceId),itemId:text(i.itemId),itemKind:text(i.itemKind),quantity:count(i.quantity),state:text(i.state),activationRecordId:typeof i.activationRecordId==='string'?i.activationRecordId:null};});
+  return {
+   usage:{today:day(usage.today),daily:list(usage.daily).map(day)},
+   historicalUsage:{available:history.available===true,reason:text(history.reason),totalSeconds:count(history.totalSeconds),totalMinutes:count(history.totalMinutes),observedSeconds:count(history.observedSeconds),estimatedSeconds:count(history.estimatedSeconds),fromDay:text(history.fromDay),toDay:text(history.toDay),daily:list(history.daily).map(day),updatedAtMs:count(history.updatedAtMs)},
+   observations:observationSummary(data.observations),
++  reportedState:ark.reportedState&&reported.source==='device.ark.state'?{sourceMode:['normal','gm'].includes(text(reported.sourceMode))?text(reported.sourceMode):'unknown',snapshotId:text(reported.snapshotId),logicalDay:text(reported.logicalDay),capturedAtMs:count(reported.capturedAtMs),receivedAtMs:count(reported.receivedAtMs),familyCoin:count(reportedWallets.familyCoin),stardust:count(reportedWallets.stardust),cards:count(reportedInventory['M-CARD-001']),progress:{timerState:text(progress.timerState),claimableCount:count(progress.claimableCount),nextReward:{status:text(reward.status),kind:text(reward.kind),itemId:text(reward.itemId),stageId:text(reward.stageId),remainingSeconds:count(reward.remainingSeconds)}}}:null,
++  recentActivity:{available:recent.available===true,reason:text(recent.reason),items:recent.available===true?list(recent.items).map(businessItem):[],hasMore:recent.hasMore===true,nextCursor:text(recent.nextCursor)||null,updatedAtMs:count(recent.updatedAtMs)},
+   ark:{available:ark.available===true&&ark.sourceMode==='normal',reason:text(ark.reason),familyCoin:count(wallets.familyCoin),stardust:count(wallets.stardust),cards:count(inventory['M-CARD-001']),capturedAtMs:count(ark.capturedAtMs),receivedAtMs:count(ark.receivedAtMs)},
+   income:{available:income.available===true&&income.sourceMode==='normal',reason:text(income.reason),date:text(income.date),familyCoin:count(income.familyCoin),stardust:count(income.stardust)},
+   latest:{available:latest.available===true&&latest.sourceMode==='normal',reason:text(latest.reason),recordId:text(latest.recordId),saveId:text(latest.saveId),occurredAtMs:count(latest.occurredAtMs),items},
+@@ -22,6 +26,7 @@ export function dashboardDetails(value: unknown) {
+  };
+ }
+ export type DashboardDetails=ReturnType<typeof dashboardDetails>;
++export const sourceModeText=(mode:string)=>mode==='normal'?'正常来源':mode==='gm'?'测试来源（GM）':'来源未核实';
+ const shown=(available:boolean,value:number|null,suffix='')=>available&&value!==null?`${value}${suffix}`:'暂无数据';
+ const usageText=(day:DashboardDetails['usage']['today'])=>day.available&&day.totalSeconds!==null?durationText(day.totalSeconds):shown(day.available,day.focusMinutes,' 分钟');
+ export function detailsView(d:DashboardDetails){return {today:usageText(d.usage.today),daily:d.usage.daily.map(x=>({date:x.date,value:usageText(x)})),historicalUsage:d.historicalUsage.available?durationText(d.historicalUsage.totalSeconds):'暂无数据',familyCoin:shown(d.ark.available,d.ark.familyCoin),stardust:shown(d.ark.available,d.ark.stardust),cards:shown(d.ark.available,d.ark.cards,' 张'),incomeFamilyCoin:shown(d.income.available,d.income.familyCoin),incomeStardust:shown(d.income.available,d.income.stardust),latestItems:d.latest.available?d.latest.items:[],conversationCount:d.conversations.available&&d.conversations.messageCount!==null?`已同步 ${d.conversations.messageCount} 条`:'暂无数据'};}
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/api.test.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/api.test.ts
+index 887f0312..dc15ea5b 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/api.test.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/api.test.ts
+@@ -35,7 +35,7 @@ describe('小可现有后台合同适配', () => {
+       .mockResolvedValueOnce({ statusCode: 200, header: {}, data: { ok: true, data: { device: { online: false, updated_at_ms: 1793260800000, present: false, brightness_level: 0, image_distance_m: null, image_distance_state: null }, today: { focus_minutes: 0 }, week: {} } } } as never);
+     const devices = await liveApi.getDevices();
+     expect(devices).toEqual([{ sn: 'SN-A', publicId: 'dev_a', note: '读写台', status: 'active', brainOpened: true }]);
+-    expect(await liveApi.getSnapshot(devices[0].publicId)).toEqual({ online: false, updatedAtMs: 1793260800000, present: false, brightnessLevel: 0, imageDistanceM: null, imageDistanceState: null });
++    expect(await liveApi.getSnapshot(devices[0].publicId)).toEqual({ online: false, updatedAtMs: 1793260800000, present: false, brightnessLevel: 0, colorMode: null, ledEnabled: null, focusActive: null, imageDistanceM: null, imageDistanceState: null });
+     expect(vi.mocked(Taro.request).mock.calls[1][0].url).toBe('https://test.example/v1/parent/devices/dev_a/dashboard');
+   });
+ 
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/live-data.test.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/live-data.test.ts
+index fe3e1d83..a131f674 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/live-data.test.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/live-data.test.ts
+@@ -20,6 +20,12 @@ function fixture(overrides: Partial<LiveDataApi> = {}) {
+ }
+ 
+ describe('真实设备状态', () => {
++  it('色温直接对应既有字符串枚举，开灯和使用片段false均不当缺测',()=>{
++    expect(snapshotView({...snapshot,colorMode:'normal',ledEnabled:false,focusActive:false})).toMatchObject({colorMode:'常规',lighting:'已关灯',focus:'未计时'});
++    expect(snapshotView({...snapshot,colorMode:'cool'}).colorMode).toBe('冷光');
++    expect(snapshotView({...snapshot,colorMode:'warm'}).colorMode).toBe('暖光');
++    expect(snapshotView({...snapshot,colorMode:null}).colorMode).toBe('暂无数据');
++  });
+   it('零亮度和无人是有效数据，未知视距不显示为0', () => {
+     expect(snapshotView(snapshot)).toMatchObject({ availability: 'available', brightness: '0 档', presence: '无人', distance: '暂无数据', onlineText: '近期有上报' });
+   });
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-api-contract.test.ts b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-api-contract.test.ts
+index 1e314b64..2da9a949 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-api-contract.test.ts
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-api-contract.test.ts
+@@ -6,6 +6,14 @@ vi.mock('@tarojs/taro',()=>({default:{getStorageSync:()=> 'parent-test',request:
+ beforeEach(()=>{vi.mocked(Taro.request).mockReset();process.env.TARO_APP_API_BASE_URL='https://kidshub-ai.hahaxiong.cc';});
+ const response=(data:any)=>({statusCode:200,header:{},data:{ok:true,data}} as never);
+ describe('真实snake_case合同经微信传输层映射',()=>{
++ it('色温和测试来源游戏快照可读，正常资产摘要保持隔离',async()=>{
++  vi.mocked(Taro.request).mockResolvedValue(response({device:{online:true,updated_at_ms:1794898400000,color_mode:'warm',led_enabled:true,focus_active:false},ark:{available:false,reason:'non_normal',reported_state:{source:'device.ark.state',source_mode:'gm',snapshot_id:'s1',logical_day:'2026-11-08',captured_at_ms:1794898399000,received_at_ms:1794898400000,wallets:{family_coin:123,stardust:0},inventory:{'M-CARD-001':2},progress:{timer_state:'paused',claimable_count:1,next_reward:{status:'claimable',kind:'currency',item_id:'C-FAMILY-001',stage_id:'REGULAR-05',remaining_seconds:0}}}},records:{recent_activity:{available:true,items:[{record_id:'r1',save_id:'save',sequence:2,source_mode:'gm',reason:'gm_adjustment',logical_day:'2026-11-08',occurred_at_ms:1794898399000,received_at_ms:1794898400000,time_status:'reported',resource_changes:[],item_changes:[],grants:[{reward_instance_id:'reward1',source_kind:'progress_stage',source_id:'REGULAR-05',logical_day:'2026-11-08',resolved_rewards:[{item_id:'C-FAMILY-001',quantity:5,kind:'currency'}]}]}],has_more:false,next_cursor:null}}}));
++  const d=await liveApi.getSnapshot('dev_c');
++  expect(d).toMatchObject({colorMode:'warm',ledEnabled:true,focusActive:false});
++  expect(d.details?.ark.available).toBe(false);
++  expect(d.details?.reportedState).toMatchObject({sourceMode:'gm',logicalDay:'2026-11-08',familyCoin:123,stardust:0,cards:2,progress:{claimableCount:1,nextReward:{remainingSeconds:0}}});
++  expect(d.details?.recentActivity.items[0]).toMatchObject({recordId:'r1',sourceMode:'gm',logicalDay:'2026-11-08',grants:[{logicalDay:'2026-11-08',resolvedRewards:[{quantity:5}]}]});
++ });
+  it('历史奖励/库存/使用时长snake合同可读，不把unknown旧奖励混入当前资产',async()=>{
+   const item={event_id:'old-reward',event_name:'g1.reward_granted',kind:'rewards',occurred_at_ms:1793933632128,received_at_ms:1794830000000,time_status:'reported',source_mode:'unknown',rewards:[{item_id:'E01-DEC-001',quantity:1,kind:'decoration',tank_id:null}]};
+   vi.mocked(Taro.request).mockResolvedValueOnce(response({device:{online:false,updated_at_ms:null},historical_usage:{available:true,total_seconds:902,observed_seconds:0,estimated_seconds:902,from_day:'2026-11-06',to_day:'2026-11-06',daily:[]},observations:{available:true,counts:{rewards:11,inventory:21,makeup_cards:5,progress:3,wallet:0},coverage:{complete:false,first_occurred_at_ms:1793933632128},latest:{rewards:item,makeup_cards:{...item,event_id:'card',kind:'makeup_cards',rewards:undefined,inventory:{item_id:'M-CARD-001',before:1,after:0,delta:-1}}}}}));
+diff --git a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-render.test.tsx b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-render.test.tsx
+index 9aeeab31..e635cb20 100644
+--- a/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-render.test.tsx
++++ b/2-Projects/P003GameDemo20260513/apps/miniapp/tests/real-render.test.tsx
+@@ -1,7 +1,7 @@
+ import {describe,expect,it,vi} from 'vitest';
+ import React from 'react';
+ import {renderToStaticMarkup} from 'react-dom/server';
+-import RealDetails,{BusinessRow,ConversationRow,ObservationRow} from '../src/pages/index/real-details';
++import RealDetails,{BusinessRow,ConversationRow,ObservationRow,ReportedStateCard} from '../src/pages/index/real-details';
+ import {observation} from '../src/services/observations';
+ import type {BusinessItem} from '../src/services/history-api';
+ import {dashboardDetails} from '../src/services/real-details';
+@@ -9,6 +9,16 @@ vi.mock('@tarojs/taro',()=>({default:{}}));
+ vi.mock('@tarojs/components',async()=>{const R=await import('react');const tag=(name:string)=>(p:any)=>R.createElement(name,{className:p.className},p.children);return {View:tag('div'),Text:tag('span'),Button:tag('button'),Picker:tag('div')};});
+ vi.mock('../src/pages/index/components',async()=>{const R=await import('react');return {Card:(p:any)=>R.createElement('section',{},p.children),Heading:(p:any)=>R.createElement('h2',{},p.title)};});
+ describe('真实面板可见内容',()=>{
++ it('GM游戏状态保留真实0和领取进度，并明确不计入正常收益',()=>{
++  const d=dashboardDetails({ark:{available:false,reason:'non_normal',reportedState:{source:'device.ark.state',sourceMode:'gm',logicalDay:'2026-11-08',wallets:{familyCoin:123,stardust:0},inventory:{'M-CARD-001':2},progress:{timerState:'paused',claimableCount:1,nextReward:{status:'claimable',stageId:'REGULAR-05',remainingSeconds:0}},capturedAtMs:1794898399000,receivedAtMs:1794898400000}}});
++  const html=renderToStaticMarkup(<ReportedStateCard state={d.reportedState!}/>);
++  expect(html).toContain('测试来源（GM）');expect(html).toContain('不计入正常收益');expect(html).toContain('游戏日 2026-11-08');expect(html).toContain('123');expect(html).toContain('2 张');expect(html).toContain('可领取 · REGULAR-05');expect(html).toContain('上报时距下一奖励 0 秒');expect(html).toContain('已暂停');
++ });
++ it('实时领取的奖励和库存直接可见，日期与夜间观测分开',()=>{
++  const item={recordId:'r-new',saveId:'save',sequence:2,sourceMode:'gm',reason:'gm_adjustment',logicalDay:'2026-11-08',occurredAtMs:1794898399000,receivedAtMs:1794898400000,timeStatus:'reported',resourceChanges:[{resourceId:'stardust',delta:3}],itemChanges:[],format:'p003-ark-records-r1',recordKind:'business_commit',grants:[{rewardInstanceId:'g1',sourceKind:'daily_gift',sourceId:'daily-20261108',logicalDay:'2026-11-08',resolvedRewards:[{itemId:'E01-DEC-001',kind:'decoration',quantity:1}]}],inventoryChanges:[{itemId:'E01-DEC-001',before:null,after:{quantity:1,status:'pending_activation'}}]};
++  const html=renderToStaticMarkup(<RealDetails publicId="dev_c" onAccessLost={()=>{}} details={dashboardDetails({records:{recentActivity:{available:true,items:[item],hasMore:false,nextCursor:null}}})}/>);
++  expect(html).toContain('实时业务记录');expect(html).toContain('夜间同步的历史观测');expect(html).toContain('测试来源');expect(html).toContain('游戏日 2026-11-08');expect(html).toContain('星尘：+3');expect(html).toContain('E01-DEC-001 × 1');expect(html).toContain('库存 · E01-DEC-001：0 → 1');expect(html).toContain('待激活');
++ });
+  it('历史道具零库存、进度秒数、异常时钟及来源说明真实可见',()=>{
+   const inventory=renderToStaticMarkup(<ObservationRow item={observation({eventId:'i',kind:'inventory',timeStatus:'clock_suspect',receivedAtMs:1794830000000,inventory:{itemId:'<道具>',before:1,after:0,delta:-1,status:null}})}/>);
+   expect(inventory).toContain('&lt;道具&gt;：1 → 0');expect(inventory).toContain('设备时间待确认');expect(inventory).toContain('来源模式未确认');

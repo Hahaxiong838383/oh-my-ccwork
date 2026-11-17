@@ -1,0 +1,40 @@
+{
+  "files": [
+    {
+      "target": "/opt/p003/server/src/ark/dashboard.ts",
+      "candidate": "candidate/src/ark/dashboard.ts",
+      "before_sha256": "eb2d3a3b2848cc6fe28e78353c9b3a999960fdf4392dc2f1d2c934d71c072c5d",
+      "after_sha256": "5fa0559812af45ec2b5629acc9e54dd19e1d4c2e5035b77b542837205fcf9f9b"
+    },
+    {
+      "target": "/opt/p003/server/src/ark/records-contract.ts",
+      "candidate": "candidate/src/ark/records-contract.ts",
+      "before_sha256": "c0669a969d5ff05d588c84aecbf6f2d8efb8de650be064e8c0f6bdf06c0e5685",
+      "after_sha256": "595075f3a78ea60d48ed71511528e6abb8ce9e1b104073bf1102829681c87910"
+    },
+    {
+      "target": "/opt/p003/server/src/ark/records-legacy.ts",
+      "candidate": "candidate/src/ark/records-legacy.ts",
+      "before_sha256": "7808be237a177c19f75ec7c3e27aab336e14af6421550360c17392cfe3934fa0",
+      "after_sha256": "cdf0bda728e1f75941d4787d3357db7a7f3097723cd5dbcbbe8885e4f9459825"
+    },
+    {
+      "target": "/opt/p003/server/src/ark/records-store.ts",
+      "candidate": "candidate/src/ark/records-store.ts",
+      "before_sha256": "20735e483bd01c0263a0d268dd85a2f72a552669319fa525acb1f53d133391f9",
+      "after_sha256": "1ee95fc9dc9b9e16a622f3b96053857857ce648bddce8f555b339c21d0bf4311"
+    },
+    {
+      "target": "/opt/p003/server/src/miniapp-dashboard.ts",
+      "candidate": "candidate/src/miniapp-dashboard.ts",
+      "before_sha256": "367653c43b3eefe55fe3f95d05c1d19f057f2bdbbe7576d94b61cf31a9196759",
+      "after_sha256": "aae33f44eab5640a8861ae9888e1d8b4be1537585d72de6238c3c4e3b1abba32"
+    },
+    {
+      "target": "/opt/p003/web/dist/admin/index.html",
+      "candidate": "candidate/admin/index.html",
+      "before_sha256": "d47a2b41f19e5b87ac129ca5021f60985264dca7996f3b36ed2b7d58394205ab",
+      "after_sha256": "890e4064e911ce745b342011cb0df063b0df6485984b29dd0cd25577635ce718"
+    }
+  ]
+}

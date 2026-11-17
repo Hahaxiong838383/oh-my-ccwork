@@ -1,0 +1,38 @@
+{
+  "started_ms": 1794901142612,
+  "success": true,
+  "manifest_sha256": "0af671454699ab4a15493b75d31b02d2f394a8a26e9588a1dd0a622938663c86",
+  "before": {
+    "p003-voice": {
+      "pid": 2339448,
+      "status": "online",
+      "restarts": 12
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "files": 6,
+  "database_restore": false,
+  "real_unbind_performed": false,
+  "after": {
+    "p003-voice": {
+      "pid": 2341004,
+      "status": "online",
+      "restarts": 13
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "other_processes_unchanged": true,
+  "bindings_unchanged": true,
+  "environment_changes": [],
+  "database_changes": [],
+  "upload_contract_changes": [],
+  "finished_ms": 1794901146510
+}

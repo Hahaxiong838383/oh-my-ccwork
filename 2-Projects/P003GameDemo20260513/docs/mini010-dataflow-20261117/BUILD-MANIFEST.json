@@ -1,0 +1,142 @@
+{
+  "h5": {
+    "files": 9,
+    "manifest": [
+      {
+        "path": "css/index.31643a5f.css",
+        "size": 79709,
+        "sha256": "31643a5ff27d3cbe6b4560debc544143f9b73c9b9ef8a7d6032fe92dbc9a89bd"
+      },
+      {
+        "path": "css/vendors.bdf6fb55.css",
+        "size": 8339,
+        "sha256": "bdf6fb552b5a1440084a12868f47f7b7358bb7c4e7cb911dbd3e7eb76e6e2b9d"
+      },
+      {
+        "path": "index.html",
+        "size": 941,
+        "sha256": "db5d29b63e67e7b2850faa7956a9b6778febe5e9649d34e3b20b7d1a7e22cb5e"
+      },
+      {
+        "path": "js/app.6551f259.js",
+        "size": 2046,
+        "sha256": "6d7d276f8ee8eee0f3a38c4520bf54ef04f2d7109c59189c46e4fb1053620295"
+      },
+      {
+        "path": "js/common.e4328bd1.js",
+        "size": 1297927,
+        "sha256": "f45e14a17ce49da6425554dfb14dd10aef28fbc1e1437c369b2ad7d6441998c1"
+      },
+      {
+        "path": "js/index.ae265fba.js",
+        "size": 41103,
+        "sha256": "b5d9c937581491369450db9e861add05ce22e9008d0ec0c1bc4ae3f9c4f9810d"
+      },
+      {
+        "path": "js/vendors.8cb323d1.js",
+        "size": 311929,
+        "sha256": "79d85aa08506899c9c03d8e758cd421ea901a4c4c7b15f17c323bf8740c5585b"
+      },
+      {
+        "path": "static/images/deviceCard.png",
+        "size": 7000,
+        "sha256": "c863ef9f7e5e0bb8561d225eafcd16ed8cada6ccfe7721cc20d5a6abf16996c6"
+      },
+      {
+        "path": "static/images/homeBackground.webp",
+        "size": 116632,
+        "sha256": "2a65be073b2da0742fe4ee1320ef1bf263d6c1f3ebb254185c522a3792204e64"
+      }
+    ]
+  },
+  "weapp": {
+    "files": 17,
+    "manifest": [
+      {
+        "path": "app-origin.wxss",
+        "size": 241938,
+        "sha256": "45a9ab76fb79c9e187b7d4ecd0f06e6bc940ac8571cd527fa695a821a3a939cd"
+      },
+      {
+        "path": "app.js",
+        "size": 630,
+        "sha256": "0b861acda64fc79985a79c50f0b8d28fbe46a685852d05c32726cb8669c8f0e1"
+      },
+      {
+        "path": "app.json",
+        "size": 387,
+        "sha256": "596c8a9f26a89d4aa1c757f63fad1156dc819040312754dd57a9d3e0feb6cb9c"
+      },
+      {
+        "path": "app.wxss",
+        "size": 27,
+        "sha256": "f5c248cb1c700b6cfc2648b2ee399be39618335bbc4e03b2ad2f8de548b0e456"
+      },
+      {
+        "path": "babelHelpers.js",
+        "size": 631,
+        "sha256": "fbfe8f87d5c015e645ffda5082062dbe5f08422f3b2ad0b4bbad0bff7612f788"
+      },
+      {
+        "path": "base.wxml",
+        "size": 58649,
+        "sha256": "20c304037d00c6b075419054b73f832ed2399018cad05aaeea9a9e2e06eafbdf"
+      },
+      {
+        "path": "common.js",
+        "size": 1298646,
+        "sha256": "f0bead7eb2190a8ddbc2594fd5ea92f7f752b7558defb70baf31236ca419c100"
+      },
+      {
+        "path": "comp.js",
+        "size": 118,
+        "sha256": "59802f674d98fb41daea3492b28c4df63bec5426070ff37b2fbee1c83b9687fb"
+      },
+      {
+        "path": "comp.json",
+        "size": 108,
+        "sha256": "af05838ce72c4d583b4078c931531d76e80a7bcc31fb57eb46a9baba6cecadd6"
+      },
+      {
+        "path": "comp.wxml",
+        "size": 140,
+        "sha256": "904495b6e07f81d74f23d713c7f42a7450189f56879e329e5353e18d08201165"
+      },
+      {
+        "path": "pages/index/index.js",
+        "size": 49117,
+        "sha256": "6001a72f2cca89f94d346d694cc4cc8462dd4005f6be742424d8e1d6cf32922b"
+      },
+      {
+        "path": "pages/index/index.json",
+        "size": 106,
+        "sha256": "4b183b7a21532a847940bc48498458eb476e312a0c79e2b4f00c5f061c3e669c"
+      },
+      {
+        "path": "pages/index/index.wxml",
+        "size": 80,
+        "sha256": "38b0088b8c33e0f5dd9b2a934df461c91ad48cc818bb5dce849a336fae6e7ff6"
+      },
+      {
+        "path": "project.config.json",
+        "size": 921,
+        "sha256": "b07ef8052968032dc5fa7409c472e1eacab91ab72413f6b3b068a24a2c9f1a63"
+      },
+      {
+        "path": "taro.js",
+        "size": 212334,
+        "sha256": "9a7a91df19dafc818f20b28db67e2cea8d747c0597f49f654c413f3fa92e7f24"
+      },
+      {
+        "path": "utils.wxs",
+        "size": 997,
+        "sha256": "e4ebe8c13a8ed5d58ae32d378f1f1947d51d796a620987d43bfc438631372728"
+      },
+      {
+        "path": "vendors.js",
+        "size": 14,
+        "sha256": "77f5eec38c5ef075e11892244ccf9e249d82937e07401398df98319568775a17"
+      }
+    ]
+  }
+}

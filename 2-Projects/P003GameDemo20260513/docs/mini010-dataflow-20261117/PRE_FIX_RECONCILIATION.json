@@ -1,0 +1,775 @@
+{
+  "evidence_kind": "pre_fix_read_only_production_reconciliation",
+  "source_sha256": {
+    "BEFORE.json": "acb75e2af5694f2efda76e8a88ceb2e2a4bdc3f1402ae637511c130944aa702f",
+    "P003_MINI010_LIGHT_REWARDS_SERVER_RECEIPT_20261117.zip": "b985e84668d36a8cf50fc1beca181db9964783e8749e09de1cb3eb8c88a496e1",
+    "P003_MINI010_LIGHT_REWARDS_SERVER_RECEIPT_20261117.md": "8e833b9e47dffe176e9639b298cef777d9ea6d11516203a64549da97c5a342e6",
+    "P003_mini010_小程序请求服务端排查回执_20261117.md": "109068616ecff5c8be23ea2c255f62d14e8bc35b45dc1c5710b6c394fd5ec714"
+  },
+  "read": {
+    "parent_A_confirmed": true,
+    "original_binding_unchanged": true,
+    "auth_mode": "server_signed_short_lived_session_existing_parent_role",
+    "request_method": "GET",
+    "endpoint": "https://kidshub-ai.hahaxiong.cc/v1/parent/devices/dev_50b5415662259045/dashboard?timezone=Asia/Shanghai",
+    "http_status": 200,
+    "read_started_at_ms": 1794900222078,
+    "read_at_ms": 1794900222336,
+    "read_at_beijing": "2026-11-17T15:23:42.336+08:00",
+    "business_writes": 0
+  },
+  "telemetry_snapshots": [
+    {
+      "snapshot_id": "snap_6b65f515-d694-4288-85ee-03a0f3b2ef46",
+      "ingest_trace_id": "tel_784a706289f341b1_837",
+      "captured_at_ms": 1794898191484,
+      "captured_at_beijing": "2026-11-17T14:49:51.484+08:00",
+      "server_received_ms": 1794898194392,
+      "server_received_beijing": "2026-11-17T14:49:54.392+08:00",
+      "state": {
+        "color_mode": "cool",
+        "brightness_level": 3,
+        "led_enabled": true,
+        "focus_active": false
+      }
+    },
+    {
+      "snapshot_id": "snap_1dad608b-344e-4476-b8de-662edae33534",
+      "ingest_trace_id": "tel_784a706289f341b1_838",
+      "captured_at_ms": 1794898213655,
+      "captured_at_beijing": "2026-11-17T14:50:13.655+08:00",
+      "server_received_ms": 1794898224474,
+      "server_received_beijing": "2026-11-17T14:50:24.474+08:00",
+      "state": {
+        "color_mode": "warm",
+        "brightness_level": 3,
+        "led_enabled": true,
+        "focus_active": false
+      }
+    },
+    {
+      "snapshot_id": "snap_367d5c36-5cde-4682-9d26-acf7dfd930bb",
+      "ingest_trace_id": "tel_784a706289f341b1_840",
+      "captured_at_ms": 1794898273529,
+      "captured_at_beijing": "2026-11-17T14:51:13.529+08:00",
+      "server_received_ms": 1794898284651,
+      "server_received_beijing": "2026-11-17T14:51:24.651+08:00",
+      "state": {
+        "color_mode": "normal",
+        "brightness_level": 3,
+        "led_enabled": true,
+        "focus_active": false
+      }
+    }
+  ],
+  "legacy_record_count": 13,
+  "legacy_source_counts": {
+    "normal": 0,
+    "gm": 5,
+    "unknown": 8
+  },
+  "legacy_records": [
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:1",
+      "sequence": 1,
+      "body_hash": "a9cdac87e54595f1226445a13752aec4af8163f0449d4a17f51973ddb249ccfd",
+      "received_at_ms": 1794883562443,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "baseline",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794883557030,
+      "occurred_at_beijing": "2026-11-17T10:45:57.030+08:00",
+      "received_at_beijing": "2026-11-17T10:46:02.443+08:00",
+      "baseline": {
+        "wallet": {},
+        "inventory": [
+          {
+            "item_id": "E01-DEC-001",
+            "quantity": 1,
+            "status": "pending_activation"
+          },
+          {
+            "item_id": "E01-DEC-002",
+            "quantity": 1,
+            "status": "pending_activation"
+          },
+          {
+            "item_id": "E01-DEC-003",
+            "quantity": 1,
+            "status": "pending_activation"
+          },
+          {
+            "item_id": "E01-DEC-004",
+            "quantity": 1,
+            "status": "pending_activation"
+          },
+          {
+            "item_id": "E01-DEC-005",
+            "quantity": 1,
+            "status": "pending_activation"
+          },
+          {
+            "item_id": "K-ACC-001",
+            "quantity": 1,
+            "status": "active"
+          },
+          {
+            "item_id": "M-CARD-001",
+            "quantity": 1,
+            "status": "active"
+          }
+        ],
+        "history_complete_before_baseline": false
+      }
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:2",
+      "sequence": 2,
+      "body_hash": "4d61cad1e88be2fee8021e949a3db9640f735235aa6a490029536a6d57eb5ce6",
+      "received_at_ms": 1794885217585,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794885210265,
+      "occurred_at_beijing": "2026-11-17T11:13:30.265+08:00",
+      "received_at_beijing": "2026-11-17T11:13:37.585+08:00",
+      "wallet_changes": [],
+      "inventory_changes": [
+        {
+          "item_id": "K-ACC-002",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "active"
+          }
+        }
+      ],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": [],
+      "grant_ids": [
+        "progress:2026-11-12:REGULAR-02"
+      ],
+      "grant_logical_days": [
+        "2026-11-12"
+      ]
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:3",
+      "sequence": 3,
+      "body_hash": "f055115fa80ea643fa71a3809adc8505d3aee55bb21d8cbbf876184858cabe63",
+      "received_at_ms": 1794885217588,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794885210834,
+      "occurred_at_beijing": "2026-11-17T11:13:30.834+08:00",
+      "received_at_beijing": "2026-11-17T11:13:37.588+08:00",
+      "wallet_changes": [
+        {
+          "after": 100,
+          "before": 0,
+          "delta": 100,
+          "resource_id": "C-FAMILY-001"
+        }
+      ],
+      "inventory_changes": [],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": [],
+      "grant_ids": [
+        "progress:2026-11-12:REGULAR-03"
+      ],
+      "grant_logical_days": [
+        "2026-11-12"
+      ]
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:4",
+      "sequence": 4,
+      "body_hash": "71b79394dce554de3de5c6c028f68dba2e7957639a27a5b5deb9866df6353d4a",
+      "received_at_ms": 1794885217592,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794885211384,
+      "occurred_at_beijing": "2026-11-17T11:13:31.384+08:00",
+      "received_at_beijing": "2026-11-17T11:13:37.592+08:00",
+      "wallet_changes": [
+        {
+          "after": 200,
+          "before": 100,
+          "delta": 100,
+          "resource_id": "C-FAMILY-001"
+        }
+      ],
+      "inventory_changes": [],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": [],
+      "grant_ids": [
+        "progress:2026-11-12:REGULAR-04"
+      ],
+      "grant_logical_days": [
+        "2026-11-12"
+      ]
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:5",
+      "sequence": 5,
+      "body_hash": "35d15eff0ff6b7b27a116c0e7668d2e3d0e65ad01ed992fe6a8d90c8c9784758",
+      "received_at_ms": 1794895914705,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794894947322,
+      "occurred_at_beijing": "2026-11-17T13:55:47.322+08:00",
+      "received_at_beijing": "2026-11-17T14:11:54.705+08:00",
+      "wallet_changes": [],
+      "inventory_changes": [
+        {
+          "item_id": "E01-DEC-006",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "pending_activation"
+          }
+        }
+      ],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": [],
+      "grant_ids": [
+        "progress:2026-11-12:REGULAR-05"
+      ],
+      "grant_logical_days": [
+        "2026-11-12"
+      ]
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:6",
+      "sequence": 6,
+      "body_hash": "ef216fa07063e87ff5c3497ea01e6ed5cca0f81bbeca6eecbc4a85709f460db3",
+      "received_at_ms": 1794896606680,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794896602437,
+      "occurred_at_beijing": "2026-11-17T14:23:22.437+08:00",
+      "received_at_beijing": "2026-11-17T14:23:26.680+08:00",
+      "wallet_changes": [],
+      "inventory_changes": [
+        {
+          "item_id": "M-CARD-001",
+          "before": {
+            "quantity": 1,
+            "status": "active"
+          },
+          "after": {
+            "quantity": 0,
+            "status": "active"
+          }
+        }
+      ],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": [
+        {
+          "logical_day": "2026-11-07",
+          "tank_id": "TANK-001",
+          "usage_day_index": 0
+        }
+      ],
+      "grant_ids": [],
+      "grant_logical_days": []
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:7",
+      "sequence": 7,
+      "body_hash": "465a4cd9e3f2b0086c1ed0a6892a19951fe7c88b3b4b6263e2ab66dac89e19e4",
+      "received_at_ms": 1794896606688,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794896602689,
+      "occurred_at_beijing": "2026-11-17T14:23:22.689+08:00",
+      "received_at_beijing": "2026-11-17T14:23:26.688+08:00",
+      "wallet_changes": [
+        {
+          "after": 400,
+          "before": 200,
+          "delta": 200,
+          "resource_id": "C-FAMILY-001"
+        }
+      ],
+      "inventory_changes": [
+        {
+          "item_id": "E01-DEC-007",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "pending_activation"
+          }
+        },
+        {
+          "item_id": "E01-DEC-008",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "pending_activation"
+          }
+        },
+        {
+          "item_id": "K-ACC-003",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "active"
+          }
+        }
+      ],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": [],
+      "grant_ids": [
+        "gift:daily:2026-11-07",
+        "progress:2026-11-07:REGULAR-02",
+        "progress:2026-11-07:REGULAR-03",
+        "progress:2026-11-07:REGULAR-04",
+        "progress:2026-11-07:REGULAR-05"
+      ],
+      "grant_logical_days": [
+        "2026-11-07"
+      ]
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:8",
+      "sequence": 8,
+      "body_hash": "f55c9e1192fc976403dea4c118c97aff34947c2babc0f0b50df102bc5791d287",
+      "received_at_ms": 1794898326561,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "unknown",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794898320848,
+      "occurred_at_beijing": "2026-11-17T14:52:00.848+08:00",
+      "received_at_beijing": "2026-11-17T14:52:06.561+08:00",
+      "grants": [
+        {
+          "reward_instance_id": "gift:daily:2026-11-08",
+          "source_kind": "daily_gift",
+          "source_id": "GIFT-TANK-001-DAY-03",
+          "logical_day": "2026-11-08",
+          "resolved_rewards": [
+            {
+              "item_id": "E01-DEC-009",
+              "kind": "ecotank_part",
+              "layer": "decoration",
+              "quantity": 1,
+              "tank_id": "TANK-001"
+            }
+          ],
+          "granted_at_ms": 1794898320740
+        }
+      ],
+      "wallet_changes": [],
+      "inventory_changes": [
+        {
+          "item_id": "E01-DEC-009",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "pending_activation"
+          }
+        }
+      ],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": []
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:9",
+      "sequence": 9,
+      "body_hash": "320567832069e09cede2088ef30fe99b0e4310824f972d4eb93e61ee04075882",
+      "received_at_ms": 1794898356655,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "gm",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794898342360,
+      "occurred_at_beijing": "2026-11-17T14:52:22.360+08:00",
+      "received_at_beijing": "2026-11-17T14:52:36.655+08:00",
+      "grants": [],
+      "wallet_changes": [],
+      "inventory_changes": [],
+      "previous_source_mode": "unknown",
+      "makeup_grants": [],
+      "makeup_uses": []
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:10",
+      "sequence": 10,
+      "body_hash": "bcabe32f847e5558f72dd275645ae451ae334c57b60e81b916c719ec7a5c2a53",
+      "received_at_ms": 1794898386755,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "gm",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794898359941,
+      "occurred_at_beijing": "2026-11-17T14:52:39.941+08:00",
+      "received_at_beijing": "2026-11-17T14:53:06.755+08:00",
+      "grants": [
+        {
+          "reward_instance_id": "progress:2026-11-08:REGULAR-02",
+          "source_kind": "progress_stage",
+          "source_id": "REGULAR-02",
+          "logical_day": "2026-11-08",
+          "resolved_rewards": [
+            {
+              "item_id": "M-CARD-001",
+              "kind": "makeup_card",
+              "layer": null,
+              "quantity": 1,
+              "tank_id": null
+            }
+          ],
+          "granted_at_ms": 1794898359812
+        }
+      ],
+      "wallet_changes": [],
+      "inventory_changes": [
+        {
+          "item_id": "M-CARD-001",
+          "before": {
+            "quantity": 0,
+            "status": "active"
+          },
+          "after": {
+            "quantity": 1,
+            "status": "active"
+          }
+        }
+      ],
+      "previous_source_mode": "gm",
+      "makeup_grants": [],
+      "makeup_uses": []
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:11",
+      "sequence": 11,
+      "body_hash": "7d64ae141d49b83ee78620e39a6c526880971494f03ac41b4c890b38a4c7fbc9",
+      "received_at_ms": 1794898386760,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "gm",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794898376956,
+      "occurred_at_beijing": "2026-11-17T14:52:56.956+08:00",
+      "received_at_beijing": "2026-11-17T14:53:06.760+08:00",
+      "grants": [
+        {
+          "reward_instance_id": "progress:2026-11-08:REGULAR-03",
+          "source_kind": "progress_stage",
+          "source_id": "REGULAR-03",
+          "logical_day": "2026-11-08",
+          "resolved_rewards": [
+            {
+              "item_id": "C-FAMILY-001",
+              "kind": "currency",
+              "layer": null,
+              "quantity": 100,
+              "tank_id": null
+            }
+          ],
+          "granted_at_ms": 1794898376880
+        }
+      ],
+      "wallet_changes": [
+        {
+          "after": 500,
+          "before": 400,
+          "delta": 100,
+          "resource_id": "C-FAMILY-001"
+        }
+      ],
+      "inventory_changes": [],
+      "previous_source_mode": "gm",
+      "makeup_grants": [],
+      "makeup_uses": []
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:12",
+      "sequence": 12,
+      "body_hash": "4d461b5c50a0f7a4af7a34d546039542ed27402db492f1021e6058b2a9880172",
+      "received_at_ms": 1794898386768,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "gm",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794898380773,
+      "occurred_at_beijing": "2026-11-17T14:53:00.773+08:00",
+      "received_at_beijing": "2026-11-17T14:53:06.768+08:00",
+      "grants": [
+        {
+          "reward_instance_id": "progress:2026-11-08:REGULAR-04",
+          "source_kind": "progress_stage",
+          "source_id": "REGULAR-04",
+          "logical_day": "2026-11-08",
+          "resolved_rewards": [
+            {
+              "item_id": "C-FAMILY-001",
+              "kind": "currency",
+              "layer": null,
+              "quantity": 100,
+              "tank_id": null
+            }
+          ],
+          "granted_at_ms": 1794898380703
+        }
+      ],
+      "wallet_changes": [
+        {
+          "after": 600,
+          "before": 500,
+          "delta": 100,
+          "resource_id": "C-FAMILY-001"
+        }
+      ],
+      "inventory_changes": [],
+      "previous_source_mode": "gm",
+      "makeup_grants": [],
+      "makeup_uses": []
+    },
+    {
+      "record_id": "save-8da60f9a985d9f16addb154537a14186:13",
+      "sequence": 13,
+      "body_hash": "3be7bffbf77c1e9a0a82adfe82848e5af9c3d68fab4c9df6be158398f79cf8ad",
+      "received_at_ms": 1794898416885,
+      "time_status": "reported",
+      "occurred_day": "2026-11-17",
+      "coverage_from_ms": 1794883557030,
+      "dropped_records": 0,
+      "record_kind": "business_commit",
+      "source_mode": "gm",
+      "logical_day": "2026-11-12",
+      "occurred_at_ms": 1794898413314,
+      "occurred_at_beijing": "2026-11-17T14:53:33.314+08:00",
+      "received_at_beijing": "2026-11-17T14:53:36.885+08:00",
+      "grants": [
+        {
+          "reward_instance_id": "progress:2026-11-08:REGULAR-05",
+          "source_kind": "progress_stage",
+          "source_id": "REGULAR-05",
+          "logical_day": "2026-11-08",
+          "resolved_rewards": [
+            {
+              "item_id": "E01-DEC-010",
+              "kind": "ecotank_part",
+              "layer": "decoration",
+              "quantity": 1,
+              "tank_id": "TANK-001"
+            }
+          ],
+          "granted_at_ms": 1794898413200
+        }
+      ],
+      "wallet_changes": [],
+      "inventory_changes": [
+        {
+          "item_id": "E01-DEC-010",
+          "before": null,
+          "after": {
+            "quantity": 1,
+            "status": "pending_activation"
+          }
+        }
+      ],
+      "previous_source_mode": "gm",
+      "makeup_grants": [],
+      "makeup_uses": []
+    }
+  ],
+  "ack_classification": {
+    "client_settled_count": 6,
+    "client_rejected_count": 0,
+    "server_batch_or_request_id_persisted": false,
+    "accepted_versus_duplicated_recoverable": false,
+    "record_mapping_basis": "business_contents, sequence, receive windows and client receipt; not a persisted batch_id/RID join"
+  },
+  "ark_current": {
+    "snapshot_id": "ark-4904df882ef744db-1416",
+    "source_mode": "gm",
+    "logical_day": "2026-11-12",
+    "captured_at_ms": 1794900202836,
+    "wallets": {
+      "family_coin": 600,
+      "stardust": 0
+    },
+    "inventory": {
+      "M-CARD-001": 1
+    },
+    "progress": {
+      "claimable_count": 0,
+      "next_reward": {
+        "item_id": null,
+        "kind": "unknown",
+        "remaining_seconds": null,
+        "stage_id": null,
+        "status": "day_complete"
+      },
+      "timer_state": "paused"
+    },
+    "received_at_ms": 1794900213819
+  },
+  "dashboard_before": {
+    "device": {
+      "updated_at_ms": 1794900218607,
+      "online": true,
+      "lid_open": true,
+      "present": false,
+      "brightness_level": 3,
+      "color_mode": "normal",
+      "image_distance_m": 2,
+      "image_distance_state": "valid"
+    },
+    "ark": {
+      "available": false,
+      "reason": "non_normal",
+      "source_mode": null,
+      "snapshot_id": null,
+      "captured_at_ms": null,
+      "received_at_ms": null,
+      "wallets": {
+        "family_coin": null,
+        "stardust": null
+      },
+      "inventory": {
+        "M-CARD-001": null
+      }
+    },
+    "records": {
+      "schema_version": 1,
+      "coverage": {
+        "kind": "received_records",
+        "complete": false,
+        "reason": "partial_history",
+        "min_occurred_at_ms": 1794883557030,
+        "max_occurred_at_ms": 1794898413314,
+        "first_received_at_ms": 1794883562443,
+        "last_received_at_ms": 1794898416885,
+        "coverage_from_ms": 1794883557030,
+        "dropped_records": 0
+      },
+      "updated_at_ms": 1794898416885,
+      "yesterday_income": {
+        "available": false,
+        "reason": "no_records",
+        "date": "2026-11-16",
+        "timezone": "Asia/Shanghai",
+        "source_mode": null,
+        "family_coin": null,
+        "stardust": null,
+        "occurred_from_ms": null,
+        "occurred_to_ms": null,
+        "received_at_ms": null
+      },
+      "latest_items": {
+        "available": false,
+        "reason": "non_normal",
+        "source_mode": null,
+        "record_id": null,
+        "save_id": null,
+        "occurred_at_ms": null,
+        "received_at_ms": null,
+        "items": []
+      }
+    },
+    "usage": {
+      "source": "merged_observations",
+      "timezone": "Asia/Shanghai",
+      "today": {
+        "date": "2026-11-17",
+        "available": true,
+        "focus_minutes": 128,
+        "total_seconds": 7663,
+        "observed_seconds": 6933,
+        "estimated_seconds": 730,
+        "source": "telemetry.focus_segment+telemetry.presence_transition+telemetry.posture_round",
+        "updated_at_ms": 1794900218607,
+        "coverage": {
+          "complete": false,
+          "reason": "partial_history",
+          "presence_window_seconds": 300,
+          "posture_window_seconds": 60,
+          "reward_counter_policy": "calendar_day_high_water"
+        }
+      }
+    },
+    "observations": {
+      "available": true,
+      "reason": "partial_history",
+      "source": "analytics_event",
+      "origin_verified": false,
+      "mode_status": "unverified",
+      "coverage": {
+        "complete": false,
+        "reason": "retained_observations",
+        "raw_retention_days": 14,
+        "first_occurred_at_ms": 1793931495169,
+        "last_occurred_at_ms": 1794811636513,
+        "first_received_at_ms": 1794749242679,
+        "last_received_at_ms": 1794841246975
+      },
+      "counts": {
+        "rewards": 11,
+        "inventory": 21,
+        "makeup_cards": 5,
+        "progress": 3,
+        "wallet": 0
+      }
+    }
+  }
+}
