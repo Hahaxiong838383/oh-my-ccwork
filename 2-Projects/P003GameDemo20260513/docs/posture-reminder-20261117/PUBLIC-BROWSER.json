@@ -1,0 +1,124 @@
+{
+  "at_ms": 1794912540584,
+  "pass": true,
+  "public_html": true,
+  "real_unbind_performed": false,
+  "business_writes": 0,
+  "blocked_non_read_requests": 0,
+  "auth_requests": 0,
+  "reads": [
+    {
+      "path": "/api/admin/devices/:sn/miniapp/dashboard",
+      "status": 200,
+      "at_ms": 1794912562634
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/observations",
+      "status": 200,
+      "at_ms": 1794912564183
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/dashboard",
+      "status": 200,
+      "at_ms": 1794912566062
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/observations",
+      "status": 200,
+      "at_ms": 1794912566430
+    },
+    {
+      "path": "/api/admin/devices/:sn/miniapp/records",
+      "status": 200,
+      "at_ms": 1794912569106
+    }
+  ],
+  "page_errors": 0,
+  "reported_state_matches_response": true,
+  "game_progress_matches_response": true,
+  "reported_source_mode": "gm",
+  "color_mode_matches_response": true,
+  "reported_color_mode": "warm",
+  "posture": {
+    "initial": {
+      "checked_at_ms": 1794912563273,
+      "source": "telemetry.posture_reminder",
+      "timezone": "Asia/Shanghai",
+      "today": {
+        "date": "2026-11-17",
+        "available": true,
+        "played_count": 7,
+        "updated_at_ms": 1794911607050
+      },
+      "history": {
+        "available": true,
+        "played_count": 7,
+        "from_day": "2026-11-17",
+        "to_day": "2026-11-17",
+        "updated_at_ms": 1794911607050
+      },
+      "coverage_complete": false,
+      "daily_rows": 1,
+      "matches_same_response": true
+    },
+    "refreshed": {
+      "checked_at_ms": 1794912567653,
+      "source": "telemetry.posture_reminder",
+      "timezone": "Asia/Shanghai",
+      "today": {
+        "date": "2026-11-17",
+        "available": true,
+        "played_count": 7,
+        "updated_at_ms": 1794911607050
+      },
+      "history": {
+        "available": true,
+        "played_count": 7,
+        "from_day": "2026-11-17",
+        "to_day": "2026-11-17",
+        "updated_at_ms": 1794911607050
+      },
+      "coverage_complete": false,
+      "daily_rows": 1,
+      "matches_same_response": true
+    },
+    "usage_tab": {
+      "checked_at_ms": 1794912568314,
+      "source": "telemetry.posture_reminder",
+      "timezone": "Asia/Shanghai",
+      "today": {
+        "date": "2026-11-17",
+        "available": true,
+        "played_count": 7,
+        "updated_at_ms": 1794911607050
+      },
+      "history": {
+        "available": true,
+        "played_count": 7,
+        "from_day": "2026-11-17",
+        "to_day": "2026-11-17",
+        "updated_at_ms": 1794911607050
+      },
+      "coverage_complete": false,
+      "daily_rows": 1,
+      "matches_same_response": true
+    }
+  },
+  "conversation_entry_hidden": true,
+  "recent_r1_count": 13,
+  "historical_observation_page_count": 20,
+  "r1_and_nightly_history_separate": true,
+  "recent_record_ids_match_response": true,
+  "refresh_dashboard_http": 200,
+  "refresh_observations_http": 200,
+  "refresh_both_domains_verified": true,
+  "posture_refresh_matches_response": true,
+  "app_id_visible": true,
+  "wechat_fields_retained": true,
+  "wechat_deferred": true,
+  "account_binding_visible": true,
+  "phone_masked": true,
+  "conversation_diagnostics_hidden": true,
+  "conversation_requests": 0,
+  "completed_at_ms": 1794912569618
+}

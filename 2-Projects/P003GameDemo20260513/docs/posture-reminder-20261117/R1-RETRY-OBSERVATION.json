@@ -1,0 +1,18 @@
+{
+  "read_at_ms": 1794912784600,
+  "query_only": true,
+  "business_writes": 0,
+  "records": {
+    "ark_record": {
+      "count": 0,
+      "last_received_at_ms": null,
+      "received_since_release": 0
+    },
+    "ark_record_legacy": {
+      "count": 13,
+      "last_received_at_ms": 1794898416885,
+      "received_since_release": 0
+    }
+  },
+  "deployed_files_match": true
+}

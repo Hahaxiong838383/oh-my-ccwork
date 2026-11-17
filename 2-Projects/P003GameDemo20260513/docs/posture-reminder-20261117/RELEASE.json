@@ -1,0 +1,40 @@
+{
+  "started_ms": 1794912510063,
+  "success": true,
+  "manifest_sha256": "67295a696476f95a157fc38ed65c5ba16d515509e1b28313cc193c5a451dc75e",
+  "before": {
+    "p003-voice": {
+      "pid": 2365035,
+      "status": "online",
+      "restarts": 15
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "files": 4,
+  "database_restore": false,
+  "real_unbind_performed": false,
+  "after": {
+    "p003-voice": {
+      "pid": 2369553,
+      "status": "online",
+      "restarts": 16
+    },
+    "p003-analytics": {
+      "pid": 2296315,
+      "status": "online",
+      "restarts": 3
+    }
+  },
+  "other_processes_unchanged": true,
+  "bindings_unchanged": true,
+  "environment_changes": [
+    "ARK_RECORDS_MIN_FREE_BYTES=2147483648"
+  ],
+  "database_changes": [],
+  "upload_contract_changes": [],
+  "finished_ms": 1794912512620
+}

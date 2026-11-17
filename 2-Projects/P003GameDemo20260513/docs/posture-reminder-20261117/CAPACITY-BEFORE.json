@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "purpose": "P003 R1 production capacity read-only inspection before configuration change",
+  "recorded_at": "2026-11-17T18:46:41+08:00",
+  "inspection_time": {
+    "timezone": "Asia/Shanghai",
+    "after": "2026-11-17T18:44:36.177+08:00",
+    "before": "2026-11-17T18:46:41+08:00",
+    "precision": "bounded_interval",
+    "note": "The capacity inspection completed after the candidate test log timestamp and before this record was written. Its individual tool result did not include an exact wall-clock timestamp; no timestamp was invented and no production query was repeated."
+  },
+  "measurement": {
+    "disk_total_bytes": 41882943488,
+    "disk_available_bytes_bavail": 6492160000,
+    "disk_free_bytes_bfree": 8427896832,
+    "effective_min_free_disk_bytes": 8589934592,
+    "filesystem_shared_by": ["production database", "candidate checkout", "/tmp"],
+    "capacity_check": "bavail_bytes must be at least min_free_disk_bytes + payload_bytes * 4 + 65536",
+    "new_record_would_fail_disk_gate": true,
+    "duplicate_ack_unchanged": true
+  },
+  "database": {
+    "main_file_bytes": 143360,
+    "wal_file_bytes": 4120032,
+    "shm_file_bytes": 32768,
+    "strict_raw": {"records": 0, "payload_bytes": 0},
+    "legacy_raw": {"records": 13, "payload_bytes": 14296},
+    "usage_global": {"records": 13, "payload_bytes": 14296},
+    "usage_per_device_max": {"records": 13, "payload_bytes": 14296},
+    "query_mode": "SQLite file URI mode=ro and PRAGMA query_only=ON"
+  },
+  "effective_limits": {
+    "max_records_per_batch": 50,
+    "max_batch_bytes": 262144,
+    "max_record_bytes": 32768,
+    "per_device_records": 10000,
+    "per_device_payload_bytes": 33554432,
+    "global_records": 10000,
+    "global_payload_bytes": 33554432,
+    "upload_per_minute": 6,
+    "upload_per_hour": 120,
+    "context_per_minute": 6,
+    "global_upload_per_minute": 12,
+    "global_upload_per_hour": 240,
+    "cursor_ttl_ms": 1800000,
+    "future_clock_tolerance_ms": 300000
+  },
+  "verification": {
+    "limits_loaded_using_same_production_launch_configuration": true,
+    "production_business_writes": 0,
+    "production_configuration_changes": 0,
+    "production_deployments": 0,
+    "production_test_events_submitted": 0,
+    "probe_artifact_note": "The initial malformed SQLite URI briefly created an empty 0-byte probe filename. Its size was verified and that artifact was removed before the correct read-only query; the real business database was not written."
+  },
+  "recommendation": {
+    "min_free_disk_bytes": 2147483648,
+    "disk_headroom_above_proposed_reserve_bytes": 4344676352,
+    "keep_record_and_payload_quotas_unchanged": true,
+    "keep_per_write_reserve_unchanged": true,
+    "rationale": "A 2 GiB floor leaves about 4.05 GiB of current headroom while the total business payload remains capped at 32 MiB and 10000 records. Monitor whole-filesystem growth separately.",
+    "status": "recommendation_only_not_applied_by_inspector"
+  },
+  "isolated_test": {
+    "node_version": "22.22.2",
+    "suite": "miniapp-unbind",
+    "before": {"passed": 69, "failed": 1, "failure": "raw record fixture accepted: capacity_exceeded instead of accepted"},
+    "after": {"passed": 70, "failed": 0, "exit_code": 0},
+    "change": "Only this isolated test sets its minimum free disk reserve to 1 byte; product code and production settings remain unchanged."
+  }
+}

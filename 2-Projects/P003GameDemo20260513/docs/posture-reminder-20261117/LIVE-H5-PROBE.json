@@ -1,0 +1,346 @@
+{
+  "pass": true,
+  "at": "2026-11-17T10:49:01.500Z",
+  "session_type": "short-lived server validation session, not real human login",
+  "business_writes": 0,
+  "attempted_business_writes": 0,
+  "response_body_replacements": 0,
+  "page_errors": 0,
+  "requests": [
+    {
+      "path": "/api/auth/wechat/identity",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:04.002Z",
+      "request_id": "miniapp-1794912543668-70h3at9z",
+      "no_store": true,
+      "body_sha256": "4781e8c220040c5a8461aa1617d2fe2198df990fd6202ab21ce9c199f593c2f7"
+    },
+    {
+      "path": "/api/profile/bound-devices",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:04.006Z",
+      "request_id": "miniapp-1794912543674-7p7dqzis",
+      "no_store": false,
+      "body_sha256": "6d9cf17037069a0334e19797dfbcf91fb586f272b0efd5cec6ed131646a38414"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:04.166Z",
+      "request_id": "miniapp-1794912544017-jxz5chjv",
+      "no_store": true,
+      "body_sha256": "7fd8610615f7b08a13a4bdc5fe1c8409d62e503b6b38bd23f22a31cd14a5c98c"
+    },
+    {
+      "path": "/api/auth/wechat/identity",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:05.365Z",
+      "request_id": "miniapp-1794912545287-6yjlaykp",
+      "no_store": true,
+      "body_sha256": "4781e8c220040c5a8461aa1617d2fe2198df990fd6202ab21ce9c199f593c2f7"
+    },
+    {
+      "path": "/api/profile/bound-devices",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:05.369Z",
+      "request_id": "miniapp-1794912545289-6xmmud9h",
+      "no_store": false,
+      "body_sha256": "6d9cf17037069a0334e19797dfbcf91fb586f272b0efd5cec6ed131646a38414"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/dashboard",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:05.495Z",
+      "request_id": "miniapp-1794912545373-my7edzey",
+      "no_store": true,
+      "body_sha256": "7fd8610615f7b08a13a4bdc5fe1c8409d62e503b6b38bd23f22a31cd14a5c98c"
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations",
+      "has_cursor": false,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:06.090Z",
+      "request_id": "miniapp-1794912546010-pdjni6mw",
+      "no_store": true,
+      "body_sha256": "155eca1e3dc3b1d1148cb2ba43dfd37bf024852c1fb17b11d5b68e5b87d16a73",
+      "items": 20,
+      "has_more": true
+    },
+    {
+      "path": "/v1/parent/devices/dev_50b5415662259045/observations",
+      "has_cursor": true,
+      "method": "GET",
+      "status": 200,
+      "read_at": "2026-11-17T10:49:06.797Z",
+      "request_id": "miniapp-1794912546705-k7nhz9j0",
+      "no_store": true,
+      "body_sha256": "b4cf42f2405d4c8da8af3c909f9bc62c65362f854e7b8ede40dc133969218e58",
+      "items": 20,
+      "has_more": false
+    }
+  ],
+  "checks": {
+    "auth_file_valid": true,
+    "storage_format_verified_in_installed_taro": true,
+    "production_C_dashboard_loaded": true,
+    "today_duration_matches_production": true,
+    "historical_duration_matches_production": true,
+    "history_count_rewards": true,
+    "history_count_inventory": true,
+    "history_count_makeup_cards": true,
+    "history_rewards_and_inventory_visible": true,
+    "wallet_unknown_note": true,
+    "partial_history_note": true,
+    "H5_no_wechat_phone_authorization_button": true,
+    "color_mode_is_existing_enum": true,
+    "color_mode_matches_production": true,
+    "led_state_matches_production": true,
+    "focus_state_matches_production": true,
+    "initial_posture_source": true,
+    "initial_posture_今日已同步提醒": true,
+    "initial_posture_历史已同步提醒": true,
+    "initial_posture_playback_semantics": true,
+    "initial_posture_excludes_detection_and_suppression": true,
+    "initial_posture_occurrence_day_partial_coverage": true,
+    "initial_posture_suppressed_separate": true,
+    "initial_posture_updated_at_matches": true,
+    "initial_reported_state_received": true,
+    "initial_source_label_matches": true,
+    "initial_reported_logical_day_matches": true,
+    "initial_non_normal_not_normal_asset": true,
+    "initial_non_normal_not_counted_as_income": true,
+    "initial_metric_家族币": true,
+    "initial_metric_星尘": true,
+    "initial_metric_补勤卡": true,
+    "initial_zero_is_present_and_not_missing": true,
+    "initial_timer_state_visible": true,
+    "initial_next_reward_state_visible": true,
+    "initial_claimable_count_visible": true,
+    "recent_activity_is_ark_records": true,
+    "received_R1_records_in_preview": true,
+    "recent_activity_no_duplicate_ids": true,
+    "preview_row_count_matches_dashboard": true,
+    "preview_row_f8d2f984ca56": true,
+    "preview_row_9f2fe08857bd": true,
+    "preview_row_b43d059ed35e": true,
+    "preview_row_fd16f31c1788": true,
+    "preview_row_df16233eb85f": true,
+    "preview_row_8ad30c34cfde": true,
+    "preview_row_ef92c67c37a1": true,
+    "preview_row_18748d4347d8": true,
+    "preview_row_70aafee55b2b": true,
+    "preview_row_d692859f5428": true,
+    "preview_row_1264101e931f": true,
+    "preview_row_5b844b67bcdd": true,
+    "preview_row_4cb026abe200": true,
+    "real_time_and_nightly_sections_are_separate": true,
+    "grant_6e93e229f7be": true,
+    "grant_cda0c313df51": true,
+    "grant_2ca330660a5d": true,
+    "grant_12507c5d1206": true,
+    "grant_41db7c609542": true,
+    "GM_rows_keep_source": true,
+    "refresh_sent_new_dashboard_GET": true,
+    "refresh_C_dashboard_retained": true,
+    "refreshed_reported_state_received": true,
+    "refreshed_source_label_matches": true,
+    "refreshed_reported_logical_day_matches": true,
+    "refreshed_non_normal_not_normal_asset": true,
+    "refreshed_non_normal_not_counted_as_income": true,
+    "refreshed_metric_家族币": true,
+    "refreshed_metric_星尘": true,
+    "refreshed_metric_补勤卡": true,
+    "refreshed_zero_is_present_and_not_missing": true,
+    "refreshed_timer_state_visible": true,
+    "refreshed_next_reward_state_visible": true,
+    "refreshed_claimable_count_visible": true,
+    "refreshed_posture_source": true,
+    "refreshed_posture_今日已同步提醒": true,
+    "refreshed_posture_历史已同步提醒": true,
+    "refreshed_posture_playback_semantics": true,
+    "refreshed_posture_excludes_detection_and_suppression": true,
+    "refreshed_posture_occurrence_day_partial_coverage": true,
+    "refreshed_posture_suppressed_separate": true,
+    "refreshed_posture_updated_at_matches": true,
+    "observations_page_received": true,
+    "observation_rows_match_loaded_pages": true,
+    "pagination_bounded": true,
+    "pagination_new_page": true,
+    "independent_observations_endpoint_and_cursor": true,
+    "observations_no_duplicate_records": true,
+    "nightly_history_read_at_least_two_pages": true,
+    "logout_clears_displayed_history": true,
+    "logout_clears_taro_session": true,
+    "all_production_responses_200": true,
+    "no_network_failures": true,
+    "no_page_errors": true,
+    "no_attempted_business_writes": true
+  },
+  "screenshots_saved": 0,
+  "index_sha256": "ded81d6269abf2b2cc09f1b07ee932fff91182e2e3f552d31ea24d6aa648bbde",
+  "usage": {
+    "today_seconds": 11560,
+    "historical_seconds": 16539
+  },
+  "observation_counts": {
+    "rewards": 11,
+    "inventory": 21,
+    "makeup_cards": 5,
+    "progress": 3,
+    "wallet": 0
+  },
+  "wechat": {
+    "state": "not_configured",
+    "configured": false,
+    "real_wechat_authorization_performed": false
+  },
+  "device": {
+    "color_mode": "warm",
+    "led_enabled": true,
+    "focus_active": false,
+    "updated_at_ms": 1794911886927
+  },
+  "posture_reminders": {
+    "source": "telemetry.posture_reminder",
+    "timezone": "Asia/Shanghai",
+    "today": {
+      "date": "2026-11-17",
+      "available": true,
+      "reason": "partial_history",
+      "played_count": 7,
+      "suppressed_count": 0,
+      "unknown_count": 0,
+      "clock_suspect_count": 0,
+      "updated_at_ms": 1794911607050
+    },
+    "history": {
+      "available": true,
+      "reason": "partial_history",
+      "played_count": 7,
+      "suppressed_count": 0,
+      "unknown_count": 0,
+      "clock_suspect_count": 0,
+      "from_day": "2026-11-17",
+      "to_day": "2026-11-17",
+      "updated_at_ms": 1794911607050
+    },
+    "coverage": {
+      "complete": false,
+      "reason": "received_events_only",
+      "first_received_at_ms": 1794885728477,
+      "last_received_at_ms": 1794911607050,
+      "clock_suspect_count": 0,
+      "invalid_time_count": 0
+    }
+  },
+  "reported_state": {
+    "source_mode": "gm",
+    "logical_day": "2026-11-18",
+    "captured_at_ms": 1794912525450,
+    "received_at_ms": 1794912536504,
+    "wallets": {
+      "family_coin": 300,
+      "stardust": 0
+    },
+    "inventory": {
+      "M-CARD-001": 1
+    },
+    "progress": {
+      "timer_state": "paused",
+      "next_reward": {
+        "status": "day_complete",
+        "kind": "unknown",
+        "item_id": null,
+        "stage_id": null,
+        "remaining_seconds": null
+      },
+      "claimable_count": 0
+    }
+  },
+  "recent_activity": {
+    "preview_records": 13,
+    "has_more": false,
+    "gm_records": 5,
+    "baseline_records": 1,
+    "grant_records_for_20261108": 5,
+    "record_ids_sha256": "54d3b7fcc56edbb4f59ff712b92d604e39f61e8dd5dbffd26c17351e5d620e7a"
+  },
+  "refreshed_reported_state": {
+    "source_mode": "gm",
+    "logical_day": "2026-11-18",
+    "captured_at_ms": 1794912525450,
+    "received_at_ms": 1794912536504,
+    "wallets": {
+      "family_coin": 300,
+      "stardust": 0
+    },
+    "inventory": {
+      "M-CARD-001": 1
+    },
+    "progress": {
+      "timer_state": "paused",
+      "next_reward": {
+        "status": "day_complete",
+        "kind": "unknown",
+        "item_id": null,
+        "stage_id": null,
+        "remaining_seconds": null
+      },
+      "claimable_count": 0
+    }
+  },
+  "refreshed_posture_reminders": {
+    "source": "telemetry.posture_reminder",
+    "timezone": "Asia/Shanghai",
+    "today": {
+      "date": "2026-11-17",
+      "available": true,
+      "reason": "partial_history",
+      "played_count": 7,
+      "suppressed_count": 0,
+      "unknown_count": 0,
+      "clock_suspect_count": 0,
+      "updated_at_ms": 1794911607050
+    },
+    "history": {
+      "available": true,
+      "reason": "partial_history",
+      "played_count": 7,
+      "suppressed_count": 0,
+      "unknown_count": 0,
+      "clock_suspect_count": 0,
+      "from_day": "2026-11-17",
+      "to_day": "2026-11-17",
+      "updated_at_ms": 1794911607050
+    },
+    "coverage": {
+      "complete": false,
+      "reason": "received_events_only",
+      "first_received_at_ms": 1794885728477,
+      "last_received_at_ms": 1794911607050,
+      "clock_suspect_count": 0,
+      "invalid_time_count": 0
+    }
+  },
+  "dashboard_gets": 2,
+  "observations": {
+    "pages": 2,
+    "displayed_records": 40,
+    "final_has_more": false
+  },
+  "auth_file_removed": true,
+  "production_http_gets": 8
+}

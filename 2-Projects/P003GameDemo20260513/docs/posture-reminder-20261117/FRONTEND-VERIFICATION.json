@@ -1,0 +1,98 @@
+{
+  "generated_at": "2026-11-17T18:40:22.117476+08:00",
+  "runtime": "Node v24.19.0",
+  "status": "passed",
+  "checks": {
+    "typescript": {
+      "exit_code": 0
+    },
+    "frontend_suite": {
+      "files_passed": 14,
+      "tests_passed": 118,
+      "note": "完整实现后通过；最终仅文案与 invalid_event_time 分支修改后已复跑对应 render suite"
+    },
+    "final_render_suite": {
+      "files_passed": 1,
+      "tests_passed": 10,
+      "log": "final-render-test.log"
+    },
+    "h5_build": {
+      "exit_code": 0,
+      "file_count": 9,
+      "log": "build-h5.log"
+    },
+    "weapp_build": {
+      "exit_code": 0,
+      "file_count": 17,
+      "log": "build-weapp.log"
+    },
+    "h5_browser": {
+      "pass": true,
+      "requests": 9,
+      "dashboard_reads": 2,
+      "observations_pages": 2,
+      "page_errors": [],
+      "checks": [
+        "built H5",
+        "SMS compatibility",
+        "shared history and duration DTO",
+        "verified identity and optional UnionID",
+        "color and lighting",
+        "reported GM assets and game state separated from normal income",
+        "realtime grants and inventory alongside nightly observations",
+        "refresh updates reported state",
+        "posture played counts exclude suppressed and unknown outcomes",
+        "refresh updates posture count",
+        "observation pagination",
+        "logout clears data",
+        "no WeChat phone button in H5"
+      ]
+    },
+    "diff_check": {
+      "exit_code": 0
+    }
+  },
+  "source_files": [
+    {
+      "path": "scripts/test-history-identity-h5.cjs",
+      "bytes": 8230,
+      "sha256": "67fbe2cddf5054ee7a66fe9c17a259424a669db81103ee822267d5aca61ccf73"
+    },
+    {
+      "path": "src/pages/index/real-details.tsx",
+      "bytes": 20708,
+      "sha256": "b3795f7a809a3f64347bbea25ea5d8d615ac9ef42528d925ad33568f23f5c83a"
+    },
+    {
+      "path": "src/services/live-api.ts",
+      "bytes": 4197,
+      "sha256": "67b7e75790dc306b026d10b652de9eb7169ac6fc2e163c1a57e10180ad6202cc"
+    },
+    {
+      "path": "src/services/real-details.ts",
+      "bytes": 7635,
+      "sha256": "f6d7b844be57cfa6ea8543ff1a970b65060c86923e8f9130a54b6a37c2b76d88"
+    },
+    {
+      "path": "tests/real-api-contract.test.ts",
+      "bytes": 9396,
+      "sha256": "c23e75312a6ed098bd2b5cbc070d6d97b75560c14e8409cf15f311084e12a2d0"
+    },
+    {
+      "path": "tests/real-render.test.tsx",
+      "bytes": 10131,
+      "sha256": "169697247ca61c7f385f6e8181a8e49fff5de7816d6fdb94d5603b78705e1dbc"
+    },
+    {
+      "path": "docs/posture-reminder-20261117.md",
+      "bytes": 3011,
+      "sha256": "8e4a5e225a75d95f3a627f00647f039607655ffe953a429460a272338200d06a"
+    }
+  ],
+  "limitations": [
+    "H5 浏览器回归使用本地合成 fixture；真实线上响应由主代理另行核对。",
+    "当前修复为仓内 RealDataHome 参考实现，未找到现场 liveHomeView 源码。",
+    "weapp 构建通过不表示已经微信发布或完成手机实机验收。",
+    "本子任务未调用生产写接口、未部署、未 commit/push。"
+  ]
+}

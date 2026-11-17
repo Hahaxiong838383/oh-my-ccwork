@@ -1,0 +1,449 @@
+{
+  "parent_A_confirmed": true,
+  "original_binding_unchanged": true,
+  "http_status": 200,
+  "request_id": "posture-reconcile-1794912512291",
+  "read_at_ms": 1794912512486,
+  "read_at_beijing": "2026-11-17T18:48:32.486+08:00",
+  "business_writes": 0,
+  "data": {
+    "today": {
+      "focus_minutes": 180,
+      "guarded_minutes": 180,
+      "posture_alert_count": 7
+    },
+    "posture_reminders": {
+      "source": "telemetry.posture_reminder",
+      "timezone": "Asia/Shanghai",
+      "available": true,
+      "reason": "partial_history",
+      "today": {
+        "date": "2026-11-17",
+        "available": true,
+        "reason": "partial_history",
+        "played_count": 7,
+        "suppressed_count": 0,
+        "unknown_count": 0,
+        "clock_suspect_count": 0,
+        "updated_at_ms": 1794911607050
+      },
+      "history": {
+        "available": true,
+        "reason": "partial_history",
+        "played_count": 7,
+        "suppressed_count": 0,
+        "unknown_count": 0,
+        "clock_suspect_count": 0,
+        "from_day": "2026-11-17",
+        "to_day": "2026-11-17",
+        "updated_at_ms": 1794911607050
+      },
+      "daily": [
+        {
+          "date": "2026-11-17",
+          "available": true,
+          "reason": "partial_history",
+          "played_count": 7,
+          "suppressed_count": 0,
+          "unknown_count": 0,
+          "clock_suspect_count": 0,
+          "updated_at_ms": 1794911607050
+        }
+      ],
+      "coverage": {
+        "complete": false,
+        "reason": "received_events_only",
+        "first_received_at_ms": 1794885728477,
+        "last_received_at_ms": 1794911607050,
+        "clock_suspect_count": 0,
+        "invalid_time_count": 0
+      }
+    }
+  },
+  "database": {
+    "batch_window": [
+      {
+        "trace_id": "tel_784a706289f341b1_961",
+        "events": [
+          {
+            "type": "focus_segment",
+            "count": 2,
+            "first_received_ms": 1794907903979,
+            "last_received_ms": 1794907903979
+          },
+          {
+            "type": "presence_transition",
+            "count": 3,
+            "first_received_ms": 1794907903979,
+            "last_received_ms": 1794907903979
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_31545d4b-e762-4a72-ad5a-c2e064ba5e47",
+            "server_received_ms": 1794907903979
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_962",
+        "events": [
+          {
+            "type": "presence_transition",
+            "count": 1,
+            "first_received_ms": 1794907934067,
+            "last_received_ms": 1794907934067
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_3a7bc92d-47dc-46e6-907b-2fc7d55d403d",
+            "server_received_ms": 1794907934067
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_963",
+        "events": [],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_5f149ec2-3358-47c2-a206-8e8ba9edd5c8",
+            "server_received_ms": 1794907964162
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_964",
+        "events": [
+          {
+            "type": "focus_segment",
+            "count": 3,
+            "first_received_ms": 1794907994266,
+            "last_received_ms": 1794907994266
+          },
+          {
+            "type": "presence_transition",
+            "count": 3,
+            "first_received_ms": 1794907994266,
+            "last_received_ms": 1794907994266
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_9abe50c2-9af8-45e9-b568-abccbdc0bc7a",
+            "server_received_ms": 1794907994266
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_965",
+        "events": [
+          {
+            "type": "focus_segment",
+            "count": 2,
+            "first_received_ms": 1794908024355,
+            "last_received_ms": 1794908024355
+          },
+          {
+            "type": "presence_transition",
+            "count": 4,
+            "first_received_ms": 1794908024355,
+            "last_received_ms": 1794908024355
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_2495f28a-566a-4667-acc0-5c0e03e75eb9",
+            "server_received_ms": 1794908024355
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_966",
+        "events": [
+          {
+            "type": "focus_segment",
+            "count": 1,
+            "first_received_ms": 1794908054449,
+            "last_received_ms": 1794908054449
+          },
+          {
+            "type": "presence_transition",
+            "count": 2,
+            "first_received_ms": 1794908054449,
+            "last_received_ms": 1794908054449
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_b821325f-81fd-4f9c-abd0-053d2a082f7c",
+            "server_received_ms": 1794908054449
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_967",
+        "events": [
+          {
+            "type": "presence_transition",
+            "count": 1,
+            "first_received_ms": 1794908124238,
+            "last_received_ms": 1794908124238
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_aea67abf-bc39-4a7f-aa59-5f50012ee6b1",
+            "server_received_ms": 1794908124238
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_968",
+        "events": [
+          {
+            "type": "focus_segment",
+            "count": 1,
+            "first_received_ms": 1794908184422,
+            "last_received_ms": 1794908184422
+          }
+        ],
+        "reminders": [],
+        "snapshots": []
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_969",
+        "events": [
+          {
+            "type": "focus_segment",
+            "count": 1,
+            "first_received_ms": 1794908214511,
+            "last_received_ms": 1794908214511
+          },
+          {
+            "type": "presence_transition",
+            "count": 1,
+            "first_received_ms": 1794908214511,
+            "last_received_ms": 1794908214511
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_c9a4b2aa-d0e8-4fa0-8929-be7c2ac68a8f",
+            "server_received_ms": 1794908214511
+          }
+        ]
+      },
+      {
+        "trace_id": "tel_784a706289f341b1_970",
+        "events": [
+          {
+            "type": "presence_transition",
+            "count": 1,
+            "first_received_ms": 1794908244627,
+            "last_received_ms": 1794908244627
+          }
+        ],
+        "reminders": [],
+        "snapshots": [
+          {
+            "snapshot_id": "snap_1b9c7d0e-3c66-4eeb-9508-e9d88e7419e3",
+            "server_received_ms": 1794908244627
+          }
+        ]
+      }
+    ],
+    "reminders": [
+      {
+        "event_id": "evt_6b216b5c-5b35-4b5d-9bc8-6a317d20bd24",
+        "occurred_at_ms": 1794885725714,
+        "server_received_ms": 1794885728477,
+        "clock_skew_ms": 2804,
+        "ingest_trace_id": "tel_784a706289f341b1_677",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      },
+      {
+        "event_id": "evt_d20522d0-b79a-44c4-9d51-b3894b506de8",
+        "occurred_at_ms": 1794886800551,
+        "server_received_ms": 1794886803355,
+        "clock_skew_ms": 2837,
+        "ingest_trace_id": "tel_784a706289f341b1_701",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      },
+      {
+        "event_id": "evt_70777226-ef01-4dff-8efa-805c5a86736d",
+        "occurred_at_ms": 1794890354164,
+        "server_received_ms": 1794890381156,
+        "clock_skew_ms": 2794,
+        "ingest_trace_id": "tel_784a706289f341b1_727",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      },
+      {
+        "event_id": "evt_b48f9af0-feea-42f9-978b-78d4cdac80e3",
+        "occurred_at_ms": 1794905971556,
+        "server_received_ms": 1794905999220,
+        "clock_skew_ms": 27704,
+        "ingest_trace_id": "tel_784a706289f341b1_935",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      },
+      {
+        "event_id": "evt_bf7f42bf-2659-4a8a-8f1c-4ec4499a4f4b",
+        "occurred_at_ms": 1794906160913,
+        "server_received_ms": 1794906186811,
+        "clock_skew_ms": 9362,
+        "ingest_trace_id": "tel_784a706289f341b1_941",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      },
+      {
+        "event_id": "evt_04dbd5a0-304e-4953-a76d-44d2ce170425",
+        "occurred_at_ms": 1794911240888,
+        "server_received_ms": 1794911243915,
+        "clock_skew_ms": 3055,
+        "ingest_trace_id": "tel_784a706289f341b1_1041",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      },
+      {
+        "event_id": "evt_fe9dd56b-caea-41e7-90ad-ce585c34c5da",
+        "occurred_at_ms": 1794911577023,
+        "server_received_ms": 1794911607050,
+        "clock_skew_ms": 30060,
+        "ingest_trace_id": "tel_784a706289f341b1_1050",
+        "data": {
+          "focus_id": null,
+          "kind": "generic_deviation",
+          "outcome": "played"
+        }
+      }
+    ],
+    "by_outcome": [
+      {
+        "outcome": "played",
+        "count": 7,
+        "first_occurred_ms": 1794885725714,
+        "last_occurred_ms": 1794911577023
+      }
+    ],
+    "daily": [
+      {
+        "date": "2026-11-06",
+        "reminder_played": 0,
+        "reminder_suppressed": 0,
+        "deviated_rounds": 0
+      },
+      {
+        "date": "2026-11-09",
+        "reminder_played": 0,
+        "reminder_suppressed": 0,
+        "deviated_rounds": 0
+      },
+      {
+        "date": "2026-11-10",
+        "reminder_played": 0,
+        "reminder_suppressed": 0,
+        "deviated_rounds": 0
+      },
+      {
+        "date": "2026-11-16",
+        "reminder_played": 0,
+        "reminder_suppressed": 0,
+        "deviated_rounds": 1
+      },
+      {
+        "date": "2026-11-17",
+        "reminder_played": 7,
+        "reminder_suppressed": 0,
+        "deviated_rounds": 21
+      }
+    ]
+  },
+  "admin_http_status": 200,
+  "admin_posture_reminders": {
+    "source": "telemetry.posture_reminder",
+    "timezone": "Asia/Shanghai",
+    "available": true,
+    "reason": "partial_history",
+    "today": {
+      "date": "2026-11-17",
+      "available": true,
+      "reason": "partial_history",
+      "played_count": 7,
+      "suppressed_count": 0,
+      "unknown_count": 0,
+      "clock_suspect_count": 0,
+      "updated_at_ms": 1794911607050
+    },
+    "history": {
+      "available": true,
+      "reason": "partial_history",
+      "played_count": 7,
+      "suppressed_count": 0,
+      "unknown_count": 0,
+      "clock_suspect_count": 0,
+      "from_day": "2026-11-17",
+      "to_day": "2026-11-17",
+      "updated_at_ms": 1794911607050
+    },
+    "daily": [
+      {
+        "date": "2026-11-17",
+        "available": true,
+        "reason": "partial_history",
+        "played_count": 7,
+        "suppressed_count": 0,
+        "unknown_count": 0,
+        "clock_suspect_count": 0,
+        "updated_at_ms": 1794911607050
+      }
+    ],
+    "coverage": {
+      "complete": false,
+      "reason": "received_events_only",
+      "first_received_at_ms": 1794885728477,
+      "last_received_at_ms": 1794911607050,
+      "clock_suspect_count": 0,
+      "invalid_time_count": 0
+    }
+  },
+  "raw_today_played": 7,
+  "raw_history_played": 7,
+  "capacity": {
+    "min_free_disk_bytes": 2147483648,
+    "available_disk_bytes": 6484811776,
+    "max_record_write_reserve_bytes": 196608,
+    "passes_disk_reserve": true,
+    "real_upload_exercised": false
+  },
+  "pass": true
+}

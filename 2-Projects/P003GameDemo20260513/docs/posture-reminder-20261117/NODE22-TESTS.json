@@ -1,0 +1,54 @@
+{
+  "started_ms": 1794912420603,
+  "pass": true,
+  "node_version": "v22.22.2",
+  "tests": [
+    {
+      "name": "mini008-dashboard",
+      "returncode": 0,
+      "log_sha256": "04ae6f5660e34494436c798c990dc4e3fb1c785ae50fe97e46de2f65559f4efb"
+    },
+    {
+      "name": "miniapp-admin",
+      "returncode": 0,
+      "log_sha256": "54b07a658d0c7aa166ed9fb71f453fc2496aac658d159dbdfe0eb40d47492164"
+    },
+    {
+      "name": "miniapp-unbind",
+      "returncode": 0,
+      "log_sha256": "2928221d59d8fc0edcf06fd41c24282168809a65d17a38be58455c83f85cc72d"
+    },
+    {
+      "name": "miniapp-unbind-reserve-smoke",
+      "returncode": 0,
+      "log_sha256": "6baab22db19c696a90fc0fdd3ca4e758751896e6145e0ed715afd560cedbeaa1"
+    },
+    {
+      "name": "history-dashboard",
+      "returncode": 0,
+      "log_sha256": "44a65570b436e2b71d922505492013a7fb2dfae1011cd1f91c6d9e6b0f9da5d1"
+    },
+    {
+      "name": "history-gateway",
+      "returncode": 0,
+      "log_sha256": "c295ed331206143e1d850d708ca3102be3db9b4ff7ee6909161b86c4fe9ee720"
+    },
+    {
+      "name": "history-scope",
+      "returncode": 0,
+      "log_sha256": "5acc58b9e8a7379c000b99f9d3052b7d9bf0bd724644e89c740c292da0d9b2e8"
+    },
+    {
+      "name": "telemetry",
+      "returncode": 0,
+      "log_sha256": "a4fab660739f05fcfe715125e5bbc1b32f25b535ae57a510b31120f9ca2ce30b"
+    },
+    {
+      "name": "ark-records-legacy-http",
+      "returncode": 0,
+      "log_sha256": "777c9ac70af4e304625c112792eb2432aa3f0abe24b5fe36d7ca6d0bb6e25aae"
+    }
+  ],
+  "manifest_sha256": "67295a696476f95a157fc38ed65c5ba16d515509e1b28313cc193c5a451dc75e",
+  "finished_ms": 1794912438097
+}
