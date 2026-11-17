@@ -1,0 +1,1 @@
+analytics ops: PASS (dirty-day replay, late/clock, reconciliation, bounded TTL, admin roles)

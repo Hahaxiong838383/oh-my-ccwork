@@ -1,0 +1,856 @@
+{
+  "unit_state": "Result=success\nExecMainStatus=0\nActiveState=inactive\nSubState=dead\n",
+  "ready_after": 200,
+  "stderr": "",
+  "result": {
+    "ok": true,
+    "do_not_interpret_as_t5_pass": true,
+    "source_pin": "65c86916e1e6a64352ec75d3c2b6eebb364e649a",
+    "node": "v24.19.0",
+    "platform": "linux",
+    "db": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db",
+    "now_ms": 1794890866812,
+    "cst_day": "2026-11-17",
+    "received_lower_ms": 1793681266812,
+    "day_start_ms": 1794844800000,
+    "actor": 0,
+    "sn": "BJP00399999900000001",
+    "device_key": "e83d5004571305acfb9db8167107b2572e85b039b6bc0a18db522472dbeb7d2a",
+    "second_actor": 1,
+    "phases": [
+      {
+        "name": "before_request_schema",
+        "ms": 0.1273169999999979,
+        "cpu_user_us": 1452,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 412,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 52,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "n": 48
+        }
+      },
+      {
+        "name": "request_cold.ark_grant",
+        "ms": 2.7286610000000024,
+        "cpu_user_us": 2109,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 25088,
+          "wchar": 8,
+          "syscr": 11,
+          "syscw": 8,
+          "read_bytes": 53248,
+          "write_bytes": 32768,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 100,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "settings_enabled": true,
+          "grant_rows": 50,
+          "grant_found": true,
+          "not_before_ms": 1794886290340
+        }
+      },
+      {
+        "name": "request_cold.begin",
+        "ms": 0.05724699999999672,
+        "cpu_user_us": 53,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 412,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 2,
+          "majflt": 0
+        },
+        "error": null
+      },
+      {
+        "name": "request_cold.index_lookup",
+        "ms": 0.25761100000000425,
+        "cpu_user_us": 251,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 412,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 3,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "evidence": "analytics_ark_evidence_cover_v1",
+          "assets": "analytics_ark_assets_cover_v1",
+          "daily": "analytics_ark_daily_cover_v1",
+          "present": [
+            "analytics_ark_evidence_cover_v1",
+            "analytics_ark_assets_cover_v1",
+            "analytics_ark_daily_cover_v1"
+          ]
+        }
+      },
+      {
+        "name": "request_cold.prepare_exec_evidence",
+        "ms": 82.453227,
+        "cpu_user_us": 10301,
+        "cpu_system_us": 1594,
+        "io": {
+          "rchar": 811424,
+          "wchar": 0,
+          "syscr": 203,
+          "syscw": 0,
+          "read_bytes": 991232,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 259,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 210,
+          "index": "analytics_ark_evidence_cover_v1"
+        }
+      },
+      {
+        "name": "request_cold.prepare_exec_assets",
+        "ms": 13.51472800000002,
+        "cpu_user_us": 5406,
+        "cpu_system_us": 928,
+        "io": {
+          "rchar": 209311,
+          "wchar": 0,
+          "syscr": 55,
+          "syscw": 0,
+          "read_bytes": 393216,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 167,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 513,
+          "index": "analytics_ark_assets_cover_v1"
+        }
+      },
+      {
+        "name": "request_cold.parse_evidence_assets",
+        "ms": 6.940480000000008,
+        "cpu_user_us": 7681,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 415,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 128,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 723,
+          "property_bytes": 62153,
+          "client_json_bytes": 20244
+        }
+      },
+      {
+        "name": "request_cold.prepare_exec_daily",
+        "ms": 15.629789000000017,
+        "cpu_user_us": 6396,
+        "cpu_system_us": 869,
+        "io": {
+          "rchar": 197023,
+          "wchar": 0,
+          "syscr": 52,
+          "syscw": 0,
+          "read_bytes": 397312,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 94,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 420,
+          "index": "analytics_ark_daily_cover_v1"
+        }
+      },
+      {
+        "name": "request_cold.parse_daily",
+        "ms": 2.9428350000000023,
+        "cpu_user_us": 1941,
+        "cpu_system_us": 988,
+        "io": {
+          "rchar": 415,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 29,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 420,
+          "property_bytes": 74130,
+          "client_json_bytes": 11760
+        }
+      },
+      {
+        "name": "request_cold.commit",
+        "ms": 0.08423899999999662,
+        "cpu_user_us": 106,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 415,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 2,
+          "majflt": 0
+        },
+        "error": null
+      },
+      {
+        "name": "warm_repeat.ark_grant",
+        "ms": 2.0118190000000027,
+        "cpu_user_us": 1830,
+        "cpu_system_us": 832,
+        "io": {
+          "rchar": 25091,
+          "wchar": 8,
+          "syscr": 11,
+          "syscw": 8,
+          "read_bytes": 0,
+          "write_bytes": 28672,
+          "cancelled_write_bytes": 28672
+        },
+        "faults": {
+          "minflt": 14,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "settings_enabled": true,
+          "grant_rows": 50,
+          "grant_found": true,
+          "not_before_ms": 1794886290340
+        }
+      },
+      {
+        "name": "warm_repeat.begin",
+        "ms": 0.030115999999992482,
+        "cpu_user_us": 28,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 2,
+          "majflt": 0
+        },
+        "error": null
+      },
+      {
+        "name": "warm_repeat.index_lookup",
+        "ms": 0.10450099999999907,
+        "cpu_user_us": 103,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 2,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "evidence": "analytics_ark_evidence_cover_v1",
+          "assets": "analytics_ark_assets_cover_v1",
+          "daily": "analytics_ark_daily_cover_v1",
+          "present": [
+            "analytics_ark_evidence_cover_v1",
+            "analytics_ark_assets_cover_v1",
+            "analytics_ark_daily_cover_v1"
+          ]
+        }
+      },
+      {
+        "name": "warm_repeat.prepare_exec_evidence",
+        "ms": 9.955645000000004,
+        "cpu_user_us": 9945,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 43,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 210,
+          "index": "analytics_ark_evidence_cover_v1"
+        }
+      },
+      {
+        "name": "warm_repeat.prepare_exec_assets",
+        "ms": 5.215584000000007,
+        "cpu_user_us": 4174,
+        "cpu_system_us": 1036,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 96,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 513,
+          "index": "analytics_ark_assets_cover_v1"
+        }
+      },
+      {
+        "name": "warm_repeat.parse_evidence_assets",
+        "ms": 3.770764000000014,
+        "cpu_user_us": 3765,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 64,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 723,
+          "property_bytes": 62153,
+          "client_json_bytes": 20244
+        }
+      },
+      {
+        "name": "warm_repeat.prepare_exec_daily",
+        "ms": 6.034991999999988,
+        "cpu_user_us": 5542,
+        "cpu_system_us": 1909,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 99,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 420,
+          "index": "analytics_ark_daily_cover_v1"
+        }
+      },
+      {
+        "name": "warm_repeat.parse_daily",
+        "ms": 2.742783000000003,
+        "cpu_user_us": 4591,
+        "cpu_system_us": 119,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 56,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 420,
+          "property_bytes": 74130,
+          "client_json_bytes": 11760
+        }
+      },
+      {
+        "name": "warm_repeat.commit",
+        "ms": 0.024626000000012027,
+        "cpu_user_us": 25,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 419,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 0,
+          "majflt": 0
+        },
+        "error": null
+      },
+      {
+        "name": "second_device.ark_grant",
+        "ms": 1.687026000000003,
+        "cpu_user_us": 680,
+        "cpu_system_us": 1001,
+        "io": {
+          "rchar": 25095,
+          "wchar": 8,
+          "syscr": 11,
+          "syscw": 8,
+          "read_bytes": 0,
+          "write_bytes": 28672,
+          "cancelled_write_bytes": 28672
+        },
+        "faults": {
+          "minflt": 3,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "settings_enabled": true,
+          "grant_rows": 50,
+          "grant_found": true,
+          "not_before_ms": 1794886290340
+        }
+      },
+      {
+        "name": "second_device.begin",
+        "ms": 0.00880699999999024,
+        "cpu_user_us": 0,
+        "cpu_system_us": 9,
+        "io": {
+          "rchar": 420,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 0,
+          "majflt": 0
+        },
+        "error": null
+      },
+      {
+        "name": "second_device.index_lookup",
+        "ms": 0.10263299999999731,
+        "cpu_user_us": 0,
+        "cpu_system_us": 101,
+        "io": {
+          "rchar": 420,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 0,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "evidence": "analytics_ark_evidence_cover_v1",
+          "assets": "analytics_ark_assets_cover_v1",
+          "daily": "analytics_ark_daily_cover_v1",
+          "present": [
+            "analytics_ark_evidence_cover_v1",
+            "analytics_ark_assets_cover_v1",
+            "analytics_ark_daily_cover_v1"
+          ]
+        }
+      },
+      {
+        "name": "second_device.prepare_exec_evidence",
+        "ms": 58.22772200000003,
+        "cpu_user_us": 7159,
+        "cpu_system_us": 4934,
+        "io": {
+          "rchar": 618916,
+          "wchar": 0,
+          "syscr": 155,
+          "syscw": 0,
+          "read_bytes": 802816,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 137,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 210,
+          "index": "analytics_ark_evidence_cover_v1"
+        }
+      },
+      {
+        "name": "second_device.prepare_exec_assets",
+        "ms": 13.007047,
+        "cpu_user_us": 5883,
+        "cpu_system_us": 1201,
+        "io": {
+          "rchar": 201124,
+          "wchar": 0,
+          "syscr": 53,
+          "syscw": 0,
+          "read_bytes": 389120,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 161,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 513,
+          "index": "analytics_ark_assets_cover_v1"
+        }
+      },
+      {
+        "name": "second_device.parse_evidence_assets",
+        "ms": 3.6561120000000074,
+        "cpu_user_us": 3650,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 420,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 37,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 723,
+          "property_bytes": 62153,
+          "client_json_bytes": 20244
+        }
+      },
+      {
+        "name": "second_device.prepare_exec_daily",
+        "ms": 9.777210999999966,
+        "cpu_user_us": 2900,
+        "cpu_system_us": 2946,
+        "io": {
+          "rchar": 197028,
+          "wchar": 0,
+          "syscr": 52,
+          "syscw": 0,
+          "read_bytes": 385024,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 175,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 420,
+          "index": "analytics_ark_daily_cover_v1"
+        }
+      },
+      {
+        "name": "second_device.parse_daily",
+        "ms": 4.023920000000032,
+        "cpu_user_us": 3234,
+        "cpu_system_us": 821,
+        "io": {
+          "rchar": 420,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 97,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "rows": 420,
+          "property_bytes": 74130,
+          "client_json_bytes": 11760
+        }
+      },
+      {
+        "name": "second_device.commit",
+        "ms": 0.022475000000042655,
+        "cpu_user_us": 19,
+        "cpu_system_us": 4,
+        "io": {
+          "rchar": 420,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 0,
+          "majflt": 0
+        },
+        "error": null
+      },
+      {
+        "name": "explain_after",
+        "ms": 1.1891190000000051,
+        "cpu_user_us": 1187,
+        "cpu_system_us": 0,
+        "io": {
+          "rchar": 420,
+          "wchar": 0,
+          "syscr": 4,
+          "syscw": 0,
+          "read_bytes": 0,
+          "write_bytes": 0,
+          "cancelled_write_bytes": 0
+        },
+        "faults": {
+          "minflt": 0,
+          "majflt": 0
+        },
+        "error": null,
+        "value": {
+          "indexes": {
+            "evidence": "analytics_ark_evidence_cover_v1",
+            "assets": "analytics_ark_assets_cover_v1",
+            "daily": "analytics_ark_daily_cover_v1",
+            "present": [
+              "analytics_ark_evidence_cover_v1",
+              "analytics_ark_assets_cover_v1",
+              "analytics_ark_daily_cover_v1"
+            ]
+          },
+          "plans": {
+            "evidence": [
+              {
+                "id": 6,
+                "parent": 0,
+                "notused": 55,
+                "detail": "SEARCH e USING COVERING INDEX analytics_ark_evidence_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)"
+              },
+              {
+                "id": 92,
+                "parent": 0,
+                "notused": 46,
+                "detail": "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN"
+              },
+              {
+                "id": 119,
+                "parent": 0,
+                "notused": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "assets": [
+              {
+                "id": 6,
+                "parent": 0,
+                "notused": 55,
+                "detail": "SEARCH e USING COVERING INDEX analytics_ark_assets_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)"
+              },
+              {
+                "id": 40,
+                "parent": 0,
+                "notused": 46,
+                "detail": "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN"
+              },
+              {
+                "id": 67,
+                "parent": 0,
+                "notused": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ],
+            "daily": [
+              {
+                "id": 6,
+                "parent": 0,
+                "notused": 55,
+                "detail": "SEARCH e USING COVERING INDEX analytics_ark_daily_cover_v1 (device_key=? AND event_name=? AND received_at_ms>? AND received_at_ms<?)"
+              },
+              {
+                "id": 37,
+                "parent": 0,
+                "notused": 46,
+                "detail": "SEARCH b USING INDEX sqlite_autoindex_analytics_batch_1 (attempt_id=?) LEFT-JOIN"
+              },
+              {
+                "id": 66,
+                "parent": 0,
+                "notused": 0,
+                "detail": "USE TEMP B-TREE FOR ORDER BY"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "notes": [
+      "request_cold is the first history pass in this process; later passes are comparison samples, not a warmup procedure",
+      "the OS page cache is not dropped; read_bytes near 0 means this run did not observe cold disk IO",
+      "HTTP parse, token compare, and response encoding are outside these phases",
+      "a result here is not a T5, A07, A08, A09, or A14 pass"
+    ],
+    "sqlite": {
+      "version": "3.53.3",
+      "page_count": 490978,
+      "page_size": 4096,
+      "journal_mode": "wal",
+      "query_only": 1
+    },
+    "files": {
+      "before": {
+        "db": {
+          "path": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db",
+          "size": 2011045888,
+          "mtime_ms": 1794891181643,
+          "ino": 167143
+        },
+        "wal": {
+          "path": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db-wal",
+          "size": 0,
+          "mtime_ms": 1794896248778,
+          "ino": 168817
+        },
+        "shm": {
+          "path": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db-shm",
+          "size": 32768,
+          "mtime_ms": 1794896248778,
+          "ino": 168818
+        }
+      },
+      "after": {
+        "db": {
+          "path": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db",
+          "size": 2011045888,
+          "mtime_ms": 1794891181643,
+          "ino": 167143
+        },
+        "wal": {
+          "path": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db-wal",
+          "size": 0,
+          "mtime_ms": 1794896248778,
+          "ino": 168817
+        },
+        "shm": {
+          "path": "/opt/p003/archive-t5-20261117/p003-t5-50x12000-cover01/analytics.db-shm",
+          "size": 32768,
+          "mtime_ms": 1794896513057,
+          "ino": 168818
+        }
+      }
+    },
+    "empty_wal_created": false,
+    "db_or_wal_size_changed": false,
+    "shm_changed": true,
+    "phase_errors": [],
+    "error": null,
+    "request_cold_ms": 124.60881700000004,
+    "request_cold_read_bytes": 1835008
+  }
+}

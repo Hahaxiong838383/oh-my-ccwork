@@ -1,0 +1,90 @@
+{
+  "reviewer": "grok(xAI)",
+  "date": "2026-11-17",
+  "mode": "read-only-fixed-commits",
+  "deploy_or_ssh": false,
+  "shared_worktrees_edited_by_this_review": false,
+  "concurrent_dirt_observed_not_reverted": {
+    "voice": [
+      "2-Projects/P003GameDemo20260513/apps/server/scripts/voice-onboarding-v2.test.ts",
+      "docs/voice-onboarding-20261117/ROOT-ACCEPTANCE.md",
+      "docs/voice-onboarding-v2-20261117/PLAN.md",
+      "docs/voice-onboarding-v2-20261117/P003_语音教学V2_服务端开发与联调回执_20261117.md",
+      "docs/voice-onboarding-v2-20261117/evidence/"
+    ],
+    "t5_untracked": "docs/prnas-storage-50/t5/review-followup-20261117/"
+  },
+  "voice": {
+    "worktree": "/Users/fu-121/.codex/worktrees/p003-voice-onboarding-20261117",
+    "head": "da3109f7385d56d5b2829959ef4f54aa5b9a8b19",
+    "parent": "40233116448c23922f08b702728c2afbb7f029f2",
+    "files": [
+      "2-Projects/realtime-voice-agent/rust-worker/src/pipeline.rs",
+      "docs/voice-onboarding-v2-20261117/CONTRACT.md"
+    ],
+    "behavior_delta": "accepted v2 begin calls existing request_phase_switch(\"voice_onboarding_v2\")",
+    "verdict": "source_matches_intent",
+    "release_accepted": false,
+    "human_verified": false,
+    "production": false,
+    "protocol_db_retested": false,
+    "ordered_cargo_tests_run": false,
+    "ordered_tests_blocker": "existing ordered_pcm tests do not execute this main-loop call; cargo test --lib would write the shared 5.1G gitignored target or a second full target",
+    "checks": {
+      "old_ordered_rtc_frames_dropped_until_switch": true,
+      "switch_drops_old_asr_sender_and_installs_rtc_stt": true,
+      "apply_ordered_actions_closes_room": false,
+      "apply_ordered_actions_starts_tts": false,
+      "ordered_result_reuses_timeout_terminal": true,
+      "input_phase_reason_on_fast_path": "voice_onboarding_v2",
+      "catchup_default": "disabled",
+      "catchup_when_enabled_for_this_reason": "not_complete",
+      "catchup_samples_fed": 0,
+      "v1_and_ordinary_rooms_call_new_line": false,
+      "post_begin_frames_wait_for_begin_timeout": false
+    }
+  },
+  "t5": {
+    "worktree": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116",
+    "head": "416a48985453937181fe47fedba01f4211cfdbcb",
+    "parent": "bbf40a4843d00579f6cfc5cfdcb14762c78ed373",
+    "file": "2-Projects/P003GameDemo20260513/apps/server/src/analytics/rollup.ts",
+    "rollup_sha256": "eb652974fa779a7463d61ea8e5cbc6dd6e5a45d427cb3259d45dccb31b5ea161",
+    "parent_rollup_sha256": "e3f0e452f4c7fa799570fb9efed446559f36524a23305cda358e1eb162027be5",
+    "matches_prior_evidence_file_hashes": true,
+    "prior_summary_sha256": "7cf65c2c4c209ceb27ad0a93afcb5e741eefed0c3c9e40df64d29c404b0b336f",
+    "verdict": "projection_matches_fact_usage",
+    "t5_passed": false,
+    "start_t6": false,
+    "where_order_index_transaction_budget_dirty_ttl_changed": false,
+    "query_plan": "SEARCH analytics_rollup_fact USING INDEX sqlite_autoindex_analytics_rollup_fact_1 (dimension=? AND day=?)",
+    "temp_b_tree": false,
+    "mini_fixture": {
+      "node": "v24.19.0",
+      "facts": 5,
+      "event_count": 5,
+      "active_devices": 2,
+      "sessions": 3,
+      "device_a_session_count": 2,
+      "clock_suspicious_events": 1,
+      "data_cutoff_ms": 200,
+      "read_order": [
+        "a/reward@100/aaa",
+        "a/session@100/zzz",
+        "a/session@150/sss",
+        "a/command@200/mmm",
+        "b/session@50/bbb"
+      ],
+      "integer_typeof": "number",
+      "log": "/Users/fu-121/.local/state/p003-final-delta-20261117/t5-mini/RESULT.json"
+    },
+    "not_remeasured": {
+      "ack_p95_ms": 525.924,
+      "ack_p95_limit_ms": 500,
+      "cold_first_query_over_120ms_count": 1,
+      "mature_db_gib": 41.79,
+      "disk_gib": 40,
+      "cap": 14
+    }
+  }
+}

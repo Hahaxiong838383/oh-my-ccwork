@@ -1,0 +1,145 @@
+{
+  "day": "2026-11-17",
+  "status": {
+    "attempted_days": 1,
+    "rebuilt_days": 1,
+    "failed_days": [],
+    "remaining_dirty_days": 0,
+    "partial": false
+  },
+  "plan": [
+    {
+      "id": 4,
+      "parent": 0,
+      "notused": 62,
+      "detail": "SEARCH analytics_rollup_fact USING INDEX sqlite_autoindex_analytics_rollup_fact_1 (dimension=? AND day=?)"
+    }
+  ],
+  "sample_keys": [
+    [
+      "device_key",
+      "event_name",
+      "session_digest",
+      "clock_suspicious",
+      "semantic_json",
+      "received_at_ms"
+    ],
+    [
+      "device_key",
+      "event_name",
+      "session_digest",
+      "clock_suspicious",
+      "semantic_json",
+      "received_at_ms"
+    ],
+    [
+      "device_key",
+      "event_name",
+      "session_digest",
+      "clock_suspicious",
+      "semantic_json",
+      "received_at_ms"
+    ],
+    [
+      "device_key",
+      "event_name",
+      "session_digest",
+      "clock_suspicious",
+      "semantic_json",
+      "received_at_ms"
+    ],
+    [
+      "device_key",
+      "event_name",
+      "session_digest",
+      "clock_suspicious",
+      "semantic_json",
+      "received_at_ms"
+    ]
+  ],
+  "sample_types": [
+    {
+      "device_key": "string",
+      "event_name": "string",
+      "session_digest": "string",
+      "clock_suspicious": "number",
+      "semantic_json": "string",
+      "received_at_ms": "number"
+    },
+    {
+      "device_key": "string",
+      "event_name": "string",
+      "session_digest": "string",
+      "clock_suspicious": "number",
+      "semantic_json": "string",
+      "received_at_ms": "number"
+    },
+    {
+      "device_key": "string",
+      "event_name": "string",
+      "session_digest": "string",
+      "clock_suspicious": "number",
+      "semantic_json": "string",
+      "received_at_ms": "number"
+    },
+    {
+      "device_key": "string",
+      "event_name": "string",
+      "session_digest": "string",
+      "clock_suspicious": "number",
+      "semantic_json": "string",
+      "received_at_ms": "number"
+    },
+    {
+      "device_key": "string",
+      "event_name": "string",
+      "session_digest": "string",
+      "clock_suspicious": "number",
+      "semantic_json": "string",
+      "received_at_ms": "number"
+    }
+  ],
+  "event_name_order": [
+    "g1.reward_granted",
+    "app.session_started",
+    "app.session_started",
+    "g1.command_failed",
+    "app.session_started"
+  ],
+  "global": {
+    "event_count": 5,
+    "active_devices": 2,
+    "sessions": 3,
+    "clock_suspicious_events": 1,
+    "explicit_gm_events": 1,
+    "reward_grant_events": 1,
+    "unique_reward_instances": 1,
+    "data_cutoff_ms": 200,
+    "event_count_key_order": [
+      "g1.reward_granted",
+      "app.session_started",
+      "g1.command_failed"
+    ],
+    "command_failures": [
+      {
+        "command": "c",
+        "error_code": "e",
+        "count": 1
+      }
+    ]
+  },
+  "devices": [
+    {
+      "device_key": "a",
+      "event_count": 4,
+      "session_count": 2,
+      "last_received_at_ms": 200
+    },
+    {
+      "device_key": "b",
+      "event_count": 1,
+      "session_count": 1,
+      "last_received_at_ms": 50
+    }
+  ]
+}

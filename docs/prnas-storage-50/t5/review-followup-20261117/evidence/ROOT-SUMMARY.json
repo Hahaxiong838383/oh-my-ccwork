@@ -1,0 +1,88 @@
+{
+  "status": "T5_NOT_PASSED",
+  "production_changed": false,
+  "capacity_verified": 14,
+  "target_capacity": 50,
+  "T6_started": false,
+  "runtime_candidate": "416a48985453937181fe47fedba01f4211cfdbcb",
+  "probe_query_source": "65c86916e1e6a64352ec75d3c2b6eebb364e649a",
+  "cold_probe01": {
+    "formal_pass": false,
+    "guard_exit": 3,
+    "ms": 89.85121600000002,
+    "reason": "Read-only WAL-mode created empty WAL; original guard treated this as a size change"
+  },
+  "cold_probe02": {
+    "formal_probe_pass": true,
+    "unit_state": "Result=success\nExecMainStatus=0\nActiveState=inactive\nSubState=dead\n",
+    "ready_after": 200,
+    "ms": 124.60881700000004,
+    "read_bytes": 1835008,
+    "phase_errors": 0,
+    "full_http": false
+  },
+  "cloud_db_verification": "main file size/mtime/inode unchanged; WAL zero frames; SHM changed by read-only SQLite. Not a full remote DB byte hash.",
+  "component_timings": [
+    {
+      "name": "request_cold.ark_grant",
+      "ms": 2.7286610000000024,
+      "read_bytes": 53248,
+      "rows": null
+    },
+    {
+      "name": "request_cold.begin",
+      "ms": 0.05724699999999672,
+      "read_bytes": 0,
+      "rows": null
+    },
+    {
+      "name": "request_cold.index_lookup",
+      "ms": 0.25761100000000425,
+      "read_bytes": 0,
+      "rows": null
+    },
+    {
+      "name": "request_cold.prepare_exec_evidence",
+      "ms": 82.453227,
+      "read_bytes": 991232,
+      "rows": 210
+    },
+    {
+      "name": "request_cold.prepare_exec_assets",
+      "ms": 13.51472800000002,
+      "read_bytes": 393216,
+      "rows": 513
+    },
+    {
+      "name": "request_cold.parse_evidence_assets",
+      "ms": 6.940480000000008,
+      "read_bytes": 0,
+      "rows": 723
+    },
+    {
+      "name": "request_cold.prepare_exec_daily",
+      "ms": 15.629789000000017,
+      "read_bytes": 397312,
+      "rows": 420
+    },
+    {
+      "name": "request_cold.parse_daily",
+      "ms": 2.9428350000000023,
+      "read_bytes": 0,
+      "rows": 420
+    },
+    {
+      "name": "request_cold.commit",
+      "ms": 0.08423899999999662,
+      "read_bytes": 0,
+      "rows": null
+    }
+  ],
+  "limitations": [
+    "Component probe excludes HTTP and full history reduction",
+    "Two runs are not latency statistics",
+    "No 50-device full mature fixture or 24-hour endurance passed",
+    "No production code/gate/cap changes",
+    "No new storage bought"
+  ]
+}

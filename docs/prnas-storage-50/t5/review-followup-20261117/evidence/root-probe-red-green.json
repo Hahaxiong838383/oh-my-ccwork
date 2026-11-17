@@ -1,0 +1,99 @@
+{
+  "pass": true,
+  "results": [
+    {
+      "label": "original",
+      "exit": 0,
+      "reported_ok": true,
+      "phase_errors": [
+        {
+          "name": "request_cold.prepare_exec_evidence",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "request_cold.prepare_exec_assets",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "request_cold.prepare_exec_daily",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "warm_repeat.prepare_exec_evidence",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "warm_repeat.prepare_exec_assets",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "warm_repeat.prepare_exec_daily",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "second_device.prepare_exec_evidence",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "second_device.prepare_exec_assets",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "second_device.prepare_exec_daily",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "explain_after",
+          "error": "no such index: analytics_ark_device_event_received"
+        }
+      ]
+    },
+    {
+      "label": "fixed",
+      "exit": 4,
+      "reported_ok": false,
+      "phase_errors": [
+        {
+          "name": "request_cold.prepare_exec_evidence",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "request_cold.prepare_exec_assets",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "request_cold.prepare_exec_daily",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "warm_repeat.prepare_exec_evidence",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "warm_repeat.prepare_exec_assets",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "warm_repeat.prepare_exec_daily",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "second_device.prepare_exec_evidence",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "second_device.prepare_exec_assets",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "second_device.prepare_exec_daily",
+          "error": "no such index: analytics_ark_device_event_received"
+        },
+        {
+          "name": "explain_after",
+          "error": "no such index: analytics_ark_device_event_received"
+        }
+      ]
+    }
+  ]
+}

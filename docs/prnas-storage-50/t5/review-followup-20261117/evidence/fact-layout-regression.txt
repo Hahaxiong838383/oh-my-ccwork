@@ -1,0 +1,1 @@
+analytics fact layout: PASS (atomic migration, exact data/rowid preservation, replay/conflict/TTL, rollback compatibility, ordered scan, stable ranking)
