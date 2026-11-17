@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# 微信公众平台后台保活 + 自愈
+#
+# 三层：
+#   1. profile 持久化 —— 浏览器 user-data-dir 放在挂载卷 /config 下，容器重建登录态不丢
+#   2. 心跳 —— 每 20 分钟用 CDP 访问一次后台，保持 session 活跃、降低过期频率
+#   3. 自愈 —— 若探测到「登录超时」，用 ~/.mycc-secrets/wechat-mp-register.env 里的
+#              WX_REG_PASSWORD 自动账号密码登录（未存密码则只告警）
+set -uo pipefail
+NAME="${WXDT_NAME:-wxdt-ide}"
+CDP="${WXDT_CDP:-http://127.0.0.1:9333}"
+LOG="${WXDT_MP_KEEPALIVE_LOG:-/data/home-studio/wxdt-mp-keepalive.log}"
+SECRETS="$HOME/.mycc-secrets/wechat-mp-register.env"
+SCRIPT=/tmp/mpauto/keepalive.js
+
+ts() { date '+%F %T'; }
+say() { echo "[$(ts)] $*" | tee -a "$LOG"; }
+
+# 容器没跑就跳过（由 wxdt-ide 的 timer 负责拉起容器）
+if ! docker ps --format '{{.Names}}' 2>/dev/null | grep -qx "$NAME"; then
+  say "容器未运行，跳过本次心跳"
+  exit 0
+fi
+
+# CDP 在容器内，从容器里探测（宿主到容器 9333 没有端口映射）
+if ! docker exec "$NAME" curl -s --max-time 5 "$CDP/json/version" >/dev/null 2>&1; then
+  say "CDP 不可达（浏览器没起或没带 --remote-debugging-port），跳过本次心跳"
+  exit 0
+fi
+
+docker cp "$SCRIPT" "$NAME:/tmp/mpauto/keepalive.js" >/dev/null 2>&1 || {
+  say "脚本同步失败"; exit 1; }
+
+OUT=$(docker exec -u abc "$NAME" /usr/local/bin/node /tmp/mpauto/keepalive.js 2>&1)
+say "$OUT"
+
+case "$OUT" in
+  *LOGGED_IN*)   say "登录态正常" ;;
+  *EXPIRED*)
+    if [[ -f "$SECRETS" ]] && grep -q '^WX_REG_PASSWORD=' "$SECRETS" 2>/dev/null; then
+      say "登录过期，尝试自动重登"
+      docker cp "$(dirname "$0")/../../../tmp/mpauto/relogin.js" "$NAME:/tmp/mpauto/relogin.js" >/dev/null 2>&1 || true
+      docker exec -u abc -e "WX_REG_EMAIL=$(grep '^WX_REG_EMAIL=' "$SECRETS" | cut -d= -f2-)" \
+        -e "WX_REG_PASSWORD=$(grep '^WX_REG_PASSWORD=' "$SECRETS" | cut -d= -f2-)" \
+        "$NAME" /usr/local/bin/node /tmp/mpauto/relogin.js 2>&1 | tee -a "$LOG" >/dev/null
+    else
+      say "登录过期，且未存密码 —— 需要人工登录（见 ~/.mycc-secrets/wechat-mp-register.env 加 WX_REG_PASSWORD）"
+    fi
+    ;;
+  *) say "状态未知：$OUT" ;;
+esac
