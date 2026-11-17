@@ -1,0 +1,314 @@
+{
+  "scope": "FAILED_FULL_CADENCE_PREFLIGHT_NOT_PRODUCTION",
+  "candidate": "9a5ac270dca8e63b16eec83fe7d599500e33fe32",
+  "bundle_sha256": "10bf9d9e22f4ce9b6aae3f5cec7e089832843fed04968d0a6bcc91ce560a5fa7",
+  "input_files_verified": 35,
+  "analytics_requests": 4173,
+  "analytics_status": {
+    "503": 2702,
+    "200": 1471
+  },
+  "completed_batches": 1470,
+  "ark_rows": 303,
+  "ark_status": {
+    "200": 302,
+    "503": 1
+  },
+  "ark_non200": [
+    {
+      "at_ms": 1794950177386,
+      "actor": 2,
+      "round": 6,
+      "snapshot_id": "soak-1794949872051-2-6",
+      "status": 503,
+      "body": {
+        "ok": false,
+        "error": "ark_dependency_unavailable"
+      },
+      "ms": 578.7145289999899
+    }
+  ],
+  "ark_sql_busy": [
+    {
+      "at_ms": 1794950177843,
+      "name": "Error",
+      "code": "ERR_SQLITE_ERROR",
+      "sqlite_code": 5
+    },
+    {
+      "at_ms": 1794950177880,
+      "name": "Error",
+      "code": "ERR_SQLITE_ERROR",
+      "sqlite_code": 5
+    }
+  ],
+  "query_samples": 150,
+  "history_transport_failed": 20,
+  "query_p99_ms": 129.12683500000276,
+  "slowest": {
+    "id": "mixed-query-1794950174754-0",
+    "started_at_ms": 1794950175205,
+    "statements": [
+      {
+        "database": "ark",
+        "phase": "prepare",
+        "sql_hash": "b7e0b9b7c45e0e7391d0eb7bbd2758ef85b8ba5b2bb03d4c5a798627fdc3408f",
+        "sql": "SELECT enabled,revision FROM ark_settings WHERE id=1",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.04706499999156222,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "get",
+        "sql_hash": "b7e0b9b7c45e0e7391d0eb7bbd2758ef85b8ba5b2bb03d4c5a798627fdc3408f",
+        "sql": "SELECT enabled,revision FROM ark_settings WHERE id=1",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.042902000015601516,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "prepare",
+        "sql_hash": "930af83192511eaa26786b788e2ef365ef76ba30a116147deb2077ecd93ad92b",
+        "sql": "SELECT sn FROM ark_grant ORDER BY sn",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.03943100001197308,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "all",
+        "sql_hash": "930af83192511eaa26786b788e2ef365ef76ba30a116147deb2077ecd93ad92b",
+        "sql": "SELECT sn FROM ark_grant ORDER BY sn",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.06468599999789149,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "prepare",
+        "sql_hash": "1bd460a4da87c759fd43761021895f2f4e82bac194c8a198f436c687ae0ff52e",
+        "sql": "SELECT * FROM ark_grant WHERE sn=? AND account_id=? AND epoch=?",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.04481900000246242,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "ark",
+        "phase": "get",
+        "sql_hash": "1bd460a4da87c759fd43761021895f2f4e82bac194c8a198f436c687ae0ff52e",
+        "sql": "SELECT * FROM ark_grant WHERE sn=? AND account_id=? AND epoch=?",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.029255000001285225,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "exec",
+        "sql_hash": "a8402858d4f1e1d27afee976520485ebb4b96a5387355b823f0d0b8079729032",
+        "sql": "BEGIN",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.013470000005327165,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "prepare",
+        "sql_hash": "74b1e1572f486550efd7738287eb349beb7df4ec4e85e5835f0fd73f41dbefbd",
+        "sql": "SELECT name FROM sqlite_schema WHERE type='index' AND tbl_name='analytics_event' AND name IN (?,?,?,?)",
+        "started_at_ms": 1794950175206,
+        "wall_ms": 0.02826300001470372,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "74b1e1572f486550efd7738287eb349beb7df4ec4e85e5835f0fd73f41dbefbd",
+        "sql": "SELECT name FROM sqlite_schema WHERE type='index' AND tbl_name='analytics_event' AND name IN (?,?,?,?)",
+        "started_at_ms": 1794950175207,
+        "wall_ms": 0.10246000002371147,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 5,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "prepare",
+        "sql_hash": "3b02b3b9b692a98575ce2d80aea287daaf1029f75fbc543b24d9f9db6ad971c0",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json FROM analytics_event e INDEXED BY analytics_ark_evidence_cover_v2 WHE",
+        "started_at_ms": 1794950175207,
+        "wall_ms": 0.12069399998290464,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "3b02b3b9b692a98575ce2d80aea287daaf1029f75fbc543b24d9f9db6ad971c0",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json FROM analytics_event e INDEXED BY analytics_ark_evidence_cover_v2 WHE",
+        "started_at_ms": 1794950175207,
+        "wall_ms": 324.7729620000464,
+        "thread_cpu_ms": 1.879,
+        "thread_read_bytes": 45056,
+        "thread_read_calls": 15,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "prepare",
+        "sql_hash": "71252f4dcd3e16b74d02f73a2db05ccd75e8df8bdc7b049d2bc346ade6b04f74",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY analytics_ark_as",
+        "started_at_ms": 1794950175532,
+        "wall_ms": 0.11013999994611368,
+        "thread_cpu_ms": 0.335,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "all",
+        "sql_hash": "71252f4dcd3e16b74d02f73a2db05ccd75e8df8bdc7b049d2bc346ade6b04f74",
+        "sql": "SELECT e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,NULL AS client_json,e.batch_attempt_id FROM analytics_event e INDEXED BY analytics_ark_as",
+        "started_at_ms": 1794950175532,
+        "wall_ms": 579.9895230000257,
+        "thread_cpu_ms": 2.967,
+        "thread_read_bytes": 135168,
+        "thread_read_calls": 40,
+        "error": null
+      },
+      {
+        "database": "analytics",
+        "phase": "exec",
+        "sql_hash": "79663c1d3b43ceaf9ee728e501c64b57ae2e4d6cb36ff5c65eddcda1de27342f",
+        "sql": "COMMIT",
+        "started_at_ms": 1794950176115,
+        "wall_ms": 0.02503299998352304,
+        "thread_cpu_ms": 0,
+        "thread_read_bytes": 0,
+        "thread_read_calls": 2,
+        "error": null
+      }
+    ],
+    "omitted": 0,
+    "finished_at_ms": 1794950176132,
+    "wall_ms": 926.8668080000207,
+    "main_thread_cpu_during_request_ms": 9.612
+  },
+  "slow_wait_samples": [
+    {
+      "at_ms": 1794950175252,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207646303\nwchar: 21816380\nsyscr: 37016\nsyscw: 21960\nread_bytes: 7200768\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175353,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207658591\nwchar: 21816380\nsyscr: 37019\nsyscw: 21960\nread_bytes: 7213056\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175454,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207683167\nwchar: 21816380\nsyscr: 37025\nsyscw: 21960\nread_bytes: 7237632\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175555,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207704163\nwchar: 21816380\nsyscr: 37038\nsyscw: 21960\nread_bytes: 7245824\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175655,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207724643\nwchar: 21816380\nsyscr: 37043\nsyscw: 21960\nread_bytes: 7262208\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175755,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207741027\nwchar: 21816380\nsyscr: 37047\nsyscw: 21960\nread_bytes: 7278592\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175856,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207773795\nwchar: 21816380\nsyscr: 37055\nsyscw: 21960\nread_bytes: 7307264\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950175956,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207794275\nwchar: 21816380\nsyscr: 37060\nsyscw: 21960\nread_bytes: 7327744\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    },
+    {
+      "at_ms": 1794950176057,
+      "pid": 2499903,
+      "state": "D",
+      "wchan": "folio_wait_bit_common",
+      "thread_io": "rchar: 207827043\nwchar: 21816380\nsyscr: 37068\nsyscw: 21960\nread_bytes: 7360512\nwrite_bytes: 14774272\ncancelled_write_bytes: 4096\n",
+      "sampling": "read_only_100ms_outside_test_cgroup"
+    }
+  ],
+  "slow_wait_counts": {
+    "D/folio_wait_bit_common": 9
+  },
+  "max_working_set_pct": 67.06136067708334,
+  "oom": 0,
+  "memory_max_events": 0,
+  "production_ready_samples": 97,
+  "production_ready_failures": 0,
+  "scope_limits": [
+    "client aborted history still responded server200; not successful transport",
+    "Ark HTTP handler shares synthetic receiver; production topology review pending",
+    "no final drain after fail; not proof rollup convergence regressed",
+    "foreground query_only=true cache8MiB as config; older summary64 is not this run"
+  ]
+}

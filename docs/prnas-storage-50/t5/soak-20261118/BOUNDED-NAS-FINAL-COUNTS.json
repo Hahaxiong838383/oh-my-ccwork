@@ -1,0 +1,1 @@
+{"scope":"NAS_DERIVED_COPY_READ_ONLY_COUNTS_NOT_PRODUCTION_RUNTIME","node":"v22.19.0","sqlite":"3.50.4","analytics_event":300000,"analytics_event_seen":300000,"analytics_rollup_fact":600000,"analytics_dirty_day":2,"devices":50,"dimensions":[{"dimension":"occurred","n":300000},{"dimension":"received","n":300000}]}

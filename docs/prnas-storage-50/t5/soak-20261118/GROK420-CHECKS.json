@@ -1,0 +1,148 @@
+{
+  "verdict": "NOT_ACCEPTED",
+  "mix_pass": false,
+  "production_release": false,
+  "minimal_fix": "http_accept_busy_timeout_0_then_restore_within_existing_80ms",
+  "minimal_fix_sufficient_for_this_503": false,
+  "minimal_fix_sufficient_for_1117ms": false,
+  "page_rotation_is_minimal_fix": false,
+  "nice_removes_disk_wait": false,
+  "source_modified_by_this_review": false,
+  "ssh": false,
+  "cloud_load": false,
+  "subagents": false,
+  "head_reviewed": "16716936d57315dc529d9aac25f3432cde3d1e0c",
+  "base": "5be3fb4b63ca96ccf7465217cd9582e10f56e7a5",
+  "worktree_moved_during_review": {
+    "observed_later_head": "9a5ac270dca8e63b16eec83fe7d599500e33fe32",
+    "intermediate": "708a3149",
+    "note": "708a3149 and 9a5ac270 share Ark files. Their retry loop is flat 10ms and attempt>=5, not the reviewed 10/20/30 four-attempt design. Soak evidence is 16716936."
+  },
+  "node_probe": {
+    "requested_path": "/Users/fu-121/.local/node-v24/bin/node24.19.0",
+    "requested_path_exists": false,
+    "used_path": "/Users/fu-121/.local/node-v24/bin/node",
+    "version": "v24.19.0",
+    "sqlite": "3.53.3",
+    "explicit_rowid_index": "no such column: rowid",
+    "implicit_rowid_cid": -1,
+    "payload_column_sorts_before_implicit_rowid": true
+  },
+  "hashes": {
+    "cadence_index_files": 34,
+    "cadence_sha_mismatches": 0,
+    "linux_index_files": 8,
+    "linux_sha_mismatches": 0,
+    "bundle": {
+      "path": "/Users/fu-121/.local/state/p003-t5-soak-20261118/bounded-cadence-evidence-16716936.tar.gz",
+      "bytes": 986493,
+      "sha256": "5f694656e28df84a059bd14e23037ee5acf40a54c573052e29e762029a2a1503",
+      "matches_claimed": true
+    },
+    "candidate_files_verified_after_not_rehashed": 547
+  },
+  "ark_http": {
+    "rows": 302,
+    "http_200": 301,
+    "http_503": 1,
+    "fail_index_0based": 301,
+    "fail_ordinal_1based": 302,
+    "round": 6,
+    "actor": 1,
+    "at_ms": 1794948684655,
+    "wall_ms": 1605.2175660000066,
+    "body_error": "ark_dependency_unavailable",
+    "sqlite_errcode5_lines": 2,
+    "sqlite_errcode5_at_ms": [
+      1794948686186,
+      1794948686257
+    ],
+    "prior_rows_all_200": true,
+    "rows_after_fail": 0
+  },
+  "analytics_ingest": {
+    "rows": 3685,
+    "http_200": 1500,
+    "http_503": 2185,
+    "error_ANALYTICS_OVERLOADED": 2185,
+    "http_503_other_error": 0,
+    "mixed_into_ark_count": false
+  },
+  "mixed_query": {
+    "rows": 150,
+    "windows": 3,
+    "transport_failures": 13,
+    "transport_window": "mixed-query-1794948683957",
+    "transport_actors": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "client_status_on_those_13": null,
+    "shared_reader_rows": 150,
+    "shared_reader_http_200": 150,
+    "third_server_over_120ms_actors": [
+      0,
+      1
+    ],
+    "third_client_p99_ms": 164.61908699997002,
+    "query0": {
+      "id": "mixed-query-1794948683957-0",
+      "wall_ms": 1117.7134689999511,
+      "cpu_ms": 8.762,
+      "started_at_ms": 1794948684657,
+      "finished_at_ms": 1794948685775,
+      "assets_all_wall_ms": 819.4940630000201,
+      "assets_read_bytes": 86016,
+      "evidence_all_wall_ms": 265.71755999996094,
+      "evidence_read_bytes": 24576
+    },
+    "wchan_samples": 12,
+    "wchan_D": 11,
+    "wchan_folio_wait_bit_common": 10,
+    "wchan_do_get_write_access": 1
+  },
+  "linux_physical_v2": {
+    "node": "v24.19.0",
+    "sqlite": "3.53.3",
+    "held_250ms": {
+      "status": 503,
+      "wall_ms": 86.603812,
+      "sqlite_busy_attempts": 3
+    },
+    "held_45ms": {
+      "status": 200,
+      "wall_ms": 50.74298399999998,
+      "sqlite_busy_attempts": 1
+    },
+    "scope": "LINUX_SYNTHETIC_REAL_HTTP_AND_SQLITE_LOCKS_NOT_LOAD_PASS"
+  },
+  "design": {
+    "busy_timeout_0_on_http_accept_only": "agree",
+    "finally_restore_read_back_value": "agree_stricter_than_hardcoded_15",
+    "retries": "4 attempts, yields 10/20/30, budget 80, headroom 15",
+    "authority_recheck_retained": true,
+    "sla_expanded": false,
+    "turns_this_302nd_request_into_200": false,
+    "shortens_folio_wait": false,
+    "bundle_with_page_rotation_or_nice": false
+  },
+  "assumptions": [
+    "export BEGIN IMMEDIATE is the ark lock holder at the two BUSY timestamps",
+    "whether that lock was one continuous hold or short pulses a zero timeout could slip between",
+    "one page per device would raise 8MiB cache hits",
+    "how many of the overlapping 779ms were caused by maintenance IO",
+    "host sysfs mq-deadline, rotational=1, wbt_lat_usec=75000; not present as a dump in D",
+    "708a3149 six-by-10ms behavior under the same export overlap"
+  ]
+}
