@@ -97,11 +97,13 @@ if(mode==='run'){
   for(let offset=0;offset<config.events;offset+=config.batch){
    const events=Array.from({length:Math.min(config.batch,config.events-offset)},(_,i)=>{const n=offset+i,spec=catalog[n%catalog.length];return {schema_version:1,client_event_id:prefix+'-'+actor+'-'+n,event_name:spec.eventName,occurred_at_ms:started,session_id:hash(prefix+'-'+actor).slice(0,32),sequence:n,priority:'normal',context:{},properties:structuredClone(spec.sample)};});
    const ids=events.map(e=>e.client_event_id),body=JSON.stringify({schema_version:1,batch_id:prefix+'-'+actor+'-'+offset,sent_at_ms:started,client:{component:'synthetic-t5'},events});
+   const batchStarted=performance.now();
    for(let attempt=0;;attempt++){
     assert.ok(Date.now()-started<config.deadline_ms,'load deadline exceeded');
     const start=performance.now();let status=0,retry=0,j:any;
     try{const r=await fetch(privateConfig.url+'/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json','X-Request-Id':prefix+'-'+actor+'-'+offset+'-'+attempt},body,signal:AbortSignal.timeout(20000)});status=r.status;retry=Number(r.headers.get('retry-after')??0)*1000;j=await r.json();}catch(e){j={error_code:'CLIENT_TRANSPORT',error:String(e)};retry=1000;}
-    const record={actor,offset,attempt,status,ms:performance.now()-start,retry_ms:retry,error:j.error_code??null};attempts++;appendFileSync(join(root,'requests.jsonl'),JSON.stringify(record)+'\n');
+    const finished=performance.now();
+    const record={actor,offset,attempt,status,ms:finished-start,batch_elapsed_ms:finished-batchStarted,retry_ms:retry,error:j.error_code??null};attempts++;appendFileSync(join(root,'requests.jsonl'),JSON.stringify(record)+'\n');
     if(status===200){assert.ok(j.ok&&j.rejected.length===0);assert.deepEqual([...j.accepted_event_ids,...j.duplicated_event_ids].sort(),[...ids].sort());appendFileSync(join(root,'completed.jsonl'),JSON.stringify({actor,offset,ack:j})+'\n');completed++;break;}
     assert.ok(status===0||status===429||status===503,'terminal HTTP '+status);assert.ok(Number.isFinite(retry)&&retry>=0&&retry<=3600000,'invalid Retry-After');await sleep(Math.max(100,retry)+Math.floor(random()*1000));
    }
