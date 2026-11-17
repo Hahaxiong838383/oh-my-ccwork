@@ -1,16 +1,18 @@
 import type {AnalyticsStore} from '../analytics/store.js';
+import {arkHistoryReadIndexes} from './history-indexes.js';
 import {cstDay,daySchema,dailyFactSchema,unknownHistory,type ArkHistory} from './contracts.js';
 const DAY=86400000;
 /** Full device key only. Bounded raw facts; rollups, request IDs and aliases are never authority. */
 export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,now=Date.now()):ArkHistory{
  if(!/^[a-f0-9]{64}$/.test(key)||!Number.isSafeInteger(notBefore)||notBefore>now)return unknownHistory();
  return store.readSnapshot(()=>{
+ const indexes=arkHistoryReadIndexes(store.db);
  const columns=`e.event_name,e.occurred_at_ms,e.received_at_ms,e.clock_suspicious,e.properties_json,b.client_json`;
  type Row={event_name:string;occurred_at_ms:number;received_at_ms:number;clock_suspicious:number;properties_json:string;client_json:string|null};
  // Seek the relevant event families before inspecting GM properties. Without the hint SQLite
  // favors received-time ordering and reads all unrelated device events before LIMIT can apply.
- // The index already exists; no schema/retention/authorization or fact semantics change.
- const evidence=store.db.prepare(`SELECT ${columns} FROM analytics_event e INDEXED BY analytics_ark_device_event_received LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
+ // Optional covering indexes are installed offline; old DBs use the existing selective index.
+ const evidence=store.db.prepare(`SELECT ${columns} FROM analytics_event e INDEXED BY ${indexes.evidence} LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
  WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=?
  AND e.event_name IN ('g1.logical_day_changed','g1.command_failed','g1.runtime_command_completed','g1.gift_became_available','g1.gift_claimed','g1.reward_granted')
  AND (e.event_name='g1.logical_day_changed' OR json_extract(e.properties_json,'$.gm_override')=1 OR json_extract(e.properties_json,'$.source_mode')='gm'
@@ -19,7 +21,7 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  OR lower(coalesce(json_extract(e.properties_json,'$.command'),'')||' '||coalesce(json_extract(e.properties_json,'$.source_kind'),'')) GLOB '*test*')
  ORDER BY e.received_at_ms DESC LIMIT 513`).all(key,now-14*DAY,now) as Row[];
  if(evidence.length>512)return unknownHistory('query_limit');
- const facts=store.db.prepare(`SELECT ${columns} FROM analytics_event e LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
+ const facts=store.db.prepare(`SELECT ${columns} FROM analytics_event e INDEXED BY ${indexes.assets} LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
  WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=?
  AND e.occurred_at_ms>=? AND e.occurred_at_ms<=? AND e.event_name IN ('g1.wallet_balance_changed','g1.inventory_changed','g1.makeup_card_balance_changed')
  ORDER BY e.occurred_at_ms DESC,e.received_at_ms DESC LIMIT 513`).all(key,Math.max(notBefore,now-14*DAY),now,Math.max(notBefore,now-14*DAY),now) as Row[];
@@ -55,7 +57,7 @@ export function readArkHistory(store:AnalyticsStore,key:string,notBefore:number,
  // Separate bounded day scan: reward grants are not wallet deltas; aggregated diagnostics never enter.
  const today=cstDay(now),start=Date.parse(today+'T00:00:00+08:00');
  if(normal.has(today)&&!gmDays.has(today)){
-  const rows=store.db.prepare(`SELECT ${columns},e.session_id FROM analytics_event e LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
+  const rows=store.db.prepare(`SELECT ${columns},e.session_id FROM analytics_event e INDEXED BY ${indexes.daily} LEFT JOIN analytics_batch b ON b.attempt_id=e.batch_attempt_id
    WHERE e.device_key=? AND e.received_at_ms>=? AND e.received_at_ms<=? AND e.occurred_at_ms>=? AND e.occurred_at_ms<=?
    AND e.event_name IN ('g1.progress_checkpoint','g1.reward_granted') ORDER BY e.occurred_at_ms,e.client_event_id LIMIT 513`)
    .all(key,Math.max(notBefore,start),now,Math.max(notBefore,start),now) as (Row&{session_id:string|null})[];

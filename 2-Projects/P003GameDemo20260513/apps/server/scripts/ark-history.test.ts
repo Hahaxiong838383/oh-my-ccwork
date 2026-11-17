@@ -9,8 +9,10 @@ import {createHmac} from 'node:crypto';
 import {AnalyticsStore} from '../src/analytics/store.js';
 import {settleAnalyticsBatch} from '../src/analytics/ingest.js';
 import {readArkHistory} from '../src/ark/history.js';
+import {installArkHistoryIndexes,arkHistoryReadIndexes,ARK_HISTORY_INDEXES} from '../src/ark/history-indexes.js';
 const NOW=Date.parse('2026-10-31T09:00:00Z'),KEY='a'.repeat(64),OTHER='a'.repeat(12)+'b'.repeat(52);
 function fixture(){const root=mkdtempSync(join(tmpdir(),'ark-history-')),store=new AnalyticsStore(join(root,'analytics.db'));let seq=0;
+ if(process.env.ARK_HISTORY_TEST_COVER==='1')installArkHistoryIndexes(store.db);
  const add=(name:string,properties:Record<string,unknown>,occurred=NOW-1000,received=NOW,key=KEY)=>{const id='e'+(++seq);const ack=settleAnalyticsBatch(store,{deviceKey:key,active:true,uploadEnabled:true,uploadHourCst:23},{schema_version:1,batch_id:'b'+seq,sent_at_ms:received,client:{content_version:'test-content'},events:[{schema_version:1,client_event_id:id,event_name:name,occurred_at_ms:occurred,session_id:'s',sequence:seq,priority:'normal',context:{},properties}]},'r'+seq,received);assert.equal(ack.rejected.length,0);};
  const normal=(at=NOW-2000)=>add('g1.logical_day_changed',{previous_logical_day:'2026-10-30',logical_day:'2026-10-31',previous_usage_day_index:1,usage_day_index:2,gm_override:false},at);
  const wallet=(n:number,at=NOW-1000,received=NOW,key=KEY)=>add('g1.wallet_balance_changed',{item_id:'C-FAMILY-001',before:0,after:n,delta:n},at,received,key);
@@ -71,11 +73,28 @@ test('history selects event families through the existing selective index, prese
  f.store.transaction(()=>{for(let i=0;i<12000;i++)insert.run(KEY,'index-noise'+i,'voice.session_state_changed',NOW-500,NOW,'s',i,'normal','{}','{}',row.batch_attempt_id,'2026-10-31','2026-10-31',0);});
  const plans:string[]=[];
  const instrument=(removeHint:boolean)=>({readSnapshot:f.store.readSnapshot.bind(f.store),db:{prepare(sql:string){
-  if(removeHint)sql=sql.replaceAll(' INDEXED BY analytics_ark_device_event_received','');
+  if(removeHint)sql=sql.replace(/ INDEXED BY analytics_ark_(?:device_event_received|(?:evidence|assets|daily)_cover_v1)/g,'');
   const statement=f.store.db.prepare(sql);
   return {all(...args:any[]){if(!removeHint)plans.push(...(f.store.db.prepare('EXPLAIN QUERY PLAN '+sql).all(...args) as {detail:string}[]).filter(r=>r.detail.startsWith('SEARCH e ')).map(r=>r.detail));return statement.all(...args);}};
  }}} as unknown as AnalyticsStore);
  const previous=readArkHistory(instrument(true),KEY,NOW-5000,NOW),current=readArkHistory(instrument(false),KEY,NOW-5000,NOW);
  assert.deepEqual(current,previous);assert.equal(current.wallets.family_coin?.value,21);assert.equal(plans.length,3);
  for(const plan of plans)assert.match(plan,/event_name=\?/,`must seek relevant events instead of scanning every device event: ${plan}`);
+}finally{f.done();}});
+
+test('offline history indexes preserve data, are idempotent, and a conflicting definition rolls back',()=>{const f=fixture();try{
+ f.normal();f.wallet(29);
+ for(const {name} of Object.values(ARK_HISTORY_INDEXES))f.store.db.exec(`DROP INDEX IF EXISTS ${name}`);
+ const before=readArkHistory(f.store,KEY,NOW-5000,NOW),rows=f.store.db.prepare('SELECT * FROM analytics_event ORDER BY client_event_id').all();
+ assert.equal(arkHistoryReadIndexes(f.store.db).evidence,'analytics_ark_device_event_received');
+ assert.equal(installArkHistoryIndexes(f.store.db).created.length,3);
+ assert.deepEqual(installArkHistoryIndexes(f.store.db),{created:[]});
+ assert.deepEqual(readArkHistory(f.store,KEY,NOW-5000,NOW),before);
+ assert.deepEqual(f.store.db.prepare('SELECT * FROM analytics_event ORDER BY client_event_id').all(),rows);
+ for(const [kind,{name}] of Object.entries(ARK_HISTORY_INDEXES))assert.equal(arkHistoryReadIndexes(f.store.db)[kind as keyof typeof ARK_HISTORY_INDEXES],name);
+ for(const {name} of Object.values(ARK_HISTORY_INDEXES))f.store.db.exec(`DROP INDEX ${name}`);
+ f.store.db.exec(`CREATE INDEX ${ARK_HISTORY_INDEXES.assets.name} ON analytics_event(device_key)`);
+ assert.throws(()=>installArkHistoryIndexes(f.store.db),/DEFINITION_CONFLICT/);
+ assert.equal(f.store.db.prepare("SELECT count(*) n FROM sqlite_schema WHERE type='index' AND name IN (?,?)").get(ARK_HISTORY_INDEXES.evidence.name,ARK_HISTORY_INDEXES.daily.name)!.n,0);
+ assert.deepEqual(f.store.db.prepare('SELECT * FROM analytics_event ORDER BY client_event_id').all(),rows);
 }finally{f.done();}});
