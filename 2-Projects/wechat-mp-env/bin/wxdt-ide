@@ -12,7 +12,10 @@
 #   wxdt-ide url           # 打印访问地址（含一次性的用户名/密码位置）
 #   wxdt-ide ide           # 只确保 IDE 在跑
 #   wxdt-ide shot [file]   # 截当前屏幕到 png（无需打开浏览器）
+#   wxdt-ide login         # 登录态自检（状态/昵称/多久没刷新）
 #   wxdt-ide logs          # IDE 主进程日志（尾部）
+#   wxdt-ide ensure        # 静默自愈（systemd timer 用）
+#   wxdt-ide backup [N]    # 备份登录态，保留 N 份（默认 7）
 #   wxdt-ide down          # 停容器（不删；登录态在 /data 卷里）
 #   wxdt-ide reset         # 停并删除容器（登录态仍保留）
 set -uo pipefail
@@ -141,6 +144,76 @@ cmd_logs() {
      [ -n "$latest" ] && tail -40 "$latest" || echo "（还没有日志，IDE 可能没起过）"' 2>/dev/null
 }
 
+
+# 登录态自检：读 IDE 自己写的 localStorage（不打印凭据），并对照近期是否出现过 need-login
+cmd_login() {
+  container_running || { echo "[x] 容器未运行"; return 1; }
+  local LS="$CFGDIR/.config/wechat-devtools/app/WeappLocalData"
+  python3 - "$LS" <<'PY2'
+import json,glob,os,sys,time
+d=sys.argv[1]
+best=None
+for f in glob.glob(os.path.join(d,'localstorage_*.json')):
+    try: j=json.load(open(f,encoding='utf-8'))
+    except Exception: continue
+    if isinstance(j,dict) and 'loginStatus' in j:
+        best=(f,j)
+if not best:
+    print("  loginStatus : (还没写过，可能尚未登录)"); raise SystemExit(0)
+f,j=best
+mt=time.strftime('%Y-%m-%d %H:%M',time.localtime(os.path.getmtime(f)))
+print(f"  loginStatus : {j.get('loginStatus')}")
+print(f"  isTourist   : {j.get('isTourist')}")
+print(f"  nickName    : {j.get('nickName')}")
+print(f"  openid 长度 : {len(j.get('openid') or '')}（值不打印）")
+print(f"  写入时间    : {mt}")
+age=(time.time()-os.path.getmtime(f))/3600
+print(f"  距上次刷新  : {age:.1f} 小时")
+PY2
+  # IDE 侧信号：启动/运行中出现 need-login 说明已掉线要重扫
+  local NL
+  NL="$(docker logs "$NAME" 2>&1 | grep -c 'emitNeedLogin' || true)"
+  echo "  运行期 need-login 事件: ${NL:-0} 次（0 = 登录态在用）"
+  if [[ "${NL:-0}" -gt 0 ]]; then
+    echo "  [!] 出现过掉线事件；若 IDE 界面停在二维码，需要重新扫码"
+  fi
+}
+
+# 给 systemd timer / cron 用：静默自愈，只在有动作时说话
+cmd_ensure() {
+  need_docker
+  local acted=0
+  if ! docker inspect "$NAME" >/dev/null 2>&1; then
+    echo "[$(date '+%F %T')] 容器不存在，创建"; ensure_container >/dev/null 2>&1; acted=1
+  elif ! container_running; then
+    echo "[$(date '+%F %T')] 容器停了，拉起"; docker start "$NAME" >/dev/null; acted=1
+  fi
+  if container_running; then
+    if ! docker exec "$NAME" sh -c 'pgrep -x Xvfb >/dev/null' 2>/dev/null; then
+      echo "[$(date '+%F %T')] Xvfb 未就绪，等容器自恢复"; acted=1
+    elif ! ide_running; then
+      echo "[$(date '+%F %T')] IDE 不在跑，拉起"
+      docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config "$NAME" /opt/wxdt/bin/bin/wechat-devtools
+      acted=1
+    fi
+  fi
+  [[ "$acted" == "0" ]] && echo "[$(date '+%F %T')] ok"
+  return 0
+}
+
+# 登录态备份（保留最近 N 份）
+cmd_backup() {
+  local keep="${1:-7}"
+  local dst="/data/home-studio/wxdt-ide/backup"
+  [[ -d "$CFGDIR" ]] || { echo "[x] 配置目录不存在"; return 1; }
+  mkdir -p "$dst"
+  local ts; ts="$(date +%Y%m%d-%H%M%S)"
+  tar -czf "$dst/loginstate-$ts.tgz" -C "$CFGDIR/.config" \
+    wechat-devtools/app/WeappLocalData wechat-devtools/Partitions 2>/dev/null
+  ls -1t "$dst"/loginstate-*.tgz 2>/dev/null | tail -n +$((keep+1)) | xargs -r rm -f
+  echo "[✓] 备份 $dst/loginstate-$ts.tgz（保留 $keep 份，共 $(ls -1 "$dst"/loginstate-*.tgz 2>/dev/null | wc -l) 份）"
+}
+
 case "${1:-status}" in
   up)     cmd_up ;;
   down)   cmd_down ;;
@@ -150,5 +223,8 @@ case "${1:-status}" in
   ide)    ensure_ide ;;
   shot)   shift; cmd_shot "${1:-}" ;;
   logs)   cmd_logs ;;
+  login)  cmd_login ;;
+  ensure) cmd_ensure ;;
+  backup) shift; cmd_backup "${1:-7}" ;;
   *) sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//' ;;
 esac

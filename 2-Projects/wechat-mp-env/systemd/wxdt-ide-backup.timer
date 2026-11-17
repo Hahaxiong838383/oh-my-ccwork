@@ -1,0 +1,11 @@
+[Unit]
+Description=每天备份一次微信开发者工具登录态
+
+[Timer]
+OnCalendar=daily
+RandomizedDelaySec=30m
+Persistent=true
+Unit=wxdt-ide-backup.service
+
+[Install]
+WantedBy=timers.target

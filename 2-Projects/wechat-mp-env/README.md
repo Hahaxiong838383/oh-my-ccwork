@@ -53,8 +53,10 @@ wechat-mp-env/
 │   └── wxdt-doctor      # 自检
 ├── downloads/           # deb 安装包留档
 ├── node_modules/        # miniprogram-ci（全项目共用）
+├── systemd/             # 保活单元（容器自启 + IDE 自愈 + 每日备份登录态）
 ├── scripts/
 │   ├── install-devtools.sh   # 安装/升级/回滚
+│   ├── install-systemd.sh    # 装/更新保活 timer（幂等）
 │   ├── preview.mjs           # 出预览二维码
 │   └── upload.mjs            # 上传开发版
 ├── templates/miniprogram-starter/   # 最小可跑骨架
@@ -92,6 +94,7 @@ wechat-mp-env/
 | secrets 目录 | 已建 | `~/.mycc-secrets` 700，暂无密钥 |
 | 根盘 | **预警** | `/` 91% 已用，仅剩 20G |
 | 登录态 | ✅ **2026-11-17 已扫通** | 浏览器版 IDE 扫码成功进主界面；`WeappLocalData/localstorage_*.json` 里 `loginStatus=SUCCESS`、`isTourist=false`、`openid`+`currentUser` 齐全，落在 `/data` 挂载卷，容器重建不丢 |
+| **登录态保活** | ✅ **已固化并实测** | 三层：容器 `--restart unless-stopped` + `wxdt-ide-ensure.timer`（1min，拉起 IDE）+ `wxdt-ide-backup.timer`（每日，留 7 份）。实测：① 杀 IDE → 60s 内自动拉起且免扫码；② `docker restart` → Xvfb 重建后 timer 补起 IDE，`loginStatus=SUCCESS` 不变 |
 | wxdt-ide 首版故障 | ✅ 已修 | 初版 `MAX_RES=1920x1080`，客户端 Retina 请求 3548x1992 → X `BadMatch` → 表现为"输完密码连不上"；提到 7680x4320 并重建容器后正常（PITFALLS 2.5d） |
 | 端到端上传 | **未验证** | 缺 appid + 上传密钥 |
 

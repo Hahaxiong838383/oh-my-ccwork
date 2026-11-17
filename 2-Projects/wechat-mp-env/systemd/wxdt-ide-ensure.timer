@@ -1,0 +1,11 @@
+[Unit]
+Description=每分钟检查一次微信开发者工具容器版是否健康
+
+[Timer]
+OnBootSec=90s
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=wxdt-ide-ensure.service
+
+[Install]
+WantedBy=timers.target

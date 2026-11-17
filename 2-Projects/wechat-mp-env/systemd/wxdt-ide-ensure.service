@@ -1,0 +1,10 @@
+[Unit]
+Description=微信开发者工具（容器版）自愈：容器/Xvfb/IDE 任一掉了就拉起
+Documentation=file:///home/hahaxiong83/mycc/2-Projects/wechat-mp-env/docs/WORKFLOW.md
+After=docker.service
+
+[Service]
+Type=oneshot
+Environment=PATH=/home/hahaxiong83/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/hahaxiong83/mycc/2-Projects/wechat-mp-env/bin/wxdt-ide ensure
+TimeoutStartSec=180

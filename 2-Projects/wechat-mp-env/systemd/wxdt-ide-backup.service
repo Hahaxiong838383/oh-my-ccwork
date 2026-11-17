@@ -1,0 +1,9 @@
+[Unit]
+Description=备份微信开发者工具登录态（WeappLocalData + Partitions）
+Documentation=file:///home/hahaxiong83/mycc/2-Projects/wechat-mp-env/docs/WORKFLOW.md
+
+[Service]
+Type=oneshot
+Environment=PATH=/home/hahaxiong83/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/hahaxiong83/mycc/2-Projects/wechat-mp-env/bin/wxdt-ide backup 7
+TimeoutStartSec=120

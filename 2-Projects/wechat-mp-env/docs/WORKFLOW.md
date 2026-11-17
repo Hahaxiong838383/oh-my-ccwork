@@ -39,7 +39,35 @@ wxdt-cli islogin
 容器规格：Xvfb 1920x1080 + openbox（可拖窗/最大化）+ selkies（h264/jpeg 编码），
 实测内存约 500MB、CPU 空闲 2%。IDE 目录以**只读**方式挂入，容器不改你的安装。
 
-⚠️ 容器重启后 Xvfb 会重建，**IDE 不会自动起** → 再跑一次 `./bin/wxdt-ide up` 即可。
+### 0.2 登录态保活（已固化）
+
+登录态在 `/data/home-studio/wxdt-ide/config/.config/wechat-devtools/`（挂载卷），
+微信自己的 token 由 IDE 常驻运行时持续刷新。所以保活的核心是**让 IDE 一直跑着**。
+三层守护，全部无需人工：
+
+| 层 | 机制 | 覆盖场景 |
+|---|---|---|
+| 容器 | `--restart unless-stopped` | docker daemon 重启、宿主重启后容器自动起 |
+| IDE | systemd user timer `wxdt-ide-ensure.timer`（每分钟） | 容器重启后 Xvfb 重建、IDE 崩溃、被误杀 |
+| 数据 | systemd user timer `wxdt-ide-backup.timer`（每天，留 7 份） | 误删/损坏，产物在 `/data/home-studio/wxdt-ide/backup/` |
+
+```bash
+# 看守护是否在跑
+systemctl --user list-timers wxdt-ide-*
+journalctl --user -u wxdt-ide-ensure.service -n 20 --no-pager
+
+# 手动体检 / 干预
+./bin/wxdt-ide login      # 登录态自检（状态/昵称/多久没刷新/掉线事件）
+./bin/wxdt-ide ensure     # 立刻自愈一次
+./bin/wxdt-ide backup 7   # 立刻备份
+```
+
+宿主重启这条路依赖 `Linger=yes`（本机已开）+ timer 的 `OnBootSec=90s`；容器由 docker 的
+restart policy 拉起，IDE 由 timer 在容器就绪后补起。**整机重启路径未做实机验证**
+（要真重启一次才算数），单测已覆盖「IDE 被杀」「容器 restart」两种。
+
+登录态真过期时（`wxdt-ide login` 会看到 `need-login` 事件 > 0，且界面停在二维码）：
+浏览器打开 `https://10.10.10.23:3002/` 重扫一次即可，配置无需清理。
 
 ---
 
