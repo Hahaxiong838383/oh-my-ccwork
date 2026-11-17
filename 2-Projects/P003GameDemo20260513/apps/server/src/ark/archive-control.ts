@@ -2,7 +2,6 @@ import {Hono} from 'hono';
 import {getConnInfo} from '@hono/node-server/conninfo';
 import {timingSafeEqual} from 'node:crypto';
 import {ZodError,z} from 'zod';
-import {realpathSync} from 'node:fs';
 import type {ArkStore} from './store.js';
 import {arkArchiveCommand} from './archive-commands.js';
 import {readBoundedJson,ArkHttpError} from './http.js';
@@ -19,7 +18,7 @@ export function createArkArchiveControl(o:{store:()=>ArkStore;secret:()=>string;
   pending++;try{
    const envelope=z.object({database:z.string().min(1).max(4096),command:z.unknown()}).strict().parse(await readBoundedJson(c.req.raw,8192,1000));
    const store=o.store(),file=String(store.db.prepare('PRAGMA database_list').all().find(r=>r.name==='main')?.file??'');
-   if(envelope.database!==realpathSync(file))return c.json({ok:false,error:'archive_database_mismatch'},409);
+   if(envelope.database!==file)return c.json({ok:false,error:'archive_database_mismatch'},409);
    // No transaction is retained over an await. File work stays in the exporter.
    return c.json({ok:true,result:arkArchiveCommand(store.db,envelope.command)});
   }catch(e){

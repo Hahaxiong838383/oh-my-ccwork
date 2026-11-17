@@ -21,7 +21,11 @@ test('mixed harness writes Ark in the existing Brain child, independent of a blo
  if(!receiver.listening)await once(receiver,'listening');
  let service:Awaited<ReturnType<typeof startSharedQuery>>|undefined,probe:ReturnType<typeof fork>|undefined;
  try{
-  service=await startSharedQuery(root,'http://127.0.0.1:'+(receiver.address()as any).port,secret);
+  const previousMode=process.env.T5_ARK_SINGLE_WRITER;process.env.T5_ARK_SINGLE_WRITER='1';
+  try{service=await startSharedQuery(root,'http://127.0.0.1:'+(receiver.address()as any).port,secret);}finally{if(previousMode===undefined)delete process.env.T5_ARK_SINGLE_WRITER;else process.env.T5_ARK_SINGLE_WRITER=previousMode;}
+  const control=await fetch(service.arkControlUrl,{method:'POST',headers:{'Content-Type':'application/json','X-Ark-Archive-Token':secret},body:JSON.stringify({database:join(root,'ark.db'),command:{op:'status',state:'attempt',now}})});
+  assert.equal(control.status,200,'wrapped Brain socket must preserve native connection info');
+  assert.equal(ark.db.prepare('SELECT last_attempt_ms FROM ark_archive_stats').get()!.last_attempt_ms,now);
   assert.equal(service.brainPid,service.child.pid);assert.notEqual(service.brainPid,process.pid);
   assert.match(service.arkUrl,/^http:\/\/127\.0\.0\.1:\d+\/t5\/ark\/state$/);
   const token=await new SignJWT({kind:'p003-device'}).setSubject(identity.sn).setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('1m').sign(new TextEncoder().encode(secret));

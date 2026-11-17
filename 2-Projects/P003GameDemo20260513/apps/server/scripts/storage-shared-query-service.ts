@@ -58,7 +58,7 @@ process.on('message',async(message:any)=>{
    // Reuse this existing child so the test has the same two event loops and
    // counts all of them against the original shared resource budget.
    const app=new Hono();app.route('/internal/ark-archive',createArkArchiveControl({store:()=>ark,secret:()=>message.secret,enabled:()=>process.env.T5_ARK_SINGLE_WRITER==='1'}));app.route('/t5/ark',createArkRoutes({store:()=>ark,runtime:()=>runtime!,secret:()=>message.secret,ceiling:()=>ids.map(i=>i.sn),acceptsCredential:()=>true,isAdmin:()=>false}));
-   server=serve({hostname:'127.0.0.1',port:0,fetch:async request=>{const r=await app.fetch(request);r.headers.set('X-T5-Brain-Pid',String(process.pid));return r;}});
+   server=serve({hostname:'127.0.0.1',port:0,fetch:async(request,env)=>{const r=await app.fetch(request,env);r.headers.set('X-T5-Brain-Pid',String(process.pid));return r;}});
    if(!server.listening)await once(server,'listening');
    const arkUrl='http://127.0.0.1:'+(server.address()as any).port+'/t5/ark/state';
    writeFileSync(join(root,'brain-topology.json'),JSON.stringify({brain_pid:process.pid,receiver_pid:config.receiver_pid,ark_url:arkUrl,scope:'same-existing-child-same-test-cgroup'}));
