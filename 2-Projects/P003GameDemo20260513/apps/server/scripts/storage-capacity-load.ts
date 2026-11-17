@@ -60,6 +60,13 @@ if(mode==='run'){
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run),...(earlyReclaim?{walMaxBytes:64*1024**2}:{})});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));
+ // Preserve the original exception/HTTP result; isolate SQLite BUSY from other
+ // causes of the deliberately generic public 503 without recording any payload.
+ const acceptArk=ark.accept.bind(ark);
+ ark.accept=(...args:Parameters<ArkStore['accept']>)=>{try{return acceptArk(...args);}catch(error){
+  const e=error as {name?:string;code?:string;errcode?:number};
+  appendFileSync(join(root,'ark-accept-errors.jsonl'),JSON.stringify({at_ms:Date.now(),name:e.name??null,code:e.code??null,sqlite_code:e.errcode??null})+'\n');throw error;
+ }};
  for(const id of identities)ark.authorize(id,config.started_ms-1000);
  writeFileSync(join(root,'control.json'),'{"enabled":true}',{mode:0o600});
  const deadline=Date.now()+30000;while(!writer.ready){assert.ok(Date.now()<deadline,'writer readiness timeout');await sleep(10);}checkpointer.start();
