@@ -25,6 +25,10 @@ IMG="${WXDT_IDE_IMAGE:-ghcr.io/nickrunning/wechat-selkies:latest}"
 APP="$MP_ENV/app/opt/apps/io.github.msojocs.wechat-devtools-linux/files"
 CFGDIR="${WXDT_IDE_CFG:-/data/home-studio/wxdt-ide/config}"
 PASSFILE="${WXDT_IDE_PASSFILE:-$HOME/.mycc-secrets/wxdt-ide.pass}"
+# Xvfb 的虚拟屏上限。必须给足：selkies 收到浏览器发来的分辨率后会向 X 请求新 mode，
+# 超过 Xvfb 的 -screen 尺寸就报 BadMatch，连接直接崩（表现为浏览器"一直转圈/连不上"）。
+# 客户端若用 Retina 屏，浏览器请求可到 3500x2000+，所以别按 1080p 卡。
+MAXRES="${WXDT_IDE_MAXRES:-7680x4320}"
 
 die() { echo "[x] $*" >&2; exit 1; }
 need_docker() { docker info >/dev/null 2>&1 || die "docker 不可用"; }
@@ -44,7 +48,7 @@ pw() {
 }
 
 container_running() { [[ "$(docker inspect -f '{{.State.Running}}' "$NAME" 2>/dev/null)" == "true" ]]; }
-ide_running() { [[ -n "$(docker exec "$NAME" sh -c 'pgrep -f "resources/app" | head -1' 2>/dev/null)" ]]; }
+ide_running() { docker exec "$NAME" sh -c 'pgrep -f "[r]esources/app" >/dev/null' 2>/dev/null; }
 
 ensure_container() {
   need_docker
@@ -60,7 +64,7 @@ ensure_container() {
     -e CUSTOM_USER=hahaxiong83 -e PASSWORD="$p" \
     -e TITLE='WX DevTools' -e PUID="$(id -u)" -e PGID="$(id -g)" \
     -e TZ=Asia/Shanghai -e LC_ALL=zh_CN.UTF-8 \
-    -e MAX_RES=1920x1080 -e DISABLE_DRI3=true \
+    -e MAX_RES="$MAXRES" -e DISABLE_DRI3=true \
     -e AUTO_START_WECHAT=false -e AUTO_START_QQ=false \
     -e SELKIES_ENCODER=x264enc,jpeg \
     -v "$APP:/opt/wxdt:ro" -v "$CFGDIR:/config" \
@@ -78,7 +82,7 @@ ensure_ide() {
   docker exec -d -u abc -e DISPLAY=:1 -e HOME=/config "$NAME" /opt/wxdt/bin/bin/wechat-devtools || die "启动 IDE 失败"
   echo "[*] IDE 启动中…"
   for _ in $(seq 1 40); do
-    docker exec "$NAME" sh -c 'pgrep -f "resources/app" >/dev/null' 2>/dev/null && { echo "[✓] IDE 已就绪"; return; }
+    docker exec "$NAME" sh -c 'pgrep -f "[r]esources/app" >/dev/null' 2>/dev/null && { echo "[✓] IDE 已就绪"; return; }
     sleep 1
   done
   die "IDE 20s 内没起来，看日志：wxdt-ide logs"
@@ -93,7 +97,8 @@ cmd_status() {
   if ! docker inspect "$NAME" >/dev/null 2>&1; then echo "容器: 未创建（wxdt-ide up）"; return; fi
   echo "容器: $(docker inspect -f '{{.State.Status}}' "$NAME")  镜像: $IMG"
   echo "端口: $HOSTIP:$PORT -> 3001"
-  echo "Xvfb: $(docker exec "$NAME" sh -c 'pgrep -x Xvfb >/dev/null && pgrep -a -x Xvfb | sed "s/.*-screen 0 //;s/ .*//"' 2>/dev/null || echo 未运行)"
+  echo "Xvfb上限: $(docker exec "$NAME" sh -c 'xrandr -display :1 2>/dev/null | head -1' 2>/dev/null | grep -o "maximum [0-9]* x [0-9]*" || echo '?')"
+  echo "Xvfb: $(docker exec "$NAME" sh -c 'pgrep -a -x Xvfb 2>/dev/null | sed "s/.*-screen 0 //;s/ .*//"' 2>/dev/null || true) （上限，给不够会让浏览器端 resize 报 BadMatch）"
   echo "IDE : $(ide_running && echo 运行中 || echo 未启动（wxdt-ide ide）)"
   local st="$CFGDIR/.config/wechat-devtools"
   if [[ -f "$st/app/.install_path" ]] || ls "$st/app" >/dev/null 2>&1; then

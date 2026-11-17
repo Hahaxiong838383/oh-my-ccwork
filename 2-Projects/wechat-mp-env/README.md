@@ -91,7 +91,8 @@ wechat-mp-env/
 | 单实例锁 | 已清理 | 残留 `SingletonSocket → /tmp/codeg-acp/...`（目录已不存在） |
 | secrets 目录 | 已建 | `~/.mycc-secrets` 700，暂无密钥 |
 | 根盘 | **预警** | `/` 91% 已用，仅剩 20G |
-| 登录态 | **未验证** | 仍需可交互桌面扫码 |
+| 登录态 | ✅ **2026-11-17 已扫通** | 浏览器版 IDE 扫码成功进主界面；`WeappLocalData/localstorage_*.json` 里 `loginStatus=SUCCESS`、`isTourist=false`、`openid`+`currentUser` 齐全，落在 `/data` 挂载卷，容器重建不丢 |
+| wxdt-ide 首版故障 | ✅ 已修 | 初版 `MAX_RES=1920x1080`，客户端 Retina 请求 3548x1992 → X `BadMatch` → 表现为"输完密码连不上"；提到 7680x4320 并重建容器后正常（PITFALLS 2.5d） |
 | 端到端上传 | **未验证** | 缺 appid + 上传密钥 |
 
 ### 第一轮 · 2026-11-17（首次安装）
@@ -140,5 +141,6 @@ IDE 是 Electron 程序，必须要 X/Wayland。四条路：
 
 - [ ] 提供 appid / 主体类型 → 配 `~/.mycc-secrets/private.<appid>.key`
 - [ ] 决定 IP 白名单策略（关闭 / 固定出口 / 只走 IDE 登录态）
-- [ ] 图形会话里做一次登录 + 首次上传验收
+- [x] ~~图形会话里做一次登录~~ → **2026-11-17 已用浏览器版 IDE 扫码登录成功**
+- [ ] 首次上传验收（等 appid + 密钥，或走 IDE 登录态通道）
 - [x] ~~是否另起 selkies 容器把 IDE 变成浏览器可访问~~ → **已完成**：`bin/wxdt-ide`（容器 wxdt-ide，端口 3002，不动现有微信容器）

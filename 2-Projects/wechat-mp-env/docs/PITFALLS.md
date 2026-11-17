@@ -67,6 +67,18 @@
   `hostname-pid` / `/tmp/...` socket；异常退出后残留（本机实测残留指向 `/tmp/codeg-acp/...`）。
 - 处置：`rm -f ~/.config/wechat-devtools/Singleton{Cookie,Lock,Socket}`。`bin/wxdt-doctor` 的 [1b] 段会自动检出。
 
+### 2.5d 浏览器版 IDE「连不上」= Xvfb 虚拟屏太小（真踩过）
+- **现象**：浏览器打开 `wxdt-ide` 的地址，输完账号密码后一直转圈 / 黑屏 / 反复重连，容器日志刷
+  `Rate limited: reconnecting too quickly`。
+- **根因**：selkies 会把 X 分辨率改成**浏览器窗口的真实像素尺寸**（Mac Retina 上是 3548x1992 这种），
+  再通过 RandR 向 Xvfb 申请新 mode。若超过 Xvfb 启动时的 `-screen 0 WxHx24` 上限，X 直接拒：
+  `Failed (add new mode). RC: 1, Stderr: X Error of failed request: BadMatch`，连接随即崩、
+  前端重连又撞上 500ms 的 `RECONNECT_DEBOUNCE_MS` 限流 → 表现就是"根本连不上"。
+- **判据**：`docker logs wxdt-ide | grep -E 'resize request|BadMatch'`，看到请求尺寸 > `xrandr` 的 maximum 即是。
+- **处置**：`MAX_RES` 别按 1080p 给。`bin/wxdt-ide` 默认 `WXDT_IDE_MAXRES=7680x4320`，
+  改完必须**重建容器**（Xvfb 的 screen 尺寸是启动参数）。验证：
+  `docker exec -e DISPLAY=:1 -u abc wxdt-ide xrandr | head -1` 的 maximum 要大于客户端请求。
+
 ### 2.5c 直接跑 electron 报 SUID sandbox FATAL
 - 现象：`.../electron --version` 报 `The SUID sandbox helper binary was found, but is not configured correctly`。
 - 根因：用户级 `dpkg-deb -x` 解包后 `chrome-sandbox` 不是 `root:root 4755`，而改成 4755 需要 sudo。
