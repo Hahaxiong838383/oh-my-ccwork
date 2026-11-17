@@ -48,10 +48,12 @@ if(mode==='run'){
  if(config.rollup_prefix_index)installRollupPrefixIndex(store.db);
  // Match startAnalyticsServer's foreground connection; only the separate writer
  // may mutate Analytics. A generic AnalyticsStore defaults to a 64MiB writer cache.
- store.db.exec('PRAGMA query_only=ON; PRAGMA cache_size=-8192; PRAGMA shrink_memory');
- assert.equal(store.db.prepare('PRAGMA query_only').get()!.query_only,1);
- assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,-8192);
- Object.assign(config,{reader_query_only:true,reader_cache_kib:8192});
+ const genericReaderDiagnostic=process.env.T5_DIAGNOSTIC_GENERIC_READER==='1';
+ if(genericReaderDiagnostic)assert(process.env.T5_PROFILE_SQL==='1'&&soak?.preflight,'generic reader allowed only in profiled diagnostic preflight, never full-day acceptance');
+ else store.db.exec('PRAGMA query_only=ON; PRAGMA cache_size=-8192; PRAGMA shrink_memory');
+ assert.equal(store.db.prepare('PRAGMA query_only').get()!.query_only,genericReaderDiagnostic?0:1);
+ assert.equal(store.db.prepare('PRAGMA cache_size').get()!.cache_size,genericReaderDiagnostic?-65536:-8192);
+ Object.assign(config,{reader_query_only:!genericReaderDiagnostic,reader_cache_kib:genericReaderDiagnostic?65536:8192,generic_reader_diagnostic:genericReaderDiagnostic});
  writeFileSync(configPath,JSON.stringify(config,null,2),{mode:0o600});
  const writer=new AnalyticsWriter(path),checkpointer=new AnalyticsCheckpointer(path,{runExclusive:run=>writer.withCheckpoint(run)});
  const ark=new ArkStore(join(root,'ark.db'),undefined,()=>({enabled:true,limitBytes:8*1024**3,reserveBytes:4.5*1024**3,freeBytes:Number(statfsSync(root).bavail)*Number(statfsSync(root).bsize)}));

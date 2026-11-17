@@ -7,3 +7,5 @@
 源码只改隔离测试profile。单元检查保留结果/异常、参数不泄漏、最多64条样本；Mac IO明确null，不能冒Linux。首次Linux临时目录缺ESM package元信息导致tsx CJS编译失败，补同仓type=module后复验，原记录保留。生产src、API、预算均未改。
 
 署名：codex（OpenAI）｜2026-11-18
+
+对照执行更新：为避免混淆8MiB接线与新IO观察两个因素，增加只允许profile preflight的GENERIC诊断开关；显式保留9e9b4819的query_only=0/cache64，禁止fullDay使用。默认依然与生产query_only=1/cache8相同。实际PRAGMA断言并落config。本轮诊断只加IO计数，不据此放行生产或24h。
