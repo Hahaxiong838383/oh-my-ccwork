@@ -21,3 +21,5 @@ Ruling：复用createLoadAccounting精确ID/seen对账，accepted与duplicated�
 2026-11-17 后续：50×6000首轮ab88de96已完成，上传精确对账/ACK指标通过，但最终统计dirty=1，整体FAIL，证据084eee66已push。冷缓存对照full45.66s/narrow45.54s/grouped44.28s；rowid重排33.75s仍超过30s，不宣称解决。重排实验未达标，已撤回rollup.ts运行源码；保留3个交错设备/查询形状测试改进。profile04已完成，详见下一段。
 
 实验结论：profile04完整成功。仅索引COUNT冷读10.63s，整张新鲜夹具顺序扫23.56s（不适用于90天成熟库），定日rowid重排33.39s仍不达30s。单纯缩列、SQL聚合、rowid重排都没有完成修复；同等冷处理下索引回表/存储读取成本是明确瓶颈，不能从暖缓存4秒外推生产。rowid实验已保存patch并撤回运行源码，保留交错设备和不依赖SELECT*字样的测试改进。后续需合适的隔离盘/IO资源，必要再比较有界按日布局方案，不以扩大预算冒充性能优化。
+
+最新冲突复核：会话360于本次回读已恢复in_progress；HEAD仍53239abe，正在未提交地修改device-registry/pairing/parent-conversations/admin-data/profile/telemetry及admin/index.html，并新增miniapp-dashboard/miniapp-admin与测试。PRnas树未修改这些现有业务文件；T4后台admin/index.html与其后续成果存在集成重叠，T6须逐段合并，不整文件覆盖。当前阶段未操作其工作树。
