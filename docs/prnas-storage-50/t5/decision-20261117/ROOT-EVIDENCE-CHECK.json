@@ -1,0 +1,66 @@
+[
+  {
+    "path": "docs/prnas-storage-50/t5/review-followup-20261117/RESULT.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/ROOT-SUMMARY.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/grok-review.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/next-profile-cloud02.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/next-profile-cloud.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/600k-query-20261117/RESULT.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/600k-query-20261117/600K-COMPACT-RESULT.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/RESULT.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/query-result.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/query-failure-and-scan.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/maintenance-after-scan.json",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/isolation-final.json",
+    "match": true
+  },
+  {
+    "path": "docs/superpowers/plans/2026-11-16-p003-prnas-50-devices.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/grok-gates-audit/REPORT.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/IMPLEMENTATION.md",
+    "match": true
+  },
+  {
+    "path": "docs/prnas-storage-50/t5/STATUS.md",
+    "match": true
+  }
+]

@@ -1,0 +1,421 @@
+{
+  "reviewer": "grok(xAI)",
+  "date": "2026-11-17",
+  "mode": "read-only-independent-recertification",
+  "did_implement": false,
+  "did_ssh": false,
+  "did_deploy": false,
+  "did_buy_resources": false,
+  "shared_worktree_edited": false,
+  "worktree": "/Users/fu-121/.codex/worktrees/p003-prnas-storage-50-20261116",
+  "fixed_head": "a2d614368413de56dd47b681e5c903e293341ee2",
+  "runtime_candidate": "416a48985453937181fe47fedba01f4211cfdbcb",
+  "runtime_candidate_parent": "bbf40a4843d00579f6cfc5cfdcb14762c78ed373",
+  "probe_query_source": "65c86916e1e6a64352ec75d3c2b6eebb364e649a",
+  "git_status_porcelain": "",
+  "verdict": {
+    "t5_passed": false,
+    "start_t6": false,
+    "raise_verified_cap_14_to_50": false,
+    "relax_thresholds": false,
+    "purchase_authorized": false,
+    "status": "T5_NOT_PASSED"
+  },
+  "parallel_authorized": {
+    "owner": "main-13",
+    "scope": "voice-onboarding Linux release and real-device debug",
+    "counts_as_t5_pass": false
+  },
+  "capacity_14": {
+    "kind": "verified_admission_tier_and_model_cap",
+    "not": "14_real_devices_completed_t5_stress_test",
+    "capacity_verified": 14,
+    "planned_quota_default": 50,
+    "formula_example": "planned=50, verified=14 -> cap=14",
+    "origin": "T0/T1 14 synthetic subjects / 84k historical evidence",
+    "t5_load_identities": "50 synthetic (50x12000 and 50x6000)",
+    "other_14_surface": "2026-10-16 local-audio rollout 14/14 is a different product surface",
+    "plan_real_devices_note": "plan mentions ~18 current devices; 50 is synthetic capacity acceptance"
+  },
+  "passed_subitems_not_t5": [
+    {
+      "id": "A06_drain",
+      "result": "600000 events / 3000 batches exact, 1350.168s < 2h"
+    },
+    {
+      "id": "A07_p99",
+      "result": "ack p99 1738.339ms <= 2000ms; p95 failed"
+    },
+    {
+      "id": "A09_percentile",
+      "result": "http 1000 p95=34.873 p99=50.060; invalid_facts=0; 1 transport failure"
+    },
+    {
+      "id": "COVER01_fresh_50x6000",
+      "result": "ack p95/p99=395.00/1088.17ms dirty0 backup0; stage T5_INCREMENTAL_LOAD_NOT_FULL_ACCEPTANCE"
+    },
+    {
+      "id": "production_guard",
+      "result": "ready=200, units inactive, production source/gates unchanged"
+    }
+  ],
+  "gates": [
+    {
+      "id": "D1_ack_p95",
+      "gate": "A07",
+      "status": "failed",
+      "original_standard": "success ACK p95<=500ms, p99<=2s; keep all 429/503; do not drop slow samples",
+      "measured": {
+        "ack_p95_ms": 525.9235509999562,
+        "ack_p95_reported_ms": 525.924,
+        "ack_p99_ms": 1738.3392660000827,
+        "attempts": 9839,
+        "successes_200": 3000,
+        "status_503": 6839,
+        "failure_error": "AssertionError [ERR_ASSERTION]: ACK latency gate",
+        "cover01_ack_p95_ms": 395.0,
+        "mixed_maintenance_backup_covering": true
+      },
+      "proven": "600k mixed-load success ACK p95 exceeds 500ms; 503s retained; half-size COVER01 p95 passed",
+      "unknown": "share of disk vs lock vs 503 retry bunching vs IOWeight; whether sequencing maintenance after drain brings p95 under 500",
+      "not_hardware_by_default": true,
+      "low_complexity": [
+        "profile ACK path on existing 600k fixture",
+        "rerun 600k drain-then-maintenance without raising 500ms",
+        "keep full 503 histogram"
+      ],
+      "user_decisions": [
+        {
+          "id": "D1a",
+          "text": "keep p95<=500 / p99<=2s / no sample dropping",
+          "recommended": true
+        },
+        {
+          "id": "D1b",
+          "text": "authorize main-13 drain-then-maintenance ACK retest on current disk",
+          "recommended": true
+        },
+        {
+          "id": "D1c",
+          "text": "defer ACK retest until isolated IO",
+          "recommended": false,
+          "binds": "D4"
+        }
+      ],
+      "benefit": "D1b separates overlap from write path before blaming disk"
+    },
+    {
+      "id": "D2_cold_rollup_30s",
+      "gate": "A08_single_day_measured",
+      "status": "failed",
+      "related_unverified": "A08 90-day mature net throughput",
+      "original_standard": "90-day full-index fixture; fact net >=600k/0.7 per day equivalent; prune lock p99<=100ms cycle<=30s; dirty catch-up in 30min; rollup maxDayMs=30000",
+      "measured": {
+        "cold_full_s": 30.012,
+        "rows_scanned": 442624,
+        "rows_total": 600000,
+        "cpu_s": 3.091,
+        "read_bytes": 155459584,
+        "approx_MBps": 5.18,
+        "after_profile_occurred": "rebuilt_warm",
+        "after_profile_received": "budget_exceeded",
+        "dirty_days_after": 1,
+        "ok": false,
+        "narrow_projection_reduces_leaf_bytes": false,
+        "candidate_416a4898_deployed": false,
+        "candidate_416a4898_local_cpu_gain": "about 12%, not cold IO"
+      },
+      "proven": "covering-index cold scan cannot finish 600k facts in 30s; CPU has headroom; 416a4898 does not change leaf IO",
+      "unknown": "disk class vs page layout vs host sharing vs IOWeight=20; spec sheet is not this measurement",
+      "unverified_do_not_call_failed": [
+        "90-day 89442002-row net prune",
+        "lock p99 at mature scale"
+      ],
+      "not_hardware_by_default": true,
+      "low_complexity": [
+        "no proven software patch that meets 30s without changing rollup definition or adding incremental watermarks",
+        "keep 416a4898 undeployed until isolated IO A/B",
+        "current-disk rerun locates only; cannot complete mature acceptance"
+      ],
+      "user_decisions": [
+        {
+          "id": "D2a",
+          "text": "keep 30s day budget",
+          "recommended": true
+        },
+        {
+          "id": "D2b",
+          "text": "keep 416a4898 undeployed",
+          "recommended": true
+        },
+        {
+          "id": "D2c",
+          "text": "authorize isolated capacity/IO then rerun cold rollup",
+          "recommended": null,
+          "binds": "D4"
+        }
+      ],
+      "benefit": "avoids treating a 12% CPU projection as cold-IO fix; mature 90d still needs fixture fit"
+    },
+    {
+      "id": "D3_http_query_one_over_120",
+      "gate": "A09",
+      "status": "failed",
+      "original_standard": "p99 at least 20ms below shortest internal deadline (120ms abort => p99<=100ms); zero history_transport_failures on healthy load",
+      "measured": {
+        "samples": 1000,
+        "devices_synthetic": 50,
+        "p95_ms": 34.872879999998986,
+        "p99_ms": 50.060333999999784,
+        "invalid_facts": 0,
+        "history_transport_failures": 1,
+        "pass": false,
+        "failing_query_id": "0-0",
+        "client_ms": 155.52800200000001,
+        "body_complete": false,
+        "reader_ms": 137.4195729999999,
+        "reader_status": 200,
+        "prior_experiment_timeouts": 2,
+        "component_probe02_ms": 124.60881700000004,
+        "component_probe02_read_bytes": 1835008,
+        "component_probe02_full_http": false,
+        "component_probe02_may_replace_http": false,
+        "component_probe01_ms": 89.85121600000002,
+        "component_probe01_guard_exit": 3
+      },
+      "proven": "1/1000 actual HTTP history transport failure on first request; p99 margin holds; 124.609 component probe is not HTTP+full reduction",
+      "unknown": "how much of 137.420ms is HTTP vs JSON reduction vs evidence SQL; whether a new HTTP cold first request still exceeds 120ms",
+      "unverified_do_not_call_failed": [
+        "query overlapping upload/maintenance/backup",
+        "timeout injection (history unknown, chat still returns)"
+      ],
+      "low_complexity": [
+        "main-13 rerun actual HTTP cold first request on same 600k fixture and topology",
+        "use 124.609 only as phase location (evidence SQL dominates, real disk read)",
+        "do not delete daily or batch JOIN from this probe"
+      ],
+      "user_decisions": [
+        {
+          "id": "D3a",
+          "text": "keep 120ms / p99<=100ms / zero transport failures",
+          "recommended": true
+        },
+        {
+          "id": "D3b",
+          "text": "authorize main-13 actual HTTP cold first-request retest",
+          "recommended": true
+        },
+        {
+          "id": "D3c",
+          "text": "defer overlap query until isolated capacity",
+          "binds": "D4"
+        }
+      ],
+      "benefit": "D3b can close isolated A09; overlap A09 remains unverified; 124.609 cannot fake the HTTP case"
+    },
+    {
+      "id": "D4_mature_capacity_and_unverified_mix",
+      "gate": "A08_mature / A14",
+      "status": "capacity_blocked_plus_unverified",
+      "original_standard": "90-day full fixture for A08; 24h overlapping load for A14; reserve 4GiB+512MiB still present",
+      "measured": {
+        "mature_bytes": 44871368704,
+        "mature_gib": 41.79,
+        "root_volume_bytes": 42949672960,
+        "root_volume_gib": 40,
+        "free_bytes": 8946868224,
+        "free_gb_decimal": 8.95,
+        "reserve_4gib_plus_512mib_exhausted": false,
+        "instance": "ecs.e-c1m2.large",
+        "data_disk_mounted": false,
+        "resource_sample_ms": 1410616.281032,
+        "cpu_average_percent": 18.014382234136974,
+        "mem_available_min_fraction": 0.45840659162784675,
+        "complete_24h_evidence": false
+      },
+      "proven": "mature fixture larger than entire 40GiB root volume; free 8.95GB means reserve still exists",
+      "unknown": null,
+      "unverified_do_not_call_failed": [
+        "50-identity upload+query+backup+maintenance at mature scale",
+        "90-day TTL net reclaim",
+        "NAS 72h backlog + real 1h disconnect (A11)",
+        "voice A/B >=50 rounds (A10)",
+        "continuous 24h endurance (A14)",
+        "A15 rollback on >32 grants"
+      ],
+      "suggestion_500gib": {
+        "kind": "planning_suggestion_only",
+        "purchased": false,
+        "quoted": false,
+        "authorized_by_this_review": false,
+        "buying_does_not_auto_pass_ack_or_30s": true
+      },
+      "low_complexity": [
+        "no software change fits 41.79GiB into 40GiB",
+        "shrinking fixture / wiping production / using local or NAS fast disk would fake the gate",
+        "current disk can only locate 600k-class items (D1b/D3b)"
+      ],
+      "user_decisions": [
+        {
+          "id": "D4a",
+          "text": "do not buy disk; accept mature A08/A14 remain blocked; do not issue 50-tier",
+          "recommended": true,
+          "reason": "no purchase authorization"
+        },
+        {
+          "id": "D4b",
+          "text": "separate later authorization for isolated volume/IO; 500GiB remains suggestion",
+          "recommended": false,
+          "authorized_now": false
+        },
+        {
+          "id": "D4c",
+          "text": "keep mix/endurance/NAS/voice as unverified, not failed and not passed",
+          "recommended": true
+        }
+      ],
+      "benefit": "D4a focuses main-13 on authorized voice work plus D1b/D3b; D4b is the only unlock for mature/TTL/24h"
+    }
+  ],
+  "suggested_order": [
+    {
+      "step": 0,
+      "action": "freeze T5 not passed, no T6, cap 14, original thresholds",
+      "owner": "user",
+      "needs_purchase": false
+    },
+    {
+      "step": 1,
+      "action": "continue voice Linux release and real-device debug",
+      "owner": "main-13",
+      "already_authorized": true,
+      "not_t5_pass": true
+    },
+    {
+      "step": 2,
+      "action": "actual HTTP cold first-request retest (D3b)",
+      "owner": "main-13",
+      "needs_purchase": false,
+      "may_close": "A09 isolated query"
+    },
+    {
+      "step": 3,
+      "action": "optional 600k drain-then-maintenance ACK retest (D1b)",
+      "owner": "main-13",
+      "needs_purchase": false,
+      "may_close": "A07 overlap vs write-path"
+    },
+    {
+      "step": 4,
+      "action": "if later authorized: isolated disk rerun of same 600k cold query+maintenance",
+      "owner": "main-13",
+      "needs_purchase": true,
+      "purchase_authorized_now": false
+    },
+    {
+      "step": 5,
+      "action": "fresh 50x12000 upload+query+backup+maintenance overlap",
+      "owner": "main-13",
+      "depends": 4
+    },
+    {
+      "step": 6,
+      "action": "mature 90d TTL / lock p99 / net reclaim",
+      "owner": "main-13",
+      "depends": 4
+    },
+    {
+      "step": 7,
+      "action": "NAS 1h, voice 50/50, 24h endurance",
+      "owner": "main-13",
+      "depends": 6
+    },
+    {
+      "step": 8,
+      "action": "fixed-SHA full-gate recert then raise verified cap then T6",
+      "owner": "user+main-13",
+      "depends": 7
+    }
+  ],
+  "forbidden": [
+    "declare T5 or A09/A08 pass from p99=50.060, drain 1350s, COVER01 p95=395, component 124.609, or probe ok=true",
+    "call unverified mix/endurance/NAS/voice a failure",
+    "blame all of 525.924 / 30s scan / 137.420 on hardware",
+    "relax 500ms / 120ms / 30s / zero-timeout",
+    "buy, quote, or attach a disk in this review",
+    "implement, SSH, deploy, or edit the shared worktree",
+    "start T6 or describe cap 14 as 14 real devices fully stress-tested"
+  ],
+  "evidence": [
+    {
+      "path": "docs/prnas-storage-50/t5/review-followup-20261117/RESULT.md",
+      "sha256": "2a389244e935a6777917d0c040ccff0017346a6c959b3ee9be430a455c4d364c"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/ROOT-SUMMARY.json",
+      "sha256": "511c7ef6b387d06b8b056a76417eaf47a67af781ae1f332bc10ea840704f8f93"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/grok-review.md",
+      "sha256": "ce01dd8bd6b5723ef8220569ef163f00a1d39af9e01978084da9d78248740f53"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/next-profile-cloud02.json",
+      "sha256": "08b0473910d3a27842951c46ed1ce220444d615c7ea4b72a071c20bb09d4ea9a"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/review-followup-20261117/evidence/next-profile-cloud.json",
+      "sha256": "1c858736fc9ea3b5a70369106b60796e78bc1ae2a1db8f340509f2544d71b398"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/600k-query-20261117/RESULT.md",
+      "sha256": "c65d150a6c14c69bde704b694f3ea55e7a4387ababca5234b558f43dbc50efe1"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/600k-query-20261117/600K-COMPACT-RESULT.json",
+      "sha256": "2a571203f4b39dffb85efa27e04e5d6df5bf490591bf38f88df997681a739ca2"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/RESULT.md",
+      "sha256": "99b0fd34b89357518173c16521d53019aeb4798486a798db42d911df2e04f784"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/query-result.json",
+      "sha256": "6a2b4b8ccc7da8b8a2a2f63d802f3b0889fe67c053022518c6050d3fa69fd191"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/query-failure-and-scan.json",
+      "sha256": "93cdd46d319de8065789e89a7bef9119a74afd8e16f3579f8085926388c41b5f"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/maintenance-after-scan.json",
+      "sha256": "c57124c597ca6ad89061c1954047e2f5d1a4b7353883381fc54a4a2406e346f9"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/fixed-query-cold-io-20261117/isolation-final.json",
+      "sha256": "6902ad3a0e9a3891a5d67f932150677ed2d8ba6ec5e905ce9e0828cecf5d5489"
+    },
+    {
+      "path": "docs/superpowers/plans/2026-11-16-p003-prnas-50-devices.md",
+      "sha256": "9338e64535164a14cc7935752b93cdec0d061697e0dbe1ddbe510f34b4591bf0"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/grok-gates-audit/REPORT.md",
+      "sha256": "f21398a5eba325efc22525348fe2e983a8d5adb3078db366ba0b387557602e1e"
+    },
+    {
+      "path": "docs/prnas-storage-50/IMPLEMENTATION.md",
+      "sha256": "dc9c8ed67a519c0eaac1dc504241a802f956b54fb75bf193ce0fb30ea12d8b82"
+    },
+    {
+      "path": "docs/prnas-storage-50/t5/STATUS.md",
+      "sha256": "b1a6cfc4cdd198a9c049952ce5a6bf18ea60a4416b624cf7df92a550571254c5"
+    }
+  ],
+  "artifacts": {
+    "directory": "/Users/fu-121/.local/state/p003-t5-decision-20261117/grok-review",
+    "review_md": "/Users/fu-121/.local/state/p003-t5-decision-20261117/grok-review/REVIEW.md",
+    "review_json": "/Users/fu-121/.local/state/p003-t5-decision-20261117/grok-review/REVIEW.json",
+    "review_md_sha256": "860fcf056768cef4b6d2c2b3e547370b7d9ad930434bbeb8757763e91a21e924"
+  }
+}
