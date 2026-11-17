@@ -74,7 +74,7 @@ test('no focus: posture/presence/snapshot preserve old fields but never invent u
  const r = await batch(f, [{ event_id: 'posture', type: 'posture_round', occurred_at_ms: now, data: { result: 'correct' } }, { event_id: 'presence', type: 'presence_transition', occurred_at_ms: now, data: { present: true } }], { snapshot_id: 'state', captured_at_ms: now, present: true, brightness_level: 2 });
  assert.equal(r.status, 200); assert.equal(r.body.data.snapshot.accepted, true);
  const d = (await dash(f)).body.data;
- assert.deepEqual(d.today, { focus_minutes: 0, guarded_minutes: 0, posture_alert_count: 0 });
+ assert.deepEqual(d.today, { focus_minutes: 0, guarded_minutes: 0, posture_alert_count: null });
  assert.equal(d.week.daily.length, 7); assert.equal(d.device.present, true); assert.equal(d.device.brightness_level, 2);
  assert.equal(d.device.updated_at_ms, r.body.data.server_received_ms); assert.deepEqual(d.availability, { night_reward: false, percentile: false });
  noUsage(d.usage); emptyArk(d.ark, 'not_enabled');
@@ -221,4 +221,66 @@ test('telemetry light modes survive HTTP ACK, SQLite and parent projection; unkn
  }
  const empty = (await dash(await fixture())).body.data.device;
  for (const key of ['color_mode', 'led_enabled', 'brightness_level', 'captured_at_ms', 'focus_active', 'presence_state', 'presence_source']) assert.equal(empty[key], null);
+});
+
+const reminder=(id:string,at:number,outcome:unknown='played')=>({event_id:id,type:'posture_reminder',occurred_at_ms:at,data:{focus_id:null,kind:'generic_deviation',outcome}});
+test('posture reminders count exact played once by event ID, not rounds or mixed batch size',async()=>{
+ const f=await fixture(),now=Date.now(),played=reminder('played',now);
+ const r=await batch(f,[played,reminder('cooled',now,'suppressed_cooldown'),reminder('unknown',now,'future_outcome'),reminder('array-not-played',now,['played']),{event_id:'deviated-only',type:'posture_round',occurred_at_ms:now,data:{result:'deviated'}}]);
+ assert.equal(r.status,200);assert.equal(r.body.data.snapshot,null);assert.equal(r.body.data.acked_event_ids.length,5);assert.deepEqual(r.body.data.rejected,[]);
+ for(let i=0;i<3;i++){const replay=await batch(f,[played]);assert.deepEqual(replay.body.data.acked_event_ids,[]);assert.deepEqual(replay.body.data.duplicated_event_ids,['played']);}
+ const d=(await dash(f)).body.data,p=d.posture_reminders;
+ assert.equal(p.source,'telemetry.posture_reminder');assert.equal(p.timezone,'Asia/Shanghai');
+ assert.equal(p.today.played_count,1);assert.equal(p.today.suppressed_count,1);assert.equal(p.today.unknown_count,2);assert.equal(p.today.available,true);assert.equal(p.today.updated_at_ms,r.body.data.server_received_ms);assert.equal(d.today.posture_alert_count,1);
+ assert.equal(p.history.played_count,1);assert.equal(p.coverage.complete,false);assert.equal(p.daily.length,1);
+ assert.equal(tel.prepare('SELECT reminder_played FROM device_telemetry_daily WHERE sn=?').get(f.sn)!.reminder_played,1);
+ assert.equal(tel.prepare('SELECT reminder_suppressed FROM device_telemetry_daily WHERE sn=?').get(f.sn)!.reminder_suppressed,1,'unknown outcomes are not cooldown');
+ assert.equal(JSON.stringify(p).includes('"event_id"'),false,'aggregate DTO does not disclose raw event IDs');
+});
+test('posture missing, unsupported and observed zero remain distinct; raw history repairs query without rewriting daily',async()=>{
+ const f=await fixture(),now=Date.now();
+ let d=(await dash(f)).body.data;assert.equal(d.posture_reminders.today.available,false);assert.equal(d.posture_reminders.today.played_count,null);assert.equal(d.today.posture_alert_count,null);
+ await batch(f,[{event_id:'round',type:'posture_round',occurred_at_ms:now,data:{result:'deviated'}},reminder('unknown',now,{toString:'played'})]);
+ d=(await dash(f)).body.data;assert.equal(d.posture_reminders.today.played_count,null);assert.equal(d.posture_reminders.today.unknown_count,1);
+ await batch(f,[reminder('cooled',now,'suppressed_cooldown')]);d=(await dash(f)).body.data;assert.equal(d.posture_reminders.today.available,true);assert.equal(d.posture_reminders.today.played_count,0);assert.equal(d.posture_reminders.today.suppressed_count,1);
+ tel.prepare('INSERT INTO device_telemetry_event VALUES(?,?,?,?,?,?,?,?,?,?)').run(f.sn,'historic-raw-only','posture_reminder',now,JSON.stringify({focus_id:null,kind:'generic_deviation',outcome:'played'}),'legacy-test',1,now,0,'legacy-trace');
+ d=(await dash(f)).body.data;assert.equal(d.posture_reminders.today.played_count,1);assert.equal(d.today.posture_alert_count,1);assert.equal(tel.prepare('SELECT reminder_played FROM device_telemetry_daily WHERE sn=?').get(f.sn)!.reminder_played,0,'no business history repair writes');
+});
+test('late posture upload belongs to original Beijing day, midnight is today, and received time is separate',async()=>{
+ const f=await fixture(),now=Date.now(),midnight=Date.parse(dayOf(now)+'T00:00:00+08:00');
+ const r=await batch(f,[reminder('prior-day',midnight-1),reminder('old-queue',midnight-86400000*20)]);
+ let p=(await dash(f)).body.data.posture_reminders;assert.equal(p.today.played_count,null);assert.equal(p.history.played_count,2);assert.equal(p.history.from_day,dayOf(midnight-86400000*20));assert.equal(p.history.to_day,dayOf(midnight-1));assert.equal(p.history.updated_at_ms,r.body.data.server_received_ms);assert.equal(p.coverage.clock_suspect_count,0,'late occurred time is not clock skew');
+ const next=await batch(f,[reminder('at-midnight',midnight)]);p=(await dash(f)).body.data.posture_reminders;assert.equal(p.today.played_count,1);assert.equal(p.today.updated_at_ms,next.body.data.server_received_ms);assert.equal(p.history.played_count,3);
+});
+test('posture raw event and daily increment are atomic and safe to retry after storage failure',async()=>{
+ const f=await fixture(),now=Date.now(),event=reminder('atomic-played',now);
+ tel.exec(`CREATE TRIGGER fail_posture_daily BEFORE INSERT ON device_telemetry_daily WHEN NEW.sn='${f.sn}' BEGIN SELECT RAISE(ABORT,'synthetic-write-failure'); END;`);
+ try{const failed=await fetch(base+'/v1/device/telemetry',{method:'POST',headers:{authorization:'Bearer '+f.token,'content-type':'application/json'},body:JSON.stringify({schema_version:1,batch_id:'failed-posture',device_ts_ms:now,events:[event]})});assert.equal(failed.status,500);assert.equal(tel.prepare('SELECT COUNT(*) n FROM device_telemetry_event WHERE sn=?').get(f.sn)!.n,0,'failed aggregation must not leave an ACKable raw row');}finally{tel.exec('DROP TRIGGER fail_posture_daily');}
+ assert.deepEqual((await batch(f,[event])).body.data.acked_event_ids,['atomic-played']);assert.equal((await dash(f)).body.data.posture_reminders.today.played_count,1);
+});
+
+test('posture clock quality is labelled separately and invalid historical times do not invent a day',async()=>{
+ const f=await fixture(),now=Date.now();
+ const row=(id:string,at:number,skew:number)=>tel.prepare('INSERT INTO device_telemetry_event VALUES(?,?,?,?,?,?,?,?,?,?)').run(f.sn,id,'posture_reminder',at,JSON.stringify({focus_id:null,kind:'generic_deviation',outcome:'played'}),'old-'+id,1,now,skew,'legacy-trace');
+ row('clock-skew',now,400000);row('invalid-time',9e15,0);
+ const p=(await dash(f)).body.data.posture_reminders;
+ assert.equal(p.today.played_count,1);assert.equal(p.history.played_count,1);assert.equal(p.today.clock_suspect_count,1);assert.equal(p.coverage.invalid_time_count,1);assert.equal(p.coverage.clock_suspect_count,1);assert.equal(p.coverage.complete,false);assert.equal(p.daily.length,1);
+});
+test('posture read failure degrades only reminder counts and retains device, usage and other domains',async()=>{
+ const {telemetryStore}=await import('../src/telemetry-store.js');const f=await fixture(),now=Date.now();
+ await batch(f,[reminder('one',now)],{snapshot_id:'state',captured_at_ms:now,led_enabled:false});const before=(await dash(f)).body.data;
+ const original=telemetryStore.postureReminders;
+ telemetryStore.postureReminders=()=>{throw Error('synthetic-read-failure');};
+ try{const d=(await dash(f)).body.data;assert.equal(d.posture_reminders.reason,'dependency_unavailable');assert.equal(d.posture_reminders.today.played_count,null);assert.equal(d.today.posture_alert_count,null);assert.deepEqual(d.device,before.device);assert.deepEqual(d.usage,before.usage);assert.deepEqual(d.ark,before.ark);}finally{telemetryStore.postureReminders=original;}
+ const other=await fixture();assert.equal((await dash(f,other.parent)).status,404);
+});
+
+
+test('accepted reminder with an invalid calendar time is durable without a fake day or endless retry',async()=>{
+ const f=await fixture(),event=reminder('invalid-calendar',9e15),r=await batch(f,[event]);
+ assert.equal(r.status,200);assert.equal(r.body.data.snapshot,null);assert.deepEqual(r.body.data.acked_event_ids,['invalid-calendar']);assert.deepEqual(r.body.data.rejected,[]);
+ assert.equal(tel.prepare('SELECT occurred_at_ms FROM device_telemetry_event WHERE sn=?').get(f.sn)!.occurred_at_ms,9e15);
+ assert.equal(tel.prepare('SELECT COUNT(*) n FROM device_telemetry_daily WHERE sn=?').get(f.sn)!.n,0);
+ const p=(await dash(f)).body.data.posture_reminders;assert.equal(p.available,false);assert.equal(p.history.reason,'invalid_event_time');assert.equal(p.history.played_count,null);assert.equal(p.coverage.invalid_time_count,1);assert.equal(p.coverage.clock_suspect_count,0);assert.deepEqual(p.daily,[]);
+ assert.deepEqual((await batch(f,[event])).body.data.duplicated_event_ids,['invalid-calendar']);
 });

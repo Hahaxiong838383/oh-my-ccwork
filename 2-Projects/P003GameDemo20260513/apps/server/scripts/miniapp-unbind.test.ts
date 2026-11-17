@@ -13,6 +13,8 @@ INSERT INTO device_preauth VALUES('legacy-fixture','old-owner','',9999999999999,
 process.chdir(tmp);
 process.env.AUTH_JWT_SECRET='unbind-test-secret-32-bytes-long-01';process.env.STUDIO_USER='unbind-admin';process.env.STUDIO_PASS='unbind-pass';
 process.env.PAIRING_CLAIM_RPM_SN='1000';process.env.PAIRING_CLAIM_RPM_IP='10000';
+// This isolated ownership test must not depend on the host's production disk reserve.
+process.env.ARK_RECORDS_MIN_FREE_BYTES='1';
 const {Hono}=await import('hono');const {SignJWT}=await import('jose');
 const {adminDataRoute}=await import('../src/routes/admin-data.js');const {authRoute}=await import('../src/routes/auth.js');
 const {devicePairingRoute,parentPairingRoute,tryAutoConfirm}=await import('../src/routes/pairing.js');

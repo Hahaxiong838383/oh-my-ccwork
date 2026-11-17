@@ -6,6 +6,15 @@ vi.mock('@tarojs/taro',()=>({default:{getStorageSync:()=> 'parent-test',request:
 beforeEach(()=>{vi.mocked(Taro.request).mockReset();process.env.TARO_APP_API_BASE_URL='https://kidshub-ai.hahaxiong.cc';});
 const response=(data:any)=>({statusCode:200,header:{},data:{ok:true,data}} as never);
 describe('真实snake_case合同经微信传输层映射',()=>{
+ it('纯事件无快照仍显示服务端坐姿提醒，按played计数而非姿态轮次',async()=>{
+  vi.mocked(Taro.request).mockResolvedValue(response({device:{online:false,updated_at_ms:null},posture_reminders:{source:'telemetry.posture_reminder',timezone:'Asia/Shanghai',available:true,reason:'partial_history',today:{date:'2026-11-17',available:true,played_count:5,suppressed_count:3,unknown_count:1,updated_at_ms:1794908400000},history:{available:true,played_count:8,suppressed_count:4,unknown_count:1,from_day:'2026-11-16',to_day:'2026-11-17',updated_at_ms:1794908400000},daily:[{date:'2026-11-16',available:true,played_count:3,suppressed_count:1}],coverage:{complete:false,clock_suspect_count:1,invalid_time_count:0}}}));
+  const d=await liveApi.getSnapshot('dev_c');
+  expect(d.updatedAtMs).toBeNull();
+  expect(d.details?.postureReminders.today).toMatchObject({available:true,playedCount:5,suppressedCount:3,unknownCount:1});
+  expect(d.details?.postureReminders.history).toMatchObject({playedCount:8,fromDay:'2026-11-16'});
+  expect(d.details?.postureReminders.coverage.clockSuspectCount).toBe(1);
+ });
+
  it('色温和测试来源游戏快照可读，正常资产摘要保持隔离',async()=>{
   vi.mocked(Taro.request).mockResolvedValue(response({device:{online:true,updated_at_ms:1794898400000,color_mode:'warm',led_enabled:true,focus_active:false},ark:{available:false,reason:'non_normal',reported_state:{source:'device.ark.state',source_mode:'gm',snapshot_id:'s1',logical_day:'2026-11-08',captured_at_ms:1794898399000,received_at_ms:1794898400000,wallets:{family_coin:123,stardust:0},inventory:{'M-CARD-001':2},progress:{timer_state:'paused',claimable_count:1,next_reward:{status:'claimable',kind:'currency',item_id:'C-FAMILY-001',stage_id:'REGULAR-05',remaining_seconds:0}}}},records:{recent_activity:{available:true,items:[{record_id:'r1',save_id:'save',sequence:2,source_mode:'gm',reason:'gm_adjustment',logical_day:'2026-11-08',occurred_at_ms:1794898399000,received_at_ms:1794898400000,time_status:'reported',resource_changes:[],item_changes:[],grants:[{reward_instance_id:'reward1',source_kind:'progress_stage',source_id:'REGULAR-05',logical_day:'2026-11-08',resolved_rewards:[{item_id:'C-FAMILY-001',quantity:5,kind:'currency'}]}]}],has_more:false,next_cursor:null}}}));
   const d=await liveApi.getSnapshot('dev_c');

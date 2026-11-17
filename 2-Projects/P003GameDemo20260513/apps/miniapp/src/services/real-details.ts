@@ -5,6 +5,14 @@ const obj = (v: unknown): Obj => v && typeof v === 'object' && !Array.isArray(v)
 const text = (v: unknown) => typeof v === 'string' ? v : '';
 const count = (v: unknown): number | null => typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null;
 const list = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
+/** Reminder counts are server-deduplicated received events, independent of snapshots. */
+function postureReminderSummary(value:unknown) {
+ const p=obj(value),known=p.source==='telemetry.posture_reminder',coverage=obj(p.coverage);
+ const integer=(v:unknown)=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0?v:null;
+ const row=(value:unknown)=>{const x=obj(value);return {date:text(x.date),available:known&&x.available===true,reason:text(x.reason)||'no_reminder_events',playedCount:known?integer(x.playedCount):null,suppressedCount:known?integer(x.suppressedCount):null,unknownCount:known?integer(x.unknownCount)??0:0,clockSuspectCount:known?integer(x.clockSuspectCount)??0:0,updatedAtMs:known?integer(x.updatedAtMs):null};};
+ const history=obj(p.history);
+ return {source:known?'telemetry.posture_reminder':'',timezone:known?text(p.timezone):'',today:row(p.today),history:{...row(history),fromDay:text(history.fromDay),toDay:text(history.toDay)},daily:known?list(p.daily).map(row):[],coverage:{complete:false,clockSuspectCount:known?integer(coverage.clockSuspectCount)??0:0,invalidTimeCount:known?integer(coverage.invalidTimeCount)??0:0,firstReceivedAtMs:known?integer(coverage.firstReceivedAtMs):null,lastReceivedAtMs:known?integer(coverage.lastReceivedAtMs):null}};
+}
 export type AcquiredItem = { itemInstanceId: string; itemId: string; itemKind: string; quantity: number | null; state: string; activationRecordId: string | null };
 export function dashboardDetails(value: unknown) {
  const data=obj(value),usage=obj(data.usage),ark=obj(data.ark),wallets=obj(ark.wallets),inventory=obj(ark.inventory),records=obj(data.records),income=obj(records.yesterdayIncome),latest=obj(records.latestItems),conversations=obj(data.conversations);
@@ -16,6 +24,7 @@ export function dashboardDetails(value: unknown) {
   usage:{today:day(usage.today),daily:list(usage.daily).map(day)},
   historicalUsage:{available:history.available===true,reason:text(history.reason),totalSeconds:count(history.totalSeconds),totalMinutes:count(history.totalMinutes),observedSeconds:count(history.observedSeconds),estimatedSeconds:count(history.estimatedSeconds),fromDay:text(history.fromDay),toDay:text(history.toDay),daily:list(history.daily).map(day),updatedAtMs:count(history.updatedAtMs)},
   observations:observationSummary(data.observations),
+  postureReminders:postureReminderSummary(data.postureReminders),
   reportedState:ark.reportedState&&reported.source==='device.ark.state'?{sourceMode:['normal','gm'].includes(text(reported.sourceMode))?text(reported.sourceMode):'unknown',snapshotId:text(reported.snapshotId),logicalDay:text(reported.logicalDay),capturedAtMs:count(reported.capturedAtMs),receivedAtMs:count(reported.receivedAtMs),familyCoin:count(reportedWallets.familyCoin),stardust:count(reportedWallets.stardust),cards:count(reportedInventory['M-CARD-001']),progress:{timerState:text(progress.timerState),claimableCount:count(progress.claimableCount),nextReward:{status:text(reward.status),kind:text(reward.kind),itemId:text(reward.itemId),stageId:text(reward.stageId),remainingSeconds:count(reward.remainingSeconds)}}}:null,
   recentActivity:{available:recent.available===true,reason:text(recent.reason),items:recent.available===true?list(recent.items).map(businessItem):[],hasMore:recent.hasMore===true,nextCursor:text(recent.nextCursor)||null,updatedAtMs:count(recent.updatedAtMs)},
   ark:{available:ark.available===true&&ark.sourceMode==='normal',reason:text(ark.reason),familyCoin:count(wallets.familyCoin),stardust:count(wallets.stardust),cards:count(inventory['M-CARD-001']),capturedAtMs:count(ark.capturedAtMs),receivedAtMs:count(ark.receivedAtMs)},

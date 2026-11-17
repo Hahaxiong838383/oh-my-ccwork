@@ -37,6 +37,25 @@ export function BusinessRow({item}:{item:BusinessItem}){
  </View>;
 }
 
+export function PostureReminderCard({data}:{data:DashboardDetails['postureReminders']}) {
+ const value=(r:{available:boolean;playedCount:number|null})=>r.available&&r.playedCount!==null?`${r.playedCount} 次`:'暂无数据';
+ const reason=(r:string)=>r==='dependency_unavailable'?'读取暂时失败，请刷新重试。':r==='invalid_event_time'?'已收到提醒事件，但时间无效，暂不能按日期统计。':r==='no_supported_outcome'?'仅收到未知结果，暂不能确认提醒次数。':'尚未收到该日期范围的坐姿提醒事件，不能据此认定为0次。';
+ return <Card><Heading title="坐姿提醒次数"/>
+  <View className="live-metrics"><View><Text className="metric-label">今日已同步提醒</Text><Text className="live-metric-value">{value(data.today)}</Text></View><View><Text className="metric-label">历史已同步提醒</Text><Text className="live-metric-value">{value(data.history)}</Text></View></View>
+  <Text className="small-note">仅统计调整坐姿语音已开始播放的独立事件；不代表播放完成或孩子听完。检测到偏离、冷却拦截和未知结果不计入提醒次数。</Text>
+  <Text className="small-note">按北京时间的发生日统计，断网补传归回原发生日；只包含已收到的事件，历史可能不完整。</Text>
+  {!data.today.available&&<Text className="paragraph muted">今日：{reason(data.today.reason)}</Text>}
+  {!data.history.available&&<Text className="paragraph muted">历史：{reason(data.history.reason)}</Text>}
+  {data.today.suppressedCount!==null&&<Text className="small-note">今日冷却拦截 {data.today.suppressedCount} 次（不计入提醒次数）</Text>}
+  {data.today.unknownCount>0&&<Text className="small-note">今日未知结果 {data.today.unknownCount} 条（不计入提醒次数）</Text>}
+  {data.history.fromDay&&<Text className="small-note">已同步发生日期：{data.history.fromDay} 至 {data.history.toDay||'未知'}</Text>}
+  {data.daily.length>0&&<View className="live-days">{data.daily.map(row=><View key={row.date}><Text>{row.date}</Text><Text>{value(row)}</Text></View>)}</View>}
+  {data.coverage.clockSuspectCount>0&&<Text className="small-note">{data.coverage.clockSuspectCount} 条提醒记录的时间存在疑点，仍按上报发生日期统计，日期待核。</Text>}
+  {data.coverage.invalidTimeCount>0&&<Text className="small-note">{data.coverage.invalidTimeCount} 条提醒记录时间无效，未按日期计入。</Text>}
+  {data.history.updatedAtMs!==null&&<Text className="small-note">提醒数据更新：{time(data.history.updatedAtMs)}</Text>}
+ </Card>;
+}
+
 export function ReportedStateCard({state}:{state:NonNullable<DashboardDetails['reportedState']>}) {
  const p=state.progress,r=p.nextReward;
  const value=(n:number|null,suffix='')=>n===null?'暂无数据':`${n}${suffix}`;
@@ -83,6 +102,7 @@ export default function RealDetails({details,publicId,onAccessLost}:{details?:Da
  const d=details||dashboardDetails({}),v=detailsView(d);const [showConversations,setShowConversations]=useState(false);const [showRecords,setShowRecords]=useState(false);const [showObservations,setShowObservations]=useState(false);
  return <>
   <Card><Heading title="使用时长"/><Text className="live-metric-value">已同步历史 {v.historicalUsage}</Text><Text className="small-note">按使用片段、在位姿态窗口与奖励进度保守合并，重叠不重复累计；只包含已同步历史。</Text>{d.historicalUsage.available&&<><Text className="small-note">{d.historicalUsage.fromDay} 至 {d.historicalUsage.toDay} · 有效使用片段 {durationText(d.historicalUsage.observedSeconds)} · 补充用时 {durationText(d.historicalUsage.estimatedSeconds)}</Text><View className="live-days">{d.historicalUsage.daily.map(x=><View key={x.date}><Text>{x.date}</Text><Text>{x.available?(x.totalSeconds!==null?durationText(x.totalSeconds):`${x.focusMinutes} 分钟`):'暂无数据'}{x.estimatedSeconds&&x.estimatedSeconds>0?' · 含进度/在位估算':''}</Text></View>)}</View></>}<Text className="row-title">今日 {v.today}</Text><Text className="small-note">近 7 日；缺测日期保持暂无数据。</Text><View className="live-days">{v.daily.map(x=><View key={x.date}><Text>{x.date}</Text><Text>{x.value}</Text></View>)}</View>{!v.daily.length&&<Text className="paragraph muted">近 7 日暂无已同步数据</Text>}</Card>
+  <PostureReminderCard data={d.postureReminders}/>
   <Card><Heading title="历史奖励与道具"/>
    <Text className="row-title">实时业务记录</Text><Text className="small-note">上传成功的领取、钱包和道具变更可在此查询；与下方夜间历史观测分开展示，不重复合计。</Text>
    {d.recentActivity.items.map(item=><BusinessRow key={item.recordId} item={item}/>)}

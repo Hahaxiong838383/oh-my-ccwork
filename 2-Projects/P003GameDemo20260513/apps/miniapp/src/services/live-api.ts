@@ -58,6 +58,6 @@ export const liveApi: LiveDataApi = {
     return { online: row.online, updatedAtMs: numberOrNull(row.updatedAtMs), present: typeof row.present === 'boolean' ? row.present : null, brightnessLevel: numberOrNull(row.brightnessLevel),
       colorMode: ['cool','normal','warm'].includes(row.colorMode as string) ? row.colorMode as 'cool'|'normal'|'warm' : null,
       ledEnabled: typeof row.ledEnabled==='boolean'?row.ledEnabled:null,focusActive:typeof row.focusActive==='boolean'?row.focusActive:null,
-      imageDistanceM: numberOrNull(row.imageDistanceM), imageDistanceState: typeof row.imageDistanceState === 'string' ? row.imageDistanceState : null, ...(['usage','ark','records','conversations','historicalUsage','observations'].some(key=>key in data)?{details:dashboardDetails(data)}:{}) };
+      imageDistanceM: numberOrNull(row.imageDistanceM), imageDistanceState: typeof row.imageDistanceState === 'string' ? row.imageDistanceState : null, ...(['usage','ark','records','conversations','historicalUsage','observations','postureReminders'].some(key=>key in data)?{details:dashboardDetails(data)}:{}) };
   },
 };

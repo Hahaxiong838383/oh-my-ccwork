@@ -1,7 +1,7 @@
 import {describe,expect,it,vi} from 'vitest';
 import React from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
-import RealDetails,{BusinessRow,ConversationRow,ObservationRow,ReportedStateCard} from '../src/pages/index/real-details';
+import RealDetails,{BusinessRow,ConversationRow,ObservationRow,ReportedStateCard,PostureReminderCard} from '../src/pages/index/real-details';
 import {observation} from '../src/services/observations';
 import type {BusinessItem} from '../src/services/history-api';
 import {dashboardDetails} from '../src/services/real-details';
@@ -9,6 +9,20 @@ vi.mock('@tarojs/taro',()=>({default:{}}));
 vi.mock('@tarojs/components',async()=>{const R=await import('react');const tag=(name:string)=>(p:any)=>R.createElement(name,{className:p.className},p.children);return {View:tag('div'),Text:tag('span'),Button:tag('button'),Picker:tag('div')};});
 vi.mock('../src/pages/index/components',async()=>{const R=await import('react');return {Card:(p:any)=>R.createElement('section',{},p.children),Heading:(p:any)=>R.createElement('h2',{},p.title)};});
 describe('真实面板可见内容',()=>{
+ it('坐姿提醒展示已播放计数、有效0和补传历史，不从检测轮次或冷却拦截增计',()=>{
+  const d=dashboardDetails({postureReminders:{source:'telemetry.posture_reminder',timezone:'Asia/Shanghai',today:{date:'2026-11-17',available:true,playedCount:0,suppressedCount:2,unknownCount:1,reason:'partial_history'},history:{available:true,playedCount:5,suppressedCount:3,fromDay:'2026-11-16',toDay:'2026-11-17'},daily:[{date:'2026-11-16',available:true,playedCount:5}],coverage:{clockSuspectCount:1}}});
+  const html=renderToStaticMarkup(<PostureReminderCard data={d.postureReminders}/>);
+  expect(html).toContain('今日已同步提醒');expect(html).toContain('0 次');expect(html).toContain('5 次');expect(html).toContain('2026-11-16');expect(html).toContain('冷却拦截 2 次');expect(html).toContain('未知结果 1 条');expect(html).toContain('不计入提醒次数');expect(html).toContain('已开始播放');expect(html).toContain('不代表播放完成或孩子听完');expect(html).toContain('仍按上报发生日期统计');
+ });
+ it('缺测或未知outcome不显示0次，旧today计数不替代新域的可用性',()=>{
+  const missing=dashboardDetails({today:{postureAlertCount:0}});
+  const html=renderToStaticMarkup(<PostureReminderCard data={missing.postureReminders}/>);
+  expect(html).toContain('暂无数据');expect(html).not.toContain('0 次');
+  const unknown=dashboardDetails({postureReminders:{source:'telemetry.posture_reminder',today:{available:false,reason:'no_supported_outcome',playedCount:77,unknownCount:1},history:{available:false,reason:'no_supported_outcome'}}});
+  const pending=renderToStaticMarkup(<PostureReminderCard data={unknown.postureReminders}/>);expect(pending).not.toContain('77 次');expect(pending).not.toContain('0 次');expect(pending).toContain('未知');
+  const invalid=dashboardDetails({postureReminders:{source:'telemetry.posture_reminder',history:{available:false,reason:'invalid_event_time'},coverage:{invalidTimeCount:2}}});const invalidHtml=renderToStaticMarkup(<PostureReminderCard data={invalid.postureReminders}/>);expect(invalidHtml).toContain('已收到提醒事件，但时间无效');expect(invalidHtml).toContain('未按日期计入');
+ });
+
  it('GM游戏状态保留真实0和领取进度，并明确不计入正常收益',()=>{
   const d=dashboardDetails({ark:{available:false,reason:'non_normal',reportedState:{source:'device.ark.state',sourceMode:'gm',logicalDay:'2026-11-08',wallets:{familyCoin:123,stardust:0},inventory:{'M-CARD-001':2},progress:{timerState:'paused',claimableCount:1,nextReward:{status:'claimable',stageId:'REGULAR-05',remainingSeconds:0}},capturedAtMs:1794898399000,receivedAtMs:1794898400000}}});
   const html=renderToStaticMarkup(<ReportedStateCard state={d.reportedState!}/>);

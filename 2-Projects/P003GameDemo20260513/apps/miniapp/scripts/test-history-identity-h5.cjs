@@ -21,6 +21,7 @@ const root=path.resolve(__dirname,'../dist/h5');
     data=fixture.dashboard(fixture.devices[0]);data.data.usage.today.total_seconds=24;data.data.usage.today.focus_minutes=0;data.data.historical_usage.total_seconds=5003;
     Object.assign(data.data.device,{color_mode:'warm',led_enabled:true,focus_active:false});
     data.data.ark={available:false,reason:'non_normal',reported_state:{source:'device.ark.state',source_mode:'gm',snapshot_id:'synthetic-snapshot',logical_day:'2026-11-08',captured_at_ms:1794898399000,received_at_ms:1794898400000,wallets:{family_coin:123+(dashboardReads++),stardust:0},inventory:{'M-CARD-001':2},progress:{timer_state:'paused',claimable_count:1,next_reward:{status:'claimable',kind:'currency',item_id:'C-FAMILY-001',stage_id:'REGULAR-05',remaining_seconds:0}}}};
+    data.data.posture_reminders={source:'telemetry.posture_reminder',timezone:'Asia/Shanghai',available:true,reason:'partial_history',today:{date:'2026-11-17',available:true,played_count:dashboardReads+1,suppressed_count:4,unknown_count:1,clock_suspect_count:0,updated_at_ms:1794908400000},history:{available:true,played_count:dashboardReads+9,suppressed_count:4,unknown_count:1,clock_suspect_count:0,from_day:'2026-11-16',to_day:'2026-11-17',updated_at_ms:1794908400000},daily:[{date:'2026-11-16',available:true,played_count:8}],coverage:{complete:false,clock_suspect_count:0,invalid_time_count:0}};
     data.data.records.recent_activity={available:true,reason:'partial_history',items:[{record_id:'synthetic-realtime-grant',save_id:'synthetic-save',sequence:2,source_mode:'gm',reason:'gm_adjustment',logical_day:'2026-11-08',occurred_at_ms:1794898399000,received_at_ms:1794898400000,time_status:'reported',resource_changes:[],item_changes:[],grants:[{reward_instance_id:'synthetic-grant',source_kind:'progress_stage',source_id:'REGULAR-05',logical_day:'2026-11-08',resolved_rewards:[{item_id:'synthetic-new-decoration',quantity:1,kind:'decoration'}]}],inventory_changes:[{item_id:'synthetic-new-decoration',before:null,after:{quantity:1,status:'pending_activation'}}]}],has_more:false,next_cursor:null};
    }
    else if(url.pathname.endsWith('/observations'))data=fixture.observations(url.searchParams.get('cursor'));
@@ -35,8 +36,12 @@ const root=path.resolve(__dirname,'../dist/h5');
   const body=await page.locator('body').innerText();
   for(const value of ['今日 24 秒','微信身份已验证','wx_fixture','微信暂未返回 UnionID','历史奖励与道具','history_decor_0','1 → 0','不能据此认定家族币或星尘为 0'])assert(body.includes(value),value);
   for(const value of ['暖光','已开灯','未计时','测试来源（GM）','游戏日 2026-11-08','不计入正常收益','可领取 · REGULAR-05','上报时距下一奖励 0 秒','实时业务记录','夜间同步的历史观测','synthetic-new-decoration × 1','库存 · synthetic-new-decoration：0 → 1'])assert(body.includes(value),value);
+  const posture=page.locator('.card').filter({has:page.getByText('坐姿提醒次数',{exact:true})});
+  await posture.getByText('2 次',{exact:true}).waitFor();
+  const postureText=await posture.innerText();for(const text of ['历史已同步提醒','10 次','冷却拦截 4 次','未知结果 1 条','不代表播放完成或孩子听完','原发生日'])assert(postureText.includes(text),text);
   await page.getByText('刷新',{exact:true}).click();
   await page.getByText('124',{exact:true}).waitFor();assert.equal(dashboardReads,2,'刷新重新查询最新游戏快照');
+  await posture.getByText('3 次',{exact:true}).waitFor();assert(!(await posture.innerText()).includes('2 次'),'刷新只显示新提醒计数');
   assert(!body.includes('微信手机号授权登录'),'H5 不展示微信专属手机号按钮');
   await page.getByText('查看全部已同步历史',{exact:true}).click();await page.getByText('加载更多',{exact:true}).waitFor();
   await page.getByText('加载更多',{exact:true}).click();await page.getByText('已显示本次查询全部已同步记录',{exact:true}).waitFor();
@@ -47,6 +52,6 @@ const root=path.resolve(__dirname,'../dist/h5');
   assert(!(await page.locator('body').innerText()).includes('history_decor_0'));
   assert.equal(errors.length,0,errors.join('\n'));
   assert.equal(requests.filter(x=>x.method==='POST').length,1,'仅合成短信验证，不发送短信或微信授权');
-  console.log(JSON.stringify({pass:true,requests:requests.length,dashboard_reads:dashboardReads,observations_pages:requests.filter(x=>x.path.endsWith('/observations')).length,page_errors:errors,checks:['built H5','SMS compatibility','shared history and duration DTO','verified identity and optional UnionID','color and lighting','reported GM assets and game state separated from normal income','realtime grants and inventory alongside nightly observations','refresh updates reported state','observation pagination','logout clears data','no WeChat phone button in H5']},null,2));
+  console.log(JSON.stringify({pass:true,requests:requests.length,dashboard_reads:dashboardReads,observations_pages:requests.filter(x=>x.path.endsWith('/observations')).length,page_errors:errors,checks:['built H5','SMS compatibility','shared history and duration DTO','verified identity and optional UnionID','color and lighting','reported GM assets and game state separated from normal income','realtime grants and inventory alongside nightly observations','refresh updates reported state','posture played counts exclude suppressed and unknown outcomes','refresh updates posture count','observation pagination','logout clears data','no WeChat phone button in H5']},null,2));
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

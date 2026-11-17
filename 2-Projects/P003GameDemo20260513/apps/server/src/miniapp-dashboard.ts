@@ -4,7 +4,7 @@ import {buildHistoricalUsage} from './history-usage.js';
 import {readWechatIdentity} from './wechat-identity.js';
 import {DatabaseSync} from 'node:sqlite';
 import {resolve} from 'node:path';
-import {telemetryStore, dayOf} from './telemetry-store.js';
+import {telemetryStore, dayOf, emptyPostureReminders} from './telemetry-store.js';
 import {deviceRegistryStore} from './device-registry-store.js';
 import {accountStore} from './account-store.js';
 import {dashboardArk} from './ark/dashboard.js';
@@ -72,6 +72,9 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
   let telemetryAvailable=true;
   try { daily=telemetryStore.dailyRange(dev.sn,weekFrom,today);snap=telemetryStore.latestSnapshot(dev.sn);usageDaily=telemetryStore.usageRange(dev.sn,weekFrom,today); }
   catch { telemetryAvailable=false;daily=[];snap=null; }
+  let postureReminders=emptyPostureReminders(now);
+  try { postureReminders=telemetryStore.postureReminders(dev.sn,now); }
+  catch { postureReminders=emptyPostureReminders(now,'dependency_unavailable'); }
   const todayRow=daily.find(d=>d.date===today),p=snap?.payload;
   const totalFocusMin=Math.round(daily.reduce((s,d)=>s+d.focus_ms,0)/60000);
   const elapsedDays=daily.filter(d=>d.date<today).length||1;
@@ -85,6 +88,7 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
   const data = {
       ark,
       records,
+      posture_reminders:postureReminders,
       conversations: parentConversationSummary(publicId, accountId, authRole),
       usage: { source: 'telemetry.focus_segment', timezone: 'Asia/Shanghai',reason:telemetryAvailable?null:'dependency_unavailable',
         today: usageDaily[usageDaily.length - 1], daily: usageDaily },
@@ -108,7 +112,7 @@ export function readParentDashboard(publicId: string, accountId: string, authRol
       today: {
         focus_minutes: telemetryAvailable?Math.round((todayRow?.focus_ms ?? 0) / 60_000):null,
         guarded_minutes: telemetryAvailable?Math.round((todayRow?.guarded_ms ?? 0) / 60_000):null,
-        posture_alert_count: telemetryAvailable?(todayRow?.reminder_played ?? 0):null,
+        posture_alert_count: postureReminders.today.played_count,
       },
       week: {
         total_focus_minutes: telemetryAvailable?totalFocusMin:null,

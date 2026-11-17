@@ -80,6 +80,15 @@ function resolveDbPath(): string {
   return resolve(process.cwd(), raw);
 }
 
+type PostureDay = {date:string;available:boolean;reason:string;played_count:number|null;suppressed_count:number|null;unknown_count:number;clock_suspect_count:number;updated_at_ms:number|null};
+const emptyPostureDay=(date:string,reason:string):PostureDay=>({date,available:false,reason,played_count:null,suppressed_count:null,unknown_count:0,clock_suspect_count:0,updated_at_ms:null});
+export function emptyPostureReminders(now=Date.now(),reason='no_reminder_events') {
+  return {source:'telemetry.posture_reminder' as const,timezone:'Asia/Shanghai' as const,available:false,reason,
+    today:emptyPostureDay(dayOf(now),reason),
+    history:{available:false,reason,played_count:null as number|null,suppressed_count:null as number|null,unknown_count:0,clock_suspect_count:0,from_day:null as string|null,to_day:null as string|null,updated_at_ms:null as number|null},
+    daily:[] as PostureDay[],coverage:{complete:false as const,reason:'received_events_only' as const,first_received_at_ms:null as number|null,last_received_at_ms:null as number|null,clock_suspect_count:0,invalid_time_count:0}};
+}
+
 class TelemetryStore {
   private readonly db: DatabaseSync;
 
@@ -161,8 +170,9 @@ class TelemetryStore {
    * 返回 accepted / duplicated（同 ID 同 payload）/ conflict（同 ID 异 payload，路由层入 rejected 409 语义）。
    */
   ingestEvent(sn: string, ev: EventInput, meta: IngestMeta): EventOutcome {
-    if (ev.type !== 'focus_segment') return this.insertEvent(sn, ev, meta);
-    // Keep overlap check, first receipt and daily increments atomic, including across processes.
+    if (ev.type !== 'focus_segment' && ev.type !== 'posture_reminder') return this.insertEvent(sn, ev, meta);
+    // Keep first receipt and daily increments atomic; a failed increment must be retryable.
+    // Focus overlap checking uses the same transaction, including across processes.
     this.db.exec('BEGIN IMMEDIATE');
     try {
       const outcome = this.insertEvent(sn, ev, meta);
@@ -247,8 +257,12 @@ class TelemetryStore {
       return;
     }
     if (ev.type === 'posture_reminder') {
-      const outcome = String(ev.data.outcome ?? '');
-      bump(dayOf(ev.occurred_at_ms), outcome === 'played' ? 'reminder_played' : 'reminder_suppressed', 1);
+      const outcome = ev.data.outcome;
+      if ((outcome === 'played' || outcome === 'suppressed_cooldown')
+        && Number.isSafeInteger(ev.occurred_at_ms) && ev.occurred_at_ms >= 1 && ev.occurred_at_ms <= MAX_FOCUS_TIMESTAMP) {
+        bump(dayOf(ev.occurred_at_ms), outcome === 'played' ? 'reminder_played' : 'reminder_suppressed', 1);
+      }
+      // Unknown outcomes remain raw facts; they are neither playback nor cooldown.
     }
   }
 
@@ -313,6 +327,45 @@ class TelemetryStore {
         updated_at_ms: total?.received ?? null });
     }
     return daily;
+  }
+
+  /** Count immutable, per-device unique reminder events, never batches or posture rounds.
+   * This remains the existing Telemetry SN history domain (weekly-report already reads
+   * arbitrary historical weeks); no event IDs/text or additional cross-device scope is exposed.
+   * Raw reads also preserve correct history when an old daily aggregate is incomplete.
+   */
+  postureReminders(sn:string,now=Date.now()):ReturnType<typeof emptyPostureReminders> {
+    type Row={date:string|null;events:number;played:number;suppressed:number;unknown:number;clock_suspect:number;first_received:number;last_received:number};
+    const rows=this.db.prepare(`WITH reminders AS (
+      SELECT CASE WHEN typeof(occurred_at_ms)='integer' AND occurred_at_ms BETWEEN 1 AND ${MAX_FOCUS_TIMESTAMP}
+        THEN strftime('%Y-%m-%d',occurred_at_ms/1000.0,'unixepoch','+8 hours') END date,
+        CASE WHEN json_valid(data_json) THEN json_extract(data_json,'$.outcome') END outcome,
+        CASE WHEN ABS(clock_skew_ms)>300000 OR occurred_at_ms>server_received_ms+300000 THEN 1 ELSE 0 END clock_suspect,
+        server_received_ms
+      FROM device_telemetry_event WHERE sn=? AND type='posture_reminder'
+    ) SELECT date,COUNT(*) events,
+      SUM(CASE WHEN outcome='played' THEN 1 ELSE 0 END) played,
+      SUM(CASE WHEN outcome='suppressed_cooldown' THEN 1 ELSE 0 END) suppressed,
+      SUM(CASE WHEN outcome IS NULL OR outcome NOT IN ('played','suppressed_cooldown') THEN 1 ELSE 0 END) unknown,
+      SUM(clock_suspect) clock_suspect,MIN(server_received_ms) first_received,MAX(server_received_ms) last_received
+      FROM reminders GROUP BY date ORDER BY date LIMIT 3661`).all(sn) as Row[];
+    // Bound the response rather than silently calling a truncated range all history.
+    if(rows.length>3660)throw new Error('posture_history_query_limit');
+    const result=emptyPostureReminders(now),valid=rows.filter((r):r is Row & {date:string}=>r.date!==null);
+    const reason=(played:number,suppressed:number,events:number)=>played+suppressed>0?'partial_history':events>0?'no_supported_outcome':'no_reminder_events';
+    result.daily=valid.map(r=>({date:r.date,available:r.played+r.suppressed>0,reason:reason(r.played,r.suppressed,r.events),
+      played_count:r.played+r.suppressed>0?r.played:null,suppressed_count:r.played+r.suppressed>0?r.suppressed:null,
+      unknown_count:r.unknown,clock_suspect_count:r.clock_suspect,updated_at_ms:r.last_received}));
+    result.today=result.daily.find(r=>r.date===dayOf(now))??result.today;
+    const played=valid.reduce((n,r)=>n+r.played,0),suppressed=valid.reduce((n,r)=>n+r.suppressed,0),events=valid.reduce((n,r)=>n+r.events,0),available=played+suppressed>0;
+    result.available=available;result.reason=valid.length?reason(played,suppressed,events):rows.length?'invalid_event_time':'no_reminder_events';
+    result.history={available,reason:result.reason,played_count:available?played:null,suppressed_count:available?suppressed:null,
+      unknown_count:valid.reduce((n,r)=>n+r.unknown,0),clock_suspect_count:valid.reduce((n,r)=>n+r.clock_suspect,0),
+      from_day:valid[0]?.date??null,to_day:valid.at(-1)?.date??null,updated_at_ms:valid.length?Math.max(...valid.map(r=>r.last_received)):null};
+    result.coverage={...result.coverage,first_received_at_ms:rows.length?Math.min(...rows.map(r=>r.first_received)):null,
+      last_received_at_ms:rows.length?Math.max(...rows.map(r=>r.last_received)):null,
+      clock_suspect_count:valid.reduce((n,r)=>n+r.clock_suspect,0),invalid_time_count:rows.filter(r=>r.date===null).reduce((n,r)=>n+r.events,0)};
+    return result;
   }
 
   /** 最新快照（dashboard 设备实时态）。 */
