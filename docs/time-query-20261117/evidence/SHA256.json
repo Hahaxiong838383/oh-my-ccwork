@@ -1,6 +1,7 @@
 {
   "pool-2-search-location-fallback-runtime.log": "aa05d20e85a7aa79892ab1a6d50aad469ec25cb9b15d24c965376bec85821603",
   "pool-2-search-tasks.log": "9c3ac6942ffe2af655c1162c62cea5db8d7b09e892eaa3b131275b2661578cff",
+  "typecheck-baseline-final.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
   "pool-2-clock-search-runtime.log": "f036bc3526d08b79353bdf659df34bf037441d9f515b7e81e58ccea2e4d4f59a",
   "pool-2-search-weather-fallback-runtime.log": "8f8d12375c1dd16f81df46b5250885138f2734429ee7bee0c2a9cf99c7b26b6c",
   "POOL-MANIFEST.json": "c3e8413479daee25dd18858d247c85a3d7ec3b63bef00357a6a4411b8e3d1d7a",
@@ -19,6 +20,8 @@
   "GREEN-review-variants.log": "6a036f9bd0bf609486a83049d057a85ee722df2bca5dd3449df9e5b470b57de2",
   "BASELINE-REGRESSIONS.json": "632b76deab24b5575bb0b6fd81487de668ba29b3889008c86f723db9bda91afe",
   "pool-1-clock-search-runtime.log": "f036bc3526d08b79353bdf659df34bf037441d9f515b7e81e58ccea2e4d4f59a",
+  "TYPECHECK-COMPARISON.json": "93bd0ee097068e7a855a5d70b54777108e9aea53fb6e3beeb3970bfdc2c1063c",
+  "typecheck-candidate-final.log": "4ab70e064cd2ef96dc8bea4b5e2f32dca1c83e2d1f5f52d013f3aa05b9f559f7",
   "regression-clock-search-runtime.log": "f036bc3526d08b79353bdf659df34bf037441d9f515b7e81e58ccea2e4d4f59a",
   "pool-0-search-runtime.log": "78df2a63a2bdb4fb2f0dd9892492e6e3009c99e2f71a969dec74b0337eafdcdb",
   "REVIEW-EVIDENCE-NOTICE.md": "c5142c66feb8f0732861e2ea4dc7a3fa8dcbdd130d55a19c2cfea08f9efd39e8",

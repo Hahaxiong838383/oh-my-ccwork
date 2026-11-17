@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "name": "baseline",
+      "exit": 2,
+      "errors": 12
+    },
+    {
+      "name": "candidate",
+      "exit": 2,
+      "errors": 12
+    }
+  ],
+  "byte_equal": true
+}
