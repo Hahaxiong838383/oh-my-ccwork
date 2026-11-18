@@ -14,7 +14,7 @@ description: 微信小程序在本机的开发、真机调试与自建后端运�
 | 项 | 值 |
 |---|---|
 | 项目 | `~/MyAgent/2-Projects/P02-英语学习App/miniprogram/` |
-| 容器 | `wxdt-ide`（Ubuntu 24.04 + Xvfb 2048×1536 + openbox + selkies），GPU `/dev/dri` 映射 |
+| 容器 | `wxdt-ide`（Ubuntu 24.04 + Xvfb 2048×1536 + openbox + selkies），GPU `/dev/dri` 映射；Docker data-root 已迁 `/data/docker`（`/var/lib/docker` 软链） |
 | 远程桌面 | `https://10.10.10.23:3002/` |
 | 容器内工程路径 | `/config/projects/wordpath`（`/config` 是挂载卷，重建不丢） |
 | 启动/截图 | `~/mycc/2-Projects/wechat-mp-env/bin/wxdt-ide ide` / `wxdt-ide shot /tmp/x.png` |

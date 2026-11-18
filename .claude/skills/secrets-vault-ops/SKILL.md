@@ -24,6 +24,7 @@ output_levels: L1
 | 实现 | Vaultwarden，docker 容器 `vaultwarden`，`--restart unless-stopped` |
 | 镜像 | **`ghcr.io/dani-garcia/vaultwarden`**（docker hub 拉不动，见排障） |
 | 数据 | `~/.local/share/vaultwarden/data/db.sqlite3` |
+| Docker data-root | `/data/docker`（`/var/lib/docker` 是指向它的软链，2026-11-18 迁移；容器名/绑定挂载不变） |
 | 证书 | `~/.local/share/vaultwarden/ssl/cert.pem`（自签，SAN 含两 IP，2036 到期） |
 | 取用命令 | `vw`（`~/.local/bin/vw`，已封装证书信任 + session 读取） |
 | 解锁命令 | `~/.local/bin/vw-login`（**川哥自己跑**） |
