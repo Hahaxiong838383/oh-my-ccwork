@@ -1,0 +1,56 @@
+{
+  "http_status": 200,
+  "request_method": "GET",
+  "url": "https://kidshub-ai.hahaxiong.cc/v1/parent/devices/dev_************9045/weekly-report?timezone=Asia/Shanghai&week_start=2026-11-16",
+  "read_started_at_utc": "2026-11-18T03:13:40.480Z",
+  "read_completed_at_utc": "2026-11-18T03:13:40.675Z",
+  "read_completed_at_ms": 1794971620675,
+  "read_completed_at_beijing": "2026-11-18T11:13:40.675+08:00",
+  "server_date": "Wed, 18 Nov 2026 03:13:40 GMT",
+  "cache_control": "no-store",
+  "parent_A_existing_identity_verified": true,
+  "original_binding_unchanged": true,
+  "auth_method": "short_lived_parent_jwt_same_existing_account_and_role",
+  "mutating_http_requests": 0,
+  "response_sha256": "55b2a3c1d24fcdbffdd26e5ecab753e28c99a4787376368bed3a8432f86e6ef2",
+  "report_unavailable_reason_present": false,
+  "redactions": [
+    "data.report.scope.public_id及请求路径同字段；账号/手机号/凭据未输出"
+  ],
+  "data": {
+    "report": {
+      "scope": {
+        "kind": "device",
+        "public_id": "dev_************9045"
+      },
+      "metrics": {
+        "posture_reminders": {
+          "available": true,
+          "reason": "partial_history",
+          "value": 13,
+          "reference_max": 672,
+          "above_reference_max": false,
+          "updated_at_ms": 1794971267002
+        },
+        "usage": {
+          "available": true,
+          "reason": "partial_history",
+          "total_seconds": 16018.387,
+          "daily_average_seconds": 2288.341,
+          "denominator_days": 7,
+          "source": "telemetry.focus_segment",
+          "supplemental_seconds": 2175.6810000000023,
+          "combined_seconds": 18194.068,
+          "updated_at_ms": 1794971595465
+        },
+        "active_days": {
+          "available": true,
+          "reason": "partial_history",
+          "value": 1,
+          "threshold_seconds": 300,
+          "updated_at_ms": 1794971595465
+        }
+      }
+    }
+  }
+}
