@@ -153,3 +153,9 @@ Column(Modifier.fillMaxSize()) {
 4. 归档 `WordPath-<ver>-debug.apk` 到 `/data/home-studio/artifacts/english-app/` + 传飞牛2；
 5. 回读三处 `update.json` 的 versionCode 是否一致；
 6. 模拟器 `install -r` 启动、截图；必要时走一遍「设置→检查更新→下载→安装」。
+
+## 归档与磁盘（2026-11-18）
+
+- 发版产物归档：`/data/home-studio/artifacts/english-app/`，**只保留最近 3 个 APK**（当前 0.13.1/0.13.0/0.12.3），旧包删。
+- 大文件一律走 `/data`（数据集/模型/APK/备份），不要写 `/tmp`；Docker data-root 已在 `/data/docker`。
+- 备份脚本：`/data/home-studio/work/backup_to_fnos2.py`（SFTP 到飞牛2，增量、按大小跳过）。
