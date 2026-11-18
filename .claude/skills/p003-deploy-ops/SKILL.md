@@ -11,6 +11,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 周报公式、历史持久化、迟到修订或家长/后台周报口径排查，续读 [周报计算与验收](references/weekly-report-reconciliation.md)。该参考区分真实计时和补充估算，避免把周报统计规则直接用于发币。
 
+审核账号登录、家长任务列表 404、设备待到账或两端收益条数不一致时，见[家长任务联调与到账对账](references/parent-task-reconciliation.md)。
+
 ## 限时搜索灰度后台与验收
 
 先读 [限时语音灰度操作与交接](../voice-agent-ops/references/bounded-canary-handoff.md)：后台待测选择不等于启用派单，实际名单/窗口/健康/最近自报版本分开展示；只发布本次文件，回执与项目主入口同步，旧记录保留时间范围。
