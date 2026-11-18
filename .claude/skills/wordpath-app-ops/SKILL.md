@@ -183,3 +183,10 @@ docker exec -d --user root wx-emu sh -c '/opt/android/emulator/emulator -avd wp 
 - 容器内 adb 只监听 localhost，主机 `adb connect 127.0.0.1:5555` 会 offline；**所有 adb 命令走 `docker exec ... /opt/android/platform-tools/adb`**。
 - 相机验收看两点：`adb shell run-as com.hahaxiong.wordpath ls -l cache` 应出现 `paper-*.jpg`；截图非黑（虚拟场景可见）。
 - 权限用例：`pm revoke ... CAMERA` 后重进，应弹系统权限框；拒绝后应看到说明页。
+
+## 练习页信息架构（0.14.0 起）
+
+- 练习 = 科目 Tab（英语/语文，横滑 + 固定「全部」）→ 每科「继续卡 + 模块行」→ 模块设置（统一 StepHeader）→ 会话。
+- 英语模块：单元听写 / 拍照识别 / 我的词库；语文模块：练字。
+- 任务页（听写、设置、练字、相机）隐藏底部 Tab；`StepHeader` 在 `ui/Common.kt` 复用。
+- 已经踩过的坑：底部 CTA 必须 `navigationBarsPadding()`，否则文字被导航栏裁掉；步骤页的 LazyColumn 要留 96dp 底部 padding。
