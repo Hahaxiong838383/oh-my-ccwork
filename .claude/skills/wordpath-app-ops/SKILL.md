@@ -159,3 +159,27 @@ Column(Modifier.fillMaxSize()) {
 - 发版产物归档：`/data/home-studio/artifacts/english-app/`，**只保留最近 3 个 APK**（当前 0.13.1/0.13.0/0.12.3），旧包删。
 - 大文件一律走 `/data`（数据集/模型/APK/备份），不要写 `/tmp`；Docker data-root 已在 `/data/docker`。
 - 备份脚本：`/data/home-studio/work/backup_to_fnos2.py`（SFTP 到飞牛2，增量、按大小跳过）。
+
+## 内置相机（CameraX）踩坑与验收（0.13.2）
+
+- **必须申请 CAMERA 权限**：换成应用内 CameraX 后不再走系统相机 Intent，没权限时 `bindToLifecycle` 失败、预览纯黑且无报错。
+  Manifest 加 `android.permission.CAMERA` + `uses-feature required=false`，进页面先 `RequestPermission`，拒绝要有说明页。
+- 取景框不能用 `fillMaxWidth + padding(vertical)`（高度为 0，看不见）：用 `aspectRatio(0.707f)` 给高度。
+- 快门要 `navigationBarsPadding()` 并留 ≥40dp；否则会被窗口底边裁掉，只剩几十像素，点不到。
+- 相机是任务页：用 `cameraOpen` 状态在 AppRoot 隐藏 BottomTabBar。
+- 绑定失败把异常写到预览上方，避免“黑屏无线索”。
+
+## 无 KVM 权限时怎么跑真机级验收（2026-11-18 实测）
+
+主机用户不在 `kvm` 组，但 docker 里是 root，可以：
+
+```bash
+docker run -d --name wx-emu --device /dev/kvm -p 5555:5555 --entrypoint sleep   docker.m.daocloud.io/budtmo/docker-android:emulator_11.0 infinity
+docker exec --user root wx-emu sh -c 'echo no | /opt/android/cmdline-tools/tools/bin/avdmanager create avd -n wp -k "system-images;android-30;google_apis;x86_64" -d pixel_5 --force'
+docker exec -d --user root wx-emu sh -c '/opt/android/emulator/emulator -avd wp -no-window -no-audio -no-gpu   -gpu swiftshader_indirect -camera-back virtualscene -no-snapshot -ports 5554,5555 > /tmp/emu.log 2>&1'
+```
+
+- 镜像放 `/data`（docker data-root 已迁），拉取用 `crane pull --format tarball` + `docker load`，别把 tar 写 `/tmp`。
+- 容器内 adb 只监听 localhost，主机 `adb connect 127.0.0.1:5555` 会 offline；**所有 adb 命令走 `docker exec ... /opt/android/platform-tools/adb`**。
+- 相机验收看两点：`adb shell run-as com.hahaxiong.wordpath ls -l cache` 应出现 `paper-*.jpg`；截图非黑（虚拟场景可见）。
+- 权限用例：`pm revoke ... CAMERA` 后重进，应弹系统权限框；拒绝后应看到说明页。
