@@ -287,10 +287,8 @@ class TelemetryStore {
     });
   }
 
-  /** 已上报使用时长，包含普通游戏/聊天；不代表学习质量或完整全天覆盖。 */
-  usageRange(sn: string, fromDate: string, toDate: string) {
-    const from = Date.parse(`${fromDate}T00:00:00+08:00`);
-    const to = Date.parse(`${toDate}T00:00:00+08:00`) + DAY_MS;
+  /** Millisecond evidence shared by the usage card and scoped parent-task goals. */
+  focusUsageMillis(sn: string, from: number, to: number, scopeSince = 0) {
     const totals = new Map<string, { ms: number; received: number }>();
     // Include a one-segment margin so a legacy overlap across the window edge cannot count twice.
     const segments = this.focusSegments(sn, from - DAY_MS, to + DAY_MS);
@@ -309,7 +307,7 @@ class TelemetryStore {
       }
       prior.splice(lo, last - lo, { start, end: stop });
       // Legacy later overlaps are conservatively omitted; historical event/daily rows stay unchanged.
-      if (overlaps) continue;
+      if (overlaps || s.start < scopeSince || s.received < scopeSince) continue;
       let cur = Math.max(from, s.start);
       const end = Math.min(to, s.end);
       while (cur < end) {
@@ -320,6 +318,14 @@ class TelemetryStore {
         cur = next;
       }
     }
+    return totals;
+  }
+
+  /** 已上报使用时长，包含普通游戏/聊天；不代表学习质量或完整全天覆盖。 */
+  usageRange(sn: string, fromDate: string, toDate: string) {
+    const from = Date.parse(`${fromDate}T00:00:00+08:00`);
+    const to = Date.parse(`${toDate}T00:00:00+08:00`) + DAY_MS;
+    const totals = this.focusUsageMillis(sn, from, to);
     const daily = [];
     for (let cur = from; cur < to; cur += DAY_MS) {
       const date = dayOf(cur), total = totals.get(date);

@@ -1,3 +1,4 @@
+import {matchesTaskIncome,type IncomeProof,type IncomeIdentity} from '../parent-tasks/device-income.js';
 import {DatabaseSync} from 'node:sqlite';
 import {statfsSync} from 'node:fs';
 import {createHash,createCipheriv,createDecipheriv,randomBytes} from 'node:crypto';
@@ -8,9 +9,9 @@ import {projectLegacyRecord,legacyIncomeGrants,legacyActivations,legacyHasAcquis
 
 type Identity={sn:string;public_id:string;account_id:string;parent_account_id:string;binding_version:number;epoch:number;grant_id:string;not_before_ms:number};
 export type Credential={sn:string;iat:number;exp:number;bindingVersion?:number};
-type Options={arkPath:string;devicesPath:string;allowed:(sn:string)=>boolean;validAccount:(id:string)=>boolean;validParentAccount?:(id:string)=>boolean;secret:()=>string};
+type Options={taskProofs?:(i:IncomeIdentity)=>IncomeProof[];arkPath:string;devicesPath:string;allowed:(sn:string)=>boolean;validAccount:(id:string)=>boolean;validParentAccount?:(id:string)=>boolean;secret:()=>string};
 type Row={ingest_id:number;sn:string;record_id:string;save_id:string;sequence:number;origin_parent_account_id:string;origin_device_account_id:string;origin_epoch:number;origin_grant_id:string;body:string;received_at_ms:number;sort_ms:number;time_status:'reported'|'unknown'|'clock_suspect'};
-type Cursor={v:1;scope:string;filter:string;water:number;legacy_water?:number;expires:number;last:[number,string,number,string]};
+type Cursor={v:1;scope:string;filter:string;water:number;legacy_water?:number;expires:number;last:[number,string,number,string];part?:number};
 type LegacyRow={ingest_id:number;sn:string;record_id:string;save_id:string;sequence:number;scope_key:string;body:string;body_hash:string;payload_bytes:number;received_at_ms:number;sort_ms:number;time_status:Row['time_status'];coverage_from_ms:number;dropped_records:number};
 const legacyId=z.string().min(1).max(96).regex(/^[A-Za-z0-9_.:-]+$/);
 const LegacyScopeSchema=z.object({sn:z.string(),public_id:z.string(),account_id:z.string().min(1),parent_account_id:z.string().min(1),binding_version:z.number().int().nonnegative().safe(),epoch:z.number().int().positive().safe(),grant_id:z.string().uuid(),save_ids:z.union([z.literal('*'),z.array(legacyId).min(1).max(128)])}).strict();
@@ -105,6 +106,34 @@ export class RecordsStore{
   // The immutable key represents explicit read/import authorization, never a claimed original owner.
   return {scope,key:createHash('sha256').update(canonical(scope)).digest('hex')};
  }
+ /** A claimed save on sync alone is insufficient to issue a wallet authorization. */
+ trustedTaskSave(sn:string,owner:string,save:string){
+  const i=this.identity(sn);if(!i||i.parent_account_id!==owner)return false;
+  const s=this.legacyScope(i);if(!s||(s.scope.save_ids!=='*'&&!s.scope.save_ids.includes(save)))return false;
+  const latest=this.db.prepare(`SELECT r.save_id,r.time_status,r.sort_ms,json_extract(r.body,'$.source_mode') mode
+   FROM ark_record_legacy r JOIN (SELECT save_id,MAX(sequence) seq FROM ark_record_legacy
+    WHERE sn=? AND scope_key=? GROUP BY save_id) x ON x.save_id=r.save_id AND x.seq=r.sequence
+   WHERE r.sn=? AND r.scope_key=? ORDER BY (r.time_status<>'reported') DESC,r.sort_ms DESC LIMIT 2`)
+    .all(sn,s.key,sn,s.key);
+  return latest[0]?.save_id===save&&latest[0].time_status==='reported'&&latest[0].mode==='normal'
+    &&(!latest[1]||latest[0].sort_ms!==latest[1].sort_ms);
+ }
+ private provenTaskRecords(i:Identity,scopeKey:string,water:number){
+  const found=new Map<string,IncomeProof[]>();
+  for(const proof of this.o.taskProofs?.(i)??[]){
+   const row=this.db.prepare("SELECT body FROM ark_record_legacy WHERE sn=? AND scope_key=? AND record_id=? AND time_status='reported' AND ingest_id<=?")
+    .get(i.sn,scopeKey,proof.record_id,water);
+   if(!row||!matchesTaskIncome(JSON.parse(String(row.body)),proof))continue;
+   const prior=found.get(proof.record_id)??[];prior.push(proof);found.set(proof.record_id,prior);
+  }
+  return found;
+ }
+ matchedTaskRecord(sn:string,owner:string,proof:IncomeProof){
+  const i=this.identity(sn);if(!i||i.parent_account_id!==owner)return false;
+  const s=this.legacyScope(i);if(!s||(s.scope.save_ids!=='*'&&!s.scope.save_ids.includes(proof.save_id)))return false;
+  const row=this.db.prepare("SELECT body FROM ark_record_legacy WHERE sn=? AND scope_key=? AND record_id=? AND time_status='reported'").get(sn,s.key,proof.record_id);
+  return !!row&&matchesTaskIncome(JSON.parse(String(row.body)),proof);
+ }
  private requireLegacy(i:Identity,save?:string){const s=this.legacyScope(i);if(!s||(save&&s.scope.save_ids!=='*'&&!s.scope.save_ids.includes(save)))throw new RecordsError(403,'legacy_scope_not_authorized');return s;}
  legacyUploadEnabled(sn:string){const i=this.identity(sn);if(!i||!this.legacyScope(i))return false;return this.authorizedRead(i.public_id,i.parent_account_id,current=>this.legacyScope(current)!==null);}
  preflightLegacy(c:Credential,save:string){return this.transaction(()=>{const i=this.device(c),s=this.requireLegacy(i,save);this.rate(c.sn,'upload',Date.now());return s.key;});}
@@ -191,15 +220,22 @@ export class RecordsStore{
  private water(){return Number(this.db.prepare('SELECT COALESCE(MAX(ingest_id),0) n FROM ark_record').get()!.n);}
  private legacyWater(){return Number(this.db.prepare('SELECT COALESCE(MAX(ingest_id),0) n FROM ark_record_legacy').get()!.n);}
  private legacyWhere(i:Identity,q:Omit<RecordQuery,'cursor'|'limit'>,water:number){
-  const s=this.legacyScope(i);if(!s)return {sql:'0',args:[] as (string|number)[]};
+  const s=this.legacyScope(i);if(!s)return {sql:'0',args:[] as (string|number)[],proofs:new Map<string,IncomeProof[]>()};
+  const proofs=this.provenTaskRecords(i,s.key,water);
   let sql='r.sn=? AND r.scope_key=? AND r.ingest_id<=?';const args:(string|number)[]=[i.sn,s.key,water];
   if(s.scope.save_ids!=='*'){sql+=` AND r.save_id IN (${s.scope.save_ids.map(()=>'?').join(',')})`;args.push(...s.scope.save_ids);}
+  // An unresolved task journal is kept on disk. It enters both history views once its
+  // original commit is linked to every task grant in the row. Pagination uses the same filter.
+  sql+=` AND (NOT EXISTS(SELECT 1 FROM json_each(r.body,'$.data.grants') g WHERE json_extract(g.value,'$.source_kind')='parent_task')
+     OR (SELECT COUNT(*) FROM json_each(r.body,'$.data.grants') g WHERE json_extract(g.value,'$.source_kind')='parent_task')=
+        COALESCE((SELECT CAST(j.value AS INTEGER) FROM json_each(?) j WHERE j.key=r.record_id),0))`;
+  args.push(JSON.stringify(Object.fromEntries(Array.from(proofs,([id,rows])=>[id,rows.length]))));
   if(q.save_id){sql+=' AND r.save_id=?';args.push(q.save_id);}
   if(q.from_day){sql+=' AND r.occurred_day>=?';args.push(q.from_day);}
   if(q.to_day){sql+=' AND r.occurred_day<=?';args.push(q.to_day);}
   if(q.resource_id){sql+=" AND (EXISTS(SELECT 1 FROM json_each(r.body,'$.data.wallet_changes') c WHERE json_extract(c.value,'$.resource_id')=?)";args.push(q.resource_id==='family_coin'?'C-FAMILY-001':q.resource_id==='stardust'?'C-STARDUST-001':q.resource_id);
    if(q.resource_id==='M-CARD-001')sql+=" OR EXISTS(SELECT 1 FROM json_each(r.body,'$.data.inventory_changes') c WHERE json_extract(c.value,'$.item_id')='M-CARD-001')";sql+=')';}
-  return {sql,args};
+  return {sql,args,proofs};
  }
  private mergedCoverage(where:ReturnType<RecordsStore['where']>,legacy:ReturnType<RecordsStore['legacyWhere']>){
   const a=this.coverage(where),b=this.db.prepare(`SELECT MIN(NULLIF(sort_ms,0)) min_occurred_at_ms,MAX(NULLIF(sort_ms,0)) max_occurred_at_ms,MIN(received_at_ms) first_received_at_ms,MAX(received_at_ms) last_received_at_ms FROM ark_record_legacy r WHERE ${legacy.sql}`).get(...legacy.args) as any;
@@ -215,14 +251,47 @@ export class RecordsStore{
   const c=cursor?this.decodeCursor(cursor):null;
   if(c&&(c.scope!==scope||c.filter!==filter))throw new RecordsError(400,'invalid_cursor');if(c&&c.expires<=now)throw new RecordsError(410,'cursor_expired');
   const water=c?.water??this.water(),legacy_water=c?.legacy_water??(c?0:this.legacyWater()),where=this.where(i,filters,water),legacy=this.legacyWhere(i,filters,legacy_water),coverage=this.mergedCoverage(where,legacy),afterArgs:(number|string)[]=[];let after='';
-  if(c){const [sort,save,sequence,id]=c.last;after=' AND (r.sort_ms<? OR (r.sort_ms=? AND (r.save_id>? OR (r.save_id=? AND (r.sequence<? OR (r.sequence=? AND r.record_id>?))))))';afterArgs.push(sort,sort,save,save,sequence,sequence,id);}
+  if(c){const [sort,save,sequence,id]=c.last;after=' AND (r.sort_ms<? OR (r.sort_ms=? AND (r.save_id>? OR (r.save_id=? AND (r.sequence<? OR (r.sequence=? AND r.record_id'+(c.part!==undefined?'>=':'>')+'?))))))';afterArgs.push(sort,sort,save,save,sequence,sequence,id);}
   const original=this.db.prepare(`SELECT r.* FROM ark_record r WHERE ${where.sql}${after} ORDER BY r.sort_ms DESC,r.save_id ASC,r.sequence DESC,r.record_id ASC LIMIT ?`).all(...where.args,...afterArgs,limit+1) as Row[];
   const old=this.db.prepare(`SELECT r.* FROM ark_record_legacy r WHERE ${legacy.sql}${after} ORDER BY r.sort_ms DESC,r.save_id ASC,r.sequence DESC,r.record_id ASC LIMIT ?`).all(...legacy.args,...afterArgs,limit+1) as LegacyRow[];
-  const rows=[...original,...old].sort(sortRows),has_more=rows.length>limit,visible=rows.slice(0,limit);
-  const items=visible.map(row=>{
-   if('scope_key' in row)return {...projectLegacyRecord(JSON.parse(row.body)),received_at_ms:row.received_at_ms,time_status:row.time_status,item_references:[]};
-   const {origin_grant_id,origin_epoch,...r}=JSON.parse(row.body) as BusinessRecord;return {...r,received_at_ms:row.received_at_ms,time_status:row.time_status,item_references:r.item_changes.filter(x=>x.operation==='activated').map(x=>{if(x.operation!=='activated')throw Error('unreachable');const a=this.record(i.sn,x.acquired_record_id);return {item_instance_id:x.item_instance_id,acquired_record_id:x.acquired_record_id,status:a&&a.ingest_id<=water&&this.referenceMatches(i,JSON.parse(row.body),a,x.item_instance_id)?'resolved':'pending'};})};});
-  const last=visible.at(-1),next_cursor=has_more&&last?this.encodeCursor({v:1,scope,filter,water,legacy_water,expires:c?.expires??now+limits().cursor_ttl_ms,last:[last.sort_ms,last.save_id,last.sequence,last.record_id]}):null;
+  const rows=[...original,...old].sort(sortRows);
+  const entries=rows.flatMap<{row:LegacyRow|Row;part:number;item:object}>(row=>{
+   if('scope_key' in row){
+    const proofs=legacy.proofs.get(row.record_id)??[];
+    const item=projectLegacyRecord(JSON.parse(row.body),new Set(proofs.map(p=>p.settlement_id)));
+    const base={...item,received_at_ms:row.received_at_ms,time_status:row.time_status,item_references:[]};
+    if(!proofs.length)return [{row,part:0,item:base}];
+    const ids=new Set(proofs.map(p=>p.settlement_id)), remainingGrants=base.grants.filter(g=>!ids.has(g.reward_instance_id));
+    const family=item.resource_changes.find(c=>c.resource_id==='family_coin')!;
+    const total=proofs.reduce((n,p)=>n+p.amount,0);
+    const residual=base.resource_changes.flatMap(c=>c.resource_id!=='family_coin'?[c]:c.delta===total?[]:
+     [{...c,delta:c.delta-total,before:null,after:null}]);
+    // A journal commit can contain multiple grants. Each task credit remains traceable to the
+    // original immutable record, and individual grants do not invent intermediate balances.
+    const parts=proofs.slice().sort((a,b)=>a.settlement_id.localeCompare(b.settlement_id)).map(p=>({
+     ...base,entry_id:p.settlement_id,settlement_id:p.settlement_id,reward_instance_id:p.settlement_id,
+     source_kind:'parent_task',source_id:p.occurrence_id,currency:'C-FAMILY-001',amount:p.amount,reason:'reward_claim',
+     grants:base.grants.filter(g=>g.reward_instance_id===p.settlement_id),
+     resource_changes:proofs.length===1&&family.delta===p.amount?[family]:[{...family,delta:p.amount,before:null,after:null}],
+     item_changes:[],inventory_changes:[],inventory_state_changes:[],makeup_grants:[],makeup_uses:[]}));
+    const result:Array<{row:LegacyRow;part:number;item:object}>=parts
+      .map((item,part)=>({row,part,item})).filter(x=>!q.resource_id||q.resource_id==='family_coin');
+    if((residual.length||remainingGrants.length||base.item_changes.length||base.inventory_changes.length||base.makeup_grants.length||base.makeup_uses.length)
+      &&(!q.resource_id||residual.some(c=>c.resource_id===q.resource_id)))result.push({
+       row,part:parts.length,item:{...base,entry_id:base.record_id,resource_changes:residual,grants:remainingGrants}});
+    return result;
+   }
+   const {origin_grant_id,origin_epoch,...r}=JSON.parse(row.body) as BusinessRecord;
+   const item={...r,received_at_ms:row.received_at_ms,time_status:row.time_status,item_references:r.item_changes.filter(x=>x.operation==='activated').map(x=>{
+    if(x.operation!=='activated')throw Error('unreachable');const a=this.record(i.sn,x.acquired_record_id);
+    return {item_instance_id:x.item_instance_id,acquired_record_id:x.acquired_record_id,status:a&&a.ingest_id<=water&&this.referenceMatches(i,JSON.parse(row.body),a,x.item_instance_id)?'resolved':'pending'};})};
+   return [{row,part:0,item}];
+  }) as {row:LegacyRow|Row;part:number;item:object}[];
+  const pending=entries.filter(e=>!c||c.part===undefined||e.row.record_id!==c.last[3]||e.part>c.part);
+  const visible=pending.slice(0,limit),has_more=pending.length>limit,items=visible.map(e=>e.item);
+  const last=visible.at(-1),next=pending[limit];
+  const next_cursor=has_more&&last?this.encodeCursor({v:1,scope,filter,water,legacy_water,expires:c?.expires??now+limits().cursor_ttl_ms,
+   last:[last.row.sort_ms,last.row.save_id,last.row.sequence,last.row.record_id],...(next.row.record_id===last.row.record_id?{part:last.part}:{})}):null;
   return {schema_version:1,items,next_cursor,has_more,coverage,updated_at_ms:coverage.last_received_at_ms};
  }
  private summaries(where:ReturnType<RecordsStore['where']>,legacy:ReturnType<RecordsStore['legacyWhere']>,coverage:ReturnType<typeof emptyCoverage>,now:number){
@@ -259,7 +328,8 @@ export class RecordsStore{
    const row=raw as LegacyRow,record=JSON.parse(row.body) as LegacyRecord;
    if(legacyHasAcquisition(record))choose({sn:row.sn,record_id:row.record_id,save_id:row.save_id,sequence:row.sequence,sort_ms:row.sort_ms,received_at_ms:row.received_at_ms,time_status:row.time_status,legacy:true});
    if(record.record_kind!=='business_commit')continue;
-   const eligible=new Map((row.time_status==='reported'?legacyIncomeGrants(record):[]).map(g=>[g.reward_instance_id,g]));
+   const verifiedTasks=new Set((legacy.proofs.get(row.record_id)??[]).map(p=>p.settlement_id));
+   const eligible=new Map((row.time_status==='reported'?legacyIncomeGrants(record,verifiedTasks):[]).map(g=>[g.reward_instance_id,g]));
    for(const grant of record.data.grants){
     const key=canonical([record.save_id,grant.reward_instance_id]),fingerprint=createHash('sha256').update(canonical(grant)).digest('hex');
     const inDay=row.time_status==='reported'&&row.sort_ms>=from&&row.sort_ms<to,old=grants.get(key),value=eligible.get(grant.reward_instance_id);

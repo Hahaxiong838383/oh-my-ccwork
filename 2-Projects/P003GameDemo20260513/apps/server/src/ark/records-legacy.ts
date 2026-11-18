@@ -91,14 +91,14 @@ export type LegacyIncomeGrant={reward_instance_id:string;fingerprint:string;occu
 
 /** Per-grant facts, not aggregate sums. The store deduplicates the stable reward ID
  * within its explicit authorization + save scope, rejecting conflicting fingerprints. */
-export function legacyIncomeGrants(record:LegacyRecord):LegacyIncomeGrant[]{
+export function legacyIncomeGrants(record:LegacyRecord, verifiedTasks:ReadonlySet<string>=new Set()):LegacyIncomeGrant[]{
  if(record.record_kind!=='business_commit'||record.source_mode!=='normal')return [];
  const occurred=wallClock(record.occurred_at_ms);if(occurred===null)return [];
  const totals:Record<'family_coin'|'stardust',number>={family_coin:0,stardust:0};
  const invalid=new Set<string>();
  const candidates:LegacyIncomeGrant[]=[];
  for(const g of record.data.grants){
-  const known=rewardSources.has(g.source_kind)&&g.source_id.length>0;
+  const known=(rewardSources.has(g.source_kind)||(g.source_kind==='parent_task'&&verifiedTasks.has(g.reward_instance_id)))&&g.source_id.length>0;
   // Runtime journal.observe gets SystemTime::now at durable state commit. In
   // contrast, granted_at_ms comes from request now_ms and is only an original fact.
   const row:LegacyIncomeGrant={reward_instance_id:g.reward_instance_id,fingerprint:hash(g),occurred_at_ms:occurred,family_coin:null,stardust:null};
@@ -167,7 +167,7 @@ export type LegacyDisplayRecord={
  makeup_grants:Commit['data']['makeup_grants'];makeup_uses:Commit['data']['makeup_uses'];
  baseline?:{wallets:{family_coin:number|null;stardust:number|null;'M-CARD-001':number|null};items:{item_id:string;quantity:number;state:string;item_kind:ItemKind}[]};
 };
-export function projectLegacyRecord(record:LegacyRecord):LegacyDisplayRecord {
+export function projectLegacyRecord(record:LegacyRecord, verifiedTasks:ReadonlySet<string>=new Set()):LegacyDisplayRecord {
  const occurred=wallClock(record.occurred_at_ms);
  const result:LegacyDisplayRecord={record_id:record.record_id,save_id:record.save_id,sequence:record.sequence,occurred_at_ms:occurred,
   time_quality:occurred===null?'unknown':'reported',logical_day:record.logical_day,source_mode:record.source_mode,
@@ -205,10 +205,10 @@ export function projectLegacyRecord(record:LegacyRecord):LegacyDisplayRecord {
  const activations=legacyActivations(record);
  if(record.source_mode==='gm')result.reason='gm_adjustment';
  else if(activations.length&&activations.length===record.data.inventory_changes.length&&!record.data.wallet_changes.length&&!record.data.grants.length&&!record.data.makeup_grants.length&&!record.data.makeup_uses.length)result.reason='item_activation';
- else if(record.data.grants.length&&record.data.grants.every(g=>rewardSources.has(g.source_kind))&&
+ else if(record.data.grants.length&&record.data.grants.every(g=>rewardSources.has(g.source_kind)||(g.source_kind==='parent_task'&&verifiedTasks.has(g.reward_instance_id)))&&
   !record.data.makeup_grants.length&&!record.data.makeup_uses.length&&!activations.length&&
   record.data.wallet_changes.every(x=>x.delta>0)&&
-  (legacyIncomeGrants(record).length>0||result.item_changes.length>0))result.reason='reward_claim';
+  (legacyIncomeGrants(record,verifiedTasks).length>0||result.item_changes.length>0))result.reason='reward_claim';
  else if(record.data.makeup_grants.length&&!record.data.grants.length&&!record.data.makeup_uses.length)result.reason='tank_unlock';
  else if(record.data.makeup_uses.length&&!record.data.grants.length&&!record.data.makeup_grants.length&&!result.item_changes.length)result.reason='makeup_card_use';
  else if(record.data.wallet_changes.length&&record.data.wallet_changes.every(x=>x.delta<0)&&!record.data.grants.length&&!activations.length)result.reason='resource_spend';

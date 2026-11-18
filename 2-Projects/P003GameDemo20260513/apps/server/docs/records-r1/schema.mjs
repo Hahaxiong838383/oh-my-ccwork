@@ -66,7 +66,7 @@ export const ParentRecordSchema=z.any().superRefine((v,c)=>{
  if(!z.array(z.object({item_instance_id:id,acquired_record_id:id,status:z.enum(['pending','resolved'])}).strict()).max(32).safeParse(item_references).success){c.addIssue({code:'custom',message:'invalid_item_references'});return;}
  if(!time.safeParse(received_at_ms).success||!z.enum(['reported','unknown','clock_suspect']).safeParse(time_status).success||!RecordSchema.safeParse({...r,origin_grant_id:'00000000-0000-4000-8000-000000000001',origin_epoch:1}).success)c.addIssue({code:'custom',message:'invalid_parent_record'});
 });
-export const PageSchema=z.object({ok:z.literal(true),data:z.object({schema_version:z.literal(1),items:z.array(ParentRecordSchema).max(50),next_cursor:z.string().min(1).max(2048).nullable(),has_more:z.boolean(),coverage,updated_at_ms:time.nullable()}).strict()}).strict().refine(v=>v.data.has_more===(v.data.next_cursor!==null),'cursor_consistency');
+export const PageSchema=z.object({ok:z.literal(true),data:z.object({schema_version:z.literal(1),items:z.array(z.lazy(()=>z.union([ParentRecordSchema,LegacyParentRecordSchema]))).max(50),next_cursor:z.string().min(1).max(2048).nullable(),has_more:z.boolean(),coverage,updated_at_ms:time.nullable()}).strict()}).strict().refine(v=>v.data.has_more===(v.data.next_cursor!==null),'cursor_consistency');
 
 // Optional read-only dashboard extension. Upload Record/Envelope/Ack schemas above
 // are unchanged; validate known legacy projections without accepting arbitrary keys.
@@ -78,15 +78,27 @@ const legacyGrant=z.object({reward_instance_id:legacyKey,source_kind:legacyText,
 const legacyChange=z.object({resource_id:legacyKey,before:signed,after:signed,delta:signed.refine(x=>x!==0)}).strict();
 const legacyKind=z.enum(['tank_component','avatar_decoration','unknown']),legacyState=z.enum(['active','pending_activation']);
 const LegacyParentRecordSchema=z.object({record_id:legacyId,save_id:legacyId,sequence:seq,occurred_at_ms:time.nullable(),time_quality:z.enum(['reported','unknown']),logical_day:legacyText.nullable(),source_mode:z.enum(['normal','gm','unknown']),reason:z.enum(['reward_claim','tank_unlock','makeup_card_use','resource_spend','item_activation','gm_adjustment','unknown']),business_source_id:legacyText.nullable(),tank_id:legacyText.nullable(),stage_id:legacyText.nullable(),format:z.literal('p003-ark-records-r1'),contract_id:z.literal('p003-ark-records-r1'),record_kind:z.enum(['baseline','business_commit']),authorization_source:z.literal('legacy_explicit_scope'),origin_verified:z.literal(false),config_revision:legacyText,
- resource_changes:z.array(legacyChange.extend({resource_id:resourceId})).max(256),resource_conflicts:z.array(legacyKey).max(256),unmapped_resource_changes:z.array(legacyChange).max(256),
+ entry_id:legacyId.optional(),settlement_id:legacyId.optional(),reward_instance_id:legacyId.optional(),
+ source_kind:z.literal('parent_task').optional(),source_id:legacyId.optional(),currency:z.literal('C-FAMILY-001').optional(),amount:safe.min(1).max(500).optional(),
+ resource_changes:z.array(legacyChange.extend({resource_id:resourceId,before:signed.nullable(),after:signed.nullable()})).max(256),resource_conflicts:z.array(legacyKey).max(256),unmapped_resource_changes:z.array(legacyChange).max(256),
  item_changes:z.array(z.object({operation:z.literal('acquired'),item_instance_id:legacyId,item_identity_source:z.literal('legacy_derived'),item_id:legacyKey,item_kind:legacyKind,quantity:safe.min(1).max(0xffffffff),state:legacyState,acquisition_evidence:z.enum(['grant_and_inventory','inventory_change'])}).strict()).max(256),
  inventory_state_changes:z.array(z.object({item_id:legacyKey,from_state:legacyState,to_state:legacyState,quantity:safe.max(0xffffffff)}).strict()).max(256),
  grants:z.array(legacyGrant).max(256),inventory_changes:z.array(z.object({item_id:legacyKey,before:legacyInventory.nullable(),after:legacyInventory.nullable()}).strict()).max(256),makeup_grants:z.array(z.object({tank_id:legacyText}).strict()).max(256),makeup_uses:z.array(z.object({tank_id:legacyText.nullable(),logical_day:legacyText,usage_day_index:safe}).strict()).max(256),
  baseline:z.object({wallets:z.object({family_coin:signed.nullable(),stardust:signed.nullable(),'M-CARD-001':signed.nullable()}).strict(),items:z.array(z.object({item_id:legacyKey,quantity:safe.max(0xffffffff),state:legacyState,item_kind:legacyKind}).strict()).max(256)}).strict().optional(),
  received_at_ms:time,time_status:z.enum(['reported','unknown','clock_suspect']),item_references:z.array(z.never()).max(0)
-}).strict().refine(v=>(v.record_kind==='baseline')===(v.baseline!==undefined),'baseline_shape');
+}).strict().refine(v=>(v.record_kind==='baseline')===(v.baseline!==undefined),'baseline_shape').superRefine((v,c)=>{
+ if(v.settlement_id!==undefined){
+  const g=v.grants[0],change=v.resource_changes[0];
+  if(v.entry_id!==v.settlement_id||v.reward_instance_id!==v.settlement_id||v.source_kind!=='parent_task'||
+     !v.source_id||v.currency!=='C-FAMILY-001'||!v.amount||v.grants.length!==1||g.reward_instance_id!==v.settlement_id||
+     g.source_kind!==v.source_kind||g.source_id!==v.source_id||v.resource_changes.length!==1||change.resource_id!=='family_coin'||
+     change.delta!==v.amount||v.source_mode!=='normal'||v.reason!=='reward_claim')c.addIssue({code:'custom',message:'invalid_parent_task_income'});
+ }else if(v.reward_instance_id!==undefined||v.source_kind!==undefined||v.source_id!==undefined||v.currency!==undefined||v.amount!==undefined||
+    (v.entry_id!==undefined&&v.entry_id!==v.record_id))c.addIssue({code:'custom',message:'unlinked_task_fields'});
+ if(!v.entry_id&&v.resource_changes.some(x=>x.before===null||x.after===null))c.addIssue({code:'custom',message:'incomplete_raw_wallet_change'});
+});
 export const RecentActivitySchema=z.object({schema_version:z.literal(1),source:z.literal('ark_records'),available:z.boolean(),reason:z.enum(['partial_history','no_records','not_enabled','dependency_unavailable']),limit:z.literal(20),items:z.array(z.union([ParentRecordSchema,LegacyParentRecordSchema])).max(20),next_cursor:z.string().min(1).max(2048).nullable(),has_more:z.boolean(),coverage,updated_at_ms:time.nullable()}).strict().superRefine((v,c)=>{
  if(v.has_more!==(v.next_cursor!==null)||v.has_more&&v.items.length!==v.limit)c.addIssue({code:'custom',message:'cursor_consistency'});
  if(v.available!==(v.items.length>0))c.addIssue({code:'custom',message:'recent_availability_mismatch'});
- if(new Set(v.items.map(x=>x.record_id)).size!==v.items.length)c.addIssue({code:'custom',message:'duplicate_recent_record'});
+ if(new Set(v.items.map(x=>x.settlement_id?'settlement:'+x.settlement_id:'record:'+x.record_id)).size!==v.items.length)c.addIssue({code:'custom',message:'duplicate_recent_record'});
 });

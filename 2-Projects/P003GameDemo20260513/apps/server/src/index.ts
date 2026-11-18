@@ -11,6 +11,7 @@ import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.
 import { authRoute } from './routes/auth.js';
 import { inviteAuthRoute } from './routes/invite-auth.js';
 import { smsAuthRoute } from './routes/sms-auth.js';
+import { reviewPasswordAuthRoute } from './routes/review-password-auth.js';
 import { wechatAuthRoute } from './routes/wechat-auth.js';
 import { bleBindingsRoute } from './routes/ble-bindings.js';
 import { deviceEnrollmentRoute, deviceProvisioningRoute } from './routes/device-enrollments.js';
@@ -31,6 +32,8 @@ import { deviceConfigRoute } from './routes/device-config.js';
 import { localAudioDeviceRoute } from './routes/local-audio.js';
 import { parentPairingRoute, devicePairingRoute } from './routes/pairing.js';
 import { deviceTelemetryRoute, parentTelemetryRoute } from './routes/telemetry.js';
+import { parentTasksRoute } from './routes/parent-tasks.js';
+import { deviceParentTasksRoute } from './routes/device-parent-tasks.js';
 import { diagnosticsDeviceRoute } from './routes/diagnostics.js';
 import { devItemsRoute } from './routes/dev-items.js';
 import { themesRoute } from './routes/themes.js';
@@ -54,6 +57,7 @@ app.route('/internal/ark-facts',arkFactsRoute({secret:()=>process.env.ARK_FACTS_
 app.route('/api/auth', authRoute);
 app.route('/api/auth', inviteAuthRoute);
 app.route('/api/auth', smsAuthRoute);
+app.route('/api/auth', reviewPasswordAuthRoute);
 app.route('/api/auth', wechatAuthRoute);
 app.route('/api/feedback', feedbackRoute);
 app.route('/api/conversation', conversationRoute);
@@ -76,6 +80,8 @@ app.route('/v1/device/local-audio', localAudioDeviceRoute);
 app.route('/v1/device/pairing', devicePairingRoute);
 // 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824）
 app.route('/v1/device/telemetry', deviceTelemetryRoute);
+app.route('/v1/device/parent-tasks', deviceParentTasksRoute);
+app.route('/v1/parent/devices', parentTasksRoute);
 app.route('/v1/parent/devices', parentTelemetryRoute);
 // 设备诊断日志上云（Godot→Launcher→server；合同 DIAGNOSTIC_LOG_SERVER_HANDOFF + CC 复核回执 §3；路径字面冒号 logs:batch）
 app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);

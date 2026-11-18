@@ -12,7 +12,8 @@ export class ArkStore{
  CREATE TABLE IF NOT EXISTS ark_settings(id INTEGER PRIMARY KEY CHECK(id=1),enabled INTEGER NOT NULL);
  INSERT OR IGNORE INTO ark_settings(id,enabled) VALUES(1,0);
  CREATE TABLE IF NOT EXISTS ark_grant(sn TEXT PRIMARY KEY,account_id TEXT NOT NULL,epoch INTEGER NOT NULL,grant_id TEXT NOT NULL,not_before_ms INTEGER NOT NULL);
- CREATE TABLE IF NOT EXISTS ark_current(sn TEXT PRIMARY KEY,grant_id TEXT NOT NULL,body TEXT NOT NULL,received_at_ms INTEGER NOT NULL);`);
+ CREATE TABLE IF NOT EXISTS ark_current(sn TEXT PRIMARY KEY,grant_id TEXT NOT NULL,body TEXT NOT NULL,received_at_ms INTEGER NOT NULL);
+ CREATE TABLE IF NOT EXISTS ark_wallet_checkpoint(grant_id TEXT NOT NULL,snapshot_id TEXT NOT NULL,PRIMARY KEY(grant_id,snapshot_id)) WITHOUT ROWID;`);
  if(!(this.db.prepare('PRAGMA table_info(ark_settings)').all() as {name:string}[]).some(x=>x.name==='revision'))this.db.exec('ALTER TABLE ark_settings ADD COLUMN revision INTEGER NOT NULL DEFAULT 0');}
  close(){this.db.close();}
  settings(){const row=this.db.prepare('SELECT enabled,revision FROM ark_settings WHERE id=1').get() as {enabled:number;revision:number};return {enabled:!!row.enabled,revision:row.revision,subjects:(this.db.prepare('SELECT sn FROM ark_grant ORDER BY sn').all() as {sn:string}[]).map(x=>x.sn)};}
@@ -50,6 +51,11 @@ export class ArkStore{
   const r=this.db.prepare('SELECT body,received_at_ms FROM ark_current WHERE sn=? AND grant_id=?').get(i.sn,g.grant_id) as {body:string;received_at_ms:number}|undefined;
   return r?{snapshot:snapshotSchema.parse(JSON.parse(r.body)),received_at_ms:r.received_at_ms}:null;
  }
+ /** Keep just the trusted snapshot ID so a late receipt can reference a superseded balance. */
+ hasWalletSnapshot(i:ArkIdentity,snapshotId:string):boolean {
+  const grant=this.grant(i);
+  return !!grant && !!this.db.prepare('SELECT 1 FROM ark_wallet_checkpoint WHERE grant_id=? AND snapshot_id=?').get(grant.grant_id,snapshotId);
+ }
  accept(i:ArkIdentity,snapshot:ArkSnapshot,now:number):{status:'accepted'|'duplicate';received_at_ms:number}{
   this.db.exec('BEGIN IMMEDIATE');try{
    const g=this.grant(i);if(!g)throw new Error('not_authorized');
@@ -66,6 +72,8 @@ export class ArkStore{
      }
     }else if(snapshot.boot_started_at_ms<=p.boot_started_at_ms)throw new Error('stale');
    }
+   if(snapshot.source_mode==='normal' && snapshot.wallets.family_coin!==null)
+     this.db.prepare('INSERT OR IGNORE INTO ark_wallet_checkpoint VALUES(?,?)').run(g.grant_id,snapshot.snapshot_id);
    this.db.prepare('INSERT INTO ark_current VALUES(?,?,?,?) ON CONFLICT(sn) DO UPDATE SET grant_id=excluded.grant_id,body=excluded.body,received_at_ms=excluded.received_at_ms').run(i.sn,g.grant_id,body,now);
    this.db.exec('COMMIT');return {status:'accepted',received_at_ms:now};
   }catch(e){if(this.db.isTransaction)this.db.exec('ROLLBACK');throw e;}

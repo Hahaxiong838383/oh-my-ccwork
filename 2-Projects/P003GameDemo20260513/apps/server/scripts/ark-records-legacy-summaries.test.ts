@@ -9,6 +9,8 @@ import {randomUUID} from 'node:crypto';
 import {RecordsStore} from '../src/ark/records-store.js';
 import {RecordSchema} from '../src/ark/records-contract.js';
 import {LegacyRecordSchema} from '../src/ark/records-legacy.js';
+import {DashboardRecordsSchema,PageSchema} from '../docs/records-r1/schema.mjs';
+import type {IncomeProof} from '../src/parent-tasks/device-income.js';
 
 const NOW=Date.parse('2026-11-16T12:00:00Z'),DAY=Date.parse('2026-11-15T00:00:00+08:00'),SN='BJP00326060100009992';
 mock.timers.enable({apis:['Date'],now:NOW});after(()=>mock.timers.reset());
@@ -27,7 +29,8 @@ function fixture(t:TestContext){
  ark.prepare('INSERT INTO ark_grant VALUES(?,?,?,?,?)').run(SN,'legacy-device',2,grant,NOW-7*86400000);
  const scope={sn:SN,public_id:'dev_0123456789abcdef',account_id:'legacy-device',parent_account_id:'legacy-parent',binding_version:1,epoch:2,grant_id:grant,save_ids:'*'};
  process.env.ARK_RECORDS_LEGACY_SCOPE_JSON=JSON.stringify(scope);
- const store=new RecordsStore({arkPath,devicesPath,allowed:sn=>sn===SN,validAccount:()=>true,secret:()=> 'synthetic-legacy-summary'});
+ const proofs:IncomeProof[]=[];
+ const store=new RecordsStore({taskProofs:()=>proofs,arkPath,devicesPath,allowed:sn=>sn===SN,validAccount:()=>true,secret:()=> 'synthetic-legacy-summary'});
  const credential={sn:SN,iat:NOW/1000,exp:NOW/1000+3600,bindingVersion:1};
  t.after(()=>{store.close();devices.close();ark.close();delete process.env.ARK_RECORDS_LEGACY_SCOPE_JSON;});
  const legacy=(r:ReturnType<typeof record>)=>{const parsed=LegacyRecordSchema.parse(r);const result=store.acceptLegacy(credential,store.preflightLegacy(credential,r.save_id),{save_id:r.save_id,coverage_from_ms:DAY-86400000,dropped_records:0},parsed);assert.equal(result,'accepted');return parsed;};
@@ -36,7 +39,7 @@ function fixture(t:TestContext){
    resource_changes:[],item_changes:[{operation:'acquired',item_instance_id:`instance-${item}`,item_id:item,item_kind:'tank_component',quantity:1,state:'pending_activation'}],...patch});
   assert.equal(store.accept(credential,store.preflight(credential,[]),r),'accepted');return r;
  };
- return {store,devices,ark,scope,credential,legacy,v1,summary:()=>store.dashboard(scope.public_id,scope.parent_account_id)};
+ return {store,devices,ark,scope,proofs,credential,legacy,v1,summary:()=>store.dashboard(scope.public_id,scope.parent_account_id)};
 }
 const item=(id:string,status='pending_activation',quantity=1)=>({item_id:id,kind:'ecotank_part',quantity,tank_id:'tank-1',layer:'base',status,acquired_at_ms:DAY+1000});
 const reward=(id='reward-1',coin=7,patch:Record<string,unknown>={})=>({reward_instance_id:id,source_kind:'daily_gift',source_id:'gift-1',logical_day:'2026-10-01',config_revision:'rev',status:'granted',granted_at_ms:DAY+1000,
@@ -144,4 +147,22 @@ test('a later makeup-card grant is a resource and does not hide the latest acqui
  const f=fixture(t);f.legacy(gain('same',1,DAY+1000,'component'));
  const card=gain('same',2,DAY+2000,'M-CARD-001');card.data.inventory_changes[0].after.kind='makeup_card';f.legacy(card);
  const d=f.summary().latest_items;assert.equal(d.available,true);assert.equal(d.record_id,'same:1');assert.equal(d.items[0].item_id,'component');
+});
+
+test('two paid occurrences from the same wallet journal keep two individually paged +35 credits',t=>{
+ const f=fixture(t),r=record(6);
+ const puts=['settle_one','settle_two'].map((id,k)=>reward(id,35,{source_kind:'parent_task',source_id:'occ'+k}));
+ r.data.grants=puts;r.data.wallet_changes=[{resource_id:'C-FAMILY-001',before:100,after:170,delta:70}];f.legacy(r);
+ const read=(cursor?:string)=>f.store.page(f.scope.public_id,f.scope.parent_account_id,{resource_id:'family_coin',limit:1,cursor});
+ assert.deepEqual(read().items,[]);
+ for(const [k,grant] of puts.entries())f.proofs.push({settlement_id:grant.reward_instance_id,occurrence_id:'occ'+k,amount:35,
+   save_id:r.save_id,record_id:r.record_id,post_snapshot_id:'post170'});
+ const a=read(),b=read(a.next_cursor!);
+ assert.ok(a.has_more);assert.equal(b.has_more,false);
+ const both=[...a.items,...b.items] as any[];
+ assert.deepEqual(both.map(i=>i.settlement_id),['settle_one','settle_two']);
+ assert.deepEqual(both.map(i=>i.resource_changes[0].delta),[35,35]);
+ assert.ok(both.every(i=>i.record_id===r.record_id&&i.grants.length===1));
+ assert.equal(f.summary().yesterday_income.family_coin,70);
+ DashboardRecordsSchema.parse(f.summary());PageSchema.parse({ok:true,data:a});PageSchema.parse({ok:true,data:b});
 });

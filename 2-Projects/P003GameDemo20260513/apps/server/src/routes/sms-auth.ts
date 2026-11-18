@@ -1,10 +1,9 @@
 import { randomInt, randomUUID } from 'node:crypto';
 import { isIP } from 'node:net';
-import { SignJWT } from 'jose';
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { z } from 'zod';
-import { accountStore } from '../account-store.js';
+import { issueVerifiedPhoneSession, parentSessionSecret } from '../parent-phone-session.js';
 import { smsLimitStore } from '../sms-limit-store.js';
 import { sendSmsVerifyCode, checkSmsVerifyCode } from '../aliyun-sms.js';
 import { sendSpugSmsCode } from '../spug-sms.js';
@@ -14,13 +13,6 @@ import { verifyCodeStore } from '../verify-code-store.js';
 // Spug is the active provider; aliyun remains an explicit operational rollback, never auto-fallback.
 function smsProvider(): 'spug' | 'aliyun' {
   return process.env.SMS_PROVIDER?.trim() === 'aliyun' ? 'aliyun' : 'spug';
-}
-function authSecret(): string {
-  const secret = process.env.AUTH_JWT_SECRET ?? '';
-  if (secret !== secret.trim() || Buffer.byteLength(secret) < 32 || secret === 'dev-secret-change-me') {
-    throw new Error('auth_not_configured');
-  }
-  return secret;
 }
 function resendInterval(): number {
   const n = Number(process.env.SMS_SEND_INTERVAL_S);
@@ -53,7 +45,7 @@ smsAuthRoute.post('/sms/send', async c => {
   // Verified production nginx overwrites X-Real-IP; a caller may prepend arbitrary X-Forwarded-For.
   const realIp = c.req.header('x-real-ip') ?? '';
   const ip = isIP(realIp) ? realIp : 'unknown';
-  try { authSecret(); }
+  try { parentSessionSecret(); }
   catch { return c.json({ ok: false, error: 'auth_not_configured', message: '登录服务暂未就绪', request_id: requestId }, 503); }
   if (smsProvider() === 'spug' && !/^[A-Za-z0-9_-]{1,200}$/.test(process.env.SPUG_SMS_TEMPLATE_CODE?.trim() ?? '')) {
     return c.json({ ok: false, error: 'sms_not_configured', message: '短信服务未配置', request_id: requestId }, 503);
@@ -113,7 +105,7 @@ smsAuthRoute.post('/sms/verify', async c => {
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request', message: '手机号或验证码格式不正确', request_id: requestId }, 400);
   const { phone, code } = parsed.data;
   let secret: string;
-  try { secret = authSecret(); }
+  try { secret = parentSessionSecret(); }
   catch { return c.json({ ok: false, error: 'auth_not_configured', message: '登录服务暂未就绪', request_id: requestId }, 503); }
   try {
     if (smsProvider() === 'spug') {
@@ -131,15 +123,9 @@ smsAuthRoute.post('/sms/verify', async c => {
     return c.json({ ok: false, error: 'verify_failed', message: '校验失败，请稍后再试', request_id: requestId }, 502);
   }
   try {
-    const { account, isNew } = accountStore.upsertPhoneAccountWithStatus(phone);
-    if (account.role !== 'parent') throw new Error('account_role_mismatch');
-    const token = await new SignJWT({ accountId: account.id, role: 'parent' })
-      .setProtectedHeader({ alg: 'HS256' }).setIssuedAt().setIssuer('p003').setAudience('kidshub').setExpirationTime('30d')
-      .sign(new TextEncoder().encode(secret));
-    console.log(`[sms-auth] login request=${requestId} account=${account.id} is_new=${isNew}`);
-    return c.json({ ok: true, token, token_type: 'Bearer', expires_in: 2592000,
-      account: { id: account.id, role: 'parent', nickname: account.nickname, phone_masked: `${phone.slice(0, 3)}****${phone.slice(-4)}` },
-      is_new: isNew, request_id: requestId });
+    const session = await issueVerifiedPhoneSession(phone, secret, requestId);
+    console.log(`[sms-auth] login request=${requestId} account=${session.account.id} is_new=${session.is_new}`);
+    return c.json(session);
   } catch {
     console.error(`[sms-auth] login_failed request=${requestId}`);
     return c.json({ ok: false, error: 'account_login_failed', message: '登录暂未完成，请重新获取验证码', request_id: requestId }, 500);

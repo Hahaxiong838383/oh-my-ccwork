@@ -1,3 +1,4 @@
+import {paidTaskRecords} from '../parent-tasks/device-income.js';
 import {resolve} from 'node:path';
 import {arkStore,arkCeiling} from './service.js';
 import {accountStore} from '../account-store.js';
@@ -8,7 +9,7 @@ import {dashboardRecords,emptyCoverage} from './records-contract.js';
 let store:RecordsStore|undefined;
 export const recordsAllowed=(sn:string)=>(process.env.ARK_RECORDS_SN_ALLOW??'').split(',').map(x=>x.trim()).filter(Boolean).includes(sn)&&arkCeiling().includes(sn);
 export function recordsStore(){
- if(!store){arkStore();store=new RecordsStore({arkPath:resolve(process.env.ARK_DB_PATH??'./data/ark.db'),devicesPath:resolve(process.env.DEVICES_DB_PATH??'./data/devices.db'),allowed:recordsAllowed,validAccount:id=>accountStore.findAccount(id)?.role==='device',validParentAccount:id=>accountStore.findAccount(id)?.role==='parent',secret:()=>process.env.AUTH_JWT_SECRET??''});}
+ if(!store){arkStore();store=new RecordsStore({taskProofs:paidTaskRecords,arkPath:resolve(process.env.ARK_DB_PATH??'./data/ark.db'),devicesPath:resolve(process.env.DEVICES_DB_PATH??'./data/devices.db'),allowed:recordsAllowed,validAccount:id=>accountStore.findAccount(id)?.role==='device',validParentAccount:id=>accountStore.findAccount(id)?.role==='parent',secret:()=>process.env.AUTH_JWT_SECRET??''});}
  return store;
 }
 const options={store:recordsStore,secret:()=>process.env.AUTH_JWT_SECRET??''};
