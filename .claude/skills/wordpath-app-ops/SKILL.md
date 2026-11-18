@@ -190,3 +190,11 @@ docker exec -d --user root wx-emu sh -c '/opt/android/emulator/emulator -avd wp 
 - 英语模块：单元听写 / 拍照识别 / 我的词库；语文模块：练字。
 - 任务页（听写、设置、练字、相机）隐藏底部 Tab；`StepHeader` 在 `ui/Common.kt` 复用。
 - 已经踩过的坑：底部 CTA 必须 `navigationBarsPadding()`，否则文字被导航栏裁掉；步骤页的 LazyColumn 要留 96dp 底部 padding。
+
+## 返回规范（0.14.1，必须遵守）
+
+- 任务页左上角用 **‹**，回到所属模块：练字→练习、练字批改→练字、听写批改→听写完成、选词→来源页、设置子页→我的。
+- 任何子页不得直接 `backHome()`；`handleBack()` 与 `TopBar(onBack)` 必须指向同一逻辑。
+- **✕** 只用于「放弃任务」的确认弹窗（听写中）。
+- Tab 根页（今天/练习/错词/我的）不显示返回箭头；任务页隐藏底部 Tab。
+- 新增页面时同时改两处：`Screen` 的 `when` 分支与顶栏 `onBack`；改完用模拟器逐层按返回验收。
