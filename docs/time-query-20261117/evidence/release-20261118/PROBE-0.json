@@ -1,0 +1,118 @@
+{
+  "pool": "/opt/p003/server",
+  "port": 3001,
+  "synthetic": true,
+  "rtc_room_created": false,
+  "rows": [
+    {
+      "text": "现在几点了",
+      "status": 200,
+      "spoken": "现在是北京时间上午十一点整。",
+      "before_ms": 1794970856588,
+      "after_ms": 1794970856752,
+      "elapsed_ms": 164,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "今天是几号呀",
+      "status": 200,
+      "spoken": "今天是2026年11月18日，星期三。",
+      "before_ms": 1794970856766,
+      "after_ms": 1794970856779,
+      "elapsed_ms": 13,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "今天是周几",
+      "status": 200,
+      "spoken": "今天是星期三。",
+      "before_ms": 1794970856780,
+      "after_ms": 1794970856792,
+      "elapsed_ms": 12,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "纽约现在几点",
+      "status": 200,
+      "spoken": "纽约现在是晚上十点整，星期二。",
+      "before_ms": 1794970856792,
+      "after_ms": 1794970856808,
+      "elapsed_ms": 16,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "帮我查当前时间",
+      "status": 200,
+      "spoken": "现在是北京时间上午十一点整。",
+      "before_ms": 1794970856808,
+      "after_ms": 1794970856821,
+      "elapsed_ms": 13,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "美国时间",
+      "status": 200,
+      "spoken": "美国有好几个时区，你是想问纽约、芝加哥还是洛杉矶？",
+      "before_ms": 1794970856821,
+      "after_ms": 1794970856833,
+      "elapsed_ms": 12,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00"
+    },
+    {
+      "text": "能说一下现在几点了吗",
+      "status": 200,
+      "spoken": "现在是北京时间上午十一点整。",
+      "before_ms": 1794970856834,
+      "after_ms": 1794970856847,
+      "elapsed_ms": 13,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "能不能说一下现在几点了吗",
+      "status": 200,
+      "spoken": "现在是北京时间上午十一点整。",
+      "before_ms": 1794970856847,
+      "after_ms": 1794970856859,
+      "elapsed_ms": 12,
+      "clock_response": true,
+      "reference_beijing": "2026年11月18日星期三 11:00",
+      "time_verified": true
+    },
+    {
+      "text": "金币有什么用",
+      "status": 200,
+      "spoken": "方舟里显示的金币就是家族币。家族币用来记录你和家长约好的奖励，可在小程序查看已同步的家族币，再和家长商量兑换约定的奖励，由家长兑现。",
+      "before_ms": 1794970856862,
+      "after_ms": 1794970856889,
+      "elapsed_ms": 27,
+      "clock_response": false,
+      "reference_beijing": "2026年11月18日星期三 11:00"
+    },
+    {
+      "text": "一加一等于几",
+      "status": 200,
+      "spoken": "二呀！这么简单的问题，是不是想考考小可呀？",
+      "before_ms": 1794970856889,
+      "after_ms": 1794970858488,
+      "elapsed_ms": 1599,
+      "clock_response": false,
+      "reference_beijing": "2026年11月18日星期三 11:00"
+    }
+  ],
+  "cleanup": true,
+  "audit_rows": 16,
+  "pass": true
+}

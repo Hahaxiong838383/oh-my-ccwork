@@ -7,8 +7,8 @@ const places:Record<string,string>={
 };
 const multiZone=new Set(['美国','加拿大','澳大利亚','澳洲','俄罗斯','巴西','墨西哥']);
 const simplified:Record<string,string>={現:'现',幾:'几',點:'点',時:'时',間:'间',號:'号',禮:'礼',週:'周',說:'说'};
-const clean=(text:string)=>text.normalize('NFKC').replace(/[現幾點時間號禮週說]/g,c=>simplified[c]).replace(/[\s，。？！、,.?!：:]/g,'').replace(/^(?:小可(?:小可)?|麻烦问一下|我想知道|能不能告诉我|能告诉我|可以告诉我|请问|请|帮我(?:查查|查一下|查|看一下|看看|看)|告诉我|你知道|知道|问一下|查询一下|查一下|查查|查询)+/,'');
-const bad=/故事|昨天|明天|这是什么时间|妈妈说|爸爸说|老师说|如果|假如|例如|比如|[“”‘’「」『』\"']|天气|下雨|气温|带伞|闹钟|提醒|倒计时|宝箱|奖励|用了|使用时长|使用时间|积分|几点建议|几点意见|几点要求|开门|关门|开会|上课|下课|几点开始|几点结束|几点出发|几点回家|几点吃|几点睡|几点起|几点叫|什么时候|是什么意思|怎么说|翻译|他说|她说|我说|你说现在|不要|不用|别报|别告诉/;
+const clean=(text:string)=>text.normalize('NFKC').replace(/[現幾點時間號禮週說]/g,c=>simplified[c]).replace(/[\s，。？！、,.?!：:]/g,'').replace(/^(?:小可(?:小可)?|麻烦问一下|麻烦你|麻烦|我想知道|(?:你)?(?:能不能|能|可以)(?:告诉我|帮我|说一下)|请问|请你|请|帮我(?:查一查|查查|查一下|查|看一下|看看|看)|你(?:告诉我|帮我)|告诉我|你知道|知道|问一下|查询一下|查一查|查一下|查查|查询)+/,'');
+const bad=/故事|昨天|明天|这是什么时间|妈妈说|爸爸说|老师说|如果|假如|例如|比如|[“”‘’「」『』\"']|天气|下雨|气温|带伞|闹钟|提醒|倒计时|宝箱|奖励|用了|使用时长|使用时间|积分|几点建议|几点意见|几点要求|比赛|赛事|活动|节日|金币|开放|营业|闭馆|日出|日落|开门|关门|开会|上课|下课|几点开始|几点结束|几点出发|几点回家|几点吃|几点睡|几点起|几点叫|什么时候|是什么意思|怎么说|翻译|他说|她说|我说|你说现在|不要|不用|别报|别告诉/;
 function detect(text:string):ClockRequest|null{
   const t=clean(text);if(!t||t.length>100||(bad.test(t)&&!/^现在才几点[啊呀呢]?就跟我说晚安$/.test(t)))return null;
   if(/^那是几号[呀啊呢吗]?$/.test(t))return {kind:'clarify_date'};
@@ -24,6 +24,11 @@ function detect(text:string):ClockRequest|null{
   if(t==='几点')return null;
   let place=correction?'':(match?.[1]??'').replace(/^(?:现在|此刻|这会儿|这会|今天|今日|那)/,'').replace(/(?:现在|此刻|这会儿|这会|都|已经|今天|今日|的|当地|那边|那儿|那里|时间|那)+$/g,'');
   if(place.endsWith('市')&&places[place.slice(0,-1)])place=place.slice(0,-1);
+  // A bare '<noun>时间' is not enough evidence of a clock intent. Keep event
+  // queries in their existing search/business route, without a growing noun list.
+  if(named&&!date&&!weekday&&!time&&!places[place]&&!multiZone.has(place))return null;
+  // Unknown places need an explicit present-time/date question, not '<event>几点'.
+  if(place&&!places[place]&&!multiZone.has(place)&&!date&&!weekday&&!/(?:现在|此刻|这会儿|这会)/.test(t))return null;
   // Unknown qualifiers must not silently become Beijing time.
   if(['','北京','中国'].includes(place))return {kind:'clock',iana:'Asia/Shanghai',place_label:'北京时间',requested:date?'date':weekday?'weekday':'time'};
   if(multiZone.has(place)||!places[place])return {kind:'clarify_timezone',place,requested:date?'date':weekday?'weekday':'time'};
@@ -33,6 +38,8 @@ export function resolveClock(text:string,previousUserTurns:readonly string[]=[])
   const direct=detect(text);if(direct)return direct;
   const t=clean(text);if(bad.test(t))return null;
   const last=previousUserTurns.at(-1);const context=last?detect(last):null;
+  // An omitted 'today' is safe only with no prior referent or explicit clock context.
+  if(/^请问/.test(text.trim())&&/^(?:星期几|周几|礼拜几)[呀啊呢吗]?$/.test(t)&&(!last||context?.kind==='clock'))return {kind:'clock',iana:context?.kind==='clock'?context.iana:'Asia/Shanghai',place_label:context?.kind==='clock'?context.place_label:'北京时间',requested:'weekday'};
   if(!context||context.kind==='clarify_date')return null;
   const follow=/^(?:那)?([\p{Script=Han}]{2,8}?)(?:呢|那边呢|那儿呢)?$/u.exec(t);
   if(!follow)return null;

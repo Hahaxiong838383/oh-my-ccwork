@@ -1,0 +1,251 @@
+{
+  "at": "2026-11-18T11:01:21.480967+08:00",
+  "pools": [
+    {
+      "pool": 0,
+      "path": "/opt/p003/server",
+      "release_finished_ms": 1794970860382,
+      "source_files_verified": 234,
+      "clock_sha256": "9ba45e82d8e357b686e626eb05b8bbfe90aaed0cc19c5419ccd9591915fa6d61",
+      "env_unchanged": true,
+      "health": {
+        "status": 200,
+        "body": {
+          "status": "ok"
+        }
+      },
+      "search_flags": {
+        "p003.search.canary.expires_at_ms": "1794962794000",
+        "p003.search.enabled": "1",
+        "p003.search.scope": "all_registered",
+        "p003.search.tools": "0"
+      },
+      "new_nonprobe_rtc_user_turns": 0
+    },
+    {
+      "pool": 1,
+      "path": "/opt/p003/search-canary-20261021/brain",
+      "release_finished_ms": 1794970747639,
+      "source_files_verified": 168,
+      "clock_sha256": "9ba45e82d8e357b686e626eb05b8bbfe90aaed0cc19c5419ccd9591915fa6d61",
+      "env_unchanged": true,
+      "health": {
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "agent": "p003-search-canary-20261021",
+          "generation": "R4-20261022-two-devices",
+          "search": false,
+          "tools": false,
+          "amap": {
+            "enabled": true,
+            "key_configured": true,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        }
+      },
+      "search_flags": {
+        "p003.search.canary.expires_at_ms": "1793589540000",
+        "p003.search.enabled": "0",
+        "p003.search.tools": "0"
+      },
+      "new_nonprobe_rtc_user_turns": 0
+    },
+    {
+      "pool": 2,
+      "path": "/opt/p003/listening-canary-20261030/brain",
+      "release_finished_ms": 1794970761155,
+      "source_files_verified": 162,
+      "clock_sha256": "9ba45e82d8e357b686e626eb05b8bbfe90aaed0cc19c5419ccd9591915fa6d61",
+      "env_unchanged": true,
+      "health": {
+        "status": 200,
+        "body": {
+          "status": "ok",
+          "agent": "p003-search-listening-20261030",
+          "generation": "v374-listening-ark-20261102-1793613511",
+          "search": false,
+          "tools": false,
+          "amap": {
+            "enabled": true,
+            "key_configured": true,
+            "metered": true
+          },
+          "llm": {
+            "mode": "race",
+            "main": {
+              "outcome": "unknown"
+            },
+            "fallback": {
+              "outcome": "unknown",
+              "circuit": {
+                "state": "closed",
+                "retry_at_ms": null
+              }
+            },
+            "verified": false,
+            "degraded": false
+          }
+        }
+      },
+      "search_flags": {
+        "p003.search.canary.expires_at_ms": "1794962794000",
+        "p003.search.enabled": "1",
+        "p003.search.tools": "0"
+      },
+      "new_nonprobe_rtc_user_turns": 0
+    }
+  ],
+  "ark_since_checkpoint": {
+    "rows": [
+      {
+        "time": "18/Nov/2026:10:58:51 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:58:54 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:04 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:11 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:14 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:24 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:31 +0800",
+        "status": 502
+      },
+      {
+        "time": "18/Nov/2026:10:59:39 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:46 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:10:59:49 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:00 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:01 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:10 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:11 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:20 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:21 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:30 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:32 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:40 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:50 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:00:52 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:01:00 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:01:02 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:01:10 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:01:12 +0800",
+        "status": 200
+      },
+      {
+        "time": "18/Nov/2026:11:01:20 +0800",
+        "status": 200
+      }
+    ],
+    "count": 26,
+    "errors": [
+      {
+        "time": "18/Nov/2026:10:59:31 +0800",
+        "status": 502
+      }
+    ]
+  },
+  "public_ark_unauthorized_status": 401,
+  "pm2": [
+    {
+      "name": "p003-voice",
+      "pid": 2571942,
+      "status": "online",
+      "restarts": 21
+    },
+    {
+      "name": "kidshub-voice",
+      "pid": 1856264,
+      "status": "online",
+      "restarts": 0
+    },
+    {
+      "name": "p003-analytics",
+      "pid": 2544776,
+      "status": "online",
+      "restarts": 4
+    }
+  ],
+  "pass": true
+}

@@ -1,0 +1,69 @@
+{
+  "started_ms": 1794970853604,
+  "pool": 0,
+  "success": true,
+  "pre": {
+    "pool": 0,
+    "source": {
+      "pid": 2571238,
+      "status": "online",
+      "restarts": 20
+    },
+    "idle": {
+      "at_ms": 1794970852994,
+      "verified": true,
+      "total_rooms": 0,
+      "active_rooms": 0,
+      "idle": true
+    },
+    "node": "v22.22.2",
+    "ntp": "Timezone=Asia/Shanghai\nNTPSynchronized=yes\n",
+    "probe_preflight": {
+      "pass": true,
+      "read_only": true,
+      "key_required": false
+    },
+    "manifest_sha256": "40b0060cd4cf7c0da8efe8e3dd3fd9fc639d1bcdead95c2391ece7be72dcb2f7"
+  },
+  "backup": "/root/p003-clock-release-20261118/backup-0-1794970853008",
+  "database_restore": false,
+  "before_services": [
+    {
+      "pid": 2571238,
+      "status": "online",
+      "restarts": 20
+    },
+    {
+      "pid": 2570805,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2570991,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "after_services": [
+    {
+      "pid": 2571942,
+      "status": "online",
+      "restarts": 21
+    },
+    {
+      "pid": 2570805,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2570991,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "probe_sha256": "369b0d9372113560d1a6c6b7e371bbdbb15c7d505e550752035c6a9877f28b65",
+  "environment_unchanged": true,
+  "bindings_unchanged": true,
+  "policies_unchanged": true,
+  "finished_ms": 1794970860382
+}

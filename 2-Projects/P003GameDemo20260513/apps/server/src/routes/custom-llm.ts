@@ -1,3 +1,4 @@
+import {resolveClock,answerClock,stripClockTurns} from '../tools/clock-query.js';
 import {arkConversationPolicy,unfinishedUtterance,createArkControlFilter} from '../ark/language.js';
 import {answerArk,arkDirectReplyAllowed} from '../ark/answer.js';
 import {arkContext} from '../ark/service.js';
@@ -33,7 +34,6 @@ import { buildKnowledgeRecall,answerArkResourceUse } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
 import { getPromptOverride } from '../rtc-prompt-override.js';
-import {resolveClock,answerClock,stripClockTurns} from '../tools/clock-query.js';
 
 /**
  * 火山 RTC 实时对话「CustomLLM」回调端点（docs/34 D 方案）。

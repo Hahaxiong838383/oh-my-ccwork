@@ -1,0 +1,21 @@
+{
+  "pass": true,
+  "cleanup": true,
+  "pool": "/opt/p003/search-canary-20261021/brain",
+  "port": 3007,
+  "rows": [
+    {
+      "authenticated": true,
+      "status": 403,
+      "error": "canary_unavailable"
+    },
+    {
+      "authenticated": false,
+      "status": 401,
+      "error": "unauthorized"
+    }
+  ],
+  "production_data_written": false,
+  "real_device_scope_changed": false,
+  "validation_scope": "live exclusion guard + health; full clock handler validated on identical Node22 isolated full-entry instance"
+}

@@ -1,0 +1,988 @@
+TAP version 13
+# (node:2569517) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [memory] extract scheduler mode=turn allowlist=""
+# [curriculum-kg] 加载失败（降级为不注入）: ENOENT: no such file or directory, open '/tmp/ark-currency-http-YVZraH/absent/nodes.json'
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-001","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-002","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-003","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-004","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-005","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-006","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-007","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-008","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-009","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-010","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-011","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 匿名（无 token） [kb]
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: authenticated currency knowledge: real HTTP/SSE, empty dynamic allowlist, zero LLM and zero facts reads
+ok 1 - authenticated currency knowledge: real HTTP/SSE, empty dynamic allowlist, zero LLM and zero facts reads
+  ---
+  duration_ms: 380.269067
+  type: 'test'
+  ...
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-012","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: unfinished speech cannot emit model DEV exit, while explicit device commands retain protocol
+ok 2 - unfinished speech cannot emit model DEV exit, while explicit device commands retain protocol
+  ---
+  duration_ms: 86.366408
+  type: 'test'
+  ...
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-013","typed_facts":false}
+# Subtest: time-linked claim failure queries facts instead of inventing a charging state
+ok 3 - time-linked claim failure queries facts instead of inventing a charging state
+  ---
+  duration_ms: 11.869035
+  type: 'test'
+  ...
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-014","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-015","typed_facts":false}
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [ark-direct] {"room":"archive-room-001","response_id":"archive-response-016","typed_facts":false}
+# Subtest: family and half-word clarifications stay grounded without provider calls
+ok 4 - family and half-word clarifications stay grounded without provider calls
+  ---
+  duration_ms: 26.832505
+  type: 'test'
+  ...
+# (node:2569547) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [memory] extract scheduler mode=turn allowlist=""
+# [curriculum-kg] 加载失败（降级为不注入）: ENOENT: no such file or directory, open '/tmp/ark-currency-http-YRqVuQ/absent/nodes.json'
+# [clock-direct] {"response_id":"archive-response-017","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647593}
+# [clock-direct] {"response_id":"archive-response-018","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647699}
+# [clock-direct] {"response_id":"archive-response-019","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647710}
+# [clock-direct] {"response_id":"archive-response-020","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647722}
+# [clock-direct] {"response_id":"archive-response-021","room":"archive-room-001","kind":"clock","iana":"America/New_York","at_ms":1794970647735}
+# [clock-direct] {"response_id":"archive-response-022","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647747}
+# [clock-direct] {"response_id":"archive-response-023","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647764}
+# [clock-direct] {"response_id":"archive-response-024","room":"archive-room-001","kind":"clock","iana":"Asia/Shanghai","at_ms":1794970647778}
+# [clock-direct] {"response_id":"archive-response-025","room":"archive-room-001","kind":"clarify_timezone","at_ms":1794970647790}
+# [clock-direct] {"response_id":"archive-response-026","room":"archive-room-001","kind":"clock","iana":"America/New_York","at_ms":1794970647805}
+# Subtest: clock uses authenticated real HTTP SSE with zero upstream or Ark requests
+ok 5 - clock uses authenticated real HTTP SSE with zero upstream or Ark requests
+  ---
+  duration_ms: 260.90218
+  type: 'test'
+  ...
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=1ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: later ordinary prompt excludes stale clock answers from memory input
+ok 6 - later ordinary prompt excludes stale clock answers from memory input
+  ---
+  duration_ms: 23.029765
+  type: 'test'
+  ...
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 匿名（无 token）
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901 [kb]
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: clock preserves disabled flag, anonymous/parent and non-clock model behavior
+ok 7 - clock preserves disabled flag, anonymous/parent and non-clock model behavior
+  ---
+  duration_ms: 142.920739
+  type: 'test'
+  ...
+# [custom-llm] 记忆注入 account=device-BJP00399999999999901
+# [persona] inject read=0ms rel=0 style=0 insight=0 narrative=0 trait=0 tpl=0
+# Subtest: event followup retains previous event instead of clock routing
+ok 8 - event followup retains previous event instead of clock routing
+  ---
+  duration_ms: 12.173923
+  type: 'test'
+  ...
+# Subtest: H01: 现在几点了
+ok 9 - H01: 现在几点了
+  ---
+  duration_ms: 20.515731
+  type: 'test'
+  ...
+# Subtest: H02: 现在几点
+ok 10 - H02: 现在几点
+  ---
+  duration_ms: 0.933732
+  type: 'test'
+  ...
+# Subtest: H03: 现在才几点啊就跟我说晚安
+ok 11 - H03: 现在才几点啊就跟我说晚安
+  ---
+  duration_ms: 0.2882
+  type: 'test'
+  ...
+# Subtest: H04: 今天是周几
+ok 12 - H04: 今天是周几
+  ---
+  duration_ms: 0.305318
+  type: 'test'
+  ...
+# Subtest: H05: 今天是几号呀
+ok 13 - H05: 今天是几号呀
+  ---
+  duration_ms: 0.254966
+  type: 'test'
+  ...
+# Subtest: H06: 那是几号
+ok 14 - H06: 那是几号
+  ---
+  duration_ms: 0.202094
+  type: 'test'
+  ...
+# Subtest: N01: 对然后我跟他说我说你看一下这是什么时间做的事
+ok 15 - N01: 对然后我跟他说我说你看一下这是什么时间做的事
+  ---
+  duration_ms: 0.111752
+  type: 'test'
+  ...
+# Subtest: N02: 下周呢就所以那咱定个时间吧今天下午几点咱们就是
+ok 16 - N02: 下周呢就所以那咱定个时间吧今天下午几点咱们就是
+  ---
+  duration_ms: 0.113601
+  type: 'test'
+  ...
+# Subtest: N03: 倒计时剩余30秒
+ok 17 - N03: 倒计时剩余30秒
+  ---
+  duration_ms: 0.177115
+  type: 'test'
+  ...
+# Subtest: N04: 我离下一个宝箱还需要多久？
+ok 18 - N04: 我离下一个宝箱还需要多久？
+  ---
+  duration_ms: 0.337583
+  type: 'test'
+  ...
+# Subtest: N05: 导航啊统一的倒计时啊一些这个
+ok 19 - N05: 导航啊统一的倒计时啊一些这个
+  ---
+  duration_ms: 0.101513
+  type: 'test'
+  ...
+# Subtest: S01: 几点钟了
+ok 20 - S01: 几点钟了
+  ---
+  duration_ms: 0.227698
+  type: 'test'
+  ...
+# Subtest: S02: 都几点了
+ok 21 - S02: 都几点了
+  ---
+  duration_ms: 0.231794
+  type: 'test'
+  ...
+# Subtest: S03: 现在什么时间
+ok 22 - S03: 现在什么时间
+  ---
+  duration_ms: 0.263834
+  type: 'test'
+  ...
+# Subtest: S04: 小可现在几点了呢
+ok 23 - S04: 小可现在几点了呢
+  ---
+  duration_ms: 0.416576
+  type: 'test'
+  ...
+# Subtest: S05: 北京时间
+ok 24 - S05: 北京时间
+  ---
+  duration_ms: 0.307201
+  type: 'test'
+  ...
+# Subtest: S06: 上海现在几点
+ok 25 - S06: 上海现在几点
+  ---
+  duration_ms: 0.225485
+  type: 'test'
+  ...
+# Subtest: S07: 纽约现在几点
+ok 26 - S07: 纽约现在几点
+  ---
+  duration_ms: 0.228537
+  type: 'test'
+  ...
+# Subtest: S08: 美国时间
+ok 27 - S08: 美国时间
+  ---
+  duration_ms: 0.096051
+  type: 'test'
+  ...
+# Subtest: S09: 美国现在几点
+ok 28 - S09: 美国现在几点
+  ---
+  duration_ms: 0.063152
+  type: 'test'
+  ...
+# Subtest: S10: 纽约
+ok 29 - S10: 纽约
+  ---
+  duration_ms: 0.758917
+  type: 'test'
+  ...
+# Subtest: S11: 那纽约呢
+ok 30 - S11: 那纽约呢
+  ---
+  duration_ms: 0.423298
+  type: 'test'
+  ...
+# Subtest: S12: 那美国呢
+ok 31 - S12: 那美国呢
+  ---
+  duration_ms: 0.089193
+  type: 'test'
+  ...
+# Subtest: S13: 不要报时
+ok 32 - S13: 不要报时
+  ---
+  duration_ms: 0.063294
+  type: 'test'
+  ...
+# Subtest: S14: 他说现在几点了
+ok 33 - S14: 他说现在几点了
+  ---
+  duration_ms: 0.134006
+  type: 'test'
+  ...
+# Subtest: S15: 定个闹钟七点叫我
+ok 34 - S15: 定个闹钟七点叫我
+  ---
+  duration_ms: 0.099655
+  type: 'test'
+  ...
+# Subtest: S16: 五分钟后提醒我
+ok 35 - S16: 五分钟后提醒我
+  ---
+  duration_ms: 0.083974
+  type: 'test'
+  ...
+# Subtest: S17: 一年有多少天
+ok 36 - S17: 一年有多少天
+  ---
+  duration_ms: 0.084937
+  type: 'test'
+  ...
+# Subtest: S18: 现在几点了天气怎么样
+ok 37 - S18: 现在几点了天气怎么样
+  ---
+  duration_ms: 0.084272
+  type: 'test'
+  ...
+# Subtest: S19: 帮我查现在几点
+ok 38 - S19: 帮我查现在几点
+  ---
+  duration_ms: 0.280982
+  type: 'test'
+  ...
+# Subtest: S20: 几点
+ok 39 - S20: 几点
+  ---
+  duration_ms: 0.074443
+  type: 'test'
+  ...
+# Subtest: negative 北京现在几点开门
+ok 40 - negative 北京现在几点开门
+  ---
+  duration_ms: 0.110147
+  type: 'test'
+  ...
+# Subtest: negative 现在几点上课
+ok 41 - negative 现在几点上课
+  ---
+  duration_ms: 0.059337
+  type: 'test'
+  ...
+# Subtest: negative 几点开始下雨
+ok 42 - negative 几点开始下雨
+  ---
+  duration_ms: 0.052584
+  type: 'test'
+  ...
+# Subtest: negative 我今天用了多久
+ok 43 - negative 我今天用了多久
+  ---
+  duration_ms: 0.053193
+  type: 'test'
+  ...
+# Subtest: negative 今日奖励还差几分钟
+ok 44 - negative 今日奖励还差几分钟
+  ---
+  duration_ms: 0.070557
+  type: 'test'
+  ...
+# Subtest: negative 我现在有几点积分
+ok 45 - negative 我现在有几点积分
+  ---
+  duration_ms: 0.055457
+  type: 'test'
+  ...
+# Subtest: negative 你说现在几点了是什么意思
+ok 46 - negative 你说现在几点了是什么意思
+  ---
+  duration_ms: 0.048964
+  type: 'test'
+  ...
+# Subtest: negative 告诉我现在几点开会
+ok 47 - negative 告诉我现在几点开会
+  ---
+  duration_ms: 0.061537
+  type: 'test'
+  ...
+# Subtest: negative 不要告诉我现在几点
+ok 48 - negative 不要告诉我现在几点
+  ---
+  duration_ms: 0.051382
+  type: 'test'
+  ...
+# Subtest: negative 纽约有什么好玩的
+ok 49 - negative 纽约有什么好玩的
+  ---
+  duration_ms: 0.069517
+  type: 'test'
+  ...
+# Subtest: negative 北京时间是什么意思
+ok 50 - negative 北京时间是什么意思
+  ---
+  duration_ms: 0.052883
+  type: 'test'
+  ...
+# Subtest: unknown timezone does not default to Beijing
+ok 51 - unknown timezone does not default to Beijing
+  ---
+  duration_ms: 0.129273
+  type: 'test'
+  ...
+# Subtest: unrelated latest turn clears implicit followup
+ok 52 - unrelated latest turn clears implicit followup
+  ---
+  duration_ms: 0.102305
+  type: 'test'
+  ...
+# Subtest: midnight and cross-date
+ok 53 - midnight and cross-date
+  ---
+  duration_ms: 0.468941
+  type: 'test'
+  ...
+# Subtest: DST uses IANA rules
+ok 54 - DST uses IANA rules
+  ---
+  duration_ms: 0.330017
+  type: 'test'
+  ...
+# Subtest: RTC history drops clock answers and timezone followups, preserves personal narrative
+ok 55 - RTC history drops clock answers and timezone followups, preserves personal narrative
+  ---
+  duration_ms: 0.616842
+  type: 'test'
+  ...
+# Subtest: natural variant 我想知道现在几点
+ok 56 - natural variant 我想知道现在几点
+  ---
+  duration_ms: 0.094626
+  type: 'test'
+  ...
+# Subtest: natural variant 能告诉我现在几点吗
+ok 57 - natural variant 能告诉我现在几点吗
+  ---
+  duration_ms: 0.071415
+  type: 'test'
+  ...
+# Subtest: natural variant 麻烦问一下现在几点了
+ok 58 - natural variant 麻烦问一下现在几点了
+  ---
+  duration_ms: 0.054238
+  type: 'test'
+  ...
+# Subtest: natural variant 查一下北京时间
+ok 59 - natural variant 查一下北京时间
+  ---
+  duration_ms: 0.057694
+  type: 'test'
+  ...
+# Subtest: natural variant 现在几点几分
+ok 60 - natural variant 现在几点几分
+  ---
+  duration_ms: 0.052256
+  type: 'test'
+  ...
+# Subtest: natural variant 现在纽约几点
+ok 61 - natural variant 现在纽约几点
+  ---
+  duration_ms: 0.064609
+  type: 'test'
+  ...
+# Subtest: natural variant 北京时间现在几点
+ok 62 - natural variant 北京时间现在几点
+  ---
+  duration_ms: 0.241977
+  type: 'test'
+  ...
+# Subtest: natural variant 北京那边现在几点了
+ok 63 - natural variant 北京那边现在几点了
+  ---
+  duration_ms: 0.066298
+  type: 'test'
+  ...
+# Subtest: natural variant 现在几點了
+ok 64 - natural variant 现在几點了
+  ---
+  duration_ms: 0.089831
+  type: 'test'
+  ...
+# Subtest: quoted or narrative 告诉我一个故事现在几点
+ok 65 - quoted or narrative 告诉我一个故事现在几点
+  ---
+  duration_ms: 0.076599
+  type: 'test'
+  ...
+# Subtest: quoted or narrative 如果现在几点了你会怎么说
+ok 66 - quoted or narrative 如果现在几点了你会怎么说
+  ---
+  duration_ms: 0.08587
+  type: 'test'
+  ...
+# Subtest: quoted or narrative 比如现在几点了
+ok 67 - quoted or narrative 比如现在几点了
+  ---
+  duration_ms: 0.055347
+  type: 'test'
+  ...
+# Subtest: quoted or narrative “现在几点了”
+ok 68 - quoted or narrative “现在几点了”
+  ---
+  duration_ms: 0.049633
+  type: 'test'
+  ...
+# Subtest: quoted or narrative 他说现在几点了
+ok 69 - quoted or narrative 他说现在几点了
+  ---
+  duration_ms: 0.053954
+  type: 'test'
+  ...
+# Subtest: quoted or narrative 现在几点了是什么意思
+ok 70 - quoted or narrative 现在几点了是什么意思
+  ---
+  duration_ms: 0.049664
+  type: 'test'
+  ...
+# Subtest: current time phrase 现在的时间
+ok 71 - current time phrase 现在的时间
+  ---
+  duration_ms: 0.099009
+  type: 'test'
+  ...
+# Subtest: current time phrase 当前时间
+ok 72 - current time phrase 当前时间
+  ---
+  duration_ms: 0.067216
+  type: 'test'
+  ...
+# Subtest: current time phrase 此刻的时间
+ok 73 - current time phrase 此刻的时间
+  ---
+  duration_ms: 0.054778
+  type: 'test'
+  ...
+# Subtest: current time phrase 现在时间是多少
+ok 74 - current time phrase 现在时间是多少
+  ---
+  duration_ms: 0.066242
+  type: 'test'
+  ...
+# Subtest: current time phrase 请告诉我当前的时间
+ok 75 - current time phrase 请告诉我当前的时间
+  ---
+  duration_ms: 0.061705
+  type: 'test'
+  ...
+# Subtest: review natural 今天的日期
+ok 76 - review natural 今天的日期
+  ---
+  duration_ms: 0.086689
+  type: 'test'
+  ...
+# Subtest: review natural 今天是不是周末
+ok 77 - review natural 今天是不是周末
+  ---
+  duration_ms: 0.053229
+  type: 'test'
+  ...
+# Subtest: review natural 帮我看现在几点
+ok 78 - review natural 帮我看现在几点
+  ---
+  duration_ms: 0.142636
+  type: 'test'
+  ...
+# Subtest: review natural 现在才几点呢就跟我说晚安
+ok 79 - review natural 现在才几点呢就跟我说晚安
+  ---
+  duration_ms: 0.11076
+  type: 'test'
+  ...
+# Subtest: review natural 北京市现在几点
+ok 80 - review natural 北京市现在几点
+  ---
+  duration_ms: 0.096493
+  type: 'test'
+  ...
+# Subtest: review natural 纽约市现在几点
+ok 81 - review natural 纽约市现在几点
+  ---
+  duration_ms: 0.10334
+  type: 'test'
+  ...
+# Subtest: review narrative 妈妈说现在几点了
+ok 82 - review narrative 妈妈说现在几点了
+  ---
+  duration_ms: 0.126128
+  type: 'test'
+  ...
+# Subtest: review narrative 爸爸说现在几点了
+ok 83 - review narrative 爸爸说现在几点了
+  ---
+  duration_ms: 0.085267
+  type: 'test'
+  ...
+# Subtest: review narrative 老师说现在几点
+ok 84 - review narrative 老师说现在几点
+  ---
+  duration_ms: 0.080751
+  type: 'test'
+  ...
+# Subtest: review narrative 这是什么时间
+ok 85 - review narrative 这是什么时间
+  ---
+  duration_ms: 0.094801
+  type: 'test'
+  ...
+# Subtest: review narrative 昨天几点了
+ok 86 - review narrative 昨天几点了
+  ---
+  duration_ms: 0.089309
+  type: 'test'
+  ...
+# Subtest: review narrative 明天几点
+ok 87 - review narrative 明天几点
+  ---
+  duration_ms: 0.080879
+  type: 'test'
+  ...
+# Subtest: city clarification preserves date question
+ok 88 - city clarification preserves date question
+  ---
+  duration_ms: 0.406874
+  type: 'test'
+  ...
+# Subtest: polite clock 麻烦告诉我现在几点
+ok 89 - polite clock 麻烦告诉我现在几点
+  ---
+  duration_ms: 0.130997
+  type: 'test'
+  ...
+# Subtest: polite clock 你能告诉我现在几点吗
+ok 90 - polite clock 你能告诉我现在几点吗
+  ---
+  duration_ms: 0.088209
+  type: 'test'
+  ...
+# Subtest: polite clock 请你告诉我今天是几号
+ok 91 - polite clock 请你告诉我今天是几号
+  ---
+  duration_ms: 0.123517
+  type: 'test'
+  ...
+# Subtest: polite clock 能不能帮我查一下纽约现在几点
+ok 92 - polite clock 能不能帮我查一下纽约现在几点
+  ---
+  duration_ms: 0.089167
+  type: 'test'
+  ...
+# Subtest: polite clock 帮我查一查北京时间
+ok 93 - polite clock 帮我查一查北京时间
+  ---
+  duration_ms: 0.083806
+  type: 'test'
+  ...
+# Subtest: external or incomplete 故宫开放时间
+ok 94 - external or incomplete 故宫开放时间
+  ---
+  duration_ms: 0.208449
+  type: 'test'
+  ...
+# Subtest: external or incomplete 帮我查故宫开放时间
+ok 95 - external or incomplete 帮我查故宫开放时间
+  ---
+  duration_ms: 0.091633
+  type: 'test'
+  ...
+# Subtest: external or incomplete 图书馆营业时间
+ok 96 - external or incomplete 图书馆营业时间
+  ---
+  duration_ms: 0.08052
+  type: 'test'
+  ...
+# Subtest: external or incomplete 今天日出时间
+ok 97 - external or incomplete 今天日出时间
+  ---
+  duration_ms: 0.077147
+  type: 'test'
+  ...
+# Subtest: external or incomplete 营业现在几点
+ok 98 - external or incomplete 营业现在几点
+  ---
+  duration_ms: 0.162222
+  type: 'test'
+  ...
+# Subtest: external or incomplete 故宫明天开放吗帮我查一下
+ok 99 - external or incomplete 故宫明天开放吗帮我查一下
+  ---
+  duration_ms: 0.092033
+  type: 'test'
+  ...
+# Subtest: external or incomplete 时间
+ok 100 - external or incomplete 时间
+  ---
+  duration_ms: 0.082571
+  type: 'test'
+  ...
+# Subtest: external or incomplete 几点
+ok 101 - external or incomplete 几点
+  ---
+  duration_ms: 0.081554
+  type: 'test'
+  ...
+# Subtest: external or incomplete 明天
+ok 102 - external or incomplete 明天
+  ---
+  duration_ms: 0.084932
+  type: 'test'
+  ...
+# Subtest: external or incomplete 多久
+ok 103 - external or incomplete 多久
+  ---
+  duration_ms: 0.079678
+  type: 'test'
+  ...
+# Subtest: external or incomplete 今天是几
+ok 104 - external or incomplete 今天是几
+  ---
+  duration_ms: 0.081187
+  type: 'test'
+  ...
+# Subtest: external or incomplete 你告诉我今天是什么节日
+ok 105 - external or incomplete 你告诉我今天是什么节日
+  ---
+  duration_ms: 0.159783
+  type: 'test'
+  ...
+# Subtest: external or incomplete 什么时候开始
+ok 106 - external or incomplete 什么时候开始
+  ---
+  duration_ms: 0.103463
+  type: 'test'
+  ...
+# Subtest: external or incomplete 小可小可还有多少分钟能领到下一个金币
+ok 107 - external or incomplete 小可小可还有多少分钟能领到下一个金币
+  ---
+  duration_ms: 0.085772
+  type: 'test'
+  ...
+# Subtest: external or incomplete 我离下一个宝箱还需要多久?
+ok 108 - external or incomplete 我离下一个宝箱还需要多久?
+  ---
+  duration_ms: 0.075403
+  type: 'test'
+  ...
+# Subtest: external or incomplete 宝可梦比赛时间
+ok 109 - external or incomplete 宝可梦比赛时间
+  ---
+  duration_ms: 0.079635
+  type: 'test'
+  ...
+# Subtest: external or incomplete 吃饭时间
+ok 110 - external or incomplete 吃饭时间
+  ---
+  duration_ms: 0.090027
+  type: 'test'
+  ...
+# Subtest: event context cannot turn a city followup into clock
+ok 111 - event context cannot turn a city followup into clock
+  ---
+  duration_ms: 0.117685
+  type: 'test'
+  ...
+# Subtest: event opening answers remain in ordinary history
+ok 112 - event opening answers remain in ordinary history
+  ---
+  duration_ms: 0.142891
+  type: 'test'
+  ...
+# Subtest: polite composed 你告诉我现在几点
+ok 113 - polite composed 你告诉我现在几点
+  ---
+  duration_ms: 0.132477
+  type: 'test'
+  ...
+# Subtest: polite composed 麻烦你告诉我现在几点
+ok 114 - polite composed 麻烦你告诉我现在几点
+  ---
+  duration_ms: 0.08149
+  type: 'test'
+  ...
+# Subtest: polite composed 麻烦你帮我查一下现在几点
+ok 115 - polite composed 麻烦你帮我查一下现在几点
+  ---
+  duration_ms: 0.108714
+  type: 'test'
+  ...
+# Subtest: polite composed 可以帮我查一查现在几点
+ok 116 - polite composed 可以帮我查一查现在几点
+  ---
+  duration_ms: 0.055927
+  type: 'test'
+  ...
+# Subtest: review event/polite 比赛现在几点
+ok 117 - review event/polite 比赛现在几点
+  ---
+  duration_ms: 0.083341
+  type: 'test'
+  ...
+# Subtest: review event/polite 现在比赛几点
+ok 118 - review event/polite 现在比赛几点
+  ---
+  duration_ms: 0.052653
+  type: 'test'
+  ...
+# Subtest: review event/polite 活动今天几号
+ok 119 - review event/polite 活动今天几号
+  ---
+  duration_ms: 0.042844
+  type: 'test'
+  ...
+# Subtest: review event/polite 节日时间
+ok 120 - review event/polite 节日时间
+  ---
+  duration_ms: 0.043207
+  type: 'test'
+  ...
+# Subtest: review event/polite 麻烦你告诉我今天几号
+ok 121 - review event/polite 麻烦你告诉我今天几号
+  ---
+  duration_ms: 0.049655
+  type: 'test'
+  ...
+# Subtest: dispatcher polite diagnostic 能说一下现在几点了吗
+ok 122 - dispatcher polite diagnostic 能说一下现在几点了吗
+  ---
+  duration_ms: 0.070891
+  type: 'test'
+  ...
+# Subtest: dispatcher polite diagnostic 能不能说一下现在几点了吗
+ok 123 - dispatcher polite diagnostic 能不能说一下现在几点了吗
+  ---
+  duration_ms: 0.045888
+  type: 'test'
+  ...
+# Subtest: polite weekday with no prior referent means today
+ok 124 - polite weekday with no prior referent means today
+  ---
+  duration_ms: 0.17282
+  type: 'test'
+  ...
+# Subtest: polite weekday preserves event referent
+ok 125 - polite weekday preserves event referent
+  ---
+  duration_ms: 0.127974
+  type: 'test'
+  ...
+# Subtest: polite weekday may follow explicit clock
+ok 126 - polite weekday may follow explicit clock
+  ---
+  duration_ms: 0.090413
+  type: 'test'
+  ...
+# (node:2569583) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [search] upstream_402
+# PASS actual search runtime routes clock locally with zero provider requests
+# Subtest: /root/p003-clock-release-20261118/verify/0/2-Projects/P003GameDemo20260513/apps/server/scripts/clock-search-runtime.test.ts
+ok 4 - /root/p003-clock-release-20261118/verify/0/2-Projects/P003GameDemo20260513/apps/server/scripts/clock-search-runtime.test.ts
+  ---
+  duration_ms: 1651.834925
+  type: 'test'
+  ...
+# (node:2569601) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: 生产鉴权拒绝parent/坏token/未知房间，默认关闭不建库；热关闸无需重启
+ok 128 - 生产鉴权拒绝parent/坏token/未知房间，默认关闭不建库；热关闸无需重启
+  ---
+  duration_ms: 148.724217
+  type: 'test'
+  ...
+# (node:2569619) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: R15 delivery completed does not turn a failure or empty evidence into a successful answer
+ok 129 - R15 delivery completed does not turn a failure or empty evidence into a successful answer
+  ---
+  duration_ms: 239.529701
+  type: 'test'
+  ...
+# Subtest: R5 replay uses distinct idempotent claims, one automatic retry and immutable deadlines
+ok 130 - R5 replay uses distinct idempotent claims, one automatic retry and immutable deadlines
+  ---
+  duration_ms: 93.669421
+  type: 'test'
+  ...
+# Subtest: R5 automatic replay cannot resurrect expired, cancelled, disabled or foreign tasks
+ok 131 - R5 automatic replay cannot resurrect expired, cancelled, disabled or foreign tasks
+  ---
+  duration_ms: 251.534773
+  type: 'test'
+  ...
+# Subtest: 接单不等待网络；重复提交只执行一次；其他会话无法读取或领取
+ok 132 - 接单不等待网络；重复提交只执行一次；其他会话无法读取或领取
+  ---
+  duration_ms: 73.649994
+  type: 'test'
+  ...
+# Subtest: 普通聊天不改变后台任务；明确取消拒绝迟到结果且不释放未结束的执行槽
+ok 133 - 普通聊天不改变后台任务；明确取消拒绝迟到结果且不释放未结束的执行槽
+  ---
+  duration_ms: 51.844649
+  type: 'test'
+  ...
+# Subtest: 投机/预热/未授权/敏感查询/满会话不产生外部执行
+ok 134 - 投机/预热/未授权/敏感查询/满会话不产生外部执行
+  ---
+  duration_ms: 41.535367
+  type: 'test'
+  ...
+# Subtest: 期限包含排队；关闸取消执行与待播；退出墓碑阻止迟到提交
+ok 135 - 期限包含排队；关闸取消执行与待播；退出墓碑阻止迟到提交
+  ---
+  duration_ms: 128.563407
+  type: 'test'
+  ...
+# Subtest: 重启不重放网络任务；幂等账本保留；查询正文不落盘
+ok 136 - 重启不重放网络任务；幂等账本保留；查询正文不落盘
+  ---
+  duration_ms: 38.339048
+  type: 'test'
+  ...
+# Subtest: ready过期不再领取，实际回执必须匹配领取者
+ok 137 - ready过期不再领取，实际回执必须匹配领取者
+  ---
+  duration_ms: 45.250662
+  type: 'test'
+  ...
+# Subtest: 持久日配额与上游熔断只拦新单，已接单幂等查询仍可恢复
+ok 138 - 持久日配额与上游熔断只拦新单，已接单幂等查询仍可恢复
+  ---
+  duration_ms: 52.544031
+  type: 'test'
+  ...
+# Subtest: R7 route version is frozen at admission and retries do not re-resolve it
+ok 139 - R7 route version is frozen at admission and retries do not re-resolve it
+  ---
+  duration_ms: 62.650547
+  type: 'test'
+  ...
+# (node:2569636) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# [search-weather] {"task_id":"archive-task-002","version":"r7-3ab915fdc3b79f4ccfe305f1","city_source":"explicit","provider":"baidu-public-web","city_name":"四川成都","station_id":"101270101","province":"四川","target_date":"2026-10-23","updated_at":"2026-10-22T18:20:00+08:00","fetched_at":"2026-10-22T10:30:00.000Z","cache_hit":false,"metric":"forecast"}
+# weather runtime: actual authenticated route → frozen config → fixed provider → ledger; source gate enforced
+# Subtest: /root/p003-clock-release-20261118/verify/0/2-Projects/P003GameDemo20260513/apps/server/scripts/search-weather-runtime.test.ts
+ok 7 - /root/p003-clock-release-20261118/verify/0/2-Projects/P003GameDemo20260513/apps/server/scripts/search-weather-runtime.test.ts
+  ---
+  duration_ms: 1384.80521
+  type: 'test'
+  ...
+1..140
+# tests 140
+# suites 0
+# pass 140
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 10645.173758

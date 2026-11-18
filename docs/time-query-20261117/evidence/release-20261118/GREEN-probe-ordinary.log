@@ -1,0 +1,13 @@
+✔ valid educational response is ordinary content, not necessarily a literal answer (1.371792ms)
+✔ reject invalid ordinary response {"clock_response":false,"spoken":""} (0.744833ms)
+✔ reject invalid ordinary response {"clock_response":true,"spoken":"现在是两点"} (8.59925ms)
+✔ reject invalid ordinary response {"clock_response":false,"spoken":"（小可暂时连不上大脑：upstream 502）"} (0.880167ms)
+✔ reject invalid ordinary response {"clock_response":false,"spoken":"（小可有点累了：upstream 429）"} (0.879375ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.040959

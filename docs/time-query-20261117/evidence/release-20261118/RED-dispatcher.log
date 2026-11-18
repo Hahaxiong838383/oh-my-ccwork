@@ -1,0 +1,173 @@
+✔ H01: 现在几点了 (48.816083ms)
+✔ H02: 现在几点 (1.875458ms)
+✔ H03: 现在才几点啊就跟我说晚安 (0.314166ms)
+✔ H04: 今天是周几 (0.296083ms)
+✔ H05: 今天是几号呀 (0.315083ms)
+✔ H06: 那是几号 (0.154583ms)
+✔ N01: 对然后我跟他说我说你看一下这是什么时间做的事 (0.115666ms)
+✔ N02: 下周呢就所以那咱定个时间吧今天下午几点咱们就是 (0.120583ms)
+✔ N03: 倒计时剩余30秒 (0.123916ms)
+✔ N04: 我离下一个宝箱还需要多久？ (0.225667ms)
+✔ N05: 导航啊统一的倒计时啊一些这个 (0.115834ms)
+✔ S01: 几点钟了 (0.269666ms)
+✔ S02: 都几点了 (0.253917ms)
+✔ S03: 现在什么时间 (0.285709ms)
+✔ S04: 小可现在几点了呢 (0.289416ms)
+✔ S05: 北京时间 (0.43325ms)
+✔ S06: 上海现在几点 (0.329583ms)
+✔ S07: 纽约现在几点 (0.476958ms)
+✔ S08: 美国时间 (0.2155ms)
+✔ S09: 美国现在几点 (0.216042ms)
+✔ S10: 纽约 (1.939666ms)
+✔ S11: 那纽约呢 (2.158875ms)
+✔ S12: 那美国呢 (0.215459ms)
+✔ S13: 不要报时 (0.144208ms)
+✔ S14: 他说现在几点了 (0.128291ms)
+✔ S15: 定个闹钟七点叫我 (0.131958ms)
+✔ S16: 五分钟后提醒我 (0.127833ms)
+✔ S17: 一年有多少天 (0.123125ms)
+✔ S18: 现在几点了天气怎么样 (0.144625ms)
+✔ S19: 帮我查现在几点 (0.471167ms)
+✔ S20: 几点 (0.2145ms)
+✔ negative 北京现在几点开门 (0.230583ms)
+✔ negative 现在几点上课 (0.123209ms)
+✔ negative 几点开始下雨 (0.101458ms)
+✔ negative 我今天用了多久 (0.052708ms)
+✔ negative 今日奖励还差几分钟 (0.056167ms)
+✔ negative 我现在有几点积分 (0.051292ms)
+✔ negative 你说现在几点了是什么意思 (0.048666ms)
+✔ negative 告诉我现在几点开会 (0.053542ms)
+✔ negative 不要告诉我现在几点 (0.151625ms)
+✔ negative 纽约有什么好玩的 (0.067583ms)
+✔ negative 北京时间是什么意思 (0.068084ms)
+✔ unknown timezone does not default to Beijing (0.155ms)
+✔ unrelated latest turn clears implicit followup (0.095083ms)
+✔ midnight and cross-date (0.536959ms)
+✔ DST uses IANA rules (0.338167ms)
+✔ RTC history drops clock answers and timezone followups, preserves personal narrative (0.69325ms)
+✔ natural variant 我想知道现在几点 (0.110834ms)
+✔ natural variant 能告诉我现在几点吗 (0.057667ms)
+✔ natural variant 麻烦问一下现在几点了 (0.054125ms)
+✔ natural variant 查一下北京时间 (0.052959ms)
+✔ natural variant 现在几点几分 (0.05375ms)
+✔ natural variant 现在纽约几点 (0.058958ms)
+✔ natural variant 北京时间现在几点 (0.053834ms)
+✔ natural variant 北京那边现在几点了 (0.05575ms)
+✔ natural variant 现在几點了 (0.074209ms)
+✔ quoted or narrative 告诉我一个故事现在几点 (0.06425ms)
+✔ quoted or narrative 如果现在几点了你会怎么说 (0.048ms)
+✔ quoted or narrative 比如现在几点了 (0.053458ms)
+✔ quoted or narrative “现在几点了” (0.058625ms)
+✔ quoted or narrative 他说现在几点了 (0.050708ms)
+✔ quoted or narrative 现在几点了是什么意思 (0.050375ms)
+✔ current time phrase 现在的时间 (0.105625ms)
+✔ current time phrase 当前时间 (0.086875ms)
+✔ current time phrase 此刻的时间 (0.140167ms)
+✔ current time phrase 现在时间是多少 (0.12275ms)
+✔ current time phrase 请告诉我当前的时间 (0.095709ms)
+✔ review natural 今天的日期 (0.097083ms)
+✔ review natural 今天是不是周末 (0.082ms)
+✔ review natural 帮我看现在几点 (0.071208ms)
+✔ review natural 现在才几点呢就跟我说晚安 (0.058875ms)
+✔ review natural 北京市现在几点 (0.063667ms)
+✔ review natural 纽约市现在几点 (0.063083ms)
+✔ review narrative 妈妈说现在几点了 (0.080041ms)
+✔ review narrative 爸爸说现在几点了 (0.056917ms)
+✔ review narrative 老师说现在几点 (0.056ms)
+✔ review narrative 这是什么时间 (0.050875ms)
+✔ review narrative 昨天几点了 (0.05025ms)
+✔ review narrative 明天几点 (0.053916ms)
+✔ city clarification preserves date question (0.324125ms)
+✔ polite clock 麻烦告诉我现在几点 (0.077417ms)
+✔ polite clock 你能告诉我现在几点吗 (0.064292ms)
+✔ polite clock 请你告诉我今天是几号 (0.078209ms)
+✔ polite clock 能不能帮我查一下纽约现在几点 (0.091334ms)
+✔ polite clock 帮我查一查北京时间 (0.079459ms)
+✔ external or incomplete 故宫开放时间 (0.117833ms)
+✔ external or incomplete 帮我查故宫开放时间 (0.077166ms)
+✔ external or incomplete 图书馆营业时间 (0.075542ms)
+✔ external or incomplete 今天日出时间 (0.068417ms)
+✔ external or incomplete 营业现在几点 (0.078459ms)
+✔ external or incomplete 故宫明天开放吗帮我查一下 (0.073833ms)
+✔ external or incomplete 时间 (0.079208ms)
+✔ external or incomplete 几点 (0.085042ms)
+✔ external or incomplete 明天 (0.07675ms)
+✔ external or incomplete 多久 (0.071625ms)
+✔ external or incomplete 今天是几 (0.074708ms)
+✔ external or incomplete 你告诉我今天是什么节日 (0.075042ms)
+✔ external or incomplete 什么时候开始 (0.073125ms)
+✔ external or incomplete 小可小可还有多少分钟能领到下一个金币 (0.080375ms)
+✔ external or incomplete 我离下一个宝箱还需要多久? (0.177833ms)
+✔ external or incomplete 宝可梦比赛时间 (0.084708ms)
+✔ external or incomplete 吃饭时间 (0.089875ms)
+✔ event context cannot turn a city followup into clock (0.137083ms)
+✔ event opening answers remain in ordinary history (0.213708ms)
+✔ polite composed 你告诉我现在几点 (0.137375ms)
+✔ polite composed 麻烦你告诉我现在几点 (0.097167ms)
+✔ polite composed 麻烦你帮我查一下现在几点 (0.091542ms)
+✔ polite composed 可以帮我查一查现在几点 (0.085584ms)
+✔ review event/polite 比赛现在几点 (0.123333ms)
+✔ review event/polite 现在比赛几点 (0.091125ms)
+✔ review event/polite 活动今天几号 (0.082625ms)
+✔ review event/polite 节日时间 (0.078125ms)
+✔ review event/polite 麻烦你告诉我今天几号 (0.081334ms)
+✖ dispatcher polite diagnostic 能说一下现在几点了吗 (7.228583ms)
+✖ dispatcher polite diagnostic 能不能说一下现在几点了吗 (0.38575ms)
+ℹ tests 115
+ℹ suites 0
+ℹ pass 113
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 531.633917
+
+✖ failing tests:
+
+test at scripts/clock-query.test.ts:1:8043
+✖ dispatcher polite diagnostic 能说一下现在几点了吗 (7.228583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'clarify_timezone'
+  - 'clock'
+       ^
+  
+      at TestContext.<anonymous> ($HOME/.codex/worktrees/p003-time-query-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/clock-query.test.ts:40:96)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'clarify_timezone',
+    expected: 'clock',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at scripts/clock-query.test.ts:1:8043
+✖ dispatcher polite diagnostic 能不能说一下现在几点了吗 (0.38575ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'clarify_timezone'
+  - 'clock'
+       ^
+  
+      at TestContext.<anonymous> ($HOME/.codex/worktrees/p003-time-query-20261117/2-Projects/P003GameDemo20260513/apps/server/scripts/clock-query.test.ts:40:96)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:960:18)
+      at Test.postRun (node:internal/test_runner/test:1522:19)
+      at Test.run (node:internal/test_runner/test:1447:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'clarify_timezone',
+    expected: 'clock',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

@@ -1,0 +1,24 @@
+{
+  "node": "v22.22.2",
+  "rows": [
+    {
+      "pool": 0,
+      "exit": 0,
+      "test_files": 7
+    },
+    {
+      "pool": 1,
+      "exit": 0,
+      "test_files": 7
+    },
+    {
+      "pool": 2,
+      "exit": 0,
+      "test_files": 7
+    }
+  ],
+  "complete": true,
+  "pass": true,
+  "manifest_sha256": "40b0060cd4cf7c0da8efe8e3dd3fd9fc639d1bcdead95c2391ece7be72dcb2f7",
+  "verified_source_hashes": true
+}

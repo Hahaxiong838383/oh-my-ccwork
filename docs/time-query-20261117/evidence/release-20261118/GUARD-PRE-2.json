@@ -1,0 +1,34 @@
+{
+  "pass": true,
+  "at_ms": 1794970756443,
+  "port": 3008,
+  "key_configured": true,
+  "production_data_written": false,
+  "rows": [
+    {
+      "path": "/health",
+      "status": 200,
+      "error": null
+    },
+    {
+      "path": "/v1/internal/search-tasks/",
+      "status": 401,
+      "error": "unauthorized"
+    },
+    {
+      "path": "/v1/internal/search-tasks/",
+      "status": 403,
+      "error": "canary_unavailable"
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 401,
+      "error": "unauthorized"
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 401,
+      "error": "unauthorized"
+    }
+  ]
+}

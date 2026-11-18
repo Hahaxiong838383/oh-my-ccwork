@@ -1,0 +1,40 @@
+TAP version 13
+# Subtest: valid educational response is ordinary content, not necessarily a literal answer
+ok 1 - valid educational response is ordinary content, not necessarily a literal answer
+  ---
+  duration_ms: 1.022647
+  type: 'test'
+  ...
+# Subtest: reject invalid ordinary response {"clock_response":false,"spoken":""}
+ok 2 - reject invalid ordinary response {"clock_response":false,"spoken":""}
+  ---
+  duration_ms: 0.657395
+  type: 'test'
+  ...
+# Subtest: reject invalid ordinary response {"clock_response":true,"spoken":"现在是两点"}
+ok 3 - reject invalid ordinary response {"clock_response":true,"spoken":"现在是两点"}
+  ---
+  duration_ms: 8.678364
+  type: 'test'
+  ...
+# Subtest: reject invalid ordinary response {"clock_response":false,"spoken":"（小可暂时连不上大脑：upstream 502）"}
+ok 4 - reject invalid ordinary response {"clock_response":false,"spoken":"（小可暂时连不上大脑：upstream 502）"}
+  ---
+  duration_ms: 0.377341
+  type: 'test'
+  ...
+# Subtest: reject invalid ordinary response {"clock_response":false,"spoken":"（小可有点累了：upstream 429）"}
+ok 5 - reject invalid ordinary response {"clock_response":false,"spoken":"（小可有点累了：upstream 429）"}
+  ---
+  duration_ms: 0.279498
+  type: 'test'
+  ...
+1..5
+# tests 5
+# suites 0
+# pass 5
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 89.719814

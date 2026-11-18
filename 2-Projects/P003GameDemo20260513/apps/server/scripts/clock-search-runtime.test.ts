@@ -6,7 +6,7 @@ Object.assign(process.env,{AUTH_JWT_SECRET:'synthetic-weather-runtime',SEARCH_TA
 const originalFetch=globalThis.fetch;let fetches=0;globalThis.fetch=(async()=>{fetches++;throw new Error('NO_EXTERNAL_NETWORK_IN_CLOCK_TEST');}) as typeof fetch;
 const {searchTaskRoute,getSearchRoutingStore,closeSearchRuntime,getSearchTasks}=await import('../src/tools/search-runtime.js');
 const {configStore}=await import('../src/config-store.js');const {deviceRegistryStore}=await import('../src/device-registry-store.js');
-const sn='BJP00326070803800006';deviceRegistryStore.add(sn,'test');deviceRegistryStore.setAccountId(sn,'weather-test');
+const sn='BJP00300000000000435';deviceRegistryStore.add(sn,'test');deviceRegistryStore.setAccountId(sn,'weather-test');
 configStore.setFlag('p003.search.enabled','1','test');configStore.setFlag('p003.search.allowlist',JSON.stringify([sn]),'test');configStore.setFlag('p003.search.canary.expires_at_ms',String(Date.now()+60000),'test');
 const token=await new SignJWT({accountId:'worker',role:'device'}).setProtectedHeader({alg:'HS256'}).setIssuer('p003').setAudience('kidshub').setExpirationTime('2h').sign(new TextEncoder().encode(process.env.AUTH_JWT_SECRET));
 const headers={'x-p003-worker-token':token,'content-type':'application/json'},url='/?room=sn-'+sn+'-1',store=getSearchRoutingStore()!;
@@ -22,9 +22,10 @@ try{
  // Force an actual supplier failure through the unchanged search executor.
  globalThis.fetch=(async()=>{fetches++;return new Response('{}',{status:402});}) as typeof fetch;
  const post=(turn:string,query:string,h=headers)=>searchTaskRoute.request(url,{method:'POST',headers:h,body:JSON.stringify({protocol:1,phase:'committed',turn,query,routing:{version,rule_id:'builtin-explicit'}})});
- const paused=await post('supplier-failure','故宫今天开门吗');assert.equal(paused.status,202);const failedId=(await paused.json() as any).task.id;
+ const paused=await post('supplier-failure','故宫明天开放吗帮我查一下');assert.equal(paused.status,202);const failedId=(await paused.json() as any).task.id;
  for(let n=0;n<100&&getSearchTasks()!.get({subject:sn,session:'sn-'+sn+'-1'},failedId).status!=='failed';n++)await new Promise(r=>setTimeout(r,10));
  assert.equal(getSearchTasks()!.get({subject:sn,session:'sn-'+sn+'-1'},failedId).status,'failed');assert.equal(fetches,1);
+ const repeat=await post('supplier-failure','故宫明天开放吗帮我查一下');assert.equal(repeat.status,202);assert.equal((await repeat.json() as any).task.id,failedId);assert.equal(fetches,1);
  const denied=await post('paused-ordinary','故宫现在门票多少钱');assert.equal(denied.status,503);assert.equal((await denied.json() as any).error,'upstream_paused');
  const local=await post('paused-clock','帮我查当前时间');assert.equal(local.status,202);const localId=(await local.json() as any).task.id;
  for(let n=0;n<30&&getSearchTasks()!.get({subject:sn,session:'sn-'+sn+'-1'},localId).status!=='ready';n++)await new Promise(r=>setTimeout(r,10));

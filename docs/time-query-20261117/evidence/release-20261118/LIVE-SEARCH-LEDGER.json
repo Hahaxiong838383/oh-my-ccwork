@@ -1,0 +1,14 @@
+{
+  "at_ms": 1794971108086,
+  "task_id": "archive-task-001",
+  "status": "cancelled",
+  "query_tasks_in_synthetic_session": 1,
+  "duplicate_same_task": true,
+  "error": null,
+  "has_clock_result": false,
+  "sources": [],
+  "delivery": null,
+  "cancelled": true,
+  "natural_sample": false,
+  "provider_result_verified": false
+}

@@ -1,0 +1,16 @@
+{
+  "at_ms": 1794971016839,
+  "synthetic": true,
+  "rtc_room_created": false,
+  "audio_played": false,
+  "query": "故宫明天开放吗帮我查一下",
+  "scope_changed": false,
+  "routing_status": 200,
+  "allowed": true,
+  "submit_status": 202,
+  "task_id": "archive-task-001",
+  "duplicate_same_task": true,
+  "probe_completed": false,
+  "error": "Expected values to be strictly equal:\n\n409 !== 200\n",
+  "identity_cleanup": true
+}

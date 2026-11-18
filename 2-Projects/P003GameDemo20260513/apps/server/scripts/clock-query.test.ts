@@ -28,3 +28,16 @@ for(const q of ['现在的时间','当前时间','此刻的时间','现在时间
 for(const q of ['今天的日期','今天是不是周末','帮我看现在几点','现在才几点呢就跟我说晚安','北京市现在几点','纽约市现在几点'])test('review natural '+q,()=>assert.equal(resolveClock(q)?.kind,'clock'));
 for(const q of ['妈妈说现在几点了','爸爸说现在几点了','老师说现在几点','这是什么时间','昨天几点了','明天几点'])test('review narrative '+q,()=>assert.equal(resolveClock(q),null));
 test('city clarification preserves date question',()=>{const r=resolveClock('纽约',['美国今天几号']);assert.equal(r?.kind,'clock');assert.equal(r?.kind==='clock'&&r.requested,'date');assert.match(answerClock(r!,1794872324023),/2026年11月16日/);});
+
+// 2026-11-18: whole clock intents only; nouns ending in 时间 are not places.
+for(const q of ['麻烦告诉我现在几点','你能告诉我现在几点吗','请你告诉我今天是几号','能不能帮我查一下纽约现在几点','帮我查一查北京时间'])test('polite clock '+q,()=>assert.equal(resolveClock(q)?.kind,'clock'));
+for(const q of ['故宫开放时间','帮我查故宫开放时间','图书馆营业时间','今天日出时间','营业现在几点','故宫明天开放吗帮我查一下','时间','几点','明天','多久','今天是几','你告诉我今天是什么节日','什么时候开始','小可小可还有多少分钟能领到下一个金币','我离下一个宝箱还需要多久?','宝可梦比赛时间','吃饭时间'])test('external or incomplete '+q,()=>assert.equal(resolveClock(q),null));
+test('event context cannot turn a city followup into clock',()=>assert.equal(resolveClock('那纽约呢',['你帮我查一查宝可梦的比赛']),null));
+test('event opening answers remain in ordinary history',()=>{const h=[{role:'user',content:'故宫开放时间'},{role:'assistant',content:'请补充想去的日期。'}];assert.deepEqual(stripClockTurns(h),h);});
+for(const q of ['你告诉我现在几点','麻烦你告诉我现在几点','麻烦你帮我查一下现在几点','可以帮我查一查现在几点'])test('polite composed '+q,()=>assert.equal(resolveClock(q)?.kind,'clock'));
+for(const q of ['比赛现在几点','现在比赛几点','活动今天几号','节日时间','麻烦你告诉我今天几号'])test('review event/polite '+q,()=>assert.equal(resolveClock(q)?.kind??null,q.startsWith('麻烦')?'clock':null));
+// Dispatcher 433 supplemental diagnosis; not historical user corpus.
+for(const q of ['能说一下现在几点了吗','能不能说一下现在几点了吗'])test('dispatcher polite diagnostic '+q,()=>assert.equal(resolveClock(q)?.kind,'clock'));
+test('polite weekday with no prior referent means today',()=>assert.deepEqual(resolveClock('请问星期几'),{kind:'clock',iana:'Asia/Shanghai',place_label:'北京时间',requested:'weekday'}));
+test('polite weekday preserves event referent',()=>assert.equal(resolveClock('请问星期几',['你帮我查一查宝可梦的比赛']),null));
+test('polite weekday may follow explicit clock',()=>assert.equal(resolveClock('请问星期几',['今天几号'])?.kind,'clock'));

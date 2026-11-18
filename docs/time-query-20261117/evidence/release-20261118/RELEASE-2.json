@@ -1,0 +1,68 @@
+{
+  "started_ms": 1794970757112,
+  "pool": 2,
+  "success": true,
+  "pre": {
+    "pool": 2,
+    "source": {
+      "pid": 2292224,
+      "restarts": 0,
+      "status": "active"
+    },
+    "idle": {
+      "at_ms": 1794970756692,
+      "verified": true,
+      "total_rooms": 0,
+      "active_rooms": 0,
+      "idle": true
+    },
+    "node": "v22.22.2",
+    "ntp": "Timezone=Asia/Shanghai\nNTPSynchronized=yes\n",
+    "probe_preflight": {
+      "pass": true,
+      "pool": "/opt/p003/listening-canary-20261030/brain"
+    },
+    "manifest_sha256": "40b0060cd4cf7c0da8efe8e3dd3fd9fc639d1bcdead95c2391ece7be72dcb2f7"
+  },
+  "backup": "/root/p003-clock-release-20261118/backup-2-1794970756702",
+  "database_restore": false,
+  "before_services": [
+    {
+      "pid": 2544815,
+      "status": "online",
+      "restarts": 18
+    },
+    {
+      "pid": 2570805,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2292224,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "after_services": [
+    {
+      "pid": 2544815,
+      "status": "online",
+      "restarts": 18
+    },
+    {
+      "pid": 2570805,
+      "restarts": 0,
+      "status": "active"
+    },
+    {
+      "pid": 2570991,
+      "restarts": 0,
+      "status": "active"
+    }
+  ],
+  "probe_sha256": "95ee28e06cb6a825efd5630b6fb79feb3fe87490dc4bfc74351a6ca42f54a8e5",
+  "environment_unchanged": true,
+  "bindings_unchanged": true,
+  "policies_unchanged": true,
+  "finished_ms": 1794970761155
+}

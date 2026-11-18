@@ -1,0 +1,41 @@
+{
+  "pass": true,
+  "at_ms": 1794970852856,
+  "port": 3001,
+  "key_configured": false,
+  "production_data_written": false,
+  "rows": [
+    {
+      "path": "/health",
+      "status": 200,
+      "error": null
+    },
+    {
+      "path": "/v1/internal/search-tasks/",
+      "status": 401,
+      "error": "unauthorized"
+    },
+    {
+      "path": "/v1/internal/search-tasks/",
+      "status": 401,
+      "error": "unauthorized"
+    },
+    {
+      "path": "/v1/chat/completions",
+      "status": 200,
+      "ordinary_content": true,
+      "auth_semantics": "optional API key; anonymous ordinary context",
+      "chars": 27
+    },
+    {
+      "path": "/v1/device/ark/state",
+      "status": 401,
+      "error": "invalid_device_credential"
+    },
+    {
+      "path": "/v1/device/ark/state",
+      "status": 403,
+      "error": "not_enabled_or_authorized"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+[
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/routes/custom-llm.ts",
+    "before_sha256": "b746a1a1495f7ad86b43f924e6d82f88bf9ddbeeebe4604fff245a2b1d7e8a45",
+    "after_sha256": "a5d3d4a35605471093767f3084fd612a2e2e7eff8b6cb8889ef8c76b4a7efa8a"
+  },
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/tools/search-runtime.ts",
+    "before_sha256": "2ca91bd4ed44f11c499e89b48604243ca1118f3c4a14ebb85d51d1f5c1439478",
+    "after_sha256": "527166d163eb4644a8d27153090a13d286854fcface65ff77504143f360904eb"
+  },
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/tools/search-tasks.ts",
+    "before_sha256": "49c000cd859ca4035c5953e018afd6b5df9dd7466b08ae8ddfc75feef7235eed",
+    "after_sha256": "70996afa362b44c9aa02feb1c24757b0e3e236240c3e00765055891e35f370bf"
+  },
+  {
+    "pool": "/opt/p003/server",
+    "path": "src/tools/clock-query.ts",
+    "before_sha256": null,
+    "after_sha256": "9ba45e82d8e357b686e626eb05b8bbfe90aaed0cc19c5419ccd9591915fa6d61"
+  },
+  {
+    "pool": "/opt/p003/search-canary-20261021/brain",
+    "path": "src/tools/clock-query.ts",
+    "before_sha256": "7d29b955744f24ba7fc824f59888127433676b479ed2ed70093e65901dd9aea2",
+    "after_sha256": "9ba45e82d8e357b686e626eb05b8bbfe90aaed0cc19c5419ccd9591915fa6d61"
+  },
+  {
+    "pool": "/opt/p003/listening-canary-20261030/brain",
+    "path": "src/tools/clock-query.ts",
+    "before_sha256": "7d29b955744f24ba7fc824f59888127433676b479ed2ed70093e65901dd9aea2",
+    "after_sha256": "9ba45e82d8e357b686e626eb05b8bbfe90aaed0cc19c5419ccd9591915fa6d61"
+  }
+]

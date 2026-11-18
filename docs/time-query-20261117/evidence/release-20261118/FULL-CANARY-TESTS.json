@@ -1,0 +1,213 @@
+{
+  "pass": true,
+  "rows": [
+    {
+      "pool": 1,
+      "exit": 0,
+      "result": {
+        "pool": "/root/p003-clock-release-20261118/verify/1/2-Projects/P003GameDemo20260513/apps/server",
+        "port": 36345,
+        "synthetic": true,
+        "rtc_room_created": false,
+        "rows": [
+          {
+            "text": "\u73b0\u5728\u51e0\u70b9\u4e86",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970833847,
+            "after_ms": 1794970834010,
+            "elapsed_ms": 163,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u4eca\u5929\u662f\u51e0\u53f7\u5440",
+            "status": 200,
+            "spoken": "\u4eca\u5929\u662f2026\u5e7411\u670818\u65e5\uff0c\u661f\u671f\u4e09\u3002",
+            "before_ms": 1794970834039,
+            "after_ms": 1794970834105,
+            "elapsed_ms": 66,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u4eca\u5929\u662f\u5468\u51e0",
+            "status": 200,
+            "spoken": "\u4eca\u5929\u662f\u661f\u671f\u4e09\u3002",
+            "before_ms": 1794970834105,
+            "after_ms": 1794970834125,
+            "elapsed_ms": 20,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u7ebd\u7ea6\u73b0\u5728\u51e0\u70b9",
+            "status": 200,
+            "spoken": "\u7ebd\u7ea6\u73b0\u5728\u662f\u665a\u4e0a\u5341\u70b9\u6574\uff0c\u661f\u671f\u4e8c\u3002",
+            "before_ms": 1794970834125,
+            "after_ms": 1794970834147,
+            "elapsed_ms": 22,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u5e2e\u6211\u67e5\u5f53\u524d\u65f6\u95f4",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970834147,
+            "after_ms": 1794970834169,
+            "elapsed_ms": 22,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u7f8e\u56fd\u65f6\u95f4",
+            "status": 200,
+            "spoken": "\u7f8e\u56fd\u6709\u597d\u51e0\u4e2a\u65f6\u533a\uff0c\u4f60\u662f\u60f3\u95ee\u7ebd\u7ea6\u3001\u829d\u52a0\u54e5\u8fd8\u662f\u6d1b\u6749\u77f6\uff1f",
+            "before_ms": 1794970834169,
+            "after_ms": 1794970834189,
+            "elapsed_ms": 20,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00"
+          },
+          {
+            "text": "\u80fd\u8bf4\u4e00\u4e0b\u73b0\u5728\u51e0\u70b9\u4e86\u5417",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970834189,
+            "after_ms": 1794970834211,
+            "elapsed_ms": 22,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u80fd\u4e0d\u80fd\u8bf4\u4e00\u4e0b\u73b0\u5728\u51e0\u70b9\u4e86\u5417",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970834211,
+            "after_ms": 1794970834253,
+            "elapsed_ms": 42,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          }
+        ],
+        "cleanup": true,
+        "audit_rows": 16,
+        "pass": true
+      }
+    },
+    {
+      "pool": 2,
+      "exit": 0,
+      "result": {
+        "pool": "/root/p003-clock-release-20261118/verify/2/2-Projects/P003GameDemo20260513/apps/server",
+        "port": 35431,
+        "synthetic": true,
+        "rtc_room_created": false,
+        "rows": [
+          {
+            "text": "\u73b0\u5728\u51e0\u70b9\u4e86",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970835894,
+            "after_ms": 1794970836019,
+            "elapsed_ms": 125,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u4eca\u5929\u662f\u51e0\u53f7\u5440",
+            "status": 200,
+            "spoken": "\u4eca\u5929\u662f2026\u5e7411\u670818\u65e5\uff0c\u661f\u671f\u4e09\u3002",
+            "before_ms": 1794970836048,
+            "after_ms": 1794970836061,
+            "elapsed_ms": 13,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u4eca\u5929\u662f\u5468\u51e0",
+            "status": 200,
+            "spoken": "\u4eca\u5929\u662f\u661f\u671f\u4e09\u3002",
+            "before_ms": 1794970836061,
+            "after_ms": 1794970836073,
+            "elapsed_ms": 12,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u7ebd\u7ea6\u73b0\u5728\u51e0\u70b9",
+            "status": 200,
+            "spoken": "\u7ebd\u7ea6\u73b0\u5728\u662f\u665a\u4e0a\u5341\u70b9\u6574\uff0c\u661f\u671f\u4e8c\u3002",
+            "before_ms": 1794970836074,
+            "after_ms": 1794970836086,
+            "elapsed_ms": 12,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u5e2e\u6211\u67e5\u5f53\u524d\u65f6\u95f4",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970836086,
+            "after_ms": 1794970836114,
+            "elapsed_ms": 28,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u7f8e\u56fd\u65f6\u95f4",
+            "status": 200,
+            "spoken": "\u7f8e\u56fd\u6709\u597d\u51e0\u4e2a\u65f6\u533a\uff0c\u4f60\u662f\u60f3\u95ee\u7ebd\u7ea6\u3001\u829d\u52a0\u54e5\u8fd8\u662f\u6d1b\u6749\u77f6\uff1f",
+            "before_ms": 1794970836114,
+            "after_ms": 1794970836126,
+            "elapsed_ms": 12,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00"
+          },
+          {
+            "text": "\u80fd\u8bf4\u4e00\u4e0b\u73b0\u5728\u51e0\u70b9\u4e86\u5417",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970836127,
+            "after_ms": 1794970836140,
+            "elapsed_ms": 13,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          },
+          {
+            "text": "\u80fd\u4e0d\u80fd\u8bf4\u4e00\u4e0b\u73b0\u5728\u51e0\u70b9\u4e86\u5417",
+            "status": 200,
+            "spoken": "\u73b0\u5728\u662f\u5317\u4eac\u65f6\u95f4\u4e0a\u5348\u5341\u4e00\u70b9\u6574\u3002",
+            "before_ms": 1794970836140,
+            "after_ms": 1794970836182,
+            "elapsed_ms": 42,
+            "clock_response": true,
+            "reference_beijing": "2026\u5e7411\u670818\u65e5\u661f\u671f\u4e09 11:00",
+            "time_verified": true
+          }
+        ],
+        "cleanup": true,
+        "audit_rows": 16,
+        "pass": true
+      }
+    }
+  ],
+  "synthetic": true,
+  "production_data_used": false,
+  "manifest_sha256": "40b0060cd4cf7c0da8efe8e3dd3fd9fc639d1bcdead95c2391ece7be72dcb2f7",
+  "verified_source_hashes": true
+}

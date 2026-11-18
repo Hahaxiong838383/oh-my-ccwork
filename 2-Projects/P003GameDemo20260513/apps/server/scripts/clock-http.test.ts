@@ -21,7 +21,7 @@ const deviceToken=await token('device'),parentToken=await token('parent');
 async function chat(text:string,history:any[]=[],auth=deviceToken){const r=await fetch(origin+'/v1/chat/completions?room=sn-'+sn+'-123&token='+auth,{method:'POST',headers:{Authorization:'Bearer synthetic-key','Content-Type':'application/json'},body:JSON.stringify({messages:[...history,{role:'user',content:text}]})});assert.equal(r.status,200);const wire=await r.text();assert.match(wire,/\[DONE\]/);return wire.split('\n').filter(l=>l.startsWith('data: {')).map(l=>JSON.parse(l.slice(6)).choices[0].delta.content??'').join('');}
 test('clock uses authenticated real HTTP SSE with zero upstream or Ark requests',async()=>{
  const before=modelCalls;
- for(const q of ['现在几点了','今天是周几','今天几号','上海现在几点','纽约现在几点','帮我查现在几点']){
+ for(const q of ['现在几点了','今天是周几','今天几号','上海现在几点','纽约现在几点','帮我查现在几点','麻烦告诉我现在几点','请你告诉我今天是几号']){
   const reply=await chat(q);assert.match(reply,/现在是|今天是/);assert.doesNotMatch(reply,/模型回退|查不到|不知道/);
  }
  assert.equal(modelCalls,before);assert.equal(factsCalls,0);
@@ -36,6 +36,10 @@ test('later ordinary prompt excludes stale clock answers from memory input',asyn
 test('clock preserves disabled flag, anonymous/parent and non-clock model behavior',async()=>{
  assert.equal(await chat('现在几点了',[],parentToken),'模型回退');assert.equal(await chat('现在几点了',[],''),'模型回退');
  process.env.P003_CLOCK_ENABLED='0';try{assert.equal(await chat('现在几点了'),'模型回退');}finally{delete process.env.P003_CLOCK_ENABLED;}
- for(const q of ['现在几点开门','今天下午几点开会','明天提醒我起床','我使用了多久','纽约有什么好玩的'])assert.equal(await chat(q),'模型回退');
+ for(const q of ['现在几点开门','今天下午几点开会','明天提醒我起床','我使用了多久','纽约有什么好玩的','故宫开放时间','图书馆营业时间','故宫明天开放吗帮我查一下','你告诉我今天是什么节日','小可小可还有多少分钟能领到下一个金币'])assert.equal(await chat(q),'模型回退');
+});
+test('event followup retains previous event instead of clock routing',async()=>{
+ assert.equal(await chat('什么时候开始',[{role:'user',content:'你帮我查一查宝可梦的比赛'},{role:'assistant',content:'你想查哪场比赛？'}]),'模型回退');
+ assert.match(JSON.stringify(lastModelBody.messages),/宝可梦/);
 });
 after(async()=>{for(const s of servers){s.closeAllConnections();await new Promise<void>(r=>s.close(()=>r()));}process.chdir(cwd);rmSync(root,{recursive:true,force:true});});

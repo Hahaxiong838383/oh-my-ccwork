@@ -1,0 +1,66 @@
+TAP version 13
+# (node:2570068) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: main pool optional API key: no undefined Bearer header
+ok 1 - main pool optional API key: no undefined Bearer header
+  ---
+  duration_ms: 2.137457
+  type: 'test'
+  ...
+# Subtest: configured key is trimmed and retained
+ok 2 - configured key is trimmed and retained
+  ---
+  duration_ms: 0.563981
+  type: 'test'
+  ...
+# Subtest: blank key follows optional-auth route semantics
+ok 3 - blank key follows optional-auth route semantics
+  ---
+  duration_ms: 0.620131
+  type: 'test'
+  ...
+# Subtest: missing authority rejected
+ok 4 - missing authority rejected
+  ---
+  duration_ms: 0.913191
+  type: 'test'
+  ...
+# Subtest: invalid port rejected
+ok 5 - invalid port rejected
+  ---
+  duration_ms: 0.54732
+  type: 'test'
+  ...
+# Subtest: missing DB is not created
+ok 6 - missing DB is not created
+  ---
+  duration_ms: 0.375777
+  type: 'test'
+  ...
+# Subtest: schema drift rejected without migration
+ok 7 - schema drift rejected without migration
+  ---
+  duration_ms: 1.637813
+  type: 'test'
+  ...
+# Subtest: missing output directory rejected before mutation
+ok 8 - missing output directory rejected before mutation
+  ---
+  duration_ms: 0.189198
+  type: 'test'
+  ...
+# Subtest: DB bytes unchanged and no result artifact written
+ok 9 - DB bytes unchanged and no result artifact written
+  ---
+  duration_ms: 0.347074
+  type: 'test'
+  ...
+1..9
+# tests 9
+# suites 0
+# pass 9
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 113.194287
