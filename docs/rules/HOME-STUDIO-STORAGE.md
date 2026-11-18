@@ -64,3 +64,10 @@
 - 备份边界实测：restic 仓库在飞牛2 `/vol2/1000/开发机备份/home-studio-restic/home-studio`（99 G、23 快照），源侧约 216 G，目标卷剩 844 G。上述迁移目录位于 `/data/home-studio` 内，继续被 `fnos2-full-home` 覆盖；**HOME 里的软链不被跟随**。2026-11-18 03:30 因 backrest crash loop 未产出快照，最新快照停在 11-17 03:37 —— 巡检按“最新快照 mtime 超 36 小时即异常”判定。
 
 - 可复用操作技能：`~/mycc/.claude/skills/home-studio-storage-ops/SKILL.md`（磁盘盘点、迁移六道闸、swap/zram 分层、备份容量与新鲜度核验、NAS 空间是否挂载的判据）。
+
+
+## Codeg 智能体升级（2026-11-18）
+
+- npm 下载内容经 `~/.npm/_cacache` 写入 `/data/home-studio/artifacts/codeg/npm-content-cache/`。先用 `findmnt /data` 核挂载。运行中的 npx 工具、全局包和 Codeg 二进制仍用 NVMe 原路径。迁移时逐文件校验，旧内容暂存 `~/.npm/_cacache.before-codeg-20261118`，待 NAS 恢复验证后按既有规则处理。
+- 本机默认 Node 22.23.5 安装在 `~/local/node`。验升级环境以 Codeg 设置页的强制预检、实际安装日志和新会话为准。DeepSeek ACP 0.11.0 要求 Node ≥22.19.0。Codeg 的内置 DeepSeek 与独立 DSH 使用各自的版本和数据目录。
+- Codeg Web 0.45.0 的 npm 安装和二进制下载请求已在本机改为 15 分钟，其余请求沿用原有超时。发布包替换 Web 资源后，应从浏览器设置页验证一次超过 60 秒的升级，并核对落盘版本。备份在 `/data/home-studio/maintenance/codeg-agent-upgrade-20261118/`，其中包括修改前的 Web 文件和旧 Node 核心文件。后续版本先核上游实现，再决定是否需要本地修改。
