@@ -9,6 +9,8 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 遇到“后台有历史但小程序全0”、旧对话授权、使用时长缺失、新旧R1合同对接、分页失效，或小程序 Dashboard 展示/身份接入阶段调整时，先读 [真实数据与历史授权对账](references/miniapp-realdata-reconciliation.md)。按数据域建立能力矩阵，区分缺测与0；同URL不代表同合同，源码/构建/安装/真人验收分别留证。用户后置的微信接入不继续列为当前凭据阻塞。设备序列号和最新状态从本轮回执核，不沿用本技能旧日期快照。
 
+周报公式、历史持久化、迟到修订或家长/后台周报口径排查，续读 [周报计算与验收](references/weekly-report-reconciliation.md)。该参考区分真实计时和补充估算，避免把周报统计规则直接用于发币。
+
 ## 限时搜索灰度后台与验收
 
 先读 [限时语音灰度操作与交接](../voice-agent-ops/references/bounded-canary-handoff.md)：后台待测选择不等于启用派单，实际名单/窗口/健康/最近自报版本分开展示；只发布本次文件，回执与项目主入口同步，旧记录保留时间范围。

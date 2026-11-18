@@ -113,6 +113,8 @@ SQLite ATTACH的WAL库可能各自建立不同快照：事务内查绑定一次�
 
 ## 8. 可查案例
 
+周报计算、日/周结果持久化及现役客户端验收边界见 [周报计算与验收](weekly-report-reconciliation.md)。2026-11-17服务端/后台已上线，现役LiveApp源码及手机验收仍缺；完整证据入口为 `2-Projects/P003GameDemo20260513/docs/weekly-guard-20261117/README.md`，不能把参考小程序通过改写成手机通过。
+
 仓库 `2-Projects/P003GameDemo20260513/apps/server/docs/parent-history-20261116/`：对话授权/ABA回归、生产184条/10页逐字段对账、MINI009-COMPATIBILITY、mini009基线用时修复及构建待办。具体计数是2026-11-16核查值，不是永久状态。后续`records-r1/compat-20261116/`保存最小兼容HTTP/SQLite、Node22 199测试、发布及186条/10页H5证据。恢复入口以历史目录`MEMORY.md`为准。
 
 2026-11-17历史使用/奖励、Dashboard隐藏对话和短信身份阶段的最新收口：`2-Projects/P003GameDemo20260513/docs/history-identity-fix-20261117/CLOSEOUT.md`。实际数据快照、部署提交、剩余实机验证和企业认证阶段分开记录。
