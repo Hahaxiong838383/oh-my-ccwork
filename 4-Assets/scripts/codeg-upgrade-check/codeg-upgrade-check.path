@@ -1,0 +1,12 @@
+[Unit]
+Description=Check Codeg when the server, web release or running endpoint changes
+
+[Path]
+PathChanged=%h/.local/bin/codeg-server
+PathChanged=%h/.local/share/codeg/web
+PathChanged=%h/.local/share/codeg/web/settings/agents.html
+PathChanged=%h/.local/share/codeg/cli
+Unit=codeg-upgrade-check.service
+
+[Install]
+WantedBy=default.target

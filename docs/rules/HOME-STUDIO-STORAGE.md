@@ -70,4 +70,6 @@
 
 - npm 下载内容经 `~/.npm/_cacache` 写入 `/data/home-studio/artifacts/codeg/npm-content-cache/`。先用 `findmnt /data` 核挂载。运行中的 npx 工具、全局包和 Codeg 二进制仍用 NVMe 原路径。迁移时逐文件校验，旧内容暂存 `~/.npm/_cacache.before-codeg-20261118`，待 NAS 恢复验证后按既有规则处理。
 - 本机默认 Node 22.23.5 安装在 `~/local/node`。验升级环境以 Codeg 设置页的强制预检、实际安装日志和新会话为准。DeepSeek ACP 0.11.0 要求 Node ≥22.19.0。Codeg 的内置 DeepSeek 与独立 DSH 使用各自的版本和数据目录。
-- Codeg Web 0.45.0 的 npm 安装和二进制下载请求已在本机改为 15 分钟，其余请求沿用原有超时。发布包替换 Web 资源后，应从浏览器设置页验证一次超过 60 秒的升级，并核对落盘版本。备份在 `/data/home-studio/maintenance/codeg-agent-upgrade-20261118/`，其中包括修改前的 Web 文件和旧 Node 核心文件。后续版本先核上游实现，再决定是否需要本地修改。
+- Codeg 设置页的 npm 安装和二进制下载按本任务进度续时；连续 15 分钟无进度才超时。普通请求沿用原有时限。0.45.0 首次修复的备份在 `/data/home-studio/maintenance/codeg-agent-upgrade-20261118/`。
+- 本机 systemd 用户单元 `codeg-upgrade-check.path` 监听服务程序、Web 发布目录及运行端点变更；定时器在登录后及每小时补查。检查器从正在提供服务的 Agents 页定位资源，用独立 Firefox 配置测试两种安装请求的超时、进度隔离及本地补丁的 PWA 缓存刷新，同时核对服务的 Node/npm、zstd 和生效的下载缓存。浏览器测试使用模拟安装响应与虚拟时钟。
+- 发现已识别的回归时，先在隔离环境验候选修复，将本次待替换文件按原相对路径备份到 `/data/home-studio/maintenance/codeg-upgrade-check/<时间戳>/`，再替换和复验。未知构建结构会使检查失败，并尝试本机桌面通知。用 `journalctl --user -u codeg-upgrade-check.service -n 20` 看结果。单元及脚本在 `4-Assets/scripts/codeg-upgrade-check/`。

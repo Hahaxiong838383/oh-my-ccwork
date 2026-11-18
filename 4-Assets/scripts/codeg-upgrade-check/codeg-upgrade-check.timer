@@ -1,0 +1,11 @@
+[Unit]
+Description=Recheck Codeg after login and catch missed release changes
+
+[Timer]
+OnStartupSec=2min
+OnCalendar=hourly
+Persistent=true
+Unit=codeg-upgrade-check.service
+
+[Install]
+WantedBy=timers.target

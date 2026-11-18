@@ -1,0 +1,9 @@
+[Unit]
+Description=Verify Codeg web install timeouts, Node and npm storage after updates
+After=codeg-server.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/mycc/4-Assets/scripts/codeg-upgrade-check/check.py
+TimeoutStartSec=6min
+UMask=0077
