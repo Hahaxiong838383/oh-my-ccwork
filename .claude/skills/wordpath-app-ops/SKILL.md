@@ -214,3 +214,26 @@ docker exec -d --user root wx-emu sh -c '/opt/android/emulator/emulator -avd wp 
 - 结构：外观层（肤色/发型/脸/外套/配饰）与装备层（头/上衣/手持/背饰/脸）分开；宠物几何化（几何狐/机械鸟），可 2–2.5 头身。
 - 落地：0.15 基础形象 + 6 肤色/6 发型/4 外套/3 配饰；0.16 扩到 16 发型/8 外套/装备槽。
 - 文档：MyAgent `35-游戏化方向与信息架构.md` ~ `39-多邻国风格角色规范.md`；预览图 `docs/ux-preview/`。
+
+## OCR det 与模型按需下载（0.16.0）
+
+- 模型不再随包：`en_rec.onnx`/`ch_rec.onnx`/字典/`det.onnx` 共约 29MB，放更新目录 `models/ppocrv5/`，App 从内网→Lucky→VPS 下载到 `files/ocr/ppocrv5`，启动预取 + `warmUp()`。
+- 模型服务器目录：`/data/home-studio/artifacts/english-app/wordpath-updates/models/ppocrv5/`，需 rsync 到 `racknerd:/srv/wordpath/models/` 并复制进 Caddy 卷；验证 `…/wordpath/models/ppocrv5/det.onnx` 200。
+- 下载校验按**每个文件最小体积**，不要只信 `.ready` 标记（旧目录可能缺 det）。
+- det：PP-OCRv5 mobile 4.6MB，640×640、ImageNet 归一、DB 阈值 0.30、连通域+外接框+重叠合并；`det<3 行` 回退 ML Kit。
+- 新装离线首次只能走 ML Kit，联网后自动补齐；下载失败不得阻塞批改。
+- APK 体积：168.8→137.7MB（0.16.0）。
+
+## 容器内跑仪器测试（主机 gradle 看不到模拟器）
+
+```bash
+./gradlew assembleDebug assembleDebugAndroidTest
+docker cp app/build/outputs/apk/debug/app-debug.apk wx-emu:/tmp/app.apk
+docker cp app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk wx-emu:/tmp/test.apk
+docker exec --user root wx-emu sh -c '
+  /opt/android/platform-tools/adb install -r /tmp/app.apk
+  /opt/android/platform-tools/adb install -r /tmp/test.apk
+  /opt/android/platform-tools/adb shell am instrument -w     -e class com.hahaxiong.wordpath.PpDetectorTest     com.hahaxiong.wordpath.test/androidx.test.runner.AndroidJUnitRunner'
+```
+
+`connectedDebugAndroidTest` 会报 `No connected devices`，不要在这上面耗时间。
