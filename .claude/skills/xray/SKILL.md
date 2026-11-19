@@ -592,3 +592,88 @@ grep generativelanguage ~/xray/access.log | tail -1             # 见 [socks -> 
 - **双口并存**（旧端口不动 + 新域名挂新端口）→ 旧链接照用、新链接是增量，**平滑迁移零中断**。这才是零中断的正解（≠ 同口多挂 serverNames，那个 dest/证书单一做不到）。适合客户端分散 / 不能同时改 / 要过渡期。
 
 详见 memory `feedback_xray_reality_serverName_swap`。
+
+### 从零搭一台 Linux 服务端节点（REALITY 直连 + 加固 + 保活，2026-11-19 实测）
+
+> 场景：拿到一台干净 Linux VPS，要交付「直连」节点（不中转），要求稳定 + 性能 + 安全。
+> 本例：Ubuntu 24.04 / 1C1G / 法兰克福 / 家宽入向硬限 46Mbps。全程只用 Ubuntu 自带工具 + Xray 官方脚本。
+
+**1）先摸环境，别急着装**
+
+```bash
+ss -tlnp | awk 'NR>1{print $4}' | sort -u      # 443/80 有没有被占
+ip -6 addr show; ip -6 route show default      # 有没有 IPv6（没有就务必走 UseIPv4，见第 4 步）
+sysctl -n net.ipv4.tcp_congestion_control      # 是否已是 bbr
+curl -s -o /dev/null -w '%{http_code}' https://github.com   # 出网可用性
+```
+
+**2）装 Xray（官方脚本，自带 systemd unit，用户 `xray`）**
+
+```bash
+bash -c "$(curl -sL https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
+```
+
+**3）生成密钥与配置（VLESS + REALITY + Vision）**
+
+```bash
+UUID=$(xray uuid); KEYOUT=$(xray x25519)
+PRIV=$(echo "$KEYOUT" | awk -F': *' '/[Pp]rivate/{print $2}')
+PUB=$(echo "$KEYOUT"  | awk -F': *' '/[Pp]ublic|[Pp]assword/{print $2}')
+SID=$(openssl rand -hex 8)
+# 参数存服务器本地：/root/xray-de/params.json（600），**永不入 git / 不入记忆**
+```
+
+inbound 关键字段：`"listen":"0.0.0.0"`（Xray 26 实测会绑成 `[::]`，天然双栈）、`"port":443`、
+`"flow":"xtls-rprx-vision"`、`realitySettings.dest/serverNames` 用**永活静态域**（本例 `r.chenchuan.cc`）、
+`sockopt:{tcpFastOpen:true,tcpCongestion:"bbr"}`；outbound `freedom` 用 `sockopt.domainStrategy:"UseIPv4"`
+（机器无 IPv6 时必须，且能固定落地 IP）；`log.access:"none"` 省盘。
+
+**4）内核调优（/etc/sysctl.d/99-xray-tune.conf 要点）**
+
+```ini
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+net.core.rmem_max = 16777216          # BDP: 1Gbps × 121ms ≈ 15MB
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 65536 16777216
+net.ipv4.tcp_fastopen = 3
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_mtu_probing = 1
+net.ipv4.tcp_tw_reuse = 1
+```
+
+**5）加固 + 保活**
+
+```bash
+# systemd drop-in：/etc/systemd/system/xray.service.d/90-hardening.conf
+[Unit] StartLimitIntervalSec=0
+[Service] Restart=always / RestartSec=3 / OOMScoreAdjust=-500
+          ProtectSystem=full / ProtectHome=true / PrivateTmp=true / PrivateDevices=true
+          RestrictSUIDSGID=true / MemoryMax=800M
+```
+
+- `ufw default deny incoming` + 只放行 443 与 SSH（SSH 用 `limit` 而非 `allow`）；先 `ufw show added` 确认规则再 `--force enable`，避免锁死。
+- `fail2ban`（sshd，5 次/10min 封 1h）+ `unattended-upgrades` 自动安全更新。
+- 看门狗 timer（60s）：**进程/端口/出口连通性三查，出口连续 3 次失败才重启**（单次抖动不动服务）。
+
+**6）验收三件套（缺一不算过）**
+
+```bash
+echo | openssl s_client -connect <IP>:443 -servername <dest域名> 2>/dev/null | openssl x509 -noout -subject  # 必须回 dest 的真证书
+curl -s -o /dev/null -w '%{http_code}\n' --socks5-hostname 127.0.0.1:10809 https://api.anthropic.com/v1/models  # 401 = 通（不是 000）
+tail -c 20000 /var/log/xray/access.log | grep <域名>   # 期望 [socks -> <outbound tag>]，证明走的是你以为的那条
+kill -9 $(systemctl show -p MainPID --value xray); sleep 5; systemctl is-active xray   # 自愈
+```
+
+**7）两个必踩的坑**
+
+- 🔴 **服务商"加 IPv6 / 重置密码"会重启机器，cloud-init 会用 datasource 的空 key 列表把
+  `/root/.ssh/authorized_keys` 覆写成 0 字节，同时重新生成 SSH 主机密钥**（2026-11-19 实测：
+  客户端报 `REMOTE HOST IDENTIFICATION HAS CHANGED` + 公钥登录失效）。处置顺序：
+  ① 先用密码登录；② 核身份（我们自己写进机器的东西还在不在：节点参数文件里的公钥、服务状态、主机名）；
+  ③ 确认是同一台后再 `ssh-keygen -R` 更新 known_hosts、重装公钥；④ 装自愈：
+  `/etc/ssh/root-authorized-keys` + oneshot service（`After=cloud-init.target`）+ 每小时 timer，
+  被清自动补回（实测清空后能恢复）。
+- 🔴 **"带宽上不去"先怀疑上游限速，不是配置**：单流 5.6MB/s、4 并发总和仍 5.8MB/s、换 OVH/Hetzner
+  同为 5.6–5.7MB/s ⇒ 服务商入向硬限（本例 46Mbps），sysctl/BBR 再调也越不过去。反过来，
+  服务器→中国方向可能并不受限（本例同机回传 118Mbps），别把两个方向混为一谈。
