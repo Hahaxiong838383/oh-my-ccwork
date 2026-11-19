@@ -1,0 +1,93 @@
+{
+  "read_at_utc": "2026-11-18T08:04:25.598802+00:00",
+  "runtime": {
+    "node": "v22.22.2",
+    "package_version": "0.0.1",
+    "process": "p003-voice",
+    "pid": 2571942,
+    "status": "online",
+    "restart_count": 21,
+    "started_at_ms": 1794970853930
+  },
+  "task_source_matches": [],
+  "parent_task_env_keys": [],
+  "source_manifest_sha256": "59086882fcaca5671ba478703f34f3b10206e1d6c93cdf31b2f67495a2ed9dd7",
+  "release_metadata": {
+    "label": "V1.1 正式版",
+    "since": "2026-09-13T07:06:25Z",
+    "server_commit": "a1d9802df（B89 后台面板；线上 src 三文件 md5 = 仓库 HEAD）",
+    "server_tag": "p003-v1.1-oneshot-sealed-20260913（上线锚 p003-v1.1-oneshot → add34a8db）"
+  },
+  "release_metadata_note": "existing September one-shot release; not parent-task API release",
+  "matching_access_log": [
+    {
+      "at": "18/Nov/2026:15:44:15 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:18 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:19 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:36 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:52 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:53 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:54 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=history&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:44:56 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:49:59 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:50:26 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:56:00 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:56:04 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    },
+    {
+      "at": "18/Nov/2026:15:59:57 +0800",
+      "request": "GET /v1/parent/devices/dev_************9045/tasks?view=active&limit=20 HTTP/1.1",
+      "http_status": 404
+    }
+  ],
+  "key_source_sha256": {
+    "src/index.ts": "2d183ae033577796db381901b7e3e72b0029bb531639b6353ce6a0e6005e02c8",
+    "src/routes/telemetry.ts": "7a16f1fc7962e2210bf04fb63cad96d109627f12f9f2a7d6e57cf140ae84856a"
+  }
+}

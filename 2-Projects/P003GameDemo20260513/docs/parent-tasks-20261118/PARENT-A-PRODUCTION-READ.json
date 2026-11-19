@@ -1,0 +1,44 @@
+{
+  "domain": "https://kidshub-ai.hahaxiong.cc",
+  "password_login": {
+    "http": 200,
+    "read_at": "2026-11-18T17:16:05.531+08:00",
+    "role": "parent",
+    "existing_account": true
+  },
+  "tasks_active": {
+    "http": 200,
+    "read_at": "2026-11-18T17:16:07.815+08:00",
+    "count": 0,
+    "has_next": false,
+    "wallet_state": "unknown",
+    "balance": null
+  },
+  "tasks_history": {
+    "http": 200,
+    "read_at": "2026-11-18T17:16:09.226+08:00",
+    "count": 0,
+    "has_next": false,
+    "wallet_state": "unknown",
+    "balance": null
+  },
+  "dashboard": {
+    "http": 200,
+    "read_at": "2026-11-18T17:16:11.387+08:00"
+  },
+  "weekly_report": {
+    "http": 200,
+    "read_at": "2026-11-18T17:16:13.523+08:00"
+  },
+  "tasks_unauth": {
+    "http": 401,
+    "read_at": "2026-11-18T17:16:15.206+08:00",
+    "error": "unauthorized",
+    "reason": "credential_missing"
+  },
+  "wrong_password": {
+    "http": 401,
+    "read_at": "2026-11-18T17:16:16.869+08:00",
+    "error": "invalid_credentials"
+  }
+}

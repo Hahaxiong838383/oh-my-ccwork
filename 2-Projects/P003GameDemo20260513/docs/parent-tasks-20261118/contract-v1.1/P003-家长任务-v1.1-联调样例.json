@@ -1,0 +1,2399 @@
+{
+  "contract_version": "1.1",
+  "scenarios": [
+    {
+      "id": "daily_20m_35_coins",
+      "title": "日任务 20 分钟，家长确认后到账 35 币",
+      "steps": [
+        {
+          "id": "create",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks",
+            "headers": {
+              "Idempotency-Key": "fx-create-01"
+            },
+            "body": {
+              "template": "daily_reading",
+              "repeat": "repeat",
+              "goal_minutes": 20,
+              "required_days": null,
+              "reward_coins": 35,
+              "sync_to_xiaoke": true,
+              "description": null
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "repeat",
+                  "goal_minutes": 20,
+                  "required_days": null,
+                  "reward_coins": 35,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "active",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1140,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": null,
+                  "actions": [
+                    "edit",
+                    "delete"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          },
+          "note": "本组独立初值：家长拥有此设备，当日发布前已有1140秒真实使用；最近钱包快照为100枚，设备无其他收支。"
+        },
+        {
+          "id": "read_active",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "items": [
+                  {
+                    "task_id": "task_daily_01",
+                    "occurrence_id": "occ_daily_20261118",
+                    "definition_version": 1,
+                    "rule_version": 1,
+                    "template": "daily_reading",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": null,
+                    "reward_coins": 35,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "active",
+                    "period_start_ms": 1794931200000,
+                    "period_end_ms": 1795017600000,
+                    "progress": {
+                      "usage_seconds": 1140,
+                      "received_usage": true,
+                      "qualified_days": null
+                    },
+                    "device_received_version": null,
+                    "actions": [
+                      "edit",
+                      "delete"
+                    ],
+                    "settlement_id": null
+                  }
+                ],
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                },
+                "next_cursor": null
+              }
+            }
+          }
+        },
+        {
+          "id": "sync_task",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "mode": "snapshot",
+                "snapshot_version": 1,
+                "server_now_ms": 1794967290000,
+                "has_more": false,
+                "next_cursor": null,
+                "sync_cursor": "sync_a",
+                "items": [
+                  {
+                    "task_id": "task_daily_01",
+                    "occurrence_id": "occ_daily_20261118",
+                    "definition_version": 1,
+                    "rule_version": 1,
+                    "template": "daily_reading",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": null,
+                    "reward_coins": 35,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "active",
+                    "period_start_ms": 1794931200000,
+                    "period_end_ms": 1795017600000,
+                    "progress": {
+                      "usage_seconds": 1140,
+                      "received_usage": true,
+                      "qualified_days": null
+                    },
+                    "device_received_version": null,
+                    "actions": [
+                      "edit",
+                      "delete"
+                    ],
+                    "settlement_id": null
+                  }
+                ],
+                "deleted_task_ids": [],
+                "authorizations": []
+              }
+            }
+          }
+        },
+        {
+          "id": "task_received",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/receipts:batch",
+            "body": {
+              "contract_version": "1.0",
+              "receipts": [
+                {
+                  "receipt_id": "rc_task_01",
+                  "kind": "task_received",
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "definition_version": 1,
+                  "binding_version": 7,
+                  "save_id": "save_fixture_07"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "accepted_receipt_ids": [
+                  "rc_task_01"
+                ],
+                "duplicated_receipt_ids": [],
+                "rejected": []
+              }
+            }
+          },
+          "note": "设备已将对应任务版本持久化；此回执不能触发奖励。"
+        },
+        {
+          "id": "sync_last_minute",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/telemetry",
+            "body": {
+              "schema_version": 1,
+              "batch_id": "batch_focus_20",
+              "device_ts_ms": 1794967200000,
+              "events": [
+                {
+                  "event_id": "evt_focus_last_60",
+                  "type": "focus_segment",
+                  "occurred_at_ms": 1794967200000,
+                  "data": {
+                    "start_ms": 1794967140000,
+                    "end_ms": 1794967200000
+                  }
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "batch_id": "batch_focus_20",
+                "snapshot": null,
+                "acked_event_ids": [
+                  "evt_focus_last_60"
+                ],
+                "duplicated_event_ids": [],
+                "rejected": [],
+                "server_received_ms": 1794967200000
+              }
+            }
+          },
+          "note": "既有遥测接口样例。最后60秒与原有1140秒共同达到1200秒。"
+        },
+        {
+          "id": "read_ready",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01?occurrence_id=occ_daily_20261118"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "repeat",
+                  "goal_minutes": 20,
+                  "required_days": null,
+                  "reward_coins": 35,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "awaiting_confirmation",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1200,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": 1,
+                  "actions": [
+                    "confirm"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "confirm",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01/occurrences/occ_daily_20261118/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-confirm-01"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_daily_01",
+                "task_id": "task_daily_01",
+                "occurrence_id": "occ_daily_20261118",
+                "state": "pending_payment",
+                "currency": "C-FAMILY-001",
+                "amount": 35,
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "confirm_same_key",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01/occurrences/occ_daily_20261118/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-confirm-01"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_daily_01",
+                "task_id": "task_daily_01",
+                "occurrence_id": "occ_daily_20261118",
+                "state": "pending_payment",
+                "currency": "C-FAMILY-001",
+                "amount": 35,
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "confirm_other_key",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01/occurrences/occ_daily_20261118/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-confirm-02"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_daily_01",
+                "task_id": "task_daily_01",
+                "occurrence_id": "occ_daily_20261118",
+                "state": "pending_payment",
+                "currency": "C-FAMILY-001",
+                "amount": 35,
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "sync_grant",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "mode": "snapshot",
+                "snapshot_version": 2,
+                "server_now_ms": 1794967290000,
+                "has_more": false,
+                "next_cursor": null,
+                "sync_cursor": "sync_b",
+                "items": [
+                  {
+                    "task_id": "task_daily_01",
+                    "occurrence_id": "occ_daily_20261118",
+                    "definition_version": 1,
+                    "rule_version": 1,
+                    "template": "daily_reading",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": null,
+                    "reward_coins": 35,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "pending_payment",
+                    "period_start_ms": 1794931200000,
+                    "period_end_ms": 1795017600000,
+                    "progress": {
+                      "usage_seconds": 1200,
+                      "received_usage": true,
+                      "qualified_days": null
+                    },
+                    "device_received_version": 1,
+                    "actions": [],
+                    "settlement_id": "settle_daily_01"
+                  }
+                ],
+                "deleted_task_ids": [],
+                "authorizations": [
+                  {
+                    "settlement_id": "settle_daily_01",
+                    "occurrence_id": "occ_daily_20261118",
+                    "task_id": "task_daily_01",
+                    "currency": "C-FAMILY-001",
+                    "amount": 35,
+                    "binding_version": 7,
+                    "save_id": "save_fixture_07",
+                    "expires_at_ms": 1794967800000
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "wallet_applied",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/receipts:batch",
+            "body": {
+              "contract_version": "1.0",
+              "receipts": [
+                {
+                  "receipt_id": "rc_paid_01",
+                  "kind": "wallet_applied",
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "settlement_id": "settle_daily_01",
+                  "binding_version": 7,
+                  "save_id": "save_fixture_07",
+                  "amount": 35,
+                  "currency": "C-FAMILY-001",
+                  "record_id": "save_fixture_07:1",
+                  "applied_at_ms": 1794967320000,
+                  "post_snapshot_id": "snap_fixture_135"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "accepted_receipt_ids": [
+                  "rc_paid_01"
+                ],
+                "duplicated_receipt_ids": [],
+                "rejected": []
+              }
+            }
+          },
+          "note": "设备已原子提交钱包、结算凭证及可恢复事实，设备本地100→135。快照ID已确定，快照上传稍后完成。"
+        },
+        {
+          "id": "read_paid_syncing",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01?occurrence_id=occ_daily_20261118"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "repeat",
+                  "goal_minutes": 20,
+                  "required_days": null,
+                  "reward_coins": 35,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "paid",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1200,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": 1,
+                  "actions": [],
+                  "settlement_id": "settle_daily_01"
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "syncing"
+                }
+              }
+            }
+          },
+          "note": "当前读取最后真实云端快照100；到账状态已由可信回执确立。"
+        },
+        {
+          "id": "ark_state",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/ark/state",
+            "body": {
+              "schema_version": 1,
+              "snapshot_id": "snap_fixture_135",
+              "captured_at_ms": 1794967321000,
+              "boot_id": "boot_fixture_01",
+              "boot_started_at_ms": 1794960000000,
+              "sequence": 2,
+              "logical_day": "2026-11-18",
+              "config_revision": "fixture-config",
+              "content_version": "fixture-content",
+              "source_mode": "normal",
+              "wallets": {
+                "family_coin": 135,
+                "stardust": 0
+              },
+              "inventory": {
+                "M-CARD-001": 0
+              },
+              "progress": {
+                "timer_state": "paused",
+                "next_reward": {
+                  "status": "unknown",
+                  "kind": "unknown",
+                  "item_id": null,
+                  "stage_id": null,
+                  "remaining_seconds": null
+                },
+                "claimable_count": null
+              }
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "status": "accepted",
+              "received_at_ms": 1794967323000
+            }
+          },
+          "note": "沿用严格旧快照协议，保持现役顶层 ACK 格式；请求体没有任务自定义字段。"
+        },
+        {
+          "id": "read_paid_synced",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01?occurrence_id=occ_daily_20261118"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "repeat",
+                  "goal_minutes": 20,
+                  "required_days": null,
+                  "reward_coins": 35,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "paid",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1200,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": 1,
+                  "actions": [],
+                  "settlement_id": "settle_daily_01"
+                },
+                "wallet": {
+                  "family_coin": 135,
+                  "snapshot_id": "snap_fixture_135",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "confirm_after_paid",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01/occurrences/occ_daily_20261118/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-confirm-after-paid"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_daily_01",
+                "task_id": "task_daily_01",
+                "occurrence_id": "occ_daily_20261118",
+                "state": "paid",
+                "currency": "C-FAMILY-001",
+                "amount": 35,
+                "wallet": {
+                  "family_coin": 135,
+                  "snapshot_id": "snap_fixture_135",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "admin_read",
+          "request": {
+            "method": "GET",
+            "path": "/api/admin/devices/BJP00300000000000000/miniapp/parent-tasks"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "items": [
+                  {
+                    "task_id": "task_daily_01",
+                    "occurrence_id": "occ_daily_20261118",
+                    "definition_version": 1,
+                    "rule_version": 1,
+                    "template": "daily_reading",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": null,
+                    "reward_coins": 35,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "paid",
+                    "period_start_ms": 1794931200000,
+                    "period_end_ms": 1795017600000,
+                    "progress": {
+                      "usage_seconds": 1200,
+                      "received_usage": true,
+                      "qualified_days": null
+                    },
+                    "device_received_version": 1,
+                    "actions": [],
+                    "settlement_id": "settle_daily_01"
+                  }
+                ],
+                "wallet": {
+                  "family_coin": 135,
+                  "snapshot_id": "snap_fixture_135",
+                  "sync_state": "synced"
+                },
+                "next_cursor": null,
+                "audit": {
+                  "settlement_id": "settle_daily_01",
+                  "wallet_receipt": "accepted",
+                  "r1_state": "pending",
+                  "post_snapshot_id": "snap_fixture_135"
+                }
+              }
+            }
+          },
+          "note": "管理员只读，到账状态、可花余额和家长查询一致；R1稍后核对。"
+        }
+      ]
+    },
+    {
+      "id": "weekly_parallel",
+      "title": "相邻周共存，旧期待确认且奖励锁定，本期可以编辑",
+      "steps": [
+        {
+          "id": "weekly_list",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "items": [
+                  {
+                    "task_id": "task_weekly_02",
+                    "occurrence_id": "occ_week_1109",
+                    "definition_version": 2,
+                    "rule_version": 1,
+                    "template": "weekly_usage",
+                    "repeat": "repeat",
+                    "goal_minutes": 30,
+                    "required_days": 5,
+                    "reward_coins": 150,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "awaiting_confirmation",
+                    "period_start_ms": 1794153600000,
+                    "period_end_ms": 1794758400000,
+                    "progress": {
+                      "usage_seconds": 9000,
+                      "received_usage": true,
+                      "qualified_days": 5,
+                      "days": [
+                        {
+                          "date": "2026-11-09",
+                          "usage_seconds": 1800
+                        },
+                        {
+                          "date": "2026-11-10",
+                          "usage_seconds": 1800
+                        },
+                        {
+                          "date": "2026-11-11",
+                          "usage_seconds": 1800
+                        },
+                        {
+                          "date": "2026-11-12",
+                          "usage_seconds": 1800
+                        },
+                        {
+                          "date": "2026-11-13",
+                          "usage_seconds": 1800
+                        }
+                      ]
+                    },
+                    "device_received_version": 2,
+                    "actions": [
+                      "confirm"
+                    ],
+                    "settlement_id": null
+                  },
+                  {
+                    "task_id": "task_weekly_02",
+                    "occurrence_id": "occ_week_1116",
+                    "definition_version": 2,
+                    "rule_version": 2,
+                    "template": "weekly_usage",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": 3,
+                    "reward_coins": 90,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "active",
+                    "period_start_ms": 1794758400000,
+                    "period_end_ms": 1795363200000,
+                    "progress": {
+                      "usage_seconds": 1200,
+                      "received_usage": true,
+                      "qualified_days": 1,
+                      "days": [
+                        {
+                          "date": "2026-11-16",
+                          "usage_seconds": 1200
+                        }
+                      ]
+                    },
+                    "device_received_version": 2,
+                    "actions": [
+                      "edit",
+                      "delete"
+                    ],
+                    "settlement_id": null
+                  }
+                ],
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                },
+                "next_cursor": null
+              }
+            }
+          },
+          "note": "按周期各一行；旧周保有150枚，definition_version显示当前定义版本，rule_version为该周期锁定版本。周进度按北京时间日期列出已收到的秒数。"
+        },
+        {
+          "id": "edit_current",
+          "request": {
+            "method": "PATCH",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_weekly_02",
+            "headers": {
+              "Idempotency-Key": "fx-edit-week-02"
+            },
+            "body": {
+              "occurrence_id": "occ_week_1116",
+              "expected_definition_version": 2,
+              "reward_coins": 95
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_weekly_02",
+                  "occurrence_id": "occ_week_1116",
+                  "definition_version": 3,
+                  "rule_version": 3,
+                  "template": "weekly_usage",
+                  "repeat": "repeat",
+                  "goal_minutes": 20,
+                  "required_days": 3,
+                  "reward_coins": 95,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "active",
+                  "period_start_ms": 1794758400000,
+                  "period_end_ms": 1795363200000,
+                  "progress": {
+                    "usage_seconds": 1200,
+                    "received_usage": true,
+                    "qualified_days": 1,
+                    "days": [
+                      {
+                        "date": "2026-11-16",
+                        "usage_seconds": 1200
+                      }
+                    ]
+                  },
+                  "device_received_version": 2,
+                  "actions": [
+                    "edit",
+                    "delete"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "reject_old_edit",
+          "request": {
+            "method": "PATCH",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_weekly_02",
+            "headers": {
+              "Idempotency-Key": "fx-edit-week-old"
+            },
+            "body": {
+              "occurrence_id": "occ_week_1109",
+              "expected_definition_version": 3,
+              "reward_coins": 95
+            }
+          },
+          "response": {
+            "status": 409,
+            "body": {
+              "ok": false,
+              "error": "state_conflict",
+              "reason": "occurrence_locked"
+            }
+          }
+        },
+        {
+          "id": "confirm_old_week",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_weekly_02/occurrences/occ_week_1109/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-confirm-week-old"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_week_old",
+                "task_id": "task_weekly_02",
+                "occurrence_id": "occ_week_1109",
+                "state": "pending_payment",
+                "currency": "C-FAMILY-001",
+                "amount": 150,
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "delete_recreate",
+      "title": "删除前28分钟＋迟到5分钟；旧、新任务各确认一次",
+      "steps": [
+        {
+          "id": "old_before_delete",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_old_03?occurrence_id=occ_old_03"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_old_03",
+                  "occurrence_id": "occ_old_03",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "once",
+                  "goal_minutes": 30,
+                  "required_days": null,
+                  "reward_coins": 10,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "active",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1680,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": null,
+                  "actions": [
+                    "edit",
+                    "delete"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          },
+          "note": "本组独立初值：08:00–08:28 已收；09:00 删除前另有08:30–08:35真实片段尚在端侧。"
+        },
+        {
+          "id": "delete_old",
+          "request": {
+            "method": "DELETE",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_old_03?occurrence_id=occ_old_03&expected_definition_version=1",
+            "headers": {
+              "Idempotency-Key": "fx-delete-old"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "task_id": "task_old_03",
+                "occurrence_id": "occ_old_03",
+                "deleted_at_ms": 1794963600000
+              }
+            }
+          }
+        },
+        {
+          "id": "recreate",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks",
+            "headers": {
+              "Idempotency-Key": "fx-recreate"
+            },
+            "body": {
+              "template": "daily_reading",
+              "repeat": "once",
+              "goal_minutes": 30,
+              "required_days": null,
+              "reward_coins": 15,
+              "sync_to_xiaoke": true,
+              "description": null
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_new_03",
+                  "occurrence_id": "occ_new_03",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "once",
+                  "goal_minutes": 30,
+                  "required_days": null,
+                  "reward_coins": 15,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "active",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1680,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": null,
+                  "actions": [
+                    "edit",
+                    "delete"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          },
+          "note": "09:05 重建，同日同租户；初始仍可复用已收到的28分钟。"
+        },
+        {
+          "id": "late_five",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/telemetry",
+            "body": {
+              "schema_version": 1,
+              "batch_id": "batch_late_03",
+              "device_ts_ms": 1794964800000,
+              "events": [
+                {
+                  "event_id": "evt_before_delete_03",
+                  "type": "focus_segment",
+                  "occurred_at_ms": 1794962100000,
+                  "data": {
+                    "start_ms": 1794961800000,
+                    "end_ms": 1794962100000
+                  }
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "batch_id": "batch_late_03",
+                "snapshot": null,
+                "acked_event_ids": [
+                  "evt_before_delete_03"
+                ],
+                "duplicated_event_ids": [],
+                "rejected": [],
+                "server_received_ms": 1794964800000
+              }
+            }
+          }
+        },
+        {
+          "id": "old_reopened",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_old_03?occurrence_id=occ_old_03"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_old_03",
+                  "occurrence_id": "occ_old_03",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "once",
+                  "goal_minutes": 30,
+                  "required_days": null,
+                  "reward_coins": 10,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "awaiting_confirmation",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1980,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": null,
+                  "actions": [
+                    "confirm"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          },
+          "note": "旧定义已删除。这个旧周期仅因删除前确已发生的片段补齐而可确认；删除后发生的不再计入旧任务。"
+        },
+        {
+          "id": "new_recomputed",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_new_03?occurrence_id=occ_new_03"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_new_03",
+                  "occurrence_id": "occ_new_03",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "once",
+                  "goal_minutes": 30,
+                  "required_days": null,
+                  "reward_coins": 15,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "awaiting_confirmation",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1980,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": null,
+                  "actions": [
+                    "confirm"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "confirm_old",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_old_03/occurrences/occ_old_03/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-old-confirm"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_deleted_03",
+                "task_id": "task_old_03",
+                "occurrence_id": "occ_old_03",
+                "state": "pending_payment",
+                "currency": "C-FAMILY-001",
+                "amount": 10,
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "confirm_new",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_new_03/occurrences/occ_new_03/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-new-confirm"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "settlement_id": "settle_recreated_03",
+                "task_id": "task_new_03",
+                "occurrence_id": "occ_new_03",
+                "state": "pending_payment",
+                "currency": "C-FAMILY-001",
+                "amount": 15,
+                "wallet": {
+                  "family_coin": 100,
+                  "snapshot_id": "snap_fixture_100",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          },
+          "note": "不同任务/周期各保留自己的金额与独立结算；之后两笔各入账一次，余额才可由100变为125。"
+        }
+      ]
+    },
+    {
+      "id": "sync_paging",
+      "title": "空列表、全量中断续页、增量删除与游标失效",
+      "steps": [
+        {
+          "id": "parent_empty",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "items": [],
+                "wallet": {
+                  "family_coin": null,
+                  "snapshot_id": null,
+                  "sync_state": "unknown"
+                },
+                "next_cursor": null
+              }
+            }
+          },
+          "note": "独立空设备夹具，暂无已同步的可信钱包快照。"
+        },
+        {
+          "id": "zero_reported_usage",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_empty_05?occurrence_id=occ_empty_05"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_empty_05",
+                  "occurrence_id": "occ_empty_05",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "repeat",
+                  "goal_minutes": 20,
+                  "required_days": null,
+                  "reward_coins": 35,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "active",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 0,
+                    "received_usage": false,
+                    "qualified_days": null
+                  },
+                  "device_received_version": null,
+                  "actions": [
+                    "edit",
+                    "delete"
+                  ],
+                  "settlement_id": null
+                },
+                "wallet": {
+                  "family_coin": null,
+                  "snapshot_id": null,
+                  "sync_state": "unknown"
+                }
+              }
+            }
+          },
+          "note": "另一个已有任务的初始读取；尚无可用时长片段，不能当成孩子真实使用为零。"
+        },
+        {
+          "id": "page1",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "mode": "snapshot",
+                "snapshot_version": 20,
+                "server_now_ms": 1794967290000,
+                "has_more": true,
+                "next_cursor": "page_20_b",
+                "sync_cursor": null,
+                "items": [
+                  {
+                    "task_id": "task_weekly_02",
+                    "occurrence_id": "occ_week_1116",
+                    "definition_version": 2,
+                    "rule_version": 2,
+                    "template": "weekly_usage",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": 3,
+                    "reward_coins": 90,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "active",
+                    "period_start_ms": 1794758400000,
+                    "period_end_ms": 1795363200000,
+                    "progress": {
+                      "usage_seconds": 1200,
+                      "received_usage": true,
+                      "qualified_days": 1,
+                      "days": [
+                        {
+                          "date": "2026-11-16",
+                          "usage_seconds": 1200
+                        }
+                      ]
+                    },
+                    "device_received_version": 2,
+                    "actions": [
+                      "edit",
+                      "delete"
+                    ],
+                    "settlement_id": null
+                  }
+                ],
+                "deleted_task_ids": [],
+                "authorizations": []
+              }
+            }
+          },
+          "note": "独立分页夹具。取得部分全量后网络中断，设备维持上一次成功快照；此时不能推断未看到的任务已被删除。"
+        },
+        {
+          "id": "page2",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1",
+              "cursor": "page_20_b"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "mode": "snapshot",
+                "snapshot_version": 20,
+                "server_now_ms": 1794967290000,
+                "has_more": false,
+                "next_cursor": null,
+                "sync_cursor": "sync_20",
+                "items": [
+                  {
+                    "task_id": "task_daily_01",
+                    "occurrence_id": "occ_daily_20261118",
+                    "definition_version": 1,
+                    "rule_version": 1,
+                    "template": "daily_reading",
+                    "repeat": "repeat",
+                    "goal_minutes": 20,
+                    "required_days": null,
+                    "reward_coins": 35,
+                    "sync_to_xiaoke": true,
+                    "description": null,
+                    "state": "active",
+                    "period_start_ms": 1794931200000,
+                    "period_end_ms": 1795017600000,
+                    "progress": {
+                      "usage_seconds": 1140,
+                      "received_usage": true,
+                      "qualified_days": null
+                    },
+                    "device_received_version": null,
+                    "actions": [
+                      "edit",
+                      "delete"
+                    ],
+                    "settlement_id": null
+                  }
+                ],
+                "deleted_task_ids": [],
+                "authorizations": []
+              }
+            }
+          },
+          "note": "末页到达后原子合并两页，再保存 sync_cursor。"
+        },
+        {
+          "id": "delta_remove",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1",
+              "since_cursor": "sync_20"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "mode": "delta",
+                "snapshot_version": 21,
+                "server_now_ms": 1794967290000,
+                "has_more": false,
+                "next_cursor": null,
+                "sync_cursor": "sync_21",
+                "items": [],
+                "deleted_task_ids": [
+                  "task_weekly_02"
+                ],
+                "authorizations": []
+              }
+            }
+          }
+        },
+        {
+          "id": "delta_empty",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1",
+              "since_cursor": "sync_21"
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "mode": "delta",
+                "snapshot_version": 21,
+                "server_now_ms": 1794967290000,
+                "has_more": false,
+                "next_cursor": null,
+                "sync_cursor": "sync_21",
+                "items": [],
+                "deleted_task_ids": [],
+                "authorizations": []
+              }
+            }
+          },
+          "note": "增量无变更，保留现有本地任务。"
+        },
+        {
+          "id": "cursor_invalid",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1",
+              "since_cursor": "expired_cursor"
+            }
+          },
+          "response": {
+            "status": 409,
+            "body": {
+              "ok": false,
+              "error": "cursor_invalid",
+              "reason": "full_sync_required"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "errors_and_ack",
+      "title": "版本冲突、未知设备能力、错归属和逐条回执",
+      "steps": [
+        {
+          "id": "stale_edit",
+          "request": {
+            "method": "PATCH",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01",
+            "headers": {
+              "Idempotency-Key": "fx-edit-stale"
+            },
+            "body": {
+              "occurrence_id": "occ_daily_20261118",
+              "expected_definition_version": 0,
+              "reward_coins": 11
+            }
+          },
+          "response": {
+            "status": 409,
+            "body": {
+              "ok": false,
+              "error": "version_conflict",
+              "reason": "definition_version_mismatch"
+            }
+          }
+        },
+        {
+          "id": "not_eligible",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01/occurrences/occ_daily_20261118/confirm",
+            "headers": {
+              "Idempotency-Key": "fx-too-early"
+            },
+            "body": {}
+          },
+          "response": {
+            "status": 409,
+            "body": {
+              "ok": false,
+              "error": "state_conflict",
+              "reason": "occurrence_not_eligible"
+            }
+          }
+        },
+        {
+          "id": "foreign_device",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_daily_01?occurrence_id=occ_daily_20261118"
+          },
+          "response": {
+            "status": 404,
+            "body": {
+              "ok": false,
+              "error": "not_found",
+              "reason": "resource_not_found"
+            }
+          },
+          "note": "切换到另一位家长的现有 Bearer，不能据此枚举设备或任务。"
+        },
+        {
+          "id": "unsupported_client",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "0.9",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1"
+            }
+          },
+          "response": {
+            "status": 426,
+            "body": {
+              "ok": false,
+              "error": "upgrade_required",
+              "reason": "unsupported_contract_version"
+            }
+          }
+        },
+        {
+          "id": "stale_binding",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 6,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1"
+            }
+          },
+          "response": {
+            "status": 409,
+            "body": {
+              "ok": false,
+              "error": "identity_conflict",
+              "reason": "binding_version_mismatch"
+            }
+          },
+          "note": "设备凭据本身有效但请求内的任务归属代次已过期。"
+        },
+        {
+          "id": "partial_ack",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/receipts:batch",
+            "body": {
+              "contract_version": "1.0",
+              "receipts": [
+                {
+                  "receipt_id": "rc_task_01",
+                  "kind": "task_received",
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "definition_version": 1,
+                  "binding_version": 7,
+                  "save_id": "save_fixture_07"
+                },
+                {
+                  "receipt_id": "rc_paid_01",
+                  "kind": "wallet_applied",
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "settlement_id": "settle_daily_01",
+                  "binding_version": 7,
+                  "save_id": "save_fixture_07",
+                  "amount": 35,
+                  "currency": "C-FAMILY-001",
+                  "record_id": "save_fixture_07:1",
+                  "applied_at_ms": 1794967320000,
+                  "post_snapshot_id": "snap_fixture_135"
+                },
+                {
+                  "receipt_id": "rc_wrong_save",
+                  "kind": "wallet_applied",
+                  "task_id": "task_daily_01",
+                  "occurrence_id": "occ_daily_20261118",
+                  "settlement_id": "settle_daily_01",
+                  "binding_version": 7,
+                  "save_id": "save_wrong",
+                  "amount": 35,
+                  "currency": "C-FAMILY-001",
+                  "record_id": "save_fixture_07:1",
+                  "applied_at_ms": 1794967320000,
+                  "post_snapshot_id": "snap_fixture_135"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "accepted_receipt_ids": [
+                  "rc_task_01"
+                ],
+                "duplicated_receipt_ids": [
+                  "rc_paid_01"
+                ],
+                "rejected": [
+                  {
+                    "receipt_id": "rc_wrong_save",
+                    "reason": "save_id_mismatch",
+                    "retryable": false
+                  }
+                ]
+              }
+            }
+          },
+          "note": "独立前置：服务端已持久保存 ar；该批另一任务版本接收回执尚未记账。仅 accepted/duplicated 两项可按成功出队，错归属项保留待核。"
+        },
+        {
+          "id": "reward_out_of_range",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks",
+            "headers": {
+              "Idempotency-Key": "fx-invalid-amount"
+            },
+            "body": {
+              "template": "daily_reading",
+              "repeat": "repeat",
+              "goal_minutes": 20,
+              "required_days": null,
+              "reward_coins": 501,
+              "sync_to_xiaoke": true,
+              "description": null
+            }
+          },
+          "response": {
+            "status": 400,
+            "body": {
+              "ok": false,
+              "error": "bad_request",
+              "reason": "reward_out_of_range"
+            }
+          }
+        },
+        {
+          "id": "create_key_conflict",
+          "request": {
+            "method": "POST",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks",
+            "headers": {
+              "Idempotency-Key": "fx-create-01"
+            },
+            "body": {
+              "template": "daily_reading",
+              "repeat": "repeat",
+              "goal_minutes": 20,
+              "required_days": null,
+              "reward_coins": 36,
+              "sync_to_xiaoke": true,
+              "description": null
+            }
+          },
+          "response": {
+            "status": 409,
+            "body": {
+              "ok": false,
+              "error": "idempotency_conflict",
+              "reason": "key_reused_with_different_body"
+            }
+          },
+          "note": "前置：同一调用方已经用 fx-create-01 成功创建 35 币任务；同键更改请求正文不创建第二项。"
+        },
+        {
+          "id": "unauthenticated",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks"
+          },
+          "response": {
+            "status": 401,
+            "body": {
+              "ok": false,
+              "error": "unauthorized",
+              "reason": "credential_missing"
+            }
+          },
+          "note": "本例无家长登录态。其他样例省略鉴权值。"
+        },
+        {
+          "id": "role_forbidden",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks"
+          },
+          "response": {
+            "status": 403,
+            "body": {
+              "ok": false,
+              "error": "forbidden",
+              "reason": "parent_role_required"
+            }
+          },
+          "note": "本例使用有效设备身份请求家长列表。"
+        },
+        {
+          "id": "rate_limited",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/sync",
+            "body": {
+              "contract_version": "1.0",
+              "binding_version": 7,
+              "save_id": "save_fixture_07",
+              "source_mode": "normal",
+              "client_version": "fixture-parent-task-v1"
+            }
+          },
+          "response": {
+            "status": 429,
+            "body": {
+              "ok": false,
+              "error": "rate_limited",
+              "reason": "retry_later"
+            },
+            "headers": {
+              "Retry-After": "5"
+            }
+          }
+        },
+        {
+          "id": "dependency_unavailable",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks"
+          },
+          "response": {
+            "status": 503,
+            "body": {
+              "ok": false,
+              "error": "temporarily_unavailable",
+              "reason": "retry_later"
+            },
+            "headers": {
+              "Retry-After": "5"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "r1_before_receipt",
+      "title": "R1 和快照先到，可信到账回执后到",
+      "steps": [
+        {
+          "id": "r1_first",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/ark/records:batch",
+            "body": {
+              "schema_version": 1,
+              "contract_id": "p003-ark-records-r1",
+              "batch_id": "r1batch_04",
+              "save_id": "save_fixture_07",
+              "coverage_from_ms": 1794960000000,
+              "dropped_records": 0,
+              "records": [
+                {
+                  "record_id": "save_fixture_07:4",
+                  "save_id": "save_fixture_07",
+                  "sequence": 4,
+                  "occurred_at_ms": 1794967320000,
+                  "logical_day": "2026-11-18",
+                  "source_mode": "normal",
+                  "config_revision": "fixture-config",
+                  "active_ecotank_id": null,
+                  "record_kind": "business_commit",
+                  "data": {
+                    "wallet_changes": [
+                      {
+                        "resource_id": "C-FAMILY-001",
+                        "before": 100,
+                        "after": 110,
+                        "delta": 10
+                      }
+                    ],
+                    "inventory_changes": [],
+                    "grants": [
+                      {
+                        "reward_instance_id": "settle_order_04",
+                        "source_kind": "parent_task",
+                        "source_id": "occ_order_04",
+                        "logical_day": "2026-11-18",
+                        "config_revision": "fixture-config",
+                        "granted_at_ms": 1794967320000,
+                        "status": "granted",
+                        "resolved_rewards": [
+                          {
+                            "kind": "currency",
+                            "item_id": "C-FAMILY-001",
+                            "quantity": 10,
+                            "tank_id": null,
+                            "layer": null
+                          }
+                        ]
+                      }
+                    ],
+                    "makeup_grants": [],
+                    "makeup_uses": [],
+                    "previous_source_mode": "normal"
+                  }
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "schema_version": 1,
+                "batch_id": "r1batch_04",
+                "accepted_record_ids": [
+                  "save_fixture_07:4"
+                ],
+                "duplicated_record_ids": [],
+                "rejected": [],
+                "server_received_ms": 1794967325000
+              }
+            }
+          },
+          "note": "本组独立初值：家长已确认10枚，设备已入账、到账回执仍在端侧。使用现有 mini R1 business_commit 结构，v1.0 服务端须校验 parent_task 的 settlement/周期/钱包变更。"
+        },
+        {
+          "id": "snapshot_first",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/ark/state",
+            "body": {
+              "schema_version": 1,
+              "snapshot_id": "snap_fixture_110",
+              "captured_at_ms": 1794967321000,
+              "boot_id": "boot_fixture_01",
+              "boot_started_at_ms": 1794960000000,
+              "sequence": 2,
+              "logical_day": "2026-11-18",
+              "config_revision": "fixture-config",
+              "content_version": "fixture-content",
+              "source_mode": "normal",
+              "wallets": {
+                "family_coin": 110,
+                "stardust": 0
+              },
+              "inventory": {
+                "M-CARD-001": 0
+              },
+              "progress": {
+                "timer_state": "paused",
+                "next_reward": {
+                  "status": "unknown",
+                  "kind": "unknown",
+                  "item_id": null,
+                  "stage_id": null,
+                  "remaining_seconds": null
+                },
+                "claimable_count": null
+              }
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "status": "accepted",
+              "received_at_ms": 1794967326000
+            }
+          }
+        },
+        {
+          "id": "read_before_receipt",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_order_04?occurrence_id=occ_order_04"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_order_04",
+                  "occurrence_id": "occ_order_04",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "once",
+                  "goal_minutes": 30,
+                  "required_days": null,
+                  "reward_coins": 10,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "pending_payment",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1800,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": 1,
+                  "actions": [],
+                  "settlement_id": "settle_order_04"
+                },
+                "wallet": {
+                  "family_coin": 110,
+                  "snapshot_id": "snap_fixture_110",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          },
+          "note": "云已收到110的真实钱包快照。任务仍待到账凭证，单靠余额变化或R1不宣告该任务已到账，重试沿用同一结算。"
+        },
+        {
+          "id": "receipt_last",
+          "request": {
+            "method": "POST",
+            "path": "/v1/device/parent-tasks/receipts:batch",
+            "body": {
+              "contract_version": "1.0",
+              "receipts": [
+                {
+                  "receipt_id": "rc_paid_04",
+                  "kind": "wallet_applied",
+                  "task_id": "task_order_04",
+                  "occurrence_id": "occ_order_04",
+                  "settlement_id": "settle_order_04",
+                  "binding_version": 7,
+                  "save_id": "save_fixture_07",
+                  "amount": 10,
+                  "currency": "C-FAMILY-001",
+                  "record_id": "save_fixture_07:4",
+                  "applied_at_ms": 1794967320000,
+                  "post_snapshot_id": "snap_fixture_110"
+                }
+              ]
+            }
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "accepted_receipt_ids": [
+                  "rc_paid_04"
+                ],
+                "duplicated_receipt_ids": [],
+                "rejected": []
+              }
+            }
+          }
+        },
+        {
+          "id": "read_reconciled",
+          "request": {
+            "method": "GET",
+            "path": "/v1/parent/devices/dev_0000000000000001/tasks/task_order_04?occurrence_id=occ_order_04"
+          },
+          "response": {
+            "status": 200,
+            "body": {
+              "ok": true,
+              "data": {
+                "item": {
+                  "task_id": "task_order_04",
+                  "occurrence_id": "occ_order_04",
+                  "definition_version": 1,
+                  "rule_version": 1,
+                  "template": "daily_reading",
+                  "repeat": "once",
+                  "goal_minutes": 30,
+                  "required_days": null,
+                  "reward_coins": 10,
+                  "sync_to_xiaoke": true,
+                  "description": null,
+                  "state": "paid",
+                  "period_start_ms": 1794931200000,
+                  "period_end_ms": 1795017600000,
+                  "progress": {
+                    "usage_seconds": 1800,
+                    "received_usage": true,
+                    "qualified_days": null
+                  },
+                  "device_received_version": 1,
+                  "actions": [],
+                  "settlement_id": "settle_order_04"
+                },
+                "wallet": {
+                  "family_coin": 110,
+                  "snapshot_id": "snap_fixture_110",
+                  "sync_state": "synced"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "acceptance_note": "acceptance_cases 是待联调的界面和对账预期。related_steps 引用同场景的已有 HTTP 样例；action 中的重放与查看由测试方执行。提示数在本用例的同一绑定与存档内累计，以孩子实际看到的主动反馈计；历史条数只统计本用例涉及的已入账家长任务收入。history_match 描述两端收益历史应能追溯的同一来源，可用服务端查询映射标识。手机端 read_ready 用于核对云端状态；方舟用既有 D/sync 取得相同周期的状态。主线 35 币的 R1 必须使用该结算自己的标识和金额，10 币乱序用例独立。 小程序和后台均复用现有逐笔历史入口；服务端须核实到账并关联该笔 R1 后验证最终条数。",
+  "acceptance_cases": [
+    {
+      "id": "child_feedback_and_income",
+      "scenario_id": "daily_20m_35_coins",
+      "given": "20 分钟、35 币、初始余额 100、提醒开启且无其他收支。方舟先在线收到本期达标状态并展示，再离线，家长随后确认。",
+      "prompt_keys": {
+        "qualified_prompt": {
+          "occurrence_id": "occ_daily_20261118"
+        },
+        "paid_prompt": {
+          "settlement_id": "settle_daily_01"
+        }
+      },
+      "stages": [
+        {
+          "action": "方舟同步到本期已达标，孩子看到“任务已完成，等待家长确认奖励”。",
+          "related_steps": [
+            "read_ready"
+          ],
+          "expect": {
+            "qualified_prompt_count": 1,
+            "paid_prompt_count": 0,
+            "miniapp_paid_income_rows": 0,
+            "admin_paid_income_rows": 0,
+            "device_balance": 100
+          }
+        },
+        {
+          "action": "重复同步同一期，退出重进任务页并重启设备。",
+          "related_steps": [
+            "read_ready"
+          ],
+          "expect": {
+            "qualified_prompt_count": 1,
+            "paid_prompt_count": 0,
+            "device_balance": 100
+          }
+        },
+        {
+          "action": "方舟离线，家长确认并以相同和不同幂等键重复确认。",
+          "related_steps": [
+            "confirm",
+            "confirm_same_key",
+            "confirm_other_key"
+          ],
+          "expect": {
+            "qualified_prompt_count": 1,
+            "paid_prompt_count": 0,
+            "miniapp_paid_income_rows": 0,
+            "admin_paid_income_rows": 0,
+            "task_state": "pending_payment",
+            "device_balance": 100
+          }
+        },
+        {
+          "action": "设备恢复联网，反复拉取同一授权；在钱包实际入账前检查。",
+          "related_steps": [
+            "sync_grant"
+          ],
+          "expect": {
+            "qualified_prompt_count": 1,
+            "paid_prompt_count": 0,
+            "miniapp_paid_income_rows": 0,
+            "admin_paid_income_rows": 0,
+            "device_balance": 100
+          }
+        },
+        {
+          "action": "方舟钱包已持久化同一结算，孩子看到“35 家族币已到账”；云端收到账凭证，快照稍后上传。",
+          "related_steps": [
+            "wallet_applied",
+            "read_paid_syncing"
+          ],
+          "expect": {
+            "qualified_prompt_count": 1,
+            "paid_prompt_count": 1,
+            "task_state": "paid",
+            "device_balance": 135,
+            "miniapp_snapshot_balance": 100,
+            "miniapp_wallet_sync_state": "syncing"
+          }
+        },
+        {
+          "action": "上传真实快照与对应 R1，重放同一回执、R1 和快照，重启方舟、重进任务页并刷新两端收益历史。",
+          "related_steps": [
+            "wallet_applied",
+            "ark_state",
+            "read_paid_synced",
+            "confirm_after_paid",
+            "admin_read"
+          ],
+          "expect": {
+            "qualified_prompt_count": 1,
+            "paid_prompt_count": 1,
+            "miniapp_paid_income_rows": 1,
+            "admin_paid_income_rows": 1,
+            "history_match": [
+              {
+                "source_kind": "parent_task",
+                "source_id": "occ_daily_20261118",
+                "reward_instance_id": "settle_daily_01",
+                "currency": "C-FAMILY-001",
+                "amount": 35
+              }
+            ],
+            "attributed_income_per_view": 35,
+            "device_balance": 135,
+            "miniapp_snapshot_balance": 135
+          }
+        }
+      ]
+    },
+    {
+      "id": "muted_task",
+      "scenario_id": "daily_20m_35_coins",
+      "given": "独立重跑日任务；本轮创建时关闭主动提醒，方舟保持同一绑定、存档。使用主线同样的时长、金额及结算流程。",
+      "configuration": {
+        "sync_to_xiaoke": false
+      },
+      "stages": [
+        {
+          "action": "达标后查看任务详情并重新同步。",
+          "related_steps": [
+            "read_ready"
+          ],
+          "expect": {
+            "qualified_prompt_count": 0,
+            "paid_prompt_count": 0,
+            "device_task_visible": true,
+            "task_state": "awaiting_confirmation",
+            "miniapp_paid_income_rows": 0,
+            "admin_paid_income_rows": 0
+          }
+        },
+        {
+          "action": "家长确认时方舟先离线，待到账期间查看小程序。",
+          "related_steps": [
+            "confirm"
+          ],
+          "expect": {
+            "qualified_prompt_count": 0,
+            "paid_prompt_count": 0,
+            "task_state": "pending_payment",
+            "miniapp_paid_income_rows": 0,
+            "admin_paid_income_rows": 0
+          }
+        },
+        {
+          "action": "方舟联网完成入账；可信回执、钱包快照及同笔 R1 同步后查看任务详情、余额与两端收益历史。",
+          "related_steps": [
+            "wallet_applied",
+            "ark_state",
+            "read_paid_synced",
+            "admin_read"
+          ],
+          "expect": {
+            "qualified_prompt_count": 0,
+            "paid_prompt_count": 0,
+            "device_task_visible": true,
+            "task_state": "paid",
+            "device_balance": 135,
+            "miniapp_snapshot_balance": 135,
+            "miniapp_paid_income_rows": 1,
+            "admin_paid_income_rows": 1,
+            "history_match": [
+              {
+                "source_kind": "parent_task",
+                "source_id": "occ_daily_20261118",
+                "reward_instance_id": "settle_daily_01",
+                "currency": "C-FAMILY-001",
+                "amount": 35
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "r1_order_and_replay",
+      "scenario_id": "r1_before_receipt",
+      "given": "独立的 10 币任务，钱包已实际加币；R1 和钱包快照先到服务端，可信到账回执晚到。孩子的到账提示已经随该次本地入账展示。",
+      "stages": [
+        {
+          "action": "先上传 R1 和真实快照，两者按原标识重传，查看小程序任务。",
+          "related_steps": [
+            "r1_first",
+            "snapshot_first",
+            "read_before_receipt"
+          ],
+          "expect": {
+            "paid_prompt_count": 1,
+            "task_state": "pending_payment",
+            "miniapp_snapshot_balance": 110
+          }
+        },
+        {
+          "action": "再上传可信到账回执，随后多次重传同一回执、R1 及快照，重启并刷新两端收益历史。",
+          "related_steps": [
+            "receipt_last",
+            "read_reconciled"
+          ],
+          "expect": {
+            "paid_prompt_count": 1,
+            "task_state": "paid",
+            "miniapp_paid_income_rows": 1,
+            "admin_paid_income_rows": 1,
+            "history_match": [
+              {
+                "source_kind": "parent_task",
+                "source_id": "occ_order_04",
+                "reward_instance_id": "settle_order_04",
+                "currency": "C-FAMILY-001",
+                "amount": 10
+              }
+            ],
+            "attributed_income_per_view": 10,
+            "device_balance": 110,
+            "miniapp_snapshot_balance": 110
+          }
+        }
+      ]
+    },
+    {
+      "id": "distinct_equal_rewards",
+      "scenario_id": "daily_20m_35_coins",
+      "given": "另用同一设备和存档，以同一个 20 分钟、35 币重复任务连续两天达标；每期分别展示达标反馈、由家长确认、实际入账，初始 100 币且无其他收支。",
+      "task_id": "task_daily_01",
+      "stages": [
+        {
+          "action": "逐期跑主线并分别重传两期凭证和流水，刷新小程序和后台。按周期和结算分别检索两笔同额收入。",
+          "related_steps": [
+            "read_ready",
+            "confirm",
+            "wallet_applied",
+            "read_paid_synced",
+            "admin_read"
+          ],
+          "expect": {
+            "qualified_prompt_count": 2,
+            "paid_prompt_count": 2,
+            "miniapp_paid_income_rows": 2,
+            "admin_paid_income_rows": 2,
+            "history_match": [
+              {
+                "source_kind": "parent_task",
+                "source_id": "occ_daily_20261118",
+                "reward_instance_id": "settle_daily_01",
+                "currency": "C-FAMILY-001",
+                "amount": 35
+              },
+              {
+                "source_kind": "parent_task",
+                "source_id": "occ_daily_20261119",
+                "reward_instance_id": "settle_daily_02",
+                "currency": "C-FAMILY-001",
+                "amount": 35
+              }
+            ],
+            "attributed_income_per_view": 70,
+            "device_balance": 170,
+            "miniapp_snapshot_balance": 170
+          }
+        }
+      ]
+    }
+  ]
+}
