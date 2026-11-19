@@ -33,7 +33,7 @@ def main():
                         os.unlink(temporary)
             result = {"pluginPaths": [str(PLUGIN)]}
         else:
-            git_note = ("\n\n本机 Git 同步规则（多机共享仓）：开工先 `git pull --rebase --autostash`；一个任务一个提交、当日 push；禁止 force push / 改写远端；发现分叉按 /home/hahaxiong83/mycc/docs/rules/GIT-SYNC.md 处理。完整宪法：/home/hahaxiong83/AGENTS.md")
+            git_note = "\n\n开工、推送、发版及收工前读取 ~/mycc/docs/rules/GIT-SYNC.md。"
             result = {"additional_context": "本机共享存储规则（从唯一真源实时读取）：\n" + text + git_note}
     except (OSError, ValueError):
         if workspace:

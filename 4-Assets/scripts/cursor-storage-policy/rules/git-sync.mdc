@@ -1,0 +1,6 @@
+---
+description: 多智能体 Git 分支协作
+alwaysApply: true
+---
+
+开工、推送、发版及收工前，读取 ~/mycc/docs/rules/GIT-SYNC.md，按其中的分支执行规则办理。
