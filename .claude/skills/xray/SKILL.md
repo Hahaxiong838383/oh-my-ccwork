@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗；不处理 Netflix 登录、遥控适配或 DRM。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
 ---
 
 # xray - Xray 代理管理
@@ -69,6 +69,10 @@ Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xr
 ## Air 受管代理、ChatGPT 重连与维护
 
 处理 Air 的 `cf-lisa`、ChatGPT 反复重连/功能缺失、8888 管理页或规则更新时，先读 [Air 受管代理维护](references/air-managed-failover-maintenance.md)。静态 `cf-block` 不代表当前正在阻断；核实际override、状态新鲜度与目标日志。受管安装不直接套用下方批量切换、独立改配置或自动重启流程。
+
+## X 平台与 DSH 局部代理
+
+处理 Mini/DSH 的 X 访问、ZGO 路由或“代理通但读不到帖子”时，先读 [X 定向分流与公开帖验收](references/x-public-post-access.md)。已有 DSH/模型直连要求时，默认 switch/proxy on 流程不适用：只处理授权目标的路由与抓取子进程，不为 X 开启全局代理。
 
 ## 可用命令
 
@@ -226,6 +230,8 @@ DMIT 常规端口（6443/7443 等）流量超额被限速后，DMIT 新开了两
 4. **改对了还可能验出"没生效"，且这次是正常的**：`main-balancer` 的 selector 已确认指向新 `admin-dmit-ZGO-不限速`，但当前 DMIT 限流下这个新端口被 leastPing 健康探测判定不健康，实际流量走了 `fallbackTag=mini`（降级到 Mini 代理）——这是 balancer 设计的正常降级，不是配置错误；跟 [[feedback_xray_balancer_bug]]（没设 fallbackTag 时无声落到任意节点）不是同一回事，这次是**设了 fallbackTag 后按设计触发**。流量恢复后健康检查会自动切回，不需要额外操作。
 
 **摸排方法论坑（最贵的一个，进了 memory `feedback_xray_domain_ip_and_rule`）**：判断"哪些 outbound 指向丽萨/ZGO 这两个落地"时，一开始只查 outbound 的 `settings.address` 字段是否**直接等于**落地 IP——完全漏掉了「新美宅-Claude-GPT」「DMIT-Gemini-vps-chenchuan」这两个经 `64.186.235.107` 中转访问同一落地的节点（它们的 `address` 字段是中转 IP 不是落地 IP），而这两个恰恰是本次真正要换的对象。查某个落地 IP 归属，必须同时覆盖"直连该 IP"和"经中转到该 IP"两种 outbound 定义模式，只查字面地址字段相等 = 只覆盖了对象的一种形态。
+
+**Mini 的 X 专项更新（2026-10-19）**：上表是历史快照，不代表所有设备当前路由。Mini 的 `x.com/twitter.com/twimg.com/t.co` 已单独指向 `admin-dmit-ZGO-不限速`，真实 X 请求日志验证通过；其他设备未同步。用前仍查当前配置与对应请求日志，细节见 [专项参考](references/x-public-post-access.md)。
 
 ### 🔴 domain+ip 写进同一条规则 = AND = 整条静默失效（2026-08-31 事故）
 

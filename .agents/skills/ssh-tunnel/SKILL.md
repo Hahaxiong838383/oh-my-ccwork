@@ -7,7 +7,7 @@ description: 公网 SSH 与反向转发维护指南，覆盖临时 cloudflared Q
 
 本 Skill 的单一真源是：
 
-`../../../claude/skills/ssh-tunnel/SKILL.md`
+`../../../.claude/skills/ssh-tunnel/SKILL.md`
 
 执行相关工作前，先完整读取该文件，并按其中的流程、约束与验收口径执行。
 不要在本入口复制正文，避免多引擎版本漂移。

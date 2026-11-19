@@ -22,6 +22,10 @@ description: 公网 SSH 与反向转发维护指南，覆盖临时 cloudflared Q
 /ssh-tunnel status   # 查看隧道状态
 ```
 
+## 固定 Web 入口、间歇断联与模型直连
+
+已有公网服务或用户要求模型/API 不走代理时，先读 [Web 隧道分层诊断](references/web-service-diagnostics.md)。区分网页入站转发、服务出站代理、浏览器登录与应用渲染，不因一次失败就重建隧道或切换全局网络。
+
 ## 执行流程
 
 ### 启动隧道（默认）
