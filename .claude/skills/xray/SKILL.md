@@ -665,6 +665,11 @@ tail -c 20000 /var/log/xray/access.log | grep <域名>   # 期望 [socks -> <out
 kill -9 $(systemctl show -p MainPID --value xray); sleep 5; systemctl is-active xray   # 自愈
 ```
 
+**6.5）🔴 身份类域名的出口要「固定」，不要做自动 fallback**
+Claude / Anthropic / 支付 / KYC 这类域名，出口 IP 就是账号身份的一部分：德国节点挂了宁可**连不上**，
+也不要让它自动切到另一个落地（换 IP 会显著提高风控/封号风险）。反之 GitHub / npm / GCS / 字体 / CDN
+这些与身份无关的依赖，应该放回带宽更大、更稳的通道，不要占身份链路的出口。
+
 **7）两个必踩的坑**
 
 - 🔴 **服务商"加 IPv6 / 重置密码"会重启机器，cloud-init 会用 datasource 的空 key 列表把
