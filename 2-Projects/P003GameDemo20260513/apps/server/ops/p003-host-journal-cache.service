@@ -1,0 +1,19 @@
+[Unit]
+Description=P003 read-only worker journal statistics cache
+After=systemd-journald.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+RuntimeDirectory=p003-host-monitor
+RuntimeDirectoryMode=0700
+RuntimeDirectoryPreserve=yes
+UMask=0077
+ExecStart=/usr/bin/flock --nonblock /run/p003-host-monitor/refresh.lock /usr/bin/python3 /root/rust-worker/host-stats.py --refresh-journal-cache
+ExecStopPost=/usr/bin/python3 /root/rust-worker/host-stats.py --invalidate-failed-refresh
+TimeoutStartSec=45s
+TimeoutStopSec=5s
+KillMode=control-group
+Nice=10
+IOSchedulingClass=idle

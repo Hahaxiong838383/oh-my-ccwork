@@ -1,0 +1,11 @@
+[Unit]
+Description=Reconcile candidate room cleanup independently of Worker
+
+[Timer]
+OnBootSec=10s
+OnUnitInactiveSec=5s
+AccuracySec=1s
+Unit=p003-search-room-cleanup.service
+
+[Install]
+WantedBy=timers.target

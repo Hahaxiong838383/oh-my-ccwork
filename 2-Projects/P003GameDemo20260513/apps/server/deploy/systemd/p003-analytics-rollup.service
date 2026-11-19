@@ -1,0 +1,11 @@
+[Unit]
+Description=P003 isolated analytics rollup and retention
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/p003/server
+ExecStart=/bin/bash /opt/p003/server/scripts/analytics-maintenance.sh rollup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+TimeoutStartSec=300

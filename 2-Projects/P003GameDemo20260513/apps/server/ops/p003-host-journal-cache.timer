@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh P003 worker journal statistics every minute
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=60s
+AccuracySec=1s
+Unit=p003-host-journal-cache.service
+
+[Install]
+WantedBy=timers.target

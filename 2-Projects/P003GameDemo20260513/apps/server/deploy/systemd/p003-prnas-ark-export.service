@@ -1,0 +1,13 @@
+[Unit]
+Description=P003 Ark checkpoints for PRnas
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/p003/archive-production
+EnvironmentFile=/opt/p003/archive-production/ark-export.env
+ExecStart=/usr/bin/python3 /opt/p003/archive-production/scripts/storage-ark-export.py --require-owner --db /opt/p003/server/data/ark.db --root /opt/p003/archive-production/spool
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+UMask=0077
+TimeoutStartSec=240
+NoNewPrivileges=true

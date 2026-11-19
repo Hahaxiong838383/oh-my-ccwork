@@ -1,0 +1,18 @@
+[Unit]
+Description=P003 synthetic verification durable room cleanup
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/p003-search-verification-20261026
+EnvironmentFile=/opt/p003-search-verification-20261026/canary.env
+ExecStart=/usr/bin/python3 /opt/p003-search-verification-20261026/reconcile_rooms.py --queue /opt/p003-search-verification-20261026/room-cleanup --window /opt/p003-search-verification-20261026/window.json --status /opt/p003-search-verification-20261026/cleanup-status.json
+TimeoutStartSec=60
+MemoryMax=96M
+CPUQuota=20%
+TasksMax=16
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/p003-search-verification-20261026/room-cleanup /opt/p003-search-verification-20261026
+PrivateTmp=true

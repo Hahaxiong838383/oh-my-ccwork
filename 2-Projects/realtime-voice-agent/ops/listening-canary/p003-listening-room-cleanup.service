@@ -1,0 +1,18 @@
+[Unit]
+Description=P003 candidate durable room cleanup
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/p003-listening-canary-20261030
+EnvironmentFile=/opt/p003-listening-canary-20261030/canary.env
+ExecStart=/usr/bin/python3 /opt/p003-listening-canary-20261030/reconcile_rooms.py --queue /opt/p003-listening-canary-20261030/room-cleanup --window /opt/p003-listening-canary-20261030/window.json --status /opt/p003-listening-canary-20261030/cleanup-status.json
+TimeoutStartSec=60
+MemoryMax=96M
+CPUQuota=20%
+TasksMax=16
+UMask=0077
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/p003-listening-canary-20261030/room-cleanup /opt/p003-listening-canary-20261030
+PrivateTmp=true
