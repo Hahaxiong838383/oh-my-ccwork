@@ -1,0 +1,333 @@
+{
+  "id": "p003-listening-http-v1",
+  "version": 1,
+  "status": "frozen_for_integration",
+  "authority": "p003-main-brain",
+  "base_path": "/v1/internal/listening",
+  "transport": "HTTPS JSON; main authority only; no public/client use; no SSE",
+  "authentication": {
+    "all": [
+      "authorization: Bearer <CUSTOM_LLM_API_KEY> (required nonempty)",
+      "x-p003-worker-token: HS256 JWT, iss=p003 aud=kidshub role=device, accountId matching server-authoritative target worker, required iat/exp",
+      "x-p003-listening-grant: bound eligibility JWT (all session routes)"
+    ],
+    "worker_ready_exception": "worker-ready requires worker JWT/service Bearer only; target agent/account resolved from server roster; headers only; no query-token fallback",
+    "secrets": "AUTH_JWT_SECRET and LISTENING_GRANT_SECRET >=32 UTF8 bytes, no fallback; CUSTOM_LLM_API_KEY required",
+    "roster": "LISTENING_WORKER_ACCOUNTS JSON object agent_name -> exact worker JWT accountId; no body-selected account"
+  },
+  "wire": {
+    "binding": {
+      "sn": "BJP00326070803800006",
+      "room": "sn-BJP00326070803800006-1800000000",
+      "session_id": "test-session-1",
+      "trace_id": "trace-test-1",
+      "account_id": "test-account-1"
+    },
+    "common": {
+      "version": 1,
+      "request_id": "lease-1",
+      "session": {
+        "sn": "BJP00326070803800006",
+        "room": "sn-BJP00326070803800006-1800000000",
+        "session_id": "test-session-1",
+        "trace_id": "trace-test-1",
+        "account_id": "test-account-1"
+      },
+      "listening_id": "trace-test-1:1",
+      "scene": "story",
+      "mode_epoch": 1
+    },
+    "limits": {
+      "request_bytes": 98304,
+      "request_id_ascii": 96,
+      "segment_count": 128,
+      "raw_unicode_chars": 12000,
+      "recent_unicode_chars": 4000,
+      "summary_unicode_chars": 1200,
+      "question_unicode_chars": 500,
+      "safe_integer": 9007199254740991
+    },
+    "unknown_fields": "reject recursively; every ID is ASCII A-Za-z0-9_.:- as applicable; trim is not identity normalization"
+  },
+  "endpoints": {
+    "POST /worker-ready": {
+      "request": {
+        "version": 1,
+        "request_id": "ready-1",
+        "agent": "rust-worker",
+        "instance_id": "test-instance-1",
+        "build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registered": true,
+        "capabilities": [
+          "listening_mode_v1",
+          "listening_http_v1",
+          "per_frame_output_permit_v1",
+          "capture_drain_v1",
+          "local_ready_ack_v1"
+        ],
+        "applied_revision": null,
+        "applied_config_sha256": null
+      },
+      "response": "{version,ok,ready,policy_revision,config_sha256,config:{scenes,tuning,limits}}; first ack null offers current config; ready needs approved release + fresh matching application ack; registered=false withdraws instance",
+      "body_bytes": 4096,
+      "optional_capabilities": [
+        "listening_voice_control_v1"
+      ],
+      "rules": [
+        "Original five required; optional sixth listening_voice_control_v1 only; no unknown/duplicate capabilities. Optional capability needs intersection of approved manifest and fresh worker ack; old five-capability builds stay compatible."
+      ]
+    },
+    "POST /lease": {
+      "request": {
+        "version": 1,
+        "request_id": "lease-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "applied_snapshot_sha256": null
+      },
+      "response": "{version,request_id,authorized,lease_id,policy_revision,server_time_ms,lease_expires_at_ms,refresh_after_ms:5000,request_budget_ms:1000,snapshot:{revision,scenes,tuning,limits,sha256}}",
+      "rules": [
+        "First request reserves an entry snapshot; authorized=false and expires=0 until request echoes applied_snapshot_sha256 exactly. Apply every field before retry with a NEW request_id.",
+        "Current policy_revision is latest config.revision; snapshot.revision/tuning stay frozen for this entry. Current gate/allowlist/scene still revoke it.",
+        "Once authorized, TTL <=15s and <=grant/session/device-credential/search cutoff/entry max_session deadline. Worker uses monotonic remaining duration, subtracts request elapsed and rejects <=0.",
+        "Every response is bound to request, session and entry/epoch; duplicates never extend original lease deadline. Lower mode_epoch or older listening entry seq rejected.",
+        "A new listening_id must have increasing trace:seq and previous entry must be closed. After expiry/revocation close old RTC session; no automatic chat."
+      ]
+    },
+    "POST /close": {
+      "request": {
+        "version": 1,
+        "request_id": "close-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1
+      },
+      "response": "{version,request_id,closed:true}; authenticates session even when policy disabled; idempotent close cannot reopen entry"
+    },
+    "POST /summary": {
+      "request": {
+        "version": 1,
+        "request_id": "summary-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "snapshot_revision": 3,
+        "snapshot_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "base_summary_version": 0,
+        "previous_summary": "",
+        "has_gap": false,
+        "segments": [
+          {
+            "seq": 1,
+            "revision": 1,
+            "text": "小熊和小兔分享了苹果。"
+          },
+          {
+            "seq": 2,
+            "revision": 1,
+            "text": "后来他们一起回家。"
+          }
+        ]
+      },
+      "response": "{version,request_id,listening_id,mode_epoch,policy_revision,snapshot_revision,base_summary_version,source_sha256,covered:[{seq,revision}],summary,has_gap}",
+      "rules": [
+        "Contiguous ordered segment IDs, revisions >=1; raw <=12000 Unicode scalars; previous_summary <=1200. No user traits/persona read.",
+        "One content task per entry at a time. Model timeout 8s, result <=1200 chars. Missing source or excess output is failure, never silently truncate facts.",
+        "No server-side transcript persistence; echoes frozen coverage/base version/source hash. Worker must compare retained ticket/listening session/epoch/revisions then CAS apply; stale result is discarded, source not released."
+      ]
+    },
+    "POST /feedback": {
+      "request": {
+        "version": 1,
+        "request_id": "feedback-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "snapshot_revision": 3,
+        "snapshot_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "summary": "",
+        "recent": "小熊把最后一个苹果分给了小兔。",
+        "has_gap": false,
+        "question": "你觉得呢？",
+        "trigger": "button"
+      },
+      "response": "{version,request_id,listening_id,mode_epoch,policy_revision,snapshot_revision,text,max_chars,max_duration_ms}",
+      "rules": [
+        "trigger button|voice_invitation|voice_command. voice_invitation remains story/sharing only; voice_command needs negotiated session capability listening_voice_control_v1 and frozen voice_invitation_enabled=true, including singing explicit called-name after-song phrase. Never relabel voice as button.",
+        "recent <=4000 chars, summary <=1200, question <=500. One request per epoch; cooldown enforced.",
+        "Text <=snapshot feedback_max_chars, generation budget <=min(8s, feedback_max_duration_sec); no tool/ordinary chat/onboarding/feedback-arm/style/long-term memory writes.",
+        "Current personality may be read without inject receipts. Lyrics/fiction never become autobiographical claims; no pitch/rhythm assessment.",
+        "Audio permission/turn/VAD/playout-duration gate remains Worker responsibility; HTTP200 is not permission to play or Android audibility evidence."
+      ]
+    }
+  },
+  "replay": {
+    "request_ids": "unique within authoritative session, same endpoint+body SHA required; never reuse an ID with modified epoch/snapshot",
+    "content": "in-flight=409 request_in_progress; same completed request returns short-lived RAM cache; cache missing/restart=409 request_spent; failures spent; never auto-regenerate same request",
+    "recheck": "credentials/registry/source cutoff/current gate/scene checked even for cached content; epoch cancellation/revocation while model running discards result"
+  },
+  "errors": {
+    "envelope": "{version:1,ok:false,error:{code:<stable>,retryable:<boolean>}}; no raw text, tokens, URLs or provider body",
+    "codes": {
+      "400": [
+        "invalid_request"
+      ],
+      "401": [
+        "unauthorized"
+      ],
+      "403": [
+        "not_authorized",
+        "policy_disabled",
+        "device_changed",
+        "scene_disabled",
+        "worker_not_ready",
+        "source_expired",
+        "entry_closed",
+        "lease_required"
+      ],
+      "409": [
+        "request_conflict",
+        "request_in_progress",
+        "request_spent",
+        "stale_epoch",
+        "entry_conflict",
+        "snapshot_mismatch",
+        "content_busy"
+      ],
+      "413": [
+        "request_too_large"
+      ],
+      "429": [
+        "feedback_cooldown",
+        "capacity_exceeded"
+      ],
+      "502": [
+        "content_invalid"
+      ],
+      "503": [
+        "authority_unavailable",
+        "model_unavailable"
+      ],
+      "504": [
+        "model_timeout"
+      ]
+    }
+  },
+  "privacy": {
+    "persistent": "session/grant fingerprint, source expiry, ownership epoch, entry/snapshot/lease/request digest/terminal metadata only; no grant plaintext/story/lyrics/model text",
+    "content_cache": "bounded RAM only, <=60s and invalidated by authorization or epoch change",
+    "logs": "reason/count/latency only; no request bodies/headers/provider error bodies"
+  },
+  "readiness": {
+    "manifest_env": "LISTENING_RELEASE_MANIFEST_PATH (trusted operator evidence file; absent fails closed)",
+    "manifest_shape": {
+      "version": 1,
+      "expires_at_ms": 1800003600000,
+      "evidence_ref": "integration-evidence/ref",
+      "agents": [
+        {
+          "agent": "rust-worker",
+          "build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "capabilities": [
+            "listening_mode_v1",
+            "listening_http_v1",
+            "per_frame_output_permit_v1",
+            "capture_drain_v1",
+            "local_ready_ack_v1"
+          ]
+        }
+      ]
+    },
+    "heartbeat_ttl_ms": 15000,
+    "runtime": "No manifest+fresh matching Worker/config ack => ready=false; truthful active/applied state only, no environment boolean override",
+    "config_ack": "applied_config_sha256 equals snapshot hash of current global configuration; approved build + fresh matching ack needed. Entry lease separately acknowledges its frozen snapshot.",
+    "optional_capabilities": [
+      "listening_voice_control_v1"
+    ]
+  },
+  "fixtures": "p003-listening-http-v1.fixtures.json; synthetic values only; authorization/model doubles in offline tests do not certify production readiness",
+  "hashing": "SHA256 of UTF8 canonical JSON: lexicographically sorted object keys recursively, array order retained, compact separators, Unicode unescaped. Snapshot sha256 hashes {revision,scenes,tuning,limits} without its sha256 field. source_sha256 hashes {base_summary_version,previous_summary,has_gap,segments}.",
+  "metadata": {
+    "signed_job_field": "listening",
+    "shape": {
+      "version": 1,
+      "authority": "p003-main-brain",
+      "grant": "<JWT; never log>",
+      "session": {
+        "sn": "BJP00326070803800006",
+        "room": "sn-BJP00326070803800006-1800000000",
+        "session_id": "test-session-1",
+        "trace_id": "trace-test-1",
+        "account_id": "test-account-1"
+      },
+      "grant_expires_at_ms": 1800001800000,
+      "agent": "rust-worker",
+      "worker_build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "snapshot": {
+        "revision": 3,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "limits": {
+          "raw_chars": 12000,
+          "recent_chars": 4000,
+          "summary_chars": 1200,
+          "lease_ttl_ms": 15000,
+          "lease_refresh_ms": 5000,
+          "lease_request_budget_ms": 1000
+        },
+        "sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3"
+      }
+    },
+    "android_response": "listening_contract contains version,capability,scenes,tuning,policy_revision,expires_at_ms; optional negotiated voice_control only; grant/account never handed to client",
+    "voice_control": {
+      "optional": true,
+      "shape": {
+        "version": 1,
+        "capability": "listening_voice_control_v1"
+      },
+      "rule": "Only on three-way Android/approved Worker/fresh ack negotiation AND voice_invitation_enabled. Same optional object in signed listening metadata and client listening_contract; absent means unavailable. No grant/account sent to client."
+    }
+  },
+  "voice_extension_revision": 1
+}
