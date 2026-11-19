@@ -61,7 +61,7 @@
     "codex/p003-search-fragment-clarify-20261113": {
       "task": "搜索半句澄清",
       "state": "keep",
-      "until": "现役搜索池验证两项差异"
+      "until": "原线搜索回归 63/63；现役搜索池和主线各有 2 项半句回归失败。确认需求并在两条发布源码复验后再归档"
     },
     "codex/p003-search-retro-skills-20261021": {
       "task": "后台搜索复盘",
@@ -111,7 +111,7 @@
     "feat/voice-test-rust-demo": {
       "task": "独立语音演示",
       "state": "keep",
-      "until": "核实专用部署归属"
+      "until": "hk2 和 dev198 未发现 voice-worker-demo.service，待确认独立部署位置或退役结论"
     },
     "sync/mycc-20261117": {
       "task": "2026-11-17 多机主线同步与恢复",
@@ -121,6 +121,10 @@
     "codex/git-branch-governance-20261119": {
       "task": "GIT-SYNC 四节点规则、只读巡检及 P003 两支原机保全归档",
       "state": "done"
+    },
+    "codex/p003-curated-regressions-20261119": {
+      "task": "P003 六支归档、搜索半句发布版本回归与 dev198 核实",
+      "state": "active"
     }
   },
   "releases": {
