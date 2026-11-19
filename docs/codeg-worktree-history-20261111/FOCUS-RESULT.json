@@ -1,0 +1,7 @@
+{
+  "session_id": 251,
+  "http_status": 501,
+  "focus_requested": true,
+  "visual_verified": false,
+  "note": "focus_conversation not implemented on HTTP transport"
+}

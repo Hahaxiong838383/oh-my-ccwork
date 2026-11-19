@@ -1,0 +1,6 @@
+{
+  "dry_run_no_write": true,
+  "drift_rejected": true,
+  "exact_after_restored": true,
+  "production_rollback_executed": false
+}

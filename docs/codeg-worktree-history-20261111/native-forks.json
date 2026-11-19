@@ -1,0 +1,50 @@
+[
+  {
+    "native_id": "01a1c8cc-f49f-7963-a5d1-85085095719e",
+    "cwd": "/Users/fu-121/.codex/worktrees/p003-sms-login-20261103",
+    "source": "01a12f4d-4458-7af1-85a3-480b2c388d9c",
+    "boundary": "01a1c86c-0968-7762-bdd1-c6e23fc4e7c7",
+    "title": "P003 小程序短信登录｜主13历史快照 · 截至2026-11-11",
+    "state": "verified",
+    "turns": 201,
+    "last_turn_id": "01a1c86c-0968-7762-bdd1-c6e23fc4e7c7",
+    "status": {
+      "type": "idle"
+    },
+    "git_info": {
+      "sha": "7ccd1f7cd3e9c23b148c4712686dc1a17cdc297a",
+      "branch": "codex/p003-sms-login-20261103",
+      "originUrl": "https://github.com/Hahaxiong838383/oh-my-ccwork.git"
+    },
+    "conversation_id": 253,
+    "folder_id": 38,
+    "parent_id": null,
+    "codeg_imported": true,
+    "body_chars": 96503,
+    "body_sha256": "ea5ee1a5151e7c9f843f0ddcb86f09712506b30adc9496d009439bea44e2c32d"
+  },
+  {
+    "native_id": "01a1c8cd-8a69-7270-bb64-2432dd071386",
+    "cwd": "/Users/fu-121/.codex/worktrees/p003-voice-routing-listening-20261110",
+    "source": "01a12f4d-4458-7af1-85a3-480b2c388d9c",
+    "boundary": "01a1c86c-0968-7762-bdd1-c6e23fc4e7c7",
+    "title": "P003 语音天气修复｜主13历史快照 · 截至2026-11-11",
+    "state": "verified",
+    "turns": 201,
+    "last_turn_id": "01a1c86c-0968-7762-bdd1-c6e23fc4e7c7",
+    "status": {
+      "type": "idle"
+    },
+    "git_info": {
+      "sha": "77c33308082941197897cc3258b1592d0fabccac",
+      "branch": "codex/p003-voice-routing-listening-20261110",
+      "originUrl": "https://github.com/Hahaxiong838383/oh-my-ccwork.git"
+    },
+    "conversation_id": 254,
+    "folder_id": 50,
+    "parent_id": null,
+    "codeg_imported": true,
+    "body_chars": 96516,
+    "body_sha256": "5570e1ea708d43652a12c8259f1dcf9f83222351c29f50db0795b0f81d223efb"
+  }
+]

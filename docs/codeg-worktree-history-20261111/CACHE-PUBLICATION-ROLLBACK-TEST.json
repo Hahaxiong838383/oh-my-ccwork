@@ -1,0 +1,6 @@
+{
+  "dry_run_no_mutation": true,
+  "drift_refused_before_any_mutation": true,
+  "restored_route_then_removed_new_asset": true,
+  "production_rollback_executed": false
+}

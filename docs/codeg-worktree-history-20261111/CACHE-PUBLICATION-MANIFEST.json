@@ -1,0 +1,89 @@
+{
+  "root": "/Users/fu-121/mycc/2-Projects/multi-runtime-orchestration/codeg-company-macstudio/releases/0.34.0/web",
+  "mapping": {
+    "048tzznh3mzxz.js": "048tzznh3mzxz-wt-5c9cd45fc1ee.js",
+    "3mp80sn446_ra.js": "3mp80sn446_ra-wt-437913cd27fd.js"
+  },
+  "files": [
+    {
+      "relative": "_next/static/chunks/048tzznh3mzxz-wt-5c9cd45fc1ee.js",
+      "before_sha256": null,
+      "after_sha256": "5c9cd45fc1eedd289656861e3db44a3c91ec90473543962b8890f567b351aa2b",
+      "candidate": "048tzznh3mzxz-wt-5c9cd45fc1ee.js.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "_next/static/chunks/3mp80sn446_ra-wt-437913cd27fd.js",
+      "before_sha256": null,
+      "after_sha256": "437913cd27fd2c4e0937b462147eaae51b7e17cc1667b65fc634436f2ab3bbcb",
+      "candidate": "3mp80sn446_ra-wt-437913cd27fd.js.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "commit.txt",
+      "before_sha256": "c02b7ce66f49a109f21af7725e86a51e7730421f624f006b30c8ba55e4adcc4e",
+      "after_sha256": "faffff211d142b59622925a278722e97255914681cd11fe12b26684203657545",
+      "backup": "commit.txt.before",
+      "candidate": "commit.txt.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "commit.html",
+      "before_sha256": "47bd11e40d5dda6ac592aaadfca0ad1f27e5c4d44c9f991f876564ef36a04cea",
+      "after_sha256": "271c28f3b2e12c2cbf70ca3abc44ed854743c4969244bd4d9d8d058ae05db092",
+      "backup": "commit.html.before",
+      "candidate": "commit.html.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "workspace.html",
+      "before_sha256": "1e681cae75b008da6769e319227bd2b16c84b5de187fe1798a0ff220a02373e6",
+      "after_sha256": "ffc535328666b33583ac869ed28b047945fb56ace5df908d6fd93e46509f9e82",
+      "backup": "workspace.html.before",
+      "candidate": "workspace.html.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "workspace.txt",
+      "before_sha256": "fe3a4ea7d6122483fff4a9c65851f208100903e860f636c66723591913b8d130",
+      "after_sha256": "97725695dbb7e3985ca78fa073f26a37661125861cfda65487ed5d37fda25dd8",
+      "backup": "workspace.txt.before",
+      "candidate": "workspace.txt.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "commit/__next._full.txt",
+      "before_sha256": "c02b7ce66f49a109f21af7725e86a51e7730421f624f006b30c8ba55e4adcc4e",
+      "after_sha256": "faffff211d142b59622925a278722e97255914681cd11fe12b26684203657545",
+      "backup": "commit____next._full.txt.before",
+      "candidate": "commit____next._full.txt.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "commit/__next.commit.__PAGE__.txt",
+      "before_sha256": "784d5a5dd140661c09b0539ff6dc409147a61ede85200f33f13fa559de735173",
+      "after_sha256": "391a0482e474728dcee5fa4b96b40da51acb9dab512cb5c2f5cfc81b152f4b31",
+      "backup": "commit____next.commit.__PAGE__.txt.before",
+      "candidate": "commit____next.commit.__PAGE__.txt.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "workspace/__next._full.txt",
+      "before_sha256": "fe3a4ea7d6122483fff4a9c65851f208100903e860f636c66723591913b8d130",
+      "after_sha256": "97725695dbb7e3985ca78fa073f26a37661125861cfda65487ed5d37fda25dd8",
+      "backup": "workspace____next._full.txt.before",
+      "candidate": "workspace____next._full.txt.candidate",
+      "mode": 420
+    },
+    {
+      "relative": "workspace/__next.workspace.__PAGE__.txt",
+      "before_sha256": "7c99c4164de07cc07e86de22ef85cfe787b0d2eed9127973b145e8daaf2a99f0",
+      "after_sha256": "84115044c84b98899ab6a77a8d7766f2073f27a5bc4b0c572ecf5a2af160cb99",
+      "backup": "workspace____next.workspace.__PAGE__.txt.before",
+      "candidate": "workspace____next.workspace.__PAGE__.txt.candidate",
+      "mode": 420
+    }
+  ],
+  "strategy": "new_content_versioned_urls_keep_old_assets",
+  "sw_changed": false
+}

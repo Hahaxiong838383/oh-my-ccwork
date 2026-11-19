@@ -1,0 +1,62 @@
+{
+  "checks": [
+    {
+      "path": "_next/static/chunks/048tzznh3mzxz-wt-5c9cd45fc1ee.js",
+      "http_sha256": "5c9cd45fc1eedd289656861e3db44a3c91ec90473543962b8890f567b351aa2b",
+      "pass": true
+    },
+    {
+      "path": "_next/static/chunks/3mp80sn446_ra-wt-437913cd27fd.js",
+      "http_sha256": "437913cd27fd2c4e0937b462147eaae51b7e17cc1667b65fc634436f2ab3bbcb",
+      "pass": true
+    },
+    {
+      "path": "commit.txt",
+      "http_sha256": "faffff211d142b59622925a278722e97255914681cd11fe12b26684203657545",
+      "pass": true
+    },
+    {
+      "path": "commit.html",
+      "http_sha256": "271c28f3b2e12c2cbf70ca3abc44ed854743c4969244bd4d9d8d058ae05db092",
+      "pass": true
+    },
+    {
+      "path": "workspace.html",
+      "http_sha256": "ffc535328666b33583ac869ed28b047945fb56ace5df908d6fd93e46509f9e82",
+      "pass": true
+    },
+    {
+      "path": "workspace.txt",
+      "http_sha256": "97725695dbb7e3985ca78fa073f26a37661125861cfda65487ed5d37fda25dd8",
+      "pass": true
+    },
+    {
+      "path": "commit/__next._full.txt",
+      "http_sha256": "faffff211d142b59622925a278722e97255914681cd11fe12b26684203657545",
+      "pass": true
+    },
+    {
+      "path": "commit/__next.commit.__PAGE__.txt",
+      "http_sha256": "391a0482e474728dcee5fa4b96b40da51acb9dab512cb5c2f5cfc81b152f4b31",
+      "pass": true
+    },
+    {
+      "path": "workspace/__next._full.txt",
+      "http_sha256": "97725695dbb7e3985ca78fa073f26a37661125861cfda65487ed5d37fda25dd8",
+      "pass": true
+    },
+    {
+      "path": "workspace/__next.workspace.__PAGE__.txt",
+      "http_sha256": "84115044c84b98899ab6a77a8d7766f2073f27a5bc4b0c572ecf5a2af160cb99",
+      "pass": true
+    },
+    {
+      "route_aliases": [
+        "/workspace",
+        "/commit"
+      ],
+      "pass": true
+    }
+  ],
+  "visual_verified": false
+}
