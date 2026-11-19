@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';
+const m:any=await import('../src/tools/fixed-weather.js').catch(()=>({}));
+assert.equal(typeof m.FixedWeather,'function','provider fallback must preserve exact place and cancellation');
+let old=0,primary=0;
+const moji={run:async(q:any)=>{old++;return {text:'旧源'+q.city_name,sources:[],weather:{provider:'moji-public-web',city_name:q.city_name}};}};
+const baidu={run:async()=>{primary++;throw new Error('weather_http_429');}};
+const p=new m.FixedWeather({moji,baidu});const signal=new AbortController().signal;
+assert.match((await p.run({place:'北京',day_offset:1,metric:'forecast'},signal,Date.now())).text,/旧源北京市/);
+assert.equal(old,1);await assert.rejects(p.run({place:'北京朝阳',day_offset:0,metric:'forecast'},signal,Date.now()));assert.equal(old,1,'district failure must not become city-centre weather');
+await assert.rejects(p.run({place:'成都',day_offset:1,metric:'forecast'},signal,Date.now()));assert.equal(old,1);
+await assert.rejects(p.run({place:'朝阳',day_offset:0,metric:'forecast'},signal,Date.now()),/ambiguous/);assert.equal(primary,3);
+const aborted=new AbortController();aborted.abort();await assert.rejects(p.run({place:'北京',day_offset:0,metric:'forecast'},aborted.signal,Date.now()));assert.equal(primary,3);
+await p.run({place:'上海',day_offset:0,metric:'aqi'},signal,Date.now());assert.equal(primary,3,'unverified AQI fields must not use Baidu');
+await assert.rejects(p.run({place:'成都',day_offset:0,metric:'aqi'},signal,Date.now()),/metric/);
+console.log('fixed weather: precise fallback, scope, AQI boundary and cancellation passed');
+// Runtime baseline 0708d768 retired the Amap-first path. Verify the deployed
+// Baidu/Moji contract; keep historical red evidence in the execution ledger.
+const precise=new m.FixedWeather({baidu:{run:async()=>({text:'百度成都天气',sources:[]})},moji});
+assert.match((await precise.run({place:'成都',day_offset:0,metric:'forecast'},signal,Date.now())).text,/百度/);
