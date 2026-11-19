@@ -1,0 +1,25 @@
+{
+  "node": "v24.19.0",
+  "source": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+  "archive_sha": "a7911f3fcd729987b22eeedac0ce407459153ea137c9cb0e5d942d1f152344d5",
+  "results": [
+    {
+      "name": "npm-ci",
+      "rc": 0,
+      "log": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/npm-ci.log",
+      "sha256": "49c0f1787833e330367ebc165d73e37b3cb24fb463c55a3fcc79b209263f4193"
+    },
+    {
+      "name": "brain-tests",
+      "rc": 0,
+      "log": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/brain-tests.log",
+      "sha256": "d97091e27ad1d39c3fa3e3dc161ffe2d5f114835df2adff5baa275fb191aaa0e"
+    },
+    {
+      "name": "worker-full",
+      "rc": 0,
+      "log": "/home/hahaxiong83/local/p003-onboarding-release-20261117/main/candidate/worker-full.log",
+      "sha256": "b7c214b022c8b7ca15d87c7c90e74504a2aac829eb4fb015a956aa3d11ec7454"
+    }
+  ]
+}

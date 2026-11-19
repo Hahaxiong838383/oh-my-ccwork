@@ -107,19 +107,56 @@ impl TtsCfg {
         match self {
             Self::Volc(c) => tts_volc::synthesize(c, text, audio_tx).await,
             Self::Xfyun(c) => {
-                let conn = warm.take().await;
-                *warm = self.start_prewarm(); // 先为下一句排队,再开始本句合成
-                tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await
+                let waiting = std::time::Instant::now();
+                let (room,turn)=ctl.trace_identity();
+                let mut timing=DispatchTiming{start:waiting,room:room.into(),turn,prewarm_ms:None,finished:false};
+                let recovery = connection_recovery_mode();
+                let conn = if recovery {
+                    let acquired = warm.take_for_sentence(c).await;
+                    // Preserve the pipeline for the following sentence even if
+                    // this acquisition failed; the old candidate is already gone.
+                    *warm = self.start_prewarm();
+                    Some(acquired?)
+                } else {
+                    warm.take().await
+                };
+                let wait_ms = waiting.elapsed().as_millis() as u64;
+                timing.prewarm_ms=Some(wait_ms);
+                if !recovery { *warm = self.start_prewarm(); }
+                let (provider_ms, bytes) = if recovery {
+                    // No hidden cold reconnect after the shared acquisition budget.
+                    tts_xfyun::synthesize_connected(c, text, audio_tx, ctl, conn.expect("acquired connection")).await?
+                } else {
+                    tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await?
+                };
+                // The caller starts its timer before take(): include the handshake
+                // wait that used to disappear from body_ready_since_turn_ms.
+                timing.finished=true;
+                let first_pcm_ms = wait_ms.saturating_add(provider_ms);
+                tracing::info!(prewarm_wait_ms=wait_ms,provider_ttfb_ms=provider_ms,first_pcm_ms,"tts dispatch timing");
+                Ok((first_pcm_ms, bytes))
             }
         }
     }
 }
+
+/// Emits even when the synth future is dropped mid-handshake/provider streaming.
+struct DispatchTiming {start:std::time::Instant,room:String,turn:u64,prewarm_ms:Option<u64>,finished:bool}
+impl Drop for DispatchTiming {fn drop(&mut self){tracing::info!(room=%self.room,turn_id=self.turn,elapsed_ms=self.start.elapsed().as_millis() as u64,prewarm_wait_ms=self.prewarm_ms,finished=self.finished,stage=if self.prewarm_ms.is_none(){"prewarm"}else{"provider"},"tts dispatch end (includes aborted futures)");}}
 
 /// `XFYUN_TTS_PRECONNECT=0` 关掉预建连(回到每句现连)。
 /// 留这个开关是因为这条线正在被演示:出问题时改一行 env + 重启即可退回,
 /// 不用换二进制。默认开。
 fn preconnect_enabled() -> bool {
     preconnect_from(std::env::var("XFYUN_TTS_PRECONNECT").ok().as_deref())
+}
+
+pub fn latency_mode() -> bool {
+    std::env::var("P003_TTS_LATENCY_V1").is_ok_and(|v|v=="1")
+}
+
+fn connection_recovery_mode() -> bool {
+    std::env::var("P003_TTS_CONNECT_RECOVERY_V1").is_ok_and(|v|v=="1")
 }
 
 /// 纯函数版,单测走这条(进程级 env 会被并行测试互相污染)。
@@ -140,18 +177,51 @@ impl Prewarm {
     }
 
     /// 关闭态(火山线,或 `XFYUN_TTS_PRECONNECT=0`)
-    const fn off() -> Self {
+    pub(crate) const fn off() -> Self {
         Self(None)
     }
 
     fn arm(cfg: tts_xfyun::XfyunTtsConfig) -> Self {
-        Self(Some(tokio::spawn(async move { tts_xfyun::connect_warm(&cfg).await })))
+        Self(Some(tokio::spawn(async move {
+            static HEDGES: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+            if latency_mode() && !connection_recovery_mode() {
+                connect_hedged(||tts_xfyun::connect_warm(&cfg),std::time::Duration::from_millis(650),&HEDGES).await
+            } else { tts_xfyun::connect_warm(&cfg).await }
+        })))
+    }
+
+    async fn take_for_sentence(&mut self, cfg: &tts_xfyun::XfyunTtsConfig) -> Result<tts_xfyun::Warm> {
+        static SPARES: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(2);
+        // This local guard owns the JoinHandle even if the foreground is cancelled
+        // or a spare wins. Dropping it aborts the unused prewarm, never detaches it.
+        let mut pending = std::mem::replace(self, Self::off());
+        // A completed failure or expired socket is not an in-flight primary.
+        // Consume it first so a real cold primary never needs a spare permit.
+        if pending.is_finished() {
+            if let Some(ready) = pending.take().await.filter(tts_xfyun::Warm::fresh) {
+                return Ok(ready);
+            }
+        }
+        let primary = async {
+            if pending.0.is_none() {
+                return tts_xfyun::connect_warm(cfg).await;
+            }
+            pending.take().await.filter(tts_xfyun::Warm::fresh)
+                .ok_or_else(||anyhow::anyhow!("prewarm_failed_or_expired"))
+        };
+        // Keep the original 10s connection tolerance, but share it across the
+        // entire foreground acquisition. A 650ms spare removes the serial wait
+        // when one connection stalls without turning 4s successes into failures.
+        recover_connection(primary, ||tts_xfyun::connect_warm(cfg),
+            std::time::Duration::from_millis(650),std::time::Duration::from_secs(10),&SPARES).await
     }
 
     /// 取走已建好的连接。建连失败/被取消**不算错误**——
     /// 返回 None,调用方现连即可,预热失败绝不能让整句合成失败。
     async fn take(&mut self) -> Option<tts_xfyun::Warm> {
-        match self.0.take() {
+        // Keep ownership while awaiting. Cancelling this future must run Drop
+        // on the handle instead of detaching an in-flight socket handshake.
+        let result = match self.0.as_mut() {
             None => None,
             Some(h) => match h.await {
                 Ok(Ok(w)) => Some(w),
@@ -161,7 +231,9 @@ impl Prewarm {
                 }
                 Err(_) => None, // task 被 abort(turn 结束)
             },
-        }
+        };
+        self.0.take();
+        result
     }
 }
 
@@ -174,9 +246,253 @@ impl Drop for Prewarm {
     }
 }
 
+// Connector seam for deterministic latency/cancellation regression tests.
+// Only connection establishment races: no synthesis text is sent here.
+// A failed primary releases its slot before a replacement starts. Concurrent
+// spares require a permit; capacity exhaustion never queues or cancels primary.
+pub(crate) async fn recover_connection<T, P, F, Fut>(
+    primary: P, connect: F, delay: std::time::Duration,
+    budget: std::time::Duration, limit: &tokio::sync::Semaphore,
+) -> Result<T>
+where P: std::future::Future<Output=Result<T>>, F: FnOnce() -> Fut,
+      Fut: std::future::Future<Output=Result<T>> {
+    tokio::time::timeout(budget, async {
+        tokio::pin!(primary);
+        tokio::select! {
+            biased;
+            result=&mut primary=>return match result {
+                Ok(value)=>Ok(value),
+                Err(_)=>connect().await,
+            },
+            _=tokio::time::sleep(delay)=>{}
+        }
+        let Ok(_permit)=limit.try_acquire() else {
+            return match primary.await {
+                Ok(value)=>Ok(value),
+                Err(_)=>connect().await,
+            };
+        };
+        tracing::info!("tts foreground slow connection: bounded spare started");
+        let spare=connect();tokio::pin!(spare);
+        tokio::select! {
+            biased;
+            result=&mut primary=>match result {Ok(value)=>Ok(value),Err(_)=>spare.await},
+            result=&mut spare=>match result {Ok(value)=>Ok(value),Err(_)=>primary.await},
+        }
+    }).await.map_err(|_|anyhow::anyhow!("tts_foreground_connect_budget_exhausted"))?
+}
+
+async fn connect_hedged<T, F, Fut>(connect: F, delay: std::time::Duration, limit: &tokio::sync::Semaphore) -> Result<T>
+where F: Fn() -> Fut, Fut: std::future::Future<Output=Result<T>> {
+    let primary=connect();tokio::pin!(primary);
+    tokio::select! {
+        result=&mut primary=>return result,
+        _=tokio::time::sleep(delay)=>{}
+    }
+    // Never queue for a spare: at most two extra handshakes process-wide.
+    let Ok(_permit)=limit.try_acquire() else {return primary.await;};
+    tracing::info!("tts slow preconnect: one bounded spare started");
+    let spare=connect();tokio::pin!(spare);
+    // Losing futures drop their sockets; failures cannot cancel a healthy peer.
+    tokio::select! {
+        result=&mut primary=>match result {Ok(w)=>Ok(w),Err(_)=>spare.await},
+        result=&mut spare=>match result {Ok(w)=>Ok(w),Err(_)=>primary.await},
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test]
+    async fn priority_actual_foreground_owner_aborts_pending_prewarm_on_cancel() {
+        let (started,ready)=tokio::sync::oneshot::channel();
+        let (dropped,done)=tokio::sync::oneshot::channel();
+        struct Notify(Option<tokio::sync::oneshot::Sender<()>>);
+        impl Drop for Notify {fn drop(&mut self){if let Some(s)=self.0.take(){let _=s.send(());}}}
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _guard=Notify(Some(dropped));let _=started.send(());
+            std::future::pending::<Result<tts_xfyun::Warm>>().await
+        })));
+        let cfg=tts_xfyun::XfyunTtsConfig{app_id:String::new(),api_key:String::new(),api_secret:String::new(),
+            vcn:tts_xfyun::DEFAULT_VCN.into(),speed:50,oral_level:"mid".into()};
+        // Empty credentials guarantee even an unexpectedly late spare cannot
+        // reach an external service. Exercise the real foreground owner method.
+        let outer=tokio::spawn(async move {let _=warm.take_for_sentence(&cfg).await;});
+        ready.await.unwrap();tokio::task::yield_now().await;outer.abort();let _=outer.await;
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200),done).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_pending_primary_uses_spare_without_waiting_for_failure() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(1);
+        let acquisition=recover_connection(
+            std::future::pending::<Result<u8>>(),
+            ||{calls.fetch_add(1,Ordering::SeqCst);async{Ok(42)}},
+            std::time::Duration::from_millis(20),std::time::Duration::from_millis(150),&limit);
+        let result=tokio::time::timeout(std::time::Duration::from_millis(300),acquisition).await;
+        assert!(matches!(result,Ok(Ok(42))),"a healthy spare must bypass the hung prewarm");
+        assert_eq!(calls.load(Ordering::SeqCst),1);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_both_hung_share_one_deadline() {
+        let limit=tokio::sync::Semaphore::new(1);
+        let acquisition=recover_connection(std::future::pending::<Result<u8>>(),
+            ||std::future::pending::<Result<u8>>(),std::time::Duration::from_millis(10),
+            std::time::Duration::from_millis(60),&limit);
+        let result=tokio::time::timeout(std::time::Duration::from_millis(250),acquisition).await;
+        assert!(matches!(result,Ok(Err(_))),"the acquisition itself must enforce one shared deadline");
+        assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_failed_primary_starts_spare_immediately() {
+        let limit=tokio::sync::Semaphore::new(1);
+        let acquisition=recover_connection(async{anyhow::bail!("primary failure")},
+            ||async{Ok(7)},std::time::Duration::from_secs(1),
+            std::time::Duration::from_millis(200),&limit);
+        assert!(matches!(tokio::time::timeout(std::time::Duration::from_millis(150),acquisition).await,Ok(Ok(7))));
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_healthy_primary_never_opens_spare() {
+        let limit=tokio::sync::Semaphore::new(1);
+        let value=recover_connection(async{Ok(3)},||async{panic!("unnecessary connection")},
+            std::time::Duration::from_millis(20),std::time::Duration::from_millis(100),&limit).await.unwrap();
+        assert_eq!(value,3);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_capacity_preserves_primary_and_failed_primary_can_replace() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        for primary_ok in [false,true] {
+            let limit=tokio::sync::Semaphore::new(0);let calls=AtomicUsize::new(0);
+            let value=recover_connection(async{
+                tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+                if primary_ok{Ok(7)}else{anyhow::bail!("failed after spare capacity was denied")}
+            },||{calls.fetch_add(1,Ordering::SeqCst);async{Ok(9)}},
+            std::time::Duration::from_millis(5),std::time::Duration::from_millis(150),&limit).await.unwrap();
+            assert_eq!(value,if primary_ok{7}else{9});
+            assert_eq!(calls.load(Ordering::SeqCst),if primary_ok{0}else{1});
+        }
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_spare_failure_does_not_cancel_primary_or_start_third() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        let limit=tokio::sync::Semaphore::new(1);let calls=AtomicUsize::new(0);
+        let value=recover_connection(async{
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;Ok(8)
+        },||{calls.fetch_add(1,Ordering::SeqCst);async{anyhow::bail!("spare failed")}},
+        std::time::Duration::from_millis(5),std::time::Duration::from_millis(150),&limit).await.unwrap();
+        assert_eq!(value,8);assert_eq!(calls.load(Ordering::SeqCst),1);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn priority_recovery_cancels_losers_and_releases_spare_permit() {
+        use std::sync::{Arc,atomic::{AtomicUsize,Ordering}};
+        struct Guard(Arc<AtomicUsize>);
+        impl Drop for Guard{fn drop(&mut self){self.0.fetch_add(1,Ordering::SeqCst);}}
+        let drops=Arc::new(AtomicUsize::new(0));let limit=tokio::sync::Semaphore::new(1);
+        let (started,ready)=tokio::sync::oneshot::channel();
+        let acquisition=recover_connection(async{let _g=Guard(drops.clone());std::future::pending::<Result<()>>().await},
+            ||async{let _g=Guard(drops.clone());let _=started.send(());std::future::pending::<Result<()>>().await},
+            std::time::Duration::from_millis(5),std::time::Duration::from_secs(1),&limit);
+        let acquisition=Box::pin(acquisition);
+        let mut acquisition=acquisition;
+        tokio::select!{_=&mut acquisition=>panic!("both connections should be pending"),_=ready=>{}}
+        assert_eq!(limit.available_permits(),0);drop(acquisition);
+        assert_eq!(drops.load(Ordering::SeqCst),2);assert_eq!(limit.available_permits(),1);
+    }
+
+    // Current behavior characterization: foreground remains attached to the
+    // pending warm future; this is evidence, not an acceptance test for a fix.
+    #[tokio::test]
+    async fn priority_pending_prewarm_blocks_until_its_own_failure() {
+        let (release, blocked)=tokio::sync::oneshot::channel::<()>();
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _=blocked.await;
+            anyhow::bail!("synthetic handshake failure")
+        })));
+        let take=warm.take();tokio::pin!(take);
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(80),&mut take).await.is_err());
+        release.send(()).unwrap();
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(200),&mut take).await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn cancelled_warm_wait_drops_the_underlying_connection_task() {
+        let (started,ready)=tokio::sync::oneshot::channel();
+        let (dropped,done)=tokio::sync::oneshot::channel();
+        struct Notify(Option<tokio::sync::oneshot::Sender<()>>);
+        impl Drop for Notify {fn drop(&mut self){if let Some(s)=self.0.take(){let _=s.send(());}}}
+        let mut warm=Prewarm(Some(tokio::spawn(async move {
+            let _guard=Notify(Some(dropped));let _=started.send(());
+            std::future::pending::<Result<tts_xfyun::Warm>>().await
+        })));
+        let outer=tokio::spawn(async move {warm.take().await;});
+        ready.await.unwrap();tokio::task::yield_now().await;outer.abort();let _=outer.await;
+        assert!(tokio::time::timeout(std::time::Duration::from_millis(150),done).await.is_ok(),"cancelled turn must not detach its in-flight preconnect");
+    }
+
+    #[tokio::test]
+    async fn slow_preconnect_is_hedged_without_waiting_for_the_slow_socket() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(1);
+        let t=std::time::Instant::now();
+        let got=connect_hedged(||{
+            let n=calls.fetch_add(1,Ordering::SeqCst);
+            async move{tokio::time::sleep(std::time::Duration::from_millis(if n==0{600}else{15})).await;Ok(n)}
+        },std::time::Duration::from_millis(40),&limit).await.unwrap();
+        assert_eq!(got,1,"the one delayed spare must beat the slow initial handshake");
+        assert!(t.elapsed()<std::time::Duration::from_millis(300));
+        assert_eq!(calls.load(Ordering::SeqCst),2);assert_eq!(limit.available_permits(),1);
+    }
+
+    #[tokio::test]
+    async fn healthy_preconnect_uses_one_socket_and_zero_extra_wait() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(1);
+        let got=connect_hedged(||{calls.fetch_add(1,Ordering::SeqCst);async {Ok(7)}},std::time::Duration::from_millis(40),&limit).await.unwrap();
+        assert_eq!(got,7);assert_eq!(calls.load(Ordering::SeqCst),1);
+    }
+
+    #[tokio::test]
+    async fn spare_failure_keeps_primary_and_capacity_limit_never_queues() {
+        use std::sync::atomic::{AtomicUsize,Ordering};
+        for available in [0,1] {
+            let calls=AtomicUsize::new(0);let limit=tokio::sync::Semaphore::new(available);
+            let value=connect_hedged(|| {
+                let n=calls.fetch_add(1,Ordering::SeqCst);
+                async move {if n==1{anyhow::bail!("synthetic spare failure");}
+                    tokio::time::sleep(std::time::Duration::from_millis(40)).await;Ok(42)}
+            },std::time::Duration::from_millis(5),&limit).await.unwrap();
+            assert_eq!(value,42);assert_eq!(calls.load(Ordering::SeqCst),available+1);
+            assert_eq!(limit.available_permits(),available);
+        }
+    }
+
+    #[tokio::test]
+    async fn cancelling_hedged_connect_drops_both_attempts_and_releases_permit() {
+        use std::sync::{Arc,atomic::{AtomicUsize,Ordering}};
+        struct Count(Arc<AtomicUsize>);
+        impl Drop for Count{fn drop(&mut self){self.0.fetch_sub(1,Ordering::SeqCst);}}
+        let active=Arc::new(AtomicUsize::new(0));let limit=Arc::new(tokio::sync::Semaphore::new(1));
+        let a=active.clone();let l=limit.clone();
+        let task=tokio::spawn(async move {
+            connect_hedged(||{let a=a.clone();async move {
+                a.fetch_add(1,Ordering::SeqCst);let _count=Count(a);
+                std::future::pending::<Result<usize>>().await
+            }},std::time::Duration::from_millis(5),&l).await
+        });
+        tokio::time::timeout(std::time::Duration::from_secs(1),async {
+            while active.load(Ordering::SeqCst)!=2 {tokio::task::yield_now().await;}
+        }).await.unwrap();
+        task.abort();let _=task.await;
+        assert_eq!(active.load(Ordering::SeqCst),0);assert_eq!(limit.available_permits(),1);
+    }
 
     #[test]
     fn sample_rate_is_uniform_across_providers() {
@@ -272,4 +588,3 @@ mod tests {
         assert_eq!(x.voice(), "x6_lingxiaoxuan_pro");
     }
 }
-

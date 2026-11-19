@@ -48,6 +48,7 @@ pub struct Envelope {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Inbound {
+    VoiceOnboarding,
     /// 停止本轮生成与播放(川哥 2026-08-15 拍板:走硬 abort,不进假打断窗口——
     /// 用户明确按了停,不该再等 1.5s 定时器判断他是不是说错话了)
     Cancel,
@@ -89,6 +90,7 @@ pub fn parse(raw: &[u8]) -> Option<(Envelope, Inbound)> {
         return None; // worker 自己的 ack 也在这个 topic 上,必须挡掉
     }
     let kind = match ev.kind.as_str() {
+        "voice_onboarding.request" if raw.len() <= 4096 && ev.lane.as_deref() == Some("voice_onboarding") => Inbound::VoiceOnboarding,
         "cancel" => Inbound::Cancel,
         "wake" => match ev.payload.get("device_command_contract_version").and_then(|v| v.as_u64()) {
             Some(v) if v <= u32::MAX as u64 => Inbound::Capability { contract_version: v as u32 },

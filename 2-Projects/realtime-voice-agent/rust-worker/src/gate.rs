@@ -67,10 +67,11 @@ pub struct OutputGate {
 
 /// PCM 管道容量与 start_turn 的 pcm channel 同深(32),包装层不改变背压语义。
 const WRAP_CAPACITY: usize = 32;
+pub(crate) const OUTPUT_READY_TIMEOUT: Duration = Duration::from_secs(5);
 
 impl OutputGate {
     pub fn new(rx: watch::Receiver<bool>) -> Self {
-        Self { rx, passed: false, timeout: Duration::from_secs(5) }
+        Self { rx, passed: false, timeout: OUTPUT_READY_TIMEOUT }
     }
 
     #[cfg(test)]

@@ -11,7 +11,7 @@ use serde_json::json;
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message as WsMessage;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 
 use crate::volc::{gzip, Flags, Frame, MsgType, ASR_URL, COMP_GZIP, SER_JSON};
 
@@ -27,6 +27,9 @@ pub enum SttEvent {
 
 #[derive(Clone)]
 pub struct SttConfig {
+    /// Independent DNS families/address racing; bounded connect applies to
+    /// both paths. Opt-in is separate from TTS and restricted to the ASR host.
+    pub async_connect: bool,
     pub app_id: String,
     pub access_token: String,
     pub api_key: Option<String>,
@@ -61,8 +64,14 @@ pub struct SttConfig {
 pub const ASYNC_ASR_URL: &str = "wss://openspeech.bytedance.com/api/v3/sauc/bigmodel_async";
 
 impl SttConfig {
+    /// Candidate-only: retain short backchannels instead of asking DDC to
+    /// delete them. Does not change model, endpoint, endpointing or hotwords.
+    pub fn preserve_search_ack(&mut self, candidate: bool, enabled: bool) {
+        if candidate && enabled { self.enable_ddc=false; }
+    }
     pub fn from_env() -> Self {
         Self {
+            async_connect: std::env::var("P003_ASR_CONNECT_RECOVERY_V1").is_ok_and(|v| v == "1"),
             app_id: std::env::var("VOLC_APP_ID").unwrap_or_default(),
             access_token: std::env::var("VOLC_ACCESS_TOKEN").unwrap_or_default(),
             api_key: std::env::var("VOLC_ASR_API_KEY").ok().filter(|s| !s.is_empty()),
@@ -147,12 +156,75 @@ fn is_last_frame(flag: Flags) -> bool {
 /// 一条 ASR 连接的结束方式(重连决策依据,Closed 事件由外层重连循环统一发)。
 #[derive(Debug, PartialEq, Eq)]
 pub enum AsrEnd {
+    /// Unused preconnection closed locally, without requesting recognition of
+    /// an empty recording. No provider final acknowledgement is implied.
+    Unused,
     /// 输入结束且服务端 LastNoSeq 收尾——正常终局,不重连。
     InputDone,
     /// 输入结束(已发 NegativeSeq)但服务端未回 LastNoSeq 就关闭了连接——意外 EOF:不重连,但不是正常终局。
     InputDoneEof,
     /// 服务端中途断开——外层重连(改进项:Python 版此处直接死流)。
     ServerClosed,
+}
+
+pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+type AsrWs = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+
+#[derive(Debug)]
+pub struct ConnectFailure;
+impl std::fmt::Display for ConnectFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { f.write_str("asr connection failed within bounded episode") }
+}
+impl std::error::Error for ConnectFailure {}
+
+struct ConnectTiming<'a> {
+    request_id: &'a str, started: std::time::Instant, stage: &'static str,
+    outcome: &'static str, dns_ms: Option<u64>, tcp_ms: Option<u64>, tls_ws_ms: Option<u64>,
+    reason: &'static str,
+}
+impl Drop for ConnectTiming<'_> {
+    fn drop(&mut self) {
+        info!(request_id=self.request_id, stage=self.stage, outcome=self.outcome,reason=self.reason,
+            elapsed_ms=self.started.elapsed().as_millis() as u64, dns_ms=self.dns_ms,
+            tcp_ms=self.tcp_ms, tls_ws_ms=self.tls_ws_ms, "asr connection timing");
+    }
+}
+
+async fn connect_observed(request: tokio_tungstenite::tungstenite::handshake::client::Request,
+                          request_id: &str, async_connect: bool) -> Result<AsrWs> {
+    let mut timing = ConnectTiming { request_id, started: std::time::Instant::now(), stage:"request",
+        outcome:"cancelled", reason:"owner_dropped", dns_ms:None, tcp_ms:None, tls_ws_ms:None };
+    let result = tokio::time::timeout(CONNECT_TIMEOUT, async {
+        let host = request.uri().host().ok_or_else(|| anyhow::anyhow!("invalid_host"))?.to_owned();
+        let port = request.uri().port_u16().unwrap_or(if request.uri().scheme_str()==Some("wss") {443} else {80});
+        let socket = if async_connect && host == "openspeech.bytedance.com" {
+            timing.stage="resolve_tcp";
+            let c=crate::voice_connect::connect(&host,port)
+                .instrument(tracing::info_span!("voice_connection",provider="asr",request_id)).await?;
+            timing.dns_ms=Some(c.dns_ms);timing.tcp_ms=Some(c.tcp_ms);c.socket
+        } else {
+            timing.stage="dns";let at=std::time::Instant::now();
+            let addresses:Vec<_>=tokio::net::lookup_host((host.as_str(),port)).await
+                .map_err(|_|anyhow::anyhow!("resolve_failed"))?.collect();
+            timing.dns_ms=Some(at.elapsed().as_millis() as u64);
+            timing.stage="tcp";let at=std::time::Instant::now();
+            let socket=tokio::net::TcpStream::connect(addresses.as_slice()).await
+                .map_err(|_|anyhow::anyhow!("connect_failed"))?;
+            timing.tcp_ms=Some(at.elapsed().as_millis() as u64);socket
+        };
+        timing.stage="tls_ws";let at=std::time::Instant::now();
+        // Pass the original request unchanged: Host, auth headers, path and
+        // TLS hostname/certificate verification retain their existing contract.
+        let (ws,_) = tokio_tungstenite::client_async_tls_with_config(request,socket,None,None).await
+            .map_err(|_|anyhow::anyhow!("handshake_failed"))?;
+        timing.tls_ws_ms=Some(at.elapsed().as_millis() as u64);
+        Ok::<_,anyhow::Error>(ws)
+    }).await;
+    match result {
+        Ok(Ok(ws)) => {timing.outcome="connected";timing.reason="none";Ok(ws)},
+        Ok(Err(error)) => {timing.outcome="failed";timing.reason=crate::voice_connect::safe_failure_reason(&error);Err(ConnectFailure.into())},
+        Err(_) => {timing.outcome="timeout";timing.reason="connect_budget";Err(ConnectFailure.into())},
+    }
 }
 
 /// 起一条 ASR 长连:`pcm_rx` 收 16k i16 PCM 段,事件从 `event_tx` 发出。
@@ -162,7 +234,28 @@ pub async fn run_asr_stream(
     pcm_rx: &mut mpsc::Receiver<Vec<i16>>,
     event_tx: mpsc::Sender<SttEvent>,
 ) -> Result<AsrEnd> {
-    let request_id = uuid::Uuid::new_v4().to_string();
+    run_asr_stream_observed(cfg, pcm_rx, event_tx, None).await
+}
+
+pub async fn run_asr_stream_observed(
+    cfg: SttConfig, pcm_rx: &mut mpsc::Receiver<Vec<i16>>, event_tx: mpsc::Sender<SttEvent>,
+    diagnostic: Option<std::sync::Arc<crate::asr_diagnostics::InputDiagnostic>>,
+) -> Result<AsrEnd> {
+    let mut observed = crate::asr_diagnostics::Observation::new(uuid::Uuid::new_v4().to_string(), diagnostic);
+    let result = run_asr_stream_inner(cfg, pcm_rx, event_tx, &mut observed).await;
+    observed.outcome = match &result {
+        Ok(AsrEnd::Unused) => "unused", Ok(AsrEnd::InputDone) => "last_frame",
+        Ok(AsrEnd::InputDoneEof) => "input_done_eof", Ok(AsrEnd::ServerClosed) => "server_closed", Err(_) => "error",
+    };
+    result
+}
+
+async fn run_asr_stream_inner(
+    cfg: SttConfig, pcm_rx: &mut mpsc::Receiver<Vec<i16>>, event_tx: mpsc::Sender<SttEvent>,
+    observed: &mut crate::asr_diagnostics::Observation,
+) -> Result<AsrEnd> {
+    let request_id = observed.request_id.clone();
+
     let mut req = cfg.url.as_str().into_client_request()?;
     {
         let h = req.headers_mut();
@@ -178,9 +271,13 @@ pub async fn run_asr_stream(
         h.insert("X-Api-Request-Id", request_id.parse()?);
         h.insert("X-Api-Connect-Id", uuid::Uuid::new_v4().to_string().parse()?);
     }
-    let (ws, _) = tokio_tungstenite::connect_async(req).await.context("asr connect")?;
+    let ws = tokio::select! {
+        result = connect_observed(req, &request_id, cfg.async_connect) => result?,
+        _ = event_tx.closed() => return Ok(AsrEnd::Unused),
+    };
     let (mut tx, mut rx) = ws.split();
     info!(
+        %request_id,
         end_window_ms = cfg.end_window_ms,
         hotwords = cfg.hotwords.len(),
         "asr: connected (seedasr bigmodel)"
@@ -197,11 +294,15 @@ pub async fn run_asr_stream(
         payload: gzip(init_payload.to_string().as_bytes()),
         ..Default::default()
     };
+    observed.stage="init_write";
     tx.send(WsMessage::Binary(init.marshal().into())).await?;
+    observed.stats.init_written=true;
+    observed.stage="receive";
 
     // 已发 Final 的句子游标:utterances 是全量数组,靠计数防重发
     let mut finals_emitted = 0usize;
     let mut input_done = false;
+    let mut audio_sent = false;
     // WS 应用层心跳(对齐 Python websockets ping_interval=20):跨境长连的死链检测——
     // 无心跳时黑洞连接表现为永久静默(2026-08-12 聋窗排查加装);死链 → send Err → 外层重连。
     let mut ping_tick = tokio::time::interval(Duration::from_secs(20));
@@ -211,10 +312,14 @@ pub async fn run_asr_stream(
     loop {
         tokio::select! {
             _ = ping_tick.tick() => {
+                observed.stage="ping_write";
                 tx.send(WsMessage::Ping(Vec::new().into())).await.context("asr keepalive ping")?;
+                observed.stage="receive";
             }
             pcm = pcm_rx.recv(), if !input_done => match pcm {
                 Some(samples) => {
+                    if samples.is_empty() { continue; }
+                    if observed.enabled() {observed.stats.taken.push(&samples);}
                     seq += 1;
                     let bytes: Vec<u8> = samples.iter().flat_map(|s| s.to_le_bytes()).collect();
                     let frame = Frame {
@@ -226,9 +331,30 @@ pub async fn run_asr_stream(
                         payload: gzip(&bytes),
                         ..Default::default()
                     };
+                    observed.stage="audio_write";
+                    let at=std::time::Instant::now();
                     tx.send(WsMessage::Binary(frame.marshal().into())).await?;
+                    if observed.enabled() {
+                        observed.stats.written.push(&samples);observed.stats.audio_writes+=1;
+                        observed.stats.max_write_ms=observed.stats.max_write_ms.max(at.elapsed().as_millis() as u64);
+                        if observed.stats.first_write_ms.is_none() {observed.stats.first_write_ms=Some(observed.ms());}
+                        observed.stats.last_write_ms=Some(observed.ms());
+                    }
+                    observed.stage="receive";
+                    audio_sent = true;
                 }
                 None => {
+                    if !audio_sent {
+                        // First-turn timeout abandons this preconnection before
+                        // the replacement RTC stream starts receiving audio.
+                        // bigmodel_async rejects a zero-audio NegativeSeq with
+                        // 45000002. Close the unused socket instead, bounded so
+                        // a peer cannot hold an abandoned stream indefinitely.
+                        let _ = tokio::time::timeout(Duration::from_millis(500),
+                            tx.send(WsMessage::Close(None))).await;
+                        info!(%request_id, "unused asr preconnection closed without recognition");
+                        return Ok(AsrEnd::Unused);
+                    }
                     // 输入结束:空尾段 NegativeSeq 收流,之后只等服务端 LastNoSeq
                     input_done = true;
                     seq += 1;
@@ -241,25 +367,31 @@ pub async fn run_asr_stream(
                         payload: gzip(b""),
                         ..Default::default()
                     };
+                    observed.stage="terminator_write";
                     tx.send(WsMessage::Binary(last.marshal().into())).await?;
+                    observed.stats.terminator_written=true;
+                    observed.stage="receive";
                 }
             },
             msg = rx.next() => match msg {
                 Some(Ok(WsMessage::Binary(data))) => {
+                    observed.stats.binary+=1;observed.stage="decode_frame";
                     let frame = Frame::unmarshal(&data)?;
                     if frame.msg_type == MsgType::Error {
+                        observed.stats.error_code=Some(frame.error_code);
                         bail!("火山 ASR 流异常 code={} payload={}",
                             frame.error_code,
                             String::from_utf8_lossy(&frame.payload).chars().take(200).collect::<String>());
                     }
                     if frame.msg_type != MsgType::FullServerResponse {
-                        continue;
+                        observed.stats.other+=1;observed.stage="receive";continue;
                     }
                     let ended = is_last_frame(frame.flag);
                     if let Some(payload) = frame.json_payload() {
-                        handle_result(&payload, &mut finals_emitted, &event_tx, cfg.canon, ended)
-                            .await;
-                    }
+                        observed.response(&payload);
+                        handle_result_observed(&payload, &mut finals_emitted, &event_tx, cfg.canon, ended, observed).await;
+                    } else {observed.stats.invalid_json+=1;}
+                    observed.stage="receive";
                     if ended {
                         return Ok(AsrEnd::InputDone);
                     }
@@ -269,19 +401,16 @@ pub async fn run_asr_stream(
                     // 收流后未见 LastNoSeq 即被关闭 = 意外 EOF(与 LastNoSeq 正常终局区分;ordered_pcm 据此不提交半段 final)
                     return Ok(if input_done { AsrEnd::InputDoneEof } else { AsrEnd::ServerClosed });
                 }
-                Some(Ok(_)) => {}
+                Some(Ok(_)) => {observed.stats.other+=1;}
                 Some(Err(e)) => return Err(e.into()),
             }
         }
     }
 }
 
-async fn handle_result(
-    payload: &serde_json::Value,
-    finals_emitted: &mut usize,
-    event_tx: &mpsc::Sender<SttEvent>,
-    canon: bool,
-    ended: bool,
+async fn handle_result_observed(
+    payload: &serde_json::Value, finals_emitted: &mut usize, event_tx: &mpsc::Sender<SttEvent>,
+    canon: bool, ended: bool, observed: &mut crate::asr_diagnostics::Observation,
 ) {
     let Some(result) = payload.get("result") else { return };
     let norm = |raw: &str| -> String {
@@ -296,7 +425,7 @@ async fn handle_result(
         // 无 utterances 的响应:顶层 text 兜底发 Interim(对齐 volc_stt.py `elif not utts`)
         let top = norm(result.get("text").and_then(|t| t.as_str()).unwrap_or(""));
         if !top.is_empty() {
-            let _ = event_tx.send(SttEvent::Interim(top)).await;
+            observed.emit(event_tx,SttEvent::Interim(top)).await;
         }
         return;
     };
@@ -316,7 +445,7 @@ async fn handle_result(
                     warn!("stt: definite 句段顺滑后为空(疑似 enable_ddc 清空纯语气词), raw_utterance={u}");
                 } else {
                     info!("stt final: {text}"); // 证据日志,格式对齐 Python 版
-                    let _ = event_tx.send(SttEvent::Final(text)).await;
+                    observed.emit(event_tx,SttEvent::Final(text)).await;
                 }
                 *finals_emitted = definite_count;
             }
@@ -325,23 +454,284 @@ async fn handle_result(
             // 否则尾句只停留在 interim,永不提交
             if !text.is_empty() {
                 info!("stt final(流尾提升): {text}");
-                let _ = event_tx.send(SttEvent::Final(text)).await;
+                observed.emit(event_tx,SttEvent::Final(text)).await;
             }
         } else {
             tail_interim = if text.is_empty() { None } else { Some(text) };
         }
     }
     if let Some(t) = tail_interim {
-        let _ = event_tx.send(SttEvent::Interim(t)).await;
+        observed.emit(event_tx,SttEvent::Interim(t)).await;
     }
 }
 
 #[cfg(test)]
 mod tests {
+
+    #[tokio::test]
+    async fn diagnostic_real_ws_writes_and_empty_interim_final_are_separate() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();let addr=listener.local_addr().unwrap();
+        let samples=vec![0,7,-9,i16::MIN];let expected=samples.clone();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();assert_eq!(init.msg_type,MsgType::FullClientRequest);
+            let audio=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();assert_eq!(audio.msg_type,MsgType::AudioOnlyClient);
+            use std::io::Read;let mut bytes=Vec::new();flate2::read::GzDecoder::new(audio.payload.as_slice()).read_to_end(&mut bytes).unwrap();
+            assert_eq!(bytes,expected.iter().flat_map(|s|s.to_le_bytes()).collect::<Vec<_>>());
+            for (payload,flag) in [(json!({}),Flags::NoSeq),(json!({"result":{"utterances":[]}}),Flags::NoSeq),(json!({"result":{"text":"合成","utterances":[{"text":"合成","definite":false}]}}),Flags::NoSeq),(json!({"result":{"utterances":[{"text":"合成验证","definite":true}]}}),Flags::LastNoSeq)] {
+                let frame=Frame{msg_type:MsgType::FullServerResponse,flag,payload:serde_json::to_vec(&payload).unwrap(),..Default::default()};ws.send(WsMessage::Binary(frame.marshal().into())).await.unwrap();
+            }
+        });
+        let mut c=cfg(vec![]);c.url=format!("ws://{addr}");let (tx,mut rx)=mpsc::channel(2);tx.send(samples).await.unwrap();
+        let (ev,mut events)=mpsc::channel(8);let mut o=Observation::new("synthetic-diagnostic".into(),Some(InputDiagnostic::new()));
+        assert_eq!(tokio::time::timeout(Duration::from_secs(2),run_asr_stream_inner(c,&mut rx,ev,&mut o)).await.unwrap().unwrap(),AsrEnd::InputDone);
+        assert!(o.stats.init_written);assert_eq!(o.stats.taken.samples,4);assert_eq!(o.stats.written.samples,4);assert_eq!(o.stats.written.nonzero,3);
+        assert_eq!(o.stats.binary,4);assert_eq!(o.stats.responses,4);assert_eq!(o.stats.missing_result,1);assert_eq!(o.stats.empty_utterances,1);
+        assert_eq!(o.stats.interim_delivered,1);assert_eq!(o.stats.final_delivered,1);assert!(!o.stats.terminator_written);
+        assert!(matches!(events.recv().await,Some(SttEvent::Interim(_))));assert!(matches!(events.recv().await,Some(SttEvent::Final(_))));server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn diagnostic_parser_boundaries_and_closed_event_consumer_do_not_invent_finals() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let (tx,mut rx)=mpsc::channel(8);let mut n=0;let mut o=Observation::new("synthetic-shapes".into(),Some(InputDiagnostic::new()));
+        for (payload,ended) in [(json!({"result":{"text":"顶层尾句"}}),true),(json!({"result":{"text":"空数组尾句","utterances":[]}}),true),(json!({"result":{"utterances":[{"text":"数值标志","definite":1}]}}),false)] {
+            o.response(&payload);handle_result_observed(&payload,&mut n,&tx,true,ended,&mut o).await;
+        }
+        assert_eq!(o.stats.final_delivered,0);assert_eq!(o.stats.interim_delivered,2);
+        // Preserve existing behavior, expose the shape for diagnosis, do not silently "fix" protocol assumptions.
+        assert!(matches!(rx.recv().await,Some(SttEvent::Interim(_))));assert!(matches!(rx.recv().await,Some(SttEvent::Interim(_))));
+        drop(rx);handle_result_observed(&json!({"result":{"utterances":[{"text":"合成验证","definite":true}]}}),&mut n,&tx,true,false,&mut o).await;
+        assert_eq!(o.stats.event_receiver_closed,1);assert_eq!(o.stats.final_delivered,0);
+    }
+
+    #[tokio::test]
+    async fn diagnostic_cancelled_event_send_exposes_pending_stage_without_false_delivery() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let (tx,_rx)=mpsc::channel(1);tx.send(SttEvent::Interim("occupied".into())).await.unwrap();
+        let mut o=Observation::new("synthetic-blocked".into(),Some(InputDiagnostic::new()));
+        assert!(tokio::time::timeout(Duration::from_millis(20),o.emit(&tx,SttEvent::Final("合成".into()))).await.is_err());
+        assert_eq!(o.stage,"event_send");assert_eq!(o.outcome,"cancelled");assert_eq!(o.stats.final_delivered,0);
+    }
+
+    /// Private synthetic PCM only. Credentials are inherited in memory by the
+    /// controlled runner; this probe never prints headers or provider bodies.
+    #[tokio::test]
+    #[ignore = "requires explicitly supplied synthetic WAV and live provider credentials"]
+    async fn diagnostic_live_synthetic_wav() {
+        use crate::asr_diagnostics::{InputDiagnostic,Observation};
+        let path=std::env::var("P003_SYNTHETIC_ASR_WAV").expect("synthetic WAV required");
+        let mut wav=hound::WavReader::open(path).unwrap();let spec=wav.spec();assert_eq!((spec.sample_rate,spec.channels,spec.bits_per_sample),(16000,1,16));
+        let mut samples:Vec<i16>=wav.samples::<i16>().map(Result::unwrap).collect();samples.extend(vec![0;16000*2]);
+        let mut c=SttConfig::from_env();
+        if std::env::var("P003_SYNTHETIC_ASR_ASYNC").as_deref()==Ok("1") {c.url=ASYNC_ASR_URL.into();c.nonstream=true;}
+        let d=InputDiagnostic::new();d.phase("direct_synthetic");let mut o=Observation::new(uuid::Uuid::new_v4().to_string(),Some(d));
+        let (tx,mut rx)=mpsc::channel(128);let (ev,mut events)=mpsc::channel(64);
+        let feeder=tokio::spawn(async move {let start=tokio::time::Instant::now();for (i,part) in samples.chunks(3200).enumerate() {tokio::time::sleep_until(start+Duration::from_millis(i as u64*200)).await;tx.send(part.to_vec()).await.unwrap();}});
+        let consume=tokio::spawn(async move {let mut finals=0;while let Some(e)=events.recv().await {if matches!(e,SttEvent::Final(_)) {finals+=1;}} finals});
+        let result=tokio::time::timeout(Duration::from_secs(25),run_asr_stream_inner(c,&mut rx,ev,&mut o)).await;
+        feeder.abort();let _=feeder.await;let finals=consume.await.unwrap();
+        println!("SYNTHETIC_ASR_RESULT {}",json!({"stats":o.stats,"finals":finals,"terminal":format!("{:?}",result.as_ref().map(|r|r.as_ref().map_err(|_|"error")))}));
+        assert!(matches!(result,Ok(Ok(AsrEnd::InputDone))));assert!(finals>0,"no final from synthetic direct ASR");
+    }
     use super::*;
+
+    // A TCP peer that never finishes the WS handshake must not keep the
+    // recognition task alive indefinitely (the 01:08 production failure).
+    #[tokio::test]
+    async fn stalled_handshake_has_a_bounded_connection_budget() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut c = cfg(vec![]); c.url = format!("ws://{}", listener.local_addr().unwrap());
+        let (tx, mut rx) = mpsc::channel(128);
+        tx.send(vec![7; 3200]).await.unwrap();
+        let (events, _ev_rx) = mpsc::channel(2);
+        let mut client = tokio::spawn(async move { run_asr_stream(c, &mut rx, events).await });
+        let (_socket, _) = listener.accept().await.unwrap();
+        let result = tokio::time::timeout(Duration::from_secs(11), &mut client).await;
+        client.abort();
+        assert!(result.is_ok(), "ASR connect remained pending beyond its 10s budget");
+        assert!(result.unwrap().unwrap().is_err());
+    }
+
+    #[tokio::test]
+    async fn abandoned_event_consumer_cancels_pending_handshake() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let mut c = cfg(vec![]); c.url = format!("ws://{}", listener.local_addr().unwrap());
+        let (_tx, mut rx) = mpsc::channel(2);
+        let (events, ev_rx) = mpsc::channel(2);
+        let mut client = tokio::spawn(async move { run_asr_stream(c, &mut rx, events).await });
+        let (_socket, _) = listener.accept().await.unwrap();
+        drop(ev_rx);
+        let result = tokio::time::timeout(Duration::from_millis(500), &mut client).await;
+        client.abort();
+        assert!(result.is_ok(), "orphan ASR handshake survived its event owner");
+        assert_eq!(result.unwrap().unwrap().unwrap(), AsrEnd::Unused);
+    }
+
+    #[tokio::test]
+    async fn delayed_handshake_preserves_auth_and_first_pcm_exactly_once() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let expected:Vec<i16>=(0..3200).map(|i|(i%601-300) as i16).collect();
+        let pcm=expected.clone();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_millis(150)).await;
+            let mut ws=tokio_tungstenite::accept_hdr_async(socket,|req:&tokio_tungstenite::tungstenite::handshake::server::Request,response| {
+                assert_eq!(req.uri().path(),"/asr-test");
+                assert_eq!(req.headers()["X-Api-Key"],"test-key");
+                assert_eq!(req.headers()["X-Api-Resource-Id"],"r");
+                assert!(req.headers().contains_key("X-Api-Request-Id"));
+                Ok(response)
+            }).await.unwrap();
+            let mut got=Vec::new();let mut init_count=0;
+            while let Some(msg)=ws.next().await {
+                let frame=Frame::unmarshal(&msg.unwrap().into_data()).unwrap();
+                if frame.msg_type==MsgType::FullClientRequest {init_count+=1;continue;}
+                if frame.flag==Flags::NegativeSeq {
+                    let response=Frame{msg_type:MsgType::FullServerResponse,flag:Flags::LastNoSeq,
+                        payload:br#"{"result":{"utterances":[]}}"#.to_vec(),..Default::default()};
+                    ws.send(WsMessage::Binary(response.marshal().into())).await.unwrap();break;
+                }
+                use std::io::Read;let mut bytes=Vec::new();
+                flate2::read::GzDecoder::new(frame.payload.as_slice()).read_to_end(&mut bytes).unwrap();
+                got.extend(bytes.chunks_exact(2).map(|b|i16::from_le_bytes([b[0],b[1]])));
+            }
+            assert_eq!(init_count,1);assert_eq!(got,expected);
+        });
+        let mut c=cfg(vec![]);c.url=format!("ws://{addr}/asr-test");c.api_key=Some("test-key".into());
+        let (tx,mut rx)=mpsc::channel(128);let (events,_ev_rx)=mpsc::channel(2);
+        tx.send(pcm).await.unwrap();drop(tx);
+        assert_eq!(tokio::time::timeout(Duration::from_secs(2),run_asr_stream(c,&mut rx,events)).await.unwrap().unwrap(),AsrEnd::InputDone);
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn delayed_six_second_handshake_delivers_final_before_recognition_hold_expires() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            tokio::time::sleep(Duration::from_millis(6500)).await;
+            let mut ws=tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();
+            assert_eq!(init.msg_type,MsgType::FullClientRequest);
+            let audio=Frame::unmarshal(&ws.next().await.unwrap().unwrap().into_data()).unwrap();
+            assert_eq!(audio.msg_type,MsgType::AudioOnlyClient);
+            let response=Frame{msg_type:MsgType::FullServerResponse,flag:Flags::LastNoSeq,
+                payload:serde_json::to_vec(&json!({"result":{"utterances":[{"text":"合成验证","definite":true}]}})).unwrap(),..Default::default()};
+            ws.send(WsMessage::Binary(response.marshal().into())).await.unwrap();
+        });
+        let t=std::time::Instant::now();
+        let w=crate::business_runtime::Runtime::from_settings("enforce","BJP00326110799999901",
+            "sn-BJP00326110799999901-123",Some(&json!({"timeout_ms":5000,"revision":"cfg-1"})),t).unwrap();
+        w.input_frame(t,160);w.asr_speech(t);
+        let mut c=cfg(vec![]);c.url=format!("ws://{addr}");
+        let (tx,mut rx)=mpsc::channel(128);let (events,mut ev_rx)=mpsc::channel(2);
+        tx.send(vec![31;3200]).await.unwrap();
+        let client=tokio::spawn(async move {run_asr_stream(c,&mut rx,events).await});
+        let mut tick=tokio::time::interval(Duration::from_millis(25));
+        loop {
+            tokio::select! {
+                event=ev_rx.recv()=>{
+                    assert!(matches!(event,Some(SttEvent::Final(ref s)) if s=="合成验证"));
+                    w.asr_final(std::time::Instant::now());break;
+                },
+                _=tick.tick()=>{
+                    assert!(t.elapsed()<Duration::from_secs(9),"bounded final not delivered");
+                    assert_eq!(w.evaluate(std::time::Instant::now()),crate::business_watchdog::Decision::Keep,
+                        "ordinary 5s idle must not overtake a live recognition episode");
+                }
+            }
+        }
+        assert!(t.elapsed()>=Duration::from_secs(6));
+        assert_eq!(client.await.unwrap().unwrap(),AsrEnd::InputDone);server.await.unwrap();
+    }
+
+    // The async provider rejects an empty recognition terminator with
+    // 45000002. Reproduce its wire behavior, including a positive control:
+    // real PCM that happens to contain silence still needs normal final ACK.
+    async fn empty_preconnect_case(pcm: Option<Vec<i16>>) -> (Result<AsrEnd>, usize, bool) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let (initialized, ready) = tokio::sync::oneshot::channel();
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init = ws.next().await.unwrap().unwrap().into_data();
+            assert_eq!(Frame::unmarshal(&init).unwrap().msg_type, MsgType::FullClientRequest);
+            initialized.send(()).unwrap();
+            let mut samples = 0;
+            let mut terminator = false;
+            while let Some(message) = ws.next().await {
+                match message.unwrap() {
+                    WsMessage::Binary(data) => {
+                        let f = Frame::unmarshal(&data).unwrap();
+                        assert_eq!(f.msg_type, MsgType::AudioOnlyClient);
+                        if f.flag == Flags::NegativeSeq {
+                            terminator = true;
+                            let response = if samples == 0 {
+                                Frame { msg_type: MsgType::Error, error_code: 45000002,
+                                    payload: b"No audio was received".to_vec(), ..Default::default() }
+                            } else {
+                                Frame { msg_type: MsgType::FullServerResponse, flag: Flags::LastNoSeq,
+                                    payload: br#"{"result":{"utterances":[]}}"#.to_vec(), ..Default::default() }
+                            };
+                            ws.send(WsMessage::Binary(response.marshal().into())).await.unwrap();
+                            break;
+                        }
+                        use std::io::Read;
+                        assert_eq!(f.compression, COMP_GZIP);
+                        let mut pcm = Vec::new();
+                        flate2::read::GzDecoder::new(f.payload.as_slice()).read_to_end(&mut pcm).unwrap();
+                        samples += pcm.len() / 2;
+                    }
+                    WsMessage::Close(_) => break,
+                    _ => {}
+                }
+            }
+            (samples, terminator)
+        });
+        let mut c = cfg(vec![]); c.url = format!("ws://{addr}");
+        let (tx, mut rx) = mpsc::channel(2);
+        let (events, _ev_rx) = mpsc::channel(2);
+        let client = tokio::spawn(async move { run_asr_stream(c, &mut rx, events).await });
+        ready.await.unwrap();
+        if let Some(pcm) = pcm { tx.send(pcm).await.unwrap(); }
+        drop(tx);
+        let result = tokio::time::timeout(Duration::from_secs(2), client).await.unwrap().unwrap();
+        let (samples, terminator) = tokio::time::timeout(Duration::from_secs(2), server).await.unwrap().unwrap();
+        (result, samples, terminator)
+    }
+
+    #[tokio::test]
+    async fn unused_preconnect_does_not_submit_empty_recognition() {
+        let (result, samples, terminator) = empty_preconnect_case(None).await;
+        assert_eq!(result.unwrap(), AsrEnd::Unused);
+        assert_eq!(samples, 0);
+        assert!(!terminator, "no audio means no recognition to finalize");
+    }
+
+    #[tokio::test]
+    async fn empty_pcm_chunk_is_not_a_recognition_session() {
+        let (result, samples, terminator) = empty_preconnect_case(Some(vec![])).await;
+        assert_eq!(result.unwrap(), AsrEnd::Unused);
+        assert_eq!(samples, 0);
+        assert!(!terminator);
+    }
+
+    #[tokio::test]
+    async fn genuine_silent_pcm_still_waits_for_provider_final_ack() {
+        let (result, samples, terminator) = empty_preconnect_case(Some(vec![0; 320])).await;
+        assert_eq!(result.unwrap(), AsrEnd::InputDone);
+        assert_eq!(samples, 320);
+        assert!(terminator);
+    }
 
     fn cfg(hotwords: Vec<String>) -> SttConfig {
         SttConfig {
+            async_connect: false,
             app_id: "a".into(),
             access_token: "t".into(),
             api_key: None,
@@ -357,6 +747,16 @@ mod tests {
     }
 
     /// 二遍识别开关进 init payload(灰度命中时 pipeline 置 true+切 async 端点)。
+    #[test]
+    fn r16_search_ack_preservation_keeps_ordinary_asr_configuration() {
+        for (candidate, enabled) in [(false,false),(false,true),(true,false),(true,true)] {
+            let mut c=cfg(vec!["停".into(),"对".into()]);c.enable_ddc=true;
+            let before=build_init_payload(&c,"test");c.preserve_search_ack(candidate,enabled);
+            let after=build_init_payload(&c,"test");let mut expected=before;
+            if candidate&&enabled {expected["request"]["enable_ddc"]=false.into();}
+            assert_eq!(after,expected);
+        }
+    }
     #[test]
     fn init_payload_nonstream_flag() {
         let c = cfg(vec![]);
