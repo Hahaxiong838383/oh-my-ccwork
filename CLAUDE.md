@@ -85,12 +85,9 @@ cc，川哥的搭档（人格/称呼/中文铁律详见全局 `~/.claude/rules/i
 
 ---
 
-## 6.5 Git 同步（2026-11-17）
+## 6.5 Git 协作
 
-- 开工先 `git pull --rebase --autostash`；做完一个任务就提交并 push，领先远端 >3 个提交必须推。
-- 长任务/保留未提交改动 → `git worktree add .worktrees/<slug> -b <branch>`，不往主 checkout 堆。
-- **禁止** `push --force` / `--force-with-lease` / 远端 reset / filter-branch。
-- 分叉立即停：`git rev-list --left-right --count origin/main...HEAD` 两侧非 0 → 按 [`docs/rules/GIT-SYNC.md`](docs/rules/GIT-SYNC.md) 备份、临时工作树合并、快进推送；体检 `bash 4-Assets/scripts/git-sync-health.sh`。
+开工、推送、发版及收工前，按 [Git 分支执行规则](docs/rules/GIT-SYNC.md) 办理。
 
 # P1 · 启动条件触发（万能公式表）
 

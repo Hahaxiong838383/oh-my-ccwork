@@ -77,8 +77,8 @@ lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（�
 - **小步提交、当日推送**：一个任务一个提交，做完即 push；领先远端超过 3 个提交必须推，禁止攒提交。
 - **长期任务用 worktree**：预计半天以上或要保留未提交改动时，`git worktree add .worktrees/<slug> -b <branch>`，主 checkout 不堆几十个未提交文件。
 - **永不改写远端历史**：禁止 `push --force` / `--force-with-lease` / 远端 reset / filter-branch；只允许快进追加。
-- **分叉即停**：`git rev-list --left-right --count origin/main...HEAD` 两侧都非 0 时停止改动，按 [GIT-SYNC 规则](rules/GIT-SYNC.md) 备份→合并→推送，不自行强推。体检：`bash ~/mycc/4-Assets/scripts/git-sync-health.sh`。
-- **完整流程与踩坑**：见 [`docs/rules/GIT-SYNC.md`](rules/GIT-SYNC.md)（含长文件名 sparse-checkout、脏工作树合并、冲突处理）。
+- **分叉即停**：当前分支相对自身远端同名分支（main 对 origin/main）左右提交数都非 0 时停止改动，按 [GIT-SYNC 规则](rules/GIT-SYNC.md) 备份→合并→推送，不自行强推。体检：`bash ~/mycc/4-Assets/scripts/git-sync-health.sh`。
+- **所有智能体开工、推送、发版及收工前**，读取 `~/mycc/docs/rules/GIT-SYNC.md`，按同一份分支执行规则办理。完整流程见 [`docs/rules/GIT-SYNC.md`](rules/GIT-SYNC.md)（含长文件名 sparse-checkout、脏工作树合并、冲突处理）。
 
 ---
 
@@ -94,6 +94,7 @@ lint_ignore_globs: ['.*', '*.lock', '.DS_Store']  # 仅作用于「文件」（�
 | grok | home-studio：`~/.grok/AGENTS.md` 由 `agent-entry-derive.py` 生成＝原权限说明＋本文件原文块＋记忆入口块；omp 编排脚本仍可 prompt 注入 | grok 会加载 `~/.grok/AGENTS.md` 与 Claude rules 目录（含 cc 的指针文件），但**不读 `~/AGENTS.md`**（2026-09-24 home-studio 验收会话实测：rules 段无本文件原文）。`~/.grok/README.md` 是产品文档，勿改 |
 | cursor | home-studio：`~/.cursor/hooks.json` 的 `sessionStart` 注入存储规则正文；`workspaceOpen` 为桌面/CLI 加载本地 alwaysApply 规则插件 | 官方全局 hook 已配置、派生规则与真源一致；旧进程事件触发未测，不保证缓存会话热更新 |
 | hermes | home-studio：`~/.hermes/SOUL.md` 附加 HOME 与存储规则指针 | 全局身份文件随新会话 system prompt 加载；已缓存会话不保证热更新 |
+| DSH | home-studio 的 `~/.dsh/AGENTS.md` 指向 HOME 宪法 | 由 §四进入同一份 Git 分支执行规则 |
 | omp / openclaw | 接入时由全局入口或编排模板注入本文件及存储规则引用 | home-studio 当前未安装；安装验收须核真实加载，不以 Codeg enabled 标记代替 |
 
 **新 agent 入场握手 checklist**：① 在 §二 YAML `agent_cfg` 加配置目录 ② 按上表接线 ③ 纳入 HOME-lint ④ 确认 secret / 归档 / 并发规则已传达 ⑤ home-studio 新智能体/runtime 必须接入 §一.7 数据盘规则，并用实际会话加载证据验收。

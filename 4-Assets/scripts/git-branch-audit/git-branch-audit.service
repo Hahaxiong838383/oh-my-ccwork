@@ -1,0 +1,8 @@
+[Unit]
+Description=Read-only Git branch and P003 release audit
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/mycc
+ExecStart=/usr/bin/python3 -B %h/mycc/4-Assets/scripts/git-branch-audit/audit.py --p003-live
+SuccessExitStatus=1

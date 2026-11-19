@@ -1,0 +1,185 @@
+{
+  "default_branch": "main",
+  "branches": {
+    "backup/mycc-main-20261117": {
+      "task": "2026-11-17 多机主线同步与恢复",
+      "state": "keep",
+      "until": "仓库负责人确认恢复点可退役"
+    },
+    "codex/p003-ark-currency-20261115": {
+      "task": "方舟货币",
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-ark-currency-20261115",
+      "archive_commit": "d8bd447cccf4dd27b369157172a92526327bf78c"
+    },
+    "codex/p003-asr-three-device-20261116": {
+      "task": "多机 ASR 诊断",
+      "state": "keep",
+      "until": "普通池清理已收，待分拣 ASR 工具与 Codeg 记录"
+    },
+    "codex/p003-brain-search-tools-20261021": {
+      "task": "搜索 P2 和 Brain 路由",
+      "state": "keep",
+      "until": "保全 5 项未提交修改并评审候选补丁"
+    },
+    "codex/p003-business-watchdog-brain-20261107": {
+      "task": "单设备空闲策略",
+      "state": "keep",
+      "until": "挑 cfg-139 回归和发布记录"
+    },
+    "codex/p003-lexicon-listening-brain-20261111": {
+      "task": "词库与倾听服务",
+      "state": "keep",
+      "until": "挑历史到期脚本、词库和天气回归"
+    },
+    "codex/p003-local-audio-integrity-20261016": {
+      "task": "本地音频完整性",
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-local-audio-integrity-20261016",
+      "archive_commit": "6c2cc932713199968337d45641c3286d66c1fbfe"
+    },
+    "codex/p003-local-audio-safety-20261016": {
+      "task": "本地音频回滚",
+      "state": "keep",
+      "until": "保全工作树并挑回归测试"
+    },
+    "codex/p003-mini008-realdata-20261111": {
+      "task": "家长任务及小程序联调",
+      "state": "keep",
+      "until": "保全工作树，确认客户端真源与联调结果"
+    },
+    "codex/p003-p1-weather-brain-20261031": {
+      "task": "天气 P1 服务端",
+      "state": "keep",
+      "until": "挑两项测试和两份发布回滚资料"
+    },
+    "codex/p003-prnas-storage-50-20261116": {
+      "task": "NAS 容量及 Ark 压测",
+      "state": "keep",
+      "until": "独立任务收工且 70 项工作树改动保全"
+    },
+    "codex/p003-search-fragment-clarify-20261113": {
+      "task": "搜索半句澄清",
+      "state": "keep",
+      "until": "现役搜索池验证两项差异"
+    },
+    "codex/p003-search-retro-skills-20261021": {
+      "task": "后台搜索复盘",
+      "state": "keep",
+      "until": "保全未提交内容并交接 Codeg 资料"
+    },
+    "codex/p003-session-close-20261113": {
+      "task": "倾听池退出",
+      "state": "keep",
+      "until": "当前独立发布池退役或迁移后再评估"
+    },
+    "codex/p003-session-close-search-20261113": {
+      "task": "搜索池退出",
+      "state": "keep",
+      "until": "当前独立发布池退役或迁移后再评估"
+    },
+    "codex/p003-time-query-20261117": {
+      "task": "三池报时",
+      "state": "keep",
+      "until": "结清审核并选取构建验收工具"
+    },
+    "codex/p003-voice-input-routing-fix-20261110": {
+      "task": "语音输入路由",
+      "state": "keep",
+      "until": "保全未提交改动并评审城市名回归"
+    },
+    "codex/p003-voice-onboarding-20261117": {
+      "task": "普通池语音教学",
+      "state": "keep",
+      "until": "审核发布工具并保留构建提交来源"
+    },
+    "codex/p003-weather-preview-fix-20261110": {
+      "task": "天气预览及降级",
+      "state": "keep",
+      "until": "挑天气、凭据展示及发布器回归"
+    },
+    "codex/p003-worker-monitor-20261105": {
+      "task": "Worker 监控",
+      "state": "keep",
+      "until": "实机配置已进 main，20 项回归已通过；确认是否收录测试脚本后归档"
+    },
+    "codex/p003-worker-tool-lifecycle-20261021": {
+      "task": "工具调用与传输生命周期",
+      "state": "keep",
+      "until": "保全工作树并评审运行时差异"
+    },
+    "feat/voice-test-rust-demo": {
+      "task": "独立语音演示",
+      "state": "keep",
+      "until": "核实专用部署归属"
+    },
+    "sync/mycc-20261117": {
+      "task": "2026-11-17 多机主线同步与恢复",
+      "state": "keep",
+      "until": "仓库负责人确认恢复点可退役"
+    },
+    "codex/git-branch-governance-20261119": {
+      "task": "GIT-SYNC 四节点规则、只读巡检及 P003 两支原机保全归档",
+      "state": "done"
+    }
+  },
+  "releases": {
+    "voice-worker-rust.service": {
+      "source_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+      "source_ref": "refs/heads/codex/p003-voice-onboarding-20261117",
+      "maintainer_branch": "main",
+      "sha256": "53797c7574344f7cbb2258f9b238ef1c4ae2ab4563459424cf2dc848cf492e95",
+      "proof": {
+        "object": "9dc3b92d2631259918eefb5e2d0e9a5b017e959d:docs/voice-onboarding-v2-20261117/linux-release/evidence/STAGED-CANDIDATE.json",
+        "digest_key": "sha256"
+      }
+    },
+    "p003-listening-worker.service": {
+      "source_commit": "261475bf1a27a03203c638f1a88c29fd71603bc6",
+      "source_ref": "refs/heads/codex/p003-session-close-20261113",
+      "maintainer_branch": "codex/p003-session-close-20261113",
+      "sha256": "c7e70e77e4600e09b02f885101a17e8e7cea0e9635bc430d456b88081b6289d5",
+      "proof": {
+        "object": "725e227aff07eb2c740ce63e2d944007094d489e:2-Projects/realtime-voice-agent/docs/stop-variants-20261114/RELEASE_EVIDENCE.json",
+        "keys": [
+          "deployments",
+          "listening"
+        ],
+        "digest_key": "process_sha256"
+      }
+    },
+    "p003-search-worker.service": {
+      "source_commit": "8db951e950a601ee3849eb611f32f684972e8cca",
+      "source_ref": "refs/heads/codex/p003-session-close-search-20261113",
+      "maintainer_branch": "codex/p003-session-close-search-20261113",
+      "sha256": "c7bec7df92c47136fd0c91e5c2b4ed59c918ffa7158cdfb3a63415fa1e221b25",
+      "proof": {
+        "object": "725e227aff07eb2c740ce63e2d944007094d489e:2-Projects/realtime-voice-agent/docs/stop-variants-20261114/RELEASE_EVIDENCE.json",
+        "keys": [
+          "deployments",
+          "search"
+        ],
+        "digest_key": "process_sha256"
+      }
+    },
+    "p003-voice": {
+      "source_commit": "ad462f203664467eca1097e6fe7323599cb3ceb5",
+      "source_ref": "refs/tags/archive/2026-11/integrate/p003-server-live-20261119",
+      "maintainer_branch": "main",
+      "sha256": "090624b4df44be59b6ad8e2461e3828bc4170a9cd46c895965c4d7c998722303",
+      "proof": {
+        "kind": "p003-server-manifest"
+      }
+    },
+    "p003-admin": {
+      "source_commit": "40e712abbd1812f70a2d7b09f1f7b07fcd9d7200",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "b9f8a314137cb6929cdcd8b06f9e08a1c3ad3fdbbfe7b1499bf5f9f1ca8ebd02",
+      "proof": {
+        "kind": "file",
+        "object": "40e712abbd1812f70a2d7b09f1f7b07fcd9d7200:2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html"
+      }
+    }
+  }
+}
