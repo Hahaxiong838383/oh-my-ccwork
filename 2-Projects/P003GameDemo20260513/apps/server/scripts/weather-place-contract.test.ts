@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {resolveWeatherPlace} from '../src/tools/weather-places.js';
-const fixture=JSON.parse(readFileSync(new URL('./fixtures/weather-place-contract.json',import.meta.url),'utf8'));
+const fixture=JSON.parse(readFileSync(new URL('../../../../realtime-voice-agent/rust-worker/tests/fixtures/weather-place-contract.json',import.meta.url),'utf8'));
 for(const c of fixture.cases as {input:string;stations:string[]}[]) {
   if(c.stations.length===1) assert.equal(resolveWeatherPlace(c.input).station,c.stations[0],c.input);
   else assert.throws(()=>resolveWeatherPlace(c.input),new RegExp(c.stations.length?'weather_place_ambiguous':'weather_place_unknown'),c.input);
