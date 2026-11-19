@@ -1,0 +1,474 @@
+{
+  "contract_id": "p003-listening-http-v1",
+  "version": 1,
+  "binding": {
+    "sn": "BJP00326070803800006",
+    "room": "sn-BJP00326070803800006-1800000000",
+    "session_id": "test-session-1",
+    "trace_id": "trace-test-1",
+    "account_id": "test-account-1"
+  },
+  "valid": [
+    {
+      "name": "worker-ready",
+      "path": "/worker-ready",
+      "body": {
+        "version": 1,
+        "request_id": "ready-1",
+        "agent": "rust-worker",
+        "instance_id": "test-instance-1",
+        "build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registered": true,
+        "capabilities": [
+          "listening_mode_v1",
+          "listening_http_v1",
+          "per_frame_output_permit_v1",
+          "capture_drain_v1",
+          "local_ready_ack_v1"
+        ],
+        "applied_revision": null,
+        "applied_config_sha256": null
+      }
+    },
+    {
+      "name": "lease",
+      "path": "/lease",
+      "body": {
+        "version": 1,
+        "request_id": "lease-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "applied_snapshot_sha256": null
+      }
+    },
+    {
+      "name": "close",
+      "path": "/close",
+      "body": {
+        "version": 1,
+        "request_id": "close-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1
+      }
+    },
+    {
+      "name": "summary",
+      "path": "/summary",
+      "body": {
+        "version": 1,
+        "request_id": "summary-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "snapshot_revision": 3,
+        "snapshot_sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3",
+        "base_summary_version": 0,
+        "previous_summary": "",
+        "has_gap": false,
+        "segments": [
+          {
+            "seq": 1,
+            "revision": 1,
+            "text": "小熊和小兔分享了苹果。"
+          },
+          {
+            "seq": 2,
+            "revision": 1,
+            "text": "后来他们一起回家。"
+          }
+        ]
+      }
+    },
+    {
+      "name": "feedback",
+      "path": "/feedback",
+      "body": {
+        "version": 1,
+        "request_id": "feedback-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "snapshot_revision": 3,
+        "snapshot_sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3",
+        "summary": "",
+        "recent": "小熊把最后一个苹果分给了小兔。",
+        "has_gap": false,
+        "question": "你觉得呢？",
+        "trigger": "button"
+      }
+    },
+    {
+      "name": "worker-ready voice capability",
+      "path": "/worker-ready",
+      "body": {
+        "version": 1,
+        "request_id": "ready-1",
+        "agent": "rust-worker",
+        "instance_id": "test-instance-1",
+        "build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registered": true,
+        "capabilities": [
+          "listening_mode_v1",
+          "listening_http_v1",
+          "per_frame_output_permit_v1",
+          "capture_drain_v1",
+          "local_ready_ack_v1",
+          "listening_voice_control_v1"
+        ],
+        "applied_revision": null,
+        "applied_config_sha256": null
+      }
+    },
+    {
+      "name": "singing voice command (wire only, session capability separately enforced)",
+      "path": "/feedback",
+      "body": {
+        "version": 1,
+        "request_id": "feedback-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "singing",
+        "mode_epoch": 1,
+        "snapshot_revision": 3,
+        "snapshot_sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3",
+        "summary": "",
+        "recent": "小熊把最后一个苹果分给了小兔。",
+        "has_gap": false,
+        "question": "请对刚才的分享给一次简短反馈。",
+        "trigger": "voice_command"
+      }
+    }
+  ],
+  "invalid": [
+    {
+      "name": "unknown-field",
+      "path": "/lease",
+      "body": {
+        "version": 1,
+        "request_id": "lease-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "applied_snapshot_sha256": null,
+        "admin": true
+      }
+    },
+    {
+      "name": "wrong-version",
+      "path": "/lease",
+      "body": {
+        "version": 2,
+        "request_id": "lease-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "applied_snapshot_sha256": null
+      }
+    },
+    {
+      "name": "short-sn",
+      "path": "/close",
+      "body": {
+        "version": 1,
+        "request_id": "lease-1",
+        "session": {
+          "sn": "03800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1
+      }
+    },
+    {
+      "name": "foreign-listening-id",
+      "path": "/close",
+      "body": {
+        "version": 1,
+        "request_id": "lease-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "other-trace:1",
+        "scene": "story",
+        "mode_epoch": 1
+      }
+    },
+    {
+      "name": "zero-segment-revision",
+      "path": "/summary",
+      "body": {
+        "version": 1,
+        "request_id": "summary-1",
+        "session": {
+          "sn": "BJP00326070803800006",
+          "room": "sn-BJP00326070803800006-1800000000",
+          "session_id": "test-session-1",
+          "trace_id": "trace-test-1",
+          "account_id": "test-account-1"
+        },
+        "listening_id": "trace-test-1:1",
+        "scene": "story",
+        "mode_epoch": 1,
+        "snapshot_revision": 3,
+        "snapshot_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "base_summary_version": 0,
+        "previous_summary": "",
+        "has_gap": false,
+        "segments": [
+          {
+            "seq": 1,
+            "revision": 0,
+            "text": "合成测试"
+          }
+        ]
+      }
+    },
+    {
+      "name": "unknown optional capability",
+      "path": "/worker-ready",
+      "body": {
+        "version": 1,
+        "request_id": "ready-1",
+        "agent": "rust-worker",
+        "instance_id": "test-instance-1",
+        "build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registered": true,
+        "capabilities": [
+          "listening_mode_v1",
+          "listening_http_v1",
+          "per_frame_output_permit_v1",
+          "capture_drain_v1",
+          "local_ready_ack_v1",
+          "listening_voice_control_v1",
+          "anything"
+        ],
+        "applied_revision": null,
+        "applied_config_sha256": null
+      }
+    },
+    {
+      "name": "duplicate capability",
+      "path": "/worker-ready",
+      "body": {
+        "version": 1,
+        "request_id": "ready-1",
+        "agent": "rust-worker",
+        "instance_id": "test-instance-1",
+        "build_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "registered": true,
+        "capabilities": [
+          "listening_mode_v1",
+          "listening_http_v1",
+          "per_frame_output_permit_v1",
+          "capture_drain_v1",
+          "local_ready_ack_v1",
+          "listening_voice_control_v1",
+          "listening_voice_control_v1"
+        ],
+        "applied_revision": null,
+        "applied_config_sha256": null
+      }
+    }
+  ],
+  "snapshot": {
+    "revision": 3,
+    "scenes": [
+      "story",
+      "sharing",
+      "singing"
+    ],
+    "tuning": {
+      "max_session_sec": 1800,
+      "feedback_max_chars": 80,
+      "feedback_max_duration_sec": 12,
+      "feedback_cooldown_sec": 5,
+      "summary_interval_sec": 180,
+      "summary_trigger_chars": 6000,
+      "voice_invitation_enabled": true
+    },
+    "limits": {
+      "raw_chars": 12000,
+      "recent_chars": 4000,
+      "summary_chars": 1200,
+      "lease_ttl_ms": 15000,
+      "lease_refresh_ms": 5000,
+      "lease_request_budget_ms": 1000
+    },
+    "sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3"
+  },
+  "responses": {
+    "ready_offer": {
+      "version": 1,
+      "ok": true,
+      "ready": false,
+      "policy_revision": 3,
+      "config_sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3",
+      "config": {
+        "revision": 3,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "limits": {
+          "raw_chars": 12000,
+          "recent_chars": 4000,
+          "summary_chars": 1200,
+          "lease_ttl_ms": 15000,
+          "lease_refresh_ms": 5000,
+          "lease_request_budget_ms": 1000
+        }
+      }
+    },
+    "lease_offer": {
+      "version": 1,
+      "request_id": "lease-1",
+      "authorized": false,
+      "lease_id": "test-session-1:trace-test-1:1",
+      "policy_revision": 3,
+      "server_time_ms": 1800000000000,
+      "lease_expires_at_ms": 0,
+      "refresh_after_ms": 5000,
+      "request_budget_ms": 1000,
+      "snapshot": {
+        "revision": 3,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "limits": {
+          "raw_chars": 12000,
+          "recent_chars": 4000,
+          "summary_chars": 1200,
+          "lease_ttl_ms": 15000,
+          "lease_refresh_ms": 5000,
+          "lease_request_budget_ms": 1000
+        },
+        "sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3"
+      }
+    },
+    "lease_authorized": {
+      "version": 1,
+      "request_id": "lease-2",
+      "authorized": true,
+      "lease_id": "test-session-1:trace-test-1:1",
+      "policy_revision": 3,
+      "server_time_ms": 1800000001000,
+      "lease_expires_at_ms": 1800000016000,
+      "refresh_after_ms": 5000,
+      "request_budget_ms": 1000,
+      "snapshot": {
+        "revision": 3,
+        "scenes": [
+          "story",
+          "sharing",
+          "singing"
+        ],
+        "tuning": {
+          "max_session_sec": 1800,
+          "feedback_max_chars": 80,
+          "feedback_max_duration_sec": 12,
+          "feedback_cooldown_sec": 5,
+          "summary_interval_sec": 180,
+          "summary_trigger_chars": 6000,
+          "voice_invitation_enabled": true
+        },
+        "limits": {
+          "raw_chars": 12000,
+          "recent_chars": 4000,
+          "summary_chars": 1200,
+          "lease_ttl_ms": 15000,
+          "lease_refresh_ms": 5000,
+          "lease_request_budget_ms": 1000
+        },
+        "sha256": "617bf54fac550ff070e8cc45ba49083844091666d25705768d903fa1cafb90b3"
+      }
+    },
+    "error": {
+      "version": 1,
+      "ok": false,
+      "error": {
+        "code": "policy_disabled",
+        "retryable": false
+      }
+    }
+  },
+  "voice_extension_revision": 1
+}
