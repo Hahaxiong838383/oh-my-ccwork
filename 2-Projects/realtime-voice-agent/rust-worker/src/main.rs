@@ -7,7 +7,17 @@ mod config;
 mod contract;
 mod candidate;
 mod say_defer;
+mod search_canary;
+mod search_enrollment;
+mod search_policy;
+mod search_routing;
+mod search_tasks;
+mod search_dialogue;
+mod search_progress;
+mod search_receipts;
 mod control;
+mod voice_onboarding;
+mod device_grammar;
 mod device_intent;
 mod device_ledger;
 mod eot;
@@ -15,6 +25,13 @@ mod eot_snapshot;
 mod filler;
 mod gate;
 mod job;
+mod startup_participant;
+mod business_watchdog;
+mod business_runtime;
+mod owned_task;
+mod room_cleanup;
+mod room_verify;
+mod voice_connect;
 mod llm;
 mod ordered_pcm;
 mod pipeline;
@@ -27,7 +44,10 @@ mod ready_confirm;
 mod segmenter;
 mod speaker_id;
 mod stt_volc;
+mod asr_diagnostics;
 mod textproc;
+mod stop_variants;
+mod session_close;
 mod token;
 mod transcript_pub;
 mod tts;
@@ -37,6 +57,8 @@ mod turn;
 mod vad;
 mod volc;
 mod worker;
+#[cfg(test)]
+mod rtc_business_probe;
 
 use tracing_subscriber::EnvFilter;
 
@@ -54,6 +76,10 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cfg = config::Config::from_env()?;
+    search_canary::validate_startup(&cfg.agent_name,cfg.max_jobs)?;
+    // Build the shared place dictionary before accepting jobs, including P1.
+    // First-turn weather parsing must not allocate it on the audio event loop.
+    search_routing::prepare_weather_places();
     tracing::info!(
         agent_name = %cfg.agent_name,
         url = %cfg.ws_url,

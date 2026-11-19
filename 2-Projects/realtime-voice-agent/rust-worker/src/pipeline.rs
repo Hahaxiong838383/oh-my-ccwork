@@ -28,7 +28,7 @@ use livekit::webrtc::audio_stream::native::NativeAudioStream;
 use serde_json::{Value, json};
 use tokio::sync::{Mutex, mpsc};
 use tokio::task::JoinHandle;
-use tracing::{info, warn};
+use tracing::{info, warn, Instrument};
 
 use crate::contract::Contract;
 use crate::candidate::is_silent_result;
@@ -105,6 +105,7 @@ pub struct PipelineConfig {
     pub tts_first_clause_min: usize,
     /// B23：首句逗号切默认只对 ordered 首句轮生效（env `TTS_FIRST_CLAUSE_ORDERED_ONLY`，默认 1）；0 = 所有轮次含未签设备——上产前拍板。
     pub tts_first_clause_ordered_only: bool,
+    pub tts_latency_v1: bool,
     /// B23 产品首句 v1：input_ready 后这么久没有 begin → 视为端侧没走首句，切回 RTC（env `ORDERED_BEGIN_TIMEOUT_MS`，默认 2500）。
     pub ordered_begin_timeout_ms: u64,
     /// B25（codex §3.4 回声反例）：首句→RTC 切换时回灌多少毫秒的 RTC 追补音频（env `ORDERED_RTC_CATCHUP_MS`）。
@@ -121,8 +122,8 @@ pub struct PipelineConfig {
     pub canary_identity_allow: Vec<String>,
     pub vad_model_path: String,
     pub hotwords: HashSet<String>,
-    /// 退出词吞句集(EXIT_SWALLOW_HOTWORDS):整句命中→只吞轮次(防幽灵回答轮),
-    /// 回复/关房归 Android。与急停表分开配置,词表须与 Android SESSION_EXIT 一致。
+    /// 退出词集(EXIT_SWALLOW_HOTWORDS):明确结束整段对话时取消输出并有界关房。
+    /// 与仅停止当前播放的急停表分开,由后台统一发布。
     pub exit_hotwords: HashSet<String>,
     /// A 案(2026-08-28):exit 尾部匹配开关(EXIT_TAIL_MATCH,默认开;置 0 回退纯精确匹配)。
     pub exit_tail_match: bool,
@@ -214,6 +215,7 @@ impl PipelineConfig {
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(0),
             tts_first_clause_ordered_only: std::env::var("TTS_FIRST_CLAUSE_ORDERED_ONLY").map(|v| v != "0").unwrap_or(true),
+            tts_latency_v1: crate::tts::latency_mode(),
             ordered_begin_timeout_ms: std::env::var("ORDERED_BEGIN_TIMEOUT_MS")
                 .ok()
                 .and_then(|v| v.parse().ok())
@@ -358,6 +360,9 @@ enum InputPhase {
 
 enum TurnKind {
     Say(String),
+    // Web evidence must not enter the ordinary chat history / downstream memory extractor.
+    BackgroundSay(String),
+    BackgroundClip(String, Vec<u8>),
     Reply {
         user_text: String,
         pending_amend: Option<String>,
@@ -370,6 +375,7 @@ enum TurnKind {
 
 /// 投机生成(preflight 触发的提前 LLM 流;命中=提交文本全等+历史版本未变)。
 struct Speculation {
+    search_context: Option<Value>,
     text: String,
     version: u64,
     started: Instant,
@@ -378,6 +384,7 @@ struct Speculation {
 }
 
 struct AgentTurn {
+    search_progress: Option<Arc<StdMutex<crate::search_progress::SearchProgress>>>,
     id: u64,
     task: JoinHandle<()>,
     ctl: PlayoutControl,
@@ -389,6 +396,7 @@ struct AgentTurn {
     /// B 观测:本轮 filler 的 24k 样本数(0=无 filler);turn 起始时刻;分段日志阶段(0/1/2)。
     filler_samples: u64,
     started: Instant,
+    business_until: Instant,
     seg_stage: u8,
 }
 
@@ -410,6 +418,9 @@ struct ExitSignalPending {
 }
 
 struct Orchestrator {
+    search: Option<crate::search_tasks::SearchSession>,
+    search_turn: bool,
+    search_user_speaking: bool,
     /// One-shot v0.3:有序 PCM 代次(Some=实验模式;None=现役 RTC,本字段零参与)
     ordered: Option<crate::ordered_pcm::Session>,
     /// B23：输入相位（见 `InputPhase`）
@@ -450,12 +461,15 @@ struct Orchestrator {
     contract_version: u32,
     /// S2-B2:会话级 trace(input_ready 同源,命令事件绑它;None=不发命令)
     device_trace: Option<String>,
+    onboarding: Option<crate::voice_onboarding::Runtime>,
+    onboarding_deferred: Option<(control::Envelope, Option<String>, Instant)>,
     /// v140 退出信令灰度(合同 §8.3 先仅 0010;fail-closed:env 未配=不发,吞句照常)
     exit_signal_on: bool,
     /// 退出信令 seq(per-job 单调;重试必须同 seq——只在新命中时自增)
     exit_seq: i64,
     /// 在途退出信令:等 ACK/cancel/room close 任一终态;800ms 无终态同 seq 重发,至多 3 发
     exit_pending: Option<ExitSignalPending>,
+    session_close: crate::session_close::CloseDeadline,
     /// 2b:本房 LLM 慢路执行开关(启动时按 room+env 定一次,默认关=2a 观察)
     l2_execute_on: bool,
     /// 2b:Android 能力声明(wake 包 contract_version>=2 才允许发 L2;room 级,job 结束即弃)
@@ -510,6 +524,7 @@ struct Orchestrator {
     eot_gap_gen: u64,
     eot_requested: bool,
     pending_amend: Option<String>,
+    search_history_handoff: Arc<StdMutex<Option<(u64, String)>>>,
     bank: Option<FillerBank>,
     pf: PreflightGate,
     spec: Option<Speculation>,
@@ -636,17 +651,49 @@ fn boundary_reply(action: &str) -> String {
 /// 预连 ASR 句柄(2026-09-07):job 层在 assignment 到达后立刻 spawn,火山 ASR websocket 握手(实测 0.4–0.6 s)与
 /// 建房/发布出声轨/等用户音轨并行;pipeline 启动时直接接管。此前握手在 pipeline 内起,落在输入环启动后
 /// +380–614ms(今早四房实读),真人「提示音一停就说」的首段语音只能在 channel 里排队等握手,首个转写整体延后。
-/// job 在 pipeline 启动前退出时句柄随之丢弃:sender drop → 流发空尾段按 InputDone 自然收尾。
+/// 任务所有权随预热产物转交；产物被丢弃或流水线被取消时停止 ASR，不留后台重试。
 pub struct SttPre {
-    pub pcm_tx: mpsc::Sender<Vec<i16>>,
+    pub pcm_tx: crate::asr_diagnostics::PcmSender,
     pub ev_rx: mpsc::Receiver<SttEvent>,
-    pub task: tokio::task::JoinHandle<()>,
+    pub task: crate::owned_task::OwnedTask<()>,
+}
+
+// Called only before any PCM is submitted to this preconnection, including
+// the spare prepared before the ordered-to-RTC transition. A queued interruption
+// belongs to that idle episode, not to the user's upcoming first utterance.
+// Keep healthy/in-flight connections regardless of age; do not restart an
+// active recognition stream or renew its bounded connection episode.
+async fn take_stt_preconnect(mut pre: SttPre, rebuild: impl FnOnce() -> SttPre) -> Result<SttPre> {
+    let mut ended = pre.pcm_tx.is_closed() || pre.ev_rx.is_closed();
+    // Snapshot the bounded queue: never wait for or discard events produced
+    // after handoff. A live reconnect retains its original task/PCM channel.
+    for _ in 0..pre.ev_rx.len() {
+        match pre.ev_rx.try_recv() {
+            Ok(SttEvent::Closed) => ended = true,
+            Ok(_) => {},
+            Err(_) => break,
+        }
+    }
+    if !ended && !pre.pcm_tx.is_closed() && !pre.ev_rx.is_closed() {
+        return Ok(pre);
+    }
+    let SttPre { pcm_tx, ev_rx, mut task } = pre;
+    task.abort();
+    anyhow::ensure!(tokio::time::timeout(Duration::from_millis(500), &mut task).await.is_ok(),
+        "failed_asr_preconnect_abort_timeout");
+    drop(pcm_tx);
+    drop(ev_rx);
+    info!("replacing failed idle ASR preconnection before PCM handoff");
+    Ok(rebuild())
 }
 
 /// 该房的 ASR 配置:env 基线 + 二遍识别 per-SN 灰度(命中即切 bigmodel_async + enable_nonstream,必须同调:
 /// 老 bigmodel 静默忽略此参数)。非命中房间零变化。
 pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
     let mut stt_cfg = SttConfig::from_env();
+    stt_cfg.preserve_search_ack(
+        crate::search_enrollment::for_room(room_name),
+        std::env::var("P003_SEARCH_ACK_ASR_V1").is_ok_and(|v|v=="1"));
     if crate::device_intent::asr_nonstream_enabled_for(room_name) {
         stt_cfg.nonstream = true;
         stt_cfg.url = stt_volc::ASYNC_ASR_URL.to_string();
@@ -659,15 +706,19 @@ pub fn stt_cfg_for_room(room_name: &str) -> SttConfig {
 pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
     let (stt_pcm_tx, stt_pcm_rx) = mpsc::channel::<Vec<i16>>(128);
     let (stt_ev_tx, stt_ev_rx) = mpsc::channel::<SttEvent>(64);
+    let diagnostic = crate::asr_diagnostics::InputDiagnostic::for_room(room_name);
+    let stt_pcm_tx = crate::asr_diagnostics::PcmSender::new(stt_pcm_tx, diagnostic.clone());
     info!(room = %room_name, nonstream = stt_cfg.nonstream, "asr stream task spawned (preconnect)");
     let rn = room_name.to_string();
+    let span = tracing::info_span!("asr_stream", room = %room_name);
     let task = tokio::spawn(async move {
         let mut pcm_rx = stt_pcm_rx;
         let mut fails = 0u32;
         loop {
+            if stt_ev_tx.is_closed() || (pcm_rx.is_closed() && pcm_rx.is_empty()) { break; }
             let started = Instant::now();
-            match stt_volc::run_asr_stream(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone()).await {
-                Ok(AsrEnd::InputDone) => break,
+            match stt_volc::run_asr_stream_observed(stt_cfg.clone(), &mut pcm_rx, stt_ev_tx.clone(), diagnostic.clone()).await {
+                Ok(AsrEnd::InputDone | AsrEnd::Unused) => break,
                 Ok(AsrEnd::InputDoneEof) => {
                     // 收流后未见 LastNoSeq 即 EOF:输入已结束不重连,但先报 Interrupted(ordered_pcm 不得提交半段 final)
                     warn!(room = %rn, "asr 收流后未见 LastNoSeq 即被关闭(意外 EOF)");
@@ -680,8 +731,15 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
                 Err(e) => {
                     warn!(room = %rn, error = %e, "火山 ASR 流异常");
                     let _ = stt_ev_tx.send(SttEvent::Interrupted).await;
+                    // DNS/address attempts already share the connection budget.
+                    // Do not renew it six times while the 25s audio queue fills
+                    // and silently discards the user's first utterance.
+                    if e.is::<stt_volc::ConnectFailure>() { break; }
                 }
             }
+            // A closed input is terminal, including provider rejection of its
+            // final empty packet. Never reconnect an abandoned prewarm stream.
+            if pcm_rx.is_closed() || stt_ev_tx.is_closed() { break; }
             if started.elapsed() > Duration::from_secs(10) {
                 fails = 0; // 长稳连接后的断开不算连败
             }
@@ -695,8 +753,8 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
             tokio::time::sleep(backoff).await;
         }
         let _ = stt_ev_tx.send(SttEvent::Closed).await;
-    });
-    SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task }
+    }.instrument(span));
+    SttPre { pcm_tx: stt_pcm_tx, ev_rx: stt_ev_rx, task: crate::owned_task::OwnedTask::new(task) }
 }
 
 /// 预组装产物(2026-09-07):不依赖音轨/房间对象的全部重活。job 收到 assignment 即起 `prebuild`,与建房/发布出声轨/
@@ -764,10 +822,7 @@ pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
         pcfg.url_query = String::new();
         pcfg.room = String::new();
         tokio::spawn(llm::prewarm(pcfg, client));
-        // 赛马兜底路同 prewarm(Python 同款:兜底冷连接会吃掉它的竞速价值)
-        if let Some((fc, fcfg)) = llm_inner.fallback_prewarm_parts() {
-            tokio::spawn(llm::prewarm(fcfg, fc));
-        }
+        // 有界灾备仅故障时启动；禁止备用生成式预热，避免每次开房额外调用。
         let tc = tts_cfg.clone();
         tokio::spawn(async move { tc.prewarm().await });
     }
@@ -808,6 +863,9 @@ pub struct OrderedCtx {
 }
 
 pub struct ReadyCtx {
+    pub onboarding: Option<serde_json::Value>,
+    pub session_id: Option<String>,
+    pub business: Option<crate::business_runtime::Runtime>,
     /// Room 会话级 activeTraceId(token metadata 受信通道);None=老 token/调试房,ready 不发
     pub trace_id: Option<String>,
     /// 输出方向就绪信号(job 层 LocalTrackSubscribed 时置 true)
@@ -836,13 +894,18 @@ pub async fn run_pipeline(
     beat: std::sync::Arc<std::sync::atomic::AtomicU64>,
     ready: ReadyCtx,
     prebuilt: Option<Prebuilt>,
+    filler_policy: Option<crate::filler::FillerPolicy>,
+    mut shutdown:Option<tokio::sync::oneshot::Receiver<()>>,
 ) -> Result<()> {
     // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
     // 回声库拉取/ASR 预连)此处直接接管;无预组装路径(web 调试直连)原地组装,行为一致。
-    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, bank, stt, started_at: prebuilt_at } = match prebuilt {
+    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, mut bank, stt, started_at: prebuilt_at } = match prebuilt {
         Some(p) => p,
         None => prebuild(room_name.clone()).await?,
     };
+    if let (Some(bank), Some(policy)) = (bank.as_mut(), filler_policy) {
+        bank.apply_policy(policy, &room_name);
+    }
     // B46:cfg 随后整体 move 进 orch 字面量(字段按源码顺序求值),开关先取成局部值
     let ready_confirm_enabled = cfg.ready_confirm_enabled;
     let caption_defer_enabled = cfg.caption_defer_enabled;
@@ -880,19 +943,21 @@ pub async fn run_pipeline(
     );
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
+    let stt = take_stt_preconnect(stt, || spawn_stt(stt_cfg_for_room(&room_name), &room_name)).await?;
     let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt;
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
+    stt_pcm_tx.phase("ordered_or_initial");
     let mut stt_pcm_tx = Some(stt_pcm_tx);
     let mut stt_closed = false;
     // B23：首句 end 收流后预连的第二条 STT（与首答并行建连），切 RTC 时接管；首条任务句柄留到收尾
     let mut stt2: Option<(SttPre, Instant)> = None;
-    let mut stt_tasks_done: Vec<tokio::task::JoinHandle<()>> = Vec::new();
+    let mut stt_tasks_done: Vec<crate::owned_task::OwnedTask<()>> = Vec::new();
 
     let (turn_ev_tx, mut turn_ev_rx) = mpsc::channel::<TurnEvent>(16);
     let (eot_tx, mut eot_rx) = mpsc::channel::<(u64, f32)>(8);
 
     let participant2 = participant.clone();
-    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 主循环 return Err
+    // 输出门 fail-closed 传导:OutputGate 包装层超时 → fatal_rx → 统一收尾后返回 Err
     // → job 收尾(关房删房),设备走既有重连路径。容量 1:一次 fatal 就收摊。
     let (fatal_tx, mut fatal_rx) = mpsc::channel::<String>(1);
 
@@ -921,13 +986,21 @@ pub async fn run_pipeline(
         info!(room = %room_name, "local-audio opening-overlap gate skipped for this SN (v237 full-prompt-then-mic)");
     }
     let input_phase0 = if ordered_session.is_some() { InputPhase::FirstTurn } else { InputPhase::NotOrdered };
+    let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1, tts_cfg.provider_name(), tts_cfg.voice()));
+    let onboarding = crate::llm::LlmConfig::from_env().and_then(|cfg| crate::voice_onboarding::Runtime::from_metadata(ready.onboarding.as_ref(), ready.trace_id.as_deref(), ready.session_id.as_deref(), crate::ordered_pcm::expected_device_identity(&room_name).as_deref(), &cfg.base_url, &cfg.url_query));
     let mut orch = Orchestrator {
+        onboarding,
+        onboarding_deferred: None,
+        search,
+        search_turn: false,
+        search_user_speaking: false,
         output_gate: crate::gate::OutputGate::new(ready.out_rx.clone()),
         fatal_tx,
         device_commands_on,
         exit_signal_on,
         exit_seq: 0,
         exit_pending: None,
+        session_close: crate::session_close::CloseDeadline::default(),
         l2_execute_on,
         l2_capable: false,
         echo_local_texts,
@@ -973,6 +1046,7 @@ pub async fn run_pipeline(
         eot_gap_gen: 0,
         eot_requested: false,
         pending_amend: None,
+        search_history_handoff: Arc::new(std::sync::Mutex::new(None)),
         bank,
         pf: PreflightGate::new(PreflightConfig::from_env()),
         spec: None,
@@ -1042,26 +1116,39 @@ pub async fn run_pipeline(
     // frames=0=源侧断流(mute/息屏);frames 正常 amp≈0=送的是静音;都正常=下游(火山)问题。
     let mut in_frames: u64 = 0;
     let mut in_amp_acc: u64 = 0;
+    let mut input_stats = crate::business_watchdog::AudioStats::default();
+    let mut business_last_played: Option<(u64, u64, Instant)> = None;
+    let mut business_ordered_until: Option<Instant> = None;
     let mut in_report = Instant::now();
     // input_ready 只发一次:独立标志,不复用 in_frames(它被 10s 水位报告清零,
     // 生产实证 2026-08-18 06:20 同 job 每 10s 重发一次 input_ready——Android 幂等兜住但脏)
     let mut input_ready_fired = false;
+    let mut exit_error = None;
 
     loop {
         // B23 产品首句 v1:执行输入相位切换(代次终态 / begin 超时后置位,每 job 一次):换 STT、回灌追补环、发 session.input_phase。
         if let Some(reason) = orch.pending_phase_switch.take() {
-            let (pre, spawned_at) = match stt2.take() {
+            let (pre, mut spawned_at) = match stt2.take() {
                 Some(x) => x,
                 None => (spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()),
+            };
+            let pre = match take_stt_preconnect(pre, || {
+                spawned_at = Instant::now();
+                spawn_stt(stt_cfg_for_room(&room_name), &room_name)
+            }).await {
+                Ok(pre) => pre,
+                Err(error) => { exit_error = Some(error); break; }
             };
             let SttPre { pcm_tx, ev_rx, task } = pre;
             // 首条(ordered)STT 在此显式收流(若尚未收);之后 EndStream 动作一律不得再碰发送端——否则会把第二条关掉
             // (2026-09-11 模拟实证:begin 超时/取消路径的 fail→EndStream 在切换后到达,关的是刚接管的第二条 → job 收尾)
             drop(stt_pcm_tx.take());
+            pcm_tx.phase("rtc");
             stt_pcm_tx = Some(pcm_tx);
             stt_ev_rx = ev_rx;
             stt_closed = false;
             stt_tasks_done.push(std::mem::replace(&mut stt_task, task));
+            if let Some(w) = &ready.business { w.first_turn_to_rtc(Instant::now()); }
             orch.input_phase = InputPhase::Rtc;
             // 未终态就切(begin 超时):先把代次关成 timeout 终态,迟到的 begin 之后一律 input_conflict 拒绝
             let mut acts = Vec::new();
@@ -1122,10 +1209,12 @@ pub async fn run_pipeline(
                   stt2_spawned_ms_ago = spawned_at.elapsed().as_millis() as u64, "ordered_pcm input phase → rtc");
         }
         tokio::select! {
+            _ = async {if let Some(rx)=&mut shutdown {let _=rx.await;}else{std::future::pending::<()>().await;}} => {break;},
             // 输出门 fail-closed(冻结 2026-08-18):首个待播 PCM 起 5s Android 仍未订阅
             // agent 轨 → 整 job 收摊关房,绝不带着半聋房间继续跑
             Some(msg) = fatal_rx.recv() => {
-                return Err(anyhow::anyhow!("output gate fail-closed: {msg}"));
+                exit_error = Some(anyhow::anyhow!("output gate fail-closed: {msg}"));
+                break;
             }
             // 入站控制包(设备 → worker)。放在最前面:cancel 的时效性高于音频帧处理。
             ctrl = ctrl_rx.recv() => {
@@ -1137,11 +1226,14 @@ pub async fn run_pipeline(
             frame = mic.next() => {
                 let Some(frame) = frame else { break };
                 let samples: Vec<i16> = frame.data.to_vec();
+                if let Some(tx)=&stt_pcm_tx {tx.rtc_input(&samples, orch.input_phase == InputPhase::FirstTurn);}
                 // B50 §5:一次性取证窗口旁路收音(默认不存在)。只做一次 extend,不进任何判定链。
                 if let Some(a) = orch.audit.as_mut() {
                     a.push(&samples);
                 }
                 in_frames += 1;
+                input_stats.push(&samples);
+                if let Some(w) = &ready.business { w.input_frame(Instant::now(), samples.len()); }
                 if !input_ready_fired {
                     input_ready_fired = true;
                     // input_ready 发射点(合同硬性要求 3):输入消费循环真实收到首帧,
@@ -1225,7 +1317,7 @@ pub async fn run_pipeline(
                     in_amp_acc += samples.iter().map(|s| u64::from(s.unsigned_abs())).sum::<u64>()
                         / samples.len() as u64;
                 }
-                stt_buf.extend_from_slice(&samples);
+                stt_buf.extend_from_slice(&samples); // Exit grammar remains available during local cues; onboarding gates all profile answers.
                 if stt_buf.len() >= STT_SEGMENT_SAMPLES {
                     // 满则丢段不阻塞热路径(channel 128 段 ≈ 25s 缓冲,正常永远不满)
                     if let Some(tx) = &stt_pcm_tx {
@@ -1239,12 +1331,17 @@ pub async fn run_pipeline(
                 if let Some(sp) = orch.speaker.as_mut() {
                     sp.ring.append(&samples); // 声纹 ring:写入即幅度过滤
                 }
+                if orch.onboarding.as_ref().is_some_and(|o|o.blocks_input()) {
+                    vad_buf.clear();
+                    continue;
+                }
                 orch.on_pf_frame(&samples).await;
                 vad_buf.extend_from_slice(&samples);
                 while vad_buf.len() >= WINDOW {
                     let chunk: Vec<i16> = vad_buf.drain(..WINDOW).collect();
                     if let Ok(p) = vad.predict(&chunk) {
                         let active = p >= gate.activation_threshold;
+                        if active { if let Some(o)=orch.onboarding.as_mut(){o.speech();} if let Some(w) = &ready.business { w.asr_speech(Instant::now()); } }
                         let ev = gate.feed(p);
                         orch.on_vad_frame(&gate, ev, active, &eot_ring).await;
                     }
@@ -1252,7 +1349,14 @@ pub async fn run_pipeline(
             }
             // One-shot v0.3:有序 PCM 包(现役房通道永远空,分支不触发)
             Some(pkt) = hist_rx.recv() => {
-                orch.on_ordered_packet(&pkt, &stt_pcm_tx);
+                let was_idle = orch.ordered.as_ref().is_some_and(|o| o.phase() == crate::ordered_pcm::Phase::Idle);
+                let submitted = orch.on_ordered_packet(&pkt, &stt_pcm_tx);
+                if let Some(w) = &ready.business {
+                    w.input_frame(Instant::now(), submitted);
+                    if was_idle && orch.ordered.as_ref().is_some_and(|o| o.phase() == crate::ordered_pcm::Phase::Receiving) {
+                        business_ordered_until = orch.ordered.as_ref().map(|o| Instant::now() + Duration::from_millis(o.business_input_budget_ms()));
+                    }
+                }
                 if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
                     orch.ordered_end_stream_pending = false; // B23:已切 RTC,首句流早已关,忽略
                 }
@@ -1274,11 +1378,14 @@ pub async fn run_pipeline(
                     }
                 }
                 Some(SttEvent::Final(t)) => {
+                    info!(room = %room_name, trace = ready.trace_id.as_deref().unwrap_or("-"),
+                        chars = t.chars().count(), phase = ?orch.input_phase, "asr final received");
                     if orch.ordered_first_turn_active() {
                         let acts = orch.ordered.as_mut().map(|o| o.on_stt_final(t, unix_ms_now())).unwrap_or_default();
                         orch.apply_ordered_actions(acts);
                         orch.on_ordered_final_held().await;
                     } else {
+                        if let Some(w) = &ready.business { w.asr_final(Instant::now()); }
                         orch.on_final(t)
                     }
                 }
@@ -1319,17 +1426,18 @@ pub async fn run_pipeline(
             }
             Some(te) = turn_ev_rx.recv() => orch.on_turn_event(te),
             _ = commit_tick.tick() => {
-                // watchdog 心跳(epoch ms):主循环卡死(如等锁)时停跳,job 层 5s 无跳即惊闸关房
+                // watchdog 心跳(assignment 起单调毫秒):主循环卡死(如等锁)时停跳,job 层 5s 无跳即惊闸关房
                 beat.store(
-                    std::time::SystemTime::now()
-                        .duration_since(std::time::UNIX_EPOCH)
-                        .unwrap_or_default()
-                        .as_millis() as u64,
+                    ready.t_assign.elapsed().as_millis().max(1) as u64,
                     std::sync::atomic::Ordering::Relaxed,
                 );
                 if in_report.elapsed() >= Duration::from_secs(10) {
                     let mean_amp = if in_frames > 0 { in_amp_acc / in_frames } else { 0 };
-                    info!(room = %room_name, frames = in_frames, mean_amp, "audio in (10s)");
+                    info!(room = %room_name, trace = ready.trace_id.as_deref().unwrap_or("-"),
+                        frames = in_frames, mean_amp, samples = input_stats.samples,
+                        nonzero_samples = input_stats.nonzero, peak = input_stats.peak,
+                        mean_abs = input_stats.mean_abs(), "audio in (10s)");
+                    input_stats = crate::business_watchdog::AudioStats::default();
                     in_frames = 0;
                     in_amp_acc = 0;
                     in_report = Instant::now();
@@ -1337,6 +1445,36 @@ pub async fn run_pipeline(
                 orch.poll_device_timeout(Instant::now());
                 orch.poll_ledger(Instant::now());
                 orch.on_tick().await;
+                if let Some(w) = &ready.business {
+                    use crate::business_watchdog::Activity;
+                    let now = Instant::now();
+                    if let Some(turn) = &orch.agent_turn {
+                        let samples = turn.ctl.captured_samples();
+                        if samples > 0 && business_last_played.map(|(id,count,_)| (id,count)) != Some((turn.id,samples)) {
+                            w.progress(now); business_last_played = Some((turn.id,samples,now));
+                        }
+                    } else { business_last_played = None; }
+                    // Initial provider/output gates have fixed deadlines. Later
+                    // sentence connection allowance is anchored to actual PCM,
+                    // never to this polling tick or an unfinished-task flag.
+                    w.activity_until(Activity::Reply, orch.agent_turn.as_ref().filter(|t| !t.task.is_finished())
+                        .map(|t| crate::business_runtime::reply_deadline(t.business_until,
+                            business_last_played.filter(|(id,_,_)| *id == t.id).map(|(_,_,at)| at))));
+                    w.activity_until(Activity::Command, orch.pending_cmd.as_ref()
+                        .map(|p| p.sent_at + if p.accepted_acked { DEVICE_RESULT_DEADLINE * 3 } else { DEVICE_RESULT_DEADLINE }));
+                    w.activity_until(Activity::Listening, orch.onboarding.as_ref().and_then(|o|o.deadline()));
+                    w.activity_until(Activity::Search, orch.search.as_ref().and_then(|s| s.business_deadline()));
+                    // Record the accepted terminal handoff before clearing the
+                    // old input hold; the actual switch is applied next loop.
+                    if orch.pending_phase_switch.is_some() { w.first_turn_to_rtc(now); }
+                    let input_until = orch.ordered.as_ref().and_then(|o| match o.phase() {
+                        crate::ordered_pcm::Phase::Idle if o.first_turn_rtc() && orch.input_phase == InputPhase::FirstTurn =>
+                            orch.input_loop_started_at.and_then(|t| t.checked_add(Duration::from_millis(orch.cfg.ordered_begin_timeout_ms))),
+                        crate::ordered_pcm::Phase::Receiving | crate::ordered_pcm::Phase::Ended => business_ordered_until,
+                        _ => None,
+                    });
+                    w.activity_until(Activity::Input,input_until.map(|at| w.input_transition_deadline(at)));
+                }
                 if orch.ordered_end_stream_pending && orch.input_phase == InputPhase::Rtc {
                     orch.ordered_end_stream_pending = false; // B23:已切 RTC,忽略
                 }
@@ -1356,12 +1494,14 @@ pub async fn run_pipeline(
                 // channel 关闭不退主循环——命令通道是可选能力
             }
         }
+        if orch.session_close.due(Instant::now()) {
+            info!(room = %room_name, "session_exit_close: signal grace ended → closing job");
+            break;
+        }
     }
 
-    if let Some(t) = orch.agent_turn.take() {
-        t.ctl.abort();
-        t.task.abort();
-    }
+    orch.hard_abort_current();
+    if let Some(search)=&mut orch.search {search.close();}
     if let Some(sp) = orch.spec.take() {
         sp.task.abort();
     }
@@ -1375,7 +1515,7 @@ pub async fn run_pipeline(
     if let Some((pre, _)) = stt2.take() { pre.task.abort(); }
     let _ = tokio::time::timeout(Duration::from_secs(3), stt_task).await;
     info!(room = %room_name, "pipeline closed");
-    Ok(())
+    match exit_error { Some(error) => Err(error), None => Ok(()) }
 }
 
 impl Orchestrator {
@@ -1431,7 +1571,8 @@ impl Orchestrator {
 
     /// publish_data 到 room(web 延迟面板/租户状态机消费;失败只记不抛)。
     /// One-shot v0.3:有序 PCM 包 → 代次状态机 → 按 3200 块写 ASR 队列(try_send 失败=计数+整代失败)→ 执行动作。
-    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<mpsc::Sender<Vec<i16>>>) {
+    fn on_ordered_packet(&mut self, pkt: &crate::ordered_pcm::Packet, stt_tx: &Option<crate::asr_diagnostics::PcmSender>) -> usize {
+        let mut submitted = 0;
         let now_ms = unix_ms_now();
         let was_idle = self.ordered.as_ref().map(|o| o.phase() == crate::ordered_pcm::Phase::Idle).unwrap_or(false);
         let mut acts = self.ordered.as_mut().map(|o| o.on_packet(pkt, now_ms)).unwrap_or_default();
@@ -1447,7 +1588,7 @@ impl Orchestrator {
         }
         if let Some(o) = self.ordered.as_mut() {
             let more = o.drain_submits(|block| match stt_tx {
-                Some(tx) => tx.try_send(block).is_ok(),
+                Some(tx) => { let n = block.len(); let ok = tx.try_send(block).is_ok(); if ok { submitted += n; } ok },
                 None => false,
             });
             acts.extend(more);
@@ -1457,6 +1598,7 @@ impl Orchestrator {
             }
         }
         self.apply_ordered_actions(acts);
+        submitted
     }
 
     /// 代次动作:result 记日志(无 PCM/无文本)+ 出站(同 topic、OPCM 线格式、空 PCM);收流交主循环执行。
@@ -1731,10 +1873,15 @@ impl Orchestrator {
     /// 解除路径(假打断定时/下轮提交)全在主循环——主循环一等锁即四环死锁。
     /// 投机是可丢的优化:拿不到锁=放弃本次,零损失。
     async fn start_speculation(&mut self, text: String) {
+        if self.session_close.active() || self.onboarding.as_ref().is_some_and(|o|o.active()) { return; }
+        if self.search_ack(&text,false){return;}
+        let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
+        if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
+        if self.search.is_some() && crate::search_policy::intent(&text).is_some() { return; }
         // 吞句词不投机(codex 合同 §3.3「零 LLM」严格判据):急停/退出词的 interim 会先于
         // commit 触发 preflight→投机 LLM 白跑一次再被吞句分支作废——在源头跳过。
-        if crate::textproc::is_stop_only(&self.cfg.hotwords, &text)
-            || crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &text)
+        if crate::textproc::is_turn_stop(&self.cfg.hotwords, &text)
+            || crate::textproc::session_exit_speculation_blocked(&self.cfg.exit_hotwords, &text, self.cfg.exit_tail_match)
         {
             info!(room = %self.room_name, "speculation skipped: swallow-word tail");
             return;
@@ -1749,8 +1896,10 @@ impl Orchestrator {
         let (client, cfg, messages, version) = llm_guard.speculation_request(&text);
         drop(llm_guard);
         let (tx, rx) = mpsc::channel::<String>(1024);
-        let task = tokio::spawn(async move { llm::stream_chat(&client, &cfg, messages, tx).await });
+        let request_context=search_context.clone();
+        let task = tokio::spawn(async move { llm::stream_chat_with_context(&client, &cfg, messages, tx,request_context).await });
         self.spec = Some(Speculation {
+            search_context,
             text,
             version,
             started: Instant::now(),
@@ -1788,6 +1937,7 @@ impl Orchestrator {
         active_frame: bool,
         eot_ring: &VecDeque<i16>,
     ) {
+        self.search_user_speaking = gate.speaking() || active_frame;
         let now = Instant::now();
         match ev {
             VadEvent::SpeechStart => {
@@ -1870,6 +2020,8 @@ impl Orchestrator {
     }
 
     fn on_interim(&mut self, t: String) {
+        if self.onboarding.as_ref().is_some_and(|o|o.reject_asr() || (o.is_v2() && o.active())) { return; }
+        if self.session_close.active() { return; }
         self.contract.user_transcript_interim();
         self.tr.user_interim(&t);
         self.tele_text = t.clone();
@@ -1880,6 +2032,23 @@ impl Orchestrator {
     }
 
     fn on_final(&mut self, t: String) {
+        if let Some(o)=self.onboarding.as_ref() {
+            let exit=crate::textproc::session_exit_path(&self.cfg.exit_hotwords,&t,self.cfg.exit_tail_match);
+            match o.input_route(exit.is_some()) {
+                crate::voice_onboarding::InputRoute::Drop => return,
+                crate::voice_onboarding::InputRoute::Exit => {
+                    self.contract.user_transcript_final(); self.tr.user_final(&t);
+                    self.begin_session_exit(&t,exit.unwrap()); return;
+                },
+                crate::voice_onboarding::InputRoute::Ordinary => {},
+            }
+        }
+        if self.session_close.active() { return; }
+        if self.onboarding.as_ref().is_some_and(|o|o.is_v2() && o.active()) {
+            self.contract.user_transcript_final(); self.tr.user_final(&t);
+            if let Some(o)=self.onboarding.as_mut(){o.answer(&t);}
+            return; // Fixed lesson answers never enter ordinary turn batching/search/LLM/TTS.
+        }
         self.contract.user_transcript_final();
         // B50 §4:门开着且非空 → 只轮换段 id 并缓冲,等 commit 裁决再发(见 caption_gate.rs)。
         // 门关着或空 final → 原路立即发(空 final 在端侧不启动等待,且 turn_gate 也不收它)。
@@ -1955,13 +2124,15 @@ impl Orchestrator {
             return;
         }
         self.false_deadline = None;
+        let resume_delay = turn.ctl.interruption_resume_delay(self.cfg.false_interruption_timeout);
         if self.paused.is_none() {
             turn.ctl.pause();
-            self.paused = Some(self.cfg.false_interruption_timeout);
+            self.paused = Some(resume_delay);
             self.set_state(AgentState::Listening);
         } else {
-            // thinking-pause(timeout=0)升格为真打断窗
-            self.paused = Some(self.cfg.false_interruption_timeout);
+            // Before the first frame keep the speech hold, but do not upgrade
+            // it to the already-speaking false-interruption recovery timer.
+            self.paused = Some(resume_delay);
         }
     }
 
@@ -2049,12 +2220,16 @@ impl Orchestrator {
         }
         let fast_path_pending = self.pending_cmd.is_some();
         let has_trace = self.device_trace.is_some();
+        // D2 B5(2026-09-23):原话无设备词 → 暗号作废(env L2_REQUIRE_DEVICE_TEXT=0 可回退)
+        let device_text = !crate::device_intent::l2_require_device_text()
+            || crate::device_intent::l2_device_text(user_text);
         if let Err(reason) = crate::device_intent::l2_gate(
-            self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace,
+            self.l2_execute_on, self.l2_capable, label, fast_path_pending, has_trace, device_text,
         ) {
             info!(room = %self.room_name, label, reason, "llm device intent suppressed");
-            // 2026-09-04(川哥拍板):不在首批的标签被压制时,LLM 回复常已自称「调好了」(003「画面调到5米」实证)
+            // 2026-09-04(川哥拍板):被压制的标签 LLM 回复常已自称「调好了」(003「画面调到5米」实证)
             // → 固定纠正句追加在回复之后(say_after_current);不教词表原句(TTS 念出=自触发风险)。
+            // D1(2026-09-22):批次=词表全集,纠正句只挂 unknown_label(表外标签),门在 device_intent::l2_fallback_hint。
             if let Some(hint) =
                 crate::device_intent::l2_fallback_hint(reason, label, fast_path_pending, has_trace)
             {
@@ -2256,7 +2431,32 @@ impl Orchestrator {
         kind: control::Inbound,
         identity: Option<&str>,
     ) {
+        if self.session_close.active() && !matches!(&kind, control::Inbound::SessionExitAck | control::Inbound::Cancel) { return; }
+        if self.onboarding.as_ref().is_some_and(|o|o.active()) && matches!(&kind,control::Inbound::CanarySay|control::Inbound::CommandWord{..}) { return; }
         match kind {
+            control::Inbound::VoiceOnboarding => {
+                if !self.onboarding.as_ref().is_some_and(|o|o.session.trusted_origin(ev,identity)) { return; }
+                if matches!(ev.payload["action"].as_str(),Some("cancel"|"finish")) {
+                    self.onboarding_deferred=None;
+                }
+                let local_lesson=self.onboarding.as_ref().is_some_and(|o|o.is_v2());
+                if !local_lesson && ev.payload["action"] == "begin" && (self.agent_turn.is_some() || self.ordered_first_turn_active() || !self.turn_gate.pending().is_empty() || !self.latest_interim.is_empty()) {
+                    if self.onboarding.is_some() && self.onboarding_deferred.is_none() { self.onboarding_deferred=Some((ev.clone(),identity.map(str::to_owned),Instant::now())); }
+                    return;
+                }
+                let before=self.onboarding.as_ref().map(|o|o.generation());
+                if let Some(o)=self.onboarding.as_mut() { o.control(ev,identity,false); }
+                if local_lesson && before!=self.onboarding.as_ref().map(|o|o.generation()) {
+                    // Local prompts use continuous RTC, never the ordinary ordered first-turn buffer.
+                    // Retire that buffer through the existing switch, instead of losing answers until begin_timeout.
+                    if ev.payload["action"] == "begin" { self.request_phase_switch("voice_onboarding_v2".into()); }
+                    self.onboarding_deferred=None;
+                    self.hard_abort_current();
+                    if let Some(sp)=self.spec.take(){sp.task.abort();}
+                    self.turn_gate=TurnGate::new(self.turn_gate.min_delay,self.turn_gate.max_delay,self.turn_gate.unlikely_threshold);
+                    self.latest_interim.clear();self.pf.reset();
+                }
+            },
             control::Inbound::CanarySay => self.on_canary_say(ev, identity),
             // command_word(2026-08-18 晚合同):VAD 芯片 label 经 Android 转发,
             // 补早说空窗——事件可先于 input_ready 到达(control 通道在 job 层缓冲,
@@ -2430,6 +2630,8 @@ impl Orchestrator {
                       budget_left = self.ready_confirm.budget_left(), "input_ready.request");
             }
             control::Inbound::Cancel => {
+                if self.device_trace.as_deref()==Some(ev.trace_id.as_str()) { if let Some(o)=self.onboarding.as_mut(){o.cancel();} self.onboarding_deferred=None; }
+                if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 // One-shot v0.3:显式取消对有序 PCM 代次立即生效(唯一终态;已 hold 的 final 作废;收流经 pending 标志传导)
                 if self.ordered.is_some() {
                     let acts = self.ordered.as_mut().map(|o| o.fail(crate::ordered_pcm::FailReason::Cancelled)).unwrap_or_default();
@@ -2589,6 +2791,9 @@ impl Orchestrator {
         recent
     }
 
+    fn search_ack(&self,text:&str,input_continues:bool)->bool {
+        self.search_turn&&self.agent_turn.as_ref().is_some_and(|t|self.search.as_ref().is_some_and(|s|s.accepts_ack(text,t.ctl.audio_started(),input_continues)))
+    }
     fn hard_abort_current(&mut self) {
         if self.deferred_say.clear_on_abort() {
             info!(room = %self.room_name, "deferred device reply dropped (turn aborted)");
@@ -2596,6 +2801,7 @@ impl Orchestrator {
         let Some(turn) = self.agent_turn.take() else {
             return;
         };
+        let was_search = std::mem::take(&mut self.search_turn);
         // B34-B:在这里把「abort 之前在播什么」抄一份。普通 commit 与 STOP/EXIT 都是
         // **先 abort 再登记**,等登记时 turn 已被 take 走,现算只会得到 none/turn_id=0,
         // 恰好在 B31「是的」那类新轮上失真。**只抄不改**,中断执行顺序一行没动。
@@ -2630,7 +2836,14 @@ impl Orchestrator {
         // 回声对撞:被打断时只有 spoken 部分出了喇叭(截断文本),连同 filler 进对撞缓冲
         self.echo_tts_text = format!("{}{spoken}", self.echo_cur_filler);
         self.echo_playout_end = Some(Instant::now());
-        self.pending_amend = Some(spoken);
+        if was_search {
+            if let Some(search) = &mut self.search {
+                if let Some(p)=&turn.search_progress {let complete=p.lock().unwrap_or_else(|e|e.into_inner()).complete(turn.ctl.captured_samples(),false);search.finish_sentences(true,complete,played/24);}
+                else {search.finish_with_progress(true, spoken.chars().count(), played as u64 / 24, sentence_spans(&synth, &progress).iter().any(|s| played >= s.end_samples));}
+            }
+        } else {
+            self.pending_amend = Some(spoken);
+        }
         self.paused = None;
         self.false_deadline = None;
         self.set_state(AgentState::Listening);
@@ -2641,6 +2854,10 @@ impl Orchestrator {
         let Some(turn) = &self.agent_turn else { return };
         if !turn.ctl.audio_started() {
             return;
+        }
+        if let Some(p)=&turn.search_progress {
+            let complete=p.lock().unwrap_or_else(|e|e.into_inner()).complete(turn.ctl.captured_samples(),false);
+            if let Some(search)=&mut self.search {search.record_sentences(complete,None);}
         }
         let played = turn.ctl.played_samples();
         let turn_id = turn.id;
@@ -2673,6 +2890,9 @@ impl Orchestrator {
         if turn.filler_samples == 0 {
             // B12：无垫句（跳过或未选中）时，首帧即正文首帧——这是「跳垫句后静默多久」的真值口径。
             turn.seg_stage = 2;
+            if self.search_turn {
+                if let Some(search) = &self.search { search.log_audio_started(&room, turn.id); }
+            }
             info!(room = %room, turn_id = turn.id, since_turn_ms = turn.started.elapsed().as_millis() as u64,
                   "body first frame published (no filler)");
             return;
@@ -2685,6 +2905,9 @@ impl Orchestrator {
         }
         if turn.seg_stage == 1 && played > turn.filler_samples {
             turn.seg_stage = 2;
+            if self.search_turn {
+                if let Some(search) = &self.search { search.log_audio_started(&room, turn.id); }
+            }
             info!(room = %room, turn_id = turn.id, played_samples = played,
                   since_turn_ms = turn.started.elapsed().as_millis() as u64, "body first frame published");
         }
@@ -2768,6 +2991,16 @@ impl Orchestrator {
                     return;
                 }
                 self.tr_finish_turn(); // 字幕:剩余句补 final(先于清 turn)
+                if std::mem::take(&mut self.search_turn) {
+                    let spoken = self.agent_turn.as_ref().filter(|t| t.ctl.played_samples() > 0)
+                        .and_then(|t| t.synth_text.lock().ok().map(|s| s.chars().count())).unwrap_or(0);
+                    if let Some(search) = &mut self.search {
+                        if let Some(turn)=&self.agent_turn {if let Some(p)=&turn.search_progress {
+                            let p=p.lock().unwrap_or_else(|e|e.into_inner());let complete=p.complete(turn.ctl.captured_samples(),true);
+                            search.finish_sentences(complete<p.sentences.len(),complete,turn.ctl.captured_samples()/24);
+                        }else{search.finish(false,spoken);}}
+                    }
+                }
                 // 回声对撞:自然播完=filler+全文都出了喇叭,整段进对撞缓冲(必须在清 turn 前取)
                 if let Some(turn) = &self.agent_turn {
                     let synth = turn.synth_text.lock().map(|s| s.clone()).unwrap_or_default();
@@ -2797,8 +3030,25 @@ impl Orchestrator {
     /// tick 唯一出口包装(B50 §4):`on_tick_inner` 有 8 条 return,把字幕裁决的落地放在这里,
     /// 任何一条 return 都绕不过去——将来新增 return 分支自动继承默认判决 Publish。
     async fn on_tick(&mut self) {
+        self.poll_exit_signal();
+        if self.session_close.active() { return; }
         self.on_tick_inner().await;
         self.flush_caption_finals();
+        if self.session_close.active() { return; }
+        let input_pending = self.search_user_speaking || !self.turn_gate.pending().is_empty()
+            || !self.latest_interim.is_empty();
+        if let Some(search) = &mut self.search { search.observe_input(input_pending); }
+        let safe = self.agent_turn.is_none() && self.state == AgentState::Listening
+            && !self.search_user_speaking && self.turn_gate.pending().is_empty()
+            && self.latest_interim.is_empty() && self.pending_cmd.is_none() && !self.ordered_first_turn_active();
+        let speech = self.search.as_mut().and_then(|s| s.poll(safe));
+        if self.search.as_mut().map(|s| s.take_revoked()).unwrap_or(false) && self.search_turn {
+            self.hard_abort_current();
+        }
+        if let Some(text) = speech {
+            let pcm=self.search.as_ref().and_then(|s|s.active_receipt_pcm());
+            self.start_turn(match pcm {Some(pcm)=>TurnKind::BackgroundClip(text,pcm),None=>TurnKind::BackgroundSay(text)});
+        }
     }
 
     /// B52 §6.2:回声门判掉一条 commit 时的**唯一**字幕落点。控制出口(急停/退出/设备命令)
@@ -2859,7 +3109,68 @@ impl Orchestrator {
         }
     }
 
+    fn poll_exit_signal(&mut self) {
+        let now = Instant::now();
+        // v140 §4.3:退出信令 800ms 无终态同 seq 重发,至多 3 发后放弃(不得重试风暴;
+        // Android 侧 ACK 预算 750ms,800ms 给足单程+处理)。room close 由 job 收尾天然终止。
+        if let Some(pend) = &mut self.exit_pending {
+            if now.duration_since(pend.sent_at) >= Duration::from_millis(800) {
+                if pend.attempts >= 3 {
+                    info!(room = %self.room_name, seq = pend.seq,
+                        "session_exit signal gave up (no terminal after 3 attempts)");
+                    self.exit_pending = None;
+                } else {
+                    pend.attempts += 1;
+                    pend.sent_at = now;
+                    let env = pend.envelope.clone();
+                    let (seq, attempt) = (pend.seq, pend.attempts);
+                    self.publish_json(control::TOPIC, env);
+                    info!(room = %self.room_name, seq, attempt, "session_exit signal retry (same seq)");
+                }
+            }
+        }
+    }
+
+    fn begin_session_exit(&mut self, text: &str, path: &str) {
+        if let Some(o)=self.onboarding.as_mut(){o.cancel();} self.onboarding_deferred=None;
+        if !self.session_close.begin(Instant::now()) { return; }
+        if let Some(lc) = crate::ready_confirm::swallow_lifecycle("session_exit") { self.ready_confirm.apply(lc); }
+        self.hard_abort_current();
+        if let Some(mut search) = self.search.take() { search.close(); }
+        if let Some(sp) = self.spec.take() { sp.task.abort(); }
+        self.pending_tts_warm = None;
+        self.false_deadline = None;
+        self.paused = None;
+        self.resume_grace = None;
+        self.latest_interim.clear();
+        self.tele_text.clear();
+        self.pf.reset();
+        if self.exit_signal_on {
+            if let Some(trace) = self.device_trace.clone() {
+                self.exit_seq += 1;
+                let rk = crate::textproc::exit_reply_kind(text);
+                let env = control::session_exit_detected(&trace, now_unix_ms(), self.exit_seq, rk, path);
+                self.publish_json(control::TOPIC, env.clone());
+                self.exit_pending = Some(ExitSignalPending {
+                    seq: self.exit_seq, sent_at: Instant::now(), attempts: 1, envelope: env,
+                });
+                info!(room = %self.room_name, seq = self.exit_seq, reply_kind = rk, path, "session_exit signal sent");
+            } else {
+                info!(room = %self.room_name, "session_exit signal skipped: no session trace");
+            }
+        }
+        info!(room = %self.room_name, path, grace_ms = crate::session_close::SIGNAL_GRACE.as_millis(),
+            "session_exit close armed");
+    }
+
     async fn on_tick_inner(&mut self) {
+        if self.onboarding_deferred.as_ref().is_some_and(|(_,_,at)|at.elapsed()>=Duration::from_secs(9)){self.onboarding_deferred=None;}
+        if self.agent_turn.is_none() && !self.ordered_first_turn_active() && self.turn_gate.pending().is_empty() && self.latest_interim.is_empty() {
+            if let Some((ev,identity,_))=self.onboarding_deferred.take() { if let Some(o)=self.onboarding.as_mut(){o.control(&ev,identity.as_deref(),false);} }
+        }
+        let onboarding_states=if let Some(o)=self.onboarding.as_mut(){o.poll().await}else{vec![]};
+        for state in onboarding_states { self.publish_json(control::TOPIC,state); }
+
         // One-shot v0.3:有序 PCM 代次超时(begin 后无 end)→ 整代失败终态
         if self.ordered.is_some() {
             let now_ms = unix_ms_now();
@@ -2880,24 +3191,6 @@ impl Orchestrator {
         // cancel 掉的 canary:turn.task.abort() 后 BufferWatch Drop 异步落槽,tick 兜底补发
         self.try_flush_canary_metrics();
         let now = Instant::now();
-        // v140 §4.3:退出信令 800ms 无终态同 seq 重发,至多 3 发后放弃(不得重试风暴;
-        // Android 侧 ACK 预算 750ms,800ms 给足单程+处理)。room close 由 job 收尾天然终止。
-        if let Some(pend) = &mut self.exit_pending {
-            if now.duration_since(pend.sent_at) >= Duration::from_millis(800) {
-                if pend.attempts >= 3 {
-                    info!(room = %self.room_name, seq = pend.seq,
-                        "session_exit signal gave up (no terminal after 3 attempts)");
-                    self.exit_pending = None;
-                } else {
-                    pend.attempts += 1;
-                    pend.sent_at = now;
-                    let env = pend.envelope.clone();
-                    let (seq, attempt) = (pend.seq, pend.attempts);
-                    self.publish_json(control::TOPIC, env);
-                    info!(room = %self.room_name, seq, attempt, "session_exit signal retry (same seq)");
-                }
-            }
-        }
         // 字幕逐句推进(按播出位置;pause 时 played 冻结自然停发)
         self.publish_agent_progress();
         self.log_playout_segments();
@@ -2913,7 +3206,10 @@ impl Orchestrator {
                     turn.ctl.resume();
                     self.resume_grace = Some(now + Duration::from_millis(250));
                     self.set_state(AgentState::Speaking);
-                    info!(room = %self.room_name, "resumed false interrupted speech");
+                    info!(room = %self.room_name, search_result=self.search_turn,
+                        pending_chars=self.turn_gate.pending().chars().count(),
+                        interim_chars=self.latest_interim.chars().count(),
+                        "resumed false interrupted speech");
                 }
                 self.contract.false_interruption();
             }
@@ -2960,7 +3256,14 @@ impl Orchestrator {
                 // 字幕发了、在途播放不停,假打断超时后还会续播。
                 let hit = {
                     let bank = self.echo_local_texts.lock().unwrap();
-                    crate::textproc::opening_echo_verdict(&nu, &bank, control_outlet).map(str::to_string)
+                    // R15: a real result can start before the greeting echo window
+                    // expires. Exact, ended result acknowledgments must reach the
+                    // search-only continue branch below; ordinary input keeps the
+                    // original echo verdict and controls keep their priority.
+                    crate::textproc::opening_echo_with_search_ack(
+                        &nu, &bank, control_outlet,
+                        self.search_ack(&user_text, self.search_user_speaking),
+                    ).map(str::to_string)
                 };
                 if let Some(slot) = hit {
                     info!(room = %self.room_name, slot = %slot,
@@ -3008,7 +3311,8 @@ impl Orchestrator {
                     if control_outlet.is_none()
                         && speech_end_ms <= deadline
                         && crate::device_intent::match_command(&user_text).is_none()
-                        && !crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text)
+                        && crate::device_grammar::executable(&user_text).is_none()
+                        && !crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text)
                         && crate::textproc::session_exit_tail_hit(&user_text).is_none()
                     {
                         let overlap = {
@@ -3059,29 +3363,13 @@ impl Orchestrator {
             // 回答轮(02:54 真机实证,当时靠 Android 泛化 vad_no_asr cancel 巧合补刀;
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
-            let swallow_kind = if crate::textproc::is_stop_only(&self.cfg.hotwords, &user_text) {
-                Some(("stop_only", "exact"))
-            } else if crate::textproc::is_stop_only(&self.cfg.exit_hotwords, &user_text) {
-                // 退出词吞句(2026-08-17 川哥拍板):trace 88185b1e 实证「退出」被 commit
-                // 起幽灵回答轮(filler 入轨+LLM 回 2 字),79ms 后才被 Android cancel 杀——
-                // 预测式判停必然抢先 cancel,竞态改确定性。Worker 只吞轮次;
-                // 退出回复/关房 100% 归 Android(退出权威不变)。
-                Some(("session_exit", "exact"))
-            } else if self.cfg.exit_tail_match {
-                // A 案(2026-08-28「不想聊了，退出吧」漏网实证):自然复合句对整句精确匹配
-                // 结构性免疫→尾部强意图词匹配,否定/疑问豁免见 textproc。语义与 exact 同=只吞。
-                // path 分桶(v140 §2):碎片词(不想聊/不想聊天)=fragment,复合句尾部命中=tail。
-                match crate::textproc::session_exit_tail_hit(&user_text) {
-                    Some(w) if crate::textproc::is_fragment_exit_word(w) => {
-                        Some(("session_exit", "fragment"))
-                    }
-                    Some(_) => Some(("session_exit", "tail")),
-                    None => None,
-                }
-            } else {
-                None
-            };
+            let swallow_kind = if let Some(path) = crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &user_text, self.cfg.exit_tail_match) {
+                    Some(("session_exit", path))
+                } else if crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text) {
+                    Some(("stop_only", "exact"))
+                } else { None };
             if let Some((kind, path)) = swallow_kind {
+                if let Some(search) = &mut self.search { search.suppress_auto_replay(); }
                 info!(room = %self.room_name, path, "{kind} utterance swallowed: '{user_text}'");
                 // B48 §3:停 vs 退出的分水岭。stop_only=只打断,补确认能力不变;
                 // session_exit=会话终态,此后迟到的补确认查询一律 Closed(不登记 pending、不重述)。
@@ -3089,32 +3377,7 @@ impl Orchestrator {
                 if let Some(lc) = crate::ready_confirm::swallow_lifecycle(kind) {
                     self.ready_confirm.apply(lc);
                 }
-                // v140 §4.1:三路命中(exact/tail/fragment)任一 → 发 session_exit_detected。
-                // 纪律:envelope 不带转写正文;trace 缺失=不发(受信通道没建立,fail-closed)。
-                if kind == "session_exit" && self.exit_signal_on {
-                    if let Some(trace) = self.device_trace.clone() {
-                        self.exit_seq += 1;
-                        let rk = crate::textproc::exit_reply_kind(&user_text);
-                        let env = control::session_exit_detected(
-                            &trace,
-                            now_unix_ms(),
-                            self.exit_seq,
-                            rk,
-                            path,
-                        );
-                        self.publish_json(control::TOPIC, env.clone());
-                        self.exit_pending = Some(ExitSignalPending {
-                            seq: self.exit_seq,
-                            sent_at: Instant::now(),
-                            attempts: 1,
-                            envelope: env,
-                        });
-                        info!(room = %self.room_name, seq = self.exit_seq, reply_kind = rk, path,
-                            "session_exit signal sent");
-                    } else {
-                        info!(room = %self.room_name, "session_exit signal skipped: no session trace");
-                    }
-                }
+                if kind == "session_exit" { self.begin_session_exit(&user_text, path); }
                 // 在途回答若还在(未被急停白名单/cancel 停掉,如用户轻声说「停」
                 // 而 interim 未及命中)→ 此刻补硬停,保证「停=安静」
                 if self.agent_turn.is_some() {
@@ -3129,6 +3392,19 @@ impl Orchestrator {
                     s.event("swallowed", &[("text", &user_text), ("kind", kind), ("path", path)]);
                 }
                 self.request_interrupt_snapshot("swallowed", format!("{kind}:{path}"));
+                return;
+            }
+            if self.onboarding.as_ref().is_some_and(|o|o.active()) {
+                let was_exit=self.onboarding.as_ref().is_some_and(|o|o.session.state["stage"]=="waiting_exit");
+                if let Some(o)=self.onboarding.as_mut(){o.answer(&user_text);}
+                if !was_exit { self.latest_interim.clear(); self.tele_text.clear(); return; }
+            }
+            if self.search_ack(&user_text,self.search_user_speaking) {
+                if let Some(sp)=self.spec.take(){sp.task.abort();}
+                if self.paused.take().is_some(){if let Some(t)=&self.agent_turn {t.ctl.resume();}}
+                self.false_deadline=None;self.latest_interim.clear();self.tele_text.clear();
+                info!(room=%self.room_name,"background search acknowledgment continued: no chat or new task");
+                self.request_interrupt_snapshot("swallowed","search_ack:exact".into());
                 return;
             }
             // 播放中附和词(2026-09-14 川哥):小可正在播长文本时,孩子随口「嗯/对/是」是在听不是插话——
@@ -3211,7 +3487,36 @@ impl Orchestrator {
             // 确定性匹配命中 → 发 proposed、零 UserTurnCommitted、零 filler、零 LLM,
             // 等 Android result 播固定短句。范围外音量 → 固定提示,零事件零执行。
             if self.device_commands_on {
-                match crate::device_intent::match_command(&user_text) {
+                // D2 语法层 L1g(2026-09-23,川哥拍板):词表精确未中 → 语法判(device_grammar,对象+方向+程度,只认结构);
+                // DEVICE_GRAMMAR_MODE=observe 只记日志(默认,观察 3~5 天),execute 与 L1 完全同链路,lane 标 L1g。
+                let (matched, lane): (Option<crate::device_intent::DeviceMatch>, &'static str) =
+                    match crate::device_intent::match_command(&user_text) {
+                        Some(m) => (Some(m), "L1"),
+                        None => match crate::device_grammar::judge(&user_text) {
+                            Ok(hit) => {
+                                let mode = crate::device_grammar::mode();
+                                info!(room = %self.room_name, label = hit.label, action = %hit.action, domain = hit.domain,
+                                      mode = mode.as_str(), modal = hit.modal, text_len = user_text.chars().count(),
+                                      "device grammar hit: '{user_text}' → '{}'", hit.peeled);
+                                if mode == crate::device_grammar::Mode::Execute {
+                                    (hit.command().map(crate::device_intent::DeviceMatch::Command), "L1g")
+                                } else {
+                                    (None, "L1")
+                                }
+                            }
+                            Err(reason) => {
+                                // D2.1 观察(2026-09-23 川哥「通过日志而不是通过大模型观察」):带设备词却被语法层否决的句子记一行;
+                                // 原因前缀 time_future / place / statement_le 是 20 槽体检新增的三道否决,后台卡按原因计数,
+                                // 并与 60 s 内同房同句的慢路提案对账(否决了但大模型开火 = 分歧,人工看)。
+                                if reason != "empty" && crate::device_intent::l2_device_text(&user_text) {
+                                    info!(room = %self.room_name, reason = %reason, mode = crate::device_grammar::mode().as_str(),
+                                          text_len = user_text.chars().count(), "device grammar veto: '{user_text}'");
+                                }
+                                (None, "L1")
+                            }
+                        },
+                    };
+                match matched {
                     Some(crate::device_intent::DeviceMatch::Command(cmd)) => {
                         // v3.1 账本(R1/R3):同句裁决按语音段归属,不按时间窗;claimed/ignored/unknown 所有权在此生效;
                         // deferred 电机被同句 ASR 独立确认时,候选 ID 原样回传
@@ -3249,7 +3554,7 @@ impl Orchestrator {
                         if let Some(sp) = self.spec.take() {
                             sp.task.abort();
                         }
-                        self.start_device_command(cmd, &user_text, "L1", candidate, "asr", utterance);
+                        self.start_device_command(cmd, &user_text, lane, candidate, "asr", utterance);
                         self.latest_interim.clear();
                         self.tele_text.clear();
                         return;
@@ -3335,6 +3640,22 @@ impl Orchestrator {
                 sp.on_turn();
             }
             let amend = self.pending_amend.take();
+            if let Some(search) = &mut self.search {
+                search.on_commit();
+                if let Some(action) = search.interpret(&user_text) {
+                    // Preserve any prior ordinary-turn history amendment for the next ordinary reply.
+                    self.pending_amend = amend;
+                    if let Some(old) = self.spec.take() { old.task.abort(); }
+                    let handoff=search.take_history_handoff();
+                    if search.command(action) {
+                        if let Some(question)=handoff {
+                            *self.search_history_handoff.lock().unwrap_or_else(|e|e.into_inner())=Some((self.next_turn_id,question));
+                        }
+                    }
+                    self.set_state(AgentState::Listening);
+                    return;
+                }
+            }
             // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废。
             // try_lock 同 start_speculation 的死锁红线:锁被回复流持着(上一轮孙任务
             // 尚未退出)时当 miss 丢投机,绝不阻塞主循环。
@@ -3343,7 +3664,7 @@ impl Orchestrator {
                     Ok(llm_guard) => {
                         let ver_now = llm_guard.history_version();
                         drop(llm_guard);
-                        if sp.text == user_text && sp.version == ver_now {
+                        if sp.text == user_text && sp.version == ver_now && sp.search_context==self.search.as_ref().and_then(|s|s.dialogue_context()) {
                             info!(
                                 room = %self.room_name,
                                 lead_ms = sp.started.elapsed().as_millis() as u64,
@@ -3377,7 +3698,8 @@ impl Orchestrator {
             let next_turn = self.next_turn_id + 1; // picked 的轮紧接 start_turn 用此 id
             // B(2026-09-09):ordered 首句 + 隔离开关 → 语义桶最短完整条;打断轮/普通轮/开关关 → 原策略。
             // ordered 来源随 CommitInfo 带出(gate 的标记在 poll_commit 返回前已复位,此处不能再读它)。
-            let shortest = self.cfg.ordered_filler_shortest && commit.input_ended && !boost;
+            let shortest = (self.cfg.ordered_filler_shortest && commit.input_ended
+                || self.cfg.tts_latency_v1 && self.search.is_some()) && !boost;
             // B11：投机命中 = LLM 已在流、TTS 首块 ≈0.3 s 内到——垫句反而成了唯一等待（真机 …1683：正文 +297 ms 就绪等到 +999）。
             let spec_lead_ms = spec.as_ref().map(|sp| sp.started.elapsed().as_millis() as u64).unwrap_or(0);
             // B12：投机「跑了多久」≠ 正文就绪（真机 …1684 跳了垫句仍静默 1.04 s）。改为三条件：
@@ -3428,6 +3750,10 @@ impl Orchestrator {
     }
 
     fn start_turn(&mut self, kind: TurnKind) {
+        if self.onboarding.as_ref().is_some_and(|o|o.active()) { return; }
+        if self.session_close.active() { return; }
+        let record_history = !matches!(&kind, TurnKind::BackgroundSay(_) | TurnKind::BackgroundClip(..));
+        self.search_turn = !record_history;
         // 回声对撞:记录本 turn 的 filler 文案(Say/无 filler 轮清空)——synth_text 只有 TTS 正文,
         // filler 是预合成 pcm 直接入轨,不经它,得单独暂存才能参与对撞
         self.echo_cur_filler = match &kind {
@@ -3449,7 +3775,10 @@ impl Orchestrator {
         // 输出门(冻结 2026-08-18):Android 未订 agent 轨前,PCM 管道过包装层——
         // 首段到达起 5s 未就绪即 fatal fail-closed。门开过(绝大多数轮次)零包装零开销。
         // spawn_playout 是全部可听 PCM(TTS+filler)的唯一入口,包在它前面=全覆盖。
-        let pcm_rx = if self.output_gate.is_open() {
+        let output_open = self.output_gate.is_open();
+        let business_until = crate::business_runtime::reply_startup_deadline(turn_started,
+            !output_open, self.pending_local_receipt_deadline);
+        let pcm_rx = if output_open {
             pcm_rx
         } else {
             self.output_gate.wrap(pcm_rx, self.fatal_tx.clone())
@@ -3467,6 +3796,9 @@ impl Orchestrator {
         };
         let (playout_task, ctl) =
             playout::spawn_playout(self.source.clone(), pcm_rx, self.room_name.clone(), id);
+        let search_progress=if let TurnKind::BackgroundSay(text)=&kind {if self.search.as_ref().is_some_and(|s|s.sentence_progress_enabled()){Some(Arc::new(StdMutex::new(crate::search_progress::SearchProgress::new(text))))}else{None}}else{None};
+        let search_progress_task=search_progress.clone();
+        let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         let synth_text = Arc::new(StdMutex::new(String::new()));
         let progress = Arc::new(StdMutex::new(Vec::new()));
         let llm_chars = Arc::new(AtomicUsize::new(0));
@@ -3491,6 +3823,7 @@ impl Orchestrator {
 
         let tts_cfg = self.tts_cfg.clone();
         let llm = self.llm.clone();
+        let search_history_handoff = self.search_history_handoff.clone();
         let room_name = self.room_name.clone();
         let ev_tx = self.turn_ev_tx.clone();
         let min_len = self.cfg.tts_min_sentence_len;
@@ -3506,7 +3839,11 @@ impl Orchestrator {
         // 等第一句文本出来时握手早已完成 → 首句省掉 ~220ms 建连。
         // (火山线返回关闭态,行为不变)
         // B12：held final 时已预热的连接优先；没有就按原样现起。
-        let mut warm = self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm());
+        let mut warm = if matches!(&kind,TurnKind::BackgroundClip(..)) {
+            // Prepared PCM needs no provider connection. Drop any unused prewarm.
+            self.pending_tts_warm.take();
+            crate::tts::Prewarm::off()
+        } else {self.pending_tts_warm.take().unwrap_or_else(|| tts_cfg.start_prewarm())};
 
         let task = tokio::spawn(async move {
             let publish = |v: Value| {
@@ -3535,7 +3872,34 @@ impl Orchestrator {
                 }
             };
             match kind {
-                TurnKind::Say(text) => {
+                TurnKind::BackgroundClip(text, pcm) => {
+                    track(&text,pcm.len());
+                    let _ = pcm_tx.send(pcm).await;
+                    drop(pcm_tx);
+                    let _ = playout_task.await;
+                    watcher.abort();
+                    let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                }
+                TurnKind::BackgroundSay(text) if search_progress_task.is_some() => {
+                    // Register the entire trusted result before awaiting a socket or any PCM.
+                    if let Ok(mut t)=synth2.lock(){*t=text.clone();}
+                    let tracker=search_progress_task.as_ref().unwrap();
+                    let sentences=tracker.lock().unwrap_or_else(|e|e.into_inner()).sentences.clone();
+                    let mut chars=0usize;let mut samples=0u64;
+                    for sentence in sentences {
+                        if ctl_tts.aborted(){break;}
+                        match tts_cfg.synthesize(&sentence,&pcm_tx,&ctl_tts,&mut warm).await {
+                            Ok((_,bytes)) if !ctl_tts.aborted() && bytes>0 => {
+                                chars+=sentence.chars().count();samples+=(bytes/2) as u64;
+                                tracker.lock().unwrap_or_else(|e|e.into_inner()).synthesized((bytes/2) as u64);
+                                if let Ok(mut p)=prog2.lock(){p.push((chars,samples));}
+                            },
+                            _=>break,
+                        }
+                    }
+                    drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id)).await;
+                }
+                TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
                     match tts_cfg
                         .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
                         .await
@@ -3551,7 +3915,7 @@ impl Orchestrator {
                     let _ = playout_task.await;
                     watcher.abort();
                     // 自然播完:固定句全文入历史(say add_to_chat_ctx 语义)
-                    llm.lock().await.push_assistant(&text);
+                    if record_history { llm.lock().await.push_assistant(&text); }
                     let _ = ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
                 TurnKind::Reply {
@@ -3571,7 +3935,12 @@ impl Orchestrator {
                         Some(sp) => {
                             {
                                 let mut g = llm.lock().await;
-                                if let Some(spoken) = pending_amend {
+                                if let Some((_, question)) = search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).take_if(|(after, _)| id > *after) {
+                                    // A handoff owns the entire prior pair, including its partial reply.
+                                    // If that reply never entered history, do not amend an unrelated assistant.
+                                    let transferred = g.transfer_last_question_to_search(&question);
+                                    info!(transferred, "search history handoff settled");
+                                } else if let Some(spoken) = pending_amend {
                                     g.set_last_assistant(&spoken);
                                 }
                                 g.push_user(&user_text);
@@ -3582,13 +3951,20 @@ impl Orchestrator {
                             let (delta_tx, delta_rx) = mpsc::channel::<String>(64);
                             let llm2 = llm.clone();
                             let ut = user_text.clone();
+                            let llm_ctl = ctl_tts.clone();
                             let h = tokio::spawn(async move {
                                 let mut g = llm2.lock().await;
+                                if llm_ctl.aborted() { return Err(anyhow::anyhow!("turn_aborted_before_llm")); }
                                 // 上一轮被打断的历史修正在同一把锁内先落账,保证消息顺序
-                                if let Some(spoken) = pending_amend {
+                                if let Some((_, question)) = search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).take_if(|(after, _)| id > *after) {
+                                    // A handoff owns the entire prior pair, including its partial reply.
+                                    // If that reply never entered history, do not amend an unrelated assistant.
+                                    let transferred = g.transfer_last_question_to_search(&question);
+                                    info!(transferred, "search history handoff settled");
+                                } else if let Some(spoken) = pending_amend {
                                     g.set_last_assistant(&spoken);
                                 }
-                                g.chat(&ut, delta_tx).await
+                                g.chat_with_context(&ut, delta_tx,search_context).await
                             });
                             (delta_rx, h, false)
                         }
@@ -3723,6 +4099,7 @@ impl Orchestrator {
             }
         });
         self.agent_turn = Some(AgentTurn {
+            search_progress,
             id,
             task,
             ctl,
@@ -3731,10 +4108,15 @@ impl Orchestrator {
             llm_chars,
             filler_samples,
             started: turn_started,
+            business_until,
             seg_stage: 0,
         });
     }
 }
+
+// Forced job abort/panic is the fallback path: never detach a talking turn or
+// lose the final conservative cursor merely because run_pipeline did not return.
+impl Drop for Orchestrator {fn drop(&mut self){if self.search.is_some(){self.hard_abort_current();if let Some(search)=&mut self.search{search.close();}}}}
 
 /// 已播样本数 → 真实说出的文本(整句边界 + 句内按样本比例折算字符,截断历史用)。
 fn truncate_spoken(synth: &str, progress: &[(usize, u64)], played_samples: u64) -> String {
@@ -4019,5 +4401,176 @@ mod publish_result_tests {
         assert_eq!(publish_fail_class("data channel closed"), "closed");
         assert_eq!(publish_fail_class("payload too large"), "payload");
         assert_eq!(publish_fail_class("某个没见过的错"), "other");
+    }
+}
+
+#[cfg(test)]
+mod asr_preconnect_handoff_tests {
+    use super::*;
+    use futures_util::{SinkExt, StreamExt};
+    use tokio_tungstenite::tungstenite::Message;
+
+    fn config(addr: std::net::SocketAddr) -> SttConfig {
+        let mut cfg = SttConfig::from_env();
+        cfg.url = format!("ws://{addr}");
+        cfg.api_key = Some("isolated-test".into());
+        cfg.canon = false;
+        cfg
+    }
+
+    // Only the provider boundary is simulated. The real ASR connector,
+    // protocol parser, task owner, channels and handoff process the first PCM.
+    async fn healthy_provider() -> (SttConfig, tokio::task::JoinHandle<()>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let cfg = config(listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            let init = ws.next().await.unwrap().unwrap().into_data();
+            assert_eq!(crate::volc::Frame::unmarshal(&init).unwrap().msg_type, crate::volc::MsgType::FullClientRequest);
+            let data = ws.next().await.unwrap().unwrap().into_data();
+            let frame = crate::volc::Frame::unmarshal(&data).unwrap();
+            assert_eq!(frame.msg_type, crate::volc::MsgType::AudioOnlyClient);
+            use std::io::Read;
+            let mut pcm = Vec::new();
+            flate2::read::GzDecoder::new(frame.payload.as_slice()).read_to_end(&mut pcm).unwrap();
+            assert_eq!(pcm, [42u8, 0u8].repeat(160), "the complete first PCM must reach the replacement");
+            let response = crate::volc::Frame {
+                msg_type: crate::volc::MsgType::FullServerResponse,
+                flag: crate::volc::Flags::PositiveSeq,
+                sequence: 1,
+                serialization: crate::volc::SER_JSON,
+                compression: crate::volc::COMP_GZIP,
+                payload: crate::volc::gzip(br#"{"result":{"utterances":[{"text":"handoff test","definite":true}]}}"#),
+                ..Default::default()
+            };
+            ws.send(Message::Binary(response.marshal().into())).await.unwrap();
+        });
+        (cfg, server)
+    }
+
+    async fn first_pcm_and_final(mut pre: SttPre, server: tokio::task::JoinHandle<()>) {
+        pre.pcm_tx.send(vec![42; 160]).await.expect("handoff must provide a live PCM receiver");
+        let ev = tokio::time::timeout(Duration::from_secs(2), pre.ev_rx.recv()).await.unwrap();
+        assert!(matches!(ev, Some(SttEvent::Final(ref text)) if text == "handoff test"),
+            "old preconnect events must not terminate or invalidate the new input: {ev:?}");
+        drop(pre);
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn closed_preconnect_is_replaced_before_first_pcm() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let old = spawn_stt(config(listener.local_addr().unwrap()), "synthetic-handoff-closed");
+        let (socket, _) = listener.accept().await.unwrap();
+        drop(socket); // Real TCP handshake failure ends the preconnection task.
+        tokio::time::timeout(Duration::from_secs(1), old.pcm_tx.closed()).await.unwrap();
+        let (cfg, server) = healthy_provider().await;
+        let current = take_stt_preconnect(old, || spawn_stt(cfg, "synthetic-handoff-new")).await.unwrap();
+        first_pcm_and_final(current, server).await;
+    }
+
+    #[tokio::test]
+    async fn reconnecting_preconnect_does_not_replay_idle_interruption_into_first_turn() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let old = spawn_stt(config(listener.local_addr().unwrap()), "synthetic-handoff-interrupted");
+        let old_tx = old.pcm_tx.clone();
+        let (socket, _) = listener.accept().await.unwrap();
+        let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+        ws.next().await.unwrap().unwrap(); // Provider accepted init, but no PCM has been submitted.
+        ws.close(None).await.unwrap();
+        drop(ws);
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while old.ev_rx.is_empty() { tokio::task::yield_now().await; }
+        }).await.unwrap();
+        let server = tokio::spawn(async move {
+            let (socket, _) = listener.accept().await.unwrap();
+            let mut ws = tokio_tungstenite::accept_async(socket).await.unwrap();
+            ws.next().await.unwrap().unwrap();
+            let data = ws.next().await.unwrap().unwrap().into_data();
+            let frame = crate::volc::Frame::unmarshal(&data).unwrap();
+            assert_eq!(frame.msg_type, crate::volc::MsgType::AudioOnlyClient);
+            use std::io::Read;
+            let mut pcm = Vec::new();
+            flate2::read::GzDecoder::new(frame.payload.as_slice()).read_to_end(&mut pcm).unwrap();
+            assert_eq!(pcm, [42u8, 0u8].repeat(160));
+            let response = crate::volc::Frame {
+                msg_type: crate::volc::MsgType::FullServerResponse,
+                flag: crate::volc::Flags::PositiveSeq,
+                sequence: 1,
+                serialization: crate::volc::SER_JSON,
+                compression: crate::volc::COMP_GZIP,
+                payload: crate::volc::gzip(br#"{"result":{"utterances":[{"text":"handoff test","definite":true}]}}"#),
+                ..Default::default()
+            };
+            ws.send(Message::Binary(response.marshal().into())).await.unwrap();
+        });
+        let mut current = take_stt_preconnect(old, || panic!("a live reconnect episode must retain its original PCM channel")).await.unwrap();
+        assert!(current.pcm_tx.same_channel(&old_tx));
+        // Exercise the real ordered consumer: an idle episode's interruption
+        // must not put the upcoming first turn in Terminal before its begin.
+        let mut first_turn = crate::ordered_pcm::Session::new(None, crate::ordered_pcm::Limits::default());
+        while let Ok(event) = current.ev_rx.try_recv() {
+            if matches!(event, SttEvent::Interrupted) { first_turn.on_stream_interrupted(); }
+        }
+        assert_eq!(first_turn.phase(), crate::ordered_pcm::Phase::Idle);
+        first_pcm_and_final(current, server).await;
+    }
+
+    #[tokio::test]
+    async fn healthy_preconnect_keeps_its_latency_benefit() {
+        let (cfg, server) = healthy_provider().await;
+        let old = spawn_stt(cfg, "synthetic-handoff-healthy");
+        let current = take_stt_preconnect(old, || panic!("healthy pending connection must be reused")).await.unwrap();
+        first_pcm_and_final(current, server).await;
+    }
+}
+
+#[cfg(test)]
+mod asr_lifecycle_tests {
+    use super::*;
+    #[tokio::test]
+    async fn failed_connection_episode_closes_without_resetting_budget_or_consuming_pcm() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
+        let SttPre{pcm_tx,mut ev_rx,task}=spawn_stt(cfg,"synthetic-asr-connect-failure");
+        pcm_tx.send(vec![5;3200]).await.unwrap();
+        let (socket,_)=listener.accept().await.unwrap();drop(socket);
+        tokio::time::timeout(Duration::from_secs(1),task).await.expect("connect failure must be terminal inside its episode").unwrap();
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Interrupted)));
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Closed)));
+        assert!(tokio::time::timeout(Duration::from_millis(600),listener.accept()).await.is_err());
+    }
+    #[tokio::test]
+    async fn rejected_final_packet_does_not_reconnect_closed_input() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let (accepted,ready)=tokio::sync::oneshot::channel();
+        let (release,rx)=tokio::sync::oneshot::channel();
+        let server=tokio::spawn(async move {
+            let (socket,_)=listener.accept().await.unwrap();
+            let _=accepted.send(());let _=rx.await;drop(socket);
+            tokio::time::timeout(Duration::from_millis(800),listener.accept()).await.is_err()
+        });
+        let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
+        let SttPre{pcm_tx,mut ev_rx,task}=spawn_stt(cfg,"synthetic-asr-closed");
+        ready.await.unwrap();drop(pcm_tx);let _=release.send(());
+        tokio::time::timeout(Duration::from_millis(400),task).await.expect("closed input must not enter backoff").unwrap();
+        assert!(server.await.unwrap(),"closed input must not reconnect");
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Interrupted)));
+        assert!(matches!(ev_rx.recv().await,Some(SttEvent::Closed)));
+    }
+    #[tokio::test]
+    async fn abandoned_asr_owner_drops_socket_without_retries() {
+        let listener=tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr=listener.local_addr().unwrap();
+        let mut cfg=SttConfig::from_env();cfg.url=format!("ws://{addr}");cfg.api_key=Some("test".into());
+        let pre=spawn_stt(cfg,"synthetic-asr-abandoned");
+        let (mut socket,_)=listener.accept().await.unwrap();drop(pre);
+        use tokio::io::AsyncReadExt;
+        let mut bytes=Vec::new();
+        tokio::time::timeout(Duration::from_secs(1),socket.read_to_end(&mut bytes)).await.expect("abandoned ASR must close transport").unwrap();
+        assert!(tokio::time::timeout(Duration::from_millis(800),listener.accept()).await.is_err());
     }
 }
