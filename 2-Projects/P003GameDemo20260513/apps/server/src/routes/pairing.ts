@@ -1,4 +1,5 @@
 import { Hono, type Context } from 'hono';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { SignJWT } from 'jose';
 import { verifyAuthToken } from '../auth-jwt.js';
@@ -8,6 +9,9 @@ import { pairingStore, hashToken, IDEMPOTENT_WINDOW_MS, TOKEN_TTL_S } from '../p
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { validateDevicePk, encryptCredential, ECIES_ALG } from '../pairing-crypto.js';
 import { performSnBinding } from './profile.js';
+import { requiresBleProof } from '../ble-binding-policy.js';
+import { claimBleCredential } from './ble-bindings.js';
+import { bodyLimit } from 'hono/body-limit';
 
 /**
  * 配网即绑定（联调合同 v3 冻结版 + 三项口径确认回执 2026-08-22）。
@@ -60,14 +64,14 @@ function rateLimited(key: string, rpm: number): boolean {
   return false;
 }
 
-async function signDeviceCredential(sn: string, secret: string): Promise<{ jwt: string; expMs: number; iatSec: number }> {
+async function signDeviceCredential(sn: string, secret: string, pairing?: { sessionId: string; bindingVersion: number }): Promise<{ jwt: string; expMs: number; iatSec: number }> {
   // 合同终值（codex 验收回执 2026-08-22）：credential_expires_at_ms 必须与 JWT exp*1000
   // 完全一致（端上双校验）——先取整到秒再派生两处，杜绝毫秒尾数差。
   // 恢复换钥（2026-09-17）：iat 显式取同一秒变量并返回，作废水位 = iatSec − 1 与它同源（双载体不各自派生）。
   const iatSec = Math.floor(Date.now() / 1000);
   const expS = iatSec + CREDENTIAL_TTL_MS / 1000;
   const expMs = expS * 1000;
-  const jwt = await new SignJWT({ kind: 'p003-device' })
+  const jwt = await new SignJWT({ kind: 'p003-device', ...(pairing ? { pairing_session_id: pairing.sessionId, binding_version: pairing.bindingVersion } : {}) })
     .setSubject(sn)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt(iatSec)
@@ -81,12 +85,17 @@ async function signDeviceCredential(sn: string, secret: string): Promise<{ jwt: 
 export const parentPairingRoute = new Hono<{ Variables: { accountId: string } }>();
 
 parentPairingRoute.use('*', async (c, next) => {
+  const rid = randomUUID();
+  c.header('X-Request-ID', rid);
+  c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const auth = await verifyAuthToken(token);
   if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
+  if (auth.role !== 'parent') return c.json({ ok: false, error: 'parent_required' }, 403);
   c.set('accountId', auth.accountId);
   await next();
+  console.log(`[pairing] parent request_id=${rid} path=${c.req.path} status=${c.res.status}`);
 });
 
 parentPairingRoute.post('/token', (c) => {
@@ -109,6 +118,7 @@ parentPairingRoute.post('/confirm', async (c) => {
   const parsed = ConfirmSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
   const sn = parsed.data.sn.toUpperCase();
+  if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required' }, 403);
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'bad_request' }, 400);
   if (!validateDevicePk(parsed.data.pk)) return c.json({ ok: false, error: 'invalid_pk' }, 400);
   // nonce 形状：canonical base64url ≥16 字符（≥128bit 由设备保证，server 只验形状）
@@ -116,17 +126,20 @@ parentPairingRoute.post('/confirm', async (c) => {
   const accountId = c.get('accountId');
   // 恢复合同（2026-09-17）：confirm 前置绑定检查——他人扫已绑定设备当场 409 不建会话（此前要等设备 claim 409、
   // 家长 H5 轮询到过期才知道，09-17 11:46 实证 29 次轮询）；台账外/停用 404。claim 侧同名判定保留（confirm→claim 之间后台改绑的竞态）。
-  let relation: 'new' | 'owner' | undefined;
-  if (cfg().recoveryContract) {
-    const device = deviceRegistryStore.get(sn);
-    if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
-    if (device.parent_account_id && device.parent_account_id !== accountId) {
-      console.log(`[pairing] confirm rejected sn=${sn} reason=sn_bound_by_other`);
-      return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
-    }
-    relation = device.parent_account_id ? 'owner' : 'new';
+  const device = deviceRegistryStore.get(sn);
+  if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
+  if (device.parent_account_id && device.parent_account_id !== accountId) {
+    console.log(`[pairing] confirm rejected sn=${sn} reason=sn_bound_by_other`);
+    return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
   }
-  const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk);
+  const relation = device.parent_account_id ? 'owner' : 'new';
+  const prior = pairingStore.findSessionByNonce(parsed.data.nonce);
+  if (prior && (prior.account_id !== accountId || prior.sn !== sn || prior.device_pk !== parsed.data.pk
+    || (prior.binding_version === null || prior.binding_version !== device.binding_version)
+    || (prior.claimed_at && Date.now() - prior.claimed_at >= IDEMPOTENT_WINDOW_MS))) {
+    return c.json({ ok: false, error: 'nonce_used' }, 409);
+  }
+  const { sessionId } = pairingStore.confirmSession(accountId, sn, parsed.data.nonce, parsed.data.pk, device.binding_version, device.parent_account_id);
   console.log(`[pairing] confirm account=${accountId} sn=${sn} session=${sessionId} relation=${relation ?? '-'}`);
   return c.json({ ok: true, session_id: sessionId, ...(relation ? { relation } : {}) });
 });
@@ -138,9 +151,19 @@ parentPairingRoute.get('/status', (c) => {
   if (sessionId) {
     const row = pairingStore.findSessionById(sessionId);
     if (!row || row.account_id !== accountId) return c.json({ ok: false, error: 'not_found' }, 404);
+    const device = deviceRegistryStore.get(row.sn);
+    if (!device || device.status !== 'active') return c.json({ ok: false, error: 'sn_not_available' }, 404);
+    if ((device.parent_account_id && device.parent_account_id !== accountId)
+      || (row.claimed_at && device.parent_account_id !== accountId)
+      || (row.binding_version === null || row.binding_version !== device.binding_version)) {
+      return c.json({ ok: false, error: 'binding_changed' }, 409);
+    }
     if (row.claimed_at) {
-      const state = row.brain_state === 'ready' ? 'bound' : 'initializing';
-      return c.json({ ok: true, state, sn: row.sn, ...(cfg().recoveryContract && row.binding_outcome ? { binding_outcome: row.binding_outcome } : {}) });
+      const activated = Boolean(row.activated_at);
+      const state = activated ? 'activated' : row.brain_state === 'ready' ? 'bound' : 'initializing';
+      return c.json({ ok: true, state, sn: row.sn, public_id: device.public_id, activated,
+        activated_at_ms: row.activated_at, brain_state: row.brain_state,
+        ...(cfg().recoveryContract && row.binding_outcome ? { binding_outcome: row.binding_outcome } : {}) });
     }
     return c.json({ ok: true, state: Date.now() >= row.expires_at ? 'expired' : 'pending' });
   }
@@ -175,10 +198,22 @@ const ClaimSchemaV2 = z.object({
 });
 
 export const devicePairingRoute = new Hono();
+devicePairingRoute.use('/claim', async (c, next) => {
+  const rid = randomUUID();
+  c.header('X-Request-ID', rid);
+  c.header('Cache-Control', 'no-store');
+  await next();
+  console.log(`[pairing] claim request_id=${rid} status=${c.res.status}`);
+});
+devicePairingRoute.use('/claim', bodyLimit({ maxSize: 4096, onError: c => c.json({ ok: false, error: 'bad_request' }, 400) }));
 
 devicePairingRoute.post('/claim', async (c) => {
   const conf = cfg();
   const body = await c.req.json().catch(() => ({}));
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({ ok: false, error: 'bad_request' }, 400);
+  if (body.binding_protocol === 'ble-key-v1') return claimBleCredential(c, body);
+  if (body.binding_protocol !== undefined) return c.json({ ok: false, error: 'bad_request' }, 400);
+  if (typeof body.sn === 'string' && requiresBleProof(body.sn.trim().toUpperCase())) return c.json({ ok: false, error: 'device_proof_required', code: 'device_proof_required' }, 403);
 
   // ── 协议分派：pairing_protocol=2（nonce 桥 + ECIES）优先；v1 受开关控制（默认关）──
   if ((body as Record<string, unknown>).pairing_protocol === 2) return claimV2(c, body, conf);
@@ -224,7 +259,7 @@ devicePairingRoute.post('/claim', async (c) => {
     return c.json({ ok: false, error: 'sn_bound_by_other' }, 409);
   }
   // fw_version_code 只进结构化日志备查（合同：非门槛）；OTA check 的周期上报才是版本台账真源
-  const brainState: 'ready' | 'initializing' = bind.brainAccountId ? 'ready' : 'initializing';
+  const brainState = bind.brainState;
   const { jwt, expMs } = await signDeviceCredential(sn, conf.authSecret);
   pairingStore.markClaimed(hashToken(parsed.data.bind_token), sn, brainState);
   console.log(`[pairing] claim ok sn=${sn} token_id=${row.token_id} brain=${brainState} already_bound=${bind.alreadyBound} fw=${parsed.data.fw_version_code ?? '-'}`);
@@ -262,6 +297,23 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   // 无会话 = 家长尚未 confirm（或 nonce 为假，不区分）：设备按 2s→3s→5s 抖动轮询
   if (!row) return c.json({ ok: false, code: 'pairing_pending' }, 404);
 
+  if (row.sn !== sn) return c.json({ ok: false, code: row.claimed_at ? 'nonce_used' : 'pairing_pending' }, row.claimed_at ? 409 : 404);
+  const current = deviceRegistryStore.get(sn);
+  if (!current || current.status !== 'active') return c.json({ ok: false, code: 'sn_not_allowed' }, 403);
+  if ((current.parent_account_id && current.parent_account_id !== row.account_id)
+    || (row.claimed_at && current.parent_account_id !== row.account_id)) {
+    return c.json({ ok: false, code: 'sn_bound_by_other' }, 409);
+  }
+  if (row.binding_version === null || row.binding_version !== current.binding_version
+    || (!row.claimed_at && row.binding_parent_account_id !== current.parent_account_id)) {
+    return c.json({ ok: false, code: 'binding_changed' }, 409);
+  }
+  const stillOwned = (version: number) => {
+    const latest = deviceRegistryStore.get(sn);
+    return latest?.status === 'active' && latest.parent_account_id === row.account_id
+      && latest.binding_version === version && !requiresBleProof(sn);
+  };
+
   const devicePk = validateDevicePk(row.device_pk);
   if (!devicePk) {
     // confirm 时已验过，此处失败=库损坏级异常；显眼 500 不静默
@@ -273,7 +325,8 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
     const inWindow = Date.now() - row.claimed_at < IDEMPOTENT_WINDOW_MS;
     if (row.sn === sn && inWindow) {
       // 幂等恢复：重签等价凭据 + 新 ephemeral/新 IV 重新加密（密文必然不同，明文语义等价）
-      const { jwt, expMs } = await signDeviceCredential(sn, conf.authSecret);
+      const { jwt, expMs } = await signDeviceCredential(sn, conf.authSecret, { sessionId: row.session_id, bindingVersion: current.binding_version });
+      if (!stillOwned(current.binding_version)) return c.json({ ok: false, code: 'binding_changed' }, 409);
       const enc = encryptCredential(devicePk, nonce, sn, jwt);
       console.log(`[pairing] v2 claim idempotent sn=${sn} session=${row.session_id}`);
       return c.json({
@@ -294,9 +347,12 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   // claim 的 SN 必须与 confirm 固定的 SN 一致；不一致按 pairing_pending（不确认 nonce 存在性）
   if (row.sn !== sn) return c.json({ ok: false, code: 'pairing_pending' }, 404);
 
-  const bind = performSnBinding(row.account_id, sn);
+  const bind = performSnBinding(row.account_id, sn, false, {
+    parentAccountId: row.binding_parent_account_id, bindingVersion: row.binding_version,
+  });
   if (!bind.ok) {
     if (bind.error === 'sn_not_available') return c.json({ ok: false, code: 'sn_not_allowed' }, 403);
+    if (bind.error === 'binding_changed') return c.json({ ok: false, code: 'binding_changed' }, 409);
     return c.json({ ok: false, code: 'sn_bound_by_other' }, 409);
   }
   // 恢复合同（2026-09-17）：绑定结局按「凭据历史」判——同家长重绑且该 SN 此前签过凭据（claim 会话或后台手签）
@@ -304,10 +360,12 @@ async function claimV2(c: Context, body: unknown, conf: ReturnType<typeof cfg>) 
   // 必须在 markSessionClaimed 之前取历史，否则本次会话自己就成了「历史」。
   const hadCredentialBefore = pairingStore.lastClaimedSessionBySn(sn) !== null || Boolean(deviceRegistryStore.get(sn)?.credential_issued_at);
   const bindingOutcome: BindingOutcome = bind.alreadyBound && hadCredentialBefore ? 'existing_binding_recovery' : 'new';
-  const brainState: 'ready' | 'initializing' = bind.brainAccountId ? 'ready' : 'initializing';
-  const { jwt, expMs, iatSec } = await signDeviceCredential(sn, conf.authSecret);
+  const brainState = bind.brainState;
+  const bindingVersion = bind.bindingVersion;
+  const { jwt, expMs, iatSec } = await signDeviceCredential(sn, conf.authSecret, { sessionId: row.session_id, bindingVersion });
+  if (!stillOwned(bindingVersion)) return c.json({ ok: false, code: 'binding_changed' }, 409);
   const enc = encryptCredential(devicePk, nonce, sn, jwt);
-  pairingStore.markSessionClaimed(nonce, brainState, bindingOutcome);
+  pairingStore.markSessionClaimed(nonce, brainState, bindingOutcome, bindingVersion);
   // v3：预授权在**真实 claim 成功**时消费（不在 announce/confirm 阶段；幂等恢复在上面已返回，不会二次消费）
   if (row.source === 'preauth' && row.preauth_created_at) {
     const consumed = pairingStore.consumePreauth(sn, row.preauth_created_at);
@@ -381,23 +439,27 @@ export function deviceAnnounceState(input: {
 
 /** 预授权代确认（announce 到达 / 晚到预授权两个触发点共用）。家长优先：同 SN 已有未认领会话即跳过。 */
 export function tryAutoConfirm(sn: string, nonceHash: string, devicePkB64: string, trigger: 'announce' | 'late_preauth'): AutoConfirmResult {
+  if (requiresBleProof(sn)) return { done: false, reason: 'device_proof_required' };
   if (!cfg().preauthEnabled) return { done: false, reason: 'disabled' };
   const preauth = pairingStore.activePreauth(sn);
   if (!preauth) return { done: false, reason: 'no_preauth' };
   const device = deviceRegistryStore.get(sn);
   if (!device || device.status !== 'active') return { done: false, reason: 'sn_not_available' };
   if (device.parent_account_id && device.parent_account_id !== preauth.parent_account_id) return { done: false, reason: 'sn_bound_by_other' };
+  if (preauth.binding_version === null || preauth.binding_version !== device.binding_version
+    || preauth.binding_parent_account_id !== device.parent_account_id) return { done: false, reason: 'binding_changed' };
   // 本 nonce 已 claim（announce 行残留）：再确认会撞 nonce_hash 主键，温和拒绝
   if (pairingStore.findSessionByHash(nonceHash)?.claimed_at) return { done: false, reason: 'already_claimed' };
   const existing = pairingStore.findUnclaimedSessionBySn(sn);
   if (existing) return { done: false, reason: existing.nonce_hash === nonceHash ? 'already_confirmed' : 'other_session' };
-  const { sessionId } = pairingStore.confirmSessionByHash(preauth.parent_account_id, sn, nonceHash, devicePkB64, 'preauth', preauth.created_at);
+  const { sessionId } = pairingStore.confirmSessionByHash(preauth.parent_account_id, sn, nonceHash, devicePkB64, 'preauth', preauth.created_at, preauth.binding_version, preauth.binding_parent_account_id);
   console.log(`[pairing] preauth-confirm sn=${sn} session=${sessionId} trigger=${trigger} by=${preauth.created_by || '-'}`);
   return { done: true, reason: 'confirmed', sessionId };
 }
 
 /** 后台一键确认：拿 announce 存下的 hash + pk，以指定家长账号确认。不覆盖已存在的未认领会话（家长优先）。 */
-export function manualConfirm(sn: string, parentAccountId: string, by: string): AutoConfirmResult {
+export function manualConfirm(sn: string, parentAccountId: string, by: string, bindImmediately = false): AutoConfirmResult {
+  if (requiresBleProof(sn)) return { done: false, reason: 'device_proof_required' };
   const ann = pairingStore.findAnnounce(sn);
   if (!ann || ann.expires_at <= Date.now()) return { done: false, reason: 'no_announce' };
   if (!validateDevicePk(ann.device_pk)) return { done: false, reason: 'invalid_pk' };
@@ -407,7 +469,13 @@ export function manualConfirm(sn: string, parentAccountId: string, by: string): 
   if (pairingStore.findSessionByHash(ann.nonce_hash)?.claimed_at) return { done: false, reason: 'already_claimed' };
   const existing = pairingStore.findUnclaimedSessionBySn(sn);
   if (existing) return { done: false, reason: existing.nonce_hash === ann.nonce_hash ? 'already_confirmed' : 'other_session' };
-  const { sessionId } = pairingStore.confirmSessionByHash(parentAccountId, sn, ann.nonce_hash, ann.device_pk, 'admin');
+  let binding = device;
+  if (bindImmediately) {
+    const bound = deviceRegistryStore.bindParent(sn, parentAccountId, false, { parentAccountId: device.parent_account_id, bindingVersion: device.binding_version });
+    if (!bound.ok) return { done: false, reason: bound.error };
+    binding = bound.device;
+  }
+  const { sessionId } = pairingStore.confirmSessionByHash(parentAccountId, sn, ann.nonce_hash, ann.device_pk, 'admin', null, binding.binding_version, binding.parent_account_id);
   console.log(`[pairing] admin-confirm sn=${sn} session=${sessionId} by=${by}`);
   return { done: true, reason: 'confirmed', sessionId };
 }
@@ -417,6 +485,7 @@ devicePairingRoute.post('/announce', async (c) => {
   const parsed = AnnounceSchema.safeParse(await c.req.json().catch(() => ({})));
   if (!parsed.success) return c.json({ ok: false, error: 'bad_request' }, 400);
   const sn = parsed.data.sn.toUpperCase();
+  if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required' }, 403);
   if (!validateDeviceSn(sn).ok) return c.json({ ok: false, error: 'bad_request' }, 400);
   if (!/^[A-Za-z0-9_-]{16,}$/.test(parsed.data.nonce)) return c.json({ ok: false, error: 'bad_request' }, 400);
   if (!validateDevicePk(parsed.data.pk)) return c.json({ ok: false, error: 'invalid_pk' }, 400);

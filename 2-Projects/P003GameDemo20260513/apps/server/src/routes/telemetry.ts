@@ -1,9 +1,15 @@
+import {readParentWeeklyReport,WeeklyReportError} from '../weekly-report-service.js';
+import {recordsParentRoute} from '../ark/records-service.js';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { telemetryStore, dayOf } from '../telemetry-store.js';
+import { telemetryStore } from '../telemetry-store.js';
 import { deviceRegistryStore } from '../device-registry-store.js';
 import { verifyDeviceCredential } from './device-session.js';
 import { verifyAuthToken } from '../auth-jwt.js';
+import {readParentDashboardWithHistory, MiniappReadError} from '../miniapp-dashboard.js';
+import {readParentObservations} from '../parent-observations.js';
+import {ObservationError} from '../history-observations.js';
+import {parentConversationsRoute} from '../parent-conversations.js';
 
 /**
  * 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824 + CC 实施计划）。
@@ -56,7 +62,6 @@ const DeviceCommandDataSchema = z
   .strict();
 const MAX_EVENTS_PER_BATCH = 50;
 const RATE_PER_HOUR = 240; // 2026-08-25 提额:设备默认 30s 上传=120次/h,原 60 不到节奏一半(恢复后30分钟打满全 429);240=2倍余量,防风暴语义仍在
-const ONLINE_WINDOW_MS = 10 * 60_000; // 心跳 5min 的两倍
 
 const SnapshotSchema = z.object({
   snapshot_id: z.string().min(1).max(80),
@@ -173,7 +178,7 @@ deviceTelemetryRoute.post('/', async (c) => {
     const outcome = telemetryStore.ingestEvent(sn, ev, meta);
     if (outcome === 'accepted') acked.push(ev.event_id);
     else if (outcome === 'duplicated') duplicated.push(ev.event_id);
-    else rejected.push({ event_id: ev.event_id, reason: 'event_id_payload_conflict' });
+    else rejected.push({ event_id: ev.event_id, reason: outcome === 'conflict' ? 'event_id_payload_conflict' : outcome });
   }
 
   console.log(
@@ -194,23 +199,18 @@ deviceTelemetryRoute.post('/', async (c) => {
 
 // ─────────────────── 家长聚合查询 ───────────────────
 
-export const parentTelemetryRoute = new Hono<{ Variables: { accountId: string } }>();
+export const parentTelemetryRoute = new Hono<{ Variables: { accountId: string; authRole: string } }>();
 
 parentTelemetryRoute.use('*', async (c, next) => {
+  if (c.req.path.endsWith('/ark/records') || c.req.path.endsWith('/dashboard') || c.req.path.endsWith('/conversations') || c.req.path.endsWith('/weekly-report')) c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   const auth = await verifyAuthToken(token);
   if (!auth) return c.json({ ok: false, error: 'unauthorized' }, 401);
   c.set('accountId', auth.accountId);
+  c.set('authRole', auth.role);
   await next();
 });
-
-/** public_id → 本家长绑定的设备；不是自己的/不存在 → null（对外一律 404 不泄露存在性）。 */
-function ownedDevice(publicId: string, accountId: string) {
-  const dev = deviceRegistryStore.getByPublicId(publicId);
-  if (!dev || dev.parent_account_id !== accountId) return null;
-  return dev;
-}
 
 function tzGuard(c: { req: { query: (k: string) => string | undefined } }): string | null {
   const tz = c.req.query('timezone');
@@ -218,99 +218,34 @@ function tzGuard(c: { req: { query: (k: string) => string | undefined } }): stri
   return tz ?? 'Asia/Shanghai';
 }
 
-function dateAdd(day: string, deltaDays: number): string {
-  return new Date(Date.parse(`${day}T00:00:00+08:00`) + deltaDays * 86400_000 + 8 * 3600_000)
-    .toISOString()
-    .slice(0, 10);
-}
+parentTelemetryRoute.route('/', recordsParentRoute);
+parentTelemetryRoute.route('/', parentConversationsRoute);
 
-parentTelemetryRoute.get('/:publicId/dashboard', (c) => {
-  if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
-  const dev = ownedDevice(c.req.param('publicId'), c.get('accountId'));
-  if (!dev) return c.json({ ok: false, error: 'not_found' }, 404);
-
-  const now = Date.now();
-  const today = dayOf(now);
-  const weekFrom = dateAdd(today, -6);
-  const daily = telemetryStore.dailyRange(dev.sn, weekFrom, today);
-  const todayRow = daily.find((d) => d.date === today);
-  const snap = telemetryStore.latestSnapshot(dev.sn);
-  const p = snap?.payload;
-
-  // 周日均：只除以已经过的自然日数（合同 §7.1：避免未来天数稀释）
-  const totalFocusMin = Math.round(daily.reduce((s, d) => s + d.focus_ms, 0) / 60_000);
-  const elapsedDays = daily.filter((d) => d.date < today).length || 1;
-
-  return c.json({
-    ok: true,
-    data: {
-      device: {
-        updated_at_ms: snap?.server_received_ms ?? null,
-        online: snap ? now - snap.server_received_ms < ONLINE_WINDOW_MS : false,
-        lid_open: p?.lid_open ?? null,
-        present: p?.present ?? null,
-        brightness_level: p?.brightness_level ?? null,
-        color_mode: p?.color_mode ?? null,
-        image_distance_m: p?.image_distance_m ?? null,
-        image_distance_state: p?.image_distance_state ?? null,
-      },
-      today: {
-        focus_minutes: Math.round((todayRow?.focus_ms ?? 0) / 60_000),
-        guarded_minutes: Math.round((todayRow?.guarded_ms ?? 0) / 60_000),
-        posture_alert_count: todayRow?.reminder_played ?? 0,
-      },
-      week: {
-        total_focus_minutes: totalFocusMin,
-        daily_average_focus_minutes: Math.round(
-          daily.filter((d) => d.date < today).reduce((s, d) => s + d.focus_ms, 0) / 60_000 / elapsedDays,
-        ),
-        daily: (() => {
-          const map = new Map(daily.map((d) => [d.date, d]));
-          const out: Array<{ date: string; focus_minutes: number }> = [];
-          for (let i = -6; i <= 0; i += 1) {
-            const day = dateAdd(today, i);
-            out.push({ date: day, focus_minutes: Math.round((map.get(day)?.focus_ms ?? 0) / 60_000) });
-          }
-          return out;
-        })(),
-      },
-      availability: { night_reward: false, percentile: false },
-    },
-  });
+parentTelemetryRoute.get('/:publicId/observations', async c => {
+  c.header('Cache-Control', 'no-store');
+  try { return c.json(await readParentObservations(c.req.param('publicId'), c.get('accountId'), c.get('authRole'), new URL(c.req.url).searchParams)); }
+  catch(error) {
+    if(error instanceof ObservationError)return c.json({ok:false,error:error.message},error.status);
+    return c.json({ok:false,error:'observations_dependency_unavailable'},503);
+  }
 });
 
-parentTelemetryRoute.get('/:publicId/weekly-report', (c) => {
+parentTelemetryRoute.get('/:publicId/dashboard', async (c) => {
+  c.header('Cache-Control', 'no-store');
   if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
-  const dev = ownedDevice(c.req.param('publicId'), c.get('accountId'));
-  if (!dev) return c.json({ ok: false, error: 'not_found' }, 404);
-
-  const weekStart = c.req.query('week_start');
-  if (weekStart && !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
-    return c.json({ ok: false, error: 'bad_request', message: 'week_start 须为 YYYY-MM-DD' }, 400);
+  try { return c.json({ok:true, data:await readParentDashboardWithHistory(c.req.param('publicId'), c.get('accountId'), c.get('authRole'))}); }
+  catch (error) {
+    if (error instanceof MiniappReadError) return c.json({ok:false,error:error.message}, error.status);
+    return c.json({ok:false,error:'dashboard_dependency_unavailable'},503);
   }
-  // 默认本周一（Asia/Shanghai）
-  const today = dayOf(Date.now());
-  const dow = (new Date(`${today}T00:00:00+08:00`).getUTCDay() + 6) % 7; // 周一=0
-  const from = weekStart ?? dateAdd(today, -dow);
-  const to = dateAdd(from, 6);
-  const daily = telemetryStore.dailyRange(dev.sn, from, to);
+});
 
-  const correct = daily.reduce((s, d) => s + d.correct_rounds, 0);
-  const deviated = daily.reduce((s, d) => s + d.deviated_rounds, 0);
-  const denom = correct + deviated; // no_person/failed 不进分母（合同 §7.2）
-  return c.json({
-    ok: true,
-    data: {
-      week_start: from,
-      eye_health_rate: denom > 0 ? Math.round((correct / denom) * 100) : null,
-      guarded_minutes: Math.round(daily.reduce((s, d) => s + d.guarded_ms, 0) / 60_000),
-      posture_alert_count: daily.reduce((s, d) => s + d.reminder_played, 0),
-      percentile: null,
-      highlights: [], // P1：server 聚合生成文案
-      data_quality: {
-        valid_posture_rounds: denom,
-        missing_hours: null, // P0 未实现——返回 null 不撒谎（不给假 0）
-      },
-    },
-  });
+parentTelemetryRoute.get('/:publicId/weekly-report', async (c) => {
+  c.header('Cache-Control','no-store');
+  if (!tzGuard(c)) return c.json({ ok: false, error: 'invalid_timezone', message: 'P0 仅支持 Asia/Shanghai' }, 400);
+  try { return c.json(await readParentWeeklyReport(c.req.param('publicId'),c.get('accountId'),c.get('authRole'),c.req.query('week_start'))); }
+  catch(error){
+    if(error instanceof WeeklyReportError)return c.json({ok:false,error:error.message},error.status);
+    return c.json({ok:false,error:'weekly_report_dependency_unavailable'},503);
+  }
 });

@@ -24,7 +24,9 @@ let transport: SpugTransport = async (url, body) => {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(10000),
   });
+  if (!res.ok) throw new Error('spug_unavailable');
   return res.json();
 };
 
@@ -35,14 +37,18 @@ export function setSpugTransportForTest(t: SpugTransport): void {
 
 export async function sendSpugSmsCode(phone: string, code: string): Promise<SpugSendResult> {
   const template = process.env.SPUG_SMS_TEMPLATE_CODE?.trim();
-  if (!template) throw new Error('spug_not_configured');
-  const resp = (await transport(`${SPUG_BASE}/sms/${template}`, {
+  if (!template || !/^[A-Za-z0-9_-]{1,200}$/.test(template)) throw new Error('spug_not_configured');
+  const resp = (await transport(`${SPUG_BASE}/sms/${encodeURIComponent(template)}`, {
     to: phone,
     code,
     number: CODE_TTL_MIN,
   })) as { code?: number; msg?: string; request_id?: string };
-  if (resp?.code === 200 && resp.request_id) return { ok: true, requestId: resp.request_id };
-  return { ok: false, code: resp?.code ?? 0, msg: resp?.msg ?? 'unknown' };
+  if (resp?.code === 200 && typeof resp.request_id === 'string' && /^[A-Za-z0-9_-]{1,200}$/.test(resp.request_id)) {
+    return { ok: true, requestId: resp.request_id };
+  }
+  // A malformed success could already be billable. Do not let it release the durable send quota.
+  if (typeof resp?.code !== 'number' || resp.code < 400 || resp.code > 599) throw new Error('spug_unconfirmed');
+  return { ok: false, code: resp.code, msg: 'spug_rejected' };
 }
 
 /** 投递状态查询（排障用；status: 0待发/1发送中/2成功/3失败/4审核中） */

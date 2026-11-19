@@ -6,7 +6,8 @@
 import { spawn } from 'node:child_process';
 
 const KEY_PATH = process.env.HOTWORD_APPLY_KEY || '/root/.ssh/hotword-apply-key';
-const TARGET = process.env.HOTWORD_APPLY_TARGET || 'root@64.90.13.117';
+// 2026-09-23 迁 hk2 阶段 3：默认指新机单池（老机生产池 09-22 已停；指老机会显示假告警且发布会拉起老池）
+const TARGET = process.env.HOTWORD_APPLY_TARGET || 'root@64.90.13.177';
 
 export interface ChannelResult {
   ok: boolean;
