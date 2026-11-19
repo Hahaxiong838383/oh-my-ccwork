@@ -31,7 +31,7 @@ export function readControl(path:string):{enabled:boolean;valid:boolean}{
     return {enabled:data.enabled,valid:true};
   }catch(e){return {enabled:false,valid:(e as NodeJS.ErrnoException).code==='ENOENT'};}
 }
-type Reader={uploadPolicy?():UploadPolicy|null;arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readCredentialState:DeviceCredentialStateReader;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
+type Reader={storageControls?:()=>ReturnType<AnalyticsDeviceReader['storageControls']>;uploadPolicy?():UploadPolicy|null;arkDeviceKey?(subject:string):string;readArkAuthorization?(subject:string):(ArkIdentity&{not_before_ms:number})|null;acceptsCredential(subject:string,iat:number):boolean;readCredentialState:DeviceCredentialStateReader;readAnalyticsDeviceContext(subject:string):AnalyticsDeviceContext;readiness():boolean;readGlobalCollectionConfig?():{event_upload_enabled:boolean;daily_upload_hour_cst:number}};
 export type AnalyticsAppOptions={store:AnalyticsStore;writer?:Pick<AnalyticsWriter,'ready'|'busy'|'settle'|'close'>;reader:Reader;authSecret:string;internalSecret:string;controlPath:string;allowSubjects:readonly string[];globalRpm?:number;diskFreeBytes?:()=>number;walMaxBytes?:number;bodyTimeoutMs?:number;checkpointStatus?:()=>ReturnType<AnalyticsCheckpointer['status']>};
 export function createAnalyticsApp(options:AnalyticsAppOptions){
   if(!isAbsolute(options.controlPath))throw new Error('analytics control path must be absolute');
@@ -41,7 +41,7 @@ export function createAnalyticsApp(options:AnalyticsAppOptions){
   const app=new Hono(),deviceHits=new Map<string,number[]>(),globalHits:number[]=[],durations:number[]=[];
   let inFlight=0,storageFailures=0,sqlBusy=0,requests=0;
   const diskFree=options.diskFreeBytes??(()=>{const info=statfsSync(options.store.path);return Number(info.bavail)*Number(info.bsize);});
-  const capacity=capacityReader(options.store);
+  const capacity=capacityReader(options.store,options.reader.storageControls?()=>options.reader.storageControls!():undefined);
   const admission=()=>{
     const emergency=readControl(options.controlPath);
     try{const policy=options.reader.uploadPolicy?.()??null;return {valid:emergency.valid,enabled:emergency.enabled&&(policy?.enabled??true),subjects:policy?.subjects??options.allowSubjects,policy,emergency};}

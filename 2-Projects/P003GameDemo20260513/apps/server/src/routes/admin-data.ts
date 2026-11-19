@@ -1,3 +1,6 @@
+import {storageRoute} from '../storage/routes.js';
+import {arkArchiveStatus} from '../ark/archive.js';
+import {arkStore,arkCapacity} from '../ark/service.js';
 import { listeningAdminRoute } from './listening-admin.js';
 import { miniappAdminRoute } from './miniapp-admin.js';
 import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
@@ -2213,12 +2216,21 @@ adminDataRoute.route('/device-config', configAdminRoute);
 adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);
 
 // 产品事件后台：既有 admin-only 网关后才允许访问回环内部查询。
+const storageCounts=()=>{const a=arkStore().settings(),p=configStore.analyticsPolicy();return {analytics:p?.enabled?p.subjects.length:0,ark:a.enabled?a.subjects.length:0};};
+adminDataRoute.route('/analytics/storage',storageRoute({
+ authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+ read:()=>({policy:configStore.storagePolicy(),profile:configStore.storageProfile(),enabled:storageCounts(),ark_capacity:arkCapacity()}),
+ save:input=>{arkStore();return configStore.saveStoragePolicy(input,storageCounts,'admin');},
+ archive:()=>arkArchiveStatus(arkStore().db,configStore.storagePolicy().archive_enabled),
+ saveArchive:input=>configStore.saveStorageArchive(input,'admin'),
+}));
 adminDataRoute.route('/analytics/control',analyticsControlRoute({
   authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
   internalUrl:process.env.ANALYTICS_INTERNAL_URL||'http://127.0.0.1:3006',
   internalSecret:process.env.ANALYTICS_INTERNAL_SECRET||'',
   devices:()=>deviceRegistryStore.list(),policy:()=>configStore.analyticsPolicy(),
-  save:(p,active,by)=>configStore.saveAnalyticsPolicy(p,active,by),
+  storageRevision:()=>configStore.storagePolicy().revision,
+  save:(p,active,by,admission)=>configStore.saveAnalyticsPolicy(p,active,by,admission),
 }));
 adminDataRoute.route('/analytics/tiering',analyticsTierControlRoute({
   authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},

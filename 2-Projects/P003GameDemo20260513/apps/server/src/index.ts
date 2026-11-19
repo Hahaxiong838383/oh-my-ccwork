@@ -1,7 +1,10 @@
 import {startWeeklyReportScheduler} from './weekly-report-service.js';
+import { createVoiceOnboardingRoute } from './routes/voice-onboarding.js';
+import { getVoiceOnboardingStore } from './voice-onboarding-runtime.js';
 import {arkRoute} from './routes/ark.js';
 import {arkFactsRoute} from './ark/proxy.js';
-import {arkService} from './ark/service.js';
+import {arkService,arkStore} from './ark/service.js';
+import {createArkArchiveControl} from './ark/archive-control.js';
 import { serve } from '@hono/node-server';
 import {getConnInfo} from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
@@ -54,6 +57,7 @@ const port = Number(process.env.PORT ?? 8787);
 app.get('/health', (c) => c.json({ status: 'ok' }));
 app.use('/internal/ark-facts',async(c,next)=>{if(!['127.0.0.1','::ffff:127.0.0.1','::1'].includes(getConnInfo(c).remote.address??''))return c.json({ok:false},404);await next();});
 app.route('/internal/ark-facts',arkFactsRoute({secret:()=>process.env.ARK_FACTS_PROXY_SECRET??'',allowed:()=> (process.env.ARK_FACTS_PROXY_SN_ALLOW??'').split(',').filter(Boolean),facts:sn=>arkService().preview(sn)}));
+app.route('/internal/ark-archive',createArkArchiveControl({store:arkStore,secret:()=>process.env.ARK_ARCHIVE_CONTROL_SECRET??'',enabled:()=>process.env.ARK_ARCHIVE_CONTROL_ENABLED==='1'&&!process.env.ARK_FACTS_PROXY_URL}));
 app.route('/api/auth', authRoute);
 app.route('/api/auth', inviteAuthRoute);
 app.route('/api/auth', smsAuthRoute);
@@ -94,6 +98,7 @@ app.route('/v1/device/provisioning', deviceProvisioningRoute);
 app.route('/v1', customLlmRoute);
 // Default-off independent background jobs; ordinary chat never awaits these requests.
 app.route('/v1/internal/search-tasks', searchTaskRoute);
+app.route('/v1/internal/voice-onboarding', createVoiceOnboardingRoute(getVoiceOnboardingStore));
 app.route('/v1/internal/listening', createLazyListeningRoute(()=>createListeningRoute(getListeningAuthority(), {generate:generateListeningContent,personality:readListeningPersonality})));
 
 // admin 静态兜底（本地 dev 同源 E2E 用；生产 nginx 直接 serve public/admin，不会走到这里）。
