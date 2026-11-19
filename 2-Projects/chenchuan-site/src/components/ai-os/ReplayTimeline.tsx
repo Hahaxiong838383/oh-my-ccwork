@@ -1,9 +1,9 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ClassicDemo } from '@/data/classic-demos'
 import { CATEGORY_LABELS } from '@/data/classic-demos'
-import { EngineBadge, formatDuration } from './EngineBadge'
+import { EngineBadge } from './EngineBadge'
 
 // 经典回放 LLM 重组版（川哥 5/30 钦定）：
 // - 每个 stage 触发一次 SSE 调用 → /api/chat/replay-stream
@@ -41,15 +41,6 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
     abortRef.current?.abort()
     abortRef.current = null
   }, [demo.id, demo.routing])
-
-  // 累计已显示的 duration
-  const cumulativeDuration = useMemo(() => {
-    let sum = 0
-    for (let i = 0; i < Math.min(currentStage + 1, totalStages); i++) {
-      sum += demo.routing[i].duration_ms
-    }
-    return sum
-  }, [currentStage, totalStages, demo.routing])
 
   // 推进到下一个 stage（流完或快进时调用）
   const advance = useCallback(() => {
@@ -202,10 +193,10 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
         <div className="flex-1">
           <div className="mb-1 flex items-center gap-3">
             <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#7FE5FF]/85">
-              {CATEGORY_LABELS[demo.category]} · 回放
+              {CATEGORY_LABELS[demo.category]} · 决策示例
             </span>
             <span className="font-mono text-[10px] text-white/35">
-              AI 现场重组 · 每次不同
+              AI 根据整理稿生成
             </span>
           </div>
           <h3 className="text-lg font-medium leading-snug text-white">
@@ -219,7 +210,7 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
               onClick={skip}
               className="rounded border border-white/15 bg-black/30 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-white/65 transition hover:border-[#7FE5FF]/40 hover:text-[#7FE5FF]"
             >
-              快进 ⏭
+              查看本步整理稿 ⏭
             </button>
           )}
           {onClose && (
@@ -238,10 +229,7 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
       <div className="mb-5">
         <div className="mb-1 flex items-baseline justify-between text-[10px] font-mono">
           <span className="text-white/55">
-            决策链路 {Math.min(currentStage + 1, totalStages)} / {totalStages}
-          </span>
-          <span className="tabular-nums text-[#7FE5FF]/85">
-            {formatDuration(cumulativeDuration)} / {formatDuration(demo.total_duration_ms)}
+            示例步骤 {Math.min(currentStage + 1, totalStages)} / {totalStages}
           </span>
         </div>
         <div className="h-1 w-full overflow-hidden rounded-full bg-white/[0.06]">
@@ -288,12 +276,11 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
                   <EngineBadge engine={step.engine} stage={step.stage} compact />
                   <span className="flex items-center gap-2 font-mono text-[10px] tabular-nums text-white/40">
                     {state?.status === 'streaming' && (
-                      <span className="text-[#7FE5FF]/80">● 现场重组中</span>
+                      <span className="text-[#7FE5FF]/80">● 正在生成示例</span>
                     )}
                     {state?.fallback && state?.status === 'done' && (
-                      <span className="text-white/45">原文兜底</span>
+                      <span className="text-white/45">整理稿</span>
                     )}
-                    {formatDuration(step.duration_ms)}
                   </span>
                 </div>
 
@@ -308,7 +295,7 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
 
                 {isPending && (
                   <div className="text-[11px] font-mono italic text-white/30">
-                    等待前序决策完成...
+                    等待上一步示例显示…
                   </div>
                 )}
               </div>
@@ -321,12 +308,10 @@ export function ReplayTimeline({ demo, onClose }: ReplayTimelineProps) {
       {isComplete && (
         <div className="mt-5 rounded border border-[#7FE5FF]/30 bg-[#7FE5FF]/[0.06] p-4">
           <p className="text-[13px] leading-relaxed text-white/85">
-            ✓ 这是陈川 AI 原生工作方法论的<strong className="text-[#7FE5FF]">真实决策链路</strong>。
-            想看其他类别？或者亲手提问？
+            本例已展示完毕。可以选择其他示例，也可以直接提问。
           </p>
           <div className="mt-2 text-[11px] text-white/55">
-            提示：每个引擎承担不同决策环节（业务定义 / 对抗审 / 自动化构建 / 战略整合）—
-            多引擎协同 vs 单引擎，效率提升约 <strong className="text-[#7FE5FF]">4-6x</strong>。
+            标签表示分析、复核、实现与判断等环节，不代表本次展示调用了多个模型。
           </div>
         </div>
       )}

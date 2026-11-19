@@ -47,6 +47,12 @@ export default async function WorkPage() {
                         <Tag key={tag}>{tag}</Tag>
                       ))}
                     </div>
+                    {'brief' in project && project.brief && (
+                      <div className="mt-4 space-y-2 border-t border-border pt-3 text-sm leading-relaxed text-text-secondary">
+                        <p><span className="text-text-primary">技术：</span>{project.brief.stack}</p>
+                        <p><span className="text-text-primary">进展：</span>{project.brief.result}</p>
+                      </div>
+                    )}
                     {project.wins.length > 0 && (
                       <div className="mt-4 border-t border-white/[0.04] pt-3">
                         {project.wins.map((win) => (

@@ -30,7 +30,7 @@ export function GhostHandDemo() {
             className="text-[10.5px] tracking-wide text-[#7FE5FF]/75"
             style={{ fontFamily: MONO_FONT }}
           >
-            授权后才能识别头部 / 手势 · 100% 本地推理 零上传
+            授权后识别头部与手势，摄像头画面不上传
           </div>
         </div>
 

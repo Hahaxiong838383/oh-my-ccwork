@@ -8,7 +8,7 @@ import { profile } from '@/data/profile'
 export function KeyWins() {
   return (
     <SectionWrapper>
-      <SectionTitle label="关键成果" title="代表性战果" />
+      <SectionTitle label="项目成果" title="做成过的事" />
       <div className="grid gap-3 md:grid-cols-2">
         {profile.keyWins.map((win, i) => (
           <BlurFade key={win} delay={i * 0.06}>

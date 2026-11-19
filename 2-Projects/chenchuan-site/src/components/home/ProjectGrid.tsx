@@ -57,7 +57,8 @@ export function ProjectGrid({ projects }: Props) {
                     >
                       <BriefRow label="问题" tint={project.color} text={project.brief.problem} />
                       <BriefRow label="方案" tint={project.color} text={project.brief.solution} />
-                      <BriefRow label="结果" tint={project.color} text={project.brief.result} highlight />
+                      <BriefRow label="技术" tint={project.color} text={project.brief.stack} />
+                      <BriefRow label="进展" tint={project.color} text={project.brief.result} highlight />
                     </div>
                   ) : project.wins.length > 0 ? (
                     <div className="mt-4 border-t border-border pt-3">

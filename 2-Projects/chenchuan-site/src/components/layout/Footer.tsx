@@ -9,9 +9,9 @@ export function Footer() {
           <div>
             <div className="mb-2 font-semibold text-text-primary">陈川</div>
             <p className="text-sm leading-relaxed text-text-secondary">
-              AI 原生产品负责人
+              {profile.title}
               <br />
-              空间光学 · Agent 操作系统
+              {profile.tagline}
             </p>
           </div>
 
@@ -49,7 +49,7 @@ export function Footer() {
 
         <div className="mt-12 border-t border-border pt-6">
           <p className="text-center font-mono text-xs text-text-muted">
-            &copy; {new Date().getFullYear()} 陈川 · 基于 Next.js 和 Claude Code 构建
+            &copy; {new Date().getFullYear()} 陈川 · 使用 Next.js 与 AI 辅助开发
           </p>
         </div>
       </div>

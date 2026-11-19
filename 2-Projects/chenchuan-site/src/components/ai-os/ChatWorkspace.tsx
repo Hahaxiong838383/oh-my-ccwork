@@ -31,17 +31,14 @@ export function ChatWorkspace({ classicDemos }: ChatWorkspaceProps) {
           <span>返回主页</span>
         </Link>
         <div className="mb-2 font-mono text-[11px] uppercase tracking-[0.3em] text-[#7FE5FF]/85">
-          Talk With My AI · Live Demo
+          Talk With My AI
         </div>
         <h1 className="text-3xl font-bold text-white sm:text-4xl">
-          陈川的<span className="text-[#7FE5FF]">战略镜像</span>
+          和陈川的 <span className="text-[#7FE5FF]">AI 聊聊</span>
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-relaxed text-white/70">
-          想了解陈川怎么用 AI 做产品决策？
-          <span className="text-white/85">左边可直接开口聊 2 分钟，也可切换成文字问答</span>；或者
-          <span className="text-white/85">右边点击「真实场景回放」</span>，
-          看陈川和多个 AI 协作做决策的完整过程。无需技术背景，问产品 / 招聘 / 创业 /
-          管理都可以。
+          可以用语音或文字了解陈川的项目与产品思路，也可以查看下方的决策示例。
+          示例根据项目经历整理，由 AI 重新组织表达，不是原始对话记录或现场多模型协作。
         </p>
       </header>
 
@@ -92,18 +89,17 @@ export function ChatWorkspace({ classicDemos }: ChatWorkspaceProps) {
       {/* 底部加微信引导 ===== */}
       <footer className="mt-10 rounded-lg border border-[#7FE5FF]/25 bg-[#7FE5FF]/[0.04] p-5">
         <div className="mb-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#7FE5FF]/85">
-          想真正深聊？
+          讨论具体项目
         </div>
         <p className="text-sm leading-relaxed text-white/80">
-          上面只是「战略镜像」的通用决策逻辑回放与有限自由提问。具体项目背景 /
-          商业 context / 决策细节，
+          如果想进一步讨论产品合作、技术方案或项目背景，可以
           <Link
             href="/contact"
             className="text-[#7FE5FF] underline-offset-2 hover:underline"
           >
-            加陈川微信 →
+            联系陈川 →
           </Link>
-          ，暗号「OS 访客」，他会给你更有杀伤力的建议。
+          。
         </p>
       </footer>
     </div>
@@ -124,14 +120,14 @@ function ClassicDemoSidebar({
   totalCount,
 }: ClassicDemoSidebarProps) {
   return (
-    <section className="rounded-lg border border-white/10 bg-white/[0.02] p-4">
+    <section id="classic-demos" className="scroll-mt-28 rounded-lg border border-white/10 bg-white/[0.02] p-4">
       <div className="mb-3 flex items-baseline justify-between">
         <div>
           <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#7FE5FF]/85">
-            真实场景回放
+            项目决策示例
           </div>
           <div className="mt-1 text-[11px] text-white/55">
-            点开看陈川怎么和 AI 一起做产品决策（免费）
+            根据项目经历整理，点击逐步查看
           </div>
         </div>
         <span className="font-mono text-[10px] text-[#7FE5FF]/65">

@@ -15,8 +15,8 @@ export function Stats({ patentCount }: { patentCount: number }) {
       label: '产品经验',
     },
     { value: patentCount, suffix: '', label: '项专利成果' },
-    { value: 9, suffix: '', label: '款量产/运营产品' },
-    { value: 10, suffix: '+', label: '人产品市场团队' },
+    { text: '软硬件', label: '产品研发与量产经验' },
+    { text: '跨职能', label: '产品与团队协作' },
   ]
 
   useEffect(() => {
@@ -33,7 +33,7 @@ export function Stats({ patentCount }: { patentCount: number }) {
           <BlurFade key={stat.label} delay={i * 0.1}>
             <div className="text-center">
               <div className="mb-1 text-3xl font-bold text-text-primary md:text-4xl">
-                <NumberTicker value={stat.value} suffix={stat.suffix} />
+                {'text' in stat ? stat.text : <NumberTicker value={stat.value!} suffix={stat.suffix} />}
               </div>
               <div className="font-mono text-xs text-text-secondary">{stat.label}</div>
             </div>

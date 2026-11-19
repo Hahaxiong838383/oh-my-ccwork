@@ -1,6 +1,6 @@
 'use client'
 
-import { Radar, Network, RefreshCw, Layers, Activity, Archive } from 'lucide-react'
+import { Radar, Network, Activity, Archive } from 'lucide-react'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { SectionTitle } from '@/components/shared/SectionTitle'
 import { BlurFade } from '@/components/ui/BlurFade'
@@ -16,78 +16,48 @@ interface DayEntry {
 
 const entries: DayEntry[] = [
   {
-    time: '07:00',
+    time: '研究',
     icon: Radar,
     tint: '#5BA7FF',
-    title: '晨起 · Hermes 战略雷达自动入库',
+    title: '找到值得做的问题',
     points: [
-      '4 个 collector 通宵跑：政策 / 资本 / 技术成熟度 / 竞品动态',
-      '每日近百条情报自动摘要 + 分类归档到飞书知识库',
-      '10 分钟扫日报，标出今日值得深挖的 3-5 条主题',
+      '结合使用反馈、行业信息和项目资料，确定要解决的问题。',
+      'AI 帮我检索和整理资料，重要判断回到原始来源核对。',
     ],
-    stack: 'Hermes pipeline · 4 collector · 影响因子矩阵',
+    stack: 'PEST 行业分析 · 资料检索 · 飞书知识库',
   },
   {
-    time: '09:00',
+    time: '开发',
     icon: Network,
     tint: '#F4A35D',
-    title: '任务规划 · 四引擎按能力域分工',
+    title: '做一个能试用的版本',
     points: [
-      'Claude 负责复杂推理、任务架构与关键决策',
-      'GPT / Codex 负责工程实现、多模态与对抗审查',
-      'Gemini 负责长上下文研究与对照验证',
-      'Grok 负责实时研究、前沿检索与 AI Ops',
-      'autoRouteEngine 自动判断引擎归属',
+      '我写清使用场景和验收条件，参与技术选型，再借助 AI 开发。',
+      '根据任务使用 Claude、GPT / Codex 或 Grok，保留代码和决策记录。',
     ],
-    stack: 'EvoDesk 编排层 · GWT 信息黑板 · multi-session 并行',
+    stack: 'EvoDesk · 多模型协作 · Git 版本管理',
   },
   {
-    time: '11:00',
-    icon: RefreshCw,
-    tint: '#A78BFA',
-    title: '跨设备同步 · 21 飞书业务节点',
-    points: [
-      'Air / Mini / Studio / NAS 四机决策上下文一致',
-      '21 飞书节点（IM / 文档 / 知识库 / 多维表格 / 日历...）实时同步',
-      '团队成员同步看到决策依据，跨人零知识漂移',
-    ],
-    stack: 'lark-cli · EvoDesk 客户端 · 19 飞书 skill 矩阵',
-  },
-  {
-    time: '14:00',
-    icon: Layers,
-    tint: '#34D399',
-    title: '项目协同 · 五层记忆零返工',
-    points: [
-      '工作 / 情景 / 语义 / 程序 / 元认知 五层记忆持续召回',
-      '决策依据可追溯到原始事实证据，反幻觉锁死',
-      '跨 session、跨设备、跨人零知识漂移',
-    ],
-    stack: '五层记忆架构 · 中文 FTS5 · 第五路注入',
-  },
-  {
-    time: '17:00',
+    time: '验收',
     icon: Activity,
     tint: '#EAB308',
-    title: '复盘自进化 · Agent 技能 ROI 排序',
+    title: '把自己当成使用者',
     points: [
-      '今日触发的所有 agent 调用回归测试 + 置信度学习',
-      'patch 自动回滚 + 失败教训沉淀到 feedback memory',
-      '高 ROI skill 提权 / 低效路径下沉，明日 prompt 自动偏置',
+      '在真实设备上试对话、点页面，也检查断线、中断和恢复。',
+      '上线前保留回滚点；出了问题，记录原因并补测试。',
     ],
-    stack: '自进化 v2 · Verifier 三层验证（cheap / cache / Gemini Flash）',
+    stack: '真机验证 · 浏览器测试 · 日志排查',
   },
   {
-    time: '22:00',
+    time: '积累',
     icon: Archive,
     tint: '#F472B6',
-    title: '收尾归档 · 日报 / 周报 / 月报自动生成',
+    title: '下次不用从头说明',
     points: [
-      '飞书云文档自动生成日报，累积成周报 + 月报',
-      '知识库分类归档 + 与历史项目交叉索引',
-      'Hermes 加载新 prompt 偏置，预备明日早班',
+      '把已确认的决定和踩过的坑留下来，供后续任务查阅。',
+      '重复有效的做法整理成 Skills（可复用工作方法），工具通过 MCP 等接口接入。',
     ],
-    stack: 'lark-doc skill · 知识库自动归档 · cron 调度',
+    stack: '分层记忆 · Skills · MCP 工具连接协议',
   },
 ]
 
@@ -95,13 +65,13 @@ export function AINativeDay() {
   return (
     <SectionWrapper className="border-y border-border">
       <SectionTitle
-        label="A day in AI-Native mode"
-        title="一天的 AI Native 工作流"
+        label="工作方式"
+        title="我怎样把想法做出来"
       />
 
       <p className="mb-12 max-w-3xl text-base leading-relaxed text-text-secondary">
-        不是会用 AI，是 living in AI-native mode。以下是真实工作日时间线 ——
-        我独立构建的 AI 工作操作系统 <span className="text-text-primary font-medium">EvoDesk</span> 每天真实跑的状态，不是 mock 数据。
+        独立软件项目由我一个人 vibe coding 完成，没有团队，AI 是我的手脚。
+        公司产品的硬件、供应链和量产，则由跨职能团队共同推进。
       </p>
 
       <div className="relative">

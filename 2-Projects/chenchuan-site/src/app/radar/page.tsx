@@ -20,7 +20,7 @@ import {
 export const metadata: Metadata = {
   title: 'AI 前沿资讯雷达',
   description:
-    '一条用 AI 搭的自动化情报产线：每日精选高价值进展，每 30 分钟聚合 AI 全域信源，并附 arXiv 前沿论文中文深度拆解。',
+    '汇总 AI 行业资讯、开源项目和前沿论文，保留来源、日期与中文解读。',
 }
 
 export default async function RadarPage() {
@@ -65,7 +65,7 @@ export default async function RadarPage() {
         id="feed"
         className={`scroll-mt-28 ${horizonReports.length > 0 ? 'pt-0' : ''}`}
       >
-        <SectionTitle label="Live Feed / 实时资讯" title="AI 全域热点" />
+        <SectionTitle label="资讯汇总" title="AI 行业动态" />
         <RadarFeed items={feed.items} />
       </SectionWrapper>
 
@@ -92,11 +92,10 @@ function RadarCTA() {
           <div className="grid gap-8 md:grid-cols-2 md:items-center">
             <div>
               <h2 className="text-2xl font-semibold tracking-tight text-text-primary md:text-3xl">
-                想要一条这样的情报产线？
+                也想整理团队关注的资讯？
               </h2>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-text-secondary">
-                从信源抓取、自动聚合过滤，到每天自动出一份专业简报——这套自动化工作流，我能用
-                AI 帮你的团队/机构快速跑通。也欢迎订阅这份雷达，第一时间收到。
+                可以聊聊你的团队关注什么、需要哪些信源，以及筛选规则和简报怎么安排。
               </p>
             </div>
             <div className="flex flex-col gap-3 md:items-end">
@@ -104,14 +103,14 @@ function RadarCTA() {
                 href="/contact"
                 className="group inline-flex items-center justify-center gap-2 rounded-lg bg-text-primary px-6 py-3 text-sm font-semibold text-bg-primary transition-all duration-300 hover:opacity-90"
               >
-                加微信 · 聊聊自动化合作
+                聊聊自动化合作
                 <span className="font-mono transition group-hover:translate-x-1">→</span>
               </Link>
               <Link
                 href="/contact"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-border px-6 py-3 text-sm font-medium text-text-secondary transition-colors hover:border-border-hover hover:text-text-primary"
               >
-                订阅每日雷达
+                联系了解订阅
               </Link>
             </div>
           </div>

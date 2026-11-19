@@ -1,4 +1,5 @@
 import { formatCareerExperience, getCareerExperience } from '@/lib/experience'
+import { patents } from '@/data/patents'
 
 const careerExperience = getCareerExperience()
 const careerExperienceLabel = formatCareerExperience(undefined, { spaced: true, includeDays: true })
@@ -6,60 +7,60 @@ const careerExperienceLabel = formatCareerExperience(undefined, { spaced: true, 
 export const profile = {
   name: '陈川',
   nameEn: 'Chen Chuan',
-  title: 'AI-Native Product Leader',
-  tagline: 'AR HUD · Embodied Intelligence · Vibe Coder',
-  bio: `${careerExperienceLabel}智能硬件与 AI 产品经验。从 SLAM 机器人到协作机械臂，从多模态 AI 系统到 AR HUD 智能座舱，跨越具身智能完整技术栈。以 Claude、GPT、Gemini、Grok 多引擎构建 AI-Native 工作流，擅长复杂硬科技产品定义、交互体验设计与商业闭环构建。`,
-  bioExtended: '我相信好的产品不是技术的堆砌，而是对人类需求的深刻理解与技术可能性的精准匹配。拥有从第一性原理解构需求、到供应链量产、再到 GTM 的全链路操盘经验，多次实现跨界技术降维打击，定义具备极高壁垒的"新物种"品类。',
+  title: 'AI Native 产品经理',
+  tagline: '儿童 AI · 团队 AI 助手 · AR HUD',
+  intro: '我做过机器人、智能硬件和 AR HUD，现在也在做儿童 AI 伙伴和团队 AI 助手。除了产品定义，我会参与技术选型、原型开发和验收，用 AI 把想法做成可试用的产品。',
+  bio: `我做产品已有${careerExperienceLabel}，经历过机器人、智能硬件和 AR HUD 的研发与商业落地。现在主要在做儿童 AI 伙伴、团队 AI 助手，也继续探索全车窗 AR HUD。`,
+  bioExtended: '我负责产品定义和技术取舍，也借助 AI 写代码、做测试，自己试用和验收。独立软件项目由我一个人 vibe coding 完成，没有团队，AI 是我的手脚；公司产品的硬件、供应链和量产由跨职能团队共同推进。',
   profileCards: [
     {
       id: '01',
-      label: 'AI-NATIVE OPS',
-      text: '以多模型动态路由构建全流程 Vibe Coding 工作方式——Claude 负责规划编排，GPT / Codex 主实现，Gemini 负责长上下文与对照验证，Grok 支撑实时研究与 AI Ops。',
+      label: '用 AI 做产品',
+      text: '从 2025 年底开始，我把 AI 用进日常开发。产品需求由我判断，代码和测试借助 AI 完成，能不能用由实际试用来检验。',
     },
     {
       id: '02',
-      label: 'AR HUD PIONEER',
-      text: '主导 AR HUD 前沿预研与产品定义，深度参与用户体验研究与交互设计，主持 4 代展车迭代路测，成功支撑斩获多家新势力旗舰车型及豪华品牌定点订单。',
+      label: '汽车显示与交互',
+      text: '我负责过 AR HUD 的产品定义、展车迭代和路测，和团队一起推动客户定点。现在的 Warp 预研关注曲面投影变形，以及可显示区域怎么用得更充分。',
     },
     {
       id: '03',
-      label: 'EMBODIED AI LINEAGE',
-      text: '从 SLAM 机器人 → 协作机械臂 → 多模态 AI 系统 → 智能座舱，跨越具身智能完整技术栈，感知-规划-交互三要素融合于产品定义全链路。',
+      label: '把不同技术用在一起',
+      text: '做机器人时接触导航、视觉和机械控制，做座舱时研究光学与交互。这些经验也用在小可上：硬件采集、语音对话和成长玩法要配合好，孩子才能顺畅地使用。',
     },
     {
       id: '04',
-      label: '0→1 FULL-STACK BUILDER',
-      text: '拥有从第一性原理解构需求、到供应链量产、再到 GTM 的全链路操盘经验，擅长跨界技术降维打击，多次实现商业规模化落地。',
+      label: '把原型带到使用现场',
+      text: '除了功能，我也关心成本、供应链、交付和后续使用。原型跑通后，要在真实设备和实际工作里继续验证，才能知道哪些地方需要改。',
     },
   ],
   stats: {
     yearsExperience: careerExperience.years,
-    patents: 14,
+    patents: patents.length,
     shippedProducts: 8,
     keyWins: 7,
   },
   aiToolchain: [
     { name: 'Claude', role: '主规划', desc: '深度推理 · 任务编排', tint: '#F4A35D' },
     { name: 'GPT / Codex', role: '主实现', desc: '编码交付 · 多模态', tint: '#5BA7FF' },
-    { name: 'Gemini', role: '对照验证', desc: '长上下文 · 研究分析', tint: '#34D399' },
     { name: 'Grok', role: '实时研究', desc: '前沿检索 · AI Ops', tint: '#F472B6' },
   ],
   keyWins: [
     'AR HUD 展车获国内新势力旗舰车型定点订单',
     '获海外豪华合资品牌 AR HUD 定点',
-    'UNHCR 难民营太阳能路灯出口 20,000 盏',
-    '太阳能消费品年均出口 ¥400-500 万',
+    '太阳能路灯交付 UNHCR 难民营项目',
+    '太阳能消费品实现海外销售',
     '机器人原型参展 CES 2017',
     '无人冰淇淋站山东两地落地运营',
     '阿斯顿马丁太阳能赛车勒芒赛季冠军',
   ],
   coreSkills: [
-    { label: '产品战略', detail: '五看三定 · PEST · NPDP · OKR/KPI' },
-    { label: 'AR 光学系统', detail: '自由曲面 · HUD 光路设计 · 前装量产' },
-    { label: 'AI 集成', detail: 'LLM 工程化 · 情感计算 · SLAM · 3D 视觉' },
-    { label: '交互设计', detail: 'HMI · DMS · 语音/手势 · 多屏协同' },
-    { label: '商业模式', detail: 'SaaS 数据闭环 · B2B2C · GTM · 供应链' },
-    { label: 'Vibe Coding', detail: '四引擎动态路由 · 多模型 API 编排' },
+    { label: '产品定义', detail: '用户需求、使用场景、成本与验收标准' },
+    { label: '汽车显示', detail: 'AR HUD 光学与交互 · Swift / Metal 预畸变原型' },
+    { label: '实时语音', detail: 'Rust / Tokio · LiveKit / WebRTC · 流式 ASR—LLM—TTS' },
+    { label: '儿童 AI 硬件', detail: 'Android / Kotlin · Godot 场景 · Rust 游戏运行时' },
+    { label: 'Agent 应用', detail: 'Node.js · SQLite · 记忆检索 · Harness 运行框架' },
+    { label: '产品交付', detail: '原型测试、供应链协作、量产与上线验收' },
   ],
   education: [
     { school: '南京航空航天大学', degree: '硕士 · 项目管理', tag: '211/双一流', year: '2011–2014' },
@@ -74,7 +75,7 @@ export const profile = {
     email: '13911184569@163.com',
     location: '北京',
     linkedin: 'https://linkedin.com/in/yourprofile',
-    github: 'https://github.com/yourprofile',
+    github: 'https://github.com/Hahaxiong838383',
     wechat: 'your-wechat-id',
   },
 }

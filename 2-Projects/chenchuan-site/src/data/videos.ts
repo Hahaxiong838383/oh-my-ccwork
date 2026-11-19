@@ -12,7 +12,7 @@ export interface Video {
 export const videos: Video[] = [
   {
     title: '眼动+手势 多模态交互演示 1',
-    description: '基于 FaceMesh 眼动追踪与手势识别的多模态交互原型，展示注视预选与捏住抓取的融合交互。',
+    description: '使用 FaceMesh 与手势识别，演示注视预选和捏合抓取。',
     url: '/media-optimized/eye-gesture-interaction/20260319-090647.mp4',
     thumbnail: '/media-posters/eye-gesture-interaction/20260319-090647.jpg',
     duration: '0:27',
@@ -20,7 +20,7 @@ export const videos: Video[] = [
   },
   {
     title: '眼动+手势 多模态交互演示 2',
-    description: '注视高亮蹦跳效果与捏住优先抓取机制的联动演示，实现自然直觉的空间交互体验。',
+    description: '展示注视高亮、气泡反馈与捏合抓取的配合。',
     url: '/media-optimized/eye-gesture-interaction/20260319-090658.mp4',
     thumbnail: '/media-posters/eye-gesture-interaction/20260319-090658.jpg',
     duration: '0:33',
@@ -28,7 +28,7 @@ export const videos: Video[] = [
   },
   {
     title: '眼动+手势 多模态交互演示 3',
-    description: '气泡锁定与视觉增强效果，通过校准精度优化实现精准的注视-手势协同操作。',
+    description: '展示校准后的注视点、气泡锁定与手势操作效果。',
     url: '/media-optimized/eye-gesture-interaction/20260319-090714.mp4',
     thumbnail: '/media-posters/eye-gesture-interaction/20260319-090714.jpg',
     duration: '0:29',
@@ -36,7 +36,7 @@ export const videos: Video[] = [
   },
   {
     title: '眼动+手势 多模态交互完整流程',
-    description: '完整展示从注视预选到手势确认的多模态交互全流程，包括眼动校准、气泡识别与拖拽操作。',
+    description: '记录眼动校准、注视预选、手势确认与拖拽操作的连续流程。',
     url: '/media-optimized/eye-gesture-interaction/20260319-090720.mp4',
     thumbnail: '/media-posters/eye-gesture-interaction/20260319-090720.jpg',
     duration: '1:13',

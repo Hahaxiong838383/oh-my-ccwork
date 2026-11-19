@@ -18,7 +18,7 @@ const PROMPTS = [
 const getStats = (experience: string, patentCount: number): Array<[string, string]> => [
   [experience, '硬科技产品经验'],
   [String(patentCount), '项专利成果'],
-  ['>9款', '0-1 量产及运营经验'],
+  ['软硬件', '研发、量产与运营经验'],
 ]
 
 function useCareerExperienceLabel(): string {
@@ -149,12 +149,12 @@ export function Hero({ patentCount, tickerItems = [] }: HeroProps) {
             </h1>
             <BlurFade delay={0.5}>
               <div className="mt-6 font-mono text-[clamp(12px,1.5vw,15px)] uppercase tracking-[0.2em] text-text-muted">
-                {profile.nameEn} / 把智能转化为产品力
+                {profile.nameEn} / {profile.title}
               </div>
             </BlurFade>
             <BlurFade delay={0.6}>
               <p className="mt-8 max-w-xl text-lg font-light leading-relaxed text-text-secondary md:text-xl">
-                以 AI Agent 工作流重构硬科技产品定义，把空间光学、AI 交互与数据服务压缩成可验证、可交付、可增长的系统。
+                {profile.intro}
               </p>
             </BlurFade>
             <BlurFade delay={0.7}>
@@ -187,7 +187,7 @@ export function Hero({ patentCount, tickerItems = [] }: HeroProps) {
           <BlurFade delay={0.35}>
             <div className="flex h-full flex-col justify-center gap-3">
               <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-muted">
-                在线体验 · 三个 AI Demo 浏览器直接玩
+                在线体验
               </div>
               <HeroStrategicMirrorCard typed={typed} onVoice={() => setVoiceOpen(true)} />
               <HeroDemoCard
@@ -196,7 +196,7 @@ export function Hero({ patentCount, tickerItems = [] }: HeroProps) {
                 icon={Hand}
                 name="纯 Web 手势交互"
                 meta="眼动 + 手势 · 摄像头"
-                desc="隔空操作 AR 座舱，手势跟手几乎零延迟"
+                desc="用摄像头试试手势控制和视线交互"
               />
               <HeroDemoCard
                 color="green"
@@ -205,7 +205,7 @@ export function Hero({ patentCount, tickerItems = [] }: HeroProps) {
                 icon={Mic}
                 name="小可 · 儿童语音 AI"
                 meta="实时语音 · 表情感知"
-                desc="开口对话，像真人秒回、看着表情接话"
+                desc="试试小可的语音对话，了解儿童 AI 伙伴"
               />
             </div>
           </BlurFade>

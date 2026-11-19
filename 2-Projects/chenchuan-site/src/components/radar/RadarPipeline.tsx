@@ -10,9 +10,9 @@ interface Props {
 
 const STAGES: Array<{ no: string; name: string; detail: string }> = [
   { no: '01', name: '信源采集', detail: 'arXiv · 官方博客 · 行业站 · X/社区' },
-  { no: '02', name: '自动聚合', detail: '多源并轨拉取 · 每 30 分钟' },
+  { no: '02', name: '自动聚合', detail: '定期获取不同来源的资讯' },
   { no: '03', name: '归类去重', detail: '5 大分类 · 去重 · 按时间排序' },
-  { no: '04', name: '自动上站', detail: '你正在看的就是产线输出' },
+  { no: '04', name: '页面展示', detail: '保留来源与发布时间' },
 ]
 
 export function RadarPipeline({ ok, count, sourceCount, fetchedAt }: Props) {
@@ -32,10 +32,10 @@ export function RadarPipeline({ ok, count, sourceCount, fetchedAt }: Props) {
                 ok ? 'animate-pulse bg-[#16A34A]' : 'bg-[#B7791F]'
               }`}
             />
-            {ok ? '产线运行中' : '信源同步中'}
+            {ok ? '已获取资讯' : '暂未获取最新资讯'}
           </span>
           <span className="tabular-nums text-text-secondary">
-            {synced ? `上次同步 UTC+8 ${synced}` : '同步中…'}
+            {synced ? `上次获取 UTC+8 ${synced}` : '暂无获取时间'}
           </span>
         </div>
 
@@ -47,10 +47,8 @@ export function RadarPipeline({ ok, count, sourceCount, fetchedAt }: Props) {
             </h1>
             <BlurFade delay={0.15}>
               <p className="mt-6 max-w-xl text-lg font-light leading-relaxed text-text-secondary">
-                一条我用 AI 搭的自动化情报产线：每 30 分钟自动把 AI
-                全域信源聚到一起，去重、归类、排序后直接上站。
-                <span className="text-text-primary">这一页本身，就是产线的实时输出</span>
-                ——不是我手动整理的。
+                我用 AI 和定时任务汇总行业资讯、开源项目与论文，去重分类后放在这里。
+                可以查看原始来源，也可以翻阅按期整理的中文解读。
               </p>
             </BlurFade>
             <BlurFade delay={0.3}>
@@ -58,7 +56,7 @@ export function RadarPipeline({ ok, count, sourceCount, fetchedAt }: Props) {
                 <Stat value={ok ? String(count) : '—'} label="本轮条目" />
                 <Stat value={ok ? String(sourceCount) : '—'} label="覆盖信源" />
                 <Stat value="5" label="自动分类" />
-                <Stat value="30min" label="刷新间隔" />
+                <Stat value="定期" label="更新方式" />
               </div>
             </BlurFade>
           </div>

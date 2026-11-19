@@ -40,7 +40,7 @@ export default async function AboutPage() {
         <BlurFade delay={0.4}>
           <div className="mb-16">
             <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">
-              Core Skills
+              我参与的工作
             </h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {profile.coreSkills.map((skill) => (
@@ -56,15 +56,14 @@ export default async function AboutPage() {
         <BlurFade delay={0.5}>
           <div className="mb-16">
             <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">
-              Embodied AI Stack
+              不同项目里用到的技术
             </h3>
             <div className="space-y-3">
               {[
-                { layer: '感知', detail: '激光雷达 SLAM · 双目视觉 · ToF · DLP' },
-                { layer: '规划', detail: '自主路径规划 · 避障算法 · 空间感知' },
-                { layer: '交互', detail: '语音 NLU · 人脸/骨骼识别 · 情感计算' },
-                { layer: '云端', detail: 'Azure AI · 国产 LLM · 个性化推荐' },
-                { layer: '执行', detail: 'UR 协作机械臂 · 舵机控制 · 无线充电' },
+                { layer: '机器人', detail: '用 SLAM 定位导航，结合视觉、避障和机械控制完成现场任务。' },
+                { layer: '儿童 AI', detail: 'Kotlin 对接硬件，Godot 展示成长世界，Rust 分别负责语音引擎和游戏状态。' },
+                { layer: '团队助手', detail: 'Node.js 运行任务，SQLite 保存状态；全文与向量检索为任务找资料。' },
+                { layer: 'AR HUD', detail: '把光学约束转为显示与交互需求，用 Swift / Metal 验证曲面预畸变。' },
               ].map((item) => (
                 <div key={item.layer} className="flex items-start gap-3">
                   <Tag variant="accent">{item.layer}</Tag>
@@ -78,7 +77,7 @@ export default async function AboutPage() {
         <BlurFade delay={0.6}>
           <div className="mb-16">
             <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">
-              Education
+              教育经历
             </h3>
             <div className="space-y-3">
               {profile.education.map((edu) => (
@@ -102,7 +101,7 @@ export default async function AboutPage() {
         <BlurFade delay={0.7}>
           <div>
             <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
-              Certifications
+              认证与语言
             </h3>
             <ul className="space-y-1.5">
               {profile.certifications.map((cert) => (

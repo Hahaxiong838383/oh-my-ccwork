@@ -188,7 +188,7 @@ export default function ArHudDemoPage() {
        * px-24 让出左上返回按钮 + 右侧对称留白，避免重叠。
        */}
       <div className="pointer-events-none absolute top-3 z-30 w-full px-24 text-center text-[11px] tracking-wide text-white/70 sm:text-xs">
-        <span className="text-[#7FE5FF]/85">100% 本地推理 · 零数据上传</span>
+        <span className="text-[#7FE5FF]/85">摄像头画面在浏览器内处理，不上传视频</span>
         <span className="mx-2 text-white/30">·</span>
         <span className="text-white/80">捏住任意卡片可拖动 / 底部卡片可左右互换</span>
         <span className="mx-2 text-white/30">·</span>

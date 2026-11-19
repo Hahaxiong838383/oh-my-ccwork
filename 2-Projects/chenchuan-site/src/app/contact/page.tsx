@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Image from 'next/image'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { SectionTitle } from '@/components/shared/SectionTitle'
 import { BlurFade } from '@/components/ui/BlurFade'
@@ -24,7 +23,7 @@ export default async function ContactPage() {
           <div className="mx-auto max-w-2xl">
             <BlurFade>
               <p className="mb-12 text-lg text-text-secondary">
-                无论是产品合作、技术交流、投资咨询还是其他想法，欢迎与我联系。
+                想聊产品合作或技术方案，可以通过邮箱联系我。
               </p>
             </BlurFade>
 
@@ -64,7 +63,7 @@ export default async function ContactPage() {
                 {[
                   { label: 'LinkedIn', href: profile.contact.linkedin },
                   { label: 'GitHub', href: profile.contact.github },
-                ].map((link) => (
+                ].filter((link) => link.href && !link.href.includes('yourprofile')).map((link) => (
                   <a
                     key={link.label}
                     href={link.href}
@@ -78,24 +77,6 @@ export default async function ContactPage() {
               </div>
             </BlurFade>
 
-            <BlurFade delay={0.35}>
-              <div className="depth-panel mt-12 flex flex-col items-center rounded-xl border border-border bg-bg-card p-8 text-center">
-                <div className="mb-4 text-sm text-text-secondary">微信</div>
-                <div className="overflow-hidden rounded-lg bg-white p-2">
-                  <Image
-                    src="/images/wechat-qr.png"
-                    alt="陈川的微信二维码"
-                    width={260}
-                    height={381}
-                    className="h-auto w-[240px]"
-                    priority={false}
-                  />
-                </div>
-                <div className="mt-4 text-sm font-medium text-text-primary">
-                  扫码加微信 · 添加时请备注来意
-                </div>
-              </div>
-            </BlurFade>
           </div>
         </div>
       </SectionWrapper>

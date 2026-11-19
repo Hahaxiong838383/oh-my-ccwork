@@ -17,7 +17,7 @@ export function ContactCTA() {
         </BlurFade>
         <BlurFade delay={0.1}>
           <p className="mb-8 text-text-secondary">
-            无论是产品合作、技术交流还是其他想法，欢迎联系
+            想聊产品合作或技术方案，可以通过邮箱联系我。
           </p>
         </BlurFade>
         <BlurFade delay={0.2}>

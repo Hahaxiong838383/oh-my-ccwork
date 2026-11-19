@@ -1,8 +1,6 @@
 import type { DemoRoutingStep } from '@/data/classic-demos'
 
-// 引擎徽章 + 决策链路标签翻译（gemini P1-2 钦定）：
-// 内部 cc/codex/gemini → 访客可读的"决策链路"语言
-// 颜色编码让访客视觉区分 3 引擎协同节奏。
+// 决策示例的环节标签，不代表本次展示实际调用的模型。
 
 interface EngineBadgeProps {
   engine: DemoRoutingStep['engine']
@@ -11,26 +9,33 @@ interface EngineBadgeProps {
 }
 
 const ENGINE_STYLES: Record<DemoRoutingStep['engine'], { label: string; bg: string; border: string; text: string; dot: string }> = {
-  cc: {
-    label: 'CC',
+  analysis: {
+    label: '分析',
     bg: 'bg-[#7FE5FF]/10',
     border: 'border-[#7FE5FF]/40',
     text: 'text-[#7FE5FF]',
     dot: 'bg-[#7FE5FF]',
   },
-  codex: {
-    label: 'CODEX',
+  implementation: {
+    label: '实现',
     bg: 'bg-[#F59E0B]/10',
     border: 'border-[#F59E0B]/40',
     text: 'text-[#F59E0B]',
     dot: 'bg-[#F59E0B]',
   },
-  gemini: {
-    label: 'GEMINI',
+  review: {
+    label: '复核',
     bg: 'bg-[#A78BFA]/10',
     border: 'border-[#A78BFA]/40',
     text: 'text-[#A78BFA]',
     dot: 'bg-[#A78BFA]',
+  },
+  decision: {
+    label: '判断',
+    bg: 'bg-emerald-300/10',
+    border: 'border-emerald-300/40',
+    text: 'text-emerald-300',
+    dot: 'bg-emerald-300',
   },
 }
 
