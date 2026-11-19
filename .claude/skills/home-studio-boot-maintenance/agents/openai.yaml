@@ -1,0 +1,3 @@
+interface:
+  display_name: "home-studio启动维护"
+  short_description: "核验重启后的系统与数据服务，维护Plymouth启动保护及回滚"

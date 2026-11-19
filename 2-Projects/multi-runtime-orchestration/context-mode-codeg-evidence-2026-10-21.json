@@ -1,0 +1,189 @@
+{
+  "collected_at": "2026-10-21T12:53:01.781178+00:00",
+  "scope": "Read-only Codeg inventory; isolated context-mode tests; no production runtime registration or agent task A/B",
+  "context_mode": {
+    "version": "1.0.169",
+    "sha": "a92cf6a77ac02971fb5fafe2155e5ee229491884"
+  },
+  "codeg": {
+    "running_executable_version": "0.38.0",
+    "reviewed_tag_sha": "3f83b02da6006d198052fdef646e0d4bb8dc9e2c",
+    "observed_codex_acp": "2.0.1",
+    "observed_bundled_codex": "0.159.3",
+    "codex_code_mode_host_running": true,
+    "conversation_query_since": "2026-10-01",
+    "conversations": [
+      {
+        "engine": "claude_code",
+        "total": 3,
+        "root": 1,
+        "child": 2
+      },
+      {
+        "engine": "codex",
+        "total": 46,
+        "root": 30,
+        "child": 16
+      },
+      {
+        "engine": "cursor",
+        "total": 10,
+        "root": 6,
+        "child": 4
+      },
+      {
+        "engine": "grok",
+        "total": 70,
+        "root": 7,
+        "child": 63
+      },
+      {
+        "engine": "hermes",
+        "total": 20,
+        "root": 3,
+        "child": 17
+      }
+    ],
+    "note": "Conversation counts include child/delegation sessions and do not measure tokens, cost, task difficulty, or successes.",
+    "conversation_query_through": "2026-10-21T12:46:02.379006672+00:00"
+  },
+  "comparison": {
+    "nativeVsContext": {
+      "rawBytes": 46216,
+      "nativeBytes": 98,
+      "contextBytes": 98,
+      "sameOutput": true,
+      "summary": {
+        "lines": 500,
+        "status": {
+          "200": 361,
+          "201": 38,
+          "204": 13,
+          "400": 13,
+          "401": 25,
+          "403": 24,
+          "404": 13,
+          "500": 13
+        }
+      }
+    },
+    "chineseSearch": [
+      {
+        "query": "重启",
+        "results": []
+      },
+      {
+        "query": "明确授权",
+        "results": [
+          {
+            "title": "决策记录",
+            "content": "# 决策记录\n只在取得明确授权之后才允许重启生产服务。",
+            "layer": "rrf"
+          }
+        ]
+      },
+      {
+        "query": "网络连接",
+        "results": [
+          {
+            "title": "网络故障",
+            "content": "# 网络故障\n家里的网络连接已经中断，需要排查线路。",
+            "layer": "rrf"
+          }
+        ]
+      },
+      {
+        "query": "断网",
+        "results": []
+      },
+      {
+        "query": "ECONNRESET",
+        "results": [
+          {
+            "title": "Technical evidence",
+            "content": "# Technical evidence\nECONNRESET occurred during websocket handshake.",
+            "layer": "rrf"
+          }
+        ]
+      },
+      {
+        "query": "ZQXNONEXISTENTTOKEN",
+        "results": []
+      }
+    ]
+  },
+  "mcp": {
+    "tools": [
+      "ctx_execute",
+      "ctx_execute_file",
+      "ctx_index",
+      "ctx_search",
+      "ctx_fetch_and_index",
+      "ctx_batch_execute",
+      "ctx_stats",
+      "ctx_doctor",
+      "ctx_upgrade",
+      "ctx_purge",
+      "ctx_insight"
+    ],
+    "toolSchemaBytes": 30082,
+    "exec": {
+      "content": [
+        {
+          "type": "text",
+          "text": "path=/tmp/context-mode-review-20261021/tests/fixtures/access.log\n```javascript\nconsole.log(JSON.stringify({lineCount:FILE_CONTENT.trim().split(\"\\n\").length}))\n```\n\n{\"lineCount\":500}\n"
+        }
+      ]
+    },
+    "idx": {
+      "content": [
+        {
+          "type": "text",
+          "text": "Indexed 1 sections (0 with code) from: review-probe\nUse ctx_search(queries: [\"...\"]) to query this content. Use source: \"review-probe\" to scope results."
+        }
+      ]
+    },
+    "positive": {
+      "content": [
+        {
+          "type": "text",
+          "text": "## CM_REVIEW_7429\n\n--- [current-session | 2026-10-21 12:51 | review-probe] ---\n### Probe\n\n# Probe\nCM_REVIEW_7429 evidence survives indexing.\n\n> Throttle: call #1/8 in this window. 2 call(s) before soft cap. Prefer ctx_search(queries: [...]) array form for multi-query workloads — it counts as a single call."
+        }
+      ]
+    },
+    "negative": {
+      "content": [
+        {
+          "type": "text",
+          "text": "## ZQXNONEXISTENTTOKEN\nNo results found.\n\n> Throttle: call #2/8 in this window. 1 call(s) before soft cap. Prefer ctx_search(queries: [...]) array form for multi-query workloads — it counts as a single call."
+        }
+      ]
+    }
+  },
+  "upstream_tests": {
+    "node": "24.22.0",
+    "files": [
+      "tests/store.test.ts",
+      "tests/core/search-flood-guard.test.ts",
+      "tests/session/session-snapshot.test.ts"
+    ],
+    "passed": 168,
+    "failed": 0,
+    "first_attempt": "Node22.14, install scripts disabled; missing native better-sqlite3 binding after built-in FTS5 unavailable. Re-run under existing Node24.22 built-in SQLite passed. Not an upstream functional regression."
+  },
+  "upstream_comparison": {
+    "script": "tests/context-comparison.ts",
+    "raw_KiB_displayed": 195.0,
+    "output_bytes": 4898,
+    "scenarios": 11,
+    "qualification": "Static fixtures with pre-written filtering programs; excludes model prompt/code-generation/schema costs, retries and answer-quality evaluation."
+  },
+  "artifacts": {
+    "review-probe.ts": "f994531335a071c188606cbb303ab2876785f8c8b90fcdc9f63ef1453c8cce7d",
+    "review-mcp.mjs": "e8741292876f084ff3b466b63513673740bdc4bc51df64914a4a4451e327d828"
+  },
+  "probe_sources": {
+    "review-probe.ts": "import { ContentStore } from './src/store.js';\nimport { PolyglotExecutor } from './src/executor.js';\nimport { readFileSync, writeFileSync } from 'node:fs';\nimport { execFileSync } from 'node:child_process';\n\nconst fixture = '/tmp/context-mode-review-20261021/tests/fixtures/access.log';\nconst raw = readFileSync(fixture, 'utf8');\n// String.raw preserves the regex and newline escapes for the executed code.\nconst code = String.raw`const lines = FILE_CONTENT.trim().split('\\n'); const counts = {}; for (const line of lines) { const m = line.match(/\" (\\d{3}) /); if(m) counts[m[1]]=(counts[m[1]]||0)+1; } console.log(JSON.stringify({lines:lines.length,status:counts}));`;\nconst direct = execFileSync(process.execPath, ['-e', `const FILE_CONTENT=require('fs').readFileSync(${JSON.stringify(fixture)},'utf8');\\n${code}`], {encoding:'utf8'});\nconst executor = new PolyglotExecutor();\nconst viaContext = await executor.executeFile({path: fixture, language:'javascript',code});\nif (viaContext.exitCode !== 0 || direct !== viaContext.stdout) throw new Error('Native/context output mismatch');\nconst store = new ContentStore('/tmp/context-mode-review-20261021/review-chinese.db');\nstore.index({source:'synthetic-decisions',content:'# 决策记录\\n只在取得明确授权之后才允许重启生产服务。\\n\\n# 网络故障\\n家里的网络连接已经中断，需要排查线路。\\n\\n# Technical evidence\\nECONNRESET occurred during websocket handshake.\\n'});\nconst search = ['重启','明确授权','网络连接','断网','ECONNRESET','ZQXNONEXISTENTTOKEN'].map(query=>({query,results:store.searchWithFallback(query,3).map(r=>({title:r.title,content:r.content,layer:r.matchLayer}))}));\nstore.close();\nconst report = {nativeVsContext:{rawBytes:Buffer.byteLength(raw),nativeBytes:Buffer.byteLength(direct),contextBytes:Buffer.byteLength(viaContext.stdout),sameOutput:direct===viaContext.stdout,summary:JSON.parse(direct)},chineseSearch:search};\nwriteFileSync('/tmp/context-mode-review-20261021/review-probe-results.json',JSON.stringify(report,null,2));\nconsole.log(JSON.stringify(report,null,2));\n",
+    "review-mcp.mjs": "import {Client} from '@modelcontextprotocol/sdk/client/index.js';\nimport {StdioClientTransport} from '@modelcontextprotocol/sdk/client/stdio.js';\nimport {writeFileSync} from 'node:fs';\nconst root='/tmp/context-mode-review-20261021';\nconst client=new Client({name:'Codex',version:'isolated-review'},{capabilities:{}});\nconst transport=new StdioClientTransport({command:process.execPath,args:['--import','tsx','src/server.ts'],cwd:root,stderr:'pipe',env:{PATH:process.env.PATH,HOME:process.env.HOME,CONTEXT_MODE_DATA_DIR:root+'/mcp-data',CONTEXT_MODE_PROJECT_DIR:root,CONTEXT_MODE_PLATFORM:'codex',CONTEXT_MODE_MCP_SENTINEL_DIR:root}});\nlet errors='';transport.stderr?.on('data',c=>errors+=c);\ntry {\n await client.connect(transport);\n const {tools}=await client.listTools();\n const listed=tools.map(t=>t.name);\n const exec=await client.callTool({name:'ctx_execute_file',arguments:{path:root+'/tests/fixtures/access.log',language:'javascript',code:'console.log(JSON.stringify({lineCount:FILE_CONTENT.trim().split(\"\\\\n\").length}))'}});\n const idx=await client.callTool({name:'ctx_index',arguments:{content:'# Probe\\nCM_REVIEW_7429 evidence survives indexing.',source:'review-probe'}});\n const positive=await client.callTool({name:'ctx_search',arguments:{queries:['CM_REVIEW_7429'],source:'review-probe'}});\n const negative=await client.callTool({name:'ctx_search',arguments:{queries:['ZQXNONEXISTENTTOKEN'],source:'review-probe'}});\n const report={tools:listed,toolSchemaBytes:Buffer.byteLength(JSON.stringify(tools)),exec,idx,positive,negative};\n if(exec.isError||idx.isError||positive.isError||!JSON.stringify(positive.content).includes('CM_REVIEW_7429')) throw new Error('MCP payload validation failed');\n writeFileSync(root+'/review-mcp-results.json',JSON.stringify(report,null,2));\n console.log(JSON.stringify(report,null,2));\n} finally {await client.close(); if(errors)writeFileSync(root+'/review-mcp-stderr.log',errors);}\n"
+  }
+}
