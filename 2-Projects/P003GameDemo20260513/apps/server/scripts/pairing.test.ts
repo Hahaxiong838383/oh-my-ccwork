@@ -23,7 +23,7 @@
  *  - 恢复合同 S1（2026-09-17，rv-*）：announce v:3 已绑→bound_recoverable / v:2→pending（通道独占锚）/ 停用 denied / 台账外 pending /
  *    有效预授权仍优先 confirmed；原家长 confirm relation=owner → claim(v:3) binding_outcome=existing_binding_recovery（按凭据历史判，
  *    claim 会话或后台手签都算）+ 旧凭据作废（水位 iat−1）+ 幂等不推水位；预绑家长新机首次 claim 仍 new；他人 confirm 409 不建会话 /
- *    台账外·停用 404（claim 级门保留给 confirm→claim 竞态）；请求不带 v:3 无 binding_outcome；开关 0 全老行为
+ *    台账外·停用 404（claim 级门保留给 confirm→claim 竞态）；请求不带 v:3 无 binding_outcome；开关 0 保持老端展示；绑定权限门始终有效
  */
 
 import { mkdtempSync } from 'node:fs';
@@ -557,7 +557,8 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   const jwtNew = decryptCredential(k2.priv, c2.json.enc, n2, SN_R1);
   eq('rv-3d 新凭据三通道可验', (await verifyDeviceCredential(`Bearer ${jwtNew}`, 'test-secret'))?.sn, SN_R1);
   eq('rv-3e 家长与 brain 账号不变', { p: deviceRegistryStore.get(SN_R1)?.parent_account_id, b: deviceRegistryStore.get(SN_R1)?.account_id }, { p: P4, b: brainBefore });
-  eq('rv-3f status bound 带 binding_outcome', await app.request(`/api/parent/pairing/status?session_id=${cf2.json.session_id}`, { headers: { authorization: `Bearer ${jwt4}` } }).then((r) => r.json()), { ok: true, state: 'bound', sn: SN_R1, binding_outcome: 'existing_binding_recovery' });
+  const boundStatus = await app.request(`/api/parent/pairing/status?session_id=${cf2.json.session_id}`, { headers: { authorization: `Bearer ${jwt4}` } }).then((r) => r.json()) as any;
+  eq('rv-3f status bound 带 outcome/public_id/activation', boundStatus, { ok: true, state: 'bound', sn: SN_R1, public_id: deviceRegistryStore.get(SN_R1)!.public_id, activated: false, activated_at_ms: null, brain_state: 'ready', binding_outcome: 'existing_binding_recovery' });
   eq('rv-3g 会话落库 binding_outcome', pairingStore.findSessionByHash(hashToken(n2))?.binding_outcome, 'existing_binding_recovery');
   // ── rv-6 恢复即换钥：旧凭据失效、新凭据通过；幂等重试不推水位 ──
   eq('rv-6a 旧凭据作废', await verifyDeviceCredential(`Bearer ${jwtOld}`, 'test-secret'), null);
@@ -599,15 +600,15 @@ deviceRegistryStore.add(SN_V2, 'v2配网测试机');
   const pendR = await app.request('/api/admin/devices/pairing/pending', { headers: { authorization: `Bearer ${adminTok}` } });
   const pendItems = ((await pendR.json()) as { items: Array<{ sn: string; parent_bound: boolean }> }).items;
   eq('rv-7 待认领项 parent_bound：已绑 true / 未绑 false', { r1: pendItems.find((i) => i.sn === SN_R1)?.parent_bound, r4: pendItems.find((i) => i.sn === SN_R4)?.parent_bound }, { r1: true, r4: false });
-  // ── rv-8 开关 0：一律老行为 ──
+  // ── rv-8 展示/恢复开关不绕过已上线绑定权限门 ──
   process.env.PAIRING_RECOVERY_CONTRACT_ENABLED = '0';
   const k8 = newDeviceKeys();
   const n8 = newNonce();
   eq('rv-8a 开关 0 → v:3 已绑也 pending', (await announceV(3, SN_R1, n8, k8.pkB64)).json.state, 'pending');
-  const cf8 = await confirm(jwt5, SN_R1, n8, k8.pkB64); // 他人也能 confirm（老行为），claim 侧 409
-  eq('rv-8b 开关 0 → confirm 不前置检查且无 relation', { s: cf8.status, rel: cf8.json.relation }, { s: 200, rel: undefined });
+  const cf8 = await confirm(jwt5, SN_R1, n8, k8.pkB64); // 权限门不随恢复展示开关关闭
+  eq('rv-8b 开关 0 仍拒绝他人确认', { s: cf8.status, error: cf8.json.error }, { s: 409, error: 'sn_bound_by_other' });
   const c8 = await claimV2(SN_R1, n8, undefined, 3);
-  eq('rv-8c 开关 0 → claim 级门 409 且无 binding_outcome', { code: c8.json.code, bo: c8.json.binding_outcome }, { code: 'sn_bound_by_other', bo: undefined });
+  eq('rv-8c 被拒的确认不建会话且无 binding_outcome', { status: c8.status, code: c8.json.code, bo: c8.json.binding_outcome }, { status: 404, code: 'pairing_pending', bo: undefined });
   delete process.env.PAIRING_RECOVERY_CONTRACT_ENABLED;
   // ── rv-9 纯函数判定序 ──
   const nowR = Date.now();

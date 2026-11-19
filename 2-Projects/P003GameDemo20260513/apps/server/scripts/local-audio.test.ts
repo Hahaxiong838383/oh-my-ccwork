@@ -5,19 +5,23 @@
  * manifest 结构（schema_version=1、六 slot 对齐）。
  * TTS/LLM 走网络不进单测（生成链 E2E 在 D1 验收 A1/A2 用真机验）。
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+import type { AnyAudioSlot } from '../src/local-audio-store.js';
 
 const tmp = mkdtempSync(join(tmpdir(), 'local-audio-test-'));
 process.env.PROFILE_DB_PATH = join(tmp, 'profile.db');
+for (const key of ['CONFIG','CONVERSATION','ACCOUNTS','FEEDBACK','DIAGNOSTICS','OTA','PAIRING','SMS','TELEMETRY']) process.env[`${key}_DB_PATH`] = join(tmp, `${key.toLowerCase()}.db`);
 process.env.DEVICES_DB_PATH = join(tmp, 'devices.db');
 process.env.LOCAL_AUDIO_DIR = join(tmp, 'local-audio');
+process.env.LOCAL_AUDIO_WRITES_PAUSED = '0';
 
 const { mp3DurationMs, pcmToWav, parseWavHeader } = await import('../src/providers/xfyun-tts.js');
 const { sanitizeClipText, countChars, gateClipText, shouldRegenerate, traitPromptLines, describeTrigger, estimateRevisionBytes, REVISION_CAP_BYTES, DEFAULT_ROUTINE_REFRESH_DAYS, PUBLISH_ITEMS_PER_SLOT, buildSlot } =
   await import('../src/local-audio-generator.js');
-const { localAudioStore, LOCAL_AUDIO_SLOTS, MIN_ITEMS_PER_SLOT } = await import('../src/local-audio-store.js');
+const { localAudioStore, LOCAL_AUDIO_SLOTS, MIN_ITEMS_PER_SLOT, REQUIRED_SLOTS } = await import('../src/local-audio-store.js');
 const { TRAIT_BASELINE } = await import('../src/trait-store.js');
 const { DEVICE_REPLY_SLOTS } = await import('../src/local-audio-store.js');
 const { DEVICE_REPLY_TEXTS, activeDeviceReplyKeep, candidateManifestReport, DEVICE_REPLY_MAX_MS } = await import('../src/local-audio-device-reply.js');
@@ -39,6 +43,19 @@ function ok(name: string, cond: boolean): void {
     fail += 1;
     console.error(`FAIL ${name}`);
   }
+}
+
+// 真实音频 fixture；ID 可为历史16hex标识，SHA必须来自实际音频字节。
+function stageFixture(account: string, slot: AnyAudioSlot, id: string, text: string, bytes = 48044) {
+  const audio = pcmToWav(Buffer.alloc(bytes - 44));
+  localAudioStore.writeAudio(account, id, audio, 'wav');
+  localAudioStore.insertItem(account, { slot, id, text, sha256: createHash('sha256').update(audio).digest('hex'),
+    bytes: audio.length, duration_ms: Math.round((audio.length - 44) / 48), format: 'wav' });
+  return { slot, id };
+}
+function requiredFixture(account: string, tag = '') {
+  return REQUIRED_SLOTS.flatMap(slot => [0, 1].map(n => stageFixture(account, slot,
+    createHash('sha256').update(`${account}:${tag}:${slot}:${n}`).digest('hex').slice(0, 16), `短句${n}`)));
 }
 
 // ── mp3 帧时长（MPEG2 Layer3 24kHz 32kbps：帧长 96B，每帧 576/24000=24ms）──
@@ -146,12 +163,12 @@ ok(
 // staging 优先复用：够 target 就不碰 LLM/TTS（网络不可达的单测环境里能返回=没叫网络）
 {
   const ACC = 'device-BJP00326060100009999';
-  const mk = (id: string, text: string) => localAudioStore.insertItem(ACC, { slot: 'greeting.normal', id, text, sha256: id.repeat(4), bytes: 90_000, duration_ms: 1800, format: 'wav' });
-  mk('aaaaaaaaaaaaaaaa', '来啦今天想聊点啥');
-  mk('bbbbbbbbbbbbbbbb', '欢迎回来坐好啦');
-  mk('cccccccccccccccc', '来啦今天想聊点啥'); // 同文案重复条目不应被选两次
+  const mk = (id: string, text: string) => stageFixture(ACC, 'greeting.normal', id, text);
+  mk('aaaaaaaaaaaaaaaa', '嗨你来啦');
+  mk('bbbbbbbbbbbbbbbb', '我在这呢');
+  mk('cccccccccccccccc', '嗨你来啦'); // 同文案重复条目不应被选两次
   const r = await buildSlot(ACC, 'greeting.normal', undefined, 2, true);
-  eq('pub-4 staging 优先复用取满 target 且文案去重', { n: r.keep.length, texts: r.keep.map((k) => k.text).sort(), keptOld: r.keptOld }, { n: 2, texts: ['来啦今天想聊点啥', '欢迎回来坐好啦'], keptOld: false });
+  eq('pub-4 staging 优先复用取满 target 且文案去重', { n: r.keep.length, texts: r.keep.map((k) => k.text).sort(), keptOld: r.keptOld }, { n: 2, texts: ['嗨你来啦', '我在这呢'], keptOld: false });
 }
 
 // ── traitPromptLines 不泄孩子字段（结构性红线锚：输出只含小可自己的维度词）──
@@ -161,38 +178,34 @@ ok('trait-2 无孩子字样', lines.every((l) => !l.includes('孩子') || l.incl
 
 // ── store 生命周期 ──
 const ACC = 'device-TESTSN001';
-const { createHash } = await import('node:crypto');
+
 const mk = (slot: (typeof LOCAL_AUDIO_SLOTS)[number], seed: string) => {
-  // sha 必须逐 seed 唯一（'1'.repeat 与 '11'.repeat 同串的坑：同 id 会互相覆盖）
-  const sha = createHash('sha256').update(`${slot}:${seed}`).digest('hex');
-  const id = sha.slice(0, 16);
-  localAudioStore.writeAudio(ACC, id, Buffer.from(`audio-${seed}`));
-  localAudioStore.insertItem(ACC, { slot, id, text: `文案${seed}`, sha256: sha, bytes: 10, duration_ms: 2000, format: 'mp3' });
-  return { slot, id };
+  const id = createHash('sha256').update(`${slot}:${seed}`).digest('hex').slice(0, 16);
+  return stageFixture(ACC, slot, id, `文案${seed}`);
 };
 eq('st-1 初始 state revision=0', localAudioStore.getState(ACC).revision, 0);
 eq('st-2 初始 active 空', localAudioStore.listActive(ACC).length, 0);
 
 // 六 slot 各 2 条 → commit → revision 1
 const keep1 = LOCAL_AUDIO_SLOTS.flatMap((slot, i) => [mk(slot, String(i * 2)), mk(slot, String(i * 2 + 1))]);
-eq('st-3 commit bump 到 1', localAudioStore.commitSet(ACC, keep1, { tier: '新朋友', traits: '{}' }), 1);
+eq('st-3 commit bump 到 1', localAudioStore.commitSet(ACC, keep1, { tier: '新朋友', traits: '{}' }, { expectedRevision: 0 }), 1);
 eq('st-4 active=slot数x2', localAudioStore.listActive(ACC).length, LOCAL_AUDIO_SLOTS.length * 2);
-eq('st-5 同集合重 commit 不 bump', localAudioStore.commitSet(ACC, keep1, { tier: '新朋友', traits: '{}' }), null);
+eq('st-5 同集合重 commit 不 bump', localAudioStore.commitSet(ACC, keep1, { tier: '新朋友', traits: '{}' }, { expectedRevision: 1 }), null);
 eq('st-6 revision 仍 1', localAudioStore.getState(ACC).revision, 1);
 ok('st-7 no-change 也前移生成基准', localAudioStore.getState(ACC).last_generated_at > 0);
 
 // J4 复用：同 slot 同 text 找得回
-const found = localAudioStore.findByText(ACC, 'greeting.normal', '文案0', 'mp3');
+const found = localAudioStore.findByText(ACC, 'greeting.normal', '文案0', 'wav');
 eq('st-8 findByText 命中(同 format)', found?.id, keep1[0].id);
-eq('st-9 findByText 异 slot 不命中', localAudioStore.findByText(ACC, 'farewell.night', '文案0', 'mp3'), null);
+eq('st-9 findByText 异 slot 不命中', localAudioStore.findByText(ACC, 'farewell.night', '文案0', 'wav'), null);
 // WAV 迁移负锚（W4 混套事故回归）：同文案跨 format 绝不复用；staging 补足默认只出 wav
-eq('st-9b 同文案 wav 查询不命中 mp3 条目', localAudioStore.findByText(ACC, 'greeting.normal', '文案0', 'wav'), null);
+eq('st-9b 同文案 mp3 查询不命中 wav 条目', localAudioStore.findByText(ACC, 'greeting.normal', '文案0', 'mp3'), null);
 eq('st-9c staging 补足(wav)不含 mp3 遗留', localAudioStore.listStagedBySlot(ACC, 'greeting.normal', 'wav').length, 0);
 
 // 换掉一个 slot 的一条 → bump 到 2；被换条目 active=0 但仍可下载（切换窗口）
 const swapped = mk('greeting.normal', 'ff');
 const keep2 = [keep1[1], swapped, ...keep1.slice(2)];
-eq('st-10 变更 commit bump 到 2', localAudioStore.commitSet(ACC, keep2, { tier: '新朋友', traits: '{}' }), 2);
+eq('st-10 变更 commit bump 到 2', localAudioStore.commitSet(ACC, keep2, { tier: '新朋友', traits: '{}' }, { expectedRevision: 1 }), 2);
 const dropped = keep1[0];
 ok('st-11 被换条目仍可按归属取到', localAudioStore.getItem(ACC, dropped.id) !== null);
 ok('st-12 被换条目已不在 active', !localAudioStore.listActive(ACC).some((i) => i.id === dropped.id));
@@ -200,7 +213,7 @@ ok('st-12 被换条目已不在 active', !localAudioStore.listActive(ACC).some((
 // 归属与格式校验
 eq('st-13 别家账号取不到', localAudioStore.getItem('device-OTHER', dropped.id), null);
 eq('st-14 非法 id 格式拒', localAudioStore.getItem(ACC, '../etc/passwd'), null);
-ok('st-15 读音频字节', localAudioStore.readAudio(ACC, swapped.id)?.toString().startsWith('audio-') === true);
+ok('st-15 读音频字节', localAudioStore.readAudio(ACC, swapped.id, 'wav')?.subarray(0, 4).toString() === 'RIFF');
 
 // applied 触达
 localAudioStore.recordFetch(ACC, 2);
@@ -229,6 +242,7 @@ eq('st-19 新鲜 inactive 不清', localAudioStore.cleanup(ACC), 0);
   );
   db.close();
 }
+writeFileSync(localAudioStore.audioPath(ACC, dropped.id, 'wav') + '.pin', '0');
 eq('st-20 过期 inactive 清 1 条', localAudioStore.cleanup(ACC), 1);
 eq('st-21 清后取不到', localAudioStore.getItem(ACC, dropped.id), null);
 
@@ -247,7 +261,7 @@ eq('mf-7 保底常量', MIN_ITEMS_PER_SLOT, 2);
 localAudioStore.clearAccount(ACC);
 eq('cl-1 清后 revision 归 0', localAudioStore.getState(ACC).revision, 0);
 eq('cl-2 清后 active 空', localAudioStore.listActive(ACC).length, 0);
-eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), null);
+eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id, 'wav'), null);
 
 // ── WAV 增量（合同 CODEX_..._WAV_CONTRACT_DELTA §2）：RIFF 封装/回读/时长/严格拒收 ──
 {
@@ -276,16 +290,13 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
 // WAV 条目 manifest 字段（codec/bits_per_sample 只在 wav 条目出现）
 {
   const A2 = 'device-TESTSN002';
-  const { createHash } = await import('node:crypto');
+
   const mkw = (slot, seed, format) => {
-    const sha = createHash('sha256').update(`${slot}:${seed}:${format}`).digest('hex');
-    const id = sha.slice(0, 16);
-    localAudioStore.writeAudio(A2, id, Buffer.from(`a-${seed}`), format);
-    localAudioStore.insertItem(A2, { slot, id, text: `w${seed}`, sha256: sha, bytes: 8, duration_ms: 1500, format });
-    return { slot, id };
+    const id = createHash('sha256').update(`${slot}:${seed}:${format}`).digest('hex').slice(0, 16);
+    return stageFixture(A2, slot, id, `w${seed}`);
   };
   const keepW = LOCAL_AUDIO_SLOTS.flatMap((slot, i) => [mkw(slot, `${i}a`, 'wav'), mkw(slot, `${i}b`, 'wav')]);
-  eq('wf-1 wav 套 commit', localAudioStore.commitSet(A2, keepW, { tier: 't', traits: '{}' }), 1);
+  eq('wf-1 wav 套 commit', localAudioStore.commitSet(A2, keepW, { tier: 't', traits: '{}' }, { expectedRevision: 0 }), 1);
   const mw = localAudioStore.buildManifest(A2);
   const it = mw.slots['greeting.normal'][0];
   eq('wf-2 format=wav', it.format, 'wav');
@@ -328,19 +339,16 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   const A3 = 'device-TESTSN003';
   const { createHash: ch3 } = await import('node:crypto');
   const mkp = (slot: (typeof LOCAL_AUDIO_SLOTS)[number], seed: string) => {
-    const sha = ch3('sha256').update(`p:${slot}:${seed}`).digest('hex');
-    const id = sha.slice(0, 16);
-    localAudioStore.writeAudio(A3, id, Buffer.from(`p-${seed}`), 'wav');
-    localAudioStore.insertItem(A3, { slot, id, text: `p${slot}${seed}`, sha256: sha, bytes: 9, duration_ms: 2000, format: 'wav' });
-    return { slot, id };
+    const id = ch3('sha256').update(`p:${slot}:${seed}`).digest('hex').slice(0, 16);
+    return stageFixture(A3, slot, id, `p${slot}${seed}`);
   };
   const keep6 = REQUIRED_SLOTS.flatMap((slot, i) => [mkp(slot, `${i}a`), mkp(slot, `${i}b`)]);
-  eq('p-16 六必选套 commit rev=1', localAudioStore.commitSet(A3, keep6, { tier: 't', traits: '{}' }), 1);
+  eq('p-16 六必选套 commit rev=1', localAudioStore.commitSet(A3, keep6, { tier: 't', traits: '{}' }, { expectedRevision: 0 }), 1);
   const m6 = localAudioStore.buildManifest(A3);
   eq('p-17 manifest 恰六键', Object.keys(m6.slots).length, 6);
   ok('p-18 无 posture 键（缺失=键不存在非空数组）', !('posture.adjust' in m6.slots) && !('posture.no_face' in m6.slots));
   const keepP = [...keep6, mkp('posture.adjust', 'pa'), mkp('posture.adjust', 'pb')];
-  eq('p-19 加姿态套 commit rev=2', localAudioStore.commitSet(A3, keepP, { tier: 't', traits: '{}' }), 2);
+  eq('p-19 加姿态套 commit rev=2', localAudioStore.commitSet(A3, keepP, { tier: 't', traits: '{}' }, { expectedRevision: 1 }), 2);
   const m7 = localAudioStore.buildManifest(A3);
   eq('p-20 posture.adjust 2 条', ((m7.slots as Record<string, unknown[]>)['posture.adjust'] ?? []).length, 2);
   ok(
@@ -401,16 +409,13 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   const A4 = 'device-TESTSN004';
   const { createHash: ch4 } = await import('node:crypto');
   const mk4 = (slot: (typeof LOCAL_AUDIO_SLOTS)[number], seed: string) => {
-    const sha = ch4('sha256').update(`g:${slot}:${seed}`).digest('hex');
-    const id = sha.slice(0, 16);
-    localAudioStore.writeAudio(A4, id, Buffer.from(`g-${seed}`), 'wav');
-    localAudioStore.insertItem(A4, { slot, id, text: `g${slot}${seed}`, sha256: sha, bytes: 9, duration_ms: 2000, format: 'wav' });
-    return { slot, id };
+    const id = ch4('sha256').update(`g:${slot}:${seed}`).digest('hex').slice(0, 16);
+    return stageFixture(A4, slot, id, `g${slot}${seed}`);
   };
   const keepR = REQUIRED_SLOTS.flatMap((slot, i) => [mk4(slot, `${i}a`), mk4(slot, `${i}b`)]);
-  eq('g1-11 minRevision=5 跳号', localAudioStore.commitSet(A4, keepR, { tier: 't', traits: '{}' }, { minRevision: 5 }), 5);
+  eq('g1-11 minRevision=5 跳号', localAudioStore.commitSet(A4, keepR, { tier: 't', traits: '{}' }, { expectedRevision: 0, minRevision: 5 }), 5);
   const keepG = [...keepR, mk4('g1.progress.coin_earned', 'ca'), mk4('g1.progress.coin_earned', 'cb')];
-  eq('g1-12 跳号后续自然 +1', localAudioStore.commitSet(A4, keepG, { tier: 't', traits: '{}' }), 6);
+  eq('g1-12 跳号后续自然 +1', localAudioStore.commitSet(A4, keepG, { tier: 't', traits: '{}' }, { expectedRevision: 5 }), 6);
   // manifest G1 键形态（有条目=键出现，字段五件套齐）
   const mg = localAudioStore.buildManifest(A4);
   eq('g1-13 g1 slot 2 条', ((mg.slots as Record<string, unknown[]>)['g1.progress.coin_earned'] ?? []).length, 2);
@@ -421,7 +426,7 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
     ),
   );
   // minRevision 低于自然值时不倒退（MAX 语义负锚）
-  eq('g1-15 低 minRevision 不倒退', localAudioStore.commitSet(A4, keepR, { tier: 't', traits: '{}' }, { minRevision: 3 }), 7);
+  eq('g1-15 低 minRevision 不倒退', localAudioStore.commitSet(A4, keepR, { tier: 't', traits: '{}' }, { expectedRevision: 6, minRevision: 3 }), 7);
   localAudioStore.clearAccount(A4);
 }
 
@@ -444,21 +449,17 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   eq('dr-3 文本互不重复', new Set(Object.values(DEVICE_REPLY_TEXTS)).size, 18);
   eq('dr-4 冻结文本样点（codex 调整的三条）', [DEVICE_REPLY_TEXTS['device_reply.applied_absolute'], DEVICE_REPLY_TEXTS['device_reply.boundary.generic'], DEVICE_REPLY_TEXTS['device_reply.not_now']], ['好的，已经调好了', '已经调到头啦', '现在暂时不能这样调']);
   ok('dr-5 时长上限 3200ms', DEVICE_REPLY_MAX_MS === 3200);
-  // 现役：两个人格槽各 2 条（模拟已发布）
-  const mk = (slot: string, id: string, bytes: number) => localAudioStore.insertItem(ACC, { slot: slot as never, id, text: `t-${id}`, sha256: id.repeat(4), bytes, duration_ms: 1500, format: 'wav' });
-  mk('greeting.normal', 'aaaaaaaaaaaaaaa1', 90000); mk('greeting.normal', 'aaaaaaaaaaaaaaa2', 90000);
-  mk('farewell.general', 'bbbbbbbbbbbbbbb1', 90000); mk('farewell.general', 'bbbbbbbbbbbbbbb2', 90000);
-  const rev1 = localAudioStore.commitSet(ACC, [
-    { slot: 'greeting.normal', id: 'aaaaaaaaaaaaaaa1' }, { slot: 'greeting.normal', id: 'aaaaaaaaaaaaaaa2' },
-    { slot: 'farewell.general', id: 'bbbbbbbbbbbbbbb1' }, { slot: 'farewell.general', id: 'bbbbbbbbbbbbbbb2' },
-  ], { tier: 't', traits: '{}' });
+  // 现役：真实六必选槽各两条；后续追加十八条固定回复。
+  const mk = (slot: string, id: string, bytes: number) => stageFixture(ACC, slot as AnyAudioSlot, id, `t-${id}`, bytes);
+  const required = requiredFixture(ACC);
+  const rev1 = localAudioStore.commitSet(ACC, required, { tier: 't', traits: '{}' }, { expectedRevision: 0 });
   ok('dr-6 现役集合发布 revision≥1', (rev1 ?? 0) >= 1);
   // 十八条入 staging（active=0）：不进 manifest、不进 activeDeviceReplyKeep
   const drRows = DEVICE_REPLY_SLOTS.map((slot, i) => { const id = `d${String(i).padStart(15, '0')}`; mk(slot, id, 96000); return { id, bytes: 96000 }; });
   eq('dr-7 staging 不进现役 manifest', Object.keys(localAudioStore.buildManifest(ACC).slots).filter((k) => k.startsWith('device_reply.')).length, 0);
   eq('dr-8 日常搬运只认已 active 的设备回复条目（staging 为 0）', activeDeviceReplyKeep(ACC).length, 0);
   const rep = candidateManifestReport(ACC, drRows, 5 * 1024 * 1024);
-  eq('dr-9 候选 manifest = 现役 ∪ 十八条按 id 去重求和', { files: rep.candidate_unique_files, bytes: rep.candidate_bytes, dr: rep.device_reply_items }, { files: 22, bytes: 4 * 90000 + 18 * 96000, dr: 18 });
+  eq('dr-9 候选 manifest = 现役 ∪ 十八条按 id 去重求和', { files: rep.candidate_unique_files, bytes: rep.candidate_bytes, dr: rep.device_reply_items }, { files: 30, bytes: 12 * 48044 + 18 * 96000, dr: 18 });
   eq('dr-10 旧槽计数与未丢失证明', { gn: rep.old_slot_counts['greeting.normal'], short: rep.old_slots_short }, { gn: 2, short: [] });
   ok('dr-11 在 5MiB 内且余量为正', rep.within_cap && rep.headroom_bytes > 0);
   const over = candidateManifestReport(ACC, drRows.map((r) => ({ ...r, bytes: 300000 })), 5 * 1024 * 1024);
@@ -467,7 +468,7 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   const rev2 = localAudioStore.commitSet(ACC, [
     ...localAudioStore.listActive(ACC).map((i) => ({ slot: i.slot, id: i.id })),
     ...DEVICE_REPLY_SLOTS.map((slot, i) => ({ slot, id: `d${String(i).padStart(15, '0')}` })),
-  ], { tier: 't', traits: '{}' });
+  ], { tier: 't', traits: '{}' }, { expectedRevision: 1 });
   eq('dr-13 显式发布 bump revision', (rev2 ?? 0), (rev1 ?? 0) + 1);
   const m = localAudioStore.buildManifest(ACC);
   eq('dr-14 发布后 manifest 含十八槽各 1 条', DEVICE_REPLY_SLOTS.every((s) => (m.slots[s] ?? []).length === 1), true);
@@ -476,14 +477,15 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   // dr-17：设备回复槽的 staging 条目豁免 14 天清理（等 APK 期间 SHA 不能变）
   const ACC2 = 'device-BJP00326060100200098';
   mk('greeting.normal', 'eeeeeeeeeeeeeee1', 1000);
-  localAudioStore.insertItem(ACC2, { slot: 'device_reply.already', id: 'fffffffffffffff1', text: '现在就是这样啦', sha256: 'f'.repeat(64), bytes: 1000, duration_ms: 1000, format: 'wav' });
-  localAudioStore.insertItem(ACC2, { slot: 'greeting.normal', id: 'fffffffffffffff2', text: 'x', sha256: 'e'.repeat(64), bytes: 1000, duration_ms: 1000, format: 'wav' });
+  stageFixture(ACC2, 'device_reply.already', 'fffffffffffffff1', '现在就是这样啦');
+  stageFixture(ACC2, 'greeting.normal', 'fffffffffffffff2', '我在呢');
   {
     const { DatabaseSync } = await import('node:sqlite');
     const db = new DatabaseSync(process.env.PROFILE_DB_PATH!);
     db.prepare(`UPDATE local_audio_item SET created_at = ? WHERE account_id = ? AND active = 0`).run(Date.now() - 15 * 86_400_000, ACC2);
     db.close();
   }
+  writeFileSync(localAudioStore.audioPath(ACC2, 'fffffffffffffff2', 'wav') + '.pin', '0');
   eq('dr-17 过期 staging 只清人格槽，设备回复槽豁免', localAudioStore.cleanup(ACC2), 1);
   ok('dr-18 设备回复 staging 条目仍在', localAudioStore.getItem(ACC2, 'fffffffffffffff1') !== null && localAudioStore.getItem(ACC2, 'fffffffffffffff2') === null);
 }
@@ -495,11 +497,10 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   const t0 = localAudioStore.listTextsForEcho(ACC3);
   ok('eb-1 无动态套的账号回声库=内置招呼语(greeting.builtin)', t0.length === BUILTIN_GREETING_TEXTS.length && t0.every((r) => r.slot === 'greeting.builtin'));
   ok('eb-2 内置含 0001 首日被当用户话的两句', t0.some((r) => r.text === '来啦，想聊点啥？') && t0.some((r) => r.text === '哟，你来啦。'));
-  localAudioStore.writeAudio(ACC3, 'eb00000000000001', Buffer.from('x'), 'wav');
-  localAudioStore.insertItem(ACC3, { slot: 'greeting.normal', id: 'eb00000000000001', text: '嗨，我醒啦', sha256: 'eb00000000000001'.repeat(4), bytes: 1, duration_ms: 1000, format: 'wav' });
-  localAudioStore.commitSet(ACC3, [{ slot: 'greeting.normal', id: 'eb00000000000001' }], { tier: '新朋友', traits: '{}' });
+  const echoSet = requiredFixture(ACC3);
+  localAudioStore.commitSet(ACC3, echoSet, { tier: '新朋友', traits: '{}' }, { expectedRevision: 0 });
   const t1 = localAudioStore.listTextsForEcho(ACC3);
-  ok('eb-3 有动态套时=动态在前 ∪ 内置', t1[0]?.slot === 'greeting.normal' && t1[0]?.text === '嗨，我醒啦' && t1.length === 1 + BUILTIN_GREETING_TEXTS.length);
+  ok('eb-3 有动态套时=动态在前 ∪ 内置', t1.some(r => r.slot === 'greeting.normal' && r.text === '短句0') && t1.length === 12 + BUILTIN_GREETING_TEXTS.length && t1[0]?.slot !== 'greeting.builtin');
   process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS = '测试追加句, 来啦。';
   ok('eb-4 env 追加去重', builtinGreetingTexts().length === BUILTIN_GREETING_TEXTS.length + 1 && localAudioStore.listTextsForEcho(ACC3).some((r) => r.text === '测试追加句'));
   delete process.env.LOCAL_AUDIO_BUILTIN_GREETING_TEXTS;
@@ -540,12 +541,10 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   badSr.writeUInt32LE(22050, 24);
   badSr.writeUInt32LE(44100, 28);
   eq('gs-4 校验拒：intro 8.1s / exit 401KiB / 22.05k 采样率 / 非 WAV', [validateG1SettingsWav('g1.settings.intro', wavOf(388800)), validateG1SettingsWav('g1.settings.exit', wavOf(409600)), validateG1SettingsWav('g1.settings.enter', badSr), validateG1SettingsWav('g1.settings.enter', Buffer.from('not a wav'))].map((v) => (v.ok ? 'ok' : v.reason.split(':')[0])), ['too_long_audio', 'file_too_big', 'bad_format', 'bad_wav']);
-  // 基线现役（模拟已发布套中的一槽两条）
-  const mk2 = (acc: string, id: string, bytes: number) => localAudioStore.insertItem(acc, { slot: 'greeting.normal', id, text: `t-${id}`, sha256: id.repeat(4), bytes, duration_ms: 1500, format: 'wav' });
+  // 基线现役：六必选槽齐全，所有字节与清单一致。
   for (const acc of [A1, A2]) {
-    mk2(acc, 'ccccccccccccccc1', 90000);
-    mk2(acc, 'ccccccccccccccc2', 90000);
-    localAudioStore.commitSet(acc, [{ slot: 'greeting.normal', id: 'ccccccccccccccc1' }, { slot: 'greeting.normal', id: 'ccccccccccccccc2' }], { tier: 't', traits: '{}' });
+    const required = requiredFixture(acc);
+    localAudioStore.commitSet(acc, required, { tier: 't', traits: '{}' }, { expectedRevision: 0 });
   }
   const revA1 = localAudioStore.getState(A1).revision;
   let synthCalls = 0;
@@ -559,7 +558,7 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   const rows1 = stageG1SettingsClips([A1, A2], r1.clips);
   const idsA1 = rows1.filter((r) => r.account_id === A1).map((r) => r.id);
   const idsA2 = rows1.filter((r) => r.account_id === A2).map((r) => r.id);
-  eq('gs-6 扇出：两账号同槽同 id（同字节同 id）且 id=sha 前 16 位', { same: JSON.stringify(idsA1) === JSON.stringify(idsA2), hex: idsA1.every((id) => /^[0-9a-f]{16}$/.test(id)), pref: rows1.every((r) => r.sha256.startsWith(r.id)) }, { same: true, hex: true, pref: true });
+  eq('gs-6 扇出：两账号同槽同 id（同场景同元信息同 id）且 ID 与字节SHA独立', { same: JSON.stringify(idsA1) === JSON.stringify(idsA2), hex: idsA1.every((id) => /^[0-9a-f]{16}$/.test(id)), pref: rows1.every((r) => r.sha256.startsWith(r.id)) }, { same: true, hex: true, pref: false });
   eq('gs-7 staging 不进 manifest / 不进搬运 / report 可见', { m: Object.keys(localAudioStore.buildManifest(A1).slots).filter((k) => k.startsWith('g1.settings.')).length, keep: activeG1SettingsKeep(A1).length, cur: currentG1SettingsRows(A1).map((r) => r.origin) }, { m: 0, keep: 0, cur: ['staged', 'staged', 'staged'] });
   synthCalls = 0;
   const r2 = await resolveG1SettingsClips([A1], { synthesize: fakeSynth });
@@ -567,7 +566,7 @@ eq('cl-3 清后文件读不到', localAudioStore.readAudio(ACC, swapped.id), nul
   const rows2 = stageG1SettingsClips([A1], r2.clips);
   eq('gs-9 重复 stage 幂等（existing，不重写）', rows2.map((r) => r.origin), ['existing', 'existing', 'existing']);
   const rep = candidateManifestReport(A1, rows1.filter((r) => r.account_id === A1), REVISION_CAP_BYTES);
-  eq('gs-10 候选预算 = 现役 2 条 + 三句', { files: rep.candidate_unique_files, bytes: rep.candidate_bytes, within: rep.within_cap }, { files: 5, bytes: 180000 + enterWav.length + introWav.length + exitWav.length, within: true });
+  eq('gs-10 候选预算 = 现役 12 条 + 三句', { files: rep.candidate_unique_files, bytes: rep.candidate_bytes, within: rep.within_cap }, { files: 15, bytes: 12 * 48044 + enterWav.length + introWav.length + exitWav.length, within: true });
   const pub = publishG1Settings(A1, rows1.filter((r) => r.account_id === A1));
   const m1 = localAudioStore.buildManifest(A1);
   eq('gs-11 发布：revision +1，三槽各 1 条，旧槽不丢', { before: pub.before, after: pub.after, g1: G1_SETTINGS_SLOTS.map((s) => (m1.slots[s] ?? []).length), old: (m1.slots['greeting.normal'] ?? []).length, rev: m1.revision }, { before: revA1, after: revA1 + 1, g1: [1, 1, 1], old: 2, rev: revA1 + 1 });

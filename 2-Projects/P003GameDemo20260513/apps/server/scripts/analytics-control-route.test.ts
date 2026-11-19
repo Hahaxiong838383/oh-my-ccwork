@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {analyticsControlRoute} from '../src/analytics/control-route.js';
+import type {UploadPolicy} from '../src/analytics/upload-policy.js';
+const a='BJP00326070803800006',b='BJP00326081002000026';
+let policy:UploadPolicy|null=null,failed=false,calls=0;
+const app=analyticsControlRoute({authorize:h=>h==='admin'?'admin':h?'other':'none',internalUrl:'http://127.0.0.1:3006',internalSecret:'fake',devices:()=>[{sn:a,note:'A',status:'active'},{sn:b,note:'B',status:'active'}],policy:()=>policy,save:(p)=>{policy={version:1,revision:p.expected_revision+1,enabled:p.enabled,subjects:p.subjects,hour:p.hour,updated_at_ms:Date.now()};return policy;},fetchImpl:async(input)=>{calls++;if(failed)throw new Error('offline');return Response.json(String(input).endsWith('/capacity')?{ok:true,max_enabled_devices:1,checked_at_ms:Date.now()}:{ok:true,revision:0,enabled:true,subjects:[a],hour:23,effective_enabled:true,valid:true,emergency_gate:{enabled:true,valid:true},managed:false});}});
+const put=(p:any,auth='admin')=>app.request('/',{method:'PUT',headers:{Authorization:auth,'Content-Type':'application/json'},body:JSON.stringify(p)});
+const payload={expected_revision:0,enabled:true,subjects:[a,b],hour:23};
+assert.equal((await put(payload,'other')).status,403);assert.equal((await app.request('/')).status,401);
+assert.equal((await app.request('/',{headers:{Authorization:'admin'}})).status,200);
+let r=await put(payload);assert.equal(r.status,409);assert.equal((await r.json()).error,'CAPACITY_LIMIT');assert.equal(policy,null);
+r=await put({...payload,subjects:[b]});assert.equal(r.status,200);assert.deepEqual(policy?.subjects,[b]);
+assert.equal((await put(payload)).status,409);
+failed=true;const offline=await app.request('/',{headers:{Authorization:'admin'}});assert.equal(offline.status,200);assert.equal((await offline.json()).runtime_available,false);const before=calls;r=await put({...payload,expected_revision:1,enabled:false,subjects:[b]});assert.equal(r.status,200);assert.equal(calls,before,'stop does not need dependency');
+r=await put({...payload,expected_revision:2,subjects:[b]});assert.equal(r.status,503,'restart verifies capacity');
+failed=false;assert.equal((await put({...payload,expected_revision:2,subjects:[b,b]})).status,400);
+console.log('analytics control HTTP: PASS (auth, limit, stop while offline, revision, duplicate validation)');
