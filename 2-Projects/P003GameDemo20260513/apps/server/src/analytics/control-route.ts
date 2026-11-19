@@ -3,7 +3,7 @@ import {parseUploadChange,type UploadPolicy} from './upload-policy.js';
 import {readBoundedJson} from '../ark/http.js';
 type Device={sn:string;note:string;status:string};
 type Status={ok:true;revision:number;enabled:boolean;subjects:string[];hour:number;effective_enabled:boolean;valid:boolean;emergency_gate:{enabled:boolean;valid:boolean};managed:boolean};
-type Options={authorize:(header:string|undefined)=>string;internalUrl:string;internalSecret:string;fetchImpl?:typeof fetch;devices:()=>Device[];policy:()=>UploadPolicy|null;save:(p:ReturnType<typeof parseUploadChange>,active:string[],by:string)=>UploadPolicy};
+type Options={authorize:(header:string|undefined)=>string;internalUrl:string;internalSecret:string;fetchImpl?:typeof fetch;devices:()=>Device[];policy:()=>UploadPolicy|null;storageRevision?:()=>number;save:(p:ReturnType<typeof parseUploadChange>,active:string[],by:string,admission?:{revision:number;limit:number;checked_at_ms:number})=>UploadPolicy};
 export function analyticsControlRoute(o:Options){
   const app=new Hono();
   app.use('*',async(c,next)=>{const role=o.authorize(c.req.header('authorization'));if(role!=='admin')return c.json({ok:false,error:role==='none'?'unauthorized':'forbidden_analytics'},role==='none'?401:403);c.header('Cache-Control','no-store');await next();});
@@ -32,13 +32,18 @@ export function analyticsControlRoute(o:Options){
     if(!p.enabled)p.subjects=p.subjects.filter(s=>active.includes(s));
     const previous:Pick<Status,'enabled'|'subjects'>=current??(p.enabled?await internal('upload-status'):{enabled:false,subjects:[]});
     const increases=p.enabled&&(!current||!previous.enabled||p.subjects.some(s=>!previous.subjects.includes(s)));
+    let admission:{revision:number;limit:number;checked_at_ms:number}|undefined;
     if(increases){
       let cap:any;try{cap=await internal('capacity');}catch{return c.json({ok:false,error:'CAPACITY_UNAVAILABLE'},503);}
       if(!Number.isSafeInteger(cap.max_enabled_devices)||cap.max_enabled_devices<0||!Number.isSafeInteger(cap.checked_at_ms)||cap.checked_at_ms<Date.now()-120_000||cap.checked_at_ms>Date.now()+5000)return c.json({ok:false,error:'CAPACITY_UNAVAILABLE'},503);
       if(p.subjects.length>cap.max_enabled_devices)return c.json({ok:false,error:'CAPACITY_LIMIT',max_enabled_devices:cap.max_enabled_devices},409);
+      if(o.storageRevision){
+        if(cap.storage_policy_revision!==o.storageRevision())return c.json({ok:false,error:'STORAGE_POLICY_CONFLICT'},409);
+        admission={revision:cap.storage_policy_revision,limit:cap.max_enabled_devices,checked_at_ms:cap.checked_at_ms};
+      }
     }
-    try{const saved=o.save(p,active,'admin');return c.json({ok:true,policy:saved,client_applied:false});}
-    catch(e){const code=(e as Error).message;return c.json({ok:false,error:code==='POLICY_CONFLICT'?code:'POLICY_SAVE_FAILED'},code==='POLICY_CONFLICT'?409:503);}
+    try{const saved=o.save(p,active,'admin',admission);return c.json({ok:true,policy:saved,client_applied:false});}
+    catch(e){const code=(e as Error).message,conflict=['POLICY_CONFLICT','STORAGE_POLICY_CONFLICT','CAPACITY_LIMIT'].includes(code);return c.json({ok:false,error:conflict?code:'POLICY_SAVE_FAILED'},conflict?409:503);}
   });
   app.onError((_e,c)=>c.json({ok:false,error:'ANALYTICS_CONTROL_UNAVAILABLE'},503));
   return app;

@@ -8,7 +8,7 @@ import { searchFailure, type SearchFailureInfo } from './search-failure.js';
 export type RoutingClaim = { version: string; rule_id: string; weather?: import('./moji-weather.js').WeatherRequest; auto_weather?: import('./moji-weather.js').AutoWeatherRequest; place_weather?: import('./baidu-weather.js').PlaceWeatherRequest };
 export type TaskRouting = RoutingClaim & { weather_enabled: boolean; auto_location_enabled?: boolean; baidu_weather_enabled?: boolean };
 export type SearchOwner = { subject: string; session: string };
-export type SearchResult = { grounding?: {version:2;notice?:string;claims:{text:string;evidence:{source_id:number;quote:string}[]}[]}; weather?: import('./moji-weather.js').WeatherEvidence | import('./baidu-weather.js').BaiduWeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
+export type SearchResult = { clock?: {observed_at_ms:number;iana?:string}; grounding?: {version:2;notice?:string;claims:{text:string;evidence:{source_id:number;quote:string}[]}[]}; weather?: import('./moji-weather.js').WeatherEvidence | import('./baidu-weather.js').BaiduWeatherEvidence; diagnostics?: import('./search-executor.js').SearchDiagnostics; text: string; sources: { title: string; url: string; date: string | null }[] };
 export type SearchTask = SearchOwner & {
   id: string; key: string; turn: string; revision: number; routing?: TaskRouting;
   status: 'queued' | 'running' | 'ready' | 'delivered' | 'failed' | 'cancelled' | 'expired';
@@ -22,7 +22,7 @@ export type SearchTask = SearchOwner & {
 type Options = {
   dbPath: string; execute: (query: string, signal: AbortSignal, owner: SearchTask) => Promise<SearchResult>;
   enabled: () => boolean; allowed: (subject: string) => boolean; now?: () => number;
-  canSubmit?: (routing?: TaskRouting) => boolean;
+  canSubmit?: (routing?: TaskRouting, query?:string) => boolean;
   resolveRouting?: (owner: SearchOwner, claim: RoutingClaim) => TaskRouting;
   resumeEnabled?: () => boolean; resumeScope?: (o:SearchOwner) => string|null; windowDeadline?: () => number;
   concurrency?: number; queueLimit?: number; dailyDeviceLimit?: number; dailyGlobalLimit?: number;
@@ -98,7 +98,7 @@ export class SearchTasks {
     const prior = this.db.prepare('SELECT body FROM tasks WHERE dedupe=?').get(key) as { body: string } | undefined;
     if (prior) return JSON.parse(prior.body);
     const routing = input.routing ? this.opts.resolveRouting?.(owner, input.routing) ?? fail('routing_version_unknown') : undefined;
-    if (this.opts.canSubmit && !this.opts.canSubmit(routing)) return fail('upstream_paused');
+    if (this.opts.canSubmit && !this.opts.canSubmit(routing,query)) return fail('upstream_paused');
     this.tick();
     const all = this.all();
     // Bound paid work even after restarts; CST calendar day.
@@ -143,7 +143,7 @@ export class SearchTasks {
       if (current.status !== 'running' || controller.signal.aborted) return;
       if (!result.text.trim() || [...result.text].length > 150 || /\[\[|\]\]|https?:\/\//i.test(result.text) || result.sources.length > 3) throw new Error('invalid_result');
       current.result = result; current.diagnostics = result.diagnostics;
-      current.outcome = result.sources.length ? 'answered' : 'no_evidence';
+      current.outcome = result.sources.length || result.clock ? 'answered' : 'no_evidence';
       current.status = 'ready'; current.readyAt = this.now(); this.save(current);
     } catch (e) {
       if (!this.closed) {
