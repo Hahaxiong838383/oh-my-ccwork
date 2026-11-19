@@ -89,7 +89,7 @@ export async function flushIdle(now = Date.now()): Promise<number> {
     _pending.set(acct, { count: 0, lastTs: p.lastTs, lastExtractedTs: now });
     if (!rows.length) continue;
     try {
-      await extractAndPersist(acct, rows.map((r) => ({ role: r.role, content: r.text, id: r.id })), 'rtc', { reason: 'idle' });
+      await extractAndPersist(acct, rows.map((r) => ({ role: r.role, content: r.text, id: r.id, memory_excluded: r.memory_excluded })), 'rtc', { reason: 'idle' });
       flushed += 1;
     } catch (err) {
       console.log('[memory] idle 补抽失败(不影响语音):', String((err as Error)?.message ?? err));

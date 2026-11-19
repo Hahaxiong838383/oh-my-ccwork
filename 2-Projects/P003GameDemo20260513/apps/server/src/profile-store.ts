@@ -49,6 +49,8 @@ export type FamilyMember = {
   account_id: string;
   nickname: string;
   birthday: string; // "2018-08"，可空
+  age_years?: number | null; // 本人明确说出的周岁，不推算生日
+  age_observed_at?: number | null;
   gender: string; // "男孩" / "女孩"，可空
   // P1 画像字段（语音抽取写入）
   interests: InterestItem[]; // 兴趣（恐龙/奥特曼…）
@@ -104,7 +106,7 @@ function resolveDbPath(): string {
 }
 
 const FAMILY_COLUMNS =
-  'id, account_id, nickname, birthday, gender, interests, preferred_address, personality_notes, recent_emotion, game_progress, created_at, updated_at';
+  'id, account_id, nickname, birthday, gender, interests, preferred_address, personality_notes, recent_emotion, game_progress, created_at, updated_at, age_years, age_observed_at';
 
 class ProfileStore {
   private readonly db: DatabaseSync;
@@ -155,6 +157,8 @@ class ProfileStore {
       add('personality_notes', '');
       add('recent_emotion', '');
       add('game_progress', '[]');
+      if (!has('age_years')) this.db.exec('ALTER TABLE family_member ADD COLUMN age_years INTEGER');
+      if (!has('age_observed_at')) this.db.exec('ALTER TABLE family_member ADD COLUMN age_observed_at INTEGER');
     } catch (err) {
       // CREATE TABLE 已含新列（新库无碍）；老库迁移失败记日志、不阻断启动，后续人工处理。
       console.error('[profile-store] migrate 失败(不阻断启动):', String((err as Error)?.message ?? err));
@@ -186,24 +190,25 @@ class ProfileStore {
       nickname: src.nickname,
       birthday: src.birthday,
       gender: src.gender,
-    });
+    }, true);
   }
 
   /** 原型：一个账号一个孩子档案。已存在则更新基础信息，不存在则插入。 */
-  upsertProfile(accountId: string, input: ProfileInput): FamilyMember {
+  upsertProfile(accountId: string, input: ProfileInput, resetObservedAge = false): FamilyMember {
     const now = Date.now();
     const existing = this.getProfile(accountId);
     if (existing) {
+      const clearAge = resetObservedAge || Boolean(input.birthday.trim());
       this.db
-        .prepare(`UPDATE family_member SET nickname = ?, birthday = ?, gender = ?, updated_at = ? WHERE id = ?`)
-        .run(input.nickname, input.birthday, input.gender, now, existing.id);
-      return { ...existing, ...input, updated_at: now };
+        .prepare(`UPDATE family_member SET nickname = ?, birthday = ?, gender = ?, updated_at = ?, age_years = ?, age_observed_at = ? WHERE id = ?`)
+        .run(input.nickname, input.birthday, input.gender, now, clearAge ? null : existing.age_years ?? null, clearAge ? null : existing.age_observed_at ?? null, existing.id);
+      return { ...existing, ...input, updated_at: now, age_years: clearAge ? null : existing.age_years, age_observed_at: clearAge ? null : existing.age_observed_at };
     }
     const id = randomUUID();
     this.db
       .prepare(`
         INSERT INTO family_member (${FAMILY_COLUMNS})
-        VALUES (?, ?, ?, ?, ?, '[]', '', '', '', '[]', ?, ?)
+        VALUES (?, ?, ?, ?, ?, '[]', '', '', '', '[]', ?, ?, NULL, NULL)
       `)
       .run(id, accountId, input.nickname, input.birthday, input.gender, now, now);
     return {

@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
+import { deviceRegistryStore, type BindingExpectation } from './device-registry-store.js';
 
 /**
  * 配网 bind_token 数据层（联调合同 v3 §3 + 三项口径确认回执 2026-08-22）。
@@ -44,6 +45,9 @@ export type PairingSessionRow = {
   preauth_created_at: number | null;
   /** 恢复合同（2026-09-17）：本会话真实 claim 的绑定结局 new / existing_binding_recovery；幂等恢复原样回显；老行 null */
   binding_outcome: BindingOutcome | null;
+  binding_version: number | null;
+  binding_parent_account_id: string | null;
+  activated_at: number | null;
 };
 
 /** 恢复合同：existing_binding_recovery = 同家长重绑且该 SN 此前签过凭据（设备曾持有凭据，本次是恢复）；其余 new */
@@ -67,6 +71,8 @@ export type DevicePreauthRow = {
   created_by: string;
   created_at: number;
   used_at: number | null;
+  binding_version: number | null;
+  binding_parent_account_id: string | null;
 };
 
 const DEFAULT_DB_PATH = './data/pairing.db';
@@ -151,6 +157,13 @@ class PairingStore {
       if (!cols.some((c) => c.name === 'preauth_created_at')) {
         this.db.exec(`ALTER TABLE pairing_session ADD COLUMN preauth_created_at INTEGER`);
       }
+      for (const name of ['binding_version', 'activated_at']) {
+        if (!cols.some(c => c.name === name)) this.db.exec(`ALTER TABLE pairing_session ADD COLUMN ${name} INTEGER`);
+      }
+      if (!cols.some(c => c.name === 'binding_parent_account_id')) this.db.exec('ALTER TABLE pairing_session ADD COLUMN binding_parent_account_id TEXT');
+      const preauthCols = this.db.prepare('PRAGMA table_info(device_preauth)').all() as Array<{ name: string }>;
+      if (!preauthCols.some(c => c.name === 'binding_version')) this.db.exec('ALTER TABLE device_preauth ADD COLUMN binding_version INTEGER');
+      if (!preauthCols.some(c => c.name === 'binding_parent_account_id')) this.db.exec('ALTER TABLE device_preauth ADD COLUMN binding_parent_account_id TEXT');
       if (!cols.some((c) => c.name === 'binding_outcome')) {
         this.db.exec(`ALTER TABLE pairing_session ADD COLUMN binding_outcome TEXT`);
       }
@@ -191,8 +204,8 @@ class PairingStore {
   // ───────── v2：nonce 会话（SoftAP 两阶段 + ECIES）─────────
 
   /** 家长 confirm：固定三元组。同 SN 未 claim 的旧会话作废（一台设备一个有效会话）。 */
-  confirmSession(accountId: string, sn: string, nonceString: string, devicePkB64: string): { sessionId: string } {
-    return this.confirmSessionByHash(accountId, sn, hashToken(nonceString), devicePkB64, 'parent');
+  confirmSession(accountId: string, sn: string, nonceString: string, devicePkB64: string, bindingVersion: number | null = null, bindingParentAccountId: string | null = null): { sessionId: string } {
+    return this.confirmSessionByHash(accountId, sn, hashToken(nonceString), devicePkB64, 'parent', null, bindingVersion, bindingParentAccountId);
   }
 
   /**
@@ -207,7 +220,16 @@ class PairingStore {
     devicePkB64: string,
     source: PairingSessionSource,
     preauthCreatedAt: number | null = null,
+    bindingVersion: number | null = null,
+    bindingParentAccountId: string | null = null,
   ): { sessionId: string } {
+    const previous = this.findSessionByHash(nonceHash);
+    if (previous && previous.account_id === accountId && previous.sn === sn && previous.device_pk === devicePkB64
+      && previous.binding_version !== null && previous.binding_version === bindingVersion
+      && (previous.claimed_at || previous.binding_parent_account_id === bindingParentAccountId)
+      && (previous.claimed_at ? Date.now() - previous.claimed_at < IDEMPOTENT_WINDOW_MS : previous.expires_at > Date.now())) {
+      return { sessionId: previous.session_id };
+    }
     const sessionId = randomBytes(9).toString('base64url');
     const now = Date.now();
     this.db.exec('BEGIN IMMEDIATE');
@@ -215,10 +237,10 @@ class PairingStore {
       this.db.prepare(`DELETE FROM pairing_session WHERE sn = ? AND claimed_at IS NULL`).run(sn);
       this.db
         .prepare(
-          `INSERT INTO pairing_session (nonce_hash, session_id, sn, account_id, device_pk, confirmed_at, expires_at, source, preauth_created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          `INSERT INTO pairing_session (nonce_hash, session_id, sn, account_id, device_pk, confirmed_at, expires_at, source, preauth_created_at, binding_version, binding_parent_account_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         )
-        .run(nonceHash, sessionId, sn, accountId, devicePkB64, now, now + TOKEN_TTL_S * 1000, source, preauthCreatedAt);
+        .run(nonceHash, sessionId, sn, accountId, devicePkB64, now, now + TOKEN_TTL_S * 1000, source, preauthCreatedAt, bindingVersion, bindingParentAccountId);
       this.db.exec('COMMIT');
     } catch (err) {
       this.db.exec('ROLLBACK');
@@ -258,10 +280,17 @@ class PairingStore {
     return (this.db.prepare(`SELECT * FROM pairing_session WHERE session_id = ?`).get(sessionId) as PairingSessionRow) ?? null;
   }
 
-  markSessionClaimed(nonceString: string, brainState: 'ready' | 'initializing', bindingOutcome: BindingOutcome | null = null): void {
+  markSessionClaimed(nonceString: string, brainState: 'ready' | 'initializing', bindingOutcome: BindingOutcome | null = null, bindingVersion: number | null = null): void {
     this.db
-      .prepare(`UPDATE pairing_session SET claimed_at = ?, brain_state = ?, binding_outcome = ? WHERE nonce_hash = ?`)
-      .run(Date.now(), brainState, bindingOutcome, hashToken(nonceString));
+      .prepare(`UPDATE pairing_session SET claimed_at = ?, brain_state = ?, binding_outcome = ?, binding_version = ? WHERE nonce_hash = ?`)
+      .run(Date.now(), brainState, bindingOutcome, bindingVersion, hashToken(nonceString));
+  }
+
+  /** Only a successfully authenticated credential for this exact claim can activate it. */
+  markSessionActivated(sessionId: string, sn: string, accountId: string, bindingVersion: number): void {
+    this.db.prepare(`UPDATE pairing_session SET activated_at=COALESCE(activated_at,?)
+      WHERE session_id=? AND sn=? AND account_id=? AND binding_version=? AND claimed_at IS NOT NULL`)
+      .run(Date.now(), sessionId, sn, accountId, bindingVersion);
   }
 
   // ───────── v3：announce（设备自报三元组）+ 后台预授权 ─────────
@@ -301,15 +330,25 @@ class PairingStore {
   }
 
   /** 写/覆盖预授权（同 SN 一条；覆盖即重新计时、清 used_at）。 */
-  setPreauth(sn: string, parentAccountId: string, phone: string, untilAt: number, createdBy: string, now = Date.now()): DevicePreauthRow {
-    const row: DevicePreauthRow = { sn, parent_account_id: parentAccountId, phone, until_at: untilAt, created_by: createdBy, created_at: now, used_at: null };
-    this.db
-      .prepare(
-        `INSERT OR REPLACE INTO device_preauth (sn, parent_account_id, phone, until_at, created_by, created_at, used_at)
-         VALUES (?, ?, ?, ?, ?, ?, NULL)`,
-      )
-      .run(sn, parentAccountId, phone, untilAt, createdBy, now);
-    return row;
+  setPreauth(sn: string, parentAccountId: string, phone: string, untilAt: number, createdBy: string, now = Date.now(), expected?: BindingExpectation): DevicePreauthRow {
+    const device = deviceRegistryStore.get(sn);
+    // Snapshot at creation only. Historical rows remain null and are never stamped with a later generation.
+    const version = expected?.bindingVersion ?? device?.binding_version ?? null;
+    const owner = expected ? expected.parentAccountId : device?.parent_account_id ?? null;
+    this.db.prepare(`INSERT OR REPLACE INTO device_preauth
+      (sn,parent_account_id,phone,until_at,created_by,created_at,used_at,binding_version,binding_parent_account_id)
+      VALUES (?,?,?,?,?,?,NULL,?,?)`).run(sn,parentAccountId,phone,untilAt,createdBy,now,version,owner);
+    return this.getPreauth(sn)!;
+  }
+
+  /** Cross-database cleanup is secondary; final device-registry CAS remains authoritative. */
+  invalidateBindingIntents(sn: string, throughVersion: number): void {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.db.prepare('DELETE FROM device_preauth WHERE sn=? AND (binding_version IS NULL OR binding_version<=?)').run(sn, throughVersion);
+      this.db.prepare('DELETE FROM pairing_session WHERE sn=? AND claimed_at IS NULL AND (binding_version IS NULL OR binding_version<=?)').run(sn, throughVersion);
+      this.db.exec('COMMIT');
+    } catch (error) { this.db.exec('ROLLBACK'); throw error; }
   }
 
   getPreauth(sn: string): DevicePreauthRow | null {

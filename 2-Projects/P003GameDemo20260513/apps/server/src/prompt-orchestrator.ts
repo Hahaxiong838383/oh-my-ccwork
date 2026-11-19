@@ -85,7 +85,7 @@ export function buildOnboardingGuide(p: FamilyMember | null): string | null {
   // 字段防御：?? '' 兜底非字符串历史/异常数据，避免 .trim() 抛错阻断主链路（failsafe）。
   const missingNickname = !p || !(p.nickname ?? '').trim();
   const missingGender = !p || !(p.gender ?? '').trim();
-  const missingBirthday = !p || !(p.birthday ?? '').trim();
+  const missingBirthday = !p || (!(p.birthday ?? '').trim() && !Number.isInteger(p.age_years));
   if (!missingNickname && !missingGender && !missingBirthday) return null;
 
   const lines = [
@@ -120,7 +120,7 @@ function buildChildMemoryBlock(
       if (p.gender) gender = sanitizeField(p.gender);
       // 年龄同样 profile 权威（team #6）：有生日就用生日算的年龄覆盖前端 meta（防前端传过时年龄），
       // 无生日才保留前端 meta.age。
-      const profileAge = ageFromBirthday(p.birthday);
+      const profileAge = ageFromBirthday(p.birthday) || (Number.isInteger(p.age_years) && p.age_observed_at ? `${new Date(p.age_observed_at).toISOString().slice(0, 10)}自述${p.age_years}岁（出生年月未知，不推算生日）` : '');
       if (profileAge) age = profileAge;
       // P1.3 语音抽取沉淀的画像（兴趣/称呼偏好/近期情绪）也注入，让小可真正「懂这个孩子」。
       interests = p.interests.filter((i) => interestState(i) === 'verified').map((i) => sanitizeField(i.value)).filter(Boolean).slice(0, 5);

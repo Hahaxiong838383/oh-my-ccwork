@@ -1,0 +1,12 @@
+import {DatabaseSync} from 'node:sqlite';import {resolve} from 'node:path';import {z} from 'zod';import {ObservationError} from './history-observations.js';
+export const HistoryScopeSchema=z.object({public_id:z.string().regex(/^dev_[a-f0-9]{16}$/),sn:z.string().regex(/^BJP003\d{14}$/),parent_account_id:z.string().min(1).max(256),account_id:z.string().min(1).max(256),binding_version:z.number().int().nonnegative().safe(),epoch:z.number().int().positive().safe()}).strict();
+export type HistoryScope=z.infer<typeof HistoryScopeSchema>;
+export function configuredHistoryScope():HistoryScope|null{const raw=process.env.PARENT_CONVERSATION_SCOPE_JSON?.trim();if(!raw)return null;try{return HistoryScopeSchema.parse(JSON.parse(raw));}catch{throw new ObservationError(503,'history_configuration_invalid');}}
+export function readOnlyDatabase(path:string){const db=new DatabaseSync(resolve(path),{readOnly:true});db.exec('PRAGMA query_only=ON;PRAGMA busy_timeout=100;');return db;}
+/** New read-only connections intentionally release any prior WAL snapshot before each check. */
+export function assertHistoryScope(expected:HistoryScope):HistoryScope{
+ const scope=configuredHistoryScope();if(!scope||Object.entries(scope).some(([k,v])=>expected[k as keyof HistoryScope]!==v))throw new ObservationError(404,'not_found');
+ const devices=readOnlyDatabase(process.env.DEVICES_DB_PATH??'./data/devices.db');try{const row=devices.prepare(`SELECT d.sn,d.public_id,d.parent_account_id,d.account_id,d.binding_version,d.status,e.epoch,(SELECT COUNT(*) FROM device_registry o WHERE o.account_id=d.account_id) account_uses FROM device_registry d JOIN ark_device_epoch e ON e.sn=d.sn WHERE d.public_id=?`).get(scope.public_id);if(!row||row.status!=='active'||row.account_uses!==1||Object.entries(scope).some(([k,v])=>row[k]!==v))throw new ObservationError(404,'not_found');}finally{devices.close();}
+ const accounts=readOnlyDatabase(process.env.ACCOUNTS_DB_PATH??'./data/accounts.db');try{if(accounts.prepare('SELECT role FROM account WHERE id=?').get(scope.parent_account_id)?.role!=='parent'||accounts.prepare('SELECT role FROM account WHERE id=?').get(scope.account_id)?.role!=='device')throw new ObservationError(404,'not_found');}finally{accounts.close();}return scope;
+}
+export function parentHistoryScope(publicId:string,owner:string,role:string){const scope=configuredHistoryScope();if(role!=='parent'||!scope||scope.public_id!==publicId||scope.parent_account_id!==owner)throw new ObservationError(404,'not_found');return assertHistoryScope(scope);}

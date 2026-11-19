@@ -1,4 +1,12 @@
+import {startWeeklyReportScheduler} from './weekly-report-service.js';
+import { createVoiceOnboardingRoute } from './routes/voice-onboarding.js';
+import { getVoiceOnboardingStore } from './voice-onboarding-runtime.js';
+import {arkRoute} from './routes/ark.js';
+import {arkFactsRoute} from './ark/proxy.js';
+import {arkService,arkStore} from './ark/service.js';
+import {createArkArchiveControl} from './ark/archive-control.js';
 import { serve } from '@hono/node-server';
+import {getConnInfo} from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
@@ -6,6 +14,11 @@ import { VoicePipeline, type ClientMessage, type SessionMeta } from './pipeline.
 import { authRoute } from './routes/auth.js';
 import { inviteAuthRoute } from './routes/invite-auth.js';
 import { smsAuthRoute } from './routes/sms-auth.js';
+import { reviewPasswordAuthRoute } from './routes/review-password-auth.js';
+import { wechatAuthRoute } from './routes/wechat-auth.js';
+import { bleBindingsRoute } from './routes/ble-bindings.js';
+import { deviceEnrollmentRoute, deviceProvisioningRoute } from './routes/device-enrollments.js';
+import { getBleBindingStore } from './ble-binding-store.js';
 import { feedbackRoute } from './routes/feedback.js';
 import { conversationRoute } from './routes/conversation.js';
 import { visionRoute } from './routes/vision.js';
@@ -22,30 +35,47 @@ import { deviceConfigRoute } from './routes/device-config.js';
 import { localAudioDeviceRoute } from './routes/local-audio.js';
 import { parentPairingRoute, devicePairingRoute } from './routes/pairing.js';
 import { deviceTelemetryRoute, parentTelemetryRoute } from './routes/telemetry.js';
+import { parentTasksRoute } from './routes/parent-tasks.js';
+import { deviceParentTasksRoute } from './routes/device-parent-tasks.js';
 import { diagnosticsDeviceRoute } from './routes/diagnostics.js';
 import { devItemsRoute } from './routes/dev-items.js';
 import { themesRoute } from './routes/themes.js';
 import { checkAndCount, getClientIp } from './guard.js';
 import { verifyAuthToken, type AuthContext } from './auth-jwt.js';
+import { searchTaskRoute } from './tools/search-runtime.js';
+import { searchAdminRoute } from './routes/search-admin.js';
+import { createListeningRoute,createLazyListeningRoute } from './routes/listening.js';
+import { getListeningAuthority } from './listening-runtime.js';
+import { generateListeningContent,readListeningPersonality } from './listening-content.js';
 
 const app = new Hono();
+// Additive schema is checked at startup; no device is automatically enrolled in BLE identity policy.
+getBleBindingStore();
+startWeeklyReportScheduler();
 const port = Number(process.env.PORT ?? 8787);
 
 app.get('/health', (c) => c.json({ status: 'ok' }));
+app.use('/internal/ark-facts',async(c,next)=>{if(!['127.0.0.1','::ffff:127.0.0.1','::1'].includes(getConnInfo(c).remote.address??''))return c.json({ok:false},404);await next();});
+app.route('/internal/ark-facts',arkFactsRoute({secret:()=>process.env.ARK_FACTS_PROXY_SECRET??'',allowed:()=> (process.env.ARK_FACTS_PROXY_SN_ALLOW??'').split(',').filter(Boolean),facts:sn=>arkService().preview(sn)}));
+app.route('/internal/ark-archive',createArkArchiveControl({store:arkStore,secret:()=>process.env.ARK_ARCHIVE_CONTROL_SECRET??'',enabled:()=>process.env.ARK_ARCHIVE_CONTROL_ENABLED==='1'&&!process.env.ARK_FACTS_PROXY_URL}));
 app.route('/api/auth', authRoute);
 app.route('/api/auth', inviteAuthRoute);
 app.route('/api/auth', smsAuthRoute);
+app.route('/api/auth', reviewPasswordAuthRoute);
+app.route('/api/auth', wechatAuthRoute);
 app.route('/api/feedback', feedbackRoute);
 app.route('/api/conversation', conversationRoute);
 app.route('/api/vision', visionRoute);
 app.route('/api/profile', profileRoute);
 app.route('/api/memory', memoryRoute);
 app.route('/api/admin', adminDataRoute);
+app.route('/api/admin/search', searchAdminRoute);
 app.route('/api/rtc', rtcRoute);
 app.route('/api/dev-items', devItemsRoute);
 app.route('/api/feedback-themes', themesRoute);
 // P003 S2-B1 设备 Session API（安卓/MCU 设备换 LiveKit token；docs/CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
 app.route('/v1/device', deviceSessionRoute);
+app.route('/v1/device/ark', arkRoute);
 app.route('/v1/device/ota', otaDeviceRoute);
 app.route('/v1/device/ota/content', pckDeviceRoute); // PCK 文件接口（双 OTA 合同 §6）
 app.route('/v1/device/config', deviceConfigRoute);
@@ -54,13 +84,22 @@ app.route('/v1/device/local-audio', localAudioDeviceRoute);
 app.route('/v1/device/pairing', devicePairingRoute);
 // 设备遥测上报 + 家长聚合查询（合同 CODEX_P003_DEVICE_TELEMETRY_REPLY_20260824）
 app.route('/v1/device/telemetry', deviceTelemetryRoute);
+app.route('/v1/device/parent-tasks', deviceParentTasksRoute);
+app.route('/v1/parent/devices', parentTasksRoute);
 app.route('/v1/parent/devices', parentTelemetryRoute);
 // 设备诊断日志上云（Godot→Launcher→server；合同 DIAGNOSTIC_LOG_SERVER_HANDOFF + CC 复核回执 §3；路径字面冒号 logs:batch）
 app.route('/v1/device/diagnostics', diagnosticsDeviceRoute);
 // 配网家长侧（联调合同 v3）：token 签发 + H5 轮询
 app.route('/api/parent/pairing', parentPairingRoute);
+app.route('/api/parent/ble-bindings', bleBindingsRoute);
+app.route('/api/parent/device-enrollments', deviceEnrollmentRoute);
+app.route('/v1/device/provisioning', deviceProvisioningRoute);
 // 火山 RTC 实时对话 CustomLLM 回调端点（docs/34 D 方案）：OpenAI 兼容 /v1/chat/completions（SSE）。
 app.route('/v1', customLlmRoute);
+// Default-off independent background jobs; ordinary chat never awaits these requests.
+app.route('/v1/internal/search-tasks', searchTaskRoute);
+app.route('/v1/internal/voice-onboarding', createVoiceOnboardingRoute(getVoiceOnboardingStore));
+app.route('/v1/internal/listening', createLazyListeningRoute(()=>createListeningRoute(getListeningAuthority(), {generate:generateListeningContent,personality:readListeningPersonality})));
 
 // admin 静态兜底（本地 dev 同源 E2E 用；生产 nginx 直接 serve public/admin，不会走到这里）。
 app.use('/admin/*', serveStatic({ root: '../web/public' }));

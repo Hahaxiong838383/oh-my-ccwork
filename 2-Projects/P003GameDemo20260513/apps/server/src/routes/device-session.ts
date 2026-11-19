@@ -1,9 +1,18 @@
+import { issueVoiceOnboarding } from '../voice-onboarding-runtime.js';
+import { buildFillerPolicy } from '../filler-policy.js';
 import { Hono } from 'hono';
 import { randomUUID } from 'node:crypto';
-import { SignJWT, jwtVerify, decodeJwt } from 'jose';
+import { SignJWT, decodeJwt } from 'jose';
+import { verifyDeviceCredential as verifyPureDeviceCredential } from '../device-credential.js';
+import { pairingStore } from '../pairing-store.js';
+import { noteBleActivation } from './ble-bindings.js';
 import { validateDeviceSn } from '../device-sn.js';
 import { deviceRegistryStore, type SessionLogEntry } from '../device-registry-store.js';
 import { configStore, type RuntimeFlag } from '../config-store.js';
+import { searchCanarySelection } from '../search-canary-runtime.js';
+import { searchDeviceAllowed } from '../tools/search-runtime.js';
+import { captureDeviceLocation } from '../tools/device-location-runtime.js';
+import { issueSessionListening } from '../listening-runtime.js';
 
 /**
  * P003 S2-B1 设备 Session API（codex 联调合同：CC_S2B1_MCU_SN_TOKEN_SESSION_API_PROMPT_20260815）。
@@ -20,6 +29,12 @@ import { configStore, type RuntimeFlag } from '../config-store.js';
 
 // 旧路径（= 现役生产 worker）的 agent 名。B29：产品首句 v1 不能派给它——它没有 ordered_pcm
 // 代次状态机，设备发了 begin 也没人接。新能力走 cfg().firstTurnAgent 指定的独立 agent。
+// Optional voice UX must never break an otherwise valid device-session ticket.
+function fillerPolicyFor(sn: string) {
+  try { return buildFillerPolicy(deviceRegistryStore.get(sn)?.account_id); }
+  catch { console.warn('[device-session] filler policy unavailable; legacy worker fallback'); return undefined; }
+}
+
 const AGENT_NAME = 'rust-worker';
 
 // ── env 全部请求时读取（不在模块顶层快照）：测试注入与生产热调参都靠这个 ──
@@ -195,19 +210,18 @@ function logQuiet(entry: SessionLogEntry): void {
 export async function verifyDeviceCredential(
   header: string | undefined,
   secret: string,
-): Promise<{ sn: string } | null> {
-  if (!header?.startsWith('Bearer ') || !secret) return null;
+): Promise<{ sn: string; bindingVersion?: number; pairingSessionId?: string; bleBindingId?: string } | null> {
+  return verifyPureDeviceCredential(header, secret, credentialAcceptedByRevocation);
+}
+
+function notePairingActivation(cred: { sn: string; bindingVersion?: number; pairingSessionId?: string }): void {
+  if (!cred.pairingSessionId || cred.bindingVersion === undefined) return;
   try {
-    const { payload } = await jwtVerify(header.slice(7), new TextEncoder().encode(secret));
-    if (payload.kind !== 'p003-device' || typeof payload.sub !== 'string') return null;
-    // 2026-09-16 川哥：后台删除设备 = 作废该 SN 此前签发的全部凭据（重加即新设备，须重新签发/认领）。
-    // 只在该 SN 有作废水位时才比对 iat：iat 必须严格晚于删除那一秒（JWT iat 只有秒精度，删除当秒签的一律算旧）；
-    // 无 iat 的老 token 视为 0 → 一并作废。查库失败按今天的行为放行并留痕（不静默）。
-    if (!credentialAcceptedByRevocation(payload.sub, typeof payload.iat === 'number' ? payload.iat : 0)) return null;
-    return { sn: payload.sub };
-  } catch {
-    return null;
-  }
+    const device = deviceRegistryStore.get(cred.sn);
+    if (device?.status === 'active' && device.parent_account_id && device.binding_version === cred.bindingVersion) {
+      pairingStore.markSessionActivated(cred.pairingSessionId, cred.sn, device.parent_account_id, cred.bindingVersion);
+    }
+  } catch { console.warn('[pairing] activation persistence pending; retry prefetch'); }
 }
 
 function credentialAcceptedByRevocation(sn: string, iatSec: number): boolean {
@@ -232,6 +246,7 @@ export function assertTokenMatchesResponse(
     expires_at_ms: number;
     trace_id?: string;
     expected_agent_name?: string;
+    voice_idle?: { timeout_ms: number; revision: string } | null;
     contract?: { input_mode: string; oneshot_first_turn: string; local_receipt: string } | null;
   },
 ): void {
@@ -271,6 +286,17 @@ export function assertTokenMatchesResponse(
     } else {
       for (const k of keys) if (k in meta) throw new Error(`自检失败: 旧路径 metadata 不得含 ${k}`);
     }
+  }
+  const idleMeta = JSON.parse(agent.metadata ?? '{}').voice_idle;
+  if (resp.voice_idle) {
+    const idle = resp.voice_idle;
+    if (!Number.isInteger(idle.timeout_ms) || idle.timeout_ms < 5000 || idle.timeout_ms > 300000
+      || typeof idle.revision !== 'string' || !/^cfg-\d+$/.test(idle.revision)
+      || idleMeta?.timeout_ms !== idle.timeout_ms || idleMeta?.revision !== idle.revision) {
+      throw new Error('自检失败: voice_idle 与配置快照/响应不一致');
+    }
+  } else if (idleMeta !== undefined) {
+    throw new Error('自检失败: 未配置的响应不得携带 voice_idle');
   }
   if (c.exp * 1000 !== resp.expires_at_ms) throw new Error('自检失败: exp 与 expires_at_ms 不一致');
   if (c.exp * 1000 - Date.now() < 5_000) throw new Error('自检失败: 剩余 TTL 不足 5 秒');
@@ -326,15 +352,31 @@ deviceSessionRoute.post('/session', async (c) => {
   const firstTurnEligible = firstTurnEligibleBy(conf.firstTurnPolicy, conf.firstTurnAllow, sn as string, supports);
   const firstTurn = firstTurnEligible && conf.firstTurnAgent !== '';
   // 本次派单目标：签了新合同 → 专用 agent；否则旧 agent。**JWT / 响应 / 自检三处同用这一个值。**
-  const agentName = firstTurn ? conf.firstTurnAgent : AGENT_NAME;
+  const canary = searchCanarySelection(sn as string, firstTurn ? conf.firstTurnAgent : AGENT_NAME, firstTurn);
+  const agentName = canary.agent;
   const contract = firstTurn ? { ...FIRST_TURN_CONTRACT, worker_capabilities: [...FIRST_TURN_CONTRACT.worker_capabilities] } : null;
 
   const roomSec = nextRoomSecond();
   const roomName = `sn-${sn}-${roomSec}`;
   const identity = `dev-${sn}`;
-  const expSec = Math.floor(Date.now() / 1000) + conf.ttlS;
+  const expSec = canary.canary
+    ? Math.min(Math.floor(Date.now() / 1000) + conf.ttlS, Math.floor(canary.expiresAtMs / 1000))
+    : Math.floor(Date.now() / 1000) + conf.ttlS;
   const sessionId = randomUUID();
   const prefetchId = typeof body.prefetch_id === 'string' ? body.prefetch_id : undefined;
+  const listening = await issueSessionListening({sn:sn as string,room:roomName,session_id:sessionId,trace_id:traceId,
+    agent:agentName,supports,source:canary.canary?'search_canary':'normal',expires_at_ms:expSec*1000,
+    source_cutoff_ms:canary.canary?canary.expiresAtMs:expSec*1000,credential:c.req.header('authorization')??''});
+
+  const voiceOnboarding = issueVoiceOnboarding({sn:sn as string,agent:agentName,supports,normal:!canary.canary,listening:Boolean(listening),session_id:sessionId,trace_id:traceId,room:roomName,expires_at_ms:expSec*1000});
+
+  // ConfigStore's zero sentinel is omitted from snapshots. Only an explicit
+  // global/SN policy can therefore reach the signed worker metadata. Never
+  // accept this authority from body.voice_idle or a client control packet.
+  const runtimeConfig = configStore.effectiveSnapshot(sn as string);
+  const idleMs = (runtimeConfig.voice as { session_idle_timeout_ms?: unknown } | undefined)?.session_idle_timeout_ms;
+  const voiceIdle = typeof idleMs === 'number' && Number.isInteger(idleMs) && idleMs >= 5000 && idleMs <= 300000
+    ? { timeout_ms: idleMs, revision: String(runtimeConfig.revision) } : null;
 
   const token = await new SignJWT({
     video: {
@@ -357,6 +399,11 @@ deviceSessionRoute.post('/session', async (c) => {
             trace_id: traceId,
             session_id: sessionId,
             issue_ts_ms: Date.now(),
+            filler_policy: fillerPolicyFor(sn),
+            ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
+            ...(listening ? { listening } : {}),
+            ...(voiceOnboarding ? { voice_onboarding: voiceOnboarding } : {}),
+            ...(canary.canary ? { search_canary: { sn, expires_at_ms: canary.expiresAtMs, generation: canary.generation } } : {}),
             // B23：产品首句合同三字段只在签了 contract 时出现（worker 只认这里，不认设备自述）
             ...(contract
               ? { input_mode: contract.input_mode, oneshot_first_turn: contract.oneshot_first_turn, local_receipt: contract.local_receipt }
@@ -383,8 +430,13 @@ deviceSessionRoute.post('/session', async (c) => {
     session_id: sessionId,
     expires_at_ms: expSec * 1000,
     expected_agent_name: agentName,
+    ...(voiceOnboarding ? {voice_onboarding_contract:{version:voiceOnboarding.version,capability:`voice_onboarding_v${voiceOnboarding.version}`}} : {}),
+    ...(voiceIdle ? { voice_idle: voiceIdle } : {}),
     // B23：null = 旧 RTC 路径；对象 = 产品首句合同（与 metadata 同源，自检对撞）
     contract,
+    ...(listening ? {listening_contract:{version:1,capability:'listening_mode_v1',policy_revision:listening.snapshot.revision,
+      scenes:listening.snapshot.scenes,tuning:listening.snapshot.tuning,expires_at_ms:listening.grant_expires_at_ms,
+      ...(listening.voice_control?{voice_control:listening.voice_control}:{})}} : {}),
   };
 
   try {
@@ -396,13 +448,21 @@ deviceSessionRoute.post('/session', async (c) => {
     return c.json({ status: 'error', code: 500, message: '签发自检失败，拒绝交付' }, 500);
   }
 
+  if(canary.canary) captureDeviceLocation(c,sn as string,roomName,expSec*1000);
+  else if(searchDeviceAllowed(sn as string)) captureDeviceLocation(c,sn as string,roomName,expSec*1000,'p1');
   console.log(
     `[device-session] ok sn=${sn} room=${roomName} session=${sessionId} trace=${traceId} contract=${contract ? 'first_turn_v1' : '-'}` +
       // B84：policy 与 supports 进日志——旧/新客户端各走哪条路径、为什么，事后能从这一行对账
       ` policy=${conf.firstTurnPolicy} policy_src=${conf.firstTurnPolicySource} supports=${supportsForLog(supports)}` +
+      ` selected_agent=${JSON.stringify(agentName)} canary_reason=${canary.reason}` +
+      ` lease_remaining_ms=${canary.leaseRemainingMs} lease_age_ms=${canary.leaseAgeMs}` +
+      ` lease_jobs=${canary.leaseJobs} lease_max_jobs=${canary.leaseMaxJobs} lease_registered=${canary.leaseRegistered}` +
+      ` canary_generation=${JSON.stringify(canary.generation)}` +
       `${prefetchId ? ` prefetch=${prefetchId}` : ''} ttl=${conf.ttlS}s ms=${Date.now() - t0}`,
   );
   logQuiet({ sn: sn as string, room: roomName, session_id: sessionId, trace_id: traceId, status: 'ok', ttl_s: conf.ttlS, ms: Date.now() - t0 });
+  noteBleActivation(cred.sn, cred.bindingVersion, cred.bleBindingId);
+  notePairingActivation(cred);
   return c.json(resp);
 });
 
@@ -427,6 +487,8 @@ deviceSessionRoute.post('/session/prefetch', async (c) => {
 
   console.log(`[device-session] prefetch sn=${cred.sn} prefetch=${prefetchId}`);
   logQuiet({ sn: cred.sn, room: '', session_id: prefetchId, trace_id: '', status: 'prefetch', ttl_s: 0, ms: 0 });
+  noteBleActivation(cred.sn, cred.bindingVersion, cred.bleBindingId);
+  notePairingActivation(cred);
   return c.json({ status: 'warming', prefetch_id: prefetchId, expires_at_ms: exp });
 });
 
