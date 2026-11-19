@@ -14,8 +14,9 @@
     },
     "codex/p003-asr-three-device-20261116": {
       "task": "多机 ASR 诊断",
-      "state": "keep",
-      "until": "普通池清理已收，待分拣 ASR 工具与 Codeg 记录"
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-asr-three-device-20261116",
+      "archive_commit": "88f12881132aa502a573a7de4f1f49becbc27921"
     },
     "codex/p003-brain-search-tools-20261021": {
       "task": "搜索 P2 和 Brain 路由",
@@ -24,13 +25,15 @@
     },
     "codex/p003-business-watchdog-brain-20261107": {
       "task": "单设备空闲策略",
-      "state": "keep",
-      "until": "挑 cfg-139 回归和发布记录"
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-business-watchdog-brain-20261107",
+      "archive_commit": "6a025aea5c132156d1943533f1273e042efbdb88"
     },
     "codex/p003-lexicon-listening-brain-20261111": {
       "task": "词库与倾听服务",
-      "state": "keep",
-      "until": "挑历史到期脚本、词库和天气回归"
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-lexicon-listening-brain-20261111",
+      "archive_commit": "00e740e93eeaf98a00f0893fed5e1e23e184b919"
     },
     "codex/p003-local-audio-integrity-20261016": {
       "task": "本地音频完整性",
@@ -50,8 +53,9 @@
     },
     "codex/p003-p1-weather-brain-20261031": {
       "task": "天气 P1 服务端",
-      "state": "keep",
-      "until": "挑两项测试和两份发布回滚资料"
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-p1-weather-brain-20261031",
+      "archive_commit": "384005059526ad0451cc0460b7a5457e23a83302"
     },
     "codex/p003-prnas-storage-50-20261116": {
       "task": "NAS 容量及 Ark 压测",
@@ -95,13 +99,15 @@
     },
     "codex/p003-weather-preview-fix-20261110": {
       "task": "天气预览及降级",
-      "state": "keep",
-      "until": "挑天气、凭据展示及发布器回归"
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-weather-preview-fix-20261110",
+      "archive_commit": "0839ccafd76793ecd30f2d803a92539dacdc3e01"
     },
     "codex/p003-worker-monitor-20261105": {
       "task": "Worker 监控",
-      "state": "keep",
-      "until": "实机配置已进 main，20 项回归已通过；确认是否收录测试脚本后归档"
+      "state": "archived",
+      "archive_ref": "refs/tags/archive/2026-11/codex/p003-worker-monitor-20261105",
+      "archive_commit": "e630fbb855bd952fdba5b59127c4197bde0b98c5"
     },
     "codex/p003-worker-tool-lifecycle-20261021": {
       "task": "工具调用与传输生命周期",
@@ -124,7 +130,7 @@
     },
     "codex/p003-curated-regressions-20261119": {
       "task": "P003 六支归档、搜索半句发布版本回归与 dev198 核实",
-      "state": "active"
+      "state": "done"
     }
   },
   "releases": {
