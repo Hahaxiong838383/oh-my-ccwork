@@ -5,6 +5,20 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## 已归档的 P003 运维记录
+
+- [方舟产品回复、设备事实与配表核验](references/ark-facts-and-product-replies.md)
+- [后台搜索与指定 SN 灰度：实施和验收约束](references/background-search-canary.md)
+- [限时语音灰度：延窗、产物与验收交接](references/bounded-canary-handoff.md)
+- [小可报时、开放时间与上线验收](references/clock-routing-and-release.md)
+- [后台搜索与语音延迟验收](references/search-latency-acceptance.md)
+- [P003 衔接概率、知识召回与多版本发布](references/style-filler-and-local-knowledge.md)
+- [TTS 建连长等待与流中停顿](references/tts-transport-recovery.md)
+- [语音灰度：计时归属、连接优化与发布收尾](references/voice-canary-release-evidence.md)
+- [语音恢复回执与故障注入验收](references/voice-recovery-receipt-audit.md)
+- [外部天气接口与调用额度](references/weather-quota-operations.md)
+- [Worker可达性与倾听收口取证](references/worker-reachability-and-closeout.md)
+
 项目:`~/mycc/2-Projects/realtime-voice-agent/`(mycc 仓内)。
 生产:阿里云 HK ECS `47.239.204.68`(2核2G,专用),`https://voice-hk.hahaxiong.cc/voice-test.html`。
 备用一套在 dev198(公司内网经 frp,改动未必同步,同步前先 diff)。

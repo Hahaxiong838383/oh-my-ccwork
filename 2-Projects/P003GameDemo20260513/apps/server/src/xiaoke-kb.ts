@@ -1,3 +1,4 @@
+import {normalizeArkVocabulary,incompleteArkCard,arkDialogueTopic,arkConversationQuery} from './ark/language.js';
 // 小可世界观知识库（按需召回，仿 curriculum-kg.ts 的 K12 学习知识库范式）。
 // 川哥定调（2026-06-21）：经济/世界观/身世这些知识【不常驻 prompt】，像 K12 学习知识库一样【按需召回】——
 //   孩子聊到相关话题才召回对应条目注入，闲聊/学习时零注入，省 token、不稀释人格、不拖 TTFT。
@@ -20,17 +21,171 @@ const REALITY_REDLINE =
   '标「数值未公开」的（光环天数、暴击倍率、掉落权重）只讲机制、不报数字（「金色翻倍」可以，「持续3天」不行），「还剩X天」走系统实时。';
 
 // 知识条目：每条带触发关键词（≥2 字、尽量特异防误伤）+ 注入内容（讲世界里真实存在的，讲品类不讲笼统）。
+/** Usage particles are not quantity questions: “有什么用吗 / 还有什么用 / 下一枚…用途”. */
+function isPureResourceUsage(text:string):boolean {
+  return /金币|家族币|星尘|星辰|补[勤签]卡/.test(text)&&/有什么用|有啥用|干什么用|做什么用|怎么用|是什么|用途|用处|作用|能干什么|能干嘛|是干嘛的/.test(text)
+    && !/多少|几(?:枚|个|张|分|秒)|余额|库存|赚|收益|所得|收入|进度|进展|领取|可领|领到|多久|还剩/.test(text);
+}
+/** Limited reward phrasing; ordinary real-world rewards never imply a device query. */
+function naturalArkRewardState(text:string):boolean {
+ if(/老师|学校|考试|公司|比赛|抽奖|外卖|奖金|工资|股票|基金|理财|订阅|提醒/.test(text))return false;
+ if(/^(?:小可[，,\s]*)?(?:(?:今天|今日|当天)(?:的)?收益|(?:未|没|待)领(?:取)?的?奖励)(?:啊|呀|吧|呢)?[。？！?!]*$/.test(text.trim()))return true;
+ return text.split(/[，,。；;！!]/).some(part=>{
+  const asks=/(?:吗|么)[?？\s]*$|多少|哪些|什么|啥|多久|多长|怎么样|咋样|怎样|如何|有没有|是否|几[项个]/.test(part)
+   || /(?:收益|收获|奖励|宝箱)呢[?？\s]*$/.test(part)
+   || /(?:帮我(?:查|看)(?:一下|看|查)?|查一下|看看).{0,12}(?:收益|收获|奖励|宝箱)(?:情况|状态|进度|数量)?[?？\s]*$/.test(part);
+  if(!asks)return false;
+  return /(?:奖励|收益|宝箱).{0,8}(?:未领|没领|漏领|待领|可领|可以领)|(?:未领|没领|漏领|待领|可领|可以领).{0,8}(?:奖励|收益|宝箱)/.test(part)
+   || /下(?:一[个项次]?|次).{0,3}奖励.{0,10}(?:多久|多长|多少|是什么|是啥|还差|还需)/.test(part)
+   || /(?:今天|今日|当天).{0,6}(?:收益|收获|获得了什么奖励|得到了什么奖励)/.test(part);
+ });
+}
+export function isArkStateQuestion(text: string): boolean {
+  text=normalizeArkVocabulary(text);
+  if (isOutsideArkQuestion(text) || isPureResourceUsage(text)) return false;
+  if(naturalArkRewardState(text)||/补[勤签]卡.{0,8}(?:可以补|能补|可补|补哪)/.test(text))return true;
+  if(/(?:分钟|读写台|方舟).*领不了(?:东西|奖励|宝箱)/.test(text))return true;
+  if(/^(?:小可)?界面是[。？！?!]*$/.test(text))return true;
+  if(/(?:在这|读写台).*(?:待|坐|用).*(?:久|时长).*(?:不给|没有|没)(?:.*(?:加|奖励|收益)|我?[。？！?!]*$)|(?:今天|今日).*(?:使用时长|使用了多久|用了多久|用了多长)|方舟当前待领取奖励|方舟当前界面和奖励进度/.test(text))return true;
+  const game=/金币|家族币|星尘|星辰|宝箱|补勤卡|补签卡|专注奖励|方舟.{0,8}(?:进度|进展|余额|资源|库存|奖励|收益|所得)/.test(text);
+  const stateQuery=/多少|数量|几[个枚张分秒]|多久|剩|还有|下一|下次|领取|领到|可领|领了|余额|库存|暂停|进度|进展|收益|所得|有.{0,8}吗|有没有|没有|没.*(?:领|拿|得)/.test(text);
+  const rewardRequest=/奖励/.test(text)&&/下次|下一次|下一项|下一个|专注/.test(text)&&/领取|领到|能领|可领|怎么领|怎么拿|怎么得|有效专注|计时|进度/.test(text);
+  return game&&stateQuery||rewardRequest;
+}
+export function isOutsideArkQuestion(text:string):boolean {
+ if(/游戏|手游|网游/.test(text)&&!/(?:方舟|小可)/.test(text)&&!/游戏(?:里|内|中|的|里的)?(?:道具|物品|装饰|皮肤)/.test(text))return true;
+ return /哆啦|原神|明日方舟|王者荣耀|我的世界|天上的|星空|天文|恒星|宇宙|别的游戏|其他游戏|马里奥|黄金|金价|比特币|股票|基金|工资|理财|银行|利息|翻译|造句|写.{0,6}(?:故事|小说)|故事里|他说|她说|这句话/.test(text);
+}
+const G1_PROGRESS_KNOWLEDGE = '【当前G1专注奖励】奖励按当前内容版本的有效专注进度计算；墙钟流逝、合盖离线、夜航都不等于有效专注。' +
+  '人在读写台前的有效使用时长达到当前阶段门槛，进度条对应奖励会点亮，用户点击领取。到达条件与领取到账是不同状态；小可不能代领，也不声称已经到账。' +
+  '下一项奖励可能是家族币，也可能是宝箱或其他道具，必须以本轮事实的reward kind/item_id为准，不把下一宝箱叫下一金币。' +
+  '余额、是否可领及还需多久只能依据本轮可信方舟事实；缺少或过期就说暂时查不到，不填0，不猜五段分钟阈值，不套旧夜航规则。问今天赚了多少时回答今日收益，钱包余额不等于今日收益，不用余额回答或改述这类问题。';
+// Product vocabulary only. This never renames stored wallet fields or rewrites user transcripts.
+export const ARK_RESOURCE_USES = {
+  family_coin:'家族币用来记录你和家长约好的奖励，可在小程序查看已同步的家族币，再和家长商量兑换约定的奖励，由家长兑现。',
+  stardust:'星尘是方舟里兑换游戏道具、给小可换装用的资源，当前能换什么以设备页面为准。',
+  makeup_card:'补勤卡用于符合条件的历史航线节点补签，补签后的奖励还需按设备页面提示领取。',
+};
+export const ARK_GOLD_ALIAS = '方舟里显示的金币就是家族币。';
+const exchangeAction=/(?:兑换|换购|购买|买|换装|能换|可以换|怎么换|换什么|换点|换个|换一|帮我换|要多少|需要多少|够不够|换这个|用什么)/;
+const gameItem=/(?:游戏(?:里|内|中|的|里的)?(?:道具|物品|装饰|皮肤)|方舟.{0,12}(?:道具|物品|装饰|摆件|皮肤|换装)|小可.{0,8}(?:换装|装扮|皮肤))/;
+const resourceName=/金币|家族币|星尘|星辰/;
+const physicalReward=/爸妈|爸爸|妈妈|父母|家长|亲子|约定|肯德基|现金|人民币|现实|提现/;
+export function isArkGameExchangeQuestion(text:string):boolean {
+  if(isOutsideArkQuestion(text)||!exchangeAction.test(text))return false;
+  if(physicalReward.test(text)&&!gameItem.test(text))return false;
+  return resourceName.test(text)||gameItem.test(text);
+}
+/** Only the latest explicit USER resource can disambiguate a short followup; no assistant guesses. */
+export function resolveArkResourceFollowup(text:string,history:{role:string;content:string}[]):string|null {
+  text=normalizeArkVocabulary(text);
+  const conversation=arkConversationQuery(text,history);if(conversation)return conversation;
+  if(isOutsideArkQuestion(text)||resourceName.test(text)||/补[勤签]卡/.test(text))return null;
+  const tail=text.trim().replace(/[。？！?!]+$/g,'');
+  if(tail.length>40||/[“”"「」『』，,；;]/.test(tail))return null;
+  const usage=/^(?:请问|那|那么)?(?:这个|那个|它|这张卡|那张卡)?(?:有什么用|有啥用|干什么用|做什么用|怎么用|用途是什么|能干什么|能干嘛|是干嘛的)$/;
+  const exchange=exchangeAction.test(tail)&&(/^(?:好|那|那么|现在|请)?(?:你|我)?(?:能|可以|要|想)?(?:兑换|换购|买|换)(?:什么|点什么|哪个|这个|那个|它)(?:呀|啊|呢|吧|吗)?$/.test(tail)||/^(?:好|那|那么)?(?:请)?(?:你)?帮我(?:兑换|换|买)(?:这个|那个|它)?(?:吧|呀|啊)?$/.test(tail)||/道具|摆件|皮肤|换装|装饰/.test(tail)&&!physicalReward.test(tail));
+  const availability=/^(?:那|现在)?还没有这个功能吗$/.test(tail);
+  if(!usage.test(tail)&&!exchange&&!availability)return null;
+  const prior=[...history].reverse().find(t=>t.role==='user')?.content??'';
+  if(!prior||prior.length>120||isOutsideArkQuestion(prior)||/[“”"「」『』]|不要|不想|别聊|别说|另外|顺便|[，,；;]/.test(prior))return null;
+  const names=[...new Set((prior.match(/家族币|星尘|星辰|金币|补勤卡|补签卡/g)??[]).map(s=>s==='金币'?'家族币':s==='星辰'?'星尘':s==='补签卡'?'补勤卡':s))];
+  if(names.length!==1)return null;
+  if(availability)return isArkGameExchangeQuestion(prior)?names[0]+'怎么兑换游戏道具':null;
+  const bare=prior.replace(/[。？！?!\s]/g,'').replace(/^(?:(?:请问|我想问一下|我想问|方舟里的|方舟的|小可|我的|的|这个|那个|这张|那张))+/,'');
+  const known=/^(?:家族币|星尘|星辰|金币|补勤卡|补签卡)(?:有什么用|有啥用|干什么用|做什么用|怎么用|用途是什么|能干什么|能干嘛|是干嘛的)?$/.test(bare);
+  if(!known&&!isArkStateQuestion(prior)&&!isArkGameExchangeQuestion(prior))return null;
+  return names[0]+tail;
+}
+/** Leave negation, quoted language and mixed commands to the ordinary conversation path. */
+export function deferArkDirectReply(text:string):boolean {
+  if(/(?:不要|别|不用)(?:再|继续)?(?:告诉我|给我介绍|说|讲|介绍|解释)|不想(?:听|知道|了解)|停止介绍|别说了|闭嘴|退下|关房|结束倾听|恢复聊天|再见|拜拜|不聊了/.test(text))return true;
+  if(/[“「『"].*[”」』"]/.test(text))return true;
+  if(/天气|气温|下雨|带伞|冷不冷|热不热|讲.{0,6}故事|编.{0,6}故事|唱.{0,6}歌|播放|音量|调.{0,4}灯|灯光/.test(text))return true;
+  return text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|宝箱|方舟|奖励|收益|使用时长|使用了多久|有.*用|用途|还.*多久/.test(part));
+}
+
+/** Public product knowledge only: never reads or answers a user's balance/progress. */
+export function answerArkResourceUse(text:string,history:{role:string;content:string}[]=[]):string|null {
+  text=normalizeArkVocabulary(text);
+  // A complaint about contradictory old exchange advice is not a quote to obey.
+  const recent=history.slice(-8),exchangeAt=recent.map(t=>t.role==='user'&&/金币|家族币/.test(t.content)&&/换/.test(t.content)).lastIndexOf(true);
+  const contradiction=/^(?:然后)?.{0,18}(?:又说|没说过|没有说过|没有说)[。？！?!]*$/.test(text);
+  if(contradiction&&exchangeAt>=0&&!deferArkDirectReply(text)&&!recent.slice(exchangeAt+1).some(t=>t.role==='user'&&/天气|故事|翻译|学校|别的游戏|其他游戏/.test(t.content)))return '刚才的兑换说明让你困惑了，我重新说清楚：方舟里的金币就是家族币，用来和家长兑换约定的奖励；游戏道具使用星尘，具体能换什么以设备页面为准。小可目前不能替你兑换或领取。';
+  if(isOutsideArkQuestion(text)||deferArkDirectReply(text))return null;
+  if(/^(?:请问)?方舟里的补[。？！?!]*$/.test(text.trim()))return '你继续说，我在听。';
+  if(/^就是这个家族[。？！?!]*$/.test(text.trim()))return '你指的是家族币吗？'+ARK_GOLD_ALIAS+ARK_RESOURCE_USES.family_coin;
+  if(/(?:母亲卡(?:有什么用|有啥用|多少|[。？！?!]*$)|方舟里的母亲(?:[。？！?!]*$))/.test(text))return '你说的是方舟里的补勤卡吗？我确认一下，免得讲错了。';
+  if(/加速币|加注[bB]|积分/.test(text)&&!/老师|学校|考试|数学|信用卡|会员|商场/.test(text))return '你说的是读写台上的家族币、星尘，还是其他积分？我先确认一下，免得查错。';
+  if(/界面.*币/.test(text)&&/有什么用|可以.*做什么|用于|用来/.test(text))return ARK_GOLD_ALIAS+ARK_RESOURCE_USES.family_coin+ARK_RESOURCE_USES.stardust;
+  if(incompleteArkCard(text))return '你说的是补勤卡吗？';
+  const compactCard=text.replace(/[\s。？！?!]/g,'');
+  if(/^(?:请问)?(?:方舟里的|方舟的|的|帮我看看)?补勤卡(?:有|有什么)?$/.test(compactCard)&&!history.some(t=>t.role==='user'&&isArkStateQuestion(t.content)))return ARK_RESOURCE_USES.makeup_card;
+  if(/帮.*收.*补勤卡/.test(text))return '小可不能替你收取或使用补勤卡。'+ARK_RESOURCE_USES.makeup_card;
+  const topic=arkDialogueTopic(history);
+  if(!topic&&/^(?:我)?点哪里[。？！?!]*$/.test(text.trim()))return '你想操作哪一项？我看不到你当前屏幕，先告诉我想领取奖励，还是做别的。';
+  if(exchangeAt>=0&&/^(?:那|现在)?还没有这个功能吗[。？！?!]*$/.test(text))return '当前版本小可不能替你兑换游戏收益或道具，也不能替你领取；你可以按设备页面提示操作。';
+  if(topic&&/^(?:小可)*(?:展示出来)[。？！?!]*$/.test(text))return '当前版本不支持由我展示游戏页面，可以等后续版本迭代。';
+  if(/咱俩/.test(text)&&(topic||/约定/.test(text)))return '咱俩是你和我呀。我们可以一起商量想要的奖励；如果说的是家族币对应的奖励，还需要和家长确认并由家长兑现，小程序可以查看已同步的家族币。';
+  if(!/老师|学校|考试|公司/.test(text)&&/^(?:小可)*(?:我)?(?:怎样|怎么|如何).*(?:获得|得到|获取)奖励[。？！?!]*$/.test(text))return '在读写台前有效使用达到阶段门槛，进度条对应的奖励会点亮，再点击领取。奖励包括家族币、宝箱和道具，具体这一阶段是什么以进度条为准；小可不能代领。';
+  if(/奖励.*不是.*(?:爸妈|家长|父母).*而是你|(?:方舟|小可).*(?:提供|有什么|有哪些).*(?:收益|奖励)/.test(text))return '方舟的游戏奖励包括家族币、宝箱，以及补勤卡、生态缸部件等道具；具体这一阶段能领什么，要看当前进度条。人在读写台前的有效使用时长达标后，奖励会点亮，再由你点击领取。';
+  if(/家族币|金币/.test(text)&&/(?:怎么|如何|怎样|哪里|哪儿)(?:能|才|可以)?(?:获得|获取|得到|赚)|怎么攒/.test(text)&&!isArkStateQuestion(text))return ARK_GOLD_ALIAS+'在读写台前有效使用达到阶段门槛，进度条上的对应奖励会点亮，点击领取后获得家族币。'+ARK_RESOURCE_USES.family_coin;
+  // A bare resource after a prior question can select its wallet/earnings subject.
+  if(/^(?:金币|家族币|星尘|星辰)[。？！?!]*$/.test(text.trim())&&history.some(t=>t.role==='user'))return null;
+  if(text.split(/另外|顺便|[，,；;]/).slice(1).some(part=>/为什么|怎么|什么|多少|吗|呢/.test(part)&&!/家族币|星尘|星辰|金币|补[勤签]卡|方舟|有.*用|用途/.test(part)))return null;
+  const q=resolveArkResourceFollowup(text,history)??text;
+  if(/方舟当前待领取奖励|方舟当前界面和奖励进度/.test(q))return null;
+  if(!isPureResourceUsage(q)&&/余额|库存|还剩|还有|有多少|有几|有没有|赚|收益|所得|收入|进度|进展|领取|可领|领到|下一|下次|多久|几分钟|几秒|我.{0,4}有.{0,6}(?:金币|家族币|星尘|星辰|补[勤签]卡)吗/.test(q))return null;
+  const exchange=isArkGameExchangeQuestion(q);
+  const locate=/金币.{0,4}(?:在哪|哪里)/.test(q);
+  const usage=/有什么用|有啥用|干什么用|做什么用|怎么用|是什么|用途|用处|作用|能干什么|能干嘛|是干嘛的|可以干什么|介绍|能换|兑换/.test(q)||/^(?:\d+\s*)?(?:金币|家族币|星尘|星辰)(?:能干)?[。？！?!]*$/.test(q.trim())||locate;
+  if(!exchange&&!usage)return null;
+  if(isArkStateQuestion(q)&&!exchange)return null;
+  const family=/金币|家族币/.test(q),star=/星尘|星辰/.test(q),card=/补[勤签]卡/.test(q);
+  if(!family&&!star&&!card&&!exchange)return null;
+  const parts:string[]=[];
+  if(/金币/.test(q))parts.push(ARK_GOLD_ALIAS);
+  if(family)parts.push(ARK_RESOURCE_USES.family_coin);
+  if(star||exchange)parts.push(ARK_RESOURCE_USES.stardust);
+  if(star&&/人民币|现金|现实|提现|肯德基/.test(q))parts.push('星尘不能兑换现实金钱或物品。');
+  if(card)parts.push(ARK_RESOURCE_USES.makeup_card);
+  if(exchange)parts.push('当前版本小可不能替你兑换游戏收益或道具。');
+  if(locate)parts.push('你可以看设备上的资源页面，具体位置以当前页面为准。');
+  return parts.join('');
+}
+/** A short answer focus keeps the full world bible from turning a usage answer into a catalog. */
+function resourceAnswerFocus(text:string):string {
+  if(isOutsideArkQuestion(text))return '';
+  const family=/金币|家族币/.test(text),star=/星尘|星辰/.test(text);
+  if(/今天|今日|当天/.test(text)&&/赚|获得|收益|所得|收入/.test(text)&&family)
+    return '【本轮回答范围】今日收益与钱包余额不同。没有今日收益事实就只说明今日收益暂时查不到，不改问余额，不补充夜航、使用时长换算或页面上有今日收益记录的猜测。';
+  if(isArkGameExchangeQuestion(text))return '【本轮回答范围】'+(family?ARK_GOLD_ALIAS+ARK_RESOURCE_USES.family_coin:'')+ARK_RESOURCE_USES.stardust+'只说明这层用途；用户点名的具体物品是否存在、售价、操作路径均未确认，不说商品已可购买，也不编造如何获得星尘。';
+  if(!isArkStateQuestion(text)&&/有什么用|有啥用|是什么|干嘛|干什么|做什么|用途|用处|作用|怎么用|兑换|能换|^(金币|家族币|星尘|星辰)$/.test(text)){
+    if(family&&!star)return '【本轮回答范围】只用一两句说明：'+(/金币/.test(text)?ARK_GOLD_ALIAS:'')+ARK_RESOURCE_USES.family_coin+'无需解释另一钱包、余额、商店、到账或兑换操作。';
+    if(star&&!family)return '【本轮回答范围】只用一两句说明：'+ARK_RESOURCE_USES.stardust+'不添加星尘获取方式、商店名称、商品例子或余额。';
+  }
+  return '';
+}
+
 const KB_ENTRIES: KbEntry[] = [
   {
     key: 'economy',
-    keywords: ['星尘', '家族币', '宝箱', '开箱', '开宝箱', '换装', '皮肤', '攒了', '攒到', '多少币', '奖励', '收益', '倍率', '福利', '兑换', '盲盒', '专注奖励', '投入产出', '怎么得到', '品级', '稀有', '约定', '现实奖励', '买玩具', '能买吗'],
+    keywords: ['星尘', '家族币', '金币', '星辰', '宝箱', '开箱', '换装', '皮肤', '多少币', '兑换', '专注奖励'],
     content:
-      '【经济·投入产出循环（设计 1.2 V2.0）】核心循环：孩子专注阅读/写作=投入（给方舟充能）→ 产出宝箱 → 开宝箱得资源 → 消耗资源建设 → 反馈激励 → 继续专注。' +
-      '🎁 宝箱是统一的中间物：专注奖励（白天用读写台越久越多）、夜航离线奖励、夜航额外奖励——所有奖励都先产出宝箱，开宝箱才得到里面的藏品 / 生态缸资源 / 星尘 / 家族币；新手福利按系数倍率多产出。' +
-      '宝箱有价值品级（如普通 / 稀有 / 史诗 / 传说，越高越好），开出的藏品品级随宝箱品级——宝箱品级越高、开出的藏品越稀有（新手光环能把宝箱升品；藏品具体品类见「藏品」）。' +
-      '四种资源用途：· 家族币——和家长兑换现实奖励、与小程序的家族币和任务功能互动形成闭环；· 星尘——购买/兑换小可的皮肤实现换装；· 藏品——盲盒收集、分品级；· 生态缸资源——升级生态缸（小可的家）。' +
-      '消耗：升级生态缸耗生态缸部件；小可换装耗星尘。你暂时不知道 ta 的实时数量和宝箱品级，绝不编造具体数字。' +
-      '★星尘是只属于方舟的小魔法，留在船里、带不回现实世界；绝不把方舟世界说成能兑换现实金钱或物品。想要现实里的小奖励，要用和爸爸妈妈之间的「约定」去和最爱孩子的他们好好商量一个暖洋洋的承诺（家族币才是和家长兑现实奖励的那条线）。',
+      '【方舟资源·正式双钱包】先直接用一两句介绍用途，不以“哇、好呀”等感叹开头，不逐项展开说明书，孩子追问再展开；已知用途直接说明，不回答“不知道，问爸爸妈妈”。没问余额或商品时，不主动补查不到余额、不展开另一钱包。' +
+      '星尘与家族币是两种独立资源，不能混为一谈。方舟里显示的金币就是家族币；金币用途直接按家族币解释，不再反问是哪种币；金币余额只对应family_coin，绝不借用stardust。' +
+      ARK_RESOURCE_USES.family_coin + ARK_RESOURCE_USES.stardust +
+      '游戏道具兑换引导星尘，金币/家族币不能被讲成游戏道具的购买货币；只介绍用途，不自行举帽子、衣服等未确认商品，具体当前可兑换内容以设备页面为准。角色外观也可能由奖励直接获得，不能说所有外观解锁都靠星尘。家族币记录家长与孩子约定的奖励，约定可由家长在现实中兑现，但不是平台自动兑换商品，不能说家族币不能获得任何现实奖励；具体约定由家长设置，不代表真实货币，不能承诺提现或固定兑换比。' +
+      '“星辰”在游戏资源提问里按“星尘”的常见口语或识别写法解释。问金币买企鹅摆件等游戏道具时，先说明金币就是家族币，再引导星尘与设备兑换页面；不声称存在该商品、兑换比例、库存或已经帮忙兑换。即使用户点名企鹅摆件，也不能确认它已上架、能购买或要用星尘购买；应说“兑换游戏道具看星尘，具体有没有你说的物品、能不能换，以设备页面为准”。不自行分配装饰、生态缸部件、补勤卡等具体物品的购买货币，不编造按钮名称、页面路径或操作步骤。问一般金币用途只讲家族币，按需才介绍另一钱包，不要求孩子先辨认币种。' +
+      '专注与游戏任务可以带来游戏奖励，具体以当前设备页面为准，不承诺某项奖励数量、商店商品已上架或购买已完成。' +
+      '余额、库存与进度只引用本轮可信方舟事实；若本轮没有对应事实，仅这些实时状态说明暂时查不到，建议看设备资源页面，不承诺稍后就能查到、也不声称自己能读取屏幕，不把已知用途一并推给家长。星尘不能兑换现实金钱或物品。',
+  },
+  {
+    key: 'props',
+    keywords: ['道具', '补勤卡', '补签卡', '装饰', '生态缸部件'],
+    content:
+      '【方舟资源·道具】先直接用一两句讲清用途，不加感叹开场或无必要的追问：装饰用于装扮小可或方舟；生态缸部件用于建设、升级生态缸；补勤卡用于符合条件的历史航线节点补签，补签后的奖励仍需按页面领取，不会自动到账。' +
+      '孩子说“补签卡”可以理解为补勤卡。实际可使用的节点、库存、具体消耗以设备页面为准；不承诺所有日期都可补、不编造价格、不声称已替孩子使用道具。',
   },
   {
     key: 'origin',
@@ -135,26 +290,43 @@ const KB_ENTRIES: KbEntry[] = [
   },
 ];
 
+// Generic coin/star/prop words need context guards; other world entries keep their existing recall behavior.
+function entryMatches(entry: KbEntry, text: string): boolean {
+  if (entry.key === 'economy' || entry.key === 'props') {
+    // A wake-word is not a game topic. Explicit external subjects win over generic aliases.
+    if (isOutsideArkQuestion(text)) return false;
+    if (/黄金|金价|金店|人民币|比特币/.test(text) && !/方舟|星尘|家族币/.test(text)) return false;
+    if (entry.key === 'props' && !/道具|补勤卡|补签卡|生态缸部件/.test(text) && !/方舟|装扮小可|小可的/.test(text)) return false;
+  }
+  return (entry.key==='economy'&&isArkGameExchangeQuestion(text))||entry.keywords.some(k => text.includes(k));
+}
+
 /** 仅供测试/监控：本轮是否命中任何知识条目。 */
 export function matchesKnowledge(text: string): boolean {
   if (!text) return false;
-  return KB_ENTRIES.some((e) => e.keywords.some((k) => text.includes(k)));
+  return KB_ENTRIES.some((e) => entryMatches(e, text));
 }
 
 /**
  * 按需召回小可世界观知识（仿 curriculum-kg.buildGuardrail）：孩子本轮文本命中知识条目→召回对应内容（≤MAX_RECALL 条）
  * + 附真实性红线；无命中返 null（不注入，闲聊/学习不稀释人格）。失败/异常一律降级为 null，绝不阻断主链路。
  */
-export function buildKnowledgeRecall(text: string): string | null {
+export function buildKnowledgeRecall(text: string, history:{role:string;content:string}[]=[]): string | null {
   try {
     if (!text) return null;
-    const hits = KB_ENTRIES.filter((e) => e.keywords.some((k) => text.includes(k)));
+    text=normalizeArkVocabulary(text);
+    text=resolveArkResourceFollowup(text,history)??text;
+    const stateQuestion = isArkStateQuestion(text);
+    const hits = KB_ENTRIES.filter((e) => entryMatches(e, text) && (!stateQuestion || !['nightsail', 'halo', 'firsttime'].includes(e.key)));
+    if(!isOutsideArkQuestion(text)&&/奖励/.test(text)&&(/方舟|小可/.test(text)||/奖励.*不是.*(?:爸妈|家长|父母)/.test(text))&&!stateQuestion)hits.unshift({key:'game_rewards',keywords:[],content:'【游戏奖励】方舟奖励包含家族币、宝箱、补勤卡、生态缸部件等；是否有某项及数量按当前内容版本与进度条，不虚构小可玩具或已领取奖励。有效使用达标点亮后手动领取。'});
+    if (stateQuestion) hits.unshift({key: 'g1_progress', keywords: [], content: G1_PROGRESS_KNOWLEDGE});
     if (!hits.length) return null;
     const picked = hits.slice(0, MAX_RECALL); // 多命中防爆长
     return [
       '==== 小可世界观素材（本轮隐性运用：讲世界里真实存在的，别照读、别当说明书、别对孩子说"这是设定"） ====',
       ...picked.map((h) => h.content),
       REALITY_REDLINE,
+      resourceAnswerFocus(text),
     ].join('\n');
   } catch {
     return null;

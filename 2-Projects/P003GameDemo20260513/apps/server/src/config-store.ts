@@ -1,6 +1,11 @@
+import {STORAGE_POLICY_KEY,VERIFIED_PROFILE_KEY,readStoragePolicy,readVerifiedProfile,parseStorageChange,parseArchiveChange} from './storage/policy.js';
 import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import {randomUUID} from 'node:crypto';
+import {TIER_CONFIG_KEYS,TIER_SETTING_NAMES,initDiagnosticRequests,diagnosticRequests} from './analytics/tier-settings.js';
+import {DIAGNOSTIC_SOURCES} from './analytics/tier-contracts.js';
+import {UPLOAD_POLICY_KEY,parseUploadPolicy,parseUploadChange,type UploadPolicy} from './analytics/upload-policy.js';
 
 /**
  * 设备运行配置数据层（联调合同 CC_P003_POSTURE_COOLDOWN_REMOTE_CONFIG_HANDOFF_20260821 + cc 回执）。
@@ -14,12 +19,12 @@ import { DatabaseSync } from 'node:sqlite';
  */
 
 export type KeySpec = {
-  builtinDefault: number | boolean;
+  builtinDefault: number | boolean | string;
   validate: (v: unknown) => boolean;
   /** admin 通用渲染用的展示元数据；min/max 只做提示与前端预校验，真门在 validate */
   label: string;
   /** bool 键：builtinDefault/值为 boolean，min/max 只占位（admin 渲染走开关） */
-  unit: 'sec' | 'day' | 'bool';
+  unit: 'sec' | 'day' | 'bool' | 'hour' | 'ms' | 'count' | 'bytes' | 'text';
   hint: string;
   min: number;
   max: number;
@@ -38,6 +43,33 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
     hint: '两次坐姿提醒的最短间隔',
     min: 10,
     max: 86400,
+  },
+  // Zero means no cloud idle override. Omit it from the device snapshot so
+  // registering this key cannot silently replace another device's cached policy.
+  'voice.session_idle_timeout_ms': {
+    builtinDefault: 0,
+    validate: (v) => typeof v === 'number' && Number.isInteger(v)
+      && (v === 0 || (v >= 5000 && v <= 300000)),
+    label: '语音会话空闲时间', unit: 'ms',
+    hint: '0=不下发；设置5000–300000毫秒。设备下一会话应用，服务器签票使用同一配置来源。',
+    min: 0, max: 300000,
+  },
+  'analytics.event_upload_enabled': {
+    builtinDefault: false, validate: (v) => typeof v === 'boolean',
+    label: '产品事件上传开关', unit: 'bool', hint: '上传同时受服务端总闸和灰度名单控制', min: 0, max: 1,
+  },
+  'analytics.daily_upload_hour_cst': {
+    builtinDefault: 23, validate: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 23,
+    label: '每日上传时间（北京时间）', unit: 'hour', hint: '设备常驻时约五分钟检查一次，积压可能立即补传', min: 0, max: 23,
+  },
+  ...TIER_CONFIG_KEYS,
+  'ark_records.enabled': {
+    builtinDefault:false,validate:v=>typeof v==='boolean',label:'业务流水上传',unit:'bool',
+    hint:'仅明确设置的单机下发；服务端仍核固定历史授权范围',min:0,max:1,
+  },
+  'ark_records.contract_id': {
+    builtinDefault:'p003-ark-records-r1',validate:v=>v==='p003-ark-records-r1',label:'业务流水兼容格式',unit:'text',
+    hint:'mini009已知格式；不是现役origin协议别名',min:0,max:0,
   },
   // 本地人格音频保底刷新（2026-09-03 川哥定）：触发式重生成之外，超过 N 天没出新套就主动重生成一次（哪怕变化很小）。
   // 只有 server 每日批读它（local-audio-generator），设备不需要 → serverOnly。
@@ -68,10 +100,11 @@ export const CONFIG_KEYS: Record<string, KeySpec> = {
 
 /** 校验失败的统一提示文案（route 复用，随键表走，别再手写范围） */
 export function invalidValueMessage(key: string): string {
+  if (key === 'voice.session_idle_timeout_ms') return '取值须为0（不下发）或5000至300000之间的整数毫秒';
   const s = CONFIG_KEYS[key];
   if (!s) return '取值不合法';
   if (s.unit === 'bool') return '取值须为 true/false';
-  return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : '天'}`;
+  return `取值须为 ${s.min}~${s.max} 的整数${s.unit === 'sec' ? '秒' : s.unit === 'hour' ? '小时' : '天'}`;
 }
 
 export const CONFIG_SCHEMA_VERSION = 1;
@@ -113,14 +146,13 @@ function resolveDbPath(): string {
   return resolve(process.cwd(), raw);
 }
 
-class ConfigStore {
+export class ConfigStore {
   private readonly db: DatabaseSync;
 
-  constructor() {
-    const dbPath = resolveDbPath();
+  constructor(dbPath = resolveDbPath()) {
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
-    this.db.exec('PRAGMA journal_mode = WAL;');
+    this.db.exec('PRAGMA journal_mode = WAL; PRAGMA busy_timeout=250;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS device_config (
         scope TEXT NOT NULL,
@@ -155,6 +187,109 @@ class ConfigStore {
         done_at INTEGER
       );
     `);
+    initDiagnosticRequests(this.db);
+  }
+
+  analyticsTierSettings(sn:string){const snapshot=this.effectiveSnapshot(sn);return {revision:snapshot.revision as string,analytics:snapshot.analytics as Record<string,any>};}
+  analyticsDiagnosticRequests(sn:string){return diagnosticRequests(this.db,sn);}
+  private analyticsSettingsTransaction<T>(fn:()=>T):T{this.db.exec('BEGIN IMMEDIATE');try{const result=fn();this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}}
+  saveAnalyticsTierSettings(sn:string,input:{expected_revision:string;settings:Record<string,unknown>},by:string){
+    const settings=input?.settings;
+    if(!settings||Array.isArray(settings)||typeof settings!=='object'||!Object.keys(settings).length||Object.keys(input).some(k=>!['expected_revision','settings'].includes(k))||Object.entries(settings).some(([k,v])=>!TIER_SETTING_NAMES.includes(k)||!TIER_CONFIG_KEYS['analytics.'+k].validate(v)))throw new Error('INVALID_TIER_SETTINGS');
+    return this.analyticsSettingsTransaction(()=>{
+      if(this.analyticsTierSettings(sn).revision!==input.expected_revision)throw new Error('POLICY_CONFLICT');
+      for(const [k,v] of Object.entries(settings))this.setValue(sn,'analytics.'+k,v);
+      // Disabling capture also stops future sample handoff; already durable samples keep their request semantics.
+      if(settings.on_demand_capture_enabled===false){this.setValue(sn,'analytics.on_demand_upload_enabled',false);this.setValue(sn,'analytics.on_demand_request_id','');this.db.prepare('UPDATE analytics_diagnostic_request SET revoked_at_ms=? WHERE sn=? AND revoked_at_ms IS NULL').run(Date.now(),sn);}
+      return this.analyticsTierSettings(sn);
+    });
+  }
+  createAnalyticsDiagnosticRequest(sn:string,input:{expected_revision:string;allowed_event_names:string[];ttl_seconds:number;max_events:number;lookback_days:number},by:string,now=Date.now()){
+    const names=input?.allowed_event_names;
+    if(!input||Object.keys(input).some(k=>!['expected_revision','allowed_event_names','ttl_seconds','max_events','lookback_days'].includes(k))||!Array.isArray(names)||!names.length||names.length>DIAGNOSTIC_SOURCES.length||new Set(names).size!==names.length||names.some(n=>!DIAGNOSTIC_SOURCES.includes(n))||!Number.isInteger(input.ttl_seconds)||input.ttl_seconds<60||input.ttl_seconds>86400||!Number.isInteger(input.max_events)||input.max_events<1||input.max_events>1000||!Number.isInteger(input.lookback_days)||input.lookback_days<1||input.lookback_days>14)throw new Error('INVALID_DIAGNOSTIC_REQUEST');
+    return this.analyticsSettingsTransaction(()=>{
+      const current=this.analyticsTierSettings(sn);if(current.revision!==input.expected_revision)throw new Error('POLICY_CONFLICT');
+      if(!current.analytics.tiering_enabled||!current.analytics.aggregate_upload_enabled)throw new Error('TIERING_NOT_ENABLED');
+      if(Number(this.db.prepare('SELECT count(*) n FROM analytics_diagnostic_request WHERE sn=? AND created_at_ms>=?').get(sn,now-86400000)!.n)>=10)throw new Error('DIAGNOSTIC_REQUEST_LIMIT');
+      this.db.prepare('UPDATE analytics_diagnostic_request SET revoked_at_ms=? WHERE sn=? AND revoked_at_ms IS NULL').run(now,sn);
+      const id='diag-'+randomUUID();this.db.prepare('INSERT INTO analytics_diagnostic_request VALUES (?,?,?,?,NULL,?,?,?,?)').run(id,sn,now,now+input.ttl_seconds*1000,JSON.stringify(names),input.max_events,input.lookback_days,by);
+      this.setValue(sn,'analytics.on_demand_capture_enabled',true);this.setValue(sn,'analytics.on_demand_upload_enabled',true);this.setValue(sn,'analytics.on_demand_request_id',id);
+      return {...this.analyticsTierSettings(sn),request:this.analyticsDiagnosticRequests(sn).find(r=>r.id===id)!};
+    });
+  }
+  revokeAnalyticsDiagnosticRequest(sn:string,id:string,_by:string,now=Date.now()){
+    return this.analyticsSettingsTransaction(()=>{
+      const request=this.analyticsDiagnosticRequests(sn).find(r=>r.id===id);if(!request)throw new Error('DIAGNOSTIC_REQUEST_NOT_FOUND');
+      if(request.revoked_at_ms===null)this.db.prepare('UPDATE analytics_diagnostic_request SET revoked_at_ms=? WHERE id=? AND sn=?').run(now,id,sn);
+      if(this.analyticsTierSettings(sn).analytics.on_demand_request_id===id){this.setValue(sn,'analytics.on_demand_upload_enabled',false);this.setValue(sn,'analytics.on_demand_request_id','');}
+      return this.analyticsTierSettings(sn);
+    });
+  }
+  expireAnalyticsDiagnosticRequests(sn:string,now=Date.now()){
+    const id=this.analyticsTierSettings(sn).analytics.on_demand_request_id;
+    if(!id)return;
+    const request=this.analyticsDiagnosticRequests(sn).find(r=>r.id===id);
+    if(request&&request.expires_at_ms>now&&request.revoked_at_ms===null)return;
+    this.analyticsSettingsTransaction(()=>{if(this.analyticsTierSettings(sn).analytics.on_demand_request_id!==id)return;this.setValue(sn,'analytics.on_demand_upload_enabled',false);this.setValue(sn,'analytics.on_demand_request_id','');});
+  }
+
+  analyticsPolicy():UploadPolicy|null {
+    const flag=this.getFlag(UPLOAD_POLICY_KEY);
+    return flag?parseUploadPolicy(flag.value):null;
+  }
+
+  storagePolicy(){return readStoragePolicy(this.getFlag(STORAGE_POLICY_KEY)?.value);}
+  storageProfile(){return readVerifiedProfile(this.getFlag(VERIFIED_PROFILE_KEY)?.value);}
+  /** Common lock order is config -> Ark. No awaited work while holding this admission lock. */
+  withStorageAdmission<T>(fn:()=>T):T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try{const value=fn();this.db.exec('COMMIT');return value;}catch(e){this.db.exec('ROLLBACK');throw e;}
+  }
+  saveStoragePolicy(input:unknown,counts:()=>{analytics:number;ark:number},by:string){
+    const p=parseStorageChange(input);
+    return this.withStorageAdmission(()=>{
+      const old=this.storagePolicy();if(old.revision!==p.expected_revision)throw new Error('STORAGE_POLICY_CONFLICT');
+      const n=counts();if(p.target_devices<Math.max(n.analytics,n.ark))throw new Error('STORAGE_ENABLED_CONFLICT');
+      const next={...old,revision:old.revision+1,target_devices:p.target_devices};
+      this.setFlag(STORAGE_POLICY_KEY,JSON.stringify(next),by,'Storage planning quota; no device switch changes');return next;
+    });
+  }
+
+  saveStorageArchive(input:unknown,by:string){
+    const p=parseArchiveChange(input);
+    return this.withStorageAdmission(()=>{
+      const old=this.storagePolicy();if(old.revision!==p.expected_revision)throw new Error('STORAGE_POLICY_CONFLICT');
+      const next={...old,revision:old.revision+1,archive_enabled:p.enabled};
+      this.setFlag(STORAGE_POLICY_KEY,JSON.stringify(next),by,'Ark checkpoint archival only; existing pending records continue draining');return next;
+    });
+  }
+
+  /** One transaction owns enrollment, device snapshots and their monotonically increasing revisions. */
+  saveAnalyticsPolicy(input:ReturnType<typeof parseUploadChange>,activeSubjects:readonly string[],by:string,admission?:{revision:number;limit:number;checked_at_ms:number}):UploadPolicy {
+    const p=parseUploadChange(input),active=new Set(activeSubjects);
+    if(p.subjects.some(s=>!active.has(s)))throw new Error('DEVICE_NOT_ACTIVE');
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const old=this.analyticsPolicy();
+      if((old?.revision??0)!==p.expected_revision)throw new Error('POLICY_CONFLICT');
+      if(p.enabled&&(!old?.enabled||p.subjects.some(sn=>!old.subjects.includes(sn)))){
+        const quota=this.storagePolicy();
+        if(admission&&(admission.revision!==quota.revision||admission.checked_at_ms<Date.now()-120_000))throw new Error('STORAGE_POLICY_CONFLICT');
+        const limit=Math.min(quota.target_devices,Math.max(this.storageProfile().analytics_devices,quota.beta_admission_limit??0),admission?.limit??0);
+        if(p.subjects.length>limit)throw new Error('CAPACITY_LIMIT');
+      }
+      // A single writer entry also prevents inherited defaults enabling future registrations.
+      const scope=new Set([...activeSubjects,...(old?.subjects??[])]);
+      this.setGlobal('analytics.event_upload_enabled',false);
+      this.setGlobal('analytics.daily_upload_hour_cst',p.hour);
+      for(const sn of scope){
+        this.setValue(sn,'analytics.event_upload_enabled',p.enabled&&p.subjects.includes(sn));
+        this.setValue(sn,'analytics.daily_upload_hour_cst',p.hour);
+      }
+      const next:UploadPolicy={version:1,revision:(old?.revision??0)+1,enabled:p.enabled,subjects:[...p.subjects].sort(),hour:p.hour,updated_at_ms:Date.now()};
+      this.db.prepare(`INSERT INTO runtime_flag(key,value,updated_at,updated_by,note) VALUES(?,?,?,?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at,updated_by=excluded.updated_by,note=excluded.note`).run(UPLOAD_POLICY_KEY,JSON.stringify(next),next.updated_at_ms,by,'Analytics 上传管理');
+      this.db.exec('COMMIT');return next;
+    }catch(e){this.db.exec('ROLLBACK');throw e;}
   }
 
   // ── 下一版待办：open 在前（按创建顺序），done/dropped 在后（按更新时间倒序）。只软删（dropped），来源永远可追。──
@@ -251,6 +386,7 @@ class ConfigStore {
   /** 保存值（scope=(global) 或 SN）。校验失败返回 null，成功返回新 rev。 */
   setValue(scope: string, key: string, value: unknown): number | null {
     const spec = CONFIG_KEYS[key];
+    if(scope===GLOBAL_SCOPE&&key.startsWith('ark_records.'))return null;
     if (!spec || !spec.validate(value)) return null;
     const rev = this.nextSeq();
     this.db
@@ -310,6 +446,8 @@ class ConfigStore {
     };
     for (const [key, spec] of Object.entries(CONFIG_KEYS)) {
       if (spec.serverOnly) continue; // 设备快照只含设备合同键
+      // No implicit all-device rollout. A missing/tombstoned per-SN switch stays absent.
+      if(key.startsWith('ark_records.')&&(!snByKey.has('ark_records.enabled')||snByKey.get('ark_records.enabled')!.value_json==='null'))continue;
       let value: unknown = spec.builtinDefault;
       const g = globalByKey.get(key);
       if (g) {
@@ -321,6 +459,7 @@ class ConfigStore {
         const parsed = JSON.parse(s.value_json);
         if (parsed !== null) value = parsed;
       }
+      if (key === 'voice.session_idle_timeout_ms' && value === 0) continue;
       // 点分路径 → 嵌套对象（posture.reminder_cooldown_sec → {posture:{reminder_cooldown_sec}}）
       const parts = key.split('.');
       let node = snapshot;
@@ -337,7 +476,7 @@ class ConfigStore {
   adminOverview(): {
     keys: Array<{
       key: string;
-      builtin_default: number | boolean;
+      builtin_default: number | boolean | string;
       global: unknown;
       global_updated_at: number | null;
       label: string;

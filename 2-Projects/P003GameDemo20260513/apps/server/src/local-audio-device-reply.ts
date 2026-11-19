@@ -1,3 +1,4 @@
+import { assertLocalAudioWritesAllowed } from './local-audio-integrity.js';
 /**
  * 设备回复本地短句（合同 v3.1 §5 · codex 阶段 B GO §3 定稿十八条，2026-09-05）。
  *
@@ -8,7 +9,6 @@
  *
  * 与 worker `pipeline.rs::device_reply` 话术表同源：改文本先改合同再两端同步。
  */
-import crypto from 'node:crypto';
 import { synthesizeXfyunTtsWav } from './providers/xfyun-tts.js';
 import {
   DEVICE_REPLY_SLOTS,
@@ -76,12 +76,14 @@ export function activeDeviceReplyKeep(accountId: string): Array<{ slot: DeviceRe
 
 /** 十八条合成/复用入 staging（active=0）。同文本已有 wav 条目直接复用（TTS 非确定性，重合成=白换 id）。 */
 export async function stageDeviceReplyClips(accountId: string): Promise<DeviceReplyStageResult> {
+  assertLocalAudioWritesAllowed();
   const rows: DeviceReplyRow[] = [];
   const rejected: Array<{ slot: DeviceReplySlot; reason: string }> = [];
   for (const slot of DEVICE_REPLY_SLOTS) {
     const text = DEVICE_REPLY_TEXTS[slot];
     const existing = localAudioStore.findByText(accountId, slot, text, 'wav');
     if (existing) {
+      localAudioStore.retainCandidate(accountId, existing.id);
       rows.push({ slot, text, id: existing.id, sha256: existing.sha256, bytes: existing.bytes, duration_ms: existing.duration_ms, origin: 'reused' });
       continue;
     }
@@ -98,10 +100,8 @@ export async function stageDeviceReplyClips(accountId: string): Promise<DeviceRe
       rejected.push({ slot, reason: `file_too_big:${tts.audio.length}` });
       continue;
     }
-    const sha256 = crypto.createHash('sha256').update(tts.audio).digest('hex');
-    const id = sha256.slice(0, 16);
-    localAudioStore.writeAudio(accountId, id, tts.audio, 'wav');
-    localAudioStore.insertItem(accountId, { slot, id, text, sha256, bytes: tts.audio.length, duration_ms: tts.durationMs, format: 'wav' });
+    const item = localAudioStore.stageClipImmutable(accountId, { slot, text, audio: tts.audio, durationMs: tts.durationMs, format: 'wav' });
+    const { id, sha256 } = item;
     rows.push({ slot, text, id, sha256, bytes: tts.audio.length, duration_ms: tts.durationMs, origin: 'synthesized' });
   }
   return { rows, rejected };

@@ -1,0 +1,35 @@
+{
+  "parent_A_verified": true,
+  "original_binding_unchanged": true,
+  "mutating_http_requests": 0,
+  "checks": [
+    {
+      "path": "/v1/parent/devices/dev_************9045/tasks?view=active&limit=20",
+      "http_status": 404,
+      "content_type": "text/plain; charset=UTF-8",
+      "read_at_beijing": "2026-11-18T15:59:57.626+08:00",
+      "error_field_present": false,
+      "reason_field_present": false,
+      "body_if_non_json": "404 Not Found",
+      "response_sha256": "7d04f7431bbfa41a04bcc7e6b98b9de0d919756c4c671c5785c99fff45f16402"
+    },
+    {
+      "path": "/v1/parent/devices/dev_************9045/dashboard",
+      "http_status": 200,
+      "content_type": "application/json",
+      "read_at_beijing": "2026-11-18T15:59:57.742+08:00",
+      "error_field_present": false,
+      "reason_field_present": false,
+      "response_sha256": "589e4c8f72f959dadaa53880993846051ce3c961a9bd4b3e0f88111774d2f85c"
+    },
+    {
+      "path": "/v1/parent/devices/dev_************9045/weekly-report?timezone=Asia/Shanghai&week_start=2026-11-16",
+      "http_status": 200,
+      "content_type": "application/json",
+      "read_at_beijing": "2026-11-18T15:59:57.839+08:00",
+      "error_field_present": false,
+      "reason_field_present": false,
+      "response_sha256": "694e4bf16df430336c08113d2b8eaf57a4cca23b1df2726ade5bc8a3365ef274"
+    }
+  ]
+}

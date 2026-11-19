@@ -5,6 +5,14 @@ description: P003 KidsHub 三端(家长端 parent / 体验台 web / admin 后台
 
 # P003 三端部署 + 邀请码运营 SOP · V1
 
+## 已归档的 P003 运维记录
+
+- [P003 管理后台：模块标签与并行静态发布](references/admin-module-tabs.md)
+- [小程序真实数据与历史授权对账](references/miniapp-realdata-reconciliation.md)
+- [家长任务联调与到账对账](references/parent-task-reconciliation.md)
+- [P003 PRnas 检查点与容量验证](references/prnas-checkpoint-capacity.md)
+- [周报计算与验收](references/weekly-report-reconciliation.md)
+
 > 2026-06-16 沉淀。配套项目记忆 `project_p003_3end_integration`。场景美术化另见 `p003-scene-art`（主题不同）。
 > 项目根:`/Users/rayman.chen/mycc/2-Projects/P003GameDemo20260513/`
 

@@ -2,6 +2,7 @@ import type { ChatHistoryTurn } from './gemini-llm.js';
 import type { DeepseekLlmClient } from './deepseek-llm.js';
 import { createDeepseekLlmClient } from './deepseek-llm.js';
 import { createVolcLlmClient } from './volc-llm.js';
+import { recordRaceContent, recordRaceFailure } from './provider-health.js';
 
 /**
  * 大脑内双路 LLM 赛马（2026-08-17 P1，_run_race 家族第三个实现：Python FastLLM →
@@ -38,7 +39,7 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
     this.fb = fb;
 
     let winner: 'main' | 'fallback' | null = null;
-    let failures = 0;
+    const failures = new Set<'main' | 'fallback'>();
     let lastErr: Error | null = null;
     let settledOut = false; // 已对外 onDone/onError 过（防双发）
     const t0 = Date.now();
@@ -47,6 +48,7 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
       onDelta: (delta: string): void => {
         if (winner === null) {
           winner = tag;
+          recordRaceContent(tag);
           console.log(`[race] won_by=${tag} ttft_ms=${Date.now() - t0}`);
           loser.abort();
         }
@@ -60,16 +62,19 @@ class RaceLlmClientImpl implements DeepseekLlmClient {
         // 无 winner 的 onDone（空回复流）不透传：等另一路；双终结兜底在 allSettled 后
       },
       onError: (err: Error): void => {
-        failures += 1;
+        // Some providers call onError and then reject the same promise. Count a route once.
+        if (failures.has(tag) || err.name === 'AbortError') return;
+        failures.add(tag);
+        recordRaceFailure(tag, err);
         lastErr = err;
         if (winner === tag && !settledOut) {
           settledOut = true; // 胜者中途死：如实上报（外层有人设兜底文案）
           opts.onError(err);
           return;
         }
-        if (winner === null && failures >= 2 && !settledOut) {
+        if (winner === null && failures.size >= 2 && !settledOut) {
           settledOut = true;
-          console.log(`[race] 双路全败: ${err.message}`);
+          console.log('[race] 双路全败');
           opts.onError(err);
         }
         // 未定胜负的单路失败：静默，让另一路继续跑

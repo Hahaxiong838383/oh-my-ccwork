@@ -20,7 +20,7 @@ CEILING=39            # glibc 次版本上限（2.39），与 CI 判据一致
 CXX_CEILING="3.4.33"  # libstdc++ 上限。CI 没查这层，这是本脚本比 CI 严的地方。
                       # 3.4.33 = Ubuntu 24.04(gcc 13) 的供给量，按「64.90 同为 24.04」推断得出，
                       # 【未实测目标机】。等有了 SSH 凭据，用这条取真值再回来改：
-                      #   ssh root@64.90.13.117 "strings /lib/x86_64-linux-gnu/libstdc++.so.6 \
+                      #   ssh root@64.90.13.177 "strings /lib/x86_64-linux-gnu/libstdc++.so.6 \
                       #     | grep -oE '^GLIBCXX_[0-9.]+' | sort -u -V | tail -1"
 BIN=target/release/voice-rust-worker
 
@@ -134,5 +134,5 @@ ls -lh "$BIN" | sed 's/^/   /'
 echo "   md5: $(md5sum "$BIN" | cut -d' ' -f1)"
 echo
 echo "   下一步（部署到 64.90，需要 SSH 凭据）："
-echo "     scp $BIN root@64.90.13.117:/root/voice-rust-worker.new"
+echo "     scp $BIN root@64.90.13.177:/root/rust-worker/voice-rust-worker.new   # 2026-09-23 起生产池在 hk2"
 echo "     然后在目标机跑 deploy-worker-bin.sh（自动备份 + 纪律重启 + md5 锚点核对）"

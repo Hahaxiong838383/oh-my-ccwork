@@ -1,4 +1,5 @@
-import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync } from 'node:fs';
+import { mkdirSync, writeFileSync, readFileSync, unlinkSync, existsSync, openSync, closeSync, fsyncSync, linkSync, lstatSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { dirname, join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 
@@ -10,93 +11,14 @@ import { DatabaseSync } from 'node:sqlite';
  *  - local_audio_item：条目（active=1 为当前套成员；替换后旧条目 active=0 保留 14 天供
  *    切换窗口期的设备继续下载，之后 cleanup 删行+删文件）。
  *
- * id = 音频 sha256 前 16 hex（内容寻址，同 id 永远同字节）；复用语义（codex J4）：
+ * 旧 id = 音频 sha256 前 16 hex；所有 ID 的元信息与字节均不可变；复用语义（codex J4）：
  * 重生成时同 slot 同 text 的旧条目直接复活 active=1，不重合成（TTS 非确定性，重合成=白换 id）。
  */
 
-export const LOCAL_AUDIO_SLOTS = [
-  'greeting.normal',
-  'greeting.cover_open',
-  'greeting.presence_return',
-  'farewell.general',
-  'farewell.goodbye',
-  'farewell.night',
-  'posture.adjust',
-  'posture.no_face',
-  // v133 G1 奖励线（optional，合同 CODEX_CC_P003_G1_LOCAL_AUDIO_V133_JOINT_20260828 §2）：
-  // 进度段完成（*.earned）与领取事务成功（*.claimed）各三档，缺失=合法（端侧只记 state=missing）
-  'g1.progress.coin_earned',
-  'g1.progress.chest_earned',
-  'g1.progress.final_earned',
-  'g1.reward.coin_claimed',
-  'g1.reward.chest_claimed',
-  'g1.reward.final_claimed',
-] as const;
-export type LocalAudioSlot = (typeof LOCAL_AUDIO_SLOTS)[number];
-
-/**
- * 设备回复槽（合同 v3.1 §5，codex 2026-09-05 定稿 18 条）：文本冻结、每槽 1 条、optional。
- * 不进 LLM 生成循环（LOCAL_AUDIO_SLOTS 不含），只由 local-audio-device-reply.ts 显式 stage / 发布；
- * 日常再生成只搬运已 active 的条目。文本真源见 DEVICE_REPLY_TEXTS。
- */
-export const DEVICE_REPLY_SLOTS = [
-  'device_reply.applied_relative',
-  'device_reply.applied_absolute',
-  'device_reply.applied_unconfirmed',
-  'device_reply.already',
-  'device_reply.boundary.virtual_image_far',
-  'device_reply.boundary.virtual_image_near',
-  'device_reply.boundary.brightness_max',
-  'device_reply.boundary.brightness_min',
-  'device_reply.boundary.color_temperature_warm',
-  'device_reply.boundary.color_temperature_cold',
-  'device_reply.boundary.volume_max',
-  'device_reply.boundary.volume_min',
-  'device_reply.boundary.height_max',
-  'device_reply.boundary.height_min',
-  'device_reply.boundary.generic',
-  'device_reply.not_now',
-  'device_reply.failed',
-  'device_reply.unsupported_motor',
-] as const;
-export type DeviceReplySlot = (typeof DEVICE_REPLY_SLOTS)[number];
-/**
- * G1 设置引导三句（Android codex 需求 2026-09-17）：文本冻结、每槽 1 条、optional；同十八条不进 LLM 循环，
- * 只由 local-audio-g1-settings.ts 显式 stage / 发布（合成一次、同字节扇出全机队）；文本真源 G1_SETTINGS_TEXTS。
- */
-export const G1_SETTINGS_SLOTS = ['g1.settings.enter', 'g1.settings.intro', 'g1.settings.exit'] as const;
-export type G1SettingsSlot = (typeof G1_SETTINGS_SLOTS)[number];
-/** 条目可落的全部槽（人格 14 + 设备回复 18 + G1 设置引导 3） */
-export type AnyAudioSlot = LocalAudioSlot | DeviceReplySlot | G1SettingsSlot;
-
-/**
- * 必选六 slot（v107 合同 §1：required 缺任一即整套 abort）。
- * posture.* 为 optional：缺失=合法（v107 端侧回退 APK 内置），但一旦出现必须 2..5 条——
- * 单条不成套（发布门会弃 1 条的 optional slot，条目留 staging 下轮补足后再进）。
- */
-export const REQUIRED_SLOTS: readonly LocalAudioSlot[] = [
-  'greeting.normal',
-  'greeting.cover_open',
-  'greeting.presence_return',
-  'farewell.general',
-  'farewell.goodbye',
-  'farewell.night',
-] as const;
-
-export const MIN_ITEMS_PER_SLOT = 2;
+export { LOCAL_AUDIO_SLOTS, DEVICE_REPLY_SLOTS, G1_SETTINGS_SLOTS, REQUIRED_SLOTS, MIN_ITEMS_PER_SLOT } from './local-audio-integrity.js';
+export type { LocalAudioSlot, DeviceReplySlot, G1SettingsSlot, AnyAudioSlot, LocalAudioItem } from './local-audio-integrity.js';
+import { type LocalAudioItem, type AnyAudioSlot, assertLocalAudioWritesAllowed, deriveClipId, sha256, fail, sameClipMetadata, validateClipBytes, validatePublicationItems } from './local-audio-integrity.js';
 const STALE_ITEM_TTL_MS = 14 * 86_400_000;
-
-export type LocalAudioItem = {
-  slot: AnyAudioSlot;
-  id: string;
-  text: string;
-  sha256: string;
-  bytes: number;
-  duration_ms: number;
-  format: 'mp3' | 'wav'; // WAV 合同增量：rev=1 存量=mp3（冻结回滚锚），rev≥2 新发布=wav
-  created_at: number;
-  active: number;
-};
 
 export type LocalAudioState = {
   account_id: string;
@@ -127,13 +49,14 @@ function safeSegment(s: string): string {
 }
 
 class LocalAudioStore {
+  readonly publicationGuardVersion = 1;
   private readonly db: DatabaseSync;
 
   constructor() {
     const dbPath = resolveDbPath();
     mkdirSync(dirname(dbPath), { recursive: true });
     this.db = new DatabaseSync(dbPath);
-    this.db.exec('PRAGMA journal_mode = WAL;');
+    this.db.exec('PRAGMA busy_timeout = 5000; PRAGMA journal_mode = WAL;');
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS local_audio_state (
         account_id            TEXT PRIMARY KEY,
@@ -218,7 +141,8 @@ class LocalAudioStore {
   }
 
   audioPath(accountId: string, id: string, format: 'mp3' | 'wav' = 'mp3'): string {
-    return join(audioRoot(), safeSegment(accountId), `${id}.${format}`);
+    if (!accountId || safeSegment(accountId) !== accountId || !/^[0-9a-f]{16}$/.test(id) || !['wav', 'mp3'].includes(format)) fail('invalid_clip_path');
+    return join(audioRoot(), accountId, `${id}.${format}`);
   }
 
   readAudio(accountId: string, id: string, format: 'mp3' | 'wav' = 'mp3'): Buffer | null {
@@ -230,9 +154,24 @@ class LocalAudioStore {
   }
 
   writeAudio(accountId: string, id: string, audio: Buffer, format: 'mp3' | 'wav' = 'mp3'): void {
+    assertLocalAudioWritesAllowed();
     const p = this.audioPath(accountId, id, format);
     mkdirSync(dirname(p), { recursive: true });
-    writeFileSync(p, audio);
+    const acceptExisting = () => {
+      if (!lstatSync(p).isFile() || !readFileSync(p).equals(audio)) fail('clip_identity_conflict', id);
+    };
+    if (existsSync(p)) { acceptExisting(); return; }
+    const temp = `${p}.${randomUUID()}.tmp`;
+    const fd = openSync(temp, 'wx', 0o600);
+    try { writeFileSync(fd, audio); fsyncSync(fd); } finally { closeSync(fd); }
+    try {
+      try { linkSync(temp, p); } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+        acceptExisting();
+      }
+      const parent = openSync(dirname(p), 'r');
+      try { fsyncSync(parent); } finally { closeSync(parent); }
+    } finally { unlinkSync(temp); }
   }
 
   /** 该 slot 的 staging 条目（active=0，14 天窗内，新→旧，限定 format）——LLM 空手轮的补足来源。
@@ -261,8 +200,8 @@ class LocalAudioStore {
    *  撞文案复活了 rev=1 的 MP3 条目，rev=2 成混套）。 */
   findByText(accountId: string, slot: AnyAudioSlot, text: string, format: 'mp3' | 'wav' = 'wav'): LocalAudioItem | null {
     const row = this.db
-      .prepare(`SELECT * FROM local_audio_item WHERE account_id = ? AND slot = ? AND text = ? AND format = ? LIMIT 1`)
-      .get(accountId, slot, text, format) as LocalAudioItem | undefined;
+      .prepare(`SELECT * FROM local_audio_item WHERE account_id = ? AND slot = ? AND text = ? AND format = ? AND (active = 1 OR created_at >= ? OR slot LIKE 'device_reply.%' OR slot LIKE 'g1.settings.%') ORDER BY active DESC, created_at DESC LIMIT 1`)
+      .get(accountId, slot, text, format, Date.now() - STALE_ITEM_TTL_MS) as LocalAudioItem | undefined;
     return row ?? null;
   }
 
@@ -270,61 +209,129 @@ class LocalAudioStore {
    *  集合恒等、changed 永假，首轮 revision 停在 0（codex 端只接受正整数 revision，整套会被拒）。
    *  发布门 abort 时已合成条目留在 staging，下轮 findByText 直接复用（省 TTS），14 天未用 cleanup 清走。 */
   insertItem(accountId: string, item: Omit<LocalAudioItem, 'active' | 'created_at'>): void {
-    this.db
-      .prepare(
-        `INSERT OR REPLACE INTO local_audio_item
-           (account_id, slot, id, text, sha256, bytes, duration_ms, format, created_at, active)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
-      )
-      .run(accountId, item.slot, item.id, item.text, item.sha256, item.bytes, item.duration_ms, item.format, Date.now());
+    assertLocalAudioWritesAllowed();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      this.insertItemRecord(accountId, item);
+      this.pinCandidate(accountId, this.getItem(accountId, item.id)!);
+      this.db.exec('COMMIT');
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
   }
 
-  /**
-   * 整套原子提交（生成侧「整套原子」，合同 §7.3 的服务端镜像）：
-   * 六 slot 的新成员集合一次事务替换 active 标记；集合与旧 active 集不同才 bump revision。
-   * 返回新 revision（未变化返回 null）。keep 传 (slot,id) 全集——含复用的旧条目。
-   */
-  commitSet(
-    accountId: string,
-    keep: Array<{ slot: AnyAudioSlot; id: string }>,
-    gen: { tier: string; traits: string },
-    // minRevision：跨设备 revision 命名空间对齐用（v133 合同硬门 2「不得低于双机已持有值」，
-    // 0010 3→5 跳号）。默认 0 = MAX(revision+1, 0) = 纯 +1，旧路径行为不变。
-    opts?: { minRevision?: number },
-  ): number | null {
-    const before = this.listActive(accountId)
-      .map((i) => `${i.slot}:${i.id}`)
-      .sort()
-      .join(',');
-    const after = keep
-      .map((k) => `${k.slot}:${k.id}`)
-      .sort()
-      .join(',');
-    this.ensureStateRow(accountId);
-    const changed = before !== after;
-    this.db.exec('BEGIN');
-    try {
-      this.db.prepare(`UPDATE local_audio_item SET active = 0 WHERE account_id = ?`).run(accountId);
-      const revive = this.db.prepare(`UPDATE local_audio_item SET active = 1 WHERE account_id = ? AND id = ?`);
-      for (const k of keep) revive.run(accountId, k.id);
-      if (changed) {
-        this.db
-          .prepare(
-            `UPDATE local_audio_state SET revision = MAX(revision + 1, ?), last_generated_at = ?, gen_tier = ?, gen_traits = ? WHERE account_id = ?`,
-          )
-          .run(opts?.minRevision ?? 0, Date.now(), gen.tier, gen.traits, accountId);
+  private insertItemRecord(accountId: string, item: Omit<LocalAudioItem, 'active' | 'created_at'>): void {
+      const existing = this.getItem(accountId, item.id);
+      if (existing) {
+        if (!sameClipMetadata(existing, item)) fail('clip_identity_conflict', item.id);
       } else {
-        // 内容没变不 bump（设备零感知），但生成基准要前移，否则触发条件每天重算重生成
-        this.db
-          .prepare(`UPDATE local_audio_state SET last_generated_at = ?, gen_tier = ?, gen_traits = ? WHERE account_id = ?`)
+        this.db.prepare(`INSERT INTO local_audio_item
+          (account_id, slot, id, text, sha256, bytes, duration_ms, format, created_at, active)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`)
+          .run(accountId, item.slot, item.id, item.text, item.sha256, item.bytes, item.duration_ms, item.format, Date.now());
+      }
+  }
+
+  /** 所有新素材共用此入口；事务防 cleanup 与重复 stage 竞争，文件落地永不覆盖。 */
+  stageClipImmutable(accountId: string, clip: { slot: AnyAudioSlot; text: string; audio: Buffer; format: 'wav'; durationMs: number }): LocalAudioItem {
+    assertLocalAudioWritesAllowed();
+    const fields = { slot: clip.slot, text: clip.text.trim().normalize('NFC'), sha256: sha256(clip.audio),
+      bytes: clip.audio.length, duration_ms: clip.durationMs, format: clip.format };
+    const proposed = { ...fields, id: deriveClipId(fields) };
+    validateClipBytes(proposed, clip.audio);
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      // 合法历史 ID 不因命名空间升级而换新；明确不同字节或元信息才新建。
+      const old = this.findByText(accountId, clip.slot, fields.text, clip.format);
+      const item = old && sameClipMetadata(old, { ...proposed, id: old.id }) ? { ...proposed, id: old.id } : proposed;
+      const collision = this.getItem(accountId, item.id);
+      if (collision && !sameClipMetadata(collision, item)) fail('clip_identity_conflict', item.id);
+      this.writeAudio(accountId, item.id, clip.audio, clip.format);
+      this.insertItemRecord(accountId, item);
+      this.pinCandidate(accountId, this.getItem(accountId, item.id)!);
+      const result = this.getItem(accountId, item.id)!;
+      this.db.exec('COMMIT');
+      return result;
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
+  }
+
+  validateItem(accountId: string, id: string): LocalAudioItem {
+    const item = this.getItem(accountId, id);
+    if (!item) fail('clip_missing', id);
+    const p = this.audioPath(accountId, id, item.format);
+    if (!existsSync(p)) fail('clip_file_missing', id);
+    if (!lstatSync(p).isFile()) fail('clip_file_mismatch', id);
+    validateClipBytes(item, readFileSync(p));
+    return item;
+  }
+
+  // 清理租约独立于created_at与manifest；正常生成在分钟内完成，24h留出进程/发布恢复余量。
+  private pinCandidate(accountId: string, item: LocalAudioItem): void {
+    writeFileSync(this.audioPath(accountId, item.id, item.format) + '.pin', String(Date.now() + 86400000), { mode: 0o600 });
+  }
+
+  private candidatePinned(accountId: string, id: string, format: 'mp3' | 'wav'): boolean {
+    try {
+      const expires = Number(readFileSync(this.audioPath(accountId, id, format) + '.pin', 'utf8'));
+      return !Number.isFinite(expires) || expires > Date.now();
+    } catch (e) { return (e as NodeJS.ErrnoException).code !== 'ENOENT'; }
+  }
+
+  retainCandidate(accountId: string, id: string): LocalAudioItem {
+    assertLocalAudioWritesAllowed();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const item = this.validateItem(accountId, id);
+      this.pinCandidate(accountId, item);
+      this.db.exec('COMMIT');
+      return item;
+    } catch (e) { this.db.exec('ROLLBACK'); throw e; }
+  }
+
+  /** 调用者必须在候选构造之前读取 expectedRevision。最终 CAS、字节校验、激活在同一写事务内。
+   * 每套最多 5MiB，选择事务内读取/散列，避免校验到提交之间的 cleanup 竞争；LLM/TTS 不在事务内。
+   */
+  commitSet(accountId: string, keep: Array<{ slot: AnyAudioSlot; id: string }>,
+    gen: { tier: string; traits: string }, opts: { expectedRevision: number; minRevision?: number; guard?: () => void }): number | null {
+    assertLocalAudioWritesAllowed();
+    if (!Number.isSafeInteger(opts?.expectedRevision) || opts.expectedRevision < 0
+      || (opts.minRevision !== undefined && (!Number.isSafeInteger(opts.minRevision) || opts.minRevision < 0))) fail('invalid_revision');
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      if (this.getState(accountId).revision !== opts.expectedRevision) fail('revision_conflict');
+      opts.guard?.();
+      const ids = new Set<string>();
+      const candidate = keep.map(k => {
+        if (ids.has(k.id)) fail('duplicate_clip_id', k.id);
+        ids.add(k.id);
+        const item = this.getItem(accountId, k.id);
+        if (!item) fail('clip_missing', k.id);
+        if (item.slot !== k.slot) fail('clip_slot_mismatch', k.id);
+        return item;
+      });
+      validatePublicationItems(candidate);
+      for (const item of candidate) {
+        const path = this.audioPath(accountId, item.id, item.format);
+        if (!existsSync(path)) fail('clip_file_missing', item.id);
+        if (!lstatSync(path).isFile()) fail('clip_file_mismatch', item.id);
+        validateClipBytes(item, readFileSync(path));
+      }
+      const signature = (items: Array<{ slot: AnyAudioSlot; id: string }>) => items.map(i => `${i.slot}:${i.id}`).sort().join(',');
+      const changed = signature(this.listActive(accountId)) !== signature(candidate);
+      this.ensureStateRow(accountId);
+      if (changed) {
+        this.db.prepare('UPDATE local_audio_item SET active = 0 WHERE account_id = ?').run(accountId);
+        const revive = this.db.prepare('UPDATE local_audio_item SET active = 1 WHERE account_id = ? AND id = ? AND slot = ?');
+        for (const item of candidate) revive.run(accountId, item.id, item.slot);
+        if (signature(this.listActive(accountId)) !== signature(candidate)) fail('publication_set_mismatch');
+        this.db.prepare(`UPDATE local_audio_state SET revision = MAX(revision + 1, ?), last_generated_at = ?, gen_tier = ?, gen_traits = ? WHERE account_id = ?`)
+          .run(opts.minRevision ?? 0, Date.now(), gen.tier, gen.traits, accountId);
+      } else {
+        this.db.prepare('UPDATE local_audio_state SET last_generated_at = ?, gen_tier = ?, gen_traits = ? WHERE account_id = ?')
           .run(Date.now(), gen.tier, gen.traits, accountId);
       }
+      const revision = this.getState(accountId).revision;
       this.db.exec('COMMIT');
-    } catch (err) {
-      this.db.exec('ROLLBACK');
-      throw err;
-    }
-    return changed ? this.getState(accountId).revision : null;
+      return changed ? revision : null;
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
   }
 
   recordFetch(accountId: string, appliedRevision: number | null, servedRevision = -1): void {
@@ -361,23 +368,24 @@ class LocalAudioStore {
 
   /** 清理：active=0 且超 14 天的条目，删行+删盘上文件。返回清理数。 */
   cleanup(accountId: string): number {
-    // 冻结槽（device_reply.* / g1.settings.*）的 staging 条目豁免 14 天清理：它们是冻结文本的交付物，SHA 已被端侧核验，
-    // 等配套 APK 就位再显式发布；清掉重合成会换 SHA（TTS 非确定性），让已核验的指纹作废（codex 2026-09-05 验收回执）。
-    const stale = this.db
-      .prepare(
-        `SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0 AND created_at < ? AND slot NOT LIKE 'device_reply.%' AND slot NOT LIKE 'g1.settings.%'`,
-      )
-      .all(accountId, Date.now() - STALE_ITEM_TTL_MS) as Array<{ id: string; format: 'mp3' | 'wav' }>;
-    for (const { id, format } of stale) {
-      const p = this.audioPath(accountId, id, format);
-      try {
-        if (existsSync(p)) unlinkSync(p);
-      } catch {
-        /* 文件删除失败不阻断，下轮再试 */
+    assertLocalAudioWritesAllowed();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      // 拿到写锁后才选行和删文件，发布拿同一把锁。固定交付物继续豁免过期清理。
+      const stale = this.db.prepare(`SELECT id, format FROM local_audio_item WHERE account_id = ? AND active = 0
+        AND created_at < ? AND slot NOT LIKE 'device_reply.%' AND slot NOT LIKE 'g1.settings.%'`)
+        .all(accountId, Date.now() - STALE_ITEM_TTL_MS) as Array<{ id: string; format: 'mp3' | 'wav' }>;
+      let removed = 0;
+      for (const { id, format } of stale) {
+        if (this.candidatePinned(accountId, id, format)) continue;
+        const p = this.audioPath(accountId, id, format);
+        try { if (existsSync(p)) unlinkSync(p); if (existsSync(p + '.pin')) unlinkSync(p + '.pin'); } catch { continue; }
+        this.db.prepare('DELETE FROM local_audio_item WHERE account_id = ? AND id = ? AND active = 0').run(accountId, id);
+        removed++;
       }
-      this.db.prepare(`DELETE FROM local_audio_item WHERE account_id = ? AND id = ?`).run(accountId, id);
-    }
-    return stale.length;
+      this.db.exec('COMMIT');
+      return removed;
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
   }
 
   /** 有内容的账号（revision>0）——冻结槽全机队发布脚本 --all 用。 */
@@ -387,6 +395,9 @@ class LocalAudioStore {
 
   /** 重置（admin DELETE relation-state 联动第六样）：删全部条目+文件+状态行。 */
   clearAccount(accountId: string): void {
+    assertLocalAudioWritesAllowed();
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
     const items = this.db
       .prepare(`SELECT id, format FROM local_audio_item WHERE account_id = ?`)
       .all(accountId) as Array<{ id: string; format: 'mp3' | 'wav' }>;
@@ -394,12 +405,15 @@ class LocalAudioStore {
       try {
         const p = this.audioPath(accountId, id, format);
         if (existsSync(p)) unlinkSync(p);
+        if (existsSync(p + '.pin')) unlinkSync(p + '.pin');
       } catch {
         /* 同上 */
       }
     }
     this.db.prepare(`DELETE FROM local_audio_item WHERE account_id = ?`).run(accountId);
     this.db.prepare(`DELETE FROM local_audio_state WHERE account_id = ?`).run(accountId);
+    this.db.exec('COMMIT');
+    } catch (err) { this.db.exec('ROLLBACK'); throw err; }
   }
 
   /** manifest 组装（路由层直接下发）。投毒开关 LOCAL_AUDIO_POISON_ID 在路由层做，store 不掺假。 */

@@ -1,0 +1,51 @@
+{
+  "protocol": 1,
+  "submit": {
+    "protocol": 1,
+    "phase": "committed",
+    "turn": "fixture-turn-1",
+    "query": "科技馆开放时间"
+  },
+  "ready": {
+    "id": "11e0532a-b4a0-48b0-9da6-925b9a7f9e76",
+    "turn": "fixture-turn-1",
+    "revision": 1,
+    "status": "ready",
+    "valid_for_ms": 300000,
+    "automatic_for_ms": 60000,
+    "result": {
+      "text": "刚才查的科技馆安排，需要再核对当天公告。",
+      "sources": [
+        {
+          "title": "开放安排",
+          "url": "https://www.cstm.org.cn/open",
+          "date": null
+        }
+      ]
+    }
+  },
+  "limits": {
+    "query_chars": 128,
+    "answer_chars": 150,
+    "deadline_ms": 20000,
+    "ready_ttl_ms": 300000,
+    "automatic_window_ms": 60000,
+    "idle_ms": 800,
+    "body_bytes": 8192,
+    "early_interruption_ms": 1000,
+    "automatic_replays": 1,
+    "replays": 8
+  },
+  "delivery_outcomes": [
+    "completed",
+    "interrupted",
+    "dropped"
+  ],
+  "replay": {
+    "previous": "fixture-attempt-1",
+    "delivery": "fixture-attempt-2",
+    "automatic": true
+  },
+  "playback_path": "/:id/playback",
+  "replay_path": "/:id/replay"
+}

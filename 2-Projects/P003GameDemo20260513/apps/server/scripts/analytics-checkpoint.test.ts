@@ -1,0 +1,65 @@
+import assert from 'node:assert/strict';
+import {mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';import {join} from 'node:path';
+import {DatabaseSync} from 'node:sqlite';import {SignJWT} from 'jose';
+import {AnalyticsStore} from '../src/analytics/store.js';
+const dir=mkdtempSync(join(tmpdir(),'analytics-checkpoint-')),store=new AnalyticsStore(join(dir,'analytics.db'));
+assert.equal(store.db.prepare('PRAGMA synchronous').get()!.synchronous,2,'FULL必须保留');
+assert.equal(store.db.prepare('PRAGMA wal_autocheckpoint').get()!.wal_autocheckpoint,0,'共享analytics writer必须关闭自动checkpoint');
+const {assertSafeSqliteVersion}=await import('../src/analytics/sqlite-policy.mjs');
+for(const version of ['3.51.2','3.51.0','3.50.6','3.44.5','bad'])assert.throws(()=>assertSafeSqliteVersion(version),/UNSAFE_ANALYTICS_SQLITE_VERSION/);
+for(const version of ['3.51.3','3.53.3','3.50.7','3.44.6'])assert.doesNotThrow(()=>assertSafeSqliteVersion(version));
+const {AnalyticsCheckpointer}=await import('../src/analytics/checkpointer.js');
+const schedule=new AnalyticsCheckpointer(store.path);
+assert.equal(schedule.status().timeout_ms,30000,'大WAL约6秒checkpoint必须有30秒有界预算');
+assert.equal(schedule.status().stale_after_ms,60000,'健康过期需包含deadline及周期');
+const {createAnalyticsApp,startAnalyticsServer}=await import('../src/analytics/index.js');
+const control=join(dir,'control.json');writeFileSync(control,'{"enabled":true}',{mode:0o600});
+const options={store,reader:{readCredentialState:()=>({binding:null,revokedThroughSec:null}),acceptsCredential:()=>true,readiness:()=>true,readAnalyticsDeviceContext:()=>({deviceKey:'a'.repeat(64),active:true,uploadEnabled:true,uploadHourCst:0})},authSecret:'fake-jwt-key',internalSecret:'fake-internal-key',controlPath:control,allowSubjects:['synthetic'],diskFreeBytes:()=>20*1024**3};
+const token=await new SignJWT({kind:'p003-device'}).setSubject('synthetic').setProtectedHeader({alg:'HS256'}).setIssuedAt().setExpirationTime('1h').sign(new TextEncoder().encode(options.authSecret));
+const body=(prefix:string,n=1)=>JSON.stringify({schema_version:1,batch_id:prefix,sent_at_ms:Date.now(),client:{},events:Array.from({length:n},(_,i)=>({schema_version:1,client_event_id:prefix+'-'+i,event_name:'app.bridge_ready',occurred_at_ms:Date.now(),session_id:'test-session',sequence:i,priority:'normal',context:{},properties:{}}))});
+const post=(app:ReturnType<typeof createAnalyticsApp>,prefix:string,n=1)=>app.request('/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':prefix},body:body(prefix,n)});
+const until=async(predicate:()=>boolean)=>{const deadline=Date.now()+10000;while(!predicate()){if(Date.now()>deadline)throw new Error('checkpoint test timeout');await new Promise(r=>setTimeout(r,20));}};
+const ordinary=createAnalyticsApp(options);assert.equal((await post(ordinary,'seed',200)).status,200);
+const pinned=new DatabaseSync(store.path,{readOnly:true});pinned.exec('BEGIN');pinned.prepare('SELECT count(*) FROM analytics_event').get();
+store.transaction(()=>store.db.prepare('INSERT INTO analytics_meta VALUES (?,?)').run('after-reader','1'));
+const max=64*1024,checkpointer=new AnalyticsCheckpointer(store.path,{walMaxBytes:max,intervalMs:1000,timeoutMs:5000});
+const capped=createAnalyticsApp({...options,walMaxBytes:max,checkpointStatus:()=>checkpointer.status()});
+let response=await post(capped,'blocked');assert.equal(response.status,503);assert.equal(response.headers.get('Retry-After'),'10');assert.equal((await response.json()).error_code,'ANALYTICS_WAL_PRESSURE');
+assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_event WHERE client_event_id='blocked-0'").get()!.n,0);
+checkpointer.start();await until(()=>checkpointer.status().last_result!==null);
+assert.equal(checkpointer.status().stalled,true,'长reader应报告部分checkpoint，不能谎称全帧完成');
+assert.ok(store.walBytes()>=max);pinned.exec('ROLLBACK');pinned.close();
+await until(()=>checkpointer.status().last_result?.reclaimed===true);
+const realNow=Date.now,successful=checkpointer.status().last_success_ms!,staleAfter=checkpointer.status().stale_after_ms;
+try{Date.now=()=>successful+staleAfter-1;assert.equal(checkpointer.status().stale,false);Date.now=()=>successful+staleAfter+1;assert.equal(checkpointer.status().stale,true);}finally{Date.now=realNow;}
+assert.ok(store.walBytes()<max,'PASSIVE完成后高水位TRUNCATE必须真实恢复');
+response=await post(capped,'recovered');assert.equal(response.status,200);assert.deepEqual((await response.json()).accepted_event_ids,['recovered-0']);
+const health=await (await capped.request('/internal/analytics/health',{headers:{'X-Analytics-Internal-Token':options.internalSecret}})).json();
+assert.equal(health.sqlite_version_safe,true);assert.equal(health.sqlite_synchronous,2);assert.equal(health.sqlite_wal_autocheckpoint,0);assert.ok(health.checkpoint.last_success_ms>0);
+await checkpointer.stop();assert.equal(checkpointer.status().running,false);assert.equal(checkpointer.status().worker_pid,null);
+// Stop a real child process mid-flight: the request thread must remain available; timeout cleans it.
+const timed=new AnalyticsCheckpointer(store.path,{intervalMs:1000,timeoutMs:300});timed.start();const stoppedPid=timed.status().worker_pid!;assert.ok(stoppedPid>0);process.kill(stoppedPid,'SIGSTOP');
+response=await post(ordinary,'independent');assert.equal(response.status,200);assert.equal(timed.status().worker_pid,stoppedPid,'请求无需等child完成');
+await until(()=>timed.status().timeouts===1);await timed.stop();assert.throws(()=>process.kill(stoppedPid,0),/ESRCH/);
+const exiting=new AnalyticsCheckpointer(store.path,{intervalMs:1000,timeoutMs:5000});exiting.start();const exitingPid=exiting.status().worker_pid!;process.kill(exitingPid,'SIGSTOP');await exiting.stop();assert.throws(()=>process.kill(exitingPid,0),/ESRCH/);
+const single=new AnalyticsCheckpointer(store.path,{intervalMs:100,timeoutMs:1000});single.start();const singlePid=single.status().worker_pid!;process.kill(singlePid,'SIGSTOP');await new Promise(r=>setTimeout(r,250));assert.equal(single.status().worker_pid,singlePid,'多个周期经过仍只允许一个child');await single.stop();assert.throws(()=>process.kill(singlePid,0),/ESRCH/);
+const long=new AnalyticsCheckpointer(store.path);long.start();const longPid=long.status().worker_pid!;process.kill(longPid,'SIGSTOP');await new Promise(r=>setTimeout(r,5500));assert.equal(long.status().timeouts,0,'超过旧5秒deadline仍允许有界checkpoint推进');assert.equal(long.status().worker_pid,longPid);process.kill(longPid,'SIGCONT');await until(()=>long.status().last_success_ms!==null);await long.stop();assert.throws(()=>process.kill(longPid,0),/ESRCH/);
+const originalInterval=process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS;
+for(const bad of ['', '99','10001','1e3','100.5','NaN']){process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS=bad;assert.throws(()=>startAnalyticsServer(options,3306),/INVALID_ANALYTICS_CHECKPOINT_INTERVAL_MS/);}
+process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS='1000';
+assert.throws(()=>startAnalyticsServer({...options,globalRpm:0},3306),/INVALID_ANALYTICS_GLOBAL_RPM/);
+assert.equal(store.db.prepare('PRAGMA query_only').get()!.query_only,0,'启动参数校验失败不应遗留worker或改变连接模式');
+const bootstrap=startAnalyticsServer(options,3306);assert.equal(bootstrap.checkpointer.status().interval_ms,1000);assert.equal(bootstrap.checkpointer.status().stale_after_ms,33000);await until(()=>bootstrap.writer.ready&&bootstrap.checkpointer.status().last_success_ms!==null);
+const bootHealth=await (await fetch('http://127.0.0.1:3306/internal/analytics/health',{headers:{'X-Analytics-Internal-Token':options.internalSecret}})).json();assert.equal(bootHealth.checkpoint.enabled,true);assert.ok(bootHealth.checkpoint.last_success_ms>0);assert.equal(bootHealth.ready,true);
+assert.throws(()=>store.db.prepare('INSERT INTO analytics_meta VALUES (?,?)').run('http-must-not-write','1'),/readonly/,'HTTP查询连接不能意外重回同步写路径');
+const bootResponse=await fetch('http://127.0.0.1:3306/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':'bootstrap-worker'},body:body('bootstrap-worker')});assert.equal(bootResponse.status,200);assert.deepEqual((await bootResponse.json()).accepted_event_ids,['bootstrap-worker-0']);assert.equal(store.db.prepare("SELECT count(*) n FROM analytics_event WHERE client_event_id='bootstrap-worker-0'").get()!.n,1);
+const shutdownLock=new DatabaseSync(store.path);shutdownLock.exec('BEGIN IMMEDIATE');
+const finalUpload=fetch('http://127.0.0.1:3306/v1/device/analytics/events:batch',{method:'POST',headers:{authorization:'Bearer '+token,'X-Request-Id':'shutdown-worker'},body:body('shutdown-worker')});
+await until(()=>bootstrap.writer.busy);const drain=bootstrap.stop();
+const unlockTimer=setTimeout(()=>shutdownLock.exec('COMMIT'),75);
+try{const finalResponse=await finalUpload;assert.equal(finalResponse.status,200,'正常关闭应让已派发事务的HTTP ACK完成');assert.deepEqual((await finalResponse.json()).accepted_event_ids,['shutdown-worker-0']);await drain;}
+finally{clearTimeout(unlockTimer);if(shutdownLock.isTransaction)shutdownLock.exec('ROLLBACK');shutdownLock.close();await drain;}
+await bootstrap.stop();assert.equal(bootstrap.checkpointer.status().worker_pid,null);assert.equal(bootstrap.writer.ready,false);
+if(originalInterval===undefined)delete process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS;else process.env.ANALYTICS_CHECKPOINT_INTERVAL_MS=originalInterval;
+rmSync(dir,{recursive:true,force:true});console.log('analytics checkpoint: PASS (FULL/auto0, safe-version gate, pinned reader/backpressure/TRUNCATE recovery, independent child, timeout/exit cleanup)');

@@ -84,6 +84,7 @@ eq('auth-2 台账外 403', (await pull(await deviceCred(SN_OUT))).status, 403);
     schema_version: 1,
     revision: 'cfg-0',
     posture: { reminder_cooldown_sec: 900 },
+    analytics: { event_upload_enabled: false, daily_upload_hour_cst: 23, tiering_enabled:false,aggregate_upload_enabled:false,aggregate_period_days:7,aggregate_retention_days:90,aggregate_max_buckets:2048,on_demand_capture_enabled:false,on_demand_upload_enabled:false,on_demand_request_id:'',on_demand_retention_days:3,on_demand_max_events:1000,on_demand_max_bytes:2097152,request_gzip_enabled:false },
   });
 }
 

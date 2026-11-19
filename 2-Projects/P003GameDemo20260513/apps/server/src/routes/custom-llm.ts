@@ -1,3 +1,12 @@
+import {resolveClock,answerClock,stripClockTurns} from '../tools/clock-query.js';
+import {arkConversationPolicy,unfinishedUtterance,createArkControlFilter} from '../ark/language.js';
+import {answerArk,arkDirectReplyAllowed} from '../ark/answer.js';
+import {arkContext} from '../ark/service.js';
+import {isArkStateQuestion,deferArkDirectReply} from '../xiaoke-kb.js';
+import {isArkFollowup,stripArkDynamicTurns} from '../ark/memory-policy.js';
+import { searchDialogueClarification } from '../tools/search-dialogue-context.js';
+import { searchCapabilityBase, searchChatPolicy, createSearchClaimFilter } from '../tools/search-chat-policy.js';
+import { searchSettings, searchDeviceAllowed, currentSearchDialogue } from '../tools/search-runtime.js';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { FEEDBACK_PERSONA_SUFFIX } from '../prompts.js';
@@ -21,7 +30,7 @@ import * as extractScheduler from '../extract-scheduler.js';
 import { conversationStore } from '../conversation-store.js';
 import { createParenFilter } from '../paren-filter.js';
 import { createExitMarkerStripper } from '../exit-intent.js';
-import { buildKnowledgeRecall } from '../xiaoke-kb.js';
+import { buildKnowledgeRecall,answerArkResourceUse } from '../xiaoke-kb.js';
 import { feedbackStore } from '../feedback-store.js';
 import { consumeFeedbackArmed } from '../feedback-arm.js';
 import { getPromptOverride } from '../rtc-prompt-override.js';
@@ -59,6 +68,7 @@ function extractText(content: unknown): string {
 }
 
 customLlmRoute.post('/chat/completions', async (c) => {
+  const requestStarted = performance.now();
   // 可选鉴权：配了 CUSTOM_LLM_API_KEY 就校验 Bearer（须与火山 CustomLLM.APIKey 一致）；未配则放行（本地验证方便）。
   const requiredKey = process.env.CUSTOM_LLM_API_KEY?.trim();
   if (requiredKey) {
@@ -69,7 +79,7 @@ customLlmRoute.post('/chat/completions', async (c) => {
     }
   }
 
-  let body: { messages?: OpenAiMessage[]; model?: string };
+  let body: { messages?: OpenAiMessage[]; model?: string; search_dialogue_context?: unknown };
   try {
     body = (await c.req.json()) as typeof body;
   } catch {
@@ -80,9 +90,12 @@ customLlmRoute.post('/chat/completions', async (c) => {
   const chat = messages.filter((m) => m.role === 'user' || m.role === 'assistant');
   const lastUserIdx = chat.map((m) => m.role).lastIndexOf('user');
   const userText = lastUserIdx >= 0 ? extractText(chat[lastUserIdx]!.content) : '';
-  const history: ChatHistoryTurn[] = chat
+  const rawHistory: ChatHistoryTurn[] = chat
     .slice(0, Math.max(lastUserIdx, 0))
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: extractText(m.content) }));
+
+  const dynamicArk = isArkStateQuestion(userText) || isArkFollowup(userText,rawHistory);
+  const history = unfinishedUtterance(userText) ? [] : stripArkDynamicTurns(stripClockTurns(rawHistory));
 
   // 复用与 WS pipeline 同一个大脑：内置世界观 + AI 安全基座 + 课程护栏 + AI 启蒙门控 + 尾部人设锚点。
   curriculumKG.load();
@@ -91,8 +104,9 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 从回调 Url 的 ?token= 拿登录态 → accountId → 注入这个孩子的 profile 记忆（昵称/年龄/兴趣/近况/方舟经历）。
   // 无 token / 无效 token → authContext=null → 降级匿名（仅世界观，无个性化记忆）。
   // ?room=sn-<SN>-<ts>（rust worker 传）→ per-device 身份路由：按 SN 反查该设备 brain 账号（多设备防串号）。
+  const workerAuth = await verifyAuthToken(c.req.query('token'));
   const authContext = resolveDeviceIdentity(
-    await verifyAuthToken(c.req.query('token')),
+    workerAuth,
     c.req.query('room'),
   );
   // per-device prompt 配置（Worker Brain 编辑 tab）：设备账号可 override 世界观 / 追加规则；
@@ -106,6 +120,26 @@ customLlmRoute.post('/chat/completions', async (c) => {
   // 吐槽模式（docs/37）：前端点「我要吐槽」arm 过 → 本轮一次性消费走吐槽（落反馈库 + 吐槽人格回应）。
   // 吐槽优先：不走 onboarding 引导、不召回世界观，专注接住孩子的吐槽。
   const isFeedback = authContext ? consumeFeedbackArmed(authContext.accountId) : false;
+  const clock = process.env.P003_CLOCK_ENABLED !== '0' && !overridePrompt && !isFeedback && workerAuth?.role === 'device' && authContext?.role === 'device'
+    ? resolveClock(userText,rawHistory.filter(t=>t.role==='user').map(t=>t.content)) : null;
+  if(clock){
+    // Capture time when producing the reply, never reuse historical answer digits.
+    const now=Date.now(),answer=answerClock(clock,now),id=`chatcmpl-clock-${now}-${Math.random().toString(36).slice(2,8)}`;
+    console.info('[clock-direct]',JSON.stringify({response_id:id,room:c.req.query('room'),kind:clock.kind,iana:clock.kind==='clock'?clock.iana:undefined,at_ms:now}));
+    return streamSSE(c,async stream=>{
+      if(stream.aborted||c.req.raw.signal.aborted)return;
+      const chunk=(delta:Record<string,unknown>,finish:string|null)=>JSON.stringify({id,object:'chat.completion.chunk',created:Math.floor(now/1000),model:body.model??'xiaoke-ark',choices:[{index:0,delta,finish_reason:finish}]});
+      await stream.writeSSE({data:chunk({role:'assistant',content:answer},null)});
+      await stream.writeSSE({data:chunk({},'stop')});
+      if(stream.aborted||c.req.raw.signal.aborted)return;
+      try{
+        for(const [role,text] of [['user',userText],['assistant',answer]] as const)conversationStore.add({account_id:authContext!.accountId,session_id:'rtc',role,text,memory_excluded:true});
+      }catch{/* Audit failure does not interrupt speech. Clock facts never become profile memory. */}
+      await stream.writeSSE({data:'[DONE]'});
+    });
+  }
+  const staticArkAnswer = !overridePrompt && !isFeedback && workerAuth?.role==='device' && authContext?.role==='device' ? answerArkResourceUse(userText,rawHistory) : null;
+  const directArkQuestion = Boolean(staticArkAnswer) || arkDirectReplyAllowed(workerAuth,c.req.query('room')??'',Boolean(overridePrompt),isFeedback) && answerArk(userText,undefined,rawHistory)!==null;
   // 语音调档 S1 快路（Phase A，2026-09-03）：仅设备账号真实轮；命中即处置（observe 只记 / execute 切档）——
   // 必须在 assembleSystemPrompt 之前，切了本轮 prompt 就读到新档；policy 行让小可先答应一句。
   let voiceStylePolicy = '';
@@ -117,27 +151,43 @@ customLlmRoute.post('/chat/completions', async (c) => {
       if (applied.policyLine) voiceStylePolicy = applied.policyLine;
     }
   }
-  const inOnboarding = !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
+  const searchConfig = searchSettings();
+  const searchRoom=c.req.query('room')??'',searchSn=/^sn-(BJP003\d{14})-\d+$/.exec(searchRoom)?.[1];
+  const searchPolicy = searchChatPolicy({candidate:Boolean(process.env.SEARCH_CANARY_ROOT),live:!process.env.SEARCH_CANARY_ROOT,enabled:searchConfig.enabled,role:authContext?.role ?? '',room:searchRoom,allowed:searchSn&&searchDeviceAllowed(searchSn)?[searchSn]:[]});
+  const inOnboarding = !dynamicArk && !directArkQuestion && !searchPolicy.suppressOnboarding && !overridePrompt && !isFeedback && Boolean(authContext) && needsOnboarding(profile);
   const onboardingGuide = inOnboarding ? buildOnboardingGuide(profile) : null;
   // 世界观知识按需召回（xiaoke-kb，对齐 pipeline）：孩子本轮聊到经济/身世/藏品/生态缸/夜航等才召回；吐槽/override 时不召回。
-  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(userText);
+  const knowledgeRecall = (overridePrompt || isFeedback) ? null : buildKnowledgeRecall(dynamicArk ? '当前方舟进度 '+userText : userText, rawHistory);
   // L_companion（对齐 pipeline 的互斥链 K12>AI 启蒙>companion）：RTC 回调无 interim 预热条件 → allowSync
   // 同步算 query 向量（超时上限 400ms，超时/失败降级不注入）。override/吐槽轮不注入。真机验收 2026-07-13 补挂。
-  const companionGuardrail = (overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
+  const companionGuardrail = (directArkQuestion || overridePrompt || isFeedback || curriculumGuardrail || aiLiteracyGuide)
     ? null
     : await companionKG.buildGuardrail(userText, true);
   console.log(`[custom-llm] ${authContext ? '记忆注入 account=' + authContext.accountId : '匿名（无 token）'}${overridePrompt ? ' [override]' : ''}${isFeedback ? ' [feedback]' : ''}${inOnboarding ? ' [onboarding]' : ''}${knowledgeRecall ? ' [kb]' : ''}`);
   // override（工作台调的 prompt）优先：直接用它（自带完整内容）；否则走固定大脑组装。
   let systemPrompt = overridePrompt
     ? overridePrompt
-    : assembleSystemPrompt(base, null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
+    : assembleSystemPrompt(searchCapabilityBase(base,Boolean(searchPolicy.instruction)), null, authContext, curriculumGuardrail, aiLiteracyGuide, onboardingGuide, knowledgeRecall, companionGuardrail);
   // per-device 附加规则（Worker Brain 编辑 tab）：拼在护栏之后（吐槽后缀仍保持绝对最末）。
   const addendumText = overridePrompt ? '' : deviceAddendum(deviceCfg);
   if (addendumText) systemPrompt += `\n\n${addendumText}`;
+  const ark = staticArkAnswer ? {prompt:'',facts_v1:undefined} : await arkContext({auth:workerAuth,room:c.req.query('room')??'',text:userText,history:rawHistory,override:Boolean(overridePrompt),feedback:isFeedback});
+  if(ark.prompt) systemPrompt += '\n\n'+ark.prompt;
+  const arkPolicy=(!overridePrompt&&!isFeedback)?arkConversationPolicy(userText,rawHistory):'';
+  if(arkPolicy)systemPrompt+='\n\n'+arkPolicy;
+  const protectArkControl=!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!deferArkDirectReply(userText)&&(dynamicArk||!!staticArkAnswer||!!arkPolicy||!!knowledgeRecall?.includes('【方舟资源')||(/多少|多久|什么时候|有什么用|为什么/.test(userText)&&!/灯|亮度|音量|声音|色温|画面|虚像|设备高度|退出|别说|不想聊/.test(userText)));
+  if(protectArkControl)systemPrompt+='\n本轮不是设备控制或退出请求，不输出DEV标记，不告别或自行结束。';
+  // Incomplete speech needs a clarification, not old worldview/profile examples to complete it.
+  if(!overridePrompt&&!isFeedback&&authContext?.role==='device'&&!directArkQuestion&&unfinishedUtterance(userText))systemPrompt='你是陪伴用户的小伙伴小可。这里的方舟指小可读写台的游戏世界，不是其它游戏。用户这句话没有说完整，或没有说明具体对象。只用一句简短自然的中文，请用户接着说，或确认是在问哪个对象。不要猜测物品、数字、玩法、界面位置或能力，不要介绍世界观，不许承诺代操作，不告别、不结束对话、不输出任何控制标记。';
   if (voiceStylePolicy) systemPrompt += `\n\n${voiceStylePolicy}`;
+  if (!overridePrompt && searchPolicy.instruction) systemPrompt += `\n\n${searchPolicy.instruction}`;
+  const temporarySearch=(!overridePrompt&&!isFeedback)?currentSearchDialogue(body.search_dialogue_context,workerAuth,c.req.query('room')??''):'';
+  if(temporarySearch)systemPrompt+='\n\n'+temporarySearch;
+  const searchClarification=temporarySearch?searchDialogueClarification(userText):null;
+  if(body.search_dialogue_context)console.info('[search-dialogue]',JSON.stringify({room:c.req.query('room'),context_valid:Boolean(temporarySearch),local_clarification:Boolean(searchClarification)}));
   // Phase 2a 设备感知协议（2026-08-20，env DEVICE_INTENT_OBSERVE=1 才注入）：仅设备账号
   // （role=device）——Web 家长/匿名/override 调试轮不注入；worker 剥标记只记日志不执行。
-  const intentProtocol = (!overridePrompt && authContext?.role === 'device') ? deviceIntentProtocol() : '';
+  const intentProtocol = (!overridePrompt && !protectArkControl && authContext?.role === 'device') ? deviceIntentProtocol() : '';
   if (intentProtocol) systemPrompt += `\n\n${intentProtocol}`;
   // 吐槽人格放 systemPrompt 最末尾（近因效应，docs/36 同源）：否则被世界观 + 用户字面意图(如"想听故事")盖过，LLM 会去满足请求而非收集吐槽。
   if (isFeedback) systemPrompt += `\n\n${FEEDBACK_PERSONA_SUFFIX}`;
@@ -213,12 +263,12 @@ customLlmRoute.post('/chat/completions', async (c) => {
       let userMsgId: string | undefined;
       let assistantMsgId: string | undefined;
       try {
-        userMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText }).id;
+        userMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'user', text: userText, memory_excluded: dynamicArk || directArkQuestion }).id;
         if (finalAssistant) {
-          assistantMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant }).id;
+          assistantMsgId = conversationStore.add({ account_id: authContext.accountId, session_id: 'rtc', role: 'assistant', text: finalAssistant, memory_excluded: dynamicArk || directArkQuestion }).id;
         }
       } catch { /* 审计落库失败不阻断 */ }
-      if (!finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
+      if (dynamicArk || directArkQuestion || !finalAssistant || process.env.MEMORY_EXTRACT_ENABLED === '0') return;
       const full = [
         ...history,
         { role: 'user' as const, content: userText, id: userMsgId },
@@ -233,12 +283,48 @@ customLlmRoute.post('/chat/completions', async (c) => {
       }
     };
 
+    if(directArkQuestion){
+      if(stream.aborted || c.req.raw.signal.aborted) return;
+      console.info('[ark-direct]',JSON.stringify({room:c.req.query('room'),response_id:id,typed_facts:!!ark.facts_v1}));
+      assistantText=staticArkAnswer??answerArk(userText,ark.facts_v1,rawHistory)??'这部分方舟数据我暂时查不到。';
+      enqueue(chunk({role:'assistant',content:assistantText},null));enqueue(chunk({},'stop'));
+      await chain;
+      if(stream.aborted || c.req.raw.signal.aborted) return;
+      persistTurn();enqueue('[DONE]');await chain;return;
+    }
+
+    if(searchClarification){
+      assistantText=searchClarification;
+      enqueue(chunk({role:'assistant',content:searchClarification},null));enqueue(chunk({},'stop'));persistTurn();enqueue('[DONE]');await chain;return;
+    }
+
     // 括号旁白硬防线(paren-filter,2026-07-03):LLM 输出"（挠了挠头）"类状态机旁白会被火山
     // TTS 原样念出——prompt 禁令压不死,这里在流上剥净(字幕/TTS/记忆抽取都吃干净文本)。
     const parenFilter = createParenFilter();
     // [EXIT] 标记剥离(2026-07-03 生产 E2E 抓到):RTC 链路此前没接(只 WS 有),LLM 输出
     // "[EXIT]再见"会被火山 TTS 念出"EXIT"。RTC 退出走火山自己的挂断,标记剥掉即可。
     const exitStripper = createExitMarkerStripper();
+    const arkControlFilter=createArkControlFilter(protectArkControl);
+    const claimGuardEnabled = Boolean(searchPolicy.instruction) && /查|搜|上网|联网|天气|气温|下雨|空气质量|温度|带伞/.test(userText);
+    const searchClaimFilter = createSearchClaimFilter(claimGuardEnabled);
+    const modelStarted = performance.now();
+    let firstUpstreamAt: number | null = null;
+    let firstForwarded = false;
+    const observeFirstForwarded = (clean: string) => {
+      if (!clean || firstForwarded) return;
+      firstForwarded = true;
+      if (!process.env.SEARCH_CANARY_ROOT) return;
+      const now = performance.now();
+      console.info('[search-chat-timing]', JSON.stringify({
+        room: c.req.query('room'), response_id: id, claim_guard_enabled: claimGuardEnabled,
+        before_model_ms: Math.round(modelStarted - requestStarted),
+        upstream_first_delta_ms: firstUpstreamAt === null ? null : Math.round(firstUpstreamAt - modelStarted),
+        output_filter_hold_ms: firstUpstreamAt === null ? null : Math.round(now - firstUpstreamAt),
+        first_content_enqueued_ms: Math.round(now - requestStarted),
+        // SSE enqueue is not PCM publication or device playback. No content or credential is logged.
+        first_content_chars: clean.length,
+      }));
+    };
 
     // OpenAI 规范：首 chunk 带 delta.role=assistant。
     enqueue(chunk({ role: 'assistant', content: '' }, null));
@@ -248,15 +334,18 @@ customLlmRoute.post('/chat/completions', async (c) => {
         userText,
         history,
         onDelta: (delta) => {
-          const clean = parenFilter.feed(exitStripper.feed(delta).text); // EXIT → 括号 两级串联
+          if (delta && firstUpstreamAt === null) firstUpstreamAt = performance.now();
+          const clean = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(arkControlFilter.feed(delta)).text)); // EXIT → 括号 两级串联
           if (!clean) return; // 整个 delta 都在过滤器扣留中
+          observeFirstForwarded(clean);
           assistantText += clean;
           enqueue(chunk({ content: clean }, null));
         },
         onDone: () => {
           // 两级过滤器收尾:EXIT 残余 → 括号 feed,再括号 flush(未闭合原样放行,绝不吞正文)
-          const tail = parenFilter.feed(exitStripper.flush().text) + parenFilter.flush();
+          const tail = searchClaimFilter.feed(parenFilter.feed(exitStripper.feed(arkControlFilter.flush()).text+exitStripper.flush().text) + parenFilter.flush()) + searchClaimFilter.flush();
           if (tail) {
+            observeFirstForwarded(tail);
             assistantText += tail;
             enqueue(chunk({ content: tail }, null));
           }

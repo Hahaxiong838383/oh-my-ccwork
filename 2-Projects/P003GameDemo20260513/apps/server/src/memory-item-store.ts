@@ -185,6 +185,17 @@ class MemoryItemStore {
         it.source_msg_id ?? '', now,
       );
       added += Number(r.changes);
+      // D2.1 记忆槽位观察（2026-09-23 川哥「先数频率再决定」「通过日志而不是通过大模型观察」）：只记日志、不改结构、
+      // 不打印孩子原话——约定/关心事的证据原话+内容里有没有 条件（如果/要是…）/ 推测情态（可能/也许…），
+      // 以及 due_text 认不出（unknown）时是哪个时间词（≤12 字）。new=1 才是新条目（UNIQUE 去重命中的 new=0）。
+      // 计数：apps/server/ops/memory-slot-stats.sh。观察够一段再决定要不要给 promise/concern 加 condition/modality 字段与扩 parseDue。
+      if (it.type === 'promise' || it.type === 'concern') {
+        const hay = `${it.source_quote ?? ''}\n${it.content}`;
+        const cond = /如果|要是|假如|的话|万一|只要/.test(hay) ? 1 : 0;
+        const modal = /可能|也许|应该|大概|好像|估计|说不定/.test(hay) ? 1 : 0;
+        const unk = due.due_granularity === 'unknown' ? ` due_text=${JSON.stringify((it.due_text ?? '').slice(0, 12))}` : '';
+        console.log(`[memory-slot] type=${it.type} new=${Number(r.changes)} cond=${cond} modal=${modal} due=${due.due_granularity || 'none'}${unk}`);
+      }
       // 成长账本：concern 真实入库时记（changes>0 才记——UNIQUE 去重命中的不算新事件）
       if (it.type === 'concern' && Number(r.changes) > 0) {
         growthLedgerStore.record(accountId, {

@@ -1,6 +1,14 @@
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
+import {storageRoute} from '../storage/routes.js';
+import {arkArchiveStatus} from '../ark/archive.js';
+import {arkStore,arkCapacity} from '../ark/service.js';
+import { listeningAdminRoute } from './listening-admin.js';
+import { miniappAdminRoute } from './miniapp-admin.js';
+import { getFillerStyleSettings, saveFillerStyleSettings, validFillerProbabilities } from '../filler-policy.js';
 import { Hono } from 'hono';
+import { canaryAdminRoute } from '../search-canary-status.js';
+import { analyticsAdminGateway } from '../analytics/admin-query.js';
+import { analyticsControlRoute } from '../analytics/control-route.js';
+import {analyticsTierControlRoute} from '../analytics/tier-control-route.js';
 import { SignJWT } from 'jose';
 import { accountStore } from '../account-store.js';
 import { otaAdminRoute } from './ota.js';
@@ -38,7 +46,9 @@ import {
 import { localAudioStore } from '../local-audio-store.js';
 import { runLocalAudioForAccount, kickoffLocalAudioOnce } from '../local-audio-generator.js';
 import { pairingStore, credentialWindowFromClaim } from '../pairing-store.js';
-import { getHostsStatus } from '../hosts-status.js';
+import { readBleCredentialStatuses } from '../admin-device-credential-status.js';
+import { requiresBleProof } from '../ble-binding-policy.js';
+import { describeExecError, getHostsStatus, sumMaxJobs, workerCollector, workerTargets } from '../hosts-status.js';
 import { tryAutoConfirm, manualConfirm, announceState, type AutoConfirmResult } from './pairing.js';
 import { stylePoolStore } from '../style-pool-store.js';
 import { childInsightStore } from '../child-insight-store.js';
@@ -52,6 +62,8 @@ import { resolveExtractLlm, callExtractionLlm } from '../llm-extract.js';
 const adminDataRoute = new Hono();
 
 adminDataRoute.use('*', async (c, next) => {
+  // Apply before authentication so denied dashboard responses cannot be cached.
+  if (/\/devices\/[^/]+\/miniapp(?:\/|$)/.test(c.req.path)) c.header('Cache-Control', 'no-store');
   const header = c.req.header('authorization');
   const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
   if (!token || !isValidToken(token)) {
@@ -64,7 +76,7 @@ adminDataRoute.use('*', async (c, next) => {
   }
   // 设备接入管理（/devices、/device-sessions、/worker-stats、/hotwords）= admin 专属，
   // 敏感度 ≥ 邀请码（凭据签发入口；hotwords 的发布会重启生产 worker）。
-  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
+  if (/\/(devices|device-sessions|worker-stats|hosts-status|hotwords|extract-llm|isolation-overview|ota|device-config|diagnostics|worker-race|worker-voice|oneshot|analytics|search-canary)(?:\/|$)/.test(c.req.path) && !isAdminRole(token)) {
     return c.json({ ok: false, error: 'forbidden_devices', message: '无设备接入管理权限' }, 403);
   }
   // 只读门控（真防线）：guest 仅可 GET（查看）；写操作（POST/DELETE/PATCH）需 admin/editor，否则 403。
@@ -74,6 +86,10 @@ adminDataRoute.use('*', async (c, next) => {
   }
   await next();
 });
+
+adminDataRoute.route('/search-canary', canaryAdminRoute);
+adminDataRoute.route('/', miniappAdminRoute);
+adminDataRoute.route('/worker-voice/listening', listeningAdminRoute);
 
 // 列所有孩子档案 + 关联设备（按账号聚合）
 adminDataRoute.get('/profiles', (c) => {
@@ -166,9 +182,12 @@ adminDataRoute.get('/devices', (c) => {
     // 绑定家长可视化（2026-08-23）：join 家长账号手机号（admin 内部台，显示全号便于核对；
     // 手机号只出现在 admin 鉴权接口，不进 worker 日志/普通用户接口）
     const now = Date.now();
-    const devices = deviceRegistryStore.list().map((d) => ({
+    const rows = deviceRegistryStore.list();
+    const bleStatuses = readBleCredentialStatuses(rows, now);
+    const devices = rows.map((d) => ({
       ...d,
       ...credentialView(d),
+      ble_status: bleStatuses.get(d.sn) ?? null,
       parent_phone: d.parent_account_id ? (accountStore.findAccount(d.parent_account_id)?.phone ?? null) : null,
       preauth: preauthView(pairingStore.getPreauth(d.sn), now),
     }));
@@ -218,17 +237,18 @@ type PreauthApply =
   | { ok: false; error: string };
 /** 预授权 + 家长绑定 + 晚到 announce 代确认（添加设备 / PUT preauth 共用）。 */
 function applyPreauth(sn: string, phone: string, days: number, by: string): PreauthApply {
+  if (requiresBleProof(sn)) return { ok: false, error: '该设备须通过蓝牙身份验证，不能使用旧预授权' };
   const existing = accountStore.findByPhone(phone);
   if (existing && existing.role === 'device') return { ok: false, error: '该手机号对应设备账号，不能绑定为家长' };
   const device = deviceRegistryStore.get(sn);
   if (!device) return { ok: false, error: '设备不在台账中' };
   const acct = existing ?? accountStore.upsertPhoneAccount(phone);
   if (device.parent_account_id && device.parent_account_id !== acct.id) return { ok: false, error: '该设备已绑定其他家长，换绑请走现役解绑/换绑流程' };
-  if (!device.parent_account_id) {
-    deviceRegistryStore.setParentAccountId(sn, acct.id);
-    console.log(`[admin-brain] parent bound=${acct.id} sn=${sn} via=preauth${existing ? '' : '(预建账号)'}`);
-  }
-  const p = pairingStore.setPreauth(sn, acct.id, phone, Date.now() + days * 86_400_000, by);
+  const bound = deviceRegistryStore.bindParent(sn, acct.id, false, { parentAccountId: device.parent_account_id, bindingVersion: device.binding_version });
+  if (!bound.ok) return { ok: false, error: '绑定已变化，请刷新后重新确认' };
+  const p = pairingStore.setPreauth(sn, acct.id, phone, Date.now() + days * 86_400_000, by, Date.now(), {
+    parentAccountId: bound.device.parent_account_id, bindingVersion: bound.device.binding_version,
+  });
   const ann = pairingStore.findAnnounce(sn);
   const auto = ann && ann.expires_at > Date.now() ? tryAutoConfirm(sn, ann.nonce_hash, ann.device_pk, 'late_preauth') : null;
   console.log(`[pairing] preauth set sn=${sn} days=${days} by=${by} late_announce=${ann ? 'yes' : 'no'} auto=${auto?.reason ?? '-'}`);
@@ -320,7 +340,7 @@ adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
     } else {
       return c.json({ ok: false, error: '需要家长手机号（该设备尚未绑定家长）' }, 400);
     }
-    const r = manualConfirm(sn, parentAccountId, opUser(c));
+    const r = manualConfirm(sn, parentAccountId, opUser(c), true);
     if (!r.done) {
       const msg: Record<string, string> = {
         no_announce: '设备近 10 分钟没有自报上线，等它联网后再试',
@@ -333,7 +353,6 @@ adminDataRoute.post('/devices/:sn/pairing/confirm', async (c) => {
       };
       return c.json({ ok: false, error: msg[r.reason] ?? r.reason, reason: r.reason }, r.reason === 'no_announce' ? 404 : 409);
     }
-    if (!device.parent_account_id) deviceRegistryStore.setParentAccountId(sn, parentAccountId);
     return c.json({ ok: true, session_id: r.sessionId, parent_account_id: parentAccountId });
   } catch (error) {
     console.error(`[pairing] admin-confirm failed sn=${c.req.param('sn')}`, error);
@@ -433,6 +452,7 @@ adminDataRoute.delete('/devices/:sn', (c) => {
 adminDataRoute.post('/devices/:sn/credential', async (c) => {
   try {
     const sn = c.req.param('sn').trim();
+    if (requiresBleProof(sn)) return c.json({ ok: false, error: 'device_proof_required', message: '请通过蓝牙身份验证恢复设备凭据' }, 403);
     const device = deviceRegistryStore.get(sn);
     if (!device) return c.json({ ok: false, error: '设备不在台账中，请先添加' }, 404);
     if (device.status !== 'active') {
@@ -950,12 +970,38 @@ adminDataRoute.patch('/devices/:sn/parent', async (c) => {
     const sn = c.req.param('sn').trim();
     const device = deviceRegistryStore.get(sn);
     if (!device) return c.json({ ok: false, error: '设备不在台账中' }, 404);
-    const body = (await c.req.json().catch(() => ({}))) as { parent_account_id?: unknown };
+    const body = (await c.req.json().catch(() => ({}))) as { parent_account_id?: unknown; expected_public_id?: unknown; expected_parent_account_id?: unknown; expected_binding_version?: unknown; note?: unknown };
     const raw = body.parent_account_id;
     if (raw !== null && typeof raw !== 'string') {
       return c.json({ ok: false, error: 'parent_account_id 须为字符串或 null' }, 400);
     }
     const parentId = typeof raw === 'string' ? raw.trim() : null;
+    if (raw !== null && !parentId) return c.json({ ok: false, error: 'parent_account_id 须为非空字符串或 null' }, 400);
+    if (parentId === null) {
+      const audit = (result: string, afterVersion: number) => console.log('[admin-parent-unbind] ' + JSON.stringify({
+        admin: opUser(c), sn, before_binding_version: Number.isSafeInteger(body.expected_binding_version) ? body.expected_binding_version : null,
+        after_binding_version: afterVersion, at_ms: Date.now(), result,
+        note: typeof body.note === 'string' && body.note.length <= 200 ? body.note : '',
+      }));
+      if (typeof body.expected_public_id !== 'string' || !body.expected_public_id.trim()
+        || typeof body.expected_parent_account_id !== 'string' || !body.expected_parent_account_id.trim()
+        || !Number.isSafeInteger(body.expected_binding_version) || (body.expected_binding_version as number) < 0
+        || (body.note !== undefined && (typeof body.note !== 'string' || body.note.length > 200))) {
+        audit('invalid_conditions', device.binding_version);
+        return c.json({ ok: false, error: 'invalid_unbind_conditions', message: '解绑条件缺失或无效，请刷新后重新确认' }, 400);
+      }
+      const result = deviceRegistryStore.unbindParent(sn, { publicId: body.expected_public_id,
+        parentAccountId: body.expected_parent_account_id, bindingVersion: body.expected_binding_version as number });
+      if (!result.ok) {
+        audit('binding_changed', deviceRegistryStore.get(sn)?.binding_version ?? device.binding_version);
+        return c.json({ ok: false, error: 'binding_changed', message: '绑定已变化，请刷新后重新确认' }, 409);
+      }
+      // Cleanup cannot roll back the authority transaction. Late writes still fail the final generation CAS.
+      try { pairingStore.invalidateBindingIntents(sn, body.expected_binding_version as number); }
+      catch { console.error(`[admin-parent-unbind] intent_cleanup_failed sn=${sn}`); }
+      audit('unbound', result.device.binding_version);
+      return c.json({ ok: true, parent_account_id: null, synced_profile: false, binding_version: result.device.binding_version });
+    }
     // P0 人格成长生命周期（codex 3.2）：换绑到不同家长≈换孩子场景，清设备账号的关系状态
     // （新孩子不继承上一名孩子的关系温度）。纯解绑(→null)不清——可能是误操作/迁移中间态，
     // 显式重建走 DELETE /devices/:sn/relation-state。
@@ -979,8 +1025,6 @@ adminDataRoute.patch('/devices/:sn/parent', async (c) => {
       if (device.account_id && !profileStore.getProfile(device.account_id)) {
         syncedProfile = Boolean(profileStore.copyProfile(parentId, device.account_id));
       }
-    } else {
-      deviceRegistryStore.setParentAccountId(sn, null);
     }
     console.log(`[admin-brain] parent ${parentId ? 'bound=' + parentId : 'unbound'} sn=${sn} synced_profile=${syncedProfile}`);
     return c.json({ ok: true, parent_account_id: parentId, synced_profile: syncedProfile });
@@ -1204,6 +1248,10 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
     // Android 的合同冻结物（0010 G1 rev5 不可变），「重置人格记账」场景清音频=过度执行。
     // 默认(all)保留原六样语义（换孩子/儿童数据删除权场景仍需全清）。
     const scope = c.req.query('scope')?.trim() || 'all';
+    // 在任何关联表删除之前拒绝，避免维护门只挡音频而造成部分重置。
+    if (scope !== 'persona' && process.env.LOCAL_AUDIO_WRITES_PAUSED === '1') {
+      return c.json({ ok: false, error: '本地回复语正在维护，请稍后重试', code: 'local_audio_writes_paused' }, 503);
+    }
     const cleared = relationStateStore.clear(device.account_id);
     const styleCleared = stylePoolStore.clear(device.account_id);
     const insightCleared = childInsightStore.clear(device.account_id);
@@ -1224,6 +1272,16 @@ adminDataRoute.delete('/devices/:sn/relation-state', (c) => {
   } catch (error) {
     return c.json({ ok: false, error: '重置失败，请稍后重试' }, 500);
   }
+});
+
+// Global per-style settings, guarded by the existing admin-only worker-voice namespace.
+adminDataRoute.get('/worker-voice/filler-probabilities', (c) => c.json({ ok: true, ...getFillerStyleSettings() }));
+adminDataRoute.put('/worker-voice/filler-probabilities', async (c) => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || Object.keys(body).length !== 1 || !validFillerProbabilities(body.probabilities)) {
+    return c.json({ ok: false, error: '请完整填写四种风格的概率（0–100%）' }, 400);
+  }
+  return c.json({ ok: true, ...saveFillerStyleSettings(body.probabilities, opUser(c)) });
 });
 
 // ── 说话风格模板（P0 2026-09-01 风格系统方案 §四）──
@@ -1275,11 +1333,16 @@ adminDataRoute.put('/devices/:sn/style-template', async (c) => {
 // server 只做校验/安全窗口/对撞/记账；env 写入、纪律重启、健康自检与回滚全在脚本内（与热词发布同一套安全网）。
 // key 永不回显（脚本只回 hint/len），也永不从 bench 载荷传（bench 用 64.90 env 里的兜底 key）。
 const RACE_RW_KEYS = [
+  'LLM_FALLBACK_ENABLED', 'LLM_FALLBACK_PROVIDER', 'LLM_FALLBACK_TRIGGER_MS', 'LLM_FALLBACK_DEADLINE_MS',
   'LLM_FALLBACK_BASE_URL', 'LLM_FALLBACK_MODEL', 'LLM_FALLBACK_THINKING', 'LLM_FALLBACK_API_KEY',
   'LLM_RACE_MAIN_GRACE_MS', 'AGENT_INSTRUCTIONS',
 ] as const;
 type RaceRwKey = (typeof RACE_RW_KEYS)[number];
 const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
+  LLM_FALLBACK_ENABLED: /^[01]$/,
+  LLM_FALLBACK_PROVIDER: /^(?:deepseek|volc_plan|volc_coding)$/,
+  LLM_FALLBACK_TRIGGER_MS: /^\d{3,4}$/,
+  LLM_FALLBACK_DEADLINE_MS: /^\d{4,5}$/,
   LLM_FALLBACK_BASE_URL: /^https:\/\/[A-Za-z0-9.-]+(?:\/[A-Za-z0-9._/-]*)?$/,
   LLM_FALLBACK_MODEL: /^[A-Za-z0-9._-]{2,64}$/,
   LLM_FALLBACK_THINKING: /^(?:disabled|enabled|adaptive|off)$/,
@@ -1288,6 +1351,7 @@ const RACE_RW_RE: Record<RaceRwKey, RegExp> = {
   AGENT_INSTRUCTIONS: /^[^\r\n"'`$\\]{0,1200}$/,
 };
 export const RACE_BASE_PRESETS = [
+  { key: 'deepseek', label: 'DeepSeek 官方（默认）', url: 'https://api.deepseek.com/v1' },
   { key: 'agent_plan', label: '火山 agent plan（api/plan/v3）', url: 'https://ark.cn-beijing.volces.com/api/plan/v3' },
   { key: 'coding_plan', label: '火山 coding plan（api/coding/v3）', url: 'https://ark.cn-beijing.volces.com/api/coding/v3' },
 ];
@@ -1319,8 +1383,12 @@ export function validateRaceValues(raw: unknown): { ok: true; values: Partial<Re
       const n = Number(val);
       if (!(n >= 200 && n <= 5000)) return { ok: false, error: 'LLM_RACE_MAIN_GRACE_MS 须在 200~5000' };
     }
+    if (k === 'LLM_FALLBACK_TRIGGER_MS' && !(Number(val)>=500 && Number(val)<=5000)) return {ok:false,error:'触发等待须500~5000ms'};
+    if (k === 'LLM_FALLBACK_DEADLINE_MS' && !(Number(val)>=2500 && Number(val)<=15000)) return {ok:false,error:'总等待须2500~15000ms'};
     values[k as RaceRwKey] = val;
   }
+  if (values.LLM_FALLBACK_TRIGGER_MS && values.LLM_FALLBACK_DEADLINE_MS && Number(values.LLM_FALLBACK_DEADLINE_MS)<Number(values.LLM_FALLBACK_TRIGGER_MS)+2000) return {ok:false,error:'总等待至少比触发等待多2000ms'};
+  // Partial updates are merged and revalidated against the actual Worker file by the publisher.
   if (Object.keys(values).length === 0) return { ok: false, error: '没有可写的值' };
   return { ok: true, values };
 }
@@ -1784,30 +1852,33 @@ adminDataRoute.post('/memory/:accountId', async (c) => {
 });
 
 // ── worker 运行态（设备接入页的容量/资源卡）──
-// 机器资源：ssh 64.90 forced-command 只读脚本（专用 key，命令锁死）；
+// 机器资源：ssh 各 worker 机 forced-command 只读脚本（专用 key，命令锁死；目标列表 WORKER_STATS_SSH_TARGETS）；
 // 接入容量：LiveKit ListRooms（twirp，jose 手签 admin token）数 sn- 前缀设备房。
 // 两路各自 try-catch 降级为 null，绝不因监控拖垮管理页。
-const pexecFile = promisify(execFile);
-
 // 30s 共享缓存(2026-08-27):admin 资源卡改 60s 自动轮询后,多标签页各自轮询会成倍打 ssh——
-// 缓存让并发消费方共享一次采集;失败不缓存(下个请求重试)。
-let workerStatsCache: { data: Record<string, unknown>; ts: number } | null = null;
-const WORKER_STATS_TTL_MS = 30_000;
-
-async function fetchWorkerMachineStats(): Promise<Record<string, unknown> | null> {
-  if (workerStatsCache && Date.now() - workerStatsCache.ts < WORKER_STATS_TTL_MS) return workerStatsCache.data;
-  try {
-    const { stdout } = await pexecFile(
-      'ssh',
-      ['-i', '/root/.ssh/worker-stats-key', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', 'root@64.90.13.117', 'stats'],
-      { timeout: 8000 },
-    );
-    const parsed = JSON.parse(stdout.trim()) as Record<string, unknown>;
-    workerStatsCache = { data: parsed, ts: Date.now() };
-    return parsed;
-  } catch {
-    return null;
-  }
+// hosts-status.ts 统一管理成功/失败缓存与并发合并，两个页面共享同一轮采集。
+// 2026-09-22 迁 hk2：worker 可多台（WORKER_STATS_SSH_TARGETS，解析在 hosts-status.ts），逐台 try/catch 降级，
+// 老机/新机并存期两台同屏；容量 = 各台 max_jobs 求和。
+type WorkerMachine = {
+  id: string;
+  label: string;
+  host: string;
+  ok: boolean;
+  error: string | null;
+  data: Record<string, unknown> | null;
+};
+async function fetchWorkerMachines(): Promise<WorkerMachine[]> {
+  const machines = await Promise.all(
+    workerTargets().map(async (w): Promise<WorkerMachine> => {
+      try {
+        const data = await workerCollector(w.target)();
+        return { id: w.id, label: w.label, host: w.host, ok: true, error: null, data };
+      } catch (e) {
+        return { id: w.id, label: w.label, host: w.host, ok: false, error: describeExecError(e), data: null };
+      }
+    }),
+  );
+  return machines;
 }
 
 async function fetchLiveKitRooms(): Promise<{ device_rooms: number; total_rooms: number } | null> {
@@ -1841,15 +1912,29 @@ async function fetchLiveKitRooms(): Promise<{ device_rooms: number; total_rooms:
 }
 
 adminDataRoute.get('/worker-stats', async (c) => {
-  const [machine, rooms] = await Promise.all([fetchWorkerMachineStats(), fetchLiveKitRooms()]);
-  const maxJobs = machine && typeof machine.max_jobs === 'number' ? (machine.max_jobs as number) : null;
+  const [machines, rooms] = await Promise.all([fetchWorkerMachines(), fetchLiveKitRooms()]);
+  const maxJobs = sumMaxJobs(machines);
+  // machine = 第一台采到的（老页面字段兼容）；machines = 全部 worker 机；capacity.per_machine = 各台上限明细
+  const machine = machines.find((m) => m.ok)?.data ?? null;
   return c.json({
     ok: true,
     machine,
+    machines,
     rooms,
     capacity:
       maxJobs !== null && rooms
-        ? { max_jobs: maxJobs, active_total: rooms.total_rooms, remaining: Math.max(maxJobs - rooms.total_rooms, 0) }
+        ? {
+            max_jobs: maxJobs,
+            active_total: rooms.total_rooms,
+            remaining: Math.max(maxJobs - rooms.total_rooms, 0),
+            per_machine: machines.map((m) => ({
+              id: m.id,
+              label: m.label,
+              host: m.host,
+              ok: m.ok,
+              max_jobs: m.ok && m.data && typeof m.data.max_jobs === 'number' ? (m.data.max_jobs as number) : null,
+            })),
+          }
         : null,
     ts: Date.now(),
   });
@@ -2129,3 +2214,34 @@ adminDataRoute.route('/ota', otaAdminRoute);
 adminDataRoute.route('/device-config', configAdminRoute);
 // 设备诊断日志后台（2026-09-19，合同 CC 诊断日志复核回执 §2 第 3 条；admin 专属正则已含 diagnostics）
 adminDataRoute.route('/diagnostics', diagnosticsAdminRoute);
+
+// 产品事件后台：既有 admin-only 网关后才允许访问回环内部查询。
+const storageCounts=()=>{const a=arkStore().settings(),p=configStore.analyticsPolicy();return {analytics:p?.enabled?p.subjects.length:0,ark:a.enabled?a.subjects.length:0};};
+adminDataRoute.route('/analytics/storage',storageRoute({
+ authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+ read:()=>({policy:configStore.storagePolicy(),profile:configStore.storageProfile(),enabled:storageCounts(),ark_capacity:arkCapacity()}),
+ save:input=>{arkStore();return configStore.saveStoragePolicy(input,storageCounts,'admin');},
+ archive:()=>arkArchiveStatus(arkStore().db,configStore.storagePolicy().archive_enabled),
+ saveArchive:input=>configStore.saveStorageArchive(input,'admin'),
+}));
+adminDataRoute.route('/analytics/control',analyticsControlRoute({
+  authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+  internalUrl:process.env.ANALYTICS_INTERNAL_URL||'http://127.0.0.1:3006',
+  internalSecret:process.env.ANALYTICS_INTERNAL_SECRET||'',
+  devices:()=>deviceRegistryStore.list(),policy:()=>configStore.analyticsPolicy(),
+  storageRevision:()=>configStore.storagePolicy().revision,
+  save:(p,active,by,admission)=>configStore.saveAnalyticsPolicy(p,active,by,admission),
+}));
+adminDataRoute.route('/analytics/tiering',analyticsTierControlRoute({
+  authorize(header){const token=header?/^Bearer\s+(.+)$/i.exec(header.trim())?.[1]:undefined;return !token||!isValidToken(token)?'none':isAdminRole(token)?'admin':'other';},
+  internalUrl:process.env.ANALYTICS_INTERNAL_URL||'http://127.0.0.1:3006',internalSecret:process.env.ANALYTICS_INTERNAL_SECRET||'',devices:()=>deviceRegistryStore.list(),config:configStore,
+}));
+adminDataRoute.route('/analytics', analyticsAdminGateway({
+  authorize(header) {
+    const token = header ? /^Bearer\s+(.+)$/i.exec(header.trim())?.[1] : undefined;
+    if (!token || !isValidToken(token)) return 'none';
+    return isAdminRole(token) ? 'admin' : 'other';
+  },
+  internalUrl: process.env.ANALYTICS_INTERNAL_URL || 'http://127.0.0.1:3006',
+  internalSecret: process.env.ANALYTICS_INTERNAL_SECRET || '',
+}));
