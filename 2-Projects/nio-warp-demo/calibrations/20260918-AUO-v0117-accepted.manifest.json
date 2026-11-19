@@ -1,0 +1,49 @@
+{
+  "name": "0918-44.8-合盖验收-v0.11.7",
+  "confirmedDate": "2026-09-18",
+  "snapshotSelected": "2026-09-18 14:02 Asia/Shanghai",
+  "selection": "User explicitly selected the 14:02 saved snapshot; later live adjustments are preserved, not overwritten.",
+  "appVersion": "0.11.7 (34)",
+  "appSourceCommit": "123153ad6851993ccbf5941d3955aa041c658199",
+  "appSourceSHA256": "b67db8dbb698c68efaaa2195baed9908983c6293bb50a058f2d2df2d809be180",
+  "appBinarySHA256": "f1ef79e8b92da2acbb01dbc7f555ba140b99463905e487db2e05ee19ddf84f96",
+  "designatedRequirement": "identifier \"com.mycc.nio-warp-demo\"",
+  "acceptanceTag": "nio-warp-v0.11.7-accepted-20260918",
+  "configurationFile": "20260918-AUO-v0117-accepted.json",
+  "configurationSHA256": "887df66fbe327e62f2e29fd906c9514a6750a1523c95f4aa461dd27729edad20",
+  "displayProfile": "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+  "displayPixels": [
+    7680,
+    936
+  ],
+  "schemaVersion": 13,
+  "presetID": "E18D1A09-0147-44A2-A8C5-A5490BFAA310",
+  "deviceBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-060142Z-v0117",
+  "preferencesRestoreFile": "preferences-accepted.plist",
+  "previousPresetsPreserved": 5,
+  "userConfirmedPhysicalLidCycle": true,
+  "validation": {
+    "columns": 200,
+    "foldedCells": 0,
+    "importedConfigurationEqual": true,
+    "indices": 165600,
+    "intersectingBoundaries": 0,
+    "invalidCoordinates": 0,
+    "jsonRoundtripEqual": true,
+    "meshValid": true,
+    "outOfAASamples": 12110,
+    "result": "PASS",
+    "rows": 135,
+    "totalSamples": 27939,
+    "unsafeScaleCount": 0,
+    "vertices": 27939
+  },
+  "identityValidation": {
+    "sourceSHA256": "b67db8dbb698c68efaaa2195baed9908983c6293bb50a058f2d2df2d809be180",
+    "binarySHA256": "f1ef79e8b92da2acbb01dbc7f555ba140b99463905e487db2e05ee19ddf84f96",
+    "signatureVerified": true,
+    "backupHashesVerified": true
+  },
+  "savedView": "calibration grid off; contentMode fit; automatic fullscreen window capture; horizontal mirror on",
+  "liveConfigurationPolicy": "The saved preset is the accepted baseline. Active adjustments after 14:02 are separate; do not auto-apply this baseline."
+}

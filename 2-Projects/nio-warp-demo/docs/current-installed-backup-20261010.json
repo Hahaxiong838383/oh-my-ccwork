@@ -1,0 +1,23 @@
+{
+  "retrievedAt": "2026-10-10T16:10:54.993290+08:00",
+  "version": "1.0.0",
+  "build": "77",
+  "bundleID": "com.mycc.nio-warp-demo",
+  "sourceSHA256": "013020fb485968d9f37f20d01f7a9c71fb4f30a6b792f27ee2ada91741a5c00c",
+  "binarySHA256": "11dd663dbd344296a1e16c060d902d5c8dc6be23f60254c91d5bdf6aae5ee2d7",
+  "archive": "NIO-Warp-v1.0.0-77-installed-backup-20261010.zip",
+  "archiveBytes": 1477539,
+  "archiveSHA256": "8d1521db99a2038cd7c1d6b9404009da23562c892040794d3c7b4afd41994c58",
+  "signatureValid": true,
+  "source": "current installed app read through SSH",
+  "remoteAppModified": false,
+  "dmg": {
+    "file": "NIO-Warp-v1.0.0-77-20261010.dmg",
+    "bytes": 1653324,
+    "sha256": "a8e17994ee46601329b80c63c2836acffcb2653f546cde1a4e33f60c7da50eb3",
+    "mountedAppFilesMatchZIP": true,
+    "strictSignatureValid": true
+  },
+  "containsCurrentParameters": false,
+  "containsMacOSPermissions": false
+}

@@ -72,6 +72,45 @@ final class CanvasGrowthTests: XCTestCase {
         assertSamePoints(original, config)
     }
 
+    func testIndependentHeightScaleKeepsPhysicalGeometryFixedWhenAACropMoves() {
+        for scale in [0.12, 1.0, 5.5] {
+            var configuration = baseline()
+            configuration.manual.verticalAspectScale = scale
+            let beforeGrowth = configuration
+            configuration.enableCanvasGrowth()
+            assertSamePoints(beforeGrowth, configuration)
+            configuration.canvas = CanvasConfiguration(width: 8000, height: 2000)
+            let original = configuration
+            for crop in [
+                NormalizedRect(x: 0.1, y: 0.3, width: 0.5, height: 0.4),
+                NormalizedRect(x: 0.2, y: 0.05, width: 0.65, height: 0.8),
+                NormalizedRect.full
+            ] {
+                var cropped = original
+                cropped.aaRect = crop
+                assertSamePoints(original, cropped)
+                XCTAssertEqual(cropped.canvasReference, original.canvasReference)
+                XCTAssertEqual(cropped.manual, original.manual)
+            }
+        }
+    }
+
+    func testIndependentHeightScaleKeepsPhysicalGeometryFixedWhenExpandedCanvasIsRebased() {
+        for scale in [0.12, 1.0, 5.5] {
+            var configuration = baseline()
+            configuration.manual.verticalAspectScale = scale
+            configuration.enableCanvasGrowth()
+            configuration.canvas = CanvasConfiguration(width: 8000, height: 2000)
+            configuration.aaRect = NormalizedRect(x: 0.1, y: 0.3, width: 0.5, height: 0.4)
+            let original = configuration
+            configuration.rebaseCanvasGrowth()
+            assertSamePoints(original, configuration)
+            XCTAssertEqual(configuration.canvasReference?.physicalY, original.canvasReference?.physicalY)
+            XCTAssertEqual(configuration.canvasReference?.physicalHeight, original.canvasReference?.physicalHeight)
+            XCTAssertEqual(configuration.canvasReference?.canvas, configuration.canvas)
+        }
+    }
+
     func testExplicitRebasePreservesGeometryAndContentScale() {
         var config = baseline()
         config.enableCanvasGrowth()

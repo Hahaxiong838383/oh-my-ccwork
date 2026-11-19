@@ -1,0 +1,82 @@
+{
+  "version": "0.12.2",
+  "build": "37",
+  "sourceSHA256": "3077b7ef54790ebb459c7b8fa48aa93a5884cbe935798905e5e0ee6fb566bf1b",
+  "binarySHA256": "916a0f17fc900fb412acdeb9d519e70fad374831666dfa7676e2ff5c95dc8661",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "verifiedAt": "2026-09-18T15:15:06.456102+08:00",
+  "directionTest": {
+    "result": "PASS",
+    "directions": {
+      "False": {
+        "rightMotionSourcePixels": [
+          80.00015258789062,
+          0.0
+        ],
+        "downMotionSourcePixels": [
+          0.0,
+          20.00002670288086
+        ]
+      },
+      "True": {
+        "rightMotionSourcePixels": [
+          -79.99992370605469,
+          0.0
+        ],
+        "downMotionSourcePixels": [
+          0.0,
+          20.00002670288086
+        ]
+      }
+    },
+    "leftUpReturn": true,
+    "rawInputDiagnosticMatched": true,
+    "clickAndDragAligned": true,
+    "escapeRestored": true,
+    "sameDocument": true,
+    "temporaryOverlayRemoved": true
+  },
+  "settingsAndUITest": {
+    "result": "PASS",
+    "testCount": 33,
+    "assertionCount": 1953,
+    "failureCount": 0,
+    "runtime": "Compiled original production sources and original test method bodies with minimal XCTest assertion shim; NOT formal XCTest"
+  },
+  "preservedPreferenceKeys": [
+    "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0",
+    "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+    "nioWarpConfigurationHistory.v1",
+    "nioWarpLastDisplayProfile",
+    "nioWarpPresets.v1",
+    "nioWarpProtoPie.configuration.v1",
+    "nioWarpProtoPie.draft.v1",
+    "nioWarpProtoPie.lastSuccessful.v1"
+  ],
+  "changedCalibrationPreferenceKeys": [],
+  "oldMouseFieldsPreserved": true,
+  "newReverseHorizontal": false,
+  "rollbackDirectory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-071136Z-before-v0122",
+  "rollbackTag": "nio-warp-before-mouse-direction-control-20260918",
+  "onsiteDirectionRetest": {
+    "result": "用户确认：向右，正常",
+    "input": "开发机本机鼠标/触摸板",
+    "mode": "glass",
+    "reverseHorizontal": false,
+    "activeDuringTest": true,
+    "movementEventCountAfterUserReply": 253
+  },
+  "finalState": {
+    "active": true,
+    "previewOnly": true,
+    "reverseHorizontal": false
+  },
+  "notRevalidated": [
+    "Air安装",
+    "新物理合盖周期",
+    "UU远程输入方向"
+  ],
+  "scopeCorrection": "用户后续明确：该次确认针对新增十字，不能认定原ProtoPie圆形系统指针已修复；见native-cursor-v0123.md"
+}

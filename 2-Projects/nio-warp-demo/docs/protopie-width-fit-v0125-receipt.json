@@ -1,0 +1,117 @@
+{
+  "version": "0.12.5",
+  "build": "47",
+  "sourceSHA256": "367d863315b2f931b71099b277bd04e435c4cf88cc8d9da6dacc8b3a2b4d1349",
+  "binarySHA256": "4384856e1c689f763b36a3df24bd3b4db3fce51d23e843ed2157aa19c8f03c9d",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "installedBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-083853Z-before-v0125",
+  "widthFit": {
+    "phaseEvidence": "Both runs reached final save after two refresh and disable/re-enable assertions; final save label and active tab corrected separately.",
+    "secondReload": {
+      "box": [
+        0,
+        -932,
+        7680,
+        2800
+      ],
+      "cursor": "image-set(url(\"https://static.protopie.io/web/images/cursors/TouchPoint_Default.png\") 1dppx, url(\"https://static.protopie.io/web/images/cursors/Retina_TouchPoint_Default.png\") 2dppx) 26 26, auto",
+      "design": [
+        3840,
+        1400
+      ],
+      "owned": true,
+      "timeOrigin": 1789720457721.3,
+      "transform": "matrix(2, 0, 0, 2, -3840, -1400)",
+      "viewport": [
+        7680,
+        936
+      ]
+    },
+    "preservedPreferenceKeys": {
+      "NSWindow Frame NIOWarpUnifiedWorkbench": true,
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpConfigurationHistory.v1": true,
+      "nioWarpLastDisplayProfile": true,
+      "nioWarpPresets.v1": true
+    },
+    "protoPieConfigs": {
+      "nioWarpProtoPie.configuration.v1": {
+        "fillWidth": true,
+        "scaleToFit": true
+      },
+      "nioWarpProtoPie.draft.v1": {
+        "fillWidth": true,
+        "scaleToFit": true
+      },
+      "nioWarpProtoPie.lastSuccessful.v1": {
+        "fillWidth": true,
+        "scaleToFit": true
+      }
+    }
+  },
+  "verticalPosition": {
+    "requestedSourcePixelShift": -500,
+    "position": -0.5364806866952789,
+    "applied": {
+      "box": [
+        0,
+        -1432,
+        7680,
+        2800
+      ],
+      "cursor": "image-set(url(\"https://static.protopie.io/web/images/cursors/TouchPoint_Default.png\") 1dppx, url(\"https://static.protopie.io/web/images/cursors/Retina_TouchPoint_Default.png\") 2dppx) 26 26, auto",
+      "design": [
+        3840,
+        1400
+      ],
+      "owned": true,
+      "timeOrigin": 1789720457721.3,
+      "transform": "matrix(2, 0, 0, 2, -3840, -1400)",
+      "viewport": [
+        7680,
+        936
+      ]
+    },
+    "afterReload": {
+      "box": [
+        0,
+        -1432,
+        7680,
+        2800
+      ],
+      "cursor": "image-set(url(\"https://static.protopie.io/web/images/cursors/TouchPoint_Default.png\") 1dppx, url(\"https://static.protopie.io/web/images/cursors/Retina_TouchPoint_Default.png\") 2dppx) 26 26, auto",
+      "design": [
+        3840,
+        1400
+      ],
+      "owned": true,
+      "timeOrigin": 1789720775153.9,
+      "transform": "matrix(2, 0, 0, 2, -3840, -1400)",
+      "viewport": [
+        7680,
+        936
+      ]
+    },
+    "preservedPreferenceKeys": {
+      "NSWindow Frame NIOWarpUnifiedWorkbench": true,
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpConfigurationHistory.v1": true,
+      "nioWarpLastDisplayProfile": true,
+      "nioWarpPresets.v1": true
+    },
+    "savedPositions": {
+      "nioWarpProtoPie.configuration.v1": -0.5364806866952789,
+      "nioWarpProtoPie.draft.v1": -0.5364806866952789,
+      "nioWarpProtoPie.lastSuccessful.v1": -0.5364806866952789
+    },
+    "nativeMousePaused": true,
+    "result": "PASS"
+  },
+  "humanWidthAccepted": true,
+  "humanVerticalPositionAcceptance": "pending",
+  "mouseHardwareAcceptance": "pending; mapping paused",
+  "airChanged": false
+}

@@ -1,0 +1,519 @@
+{
+  "aaRect": {
+    "height": 1,
+    "width": 1,
+    "x": 0,
+    "y": 0
+  },
+  "alignment": {
+    "centerHorizontal": true,
+    "centerVertical": true,
+    "level": true,
+    "snapHorizontalBend": false,
+    "snapTilt": false
+  },
+  "bezierWarp": {
+    "enabled": true,
+    "horizontalKnots": [
+      0,
+      0.125,
+      0.25,
+      0.5,
+      0.75,
+      1
+    ],
+    "horizontalRadius": 0.35,
+    "linkage": "gradient",
+    "nodes": [
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C47C",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          -101.28007675159999,
+          20.315367195194103
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          189.3036101115565,
+          115.8158821455356
+        ]
+      },
+      {
+        "id": "CCE2ECB7-F224-48C2-BF05-3B37632AE472",
+        "mixedDerivative": [
+          -855.3128394625052,
+          -523.2800946288218
+        ],
+        "offset": [
+          -76.32840079517746,
+          15.310409898079767
+        ],
+        "tangentU": [
+          457.6043213140136,
+          -91.78902816594582
+        ],
+        "tangentV": [
+          142.66618162234593,
+          87.2831197840875
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C47D",
+        "mixedDerivative": [
+          -675.8027373530906,
+          -413.4558772375877
+        ],
+        "offset": [
+          -14.655390412321744,
+          2.939666390117933
+        ],
+        "tangentU": [
+          361.56390819872666,
+          -72.52466422988314
+        ],
+        "tangentV": [
+          27.392537620711973,
+          16.75874489069691
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C47E",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C47F",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C480",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C481",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          -32.85460086414741,
+          -1.1592056717908288
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          96.18835774148947,
+          -73.84725764839297
+        ]
+      },
+      {
+        "id": "EAC04D9E-CE19-4796-8A84-10851769EDF1",
+        "mixedDerivative": [
+          -434.5988823701053,
+          333.65717425327796
+        ],
+        "offset": [
+          -24.760438806486288,
+          -0.8736201428589014
+        ],
+        "tangentU": [
+          148.4438777367284,
+          5.237530832487398
+        ],
+        "tangentV": [
+          72.49109357933357,
+          -55.65401666544675
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C482",
+        "mixedDerivative": [
+          -343.3867712553919,
+          263.63035990382446
+        ],
+        "offset": [
+          -4.754113720569205,
+          -0.1677389298384776
+        ],
+        "tangentU": [
+          117.28898981667419,
+          4.138295966409813
+        ],
+        "tangentV": [
+          13.918610461551896,
+          -10.685817254768365
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C483",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C484",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C485",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C486",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          -16.65431610699419,
+          -20.577345225759853
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          16.62866065018003,
+          -0.5589545259089879
+        ]
+      },
+      {
+        "id": "8425C89B-4CC3-4B4D-9EAF-0A78E7D8CED6",
+        "mixedDerivative": [
+          -75.13172595484306,
+          2.5254720837278324
+        ],
+        "offset": [
+          -12.55130678763185,
+          -15.50784620300672
+        ],
+        "tangentU": [
+          75.24764261170175,
+          92.97269905879331
+        ],
+        "tangentV": [
+          12.531971889267803,
+          -0.42124874356580855
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C487",
+        "mixedDerivative": [
+          -59.36333902604889,
+          1.9954347328219892
+        ],
+        "offset": [
+          -2.4099063944909744,
+          -2.9775750335603033
+        ],
+        "tangentU": [
+          59.45492749566565,
+          73.45991036744161
+        ],
+        "tangentV": [
+          2.406194008522515,
+          -0.08088162117038511
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C488",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C489",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      },
+      {
+        "id": "B3A1E000-0000-4000-8000-00000000C48A",
+        "mixedDerivative": [
+          0,
+          0
+        ],
+        "offset": [
+          0,
+          0
+        ],
+        "tangentU": [
+          0,
+          0
+        ],
+        "tangentV": [
+          0,
+          0
+        ]
+      }
+    ],
+    "scope": "region",
+    "verticalKnots": [
+      0,
+      0.5,
+      1
+    ],
+    "verticalRadius": 0.7
+  },
+  "canvas": {
+    "height": 2800,
+    "width": 12500
+  },
+  "canvasReference": {
+    "canvas": {
+      "height": 2800,
+      "width": 12500
+    },
+    "clampsOriginalManualDomain": true,
+    "contentCanvas": {
+      "height": 2800,
+      "width": 12500
+    },
+    "domain": {
+      "maximumX": 1.0208333730697632,
+      "maximumY": 1.433333396911621,
+      "minimumX": -0.020833373069763184,
+      "minimumY": -0.4333333969116211
+    },
+    "gridCanvas": {
+      "height": 1500,
+      "width": 12000
+    },
+    "outputBounds": {
+      "maximumX": 1,
+      "maximumY": 1,
+      "minimumX": 0,
+      "minimumY": 0
+    },
+    "physicalHeight": 936,
+    "physicalWidth": 7680,
+    "physicalX": 0,
+    "physicalY": 0
+  },
+  "capture": {
+    "fullscreenCoverageThreshold": 0.82,
+    "sourceMode": "automaticFullscreenWindow"
+  },
+  "contentMode": "fit",
+  "cropAnchor": {
+    "horizontal": 0.0001900815379123344,
+    "vertical": -0.008584059812677403
+  },
+  "displayPixelHeight": 936,
+  "displayPixelWidth": 7680,
+  "extendedWarpEnabled": true,
+  "localWarp": {
+    "anchors": [
+      {
+        "id": "39733AE4-E598-44AF-85F8-AE3B7E3C827D",
+        "offsetX": 0,
+        "offsetY": 0,
+        "x": 0,
+        "y": 300.00001192092896
+      },
+      {
+        "id": "91BECF1C-7BE3-49C5-A1C3-1A9265862765",
+        "offsetX": 0,
+        "offsetY": 0,
+        "x": 999.9994039535522,
+        "y": 499.99992847442627
+      }
+    ],
+    "enabled": true,
+    "lockBoundary": true,
+    "radiusCells": 4,
+    "reference": {
+      "bounds": {
+        "maximumX": 9000,
+        "maximumY": 1250,
+        "minimumX": -9000,
+        "minimumY": -1250
+      },
+      "canvas": {
+        "height": 1500,
+        "width": 12000
+      },
+      "cellHeight": 150,
+      "cellWidth": 1200
+    },
+    "smoothness": "highest"
+  },
+  "manual": {
+    "arch": 2.0132994406630575,
+    "asymmetry": -0.008224218794353843,
+    "enabled": true,
+    "horizontalBend": 0.0016421890909478522,
+    "strength": 0.35638147928966524,
+    "tilt": 0.006174626637056297,
+    "verticalAspectScale": 1.5006019938861679,
+    "verticalScale": 0.6
+  },
+  "mirror": {
+    "horizontal": true,
+    "vertical": false
+  },
+  "polynomial": {
+    "coefficientsX": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "coefficientsY": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "enabled": false,
+    "order": 3
+  },
+  "render": {
+    "antiAliasing": "quality",
+    "antiAliasingEnabled": true,
+    "automaticPerformanceFallback": false,
+    "calibrationGrid": {
+      "columns": 24,
+      "lineWidthPixels": 5,
+      "rows": 6
+    },
+    "showAABoundary": false,
+    "showWarpBoundary": true,
+    "testPattern": "off"
+  },
+  "schemaVersion": 13,
+  "warpTrend": "inverse"
+}

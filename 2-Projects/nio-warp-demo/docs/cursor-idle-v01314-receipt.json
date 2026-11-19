@@ -1,0 +1,274 @@
+{
+  "version": "0.13.14",
+  "build": "66",
+  "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
+  "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "pid": 60926,
+  "processCommand": "/Users/futurus/Applications/NIOWarpApp.app/Contents/MacOS/NIOWarpApp",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "checkedAt": "2026-09-18T13:24:42.094446+00:00",
+  "tests": {
+    "runner": "Original production sources and test method bodies with standalone Swift assertion shim; NOT formal XCTest",
+    "testCount": 70,
+    "assertionCount": 595,
+    "failures": 0,
+    "skips": 0
+  },
+  "automaticAcceptance": {
+    "passed": true,
+    "sampleCount": 23,
+    "stages": [
+      {
+        "stage": "enter",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "stationary-hidden",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "still-hidden-after-css-polls",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "keyboard-while-hidden",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "move-wakes",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "before-first-click",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "first-down-wakes",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 1
+      },
+      {
+        "stage": "held-stationary-five-seconds",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 1
+      },
+      {
+        "stage": "drag-visible",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 1
+      },
+      {
+        "stage": "release-starts-countdown",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "after-release-hidden",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "wheel-wakes",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "edge-push-0",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "edge-push-1",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "edge-push-2",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "edge-push-3",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "edge-idle-hidden",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "esc-restores",
+        "active": false,
+        "engaged": false,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "reenter",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "reenter-hidden",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      },
+      {
+        "stage": "focus-loss-restores",
+        "active": true,
+        "engaged": false,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "final-reenter",
+        "active": true,
+        "engaged": true,
+        "hidden": false,
+        "heldButtons": 0
+      },
+      {
+        "stage": "final-idle",
+        "active": true,
+        "engaged": true,
+        "hidden": true,
+        "heldButtons": 0
+      }
+    ],
+    "pageInputVerified": [
+      "mouse down on first hidden click",
+      "mouse up",
+      "click",
+      "wheel",
+      "Numpad2 keydown/keyup"
+    ],
+    "evidenceBoundary": "Controller and original official-page DOM delivery from automatic checks; user confirmation is recorded separately in humanAcceptance."
+  },
+  "parameterComparison": {
+    "parametersUnchanged": true,
+    "compared": {
+      "nioWarpProtoPie.configuration.v1": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpMouseMapping.settings.v1": true,
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009": true,
+      "nioWarpPresets.v1": true,
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true
+    }
+  },
+  "liveParameterDecision": {
+    "preserved": "latest installation-time settings",
+    "outputVerticalOffsetPixels": -93.68523296460597,
+    "taskStartValue": -34.99058649,
+    "note": "Changed on device before final v66 installation; retained latest, never restored task-start snapshot."
+  },
+  "verifiedBaseline": {
+    "version": "0.13.14",
+    "build": "66",
+    "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
+    "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/verified-baselines/20260918-132316Z-v01314",
+    "humanAcceptance": "此历史快照创建时仅完成自动检查；随后用户确认，见 humanAcceptance 与 acceptedBaseline。",
+    "files": {
+      "preferences-accepted.plist": "b7e1440243e1c3ccc9f952e6df2485b8a8426e7c0c6cea5da61eac884380bc93",
+      "native-source.tar.gz": "fed6a97bc9a479e36a2b9e6729d4105d1fd42286a117c0c8840b9015f61f3f0f",
+      "NIOWarpApp-v0.13.14-66.zip": "634d86f6e19f254f8ccb7805bffd5f92ec37b9f6c04f4ecc3d602c86182f7968"
+    }
+  },
+  "stableRollback": {
+    "version": "0.13.11 (63)",
+    "fullBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/pre-change-baselines/20260918-130806Z-before-v01312",
+    "latestPreferencesBeforeWork": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-131013Z-before-v01312",
+    "sourceTag": "nio-warp-before-cursor-idle-20260918",
+    "sourceCommit": "ae4c78822fbcc8b8e16b48b3c7da2db5ff863a7d"
+  },
+  "humanAcceptance": {
+    "status": "accepted",
+    "confirmedAt": "2026-09-18T13:36:43.762134+00:00",
+    "userConfirmation": "OK了，我确认了，更新记忆落盘commit + push 我的代码仓吧",
+    "scope": "本轮原圆圈静止隐藏、活动恢复及长按体验；固化时当前等待时间为2秒，不扩大为所有输入或其他屏幕光学验收"
+  },
+  "acceptedBaseline": {
+    "version": "0.13.14",
+    "build": "66",
+    "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
+    "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-133643Z-v01314",
+    "humanAcceptance": "accepted: 用户确认原圆圈静止自动隐藏、鼠标操作恢复及长按保持可见，本轮方案通过",
+    "sourceCommit": "18c750af912e0e1db5e707e379390ccf17456b12",
+    "acceptedAt": "2026-09-18T13:36:43.762134+00:00",
+    "files": {
+      "preferences-accepted.plist": "47e4f04bdafc5c14fbccf74597f36e241b7ed7564c9e2b8f1cc16c26af678cd0",
+      "native-source.tar.gz": "957e5595de0e9383be3e2702728db5186ff3303000a37773c9cfc4dbba438004",
+      "NIOWarpApp-v0.13.14-66.zip": "634d86f6e19f254f8ccb7805bffd5f92ec37b9f6c04f4ecc3d602c86182f7968"
+    }
+  },
+  "acceptedParameters": {
+    "currentHomeOutputVerticalOffsetPixels": -93.68523296460597,
+    "cursorAutoHideEnabled": true,
+    "cursorAutoHideDelay": 2,
+    "savedConfigurationKeys": [
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009",
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0"
+    ],
+    "preferencesSHA256": "47e4f04bdafc5c14fbccf74597f36e241b7ed7564c9e2b8f1cc16c26af678cd0"
+  },
+  "acceptanceVerification": {
+    "version": "0.13.14",
+    "build": "66",
+    "sourceSHA256": "8e56a19fd8ac657d7b88bcbf708a71a68400d473ebd03385b732944f7da7941a",
+    "binarySHA256": "d5099b3f8bbbb1c0ec1cd912210f780475e44022e8f59dc8634be1c67f0a73e3",
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "strictSignatureVerified": true,
+    "sourceDigestMatched": true,
+    "running": true,
+    "note": "核验固定路径的运行进程、签名包、源码与最新参数；本轮未重新启动应用或修改参数。"
+  }
+}

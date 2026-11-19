@@ -1,0 +1,554 @@
+{
+  "version": "0.14.5",
+  "build": 73,
+  "checkedAt": "2026-09-20T09:00:24.166590+00:00",
+  "status": "human_accepted",
+  "humanAcceptance": "用户确认：画面重播、声音和鼠标均正常",
+  "installation": {
+    "version": "0.14.5 (73)",
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-085655Z-before-v0145",
+    "sourceSHA256": "147763497c84c31fbbc5420a03b843e26984b7084fbbb433d3025f15128a56e6",
+    "binarySHA256": "591d7c4e7ddb0d8c1695534329def17d76d02f4d70308f1b4412a6b7edef9519",
+    "signatureRequirementMatched": true,
+    "preferencesByteIdenticalBeforeRelaunch": true,
+    "sourceDigestMatched": true,
+    "backupSHA256": {
+      "previous-app.zip": "f1e229188651e26b73d43db4a7bb0f37d5cb256d59cbf044f73586d27d2e1628",
+      "preferences-before.plist": "287b782217f28fc665b03ca9e2229005400bf0c3b7a804a1d54ab708d0669e8f",
+      "source-files-before.tar.gz": "6877549a63f0e5e05366880353b281d0b5b873237903b5710b15208a2422de11"
+    },
+    "updatedSourceFiles": [
+      "native/Sources/NIOWarpApp/ProtoPieCloudTargetLifecycle.swift",
+      "native/Sources/NIOWarpApp/OwnedPresentationDisplay.swift",
+      "native/Sources/NIOWarpApp/ProtoPieSystemDriver.swift",
+      "native/Sources/NIOWarpApp/PresentationDisplayPlacement.swift",
+      "native/Tests/NIOWarpAppTests/ProtoPieCloudTargetLifecycleTests.swift",
+      "native/Tests/NIOWarpAppTests/PresentationDisplayPlacementTests.swift",
+      "native/scripts/build-app.sh"
+    ]
+  },
+  "regression": {
+    "runtime": "Original production sources and original test methods with assertion shim; NOT formal XCTest",
+    "testCount": 86,
+    "assertionCount": 476,
+    "failureCount": 0,
+    "result": "PASS",
+    "checkedAt": "2026-09-20T08:56:07.124880+00:00"
+  },
+  "liveGeometryAndPointer": {
+    "passed": true,
+    "checks": [
+      {
+        "stage": "height-1200",
+        "layout": [
+          {
+            "bounds": [
+              0,
+              0,
+              1512,
+              982
+            ],
+            "builtIn": true,
+            "id": 1,
+            "main": true,
+            "model": 41057,
+            "pixelHeight": 982,
+            "pixelWidth": 1512,
+            "serial": 4251086178,
+            "vendor": 1552
+          },
+          {
+            "bounds": [
+              1512,
+              0,
+              1920,
+              1080
+            ],
+            "builtIn": false,
+            "id": 4,
+            "main": false,
+            "model": 28931,
+            "pixelHeight": 1080,
+            "pixelWidth": 1920,
+            "serial": 16780800,
+            "vendor": 19501
+          },
+          {
+            "bounds": [
+              3432,
+              0,
+              1920,
+              1200
+            ],
+            "builtIn": false,
+            "id": 32,
+            "main": false,
+            "model": 22354,
+            "pixelHeight": 1200,
+            "pixelWidth": 1920,
+            "serial": 1105183919,
+            "vendor": 20041
+          }
+        ],
+        "ready": {
+          "diagnostic": {
+            "browserFrame": [
+              3432,
+              0,
+              1920,
+              1200
+            ],
+            "capturedFrame": [
+              3432,
+              0,
+              1920,
+              1200
+            ],
+            "displayScale": 1,
+            "frontProcessID": 11639,
+            "geometryReady": true,
+            "layoutReady": true,
+            "outputDisplayID": 4,
+            "processID": 11639,
+            "sourceDisplayID": 32,
+            "stage": "monitorComplete",
+            "targetFrame": [
+              3432,
+              0,
+              1920,
+              1200
+            ],
+            "timestamp": 1789894632.626065,
+            "viewportPixels": [
+              1920,
+              1200
+            ],
+            "windowID": 3009,
+            "windowState": "fullscreen"
+          },
+          "capture": {
+            "fullWindowVerified": true,
+            "height": 1200,
+            "timestamp": 1789894632.382297,
+            "width": 1920,
+            "windowID": 3009
+          }
+        },
+        "physicalPositionsPreserved": true
+      },
+      {
+        "stage": "height-1100",
+        "layout": [
+          {
+            "bounds": [
+              0,
+              0,
+              1512,
+              982
+            ],
+            "builtIn": true,
+            "id": 1,
+            "main": true,
+            "model": 41057,
+            "pixelHeight": 982,
+            "pixelWidth": 1512,
+            "serial": 4251086178,
+            "vendor": 1552
+          },
+          {
+            "bounds": [
+              1512,
+              0,
+              1920,
+              1080
+            ],
+            "builtIn": false,
+            "id": 4,
+            "main": false,
+            "model": 28931,
+            "pixelHeight": 1080,
+            "pixelWidth": 1920,
+            "serial": 16780800,
+            "vendor": 19501
+          },
+          {
+            "bounds": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "builtIn": false,
+            "id": 33,
+            "main": false,
+            "model": 22354,
+            "pixelHeight": 1100,
+            "pixelWidth": 1920,
+            "serial": 1105183819,
+            "vendor": 20041
+          }
+        ],
+        "ready": {
+          "diagnostic": {
+            "browserFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "capturedFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "displayScale": 1,
+            "frontProcessID": 11639,
+            "geometryReady": true,
+            "layoutReady": true,
+            "outputDisplayID": 4,
+            "processID": 11639,
+            "sourceDisplayID": 33,
+            "stage": "monitorComplete",
+            "targetFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "timestamp": 1789894638.779492,
+            "viewportPixels": [
+              1920,
+              1100
+            ],
+            "windowID": 3009,
+            "windowState": "fullscreen"
+          },
+          "capture": {
+            "fullWindowVerified": true,
+            "height": 1100,
+            "timestamp": 1789894638.552154,
+            "width": 1920,
+            "windowID": 3009
+          }
+        },
+        "physicalPositionsPreserved": true
+      },
+      {
+        "stage": "cross-to-adjacent-physical",
+        "pointer": {
+          "cursorSHA256": "57a1d610df3e421ebef670ba58c97319d2ab6990d64dca34d28140e4527fd54d",
+          "cursorSize": [
+            28,
+            40
+          ],
+          "frontPID": 11639,
+          "hotspot": [
+            5,
+            5
+          ],
+          "point": [
+            1550,
+            180
+          ]
+        }
+      },
+      {
+        "stage": "native-mapping",
+        "active": true,
+        "nativeEngaged": true,
+        "connected": true,
+        "movementEventCount": 2
+      },
+      {
+        "stage": "esc-return",
+        "pointer": {
+          "cursorSHA256": "57a1d610df3e421ebef670ba58c97319d2ab6990d64dca34d28140e4527fd54d",
+          "cursorSize": [
+            28,
+            40
+          ],
+          "frontPID": 15475,
+          "hotspot": [
+            5,
+            5
+          ],
+          "point": [
+            957,
+            461
+          ]
+        },
+        "visible": true
+      }
+    ],
+    "originalHeight": 1100,
+    "finalHeight": 1100,
+    "changedSettings": [],
+    "protectedKeys": 10,
+    "pid": "15475"
+  },
+  "retryAndCancellation": {
+    "passed": true,
+    "checks": [
+      {
+        "stage": "plan-start",
+        "ready": {
+          "target": "9084905A7AE99F5D2EDA924BC971A306",
+          "capture": {
+            "fullWindowVerified": true,
+            "height": 1100,
+            "timestamp": 1789894661.846921,
+            "width": 1920,
+            "windowID": 3210
+          },
+          "page": {
+            "height": 1100,
+            "origin": 1789894656759.9,
+            "width": 1920
+          },
+          "diagnostic": {
+            "browserFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "capturedFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "displayScale": 1,
+            "frontProcessID": 11639,
+            "geometryReady": true,
+            "layoutReady": true,
+            "outputDisplayID": 4,
+            "processID": 11639,
+            "sourceDisplayID": 33,
+            "stage": "monitorComplete",
+            "targetFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "timestamp": 1789894661.858827,
+            "viewportPixels": [
+              1920,
+              1100
+            ],
+            "windowID": 3210,
+            "windowState": "fullscreen"
+          }
+        }
+      },
+      {
+        "stage": "cancel-fresh-after-created",
+        "created": [
+          "8414E183272F550E588B6EBC63F1A582"
+        ],
+        "remainingIDs": [
+          "9084905A7AE99F5D2EDA924BC971A306"
+        ]
+      },
+      {
+        "stage": "fresh-retry-1",
+        "ready": {
+          "target": "0EBEE2955298BA36407AFA48A602AD4A",
+          "capture": {
+            "fullWindowVerified": true,
+            "height": 1100,
+            "timestamp": 1789894687.306189,
+            "width": 1920,
+            "windowID": 3248
+          },
+          "page": {
+            "height": 1100,
+            "origin": 1789894663254.4,
+            "width": 1920
+          },
+          "diagnostic": {
+            "browserFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "capturedFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "displayScale": 1,
+            "frontProcessID": 11639,
+            "geometryReady": true,
+            "layoutReady": true,
+            "outputDisplayID": 4,
+            "processID": 11639,
+            "sourceDisplayID": 33,
+            "stage": "monitorComplete",
+            "targetFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "timestamp": 1789894687.321748,
+            "viewportPixels": [
+              1920,
+              1100
+            ],
+            "windowID": 3248,
+            "windowState": "fullscreen"
+          }
+        },
+        "singlePage": true
+      },
+      {
+        "stage": "fresh-retry-2",
+        "ready": {
+          "target": "239E260F2B588414F2AAB0078ACE6863",
+          "capture": {
+            "fullWindowVerified": true,
+            "height": 1100,
+            "timestamp": 1789894691.663529,
+            "width": 1920,
+            "windowID": 3268
+          },
+          "page": {
+            "height": 1100,
+            "origin": 1789894688104,
+            "width": 1920
+          },
+          "diagnostic": {
+            "browserFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "capturedFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "displayScale": 1,
+            "frontProcessID": 11639,
+            "geometryReady": true,
+            "layoutReady": true,
+            "outputDisplayID": 4,
+            "processID": 11639,
+            "sourceDisplayID": 33,
+            "stage": "monitorComplete",
+            "targetFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "timestamp": 1789894691.682897,
+            "viewportPixels": [
+              1920,
+              1100
+            ],
+            "windowID": 3268,
+            "windowState": "fullscreen"
+          }
+        },
+        "singlePage": true
+      },
+      {
+        "stage": "fresh-retry-3",
+        "ready": {
+          "target": "5E311B965D81B7B9B80F03975CEE50C3",
+          "capture": {
+            "fullWindowVerified": true,
+            "height": 1100,
+            "timestamp": 1789894696.7322931,
+            "width": 1920,
+            "windowID": 3288
+          },
+          "page": {
+            "height": 1100,
+            "origin": 1789894692645.6,
+            "width": 1920
+          },
+          "diagnostic": {
+            "browserFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "capturedFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "displayScale": 1,
+            "frontProcessID": 11639,
+            "geometryReady": true,
+            "layoutReady": true,
+            "outputDisplayID": 4,
+            "processID": 11639,
+            "sourceDisplayID": 33,
+            "stage": "monitorComplete",
+            "targetFrame": [
+              3432,
+              0,
+              1920,
+              1100
+            ],
+            "timestamp": 1789894696.746749,
+            "viewportPixels": [
+              1920,
+              1100
+            ],
+            "windowID": 3288,
+            "windowState": "fullscreen"
+          }
+        },
+        "singlePage": true
+      }
+    ],
+    "changedSettings": [],
+    "protectedKeys": 10,
+    "finalPageCount": 1
+  },
+  "acceptedBaseline": {
+    "version": "0.14.5",
+    "build": 73,
+    "directory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260920-085947Z-v0145",
+    "sourceSHA256": "147763497c84c31fbbc5420a03b843e26984b7084fbbb433d3025f15128a56e6",
+    "binarySHA256": "591d7c4e7ddb0d8c1695534329def17d76d02f4d70308f1b4412a6b7edef9519",
+    "artifacts": {
+      "NIOWarpApp-v0.14.5-73.zip": "f8476cd4f8053ff1a724b6335bbe2c58544b7106aab64c934602d6004709dd41",
+      "native-source.tar.gz": "0aac3a77065002698b68b7d06b11e5c54cba5e441cefab81b97e61d28c9c0b07",
+      "preferences.plist": "95009ee8b233b58a75abb74d010d6c00bcacb696594e73b3fd49ae0f2b0e1785"
+    },
+    "humanAcceptance": "用户确认：画面重播、声音和鼠标均正常",
+    "canvas": {
+      "height": 1100,
+      "width": 9000
+    },
+    "outputVerticalOffsetPixels": -220.5778301886792,
+    "capturedAt": "2026-09-20T08:59:48.032322+00:00"
+  },
+  "oldKnownWorkingRollback": {
+    "tag": "nio-warp-before-display-placement-20260920",
+    "commit": "9c1ea24b8b701dd542265c6deeac366b2d220949",
+    "appBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-083104Z-before-v0143/previous-app.zip",
+    "fullNativeArchive": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-083104Z-before-v0143/native-v0142-70-source.tar.gz",
+    "fullNativeArchiveSHA256": "e1b4a46ddf33559cb9c294e97fc651209d6c4e0e60e4e0450e4d7b6bb97e5c9f"
+  },
+  "limits": [
+    "未做新一轮整机重启/合盖和长时间连续轮播。",
+    "切源加载到新首帧验收之间，原型自动发声可能短暂重叠；已验证不会因失败/取消长期累积页面。",
+    "Air未更新；不以归档参数覆盖后续手调。"
+  ]
+}

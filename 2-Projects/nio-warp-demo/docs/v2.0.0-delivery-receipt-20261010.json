@@ -1,0 +1,24 @@
+{
+  "release": "2.0.0-rc.1",
+  "build": 78,
+  "sourceCommit": "c4efe3024d6917ab62e86987bc90e972d3260a23",
+  "zip": {
+    "file": "NIO-Warp-v2.0.0-rc.1-customer-20261010.zip",
+    "bytes": 4765395,
+    "sha256": "809d7d328af34e8581bf49d094896226c9063b74a387c32e776a24b77d75f17a",
+    "fileCount": 35,
+    "archiveCRCAndEveryFileByteComparisonPassed": true
+  },
+  "dmg": {
+    "dmgFile": "NIO-Warp-v2.0.0-78-rc.1.dmg",
+    "bytes": 1698835,
+    "sha256": "c43278f0b48cbc4046ead5e5f9f06677a1b603a03f17bb40ecf0b64a35cfd661",
+    "hdiutilVerifyPassed": true,
+    "readOnlyMountVerified": true,
+    "mountedAppAllFileAndSymlinkHashesMatchReleaseApp": true,
+    "strictSignatureValid": true,
+    "containsCurrentParameters": false,
+    "containsMacOSPermissions": false
+  },
+  "customerDeployed": false
+}

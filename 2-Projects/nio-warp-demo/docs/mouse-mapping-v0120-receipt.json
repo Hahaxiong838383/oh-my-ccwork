@@ -1,0 +1,96 @@
+{
+  "version": "0.12.0",
+  "build": "35",
+  "sourceSHA256": "69c79bfe6460884f026c746339490df8597ce1aa79b572540d1721bf3b1791bd",
+  "binarySHA256": "dcbe267b0db5587df84b95f15a4511bdda4e684dbcba7b1b4f30bc6f4c81634e",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "verifiedAt": "2026-09-18T14:53:52.131592+08:00",
+  "geometry": {
+    "originalMethods": 8,
+    "assertions": 22690,
+    "bottomHotspotY": 935.5,
+    "physicalHeight": 936,
+    "visiblePolygons": 25596,
+    "sweepMoves": 20000,
+    "sweepInvalidPoints": 0
+  },
+  "uiIntegration": {
+    "originalMethods": 83,
+    "assertions": 25467,
+    "failures": 0,
+    "skips": 0
+  },
+  "clamshellPolicy": {
+    "originalMethods": 18,
+    "assertions": 79,
+    "failures": 0,
+    "overlapsUIIntegration": true
+  },
+  "transport": {
+    "originalMethods": 19,
+    "assertions": 98,
+    "failures": 0
+  },
+  "testRuntime": "Actual production sources and original test bodies using independent assertion shim; NOT formal XCTest",
+  "realDevice": {
+    "relativeMovement": true,
+    "horizontalMirror": true,
+    "bottomEdge935_5": true,
+    "click": true,
+    "doubleClick": true,
+    "drag": true,
+    "wheel": true,
+    "escapeRelease": true,
+    "emergencyRelease": true,
+    "applicationQuitRelease": true,
+    "rapidRestart": true,
+    "focusLossWithoutStealingFocus": true,
+    "sameProtoPieDocument": true,
+    "temporaryTestOverlayRemoved": true,
+    "captureContentScale": 1,
+    "captureTexture": [
+      7680,
+      936
+    ],
+    "captureContentRect": [
+      0,
+      0,
+      7680,
+      936
+    ],
+    "nativeNegativeDesktopOriginTested": [
+      -325,
+      -936
+    ],
+    "physicalGlassPointerAcceptance": false,
+    "newPhysicalLidCycle": false
+  },
+  "configuration": {
+    "keysCompared": [
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0",
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+      "nioWarpConfigurationHistory.v1",
+      "nioWarpLastDisplayProfile",
+      "nioWarpPresets.v1",
+      "nioWarpProtoPie.configuration.v1",
+      "nioWarpProtoPie.draft.v1",
+      "nioWarpProtoPie.lastSuccessful.v1"
+    ],
+    "changedOriginalKeys": [],
+    "byteChangedKeys": [
+      "nioWarpProtoPie.lastSuccessful.v1"
+    ],
+    "mouseSettings": {
+      "mode": "glass",
+      "speed": 1,
+      "previewOnly": true,
+      "pointerSize": 28
+    },
+    "allOriginalConfigurationSemanticallyPreserved": true
+  },
+  "rollbackTag": "nio-warp-before-mouse-mapping-20260918",
+  "rollbackDirectory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-062921Z-before-v0120",
+  "finalInputState": "ordinary system mouse; glass mode, previewOnly=true; Warp output visible"
+}

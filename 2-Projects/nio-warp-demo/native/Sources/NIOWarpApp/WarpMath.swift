@@ -158,6 +158,8 @@ enum WarpMath {
         var extendedMinimum: SIMD2<Float>
         var extendedMaximum: SIMD2<Float>
         var localField: LocalWarpField? = nil
+        var bezierField: BezierWarpField? = nil
+        var alignment = WarpAlignmentTransform()
     }
 
     static func extendedWarpCoreRect(configuration: WarpConfiguration) -> NormalizedRect {
@@ -343,8 +345,30 @@ enum WarpMath {
     private static func mappingContext(configuration: WarpConfiguration) -> MappingContext {
         let manual = manualBounds(parameters: configuration.manual, trend: configuration.warpTrend)
         let output = configuration.canvasReference?.outputBounds ?? .unit
-        return MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum,
-                              localField: configuration.localWarp.enabled && !configuration.localWarp.anchors.isEmpty ? LocalWarpField(configuration.localWarp) : nil)
+        var context = MappingContext(manualMinimum: manual.0, manualMaximum: manual.1, extendedMinimum: output.minimum, extendedMaximum: output.maximum,
+                              localField: configuration.localWarp.enabled && !configuration.localWarp.anchors.isEmpty ? LocalWarpField(configuration.localWarp) : nil,
+                              bezierField: configuration.bezierWarp.enabled ? BezierWarpField(configuration.bezierWarp) : nil)
+        if configuration.alignment.isGeometricEnabled {
+            let dimensions = meshDimensions(configuration: configuration)
+            let anchorUVs = configuration.localWarp.enabled ? configuration.localWarp.anchors.map { configuration.canvasUV(for: $0.coordinate) } : []
+            let horizontal = (0...dimensions.columns).map { Float($0) / Float(dimensions.columns) }
+                + configuration.bezierWarp.horizontalKnots.map(Float.init) + anchorUVs.map(\.x)
+            let vertical = (0...dimensions.rows).map { Float($0) / Float(dimensions.rows) }
+                + configuration.bezierWarp.verticalKnots.map(Float.init) + anchorUVs.map(\.y)
+            var boundary = [SIMD2<Float>]()
+            for t in horizontal where t.isFinite && t >= 0 && t <= 1 {
+                for uv in [SIMD2(t, 0), SIMD2(t, 1)] { boundary.append(localPhysicalPoint(canvasPoint: uv, configuration: configuration, context: context)) }
+            }
+            for t in vertical where t.isFinite && t >= 0 && t <= 1 {
+                for uv in [SIMD2(0, t), SIMD2(1, t)] { boundary.append(localPhysicalPoint(canvasPoint: uv, configuration: configuration, context: context)) }
+            }
+            let left = localPhysicalPoint(canvasPoint: SIMD2(0, 0.5), configuration: configuration, context: context)
+            let right = localPhysicalPoint(canvasPoint: SIMD2(1, 0.5), configuration: configuration, context: context)
+            let aa = configuration.aaRect.sanitized()
+            context.alignment = WarpAlignmentTransform.make(configuration: configuration.alignment, boundary: boundary, axis: (left, right),
+                size: SIMD2(Float(aa.width * Double(configuration.displayPixelWidth)), Float(aa.height * Double(configuration.displayPixelHeight))))
+        }
+        return context
     }
 
     private static func mix(_ minimum: Float, _ maximum: Float, t: Float) -> Float {
@@ -355,11 +379,11 @@ enum WarpMath {
         canvasPoint: SIMD2<Float>,
         configuration: WarpConfiguration
     ) -> SIMD2<Float> {
-        localPhysicalPoint(
+        translatedOutputPoint(localPhysicalPoint(
             canvasPoint: canvasPoint,
             configuration: configuration,
             context: mappingContext(configuration: configuration)
-        )
+        ), configuration: configuration)
     }
 
     static func localPhysicalPoints(
@@ -368,8 +392,17 @@ enum WarpMath {
     ) -> [SIMD2<Float>] {
         let context = mappingContext(configuration: configuration)
         return canvasPoints.map {
-            localPhysicalPoint(canvasPoint: $0, configuration: configuration, context: context)
+            translatedOutputPoint(localPhysicalPoint(canvasPoint: $0, configuration: configuration, context: context), configuration: configuration)
         }
+    }
+
+    /// Keep this outside mappingContext: automatic centering/leveling must not
+    /// absorb the user's final physical translation, including in grown canvases.
+    private static func translatedOutputPoint(_ local: SIMD2<Float>, configuration: WarpConfiguration) -> SIMD2<Float> {
+        guard configuration.outputVerticalOffsetPixels != 0 else { return local }
+        let aa = configuration.aaRect.sanitized()
+        let physicalHeight = aa.height * Double(max(configuration.displayPixelHeight, 1))
+        return local + SIMD2(0, Float(configuration.outputVerticalOffsetPixels / physicalHeight))
     }
 
     private static func localPhysicalPoint(
@@ -378,10 +411,28 @@ enum WarpMath {
         context: MappingContext
     ) -> SIMD2<Float> {
         let base = baseLocalPhysicalPoint(canvasPoint: canvasPoint, configuration: configuration, context: context)
-        guard let field = context.localField else { return base }
-        let delta = field.displacement(at: configuration.localCoordinate(at: canvasPoint))
+        var delta = context.localField?.displacement(at: configuration.localCoordinate(at: canvasPoint)) ?? .zero
+        delta += context.bezierField?.displacement(at: SIMD2(Double(canvasPoint.x), Double(canvasPoint.y))) ?? .zero
         let aa = configuration.aaRect.sanitized()
-        return base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+        var displaced = base + SIMD2(Float(delta.x / (aa.width * Double(configuration.displayPixelWidth))), Float(delta.y / (aa.height * Double(configuration.displayPixelHeight))))
+        // Resize the complete deformed surface after normalization, so the multiplier is not
+        // cancelled by manualBounds or inverted by the optical trend. Alignment sees this shape.
+        let verticalAspectScale = Float(configuration.manual.verticalAspectScale)
+        if configuration.manual.enabled, verticalAspectScale != 1 {
+            // In the extended canvas, AA is only a crop. Keep the scale pivot in the
+            // captured physical frame so moving that crop cannot translate the surface.
+            let centerY: Float
+            if configuration.extendedWarpEnabled {
+                let reference = configuration.canvasReference ?? captureCanvasReference(configuration: configuration)
+                let physicalCenterY = reference.physicalY + reference.physicalHeight * 0.5
+                centerY = Float((physicalCenterY - aa.y * Double(configuration.displayPixelHeight))
+                    / (aa.height * Double(configuration.displayPixelHeight)))
+            } else {
+                centerY = 0.5
+            }
+            displaced.y = centerY + (displaced.y - centerY) * verticalAspectScale
+        }
+        return context.alignment.apply(displaced)
     }
 
     private static func baseLocalPhysicalPoint(
@@ -446,8 +497,8 @@ enum WarpMath {
             }
             return Array(Set(regular + anchors)).sorted()
         }
-        let horizontalAxis = axis(columns, anchorUVs.map(\.x))
-        let verticalAxis = axis(rows, anchorUVs.map(\.y))
+        let horizontalAxis = axis(columns, anchorUVs.map(\.x) + (configuration.bezierWarp.enabled ? configuration.bezierWarp.horizontalKnots.map(Float.init) : []))
+        let verticalAxis = axis(rows, anchorUVs.map(\.y) + (configuration.bezierWarp.enabled ? configuration.bezierWarp.verticalKnots.map(Float.init) : []))
         let columns = horizontalAxis.count - 1
         let rows = verticalAxis.count - 1
         let aa = configuration.aaRect.sanitized()
@@ -469,11 +520,15 @@ enum WarpMath {
                     configuration: configuration,
                     context: context
                 )
+                // Shape validity is translation-invariant. Keep its original
+                // coordinates for fold/conditioning tests; AA coverage uses the
+                // translated surface and the renderer clips it normally.
                 localPoints.append(local)
-                if !local.x.isFinite || !local.y.isFinite { nonFinite += 1 }
-                if local.x < 0 || local.x > 1 || local.y < 0 || local.y > 1 { outOfAA += 1 }
-                let screenX = Float(aa.x) + local.x * Float(aa.width)
-                let screenY = Float(aa.y) + local.y * Float(aa.height)
+                let translated = translatedOutputPoint(local, configuration: configuration)
+                if !translated.x.isFinite || !translated.y.isFinite { nonFinite += 1 }
+                if translated.x < 0 || translated.x > 1 || translated.y < 0 || translated.y > 1 { outOfAA += 1 }
+                let screenX = Float(aa.x) + translated.x * Float(aa.width)
+                let screenY = Float(aa.y) + translated.y * Float(aa.height)
                 vertices.append(
                     MeshVertex(
                         position: SIMD2<Float>(screenX * 2 - 1, 1 - screenY * 2),

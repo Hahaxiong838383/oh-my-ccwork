@@ -1,0 +1,41 @@
+{
+  "version": "0.12.1",
+  "build": "36",
+  "sourceSHA256": "18d4013bd5585ced8081f85ca6dc796ae877d336e21d4d46a9a95492ef5ae3b1",
+  "binarySHA256": "dd1496d82547df1c87b736790742d0b10ebcbcc4325a5d5471390c97ba0707a2",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "verifiedAt": "2026-09-18T15:01:27.804350+08:00",
+  "directionTest": {
+    "result": "PASS",
+    "rightMotionSourcePixels": [
+      -79.99992370605469,
+      0.0
+    ],
+    "downMotionSourcePixels": [
+      0.0,
+      20.00002670288086
+    ],
+    "leftUpReturn": true,
+    "clickAndDragAligned": true,
+    "escapeRestored": true,
+    "sameDocument": true,
+    "temporaryOverlayRemoved": true
+  },
+  "preservedPreferenceKeys": [
+    "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0",
+    "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+    "nioWarpConfigurationHistory.v1",
+    "nioWarpLastDisplayProfile",
+    "nioWarpMouseMapping.settings.v1",
+    "nioWarpPresets.v1",
+    "nioWarpProtoPie.configuration.v1",
+    "nioWarpProtoPie.draft.v1",
+    "nioWarpProtoPie.lastSuccessful.v1"
+  ],
+  "changedPreferenceKeys": [],
+  "rollbackDirectory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-065843Z-before-v0121",
+  "rollbackTag": "nio-warp-before-mouse-horizontal-20260918",
+  "onsiteDirectionRetest": "待用户复测；本次已按其反馈反转玻璃观察模式水平位移"
+}

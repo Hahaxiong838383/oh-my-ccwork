@@ -103,7 +103,7 @@ final class CalibrationGridTests: XCTestCase {
                 setWarpVisible: { _ in XCTFail("网格编辑不能改变输出可见性") }, isWarpVisible: { false },
                 applyCaptureConfiguration: { _ in XCTFail("网格编辑不能重启捕获") },
                 updateAABoundary: { _, _ in XCTFail("网格编辑不能改变 AA") }, updateWarpBoundary: { _, _ in },
-                presentWindow: false, historyStore: history, presetStore: PresetStore(defaults: defaults)
+                presentWindow: false, historyStore: history, presetStore: PresetStore(defaults: defaults), accessSession: authorizedWorkbenchAccessSession()
             )
         }
 
@@ -115,7 +115,7 @@ final class CalibrationGridTests: XCTestCase {
         func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
 
         var views: [NSView] {
-            let tabs = panel.window!.contentView!.subviews.compactMap { $0 as? NSTabView }.first!
+            let tabs = descendants(panel.window!.contentView!).compactMap { $0 as? NSTabView }.first!
             return tabs.tabViewItems.compactMap(\.view).flatMap(descendants)
         }
 
@@ -177,8 +177,7 @@ final class CalibrationGridTests: XCTestCase {
     func testNativeFieldEditorUpdatesGridBeforeLosingFocus() throws {
         let fixture = try Fixture()
         let window = try XCTUnwrap(fixture.panel.window)
-        let tabs = try XCTUnwrap(window.contentView?.subviews.compactMap { $0 as? NSTabView }.first)
-        tabs.selectTabViewItem(at: 1)
+        fixture.panel.selectModule("quality")
         let columns = try fixture.field("nio-grid-columns")
         columns.selectText(nil)
         let editor = try XCTUnwrap(columns.currentEditor() as? NSTextView)

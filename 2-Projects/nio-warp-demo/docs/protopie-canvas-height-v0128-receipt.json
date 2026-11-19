@@ -1,0 +1,78 @@
+{
+  "version": "0.12.8",
+  "build": "50",
+  "sourceSHA256": "56ebed82e503f2058245068d7bd49511a8a5480025cfc4131323649095c98f7e",
+  "binarySHA256": "bfc9731739dd7eaa25aace87bf8b46919c8161d362bdd417f6c5680a0328f66b",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "pid": 48030,
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "capturedSource": {
+    "fullWindowVerified": true,
+    "height": 2800,
+    "timestamp": 1789723113.281828,
+    "width": 7680,
+    "windowID": 2627
+  },
+  "physicalOutput": {
+    "displayID": 4,
+    "pixels": [
+      7680,
+      936
+    ]
+  },
+  "presentationSource": {
+    "displayID": 15,
+    "pixels": [
+      7680,
+      2800
+    ],
+    "logicalPoints": [
+      7680,
+      2800
+    ]
+  },
+  "canvas": [
+    12500,
+    2800
+  ],
+  "contentMode": "fill",
+  "cropAnchorVertical": 1,
+  "outputVerticalOffsetPixels": -100,
+  "tests": {
+    "protopieLifecycleAndBridge": {
+      "cases": 111,
+      "assertions": 994
+    },
+    "uiAndSettings": {
+      "cases": 36,
+      "assertions": 2084
+    },
+    "outputTranslationAndGeometry": {
+      "cases": 22,
+      "assertions": 30997
+    },
+    "runtime": "Original production sources and unchanged test bodies with assertion shim; NOT formal XCTest; suites may overlap and must not be summed"
+  },
+  "liveChecks": {
+    "nativeViewportAndSCKFullWindow": true,
+    "reloadKeeps2800Height": true,
+    "sourceBinaryHashMatches": true,
+    "physicalOutputNotChanged": true,
+    "offsetInputCommitsOnlyOffsetField": true,
+    "widthAcceptedByUser": true,
+    "verticalPositionAcceptedByUser": false,
+    "realHeightResizeRoundTrip": "not run; user was operating the ProtoPie tab, no height was changed",
+    "verticalPositionUserDecision": "keep -100 px for now; user will continue manual adjustment"
+  },
+  "rollback": {
+    "codeTag": "nio-warp-before-canvas-height-20260918",
+    "codeCommit": "4a9556aaa1dfdf6671be2a6638eab99405fe9f9c",
+    "v0126PairedBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-091044Z-before-v0127",
+    "previousCandidatePairedBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-091830Z-before-v0128"
+  },
+  "mouseMapping": "paused; native pointer unsupported for separate source display; original wave issue unaccepted",
+  "airChanged": false,
+  "calibrationSnapshot": "calibrations/20260918-1723-full-height-width-fill-v0128.json",
+  "checkedAt": "2026-09-18T17:23:00+08:00"
+}

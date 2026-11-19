@@ -1,0 +1,273 @@
+{
+  "version": "0.14.6",
+  "build": 74,
+  "scope": "Persistent browser control; original mechanism retained as manual fallback",
+  "sourceSHA256": "b054d0e276452e2119f1b43297cca428790c89c007f3950379d389c8c14aa448",
+  "binarySHA256": "9e3b5a50daa7b43074a653b2b858da31f57575ee7d4b41b2d48f82bd2212fddd",
+  "sourceBaselineCommit": "64bf92a07892bcd3aa072a6d9bf1d25a9f785526",
+  "rollbackTag": "nio-warp-before-persistent-cdp-20260921",
+  "rollback": {
+    "version": "0.14.5",
+    "build": 73,
+    "directory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/pre-change-baselines/20260920-232821Z-before-persistent-cdp-v0145",
+    "sourceSHA256": "147763497c84c31fbbc5420a03b843e26984b7084fbbb433d3025f15128a56e6",
+    "binarySHA256": "591d7c4e7ddb0d8c1695534329def17d76d02f4d70308f1b4412a6b7edef9519",
+    "artifacts": {
+      "NIOWarpApp-v0.14.5-73.zip": "a23fadc68f0c0a5bdfdfbbefef8599d8c881b149e9471d436651a3e5f83d47a5",
+      "native-source.tar.gz": "1c5d754627fdf6a12690a2e25e55958711b51192252fa87ae2695536a1db9a22",
+      "preferences.plist": "66b51b49f73a0814f1df933acbcdb9e4bfefbb62460232f27c69f9631df07b99"
+    },
+    "configurationHashes": {
+      "nioWarpProtoPie.configuration.v1": "6c11f1c49303ae94c9d3b59e2d5b7e7d2ac8add0a5a2c9f132c91df591219749",
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": "7a9c835e70d7dc8680d65966627fec0661d01543800da63088f90028aaaecdf8",
+      "nioWarpMouseMapping.settings.v1": "fcc68c6558028ad27d5d4037b83185e585497593c9dc3a4be5cd61ad09f4014a",
+      "nioWarpConfiguration.v2.vendor-19501-model-28931-serial-16780800": "32ba6d303f5ea39b05b1d9719d0987c8148b6ca9e91fda985c7145d5d683164f",
+      "nioWarpProtoPie.playbackLibrary.v1": "36ddf10f623b77b86bf6724be6565a4aaa1ef61da155892897f414ecf9d8d77a",
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009": "c04108495d9b195f61913dd2e2e149e2770398139cadcfcc03cdc5e747096604",
+      "nioWarpProtoPie.draft.v1": "6c11f1c49303ae94c9d3b59e2d5b7e7d2ac8add0a5a2c9f132c91df591219749",
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": "e9b421c43b8a5f0d6c3224f344c0fa6c98181508a994917805e8f254f7368dee"
+    },
+    "capturedAt": "2026-09-20T23:28:21.883641+00:00",
+    "reason": "User authorized persistent CDP experiment; retain original short-connection fallback; never restore old preferences automatically."
+  },
+  "installation": {
+    "version": "0.14.6 (74)",
+    "app": "/Users/futurus/Applications/NIOWarpApp.app",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-233719Z-before-v0146",
+    "sourceSHA256": "b054d0e276452e2119f1b43297cca428790c89c007f3950379d389c8c14aa448",
+    "binarySHA256": "9e3b5a50daa7b43074a653b2b858da31f57575ee7d4b41b2d48f82bd2212fddd",
+    "signatureRequirementMatched": true,
+    "preferencesByteIdenticalBeforeRelaunch": true,
+    "sourceDigestMatched": true,
+    "backupSHA256": {
+      "previous-app.zip": "a23fadc68f0c0a5bdfdfbbefef8599d8c881b149e9471d436651a3e5f83d47a5",
+      "preferences-before.plist": "0b71d6b2a07dd5744af2fb7e1a6d4b8e8329e0663ff2b8759f0bf9579b38c24a",
+      "source-files-before.tar.gz": "d55c131db4e023dd879f00d4c2ea3b2a09d80e364a16086c440e6705423d48e0"
+    },
+    "updatedSourceFiles": [
+      "native/Sources/NIOWarpApp/ProtoPieCDPTransport.swift",
+      "native/Sources/NIOWarpApp/ProtoPiePlaybackPanel.swift",
+      "native/Sources/NIOWarpApp/ProtoPieSystemDriver.swift",
+      "native/Sources/NIOWarpApp/ProtoPieLegacyCDP.swift",
+      "native/Sources/NIOWarpApp/ProtoPieBrowserControl.swift",
+      "native/Tests/NIOWarpAppTests/ProtoPieBrowserControlTests.swift",
+      "native/Tests/NIOWarpAppTests/ProtoPieCDPTransportTests.swift",
+      "native/scripts/build-app.sh"
+    ]
+  },
+  "validation": {
+    "originalRegression": {
+      "tests": 86,
+      "assertions": 476
+    },
+    "transportRegression": {
+      "tests": 17,
+      "assertions": 70
+    },
+    "wrapperRegression": {
+      "tests": 8,
+      "assertions": 154
+    },
+    "testRuntime": "Original production sources and test methods using assertion shim; not formal XCTest",
+    "realWireProbe": {
+      "6000": {
+        "coldToEndFootprintMiB": 7.125160217285156,
+        "warmToEndFootprintMiB": 4.6875,
+        "warmToEndMallocMiB": 0.354766845703125,
+        "snapshot": {
+          "attachedTargets": 0,
+          "attachingTargets": 0,
+          "cancelled": 0,
+          "completed": 6503,
+          "connected": true,
+          "connections": 1,
+          "disconnects": 0,
+          "maximumConnections": 16,
+          "pending": 0,
+          "requests": 6503,
+          "shutdown": false,
+          "stage": "single-connection-snapshot",
+          "timeouts": 0
+        },
+        "serverAfterReconnect": {
+          "attaches": 101,
+          "badSessions": 0,
+          "closes": 101,
+          "commands": 6508,
+          "connections": 2,
+          "evaluations": 6100,
+          "mutations": 1,
+          "stage": "server-after-disconnect"
+        },
+        "passed": {
+          "assertions": "all",
+          "evaluations": 6000,
+          "pageLifecycles": 100,
+          "stage": "pass"
+        }
+      },
+      "12000": {
+        "coldToEndFootprintMiB": 7.32830810546875,
+        "warmToEndFootprintMiB": 4.8750457763671875,
+        "warmToEndMallocMiB": 0.279083251953125,
+        "snapshot": {
+          "attachedTargets": 0,
+          "attachingTargets": 0,
+          "cancelled": 0,
+          "completed": 12903,
+          "connected": true,
+          "connections": 1,
+          "disconnects": 0,
+          "maximumConnections": 16,
+          "pending": 0,
+          "requests": 12903,
+          "shutdown": false,
+          "stage": "single-connection-snapshot",
+          "timeouts": 0
+        },
+        "serverAfterReconnect": {
+          "attaches": 201,
+          "badSessions": 0,
+          "closes": 201,
+          "commands": 12908,
+          "connections": 2,
+          "evaluations": 12100,
+          "mutations": 1,
+          "stage": "server-after-disconnect"
+        },
+        "passed": {
+          "assertions": "all",
+          "evaluations": 12000,
+          "pageLifecycles": 200,
+          "stage": "pass"
+        },
+        "second6000FootprintMiB": 0.171875,
+        "second6000MallocMiB": -0.0237884521484375,
+        "second6000MallocBlocks": -463
+      },
+      "sourceSHA256": "06b34a31456ffd7a121c9436ecf8971df61a16378b612a12a24085fd753330dd",
+      "productionSHA256": "06b34a31456ffd7a121c9436ecf8971df61a16378b612a12a24085fd753330dd",
+      "os": "ProductName:\t\tmacOS\nProductVersion:\t\t26.4.1\nBuildVersion:\t\t25E253\n",
+      "chrome": "Unavailable locally: /Applications and ~/Applications inventory; mdfind com.google.Chrome returned empty; no cached Chromium binary found. No installation, no browser touched."
+    },
+    "realChrome": {
+      "persistentAndLegacyRelaunch": true,
+      "fullWindowCapture": true,
+      "pageReuse": true,
+      "cancelledCandidateReclaimed": true,
+      "mouseMoveAndClick": true,
+      "numpad201234TrustedEvents": true,
+      "escapeReturnsVisiblePointer": true,
+      "savedConfigurationKeysUnchanged": 10,
+      "physicalDisplayLayoutUnchanged": true
+    },
+    "eightHourSoakCompleted": false,
+    "physicalRebootRetested": false,
+    "lidRetested": false,
+    "humanAcceptance": "Pending user validation; v0.14.5 remains the previous human-accepted release",
+    "tenMinuteObservationCompleted": true,
+    "tenMinuteObservation": {
+      "passed": true,
+      "windowStart": "2026-09-21T07:41:26.556155+08:00",
+      "windowEnd": "2026-09-21T07:51:26.556155+08:00",
+      "windowSeconds": 600,
+      "appPID": 30986,
+      "runID": "AAC2B12F-027D-46C8-98EA-12F3FAC99E17",
+      "healthSamples": 40,
+      "healthMaxGapSeconds": 16.0,
+      "itemReadyCount": 16,
+      "readyByItem": {
+        "DE50C293-62E2-4202-8650-FB05D1AF94CF": 8,
+        "9C36C938-D484-4BA5-995D-6C4C9C59BE5E": 8
+      },
+      "eventCounts": {
+        "health": 40,
+        "item_preparing": 16,
+        "item_ready": 16
+      },
+      "nonInfo": [],
+      "captureOrOutputIssues": 0,
+      "fps": {
+        "min": 59.83230316352914,
+        "max": 60.03760735588221
+      },
+      "appFootprintMiB": {
+        "first": 293.3448486328125,
+        "last": 293.3604736328125,
+        "min": 293.2354736328125,
+        "max": 293.5010986328125,
+        "delta": 0.015625
+      },
+      "control": {
+        "attachedTargets": 1,
+        "attachingTargets": 0,
+        "cancelled": 0,
+        "completed": 1692,
+        "connected": true,
+        "connections": 1,
+        "disconnects": 0,
+        "legacyRequests": 0,
+        "maximumConnections": 16,
+        "mode": "persistent",
+        "pending": 0,
+        "requests": 1692,
+        "shutdown": false,
+        "timeouts": 0,
+        "updatedAt": 1789948307.326851
+      },
+      "lateControlSamples": 27,
+      "lateControlIssues": 0,
+      "controlSamplingStarted": 1789947909.0981052,
+      "resourceSamples": 11,
+      "resourceMaxGapSeconds": 60.15063500404358,
+      "monitor": {
+        "activeObservations": [],
+        "automaticRepairPerformed": false,
+        "businessPlaybackVerified": false,
+        "itemFailures": 0,
+        "label": "com.mycc.nio-warp.soak-20260921-v0146",
+        "lastSampleEpoch": 1789948227.900861,
+        "missingAppSamples": 0,
+        "monitorStatus": "ended",
+        "opticalAcceptanceVerified": false,
+        "parameterSegments": 0,
+        "playbackStatus": "running",
+        "readyEvents": 14,
+        "reason": "monitor_stop_requested",
+        "runEnded": null,
+        "samples": 11,
+        "schema": 1,
+        "scope": "current_external_display_only",
+        "startEpoch": 1789947686.556155,
+        "status": "ended"
+      },
+      "savedConfigurationKeys": 10,
+      "changedSettings": [],
+      "pageCountAtFinish": 1,
+      "physicalRebootRetested": false,
+      "lidRetested": false,
+      "longSoakCompleted": false,
+      "automaticAppRestartImplemented": false,
+      "appLeftPlaying": true
+    }
+  },
+  "soak": {
+    "runDirectory": "/Users/futurus/Library/Logs/NIOWarp/Soak/20260921-074125-v0146-persistent",
+    "label": "com.mycc.nio-warp.soak-20260921-v0146",
+    "version": "0.14.6 (74)",
+    "sourceSHA256": "b054d0e276452e2119f1b43297cca428790c89c007f3950379d389c8c14aa448",
+    "appPID": 30986,
+    "runID": "AAC2B12F-027D-46C8-98EA-12F3FAC99E17",
+    "startedAt": "2026-09-21T07:41:26.567215+08:00",
+    "endsAfterHours": 0.16666666666666666,
+    "scriptSHA256": "8466859a8ccc75d4e11d7e2dbe34625c5199130451c542b83623462558388a23",
+    "scope": "Read-only observation; no restart, input or recovery; original growth threshold not used to declare memory stable.",
+    "initialPlannedHours": 8,
+    "requestedTestMinutes": 10,
+    "userRevisedDuration": true,
+    "completed": true,
+    "observerStoppedAndLaunchAgentArchived": true,
+    "appLeftPlaying": true
+  },
+  "verifiedAt": "2026-09-20T23:52:08.278292+00:00"
+}

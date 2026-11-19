@@ -1,0 +1,42 @@
+{
+  "recordType": "scheme-freeze-not-deployment",
+  "date": "2026-10-10",
+  "release": "2.0.0-rc.1",
+  "build": 78,
+  "branch": "codex/nio-warp-v2-connect",
+  "codeCommit": "c4efe3024d6917ab62e86987bc90e972d3260a23",
+  "deliveryReceiptCommit": "562969860672f8bbbfe0d20265bc1d4e4fb36e6c",
+  "originalCandidateTag": "nio-warp-v2.0.0-rc.1-20261010",
+  "schemeFreezeTag": "nio-warp-v2.0.0-rc.1-scheme-frozen-20261010",
+  "rollbackTag": "nio-warp-v1.0.0-frozen-20260921",
+  "customerDeployment": "wait-for-explicit-user-instruction",
+  "customerLastVerifiedInstalledVersion": "1.0.0 (77)",
+  "customerDeviceContactedThisTurn": false,
+  "appAndSdkCodeChangedThisTurn": false,
+  "packagesRebuiltThisTurn": false,
+  "warpParametersChangedThisTurn": false,
+  "artifacts": [
+    {
+      "file": "NIO-Warp-v2.0.0-rc.1-customer-20261010.zip",
+      "bytes": 4765395,
+      "sha256": "809d7d328af34e8581bf49d094896226c9063b74a387c32e776a24b77d75f17a"
+    },
+    {
+      "file": "NIO-Warp-v2.0.0-78-rc.1.dmg",
+      "bytes": 1698835,
+      "sha256": "c43278f0b48cbc4046ead5e5f9f06677a1b603a03f17bb40ecf0b64a35cfd661"
+    }
+  ],
+  "existingAgentCapabilities": {
+    "inputJsonLinesCli": true,
+    "inputNodeApi": true,
+    "inputSkillBundledNotInstalled": true,
+    "inputMessages": ["demo.level", "demo.toggle", "demo.action"],
+    "appGuiAccessibilityIdentifiers": true,
+    "appPublicControlApi": false,
+    "appMcpServer": false,
+    "messageDeliveryAck": false
+  },
+  "recommendationNotImplemented": "existing input CLI plus Skill; later limited App control API plus CLI; optional MCP wrapper",
+  "acceptance": "real Connect, customer hardware, glass, input and continuous operation pending"
+}

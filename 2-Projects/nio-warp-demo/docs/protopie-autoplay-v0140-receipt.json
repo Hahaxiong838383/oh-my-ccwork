@@ -1,0 +1,96 @@
+{
+  "version": "0.14.0",
+  "build": "68",
+  "status": "installed_candidate_waiting_external_display",
+  "checkedAt": "2026-09-20T12:15:00+08:00",
+  "package": {
+    "version": "0.14.0",
+    "build": "68",
+    "sourceSHA256": "ebe805ee5fd3621f36d4eb6759ee8869cc14eeab6712c5e4005ee6167d524e56",
+    "sourceDigestMatched": true,
+    "binarySHA256": "8152a06d452837b4e1d056ff1836c0755d919612f1f5d3fbe52292b98d89c455",
+    "signatureVerified": true
+  },
+  "rollback": {
+    "codeTag": "nio-warp-before-autoplay-20260920",
+    "commit": "c6eed3ee9df417fe89b13270967e2c3bba56c999",
+    "completeBaseline": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/pre-change-baselines/20260920-034900Z-before-autoplay",
+    "installBaseline67": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260920-040914Z-before-v0140"
+  },
+  "candidateBackup": {
+    "path": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/candidate-baselines/20260920-041524Z-v0140-no-external-display",
+    "version": "0.14.0",
+    "build": "68",
+    "sourceSHA256": "ebe805ee5fd3621f36d4eb6759ee8869cc14eeab6712c5e4005ee6167d524e56",
+    "acceptance": "candidate; external display unavailable; no long-run or optical acceptance",
+    "files": {
+      "NIOWarpApp-v0140-68.zip": "15366365ccbe4414874a8998bfaa08424a6d6b55037198a68550f71c962c8b9e",
+      "native.tar.gz": "3c254740f26d3398b680a3444434929c4f560ce53bab041eb22da44dfa97b690",
+      "preferences-current.plist": "e79bfbb25dc87c9e8dc8254e0a453bb711dcde795e9a5c26d08653354822037e"
+    }
+  },
+  "tests": [
+    {
+      "group": "计时与调度",
+      "testCount": 20,
+      "assertionCount": 63,
+      "failures": 0,
+      "framework": "original methods with standalone Swift assertion shim, not XCTest"
+    },
+    {
+      "group": "播放器取消与恢复",
+      "testCount": 43,
+      "assertionCount": 158,
+      "failures": 0,
+      "framework": "original methods with standalone Swift assertion shim, not XCTest"
+    },
+    {
+      "group": "输入传输与键码",
+      "testCount": 79,
+      "assertionCount": 1285,
+      "failures": 0,
+      "framework": "original methods with standalone Swift assertion shim, not XCTest"
+    },
+    {
+      "group": "作用域、光标与交接",
+      "testCount": 74,
+      "assertionCount": 875,
+      "failures": 0,
+      "framework": "original methods with standalone Swift assertion shim, not XCTest"
+    },
+    {
+      "group": "编辑器与完整工作台",
+      "testCount": 9,
+      "assertionCount": 243,
+      "failures": 0,
+      "framework": "original methods with standalone Swift assertion shim, not XCTest"
+    },
+    {
+      "group": "模型/迁移/日志",
+      "testCount": 17,
+      "assertionCount": 102,
+      "failures": 0,
+      "framework": "original methods with standalone Swift assertion shim, not XCTest"
+    }
+  ],
+  "notVerified": [
+    "real external-display playback",
+    "distinct cloud-prototype business sequences",
+    "physical human/automatic handoff",
+    "lid and display reconnection on this candidate",
+    "8-hour or 24-hour endurance",
+    "new glass optical calibration"
+  ],
+  "remoteNativeUI": {
+    "inlineRenameSaved": true,
+    "duplicateSaved": true,
+    "keypadTemplateSaved": true,
+    "timeFieldsSaved": true,
+    "reopenPersisted": true,
+    "noDisplayDeadlineStops": true,
+    "noDisplayReportsFailure": true,
+    "testLibraryRestored": true,
+    "oldParameterCount": 10,
+    "oldParametersChanged": []
+  }
+}

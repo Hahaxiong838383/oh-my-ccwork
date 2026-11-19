@@ -21,6 +21,23 @@ final class WindowLifecycleTests: XCTestCase {
         }
     }
 
+    func testOutputCanBecomeKeyOnlyDuringExplicitMappedInputWithoutChangingMainOwnership() {
+        autoreleasepool {
+            let window = makeWindow()
+            XCTAssertFalse(window.acceptsMappedInput)
+            XCTAssertFalse(window.canBecomeKey)
+            window.acceptsMappedInput = true
+            XCTAssertTrue(window.canBecomeKey)
+            XCTAssertFalse(window.canBecomeMain)
+            XCTAssertFalse(window.isVisible, "启用焦点能力本身不得启动演示窗口或抢占焦点")
+            window.acceptsMappedInput = false
+            XCTAssertFalse(window.canBecomeKey)
+            XCTAssertFalse(window.canBecomeMain)
+            window.close()
+            XCTAssertFalse(window.isReleasedWhenClosed)
+        }
+    }
+
     func testClosingOutputDoesNotInvalidateAnOwnedReference() {
         autoreleasepool {
             let window = makeWindow()

@@ -1,0 +1,73 @@
+{
+  "version": "0.13.15",
+  "build": 67,
+  "verifiedAt": "2026-09-18T13:51:21.826395+00:00",
+  "sourceSHA256": "0723d7853c18d5400202f1dee43faf101299f649c3a7cce2aa1e334f0c60347b",
+  "binarySHA256": "daba4b3af5969e4943648b8f142b4d57658c985dd561318250a201cd48a5ec0e",
+  "appPath": "/Users/futurus/Applications/NIOWarpApp.app",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "unitVerification": {
+    "runtime": "Standalone Swift binary with minimal assertion shim; NOT formal XCTest",
+    "testCount": 73,
+    "assertionCount": 965,
+    "failureCount": 0,
+    "result": "PASS"
+  },
+  "controlledReadinessComparison": {
+    "v66InteractiveRejected": true,
+    "v66CompleteAccepted": true,
+    "v67InteractiveAccepted": true,
+    "v67InteractiveToCompleteRetained": true,
+    "scope": "Temporary own-property readiness override on same live official page, removed in finally; not a captured natural original-load state."
+  },
+  "relaunchVerification": {
+    "normalQuitOpenCycles": 2,
+    "parameters": {
+      "equal": true,
+      "comparedKeyCount": 9,
+      "changedKeys": []
+    },
+    "covered": [
+      "first click after session ready",
+      "idle hide after 2 seconds",
+      "movement restores",
+      "first click from hidden reaches original DOM",
+      "Esc restores workbench and visible cursor",
+      "reenter"
+    ],
+    "softwareOnly": true
+  },
+  "humanAcceptance": {
+    "status": "accepted-app-relaunch",
+    "recordedAt": "2026-09-18T21:59:04+08:00",
+    "userStatement": "我测试了几次OK了",
+    "scope": "Repeated application quit/reopen and preview input acceptance",
+    "computerReboot": "User rebooted and tested; post-boot core pipeline logs verified. User confirmed intentional app exit. Power flag correction separately requires next reboot verification."
+  },
+  "rollback": {
+    "gitTag": "nio-warp-before-reopen-input-20260918",
+    "gitCommit": "ba165dc24202ab701addaabf60833e680f8e0725",
+    "pairedBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-134751Z-before-v01315",
+    "verifiedBaseline": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/verified-baselines/20260918-135102Z-v01315"
+  },
+  "configuration": {
+    "mouseMode": "glass",
+    "reverseHorizontal": true,
+    "cursorAutoHideEnabled": true,
+    "cursorAutoHideDelaySeconds": 2,
+    "preferencesByteIdenticalDuringInstall": true
+  },
+  "rebootInspection": {
+    "report": "reboot-acceptance-v01315-20260918.md",
+    "bootTime": "2026-09-18T22:02:32+08:00",
+    "applicationStillRunning": false,
+    "intentionalExitConfirmedByUser": true,
+    "postBootUnexpectedStops": 0,
+    "postBootRelatedCrashReports": 0,
+    "awakeFlagFound": 0,
+    "awakeFlagRestored": 1,
+    "awakeBootTask": "com.mycc.nio-warp.awake",
+    "newBootTaskColdBootVerification": "pending"
+  }
+}

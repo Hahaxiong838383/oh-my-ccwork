@@ -1,0 +1,95 @@
+{
+  "version": "0.12.3",
+  "build": "38",
+  "sourceSHA256": "c0ab7b09c482d4b20a3f24923ede7b32abb6a725a52b021f7fb9a63e8009656b",
+  "binarySHA256": "e117f014616c68453c93ee9d4b6dc945c462c8700577e7f7d66717a554b3419f",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "verifiedAt": "2026-09-18T15:43:53.390003+08:00",
+  "originalPointer": {
+    "kind": "ProtoPie CSS system cursor",
+    "normalSize": [
+      53,
+      53
+    ],
+    "normalHotspot": [
+      26,
+      26
+    ],
+    "normalImageSHA256": "a38b6a1c705839989fcc89318934d10b29d5574c5d847eb8dd568017be2fff46",
+    "activeSize": [
+      50,
+      50
+    ],
+    "activeHotspot": [
+      25,
+      25
+    ],
+    "extraOverlayVisible": false
+  },
+  "inputTest": {
+    "result": "PASS",
+    "systemCursorPreserved": true,
+    "nativeCursorHotspotErrorMaximumPixels": 1,
+    "previewDragNoBusinessClicks": true,
+    "clickAndDragAligned": true,
+    "escapeDuringDragSingleRelease": true,
+    "restartAfterPhysicalRelease": true,
+    "sameDocument": true,
+    "noDrawnPointer": true,
+    "temporaryOverlayRemoved": true
+  },
+  "edgeTest": {
+    "result": "PASS",
+    "bothVisibleEdgesReachable": true,
+    "reversedDirectionReturnsFromBothEdges": true,
+    "osHotspotMatched": true,
+    "internalMouseAfterEscapeUnchanged": true
+  },
+  "settingsAndUITest": {
+    "result": "PASS",
+    "testCount": 34,
+    "assertionCount": 1961,
+    "failureCount": 0,
+    "runtime": "Compiled original production sources and original test method bodies with minimal XCTest assertion shim; NOT formal XCTest"
+  },
+  "preservedConfigurationKeys": [
+    "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0",
+    "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530",
+    "nioWarpConfigurationHistory.v1",
+    "nioWarpLastDisplayProfile",
+    "nioWarpPresets.v1",
+    "nioWarpProtoPie.configuration.v1",
+    "nioWarpProtoPie.draft.v1",
+    "nioWarpProtoPie.lastSuccessful.v1"
+  ],
+  "changedConfigurationKeys": [],
+  "mouseSettingChanges": {
+    "previewOnly": {
+      "before": true,
+      "after": false
+    }
+  },
+  "accessibilityPermission": "用户已在系统设置开启",
+  "rollbackDirectory": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-073220Z-before-v0123",
+  "rollbackTag": "nio-warp-before-native-cursor-20260918",
+  "onsiteTest": "等待用户确认原圆形指针、方向和点击",
+  "finalState": {
+    "active": false,
+    "previewOnly": false,
+    "reverseHorizontal": false,
+    "pointerKind": "original-system-css",
+    "reason": "用户按Esc暂停，保持普通输入，不自动重新接管"
+  },
+  "limitations": [
+    "首轮iframe清理后边缘scope曾安全退出，原因尚未完全证实；显式恢复原页面hover并从中心受控重测通过",
+    "同进程窗口/菜单遮挡列表按200ms刷新",
+    "Air、UU、新物理合盖周期未复验"
+  ],
+  "onsiteObserved": {
+    "movementEventsAfterHandoff": 1302,
+    "stoppedByEscape": true,
+    "userAcceptance": "pending"
+  }
+}

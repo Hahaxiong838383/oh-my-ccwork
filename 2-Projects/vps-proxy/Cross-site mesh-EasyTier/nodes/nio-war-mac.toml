@@ -1,0 +1,33 @@
+# 公司 · nio 开发机 · 客户交付 MacBook Pro · 普通成员，不导出子网
+hostname = "nio 开发机"
+instance_name = "main"
+ipv4 = "10.10.10.14"
+
+listeners = [
+    "tcp://0.0.0.0:11010",
+    "udp://0.0.0.0:11010",
+]
+
+# ── 网络身份（决定谁和谁是同一张网）──
+# 必须与所有其他节点完全一致；不一致的症状是「connector 显示 Connected 但 peer 表空」，
+# 因为 TCP/UDP 通道建得起来，只是握手鉴权不过 —— 极容易误判成打洞失败。
+[network_identity]
+network_name = "__NETWORK_NAME__"
+network_secret = "__NETWORK_SECRET__"
+
+[[peer]]
+uri = "tcp://207.57.124.191:443"
+[[peer]]
+uri = "udp://207.57.124.191:22"
+[[peer]]
+uri = "tcp://192.168.61.66:11010"    # mini
+[[peer]]
+uri = "tcp://192.168.61.233:11010"   # dev198
+
+[flags]
+private_mode = true
+latency_first = true
+multi_thread = true
+bind_device = true
+accept_dns = false
+enable_kcp_proxy = false

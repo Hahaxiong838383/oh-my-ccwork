@@ -1,0 +1,54 @@
+{
+  "version": "0.13.8",
+  "build": "60",
+  "status": "diagnostic-installed; original long-press exit not reproduced, root cause unresolved",
+  "sourceSHA256": "2c71e1795baf4a75229041f499a1bf784fb1b570262bafd962c363f89d2f8020",
+  "binarySHA256": "31f46470f396d457573ee9b5be080cee145467695d4112d3b6e32f8f8cc6cce6",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "rollbackTag": "nio-warp-before-held-mouse-20260918",
+  "rollbackCommit": "4d32a1448cc72c3298d16fafa8394b4d020ada36",
+  "pairedRollback": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-114528Z-before-v0138",
+  "diagnosticBaseline": {
+    "version": "0.13.8",
+    "build": "60",
+    "sourceSHA256": "2c71e1795baf4a75229041f499a1bf784fb1b570262bafd962c363f89d2f8020",
+    "binarySHA256": "31f46470f396d457573ee9b5be080cee145467695d4112d3b6e32f8f8cc6cce6",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/diagnostic-baselines/20260918-114755Z-v0138",
+    "humanAcceptance": "用户确认本轮长按未退回；原始退出根因尚未确定，非根因修复验收",
+    "files": {
+      "native-source.tar.gz": "0549d490ee273c0cdea0e8000dcc602fd6bb4a7188fa71a8c2c2350043304dc3",
+      "NIOWarpApp-v0.13.8-60.zip": "30c0b740e64de2801af94cfe8583c9171c1f0933134fa4cd4436d91831d22df5",
+      "preferences-snapshot.plist": "c20837b0841a77339b3c9456803275ae953ab520bb2e13b56c5d4fb2e6ddec15"
+    }
+  },
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "parameters": {
+    "parametersUnchanged": true,
+    "compared": {
+      "nioWarpProtoPie.configuration.v1": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpMouseMapping.settings.v1": true,
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009": true,
+      "nioWarpPresets.v1": true,
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true
+    }
+  },
+  "tests": [
+    {
+      "group": "transport/cursor",
+      "tests": 46,
+      "assertions": 386,
+      "failures": 0
+    },
+    {
+      "group": "stop reason/native scope/exit/recovery",
+      "tests": 32,
+      "assertions": 174,
+      "failures": 0
+    }
+  ],
+  "testRuntime": "original production and test methods using assertion shim; NOT XCTest; groups not aggregated",
+  "userFeedback": "这次没有退回",
+  "observedHoldSecondsApprox": 8.7,
+  "rootCauseFixed": false
+}

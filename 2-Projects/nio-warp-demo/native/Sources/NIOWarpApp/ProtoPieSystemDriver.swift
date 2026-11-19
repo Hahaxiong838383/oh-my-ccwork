@@ -1,0 +1,745 @@
+import AppKit
+import ApplicationServices
+import Foundation
+
+/// Only owns dedicated Chrome targets and file-access scopes. Never terminates Chrome or Studio.
+@MainActor final class ProtoPieSystemDriver: ProtoPiePreviewDriving {
+    private let workspace = NSWorkspace.shared
+    private let profileURL: URL
+    private var browserSocket: URL?
+    private let control = ProtoPieBrowserControl()
+    private lazy var cloudTargets = ProtoPieCloudTargetLifecycle(
+        closeTarget: { [weak self] socket, target in
+            guard let self else { return false }
+            let result = try await self.control.call(socket, method: "Target.closeTarget", parameters: ["targetId": target])
+            let closed = result["success"] as? Bool == true
+            if closed { await self.control.releaseTarget(target) }
+            return closed
+        }, targetExists: { [weak self] socket, target in
+            guard let self else { throw CancellationError() }
+            let result = try await self.control.call(socket, method: "Target.getTargets")
+            let infos = try ProtoPieCloudTargetLifecycle.confirmedTargetInfos(result)
+            let exists = infos.contains { $0["targetId"] as? String == target }
+            if !exists { await self.control.releaseTarget(target) }
+            return exists
+        })
+    private var fileScopes: [UUID: URL] = [:]
+    private var freshPreviewRequested = false
+    private var presentationCanvas: CanvasConfiguration?
+    private let presentationDisplay = OwnedPresentationDisplay()
+    private var preparedPresentation: (sessionID: UUID, outputDisplayID: CGDirectDisplayID)?
+
+    func setPresentationCanvas(_ canvas: CanvasConfiguration?) { presentationCanvas = canvas }
+    func shutdownPresentation() { preparedPresentation = nil; control.shutdown(); presentationDisplay.shutdown() }
+    func presentationCaptured(_ session: ProtoPieSession) async throws {
+        let prepared = preparedPresentation
+        let previousTarget = cloudTargets.committedTargetID
+        if session.cloudTargetID != nil, prepared?.sessionID != session.id { throw CancellationError() }
+        if let id = session.presentationDisplayID, OwnedPresentationDisplay.isOwnedDisplay(id) {
+            try await presentationDisplay.captureDidSwitch(to: id)
+        } else { try await presentationDisplay.shutdownAfterCapture() }
+        try Task.checkCancellation()
+        if session.cloudTargetID != nil, preparedPresentation?.sessionID != session.id { throw CancellationError() }
+        // WindowServer can reposition a fullscreen Space after removing a source.
+        // A verified first frame alone does not prove its final global geometry.
+        if session.cloudTargetID != nil, let prepared {
+            guard await isPresentationReady(session, displayID: prepared.outputDisplayID) else {
+                throw ProtoPieError.unavailable("内容屏切换后，播放器位置或尺寸尚未对齐，请重试。")
+            }
+            try Task.checkCancellation()
+            guard preparedPresentation?.sessionID == session.id else { throw CancellationError() }
+        }
+        cloudTargets.commit(session.cloudTargetID, sessionID: session.id)
+        let protected = Set([session.cloudTargetID, previousTarget].compactMap { $0 })
+        if let socket = browserSocket, let available = try? await targets(socket) {
+            for target in ProtoPieCloudTargetLifecycle.markedOrphans(available, preserving: protected) {
+                cloudTargets.registerMarkedOrphan(target, socket: socket, preserving: protected)
+            }
+        }
+        await cloudTargets.cleanupFailures(preserving: protected)
+        try Task.checkCancellation()
+    }
+
+    deinit { for url in fileScopes.values { url.stopAccessingSecurityScopedResource() } }
+
+    func detach(_ session: ProtoPieSession) {
+        if let url = fileScopes.removeValue(forKey: session.id) { url.stopAccessingSecurityScopedResource() }
+    }
+    func requestFreshPreview() { freshPreviewRequested = true }
+
+    init(profileURL: URL? = nil) {
+        self.profileURL = profileURL ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("NIOWarp/ProtoPieChrome", isDirectory: true)
+    }
+
+    func prepare(configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
+                 progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
+        try configuration.validate()
+        let session: ProtoPieSession
+        switch configuration.source {
+        case .cloud, .connect: session = try await prepareCloud(configuration, displayID: displayID, progress: progress)
+        case .localFile: session = try await prepareStudio(configuration, displayID: displayID, progress: progress)
+        }
+        // Return an acquired resource to the coordinator even if cancellation
+        // lands at this boundary; its candidate cleanup must retain ownership.
+        preparedPresentation = (session.id, displayID)
+        return session
+    }
+
+    func isAlive(_ session: ProtoPieSession) async -> Bool {
+        guard NSRunningApplication(processIdentifier: session.processID)?.isTerminated == false,
+              Self.windows().contains(where: { $0.id == session.windowID && $0.pid == session.processID }) else { return false }
+        if let target = session.cloudTargetID {
+            guard let socket = browserSocket,
+                  let result = try? await control.call(socket, method: "Target.getTargetInfo", parameters: ["targetId": target]),
+                  let info = result["targetInfo"] as? [String: Any], let url = info["url"] as? String,
+                  let actual = URLComponents(string: url), let expected = try? session.configuration.playbackURL() else { return false }
+            if session.configuration.source == .connect, let actualURL = actual.url {
+                return ProtoPieConnectSource.matchesPage(actualURL, expected: expected)
+            }
+            return actual.host == expected.host && actual.path == expected.path
+        }
+        return true
+    }
+
+    func isPresentationReady(_ session: ProtoPieSession, displayID: CGDirectDisplayID) async -> Bool {
+        guard let target = session.cloudTargetID else { return true }
+        let sourceDisplayID = session.presentationDisplayID ?? displayID
+        let targetFrame = Self.targetRect(sourceDisplayID)
+        func record(_ stage: ProtoPiePresentationDiagnostics.Stage, observation: ProtoPieFullscreenObservation? = nil,
+                    browserFrame: CGRect? = nil, windowState: String? = nil,
+                    layoutReady: Bool? = nil, issue: ProtoPiePresentationDiagnostics.Issue? = nil) {
+            ProtoPiePresentationDiagnostics.record(stage: stage, sourceDisplayID: sourceDisplayID, outputDisplayID: displayID,
+                processID: session.processID, windowID: session.windowID, targetFrame: targetFrame,
+                observation: observation, browserFrame: browserFrame, windowState: windowState,
+                layoutReady: layoutReady, issue: issue)
+        }
+        record(.monitorStart)
+        guard CGDisplayIsActive(displayID) != 0, let socket = browserSocket,
+              let captured = Self.windows().first(where: { $0.id == session.windowID && $0.pid == session.processID }) else {
+            record(.monitorStart, issue: .outputUnavailable); return false
+        }
+        guard CGDisplayIsActive(sourceDisplayID) != 0 else { record(.monitorStart, issue: .sourceUnavailable); return false }
+        if let canvas = presentationCanvas {
+            guard CGDisplayPixelsHigh(sourceDisplayID) == canvas.height,
+                  CGDisplayPixelsWide(sourceDisplayID) == CGDisplayPixelsWide(displayID) else {
+                record(.monitorStart, issue: .sourceSizeMismatch); return false
+            }
+        }
+        do {
+            let window = try await control.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            guard let windowID = window["windowId"] as? Int else { record(.monitorWindow, issue: .windowUnavailable); return false }
+            let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            record(.monitorWindow, browserFrame: bounds.frame, windowState: bounds.state)
+            let page = try await pageSocket(target: target, browserSocket: socket)
+            let layoutReady = try await ensureCloudContentLayout(page: page, configuration: session.configuration)
+            let evaluation = try await control.call(page, method: "Runtime.evaluate", parameters: [
+                "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
+                "returnByValue": true])
+            guard let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any],
+                  let width = value["width"] as? NSNumber, let height = value["height"] as? NSNumber else {
+                record(.monitorGeometry, layoutReady: layoutReady, issue: .invalidViewport); return false
+            }
+            let scale = NSScreen.screens.first {
+                ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == sourceDisplayID
+            }?.backingScaleFactor ?? 1
+            let observation = ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
+                browserFrame: bounds.frame, windowState: bounds.state,
+                viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: scale)
+            let geometryReady = observation.isReady(for: targetFrame) && Self.targetRect(sourceDisplayID) == targetFrame
+            record(.monitorComplete, observation: observation, layoutReady: layoutReady,
+                issue: !geometryReady ? .geometryNotReady : !layoutReady ? .layoutNotReady : nil)
+            return geometryReady && layoutReady
+        } catch { record(.monitorComplete, issue: .requestFailed); return false }
+    }
+
+    func release(_ session: ProtoPieSession) async {
+        detach(session)
+        if let target = session.cloudTargetID {
+            await cloudTargets.releaseSessionTarget(target, sessionID: session.id)
+        }
+    }
+
+    func openForUser(configuration: ProtoPieConfiguration) async throws {
+        switch configuration.source {
+        case .cloud, .connect:
+            let lease = try await cloudTarget(configuration)
+            let socket = lease.socket, target = lease.targetID
+            try Task.checkCancellation()
+            // This is an explicit user action. Automatic launch/recovery never steals focus
+            // or moves a source back onto the control screen.
+            let window = try await control.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            guard let windowID = window["windowId"] as? Int else {
+                throw ProtoPieError.unavailable("未找到本次专用播放器窗口。")
+            }
+            let visiblePhysicalScreens = NSScreen.screens.filter { screen in
+                guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+                let id = number.uint32Value
+                return !OwnedPresentationDisplay.isOwnedDisplay(id) && CGDisplayIsActive(id) != 0 && CGDisplayIsAsleep(id) == 0
+            }
+            let controlScreen = visiblePhysicalScreens.first { screen in
+                guard let number = screen.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber else { return false }
+                return CGDisplayIsBuiltin(number.uint32Value) != 0
+            } ?? visiblePhysicalScreens.first(where: { $0 === NSApp.keyWindow?.screen }) ?? visiblePhysicalScreens.first
+            guard let controlScreen else { throw ProtoPieError.unavailable("没有可见的物理控制屏，暂不打开播放器。请唤醒或连接屏幕后重试。") }
+            let rect = Self.manualPreviewBounds(visibleFrame: controlScreen.visibleFrame,
+                                                primaryTop: NSScreen.screens.first?.frame.maxY ?? controlScreen.frame.maxY)
+            try await restoreCloudWindow(socket: socket, windowID: windowID)
+            _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
+                "windowId": windowID, "bounds": ["left": Int(rect.minX), "top": Int(rect.minY),
+                                                  "width": Int(rect.width), "height": Int(rect.height)]])
+            let info = try await control.call(socket, method: "SystemInfo.getProcessInfo")
+            guard let processes = info["processInfo"] as? [[String: Any]],
+                  let processID = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber,
+                  let browser = NSRunningApplication(processIdentifier: processID.int32Value) else {
+                throw ProtoPieError.unavailable("无法激活本次专用播放器进程，请重试。")
+            }
+            try Task.checkCancellation()
+            NSApp.yieldActivation(to: browser)
+            browser.activate(from: NSRunningApplication.current, options: [])
+            _ = try await control.call(socket, method: "Target.activateTarget", parameters: ["targetId": target])
+        case .localFile:
+            let file = try configuration.resolvedFile()
+            let scoped = file.startAccessingSecurityScopedResource()
+            defer { if scoped { file.stopAccessingSecurityScopedResource() } }
+            _ = try await openStudio(file: file, activates: true)
+        }
+    }
+
+    private func prepareCloud(_ configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
+                              progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
+        if configuration.source == .connect {
+            progress("正在检测 Connect 主服务页面；消息链路仍需验证…")
+            let result = try await ProtoPieConnectServiceProbe().probe(configuration.playbackURL())
+            guard result.status == .playerPageAvailable else { throw ProtoPieError.waitingForUser(result.summary) }
+            try Task.checkCancellation()
+        }
+        progress(configuration.source == .connect ? "正在打开本机 Connect 浏览器播放器；消息链路仍需验证…" : "正在打开专用 ProtoPie Cloud 播放窗口…")
+        let lease = try await cloudTarget(configuration)
+        do {
+            let socket = lease.socket, target = lease.targetID
+            let info = try await control.call(socket, method: "SystemInfo.getProcessInfo")
+            guard let processes = info["processInfo"] as? [[String: Any]],
+                  let pidNumber = processes.first(where: { $0["type"] as? String == "browser" })?["id"] as? NSNumber else {
+                throw ProtoPieError.unavailable("无法识别专用播放器进程；请重试。")
+            }
+            let pid = pid_t(pidNumber.int32Value)
+            let window = try await control.call(socket, method: "Browser.getWindowForTarget", parameters: ["targetId": target])
+            guard let browserWindowID = window["windowId"] as? Int else { throw ProtoPieError.unavailable("播放器没有可捕获窗口。") }
+            let pageSocket = try await pageSocket(target: target, browserSocket: socket)
+            let expected = try configuration.playbackURL()
+            let marker = (configuration.source == .connect ? "NIO Warp Connect Preview · " : "NIO Warp Preview · ") + String(UUID().uuidString.prefix(8))
+            let expression = configuration.source == .connect
+                ? Self.connectReadinessExpression(expectedURL: expected, marker: marker)
+                : Self.cloudReadinessExpression(expectedURL: expected, marker: marker)
+            var previousProblem = ""
+            var problemSamples = 0
+            for _ in 0..<60 {
+                try Task.checkCancellation()
+                let evaluation = try await control.call(pageSocket, method: "Runtime.evaluate", parameters: ["expression": expression, "returnByValue": true])
+                let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any] ?? [:]
+                if let problem = value["problem"] as? String, !problem.isEmpty {
+                    // Login redirects can appear briefly while a new Cloud window restores its session.
+                    problemSamples = problem == previousProblem ? problemSamples + 1 : 1
+                    previousProblem = problem
+                    if problemSamples >= 3 { throw ProtoPieError.waitingForUser(problem) }
+                } else {
+                    previousProblem = ""; problemSamples = 0
+                }
+                if value["ready"] as? Bool == true {
+                    let sourceDisplayID: CGDirectDisplayID
+                    if let canvas = presentationCanvas, canvas.height != CGDisplayPixelsHigh(displayID) {
+                        progress("正在准备与画布等高的完整播放器…")
+                        sourceDisplayID = try await presentationDisplay.ensure(width: CGDisplayPixelsWide(displayID), height: canvas.height)
+                    } else { sourceDisplayID = displayID }
+                    try Task.checkCancellation()
+                    progress("正在进入完整高度的无边框预览，等待画面尺寸稳定…")
+                    let captured = try await prepareCloudFullscreen(socket: socket, pageSocket: pageSocket,
+                        windowID: browserWindowID, processID: pid, marker: marker, displayID: sourceDisplayID,
+                        configuration: configuration)
+                    try Task.checkCancellation()
+                    return ProtoPieSession(windowID: captured.id, processID: pid, configuration: configuration,
+                                           cloudTargetID: target, title: configuration.source == .connect ? "ProtoPie Connect · 原生等比预览 · 消息未验证" : "ProtoPie Cloud · 完整高度预览",
+                                           presentationDisplayID: sourceDisplayID)
+                }
+                progress(configuration.source == .connect ? "等待 Connect 原型加载，请确认主服务运行且此原型已加入；消息连接未验证。" : "等待云端预览加载；如需登录，请在专用播放器中完成。")
+                try await Task.sleep(nanoseconds: 500_000_000)
+            }
+            throw ProtoPieError.waitingForUser("尚未识别到已加载的 ProtoPie 预览。请打开播放器检查登录、链接权限或网络后重试。")
+        } catch {
+            // No newly-created page may keep playing after an unsuccessful
+            // automatic preparation. Explicit Open Player remains the login path.
+            await cloudTargets.preparationFailed(lease)
+            if !Task.isCancelled, lease.createdForRequest,
+               let previewError = error as? ProtoPieError, case .waitingForUser(let reason) = previewError {
+                throw ProtoPieError.waitingForUser(reason + "\n请点击“打开播放器”完成登录或检查预览后重试。")
+            }
+            throw error
+        }
+    }
+
+    private func cloudWindowBounds(socket: URL, windowID: Int) async throws -> (frame: CGRect, state: String) {
+        let result = try await control.call(socket, method: "Browser.getWindowBounds", parameters: ["windowId": windowID])
+        guard let bounds = result["bounds"] as? [String: Any],
+              let x = bounds["left"] as? NSNumber, let y = bounds["top"] as? NSNumber,
+              let width = bounds["width"] as? NSNumber, let height = bounds["height"] as? NSNumber,
+              let state = bounds["windowState"] as? String else {
+            throw ProtoPieError.unavailable("无法读取专用播放器的窗口状态。")
+        }
+        return (CGRect(x: x.doubleValue, y: y.doubleValue, width: width.doubleValue, height: height.doubleValue), state)
+    }
+
+    /// macOS fullscreen transitions are asynchronous, even after CDP acknowledges the command.
+    private func restoreCloudWindow(socket: URL, windowID: Int) async throws {
+        try Task.checkCancellation()
+        _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
+            "windowId": windowID, "bounds": ["windowState": "normal"]])
+        var readiness = ProtoPieWindowRestoreReadiness()
+        let deadline = ProcessInfo.processInfo.systemUptime + 10
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            try Task.checkCancellation()
+            let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            try Task.checkCancellation()
+            guard ProcessInfo.processInfo.systemUptime < deadline else { break }
+            switch readiness.observe(frame: bounds.frame, state: bounds.state) {
+            case .ready: return
+            case .requestNormal:
+                // Fullscreen may have exited to a restored maximized window. Unmaximize only
+                // after three matching samples, once per restore attempt, within the same deadline.
+                _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
+                    "windowId": windowID, "bounds": ["windowState": "normal"]])
+            case .waiting: break
+            }
+            try await Task.sleep(nanoseconds: 150_000_000)
+        }
+        throw ProtoPieError.unavailable("播放器退出全屏尚未完成，请重试。")
+    }
+
+    func updatePresentationLayout(_ session: ProtoPieSession) async throws {
+        guard let target = session.cloudTargetID, let socket = browserSocket,
+              session.configuration.source == .cloud, session.configuration.fillWidth else {
+            throw ProtoPieError.unavailable("请先启动横向顶满的浏览器预览。")
+        }
+        let page = try await pageSocket(target: target, browserSocket: socket)
+        for _ in 0..<10 {
+            try Task.checkCancellation()
+            if try await ensureCloudContentLayout(page: page, configuration: session.configuration) { return }
+            try await Task.sleep(nanoseconds: 100_000_000)
+        }
+        throw ProtoPieError.unavailable("画面位置尚未更新，请等待预览加载后再调整。")
+    }
+
+    private func ensureCloudContentLayout(page: ProtoPiePageEndpoint, configuration: ProtoPieConfiguration) async throws -> Bool {
+        try Task.checkCancellation()
+        let expected = try configuration.playbackURL()
+        let expression = configuration.source == .connect
+            ? ProtoPieConnectLayout.expression(enabled: false, expectedURL: expected)
+            : ProtoPieWidthFit.expression(enabled: configuration.fillWidth, verticalPosition: configuration.widthFitVerticalPosition, expectedURL: expected)
+        let evaluation = try await control.call(page, method: "Runtime.evaluate", parameters: [
+            "expression": expression, "returnByValue": true])
+        return ((evaluation["result"] as? [String: Any])?["value"] as? [String: Any])?["ready"] as? Bool == true
+    }
+
+    private func prepareCloudFullscreen(socket: URL, pageSocket: ProtoPiePageEndpoint, windowID: Int, processID: pid_t,
+                                        marker: String, displayID: CGDirectDisplayID,
+                                        configuration: ProtoPieConfiguration) async throws -> WindowRecord {
+        guard CGDisplayIsActive(displayID) != 0 else { throw ProtoPieError.unavailable("目标外屏不可用。") }
+        let target = Self.targetRect(displayID)
+        func record(_ stage: ProtoPiePresentationDiagnostics.Stage, observation: ProtoPieFullscreenObservation? = nil,
+                    browserFrame: CGRect? = nil, windowState: String? = nil, geometryStable: Bool? = nil,
+                    layoutReady: Bool? = nil, issue: ProtoPiePresentationDiagnostics.Issue? = nil) {
+            ProtoPiePresentationDiagnostics.record(stage: stage, sourceDisplayID: displayID, processID: processID,
+                targetFrame: target, observation: observation, browserFrame: browserFrame, windowState: windowState,
+                geometryStable: geometryStable, layoutReady: layoutReady, issue: issue)
+        }
+        record(.prepareStart)
+        let displayScale = NSScreen.screens.first {
+            ($0.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)?.uint32Value == displayID
+        }?.backingScaleFactor ?? 1
+        let bounds = try await cloudWindowBounds(socket: socket, windowID: windowID)
+        // Reuse an already-fullscreen source without leaving its Space or flashing a title bar.
+        if bounds.state != "fullscreen" || !ProtoPieFullscreenObservation.matches(bounds.frame, target) {
+            record(.prepareRestore, browserFrame: bounds.frame, windowState: bounds.state)
+            try await restoreCloudWindow(socket: socket, windowID: windowID)
+            _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
+                "windowId": windowID, "bounds": ["left": Int(target.minX), "top": Int(target.minY),
+                                                  "width": Int(target.width), "height": Int(target.height)]])
+            // The normal window may be constrained by the menu bar/Dock. Its centre must first
+            // reach the chosen display, otherwise macOS can enter fullscreen on the control screen.
+            let placementDeadline = ProcessInfo.processInfo.systemUptime + 10
+            var placed = false
+            while ProcessInfo.processInfo.systemUptime < placementDeadline {
+                try Task.checkCancellation()
+                let moved = try await cloudWindowBounds(socket: socket, windowID: windowID)
+                record(.preparePlacement, browserFrame: moved.frame, windowState: moved.state)
+                if moved.state != "fullscreen", target.contains(CGPoint(x: moved.frame.midX, y: moved.frame.midY)) {
+                    placed = true; break
+                }
+                try await Task.sleep(nanoseconds: 150_000_000)
+            }
+            guard placed else { record(.preparePlacement, issue: .placementNotReady); throw ProtoPieError.unavailable("播放器尚未移到目标外屏，请重试。") }
+            record(.prepareFullscreen)
+            _ = try await control.call(socket, method: "Browser.setWindowBounds", parameters: [
+                "windowId": windowID, "bounds": ["windowState": "fullscreen"]])
+        }
+        var readiness = ProtoPieFullscreenReadiness()
+        var geometryStable = false
+        var layoutReady: Bool?
+        var lastObservation: ProtoPieFullscreenObservation?
+        let deadline = ProcessInfo.processInfo.systemUptime + 12
+        while ProcessInfo.processInfo.systemUptime < deadline {
+            try Task.checkCancellation()
+            let actual = try await cloudWindowBounds(socket: socket, windowID: windowID)
+            let evaluation = try await control.call(pageSocket, method: "Runtime.evaluate", parameters: [
+                "expression": "({width: innerWidth * devicePixelRatio, height: innerHeight * devicePixelRatio})",
+                "returnByValue": true])
+            let value = (evaluation["result"] as? [String: Any])?["value"] as? [String: Any]
+            let captured = Self.windows().first { $0.pid == processID && $0.title.contains(marker) }
+            var observation: ProtoPieFullscreenObservation?
+            if let captured, let width = value?["width"] as? NSNumber, let height = value?["height"] as? NSNumber {
+                observation = ProtoPieFullscreenObservation(windowID: captured.id, frame: captured.frame,
+                    browserFrame: actual.frame, windowState: actual.state,
+                    viewportPixels: CGSize(width: width.doubleValue, height: height.doubleValue), displayScale: displayScale)
+            }
+            lastObservation = observation
+            geometryStable = readiness.observe(observation, targetFrame: target)
+            layoutReady = nil
+            record(.prepareGeometry, observation: observation, browserFrame: actual.frame, windowState: actual.state,
+                geometryStable: geometryStable)
+            if geometryStable, let captured {
+                layoutReady = try await ensureCloudContentLayout(page: pageSocket, configuration: configuration)
+                record(.prepareLayout, observation: observation, geometryStable: geometryStable, layoutReady: layoutReady,
+                    issue: layoutReady == true ? nil : .layoutNotReady)
+                if layoutReady == true { record(.prepareComplete, observation: observation, geometryStable: true, layoutReady: true); return captured }
+            }
+            try await Task.sleep(nanoseconds: 150_000_000)
+        }
+        record(.prepareComplete, observation: lastObservation, geometryStable: geometryStable, layoutReady: layoutReady, issue: .timeout)
+        throw ProtoPieError.unavailable(ProtoPiePresentationDiagnostics.timeoutMessage(geometryStable: geometryStable, layoutReady: layoutReady))
+    }
+
+    private func cloudTarget(_ configuration: ProtoPieConfiguration) async throws -> ProtoPieCloudTargetLease {
+        let url = try configuration.playbackURL()
+        let fresh = freshPreviewRequested; freshPreviewRequested = false
+        // A crashed/exited dedicated browser invalidates its old socket. Only a
+        // socket verified on this acquisition may define the pre-launch baseline.
+        browserSocket = await existingBrowserSocket()
+        if let socket = browserSocket {
+            if !fresh, let targets = try? await targets(socket) {
+                // Reuse a source we created, including a login page awaiting the user's action.
+                if let reused = cloudTargets.reusable(configuration: configuration,
+                    available: Set(targets.compactMap { $0["targetId"] as? String })) {
+                    return cloudTargets.register(reused, socket: socket, configuration: configuration, createdForRequest: false)
+                }
+                // After an app restart, the dedicated profile can still have its playback window.
+                if let restored = targets.first(where: {
+                    guard $0["type"] as? String == "page", $0["url"] as? String == url.absoluteString,
+                          let id = $0["targetId"] as? String else { return false }
+                    return cloudTargets.entries[id]?.failed != true
+                }),
+                   let id = restored["targetId"] as? String {
+                    return cloudTargets.register(id, socket: socket, configuration: configuration, createdForRequest: false)
+                }
+            }
+        }
+        guard let chrome = applicationURL(bundleIdentifiers: ["com.google.Chrome"], names: ["Google Chrome.app"]) else {
+            throw ProtoPieError.missingApplication("未找到 Google Chrome。请安装后重试；浏览器联动使用独立的播放器配置。")
+        }
+        try FileManager.default.createDirectory(at: profileURL, withIntermediateDirectories: true)
+        let knownTargets: Set<String>
+        if let socket = browserSocket {
+            // An unknown baseline cannot establish which page this launch owns.
+            // Fail before opening another window if a live profile cannot list it.
+            knownTargets = Set(try await targets(socket).compactMap { $0["targetId"] as? String })
+        } else { knownTargets = [] }
+        let config = NSWorkspace.OpenConfiguration()
+        config.createsNewApplicationInstance = true
+        config.activates = false
+        config.arguments = ["--user-data-dir=\(profileURL.path)", "--remote-debugging-address=127.0.0.1", "--remote-debugging-port=0",
+                            "--no-first-run", "--no-default-browser-check", "--disable-background-timer-throttling",
+                            "--disable-renderer-backgrounding", "--disable-backgrounding-occluded-windows", "--app=\(url.absoluteString)"]
+        do {
+            _ = try await workspace.openApplication(at: chrome, configuration: config)
+            for _ in 0..<40 {
+                try Task.checkCancellation()
+                if let socket = await existingBrowserSocket(), let targets = try? await targets(socket),
+                   let target = Self.newCloudTarget(targets, excluding: knownTargets, expectedURL: url),
+                   let id = target["targetId"] as? String {
+                    browserSocket = socket
+                    return cloudTargets.register(id, socket: socket, configuration: configuration, createdForRequest: true)
+                }
+                try await Task.sleep(nanoseconds: 250_000_000)
+            }
+            throw ProtoPieError.unavailable("专用 Chrome 调试连接未就绪，请打开播放器后重试。")
+        } catch {
+            await cleanupUnboundCloudLaunch(configuration, knownTargets: knownTargets, expectedURL: url)
+            throw error
+        }
+    }
+
+    private func cleanupUnboundCloudLaunch(_ configuration: ProtoPieConfiguration, knownTargets: Set<String>,
+                                          expectedURL: URL) async {
+        // Launch can complete while its caller is canceled, before a session or
+        // target lease exists. Inspect only this isolated profile and an
+        // unambiguous newly-added page, never arbitrary Chrome windows.
+        let cleanup = Task { @MainActor [self] in
+            let deadline = ProcessInfo.processInfo.systemUptime + 3
+            for _ in 0..<4 {
+                if let socket = await existingBrowserSocket(), let available = try? await targets(socket),
+                   let target = ProtoPieCloudTargetLifecycle.unboundLaunchedTarget(available,
+                       excluding: knownTargets, expectedURL: expectedURL) {
+                    let lease = cloudTargets.register(target, socket: socket, configuration: configuration, createdForRequest: true)
+                    await cloudTargets.preparationFailed(lease)
+                    return
+                }
+                if ProcessInfo.processInfo.systemUptime >= deadline { break }
+                try? await Task.sleep(nanoseconds: 150_000_000)
+            }
+            NSLog("NIO ProtoPie launch cleanup: no unambiguous new dedicated target found")
+        }
+        await cleanup.value
+    }
+
+    nonisolated static func newCloudTarget(_ targets: [[String: Any]], excluding known: Set<String>, expectedURL: URL) -> [String: Any]? {
+        guard let id = ProtoPieCloudTargetLifecycle.unboundLaunchedTarget(targets,
+            excluding: known, expectedURL: expectedURL) else { return nil }
+        return targets.first { $0["targetId"] as? String == id }
+    }
+
+    private func existingBrowserSocket() async -> URL? {
+        guard let text = try? String(contentsOf: profileURL.appendingPathComponent("DevToolsActivePort"), encoding: .utf8) else { return nil }
+        let lines = text.split(whereSeparator: \.isNewline)
+        guard lines.count >= 2, let port = Int(lines[0]), (1...65535).contains(port), lines[1].hasPrefix("/devtools/browser/"),
+              let socket = URL(string: "ws://127.0.0.1:\(port)\(lines[1])"),
+              (try? await control.call(socket, method: "Browser.getVersion")) != nil else { return nil }
+        return socket
+    }
+
+    private func targets(_ socket: URL) async throws -> [[String: Any]] {
+        let result = try await control.call(socket, method: "Target.getTargets")
+        return try ProtoPieCloudTargetLifecycle.confirmedTargetInfos(result)
+    }
+
+    private func pageSocket(target: String, browserSocket: URL) async throws -> ProtoPiePageEndpoint {
+        guard let port = browserSocket.port, let url = URL(string: "http://127.0.0.1:\(port)/json/list") else {
+            throw ProtoPieError.unavailable("专用播放器连接无效。")
+        }
+        var request = URLRequest(url: url); request.timeoutInterval = 5
+        let (data, _) = try await URLSession.shared.data(for: request)
+        guard let pages = try JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+              let text = pages.first(where: { $0["id"] as? String == target })?["webSocketDebuggerUrl"] as? String,
+              let socket = URL(string: text), socket.host == "127.0.0.1" || socket.host == "localhost",
+              socket.port == port else { throw ProtoPieError.unavailable("无法连接本次预览页面。") }
+        return ProtoPiePageEndpoint(browserSocket: browserSocket, targetID: target, legacySocket: socket)
+    }
+
+    nonisolated static func cloudReadinessExpression(expectedURL: URL, marker: String) -> String {
+        // JSON serialization keeps user-provided URL/query text out of executable JavaScript.
+        let arguments = (try? JSONSerialization.data(withJSONObject: [expectedURL.path, marker])).flatMap { String(data: $0, encoding: .utf8) } ?? "[]"
+        return """
+        (() => {
+          const [expectedPath, marker] = \(arguments);
+          if (location.href === 'about:blank' || document.readyState === 'loading') return {ready:false};
+          const problem = message => document.readyState === 'complete' ? {problem:message} : {ready:false};
+          const visible = e => { const r=e.getBoundingClientRect(); return r.width>8 && r.height>8 && getComputedStyle(e).visibility!=='hidden'; };
+          const text=(document.body?.innerText || '').slice(0,12000);
+          if (location.hostname !== 'cloud.protopie.io' || /\\/(login|signin|sign-in|auth)(\\/|$)/i.test(location.pathname))
+            return problem('播放器需要登录，请在专用窗口完成登录后重试。');
+          if ([...document.querySelectorAll('input[type=password]')].some(visible))
+            return problem('预览需要登录或访问密码，请在专用窗口完成后重试。');
+          if (/prototype (was |is )?(not found|deleted)|you (do not|don.t) have (access|permission)|access denied/i.test(text))
+            return problem('该预览不存在或当前账号无权访问，请检查链接。');
+          const canvases=[...document.querySelectorAll('canvas')].filter(e=>visible(e)&&e.width>16&&e.height>16);
+          const videos=[...document.querySelectorAll('video')].filter(e=>visible(e)&&e.readyState>=2);
+          const player=document.querySelector('[data-testid="player"], [data-testid="prototype-player"], #player, .prototype-player, [class*="PiePlayer"], [class*="pie-player"]');
+          // The current DOM player can occupy only a third of an ultrawide viewport.
+          // Recognize its rendered layers without treating an empty mount as ready.
+          const webPlayer=document.querySelector('#webplayer-root');
+          const renderedWebPlayer=webPlayer && visible(webPlayer) &&
+            [...webPlayer.querySelectorAll('[class*="ContainerLayer"], [class*="TextLayer"]')].some(visible);
+          const layerImages=[...document.querySelectorAll('img')].filter(e=>visible(e)&&e.complete&&e.naturalWidth>16&&e.naturalHeight>16&&!/logo|avatar|icon/i.test(e.alt+' '+e.className+' '+e.src));
+          const viewportArea=Math.max(1,innerWidth*innerHeight);
+          const substantialImage=layerImages.some(e=>{ const r=e.getBoundingClientRect();
+            return r.width>=innerWidth*.45 && r.height>=innerHeight*.06 && r.width*r.height>=viewportArea*.06; });
+          // A playable prototype can precede window.load while unrelated Cloud resources are pending.
+          const ready=location.pathname===expectedPath && ['interactive','complete'].includes(document.readyState) &&
+            (canvases.length>0 || videos.length>0 || (player && visible(player)) || renderedWebPlayer || substantialImage);
+          if(ready) document.title=marker;
+          return {ready:!!ready};
+        })()
+        """
+    }
+
+    nonisolated static func connectReadinessExpression(expectedURL: URL, marker: String) -> String {
+        guard let identity = try? ProtoPieConnectSource.pageIdentity(for: expectedURL) else { return "({ready:false})" }
+        var origin = URLComponents()
+        origin.scheme = identity.scheme; origin.host = identity.host
+        if identity.port != (identity.scheme == "https" ? 443 : 80) { origin.port = identity.port }
+        let args: [Any] = [origin.string ?? "", identity.path, String(identity.pieID), marker]
+        let encoded = (try? JSONSerialization.data(withJSONObject: args)).map { String(decoding: $0, as: UTF8.self) } ?? "[]"
+        return """
+        (()=>{
+          const [origin,path,pieid,marker]=\(encoded);
+          if(document.readyState==='loading')return {ready:false};
+          const ids=new URLSearchParams(location.search).getAll('pieid');
+          const bound=location.origin===origin&&location.pathname===path&&ids.length===1&&/^\\d+$/.test(ids[0])&&ids[0].replace(/^0+/,'')===pieid;
+          if(!bound)return {ready:false,problem:'Connect 播放器地址或原型已变化，请检查完整链接。'};
+          const visible=e=>{const r=e.getBoundingClientRect();return r.width>8&&r.height>8&&getComputedStyle(e).visibility!=='hidden';};
+          const hasSize=(width,height)=>Number.isFinite(width)&&Number.isFinite(height)&&width>0&&height>0;
+          const renderedNode=e=>{
+            if(!visible(e))return false;
+            switch((e.tagName||'').toLowerCase()){
+              case 'img':return e.complete===true&&hasSize(e.naturalWidth,e.naturalHeight);
+              case 'video':return e.readyState>=2&&hasSize(e.videoWidth,e.videoHeight);
+              case 'canvas':return hasSize(e.width,e.height);
+              default:return true;
+            }
+          };
+          if([...document.querySelectorAll('input[type=password]')].some(visible))return {ready:false,problem:'Connect 需要登录或访问密码，请先在 Connect 中完成。'};
+          const text=(document.body?.innerText||'').slice(0,12000);
+          if(/prototype (was |is )?(not found|deleted)|access denied|pie not found/i.test(text))return {ready:false,problem:'Connect 原型不可用，请检查 pieid 并在主服务中加载原型。'};
+          // Connect 2.13 mounts the engine into #pie-screen, independently of
+          // the Cloud player. Do not accept an empty host or wrapper alone.
+          const root=document.querySelector('#pie-screen');
+          const rendered=root&&visible(root)&&[...root.querySelectorAll('*')]
+            .filter(e=>!e.children||e.children.length===0).some(renderedNode);
+          if(rendered)document.title=marker;
+          return {ready:!!rendered,messageConnectionVerified:false};
+        })()
+        """
+    }
+
+    private func prepareStudio(_ configuration: ProtoPieConfiguration, displayID: CGDirectDisplayID,
+                               progress: @escaping (String) -> Void) async throws -> ProtoPieSession {
+        guard AXIsProcessTrusted() else {
+            throw ProtoPieError.permission("本地预览需要 NIO Warp 的辅助功能权限。请点击“辅助功能权限”，授权后重试。")
+        }
+        let file = try configuration.resolvedFile()
+        let scoped = file.startAccessingSecurityScopedResource()
+        var retained = false
+        defer { if scoped && !retained { file.stopAccessingSecurityScopedResource() } }
+        progress("正在用 ProtoPie Studio 打开文件…")
+        let app = try await openStudio(file: file, activates: false)
+        let pid = app.processIdentifier
+        let axApp = AXUIElementCreateApplication(pid)
+        let filename = file.deletingPathExtension().lastPathComponent
+        var previewPressed = false
+        for tick in 0..<60 {
+            try Task.checkCancellation()
+            let windows = Self.axChildren(axApp, attribute: kAXWindowsAttribute)
+            let document = windows.first { window in
+                let title = Self.axString(window, kAXTitleAttribute)
+                let documentURL = Self.axString(window, kAXDocumentAttribute)
+                return documentURL == file.absoluteString || (!Self.isPreviewTitle(title) && title.localizedCaseInsensitiveContains(filename))
+            }
+            let previews = windows.filter { Self.isPreviewTitle(Self.axString($0, kAXTitleAttribute)) }
+            // Only accept a preview whose title identifies this document. A generic preview must
+            // be the sole preview, and this document must be Studio's focused document.
+            let focusedDocument = Self.axElement(axApp, kAXFocusedWindowAttribute).map {
+                Self.axString($0, kAXDocumentAttribute) == file.absoluteString || Self.axString($0, kAXTitleAttribute).localizedCaseInsensitiveContains(filename)
+            } ?? false
+            let preview = previews.first { Self.axString($0, kAXTitleAttribute).localizedCaseInsensitiveContains(filename) }
+                ?? (previews.count == 1 && document != nil && focusedDocument ? previews.first : nil)
+            if let preview {
+                let rect = Self.targetRect(displayID)
+                Self.position(preview, rect: rect)
+                try await Task.sleep(nanoseconds: 200_000_000)
+                let title = Self.axString(preview, kAXTitleAttribute)
+                let actualRect = Self.axRect(preview)
+                let matches = Self.windows().filter { $0.pid == pid && $0.title == title && Self.matches($0.frame, actualRect) }
+                if matches.count == 1, let match = matches.first {
+                    let session = ProtoPieSession(windowID: match.id, processID: pid, configuration: configuration, title: title)
+                    if scoped { fileScopes[session.id] = file; retained = true }
+                    return session
+                }
+            }
+            if tick >= 4, previews.isEmpty, let document, !previewPressed {
+                // AXPress the menu item; do not send global keystrokes into another app.
+                AXUIElementSetAttributeValue(document, kAXMainAttribute as CFString, kCFBooleanTrue)
+                if let menu = Self.axValue(axApp, kAXMenuBarAttribute) {
+                    previewPressed = Self.pressPreviewMenu(unsafeBitCast(menu, to: AXUIElement.self), depth: 0)
+                }
+            }
+            progress("等待当前文件的 Preview 窗口；可在 Studio 中按 ⌘P 开启预览。")
+            try await Task.sleep(nanoseconds: 500_000_000)
+        }
+        throw ProtoPieError.waitingForUser("未能确认当前 .pie 文件的 Preview 窗口。请在 Studio 打开该文件并按 ⌘P，再点击重试；不会捕获编辑器窗口。")
+    }
+
+    private func openStudio(file: URL, activates: Bool) async throws -> NSRunningApplication {
+        guard let studio = applicationURL(bundleIdentifiers: ["io.protopie", "io.protopie.ProtoPie", "com.studioxid.ProtoPie", "com.studioxid.protopie"], names: ["ProtoPie.app"]) else {
+            throw ProtoPieError.missingApplication("未找到 ProtoPie Studio，请安装并登录后重试。")
+        }
+        let configuration = NSWorkspace.OpenConfiguration(); configuration.activates = activates
+        return try await workspace.open([file], withApplicationAt: studio, configuration: configuration)
+    }
+
+    private func applicationURL(bundleIdentifiers: [String], names: [String]) -> URL? {
+        for id in bundleIdentifiers { if let url = workspace.urlForApplication(withBundleIdentifier: id) { return url } }
+        for directory in [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")] {
+            for name in names { let url = directory.appendingPathComponent(name); if FileManager.default.fileExists(atPath: url.path) { return url } }
+        }
+        return nil
+    }
+
+    nonisolated static func manualPreviewBounds(visibleFrame: CGRect, primaryTop: CGFloat) -> CGRect {
+        let margin: CGFloat = 20
+        let width = min(1200, max(1, visibleFrame.width - margin * 2))
+        let height = min(800, max(1, visibleFrame.height - margin * 2))
+        return CGRect(x: visibleFrame.midX - width / 2,
+                      y: primaryTop - visibleFrame.midY - height / 2, width: width, height: height)
+    }
+
+    static func targetRect(_ displayID: CGDirectDisplayID) -> CGRect {
+        // CG display bounds and AX/CDP use the desktop's top-left origin, including negative coordinates.
+        let bounds = CGDisplayBounds(displayID)
+        return bounds.isEmpty ? CGRect(x: 0, y: 0, width: 1280, height: 720) : bounds
+    }
+
+    struct WindowRecord { let id: CGWindowID; let pid: pid_t; let title: String; let frame: CGRect }
+    static func windows() -> [WindowRecord] {
+        let info = CGWindowListCopyWindowInfo([.optionAll, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+        return info.compactMap { value in
+            guard let id = value[kCGWindowNumber as String] as? NSNumber, let pid = value[kCGWindowOwnerPID as String] as? NSNumber,
+                  (value[kCGWindowLayer as String] as? Int ?? 0) == 0,
+                  let frame = value[kCGWindowBounds as String] as? NSDictionary,
+                  let rect = CGRect(dictionaryRepresentation: frame as CFDictionary), rect.width > 10, rect.height > 10 else { return nil }
+            return WindowRecord(id: id.uint32Value, pid: pid.int32Value, title: value[kCGWindowName as String] as? String ?? "", frame: rect)
+        }
+    }
+    nonisolated static func isPreviewTitle(_ title: String) -> Bool {
+        title.localizedCaseInsensitiveContains("preview") || title.contains("预览")
+    }
+    private static func axValue(_ element: AXUIElement, _ attribute: String) -> CFTypeRef? {
+        var result: CFTypeRef?; guard AXUIElementCopyAttributeValue(element, attribute as CFString, &result) == .success else { return nil }; return result
+    }
+    private static func axElement(_ element: AXUIElement, _ attribute: String) -> AXUIElement? {
+        guard let value = axValue(element, attribute), CFGetTypeID(value) == AXUIElementGetTypeID() else { return nil }
+        return unsafeBitCast(value, to: AXUIElement.self)
+    }
+    private static func axString(_ element: AXUIElement, _ attribute: String) -> String { axValue(element, attribute) as? String ?? "" }
+    private static func axChildren(_ element: AXUIElement, attribute: String = kAXChildrenAttribute) -> [AXUIElement] { axValue(element, attribute) as? [AXUIElement] ?? [] }
+    private static func axRect(_ element: AXUIElement) -> CGRect {
+        var point = CGPoint.zero, size = CGSize.zero
+        if let value = axValue(element, kAXPositionAttribute), CFGetTypeID(value) == AXValueGetTypeID() { AXValueGetValue(unsafeBitCast(value, to: AXValue.self), .cgPoint, &point) }
+        if let value = axValue(element, kAXSizeAttribute), CFGetTypeID(value) == AXValueGetTypeID() { AXValueGetValue(unsafeBitCast(value, to: AXValue.self), .cgSize, &size) }
+        return CGRect(origin: point, size: size)
+    }
+    private static func position(_ element: AXUIElement, rect: CGRect) {
+        var point = rect.origin, size = rect.size
+        if let value = AXValueCreate(.cgPoint, &point) { AXUIElementSetAttributeValue(element, kAXPositionAttribute as CFString, value) }
+        if let value = AXValueCreate(.cgSize, &size) { AXUIElementSetAttributeValue(element, kAXSizeAttribute as CFString, value) }
+    }
+    private static func matches(_ lhs: CGRect, _ rhs: CGRect) -> Bool {
+        abs(lhs.minX-rhs.minX)<4 && abs(lhs.minY-rhs.minY)<4 && abs(lhs.width-rhs.width)<4 && abs(lhs.height-rhs.height)<4
+    }
+    private static func pressPreviewMenu(_ element: AXUIElement, depth: Int) -> Bool {
+        guard depth < 5 else { return false }
+        let title = axString(element, kAXTitleAttribute)
+        if ["Show Preview", "Show Preview Window", "Preview", "显示预览", "显示预览窗口", "预览"].contains(title),
+           axString(element, kAXRoleAttribute) == kAXMenuItemRole {
+            return AXUIElementPerformAction(element, kAXPressAction as CFString) == .success
+        }
+        return axChildren(element).contains { pressPreviewMenu($0, depth: depth + 1) }
+    }
+}

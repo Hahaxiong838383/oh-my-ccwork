@@ -241,6 +241,27 @@ struct ManualWarpParameters: Codable, Equatable {
     var asymmetry = 0.08
     var tilt = 0.025
     var horizontalBend = 0.018
+    // Independent output-height multiplier. Legacy calibration keeps its original verticalScale.
+    var verticalAspectScale = 1.0
+
+    private enum CodingKeys: String, CodingKey {
+        case enabled, strength, arch, verticalScale, asymmetry, tilt, horizontalBend, verticalAspectScale
+    }
+}
+
+extension ManualWarpParameters {
+    // An extension keeps the existing memberwise initializer available to callers.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabled = try container.decode(Bool.self, forKey: .enabled)
+        strength = try container.decode(Double.self, forKey: .strength)
+        arch = try container.decode(Double.self, forKey: .arch)
+        verticalScale = try container.decode(Double.self, forKey: .verticalScale)
+        asymmetry = try container.decode(Double.self, forKey: .asymmetry)
+        tilt = try container.decode(Double.self, forKey: .tilt)
+        horizontalBend = try container.decode(Double.self, forKey: .horizontalBend)
+        verticalAspectScale = try container.decodeIfPresent(Double.self, forKey: .verticalAspectScale) ?? 1.0
+    }
 }
 
 struct PolynomialTerm: Equatable {
@@ -294,7 +315,7 @@ struct PolynomialWarpConfiguration: Codable, Equatable {
 }
 
 struct WarpConfiguration: Codable, Equatable {
-    static let currentSchemaVersion = 11
+    static let currentSchemaVersion = 14
 
     var schemaVersion = currentSchemaVersion
     var displayPixelWidth: Int
@@ -312,6 +333,16 @@ struct WarpConfiguration: Codable, Equatable {
     var polynomial = PolynomialWarpConfiguration()
     var render = RenderConfiguration()
     var localWarp = LocalWarpConfiguration()
+    var bezierWarp = BezierWarpConfiguration()
+    var alignment = WarpAlignmentConfiguration()
+    /// Final physical-screen translation, after all shape and alignment work.
+    /// Positive values move the entire surface down; texture UVs stay unchanged.
+    var outputVerticalOffsetPixels = 0.0
+
+    var outputVerticalOffsetRange: ClosedRange<Double> {
+        let height = Double(max(displayPixelHeight, 1))
+        return -height...height
+    }
 
     private enum CodingKeys: String, CodingKey {
         case schemaVersion
@@ -330,6 +361,9 @@ struct WarpConfiguration: Codable, Equatable {
         case polynomial
         case render
         case localWarp
+        case bezierWarp
+        case alignment
+        case outputVerticalOffsetPixels
     }
 
     init(
@@ -348,7 +382,10 @@ struct WarpConfiguration: Codable, Equatable {
         manual: ManualWarpParameters = ManualWarpParameters(),
         polynomial: PolynomialWarpConfiguration = PolynomialWarpConfiguration(),
         render: RenderConfiguration = RenderConfiguration(),
-        localWarp: LocalWarpConfiguration = LocalWarpConfiguration()
+        localWarp: LocalWarpConfiguration = LocalWarpConfiguration(),
+        bezierWarp: BezierWarpConfiguration = BezierWarpConfiguration(),
+        alignment: WarpAlignmentConfiguration = WarpAlignmentConfiguration(),
+        outputVerticalOffsetPixels: Double = 0
     ) {
         self.schemaVersion = schemaVersion
         self.displayPixelWidth = displayPixelWidth
@@ -366,6 +403,9 @@ struct WarpConfiguration: Codable, Equatable {
         self.polynomial = polynomial
         self.render = render
         self.localWarp = localWarp
+        self.bezierWarp = bezierWarp
+        self.alignment = alignment
+        self.outputVerticalOffsetPixels = outputVerticalOffsetPixels
     }
 
     init(from decoder: Decoder) throws {
@@ -386,6 +426,9 @@ struct WarpConfiguration: Codable, Equatable {
         polynomial = try container.decodeIfPresent(PolynomialWarpConfiguration.self, forKey: .polynomial) ?? PolynomialWarpConfiguration()
         render = try container.decodeIfPresent(RenderConfiguration.self, forKey: .render) ?? RenderConfiguration()
         localWarp = try container.decodeIfPresent(LocalWarpConfiguration.self, forKey: .localWarp) ?? LocalWarpConfiguration()
+        bezierWarp = try container.decodeIfPresent(BezierWarpConfiguration.self, forKey: .bezierWarp) ?? BezierWarpConfiguration()
+        alignment = try container.decodeIfPresent(WarpAlignmentConfiguration.self, forKey: .alignment) ?? WarpAlignmentConfiguration()
+        outputVerticalOffsetPixels = try container.decodeIfPresent(Double.self, forKey: .outputVerticalOffsetPixels) ?? 0
     }
 
     static func defaultConfiguration(displayWidth: Int, displayHeight: Int) -> WarpConfiguration {
@@ -420,8 +463,12 @@ struct WarpConfiguration: Codable, Equatable {
         copy.canvas.height = min(max(copy.canvas.height, 64), 32768)
         copy.capture = copy.capture.sanitized()
         copy.cropAnchor = copy.cropAnchor.sanitized()
+        copy.outputVerticalOffsetPixels = copy.outputVerticalOffsetPixels.isFinite
+            ? min(max(copy.outputVerticalOffsetPixels, copy.outputVerticalOffsetRange.lowerBound), copy.outputVerticalOffsetRange.upperBound)
+            : 0
         copy.manual.strength = min(max(copy.manual.strength, 0), 2.25)
         copy.manual.verticalScale = min(max(copy.manual.verticalScale, 0.2), 2)
+        copy.manual.verticalAspectScale = min(max(copy.manual.verticalAspectScale, 0.12), 5.5)
         copy.polynomial = copy.polynomial.normalized()
         if copy.extendedWarpEnabled, copy.canvasReference == nil {
             copy.canvasReference = WarpMath.captureCanvasReference(configuration: copy, preservingLegacyExtension: schemaVersion <= 7)
@@ -432,10 +479,14 @@ struct WarpConfiguration: Codable, Equatable {
     func validationErrors() -> [String] {
         var errors = [String]()
         errors += localWarp.validationErrors()
+        errors += bezierWarp.validationErrors()
         if schemaVersion < 1 || schemaVersion > Self.currentSchemaVersion {
             errors.append("不支持的 schemaVersion：\(schemaVersion)")
         }
         if displayPixelWidth <= 0 || displayPixelHeight <= 0 { errors.append("显示器像素尺寸必须大于 0") }
+        if !outputVerticalOffsetPixels.isFinite || !outputVerticalOffsetRange.contains(outputVerticalOffsetPixels) {
+            errors.append("整幅画面上下位置须为有限数值，且不得超过正负一个屏幕高度")
+        }
         if canvas.width <= 0 || canvas.height <= 0 { errors.append("画布尺寸必须大于 0") }
         if !render.calibrationGrid.isValid { errors.append("网格行列数须为 1～200 的整数，白线宽度须为 1～32 像素") }
         if let reference = canvasReference, !reference.isValid { errors.append("画布基准无效，请重新设置基准或导入有效配置") }
@@ -461,6 +512,9 @@ extension WarpConfiguration {
         copy.manual.enabled = false
         copy.polynomial.enabled = false
         copy.localWarp.enabled = false
+        copy.bezierWarp.enabled = false
+        copy.alignment = WarpAlignmentConfiguration()
+        copy.outputVerticalOffsetPixels = 0
         copy.extendedWarpEnabled = false
         copy.render.testPattern = .calibrationGrid
         return copy

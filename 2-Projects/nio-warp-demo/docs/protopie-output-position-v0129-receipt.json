@@ -1,0 +1,62 @@
+{
+  "version": "0.12.9",
+  "build": "51",
+  "sourceSHA256": "f64d72e5c285885336a3b11af78f4307ae19e0e51c12f0de4828dc9a139f7173",
+  "binarySHA256": "50c91f8d10b5881949959b054d921219461857f1d9638855968fb627489884f0",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "pid": 48646,
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "checkedAt": "2026-09-18T09:35:00.429470+00:00",
+  "rootCause": "Legacy ProtoPie internal crop had zero overflow (7680x2800 content and viewport); whole-output control was on another tab",
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "live": {
+    "continuousPhysicalDrag": true,
+    "before": -100,
+    "requested": -200,
+    "heldSaved": -205.04728780559938,
+    "releasedSaved": -205.04728780559938,
+    "restored": -100,
+    "otherWarpFieldsUnchanged": true,
+    "protoPieConfigurationsUnchanged": true,
+    "canvasTabSynchronized": true,
+    "captureVerification": {
+      "fullWindowVerified": true,
+      "height": 2800,
+      "timestamp": 1789724027.297116,
+      "width": 7680,
+      "windowID": 2627
+    },
+    "applicationVersion": "0.12.9 (51)",
+    "physicalReflectionAcceptance": "pending user observation; no system display screenshot permission",
+    "dragLog": [
+      "BEGIN -100.0 -200.0 FRAME (1139.0, 230.0) (344.0, 18.0)",
+      "HELD -205.04728780559938",
+      "RELEASED -205.04728780559938"
+    ],
+    "heldStatus": [
+      "整幅画面上下位置已更新（-205.04728781 px）；曲面有效；12302/27939 个采样点在 AA 外，仅裁切显示，不压回边界"
+    ]
+  },
+  "tests": {
+    "ui": {
+      "testCount": 40,
+      "assertionCount": 2232,
+      "failureCount": 0,
+      "skips": []
+    },
+    "protopie": {
+      "testCount": 111,
+      "assertionCount": 994,
+      "failureCount": 0
+    },
+    "runtime": "Original source and test bodies with assertion shim; not formal XCTest; suites may overlap"
+  },
+  "rollback": {
+    "tag": "nio-warp-before-protopie-position-v0129-20260918",
+    "commit": "e28100634875527b1b41adbf44d772541a2ad2ca",
+    "pairedBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-093344Z-before-v0129"
+  },
+  "airChanged": false,
+  "mouseMapping": "still paused; original wave issue remains unaccepted"
+}

@@ -1,0 +1,55 @@
+{
+  "version": "0.13.9",
+  "build": "61",
+  "status": "installed; automated and hardware-user validation passed",
+  "sourceSHA256": "5bb9f23da4dceb94d16ce014c05dd42c5d3735807061f61cf10fd6d8b47de43d",
+  "binarySHA256": "9fb3e907c23c9bbaebeb5716977f2fa2f28df1089ca19df7c37f0e6e8dfa7d5c",
+  "app": "/Users/futurus/Applications/NIOWarpApp.app",
+  "rollbackTag": "nio-warp-before-cursor-resource-20260918",
+  "rollbackCommit": "5ec206cc7ca1d912ac4bd2fa3c669a5c6de1f62f",
+  "pairedRollback": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-115659Z-before-v0139",
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "parameters": {
+    "parametersUnchanged": true,
+    "compared": {
+      "nioWarpProtoPie.configuration.v1": true,
+      "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": true,
+      "nioWarpMouseMapping.settings.v1": true,
+      "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009": true,
+      "nioWarpPresets.v1": true,
+      "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": true
+    }
+  },
+  "tests": [
+    {
+      "group": "transport/cursor",
+      "tests": 51,
+      "assertions": 461,
+      "failures": 0
+    },
+    {
+      "group": "native scope/exit/recovery/cursor identity",
+      "tests": 33,
+      "assertions": 178,
+      "failures": 0
+    }
+  ],
+  "testRuntime": "original production and test methods using assertion shim; NOT XCTest; groups not aggregated",
+  "automatedLiveInputPassed": true,
+  "sourceCursor": "Original ProtoPie cached 2x assets, correct CSS density/hotspot; no replacement drawing",
+  "humanAcceptance": "都正常，没有自行退回",
+  "rootCause": "cursor artwork network failure incorrectly closed input session; source-declared cached 2x assets were ignored in favor of uncached 1x",
+  "acceptedBaseline": {
+    "version": "0.13.9",
+    "build": "61",
+    "sourceSHA256": "5bb9f23da4dceb94d16ce014c05dd42c5d3735807061f61cf10fd6d8b47de43d",
+    "binarySHA256": "9fb3e907c23c9bbaebeb5716977f2fa2f28df1089ca19df7c37f0e6e8dfa7d5c",
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-115919Z-v0139",
+    "humanAcceptance": "用户本机鼠标两轮长按、松开、Esc重入确认：都正常，没有自行退回",
+    "files": {
+      "preferences-accepted.plist": "2f3e8da400a88676f1d3b86290ef24ae64fd521f7daef827b875607f4659e5f7",
+      "NIOWarpApp-v0.13.9-61.zip": "4bd574c3423dae202546116332c06888854c769fb22cfa7b7327d0ee661b98ab",
+      "native-source.tar.gz": "21a0d21ceb6dbff885f55cceaee51e0f62fe6366b4c4e0dc77a0cc61308b7d6d"
+    }
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "version": "0.13.7",
+  "build": 59,
+  "sourceSHA256": "98ce21d2f6ce8b5f19fe6ff59af16b1200d5cdc5dcd6ce7f12f5889e9e03412f",
+  "binarySHA256": "c931a3b555dcf11dedfa73f1216de17fb7761d6574f2a534343129acaa3be3bc",
+  "strictSignatureVerified": true,
+  "lsuiElement": true,
+  "sourceAndAppMatched": true,
+  "testResults": [
+    {
+      "suite": "activation policy",
+      "tests": 8,
+      "assertions": 59
+    },
+    {
+      "suite": "workbench",
+      "tests": 40,
+      "assertions": 2236
+    }
+  ],
+  "testRuntime": "assertion shim, NOT formal XCTest; overlapping groups not aggregated",
+  "physicalFullscreenCycles": [
+    {
+      "cycle": 1,
+      "activationPolicy": 1,
+      "onActiveSpace": true,
+      "occlusionVisible": true,
+      "sourceDisplayID": 4,
+      "outputDisplayID": 4,
+      "geometryReady": true,
+      "layoutReady": true
+    },
+    {
+      "cycle": 2,
+      "activationPolicy": 1,
+      "onActiveSpace": true,
+      "occlusionVisible": true,
+      "sourceDisplayID": 4,
+      "outputDisplayID": 4,
+      "geometryReady": true,
+      "layoutReady": true
+    },
+    {
+      "cycle": 3,
+      "activationPolicy": 1,
+      "onActiveSpace": true,
+      "occlusionVisible": true,
+      "sourceDisplayID": 4,
+      "outputDisplayID": 4,
+      "geometryReady": true,
+      "layoutReady": true
+    }
+  ],
+  "finalHeight": 600,
+  "finalOutput": {
+    "activationPolicy": 1,
+    "frame": "{{-221, 982}, {1920, 1200}}",
+    "occlusionVisible": true,
+    "onActiveSpace": true,
+    "requestedVisible": true,
+    "updatedAt": 1789731275.3201342,
+    "windowNumber": 5433
+  },
+  "finalSourcePixels": [
+    1920,
+    600
+  ],
+  "savedConfigDifferences": {
+    "nioWarpProtoPie.lastSuccessful.v1": [],
+    "nioWarpProtoPie.configuration.v1": [],
+    "nioWarpConfiguration.v2.vendor-8944-model-12667-serial-808733530": [],
+    "nioWarpMouseMapping.settings.v1": [],
+    "nioWarpConfiguration.v2.vendor-23667-model-41014-serial-16843009": [
+      ".canvasReference.contentCanvas.height",
+      ".canvasReference.contentCanvas.width",
+      ".render.automaticPerformanceFallback",
+      ".render.antiAliasing",
+      ".canvas.height"
+    ],
+    "nioWarpProtoPie.draft.v1": [],
+    "nioWarpPresets.v1": [],
+    "nioWarpConfiguration.v2.vendor-12451-model-12801-serial-0": []
+  },
+  "humanAcceptance": {
+    "result": "PASS",
+    "statement": "现在实时变化正常",
+    "scope": "AU16O原生全屏校正输出与实时滑块反馈"
+  },
+  "rollbackTag": "nio-warp-before-au16-fullscreen-20260918",
+  "pairedBackup": ".rollback/app-installs/20260918-113209Z-before-v0137",
+  "acceptedBaseline": {
+    "backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-113552Z-v0137",
+    "files": {
+      "preferences-accepted.plist": "8e35915748d1c14f3383410c17b52cc4d2de3b9d5c474428b99971d66ba8c140",
+      "native-source.tar.gz": "5c2d94ff6bad83b0a061875474b507c5914f0118281c26359696d1f32405efc3",
+      "NIOWarpApp-v0.13.7-59.zip": "c6bd87543888d118910c3a46cf2173e9e1d5e89333de18551d0f5cde98d74fb9"
+    }
+  }
+}

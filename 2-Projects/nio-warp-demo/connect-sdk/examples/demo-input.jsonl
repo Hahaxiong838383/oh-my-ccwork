@@ -1,0 +1,7 @@
+{"type":"status"}
+{"messageId":"demo.level","value":25}
+{"messageId":"demo.level","value":75}
+{"messageId":"demo.toggle","value":1}
+{"messageId":"demo.toggle","value":0}
+{"messageId":"demo.action","value":"next"}
+{"messageId":"demo.action","value":"reset"}

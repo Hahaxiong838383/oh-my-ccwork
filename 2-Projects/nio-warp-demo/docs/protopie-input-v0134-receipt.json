@@ -1,0 +1,1330 @@
+{
+  "version": "0.13.4 (56)",
+  "installedApp": "/Users/futurus/Applications/NIOWarpApp.app",
+  "sourceSHA256": "f6a70cbb37e0bf5f914bb226c42c9fc3fc8ccda2feff753910fb3e3083a1a1aa",
+  "binarySHA256": "3b5d8a6ba63a5c9da1bae1bab135cb5787100520f9ca01284cd75b066e3d487e",
+  "pidAtVerification": 51392,
+  "strictSignatureVerified": true,
+  "sourceDigestMatched": true,
+  "allInstalledSourceFilesMatchLocal": true,
+  "preferencesByteIdenticalBeforeRelaunch": true,
+  "sourceFiles": {
+    "Package.swift": "413851577bde5c44fbb4c9c85de2352fcb87101440edd61471f25c0a99d1dd9b",
+    "Sources/NIOVirtualDisplay/NIOVirtualDisplay.m": "20f065594cd1d09f9554451be45480435f1b8e87d922c173694bf966bdbda5b1",
+    "Sources/NIOVirtualDisplay/include/NIOVirtualDisplay.h": "4debcdd437154a91b90bfb930a7ef1bfb7bb4f005a8981ed9eaf938f29cff8d3",
+    "Sources/NIOWarpApp/BezierWarp.swift": "d2eff5603a280578fc88b179b7ca504c89b24a012909e45141ca980e850da7a9",
+    "Sources/NIOWarpApp/BezierWarpEditor.swift": "5beb9c3b605d48cc65776adc175e8c4f69184b9ea0e2bfef7c7d1caba18bea23",
+    "Sources/NIOWarpApp/CalibrationGrid.swift": "de968379474ac274bb2e958ee20c0cfaafeb19fe955b907338ce09c7ab1a4371",
+    "Sources/NIOWarpApp/CanvasGeometryPreview.swift": "ad51c0ee04657f28fbd51caf48bf35b380351c065eca41fe3a35a00080cdeaae",
+    "Sources/NIOWarpApp/CanvasReference.swift": "0eb7225ce35123e07258d516ca57b718d3ae17d641f4cdb4225eff59d459ae9a",
+    "Sources/NIOWarpApp/CaptureSupport.swift": "e7ed0e711cecbe513a435e1d2446f3dae0ee4f9f2d6cd0eecb4bffe61d0b6a94",
+    "Sources/NIOWarpApp/DisplaySessionPolicy.swift": "06238aeb1686877e905d97006ed6a03baa34d4a8de5bda7f157619032a71358f",
+    "Sources/NIOWarpApp/LocalWarp.swift": "c6eaacb85bfcb5d404aa1f1c1a339ca5b1f27de8706bd46859b6af335b975aad",
+    "Sources/NIOWarpApp/LocalWarpEditor.swift": "c0403df8707fae89410ebcf8ba13c6447499d5bc4686fc19fc8b461d2f42dd1b",
+    "Sources/NIOWarpApp/LocalWarpUpdates.swift": "0616c7e526f297e0b207f33d68644c14177579d4078ec89ed40b47f07809353c",
+    "Sources/NIOWarpApp/MouseCaptureFrame.swift": "19a2deee8800665c8c169ff21a3211c59d8ed0680883c316d9061926aaa7fbe6",
+    "Sources/NIOWarpApp/MouseInputCapture.swift": "f37f21a32dae9b9c53981a86a61c5cefee42d667cd6a5529e8e55f219dbbbb19",
+    "Sources/NIOWarpApp/MouseInputTransport.swift": "00c260230755b5fe68ee44732ecf3e6174c4bdaedf43436213a00af8d7abdb16",
+    "Sources/NIOWarpApp/MouseKeyboardEvent.swift": "d86a5e0d6640bde93aac854300b70086d20984b950e1856fe575dab9e598d236",
+    "Sources/NIOWarpApp/MouseMappingController.swift": "f0dd6a148145b611a1bdca15b8d2ddfa67704631c150f155dcc5760956840561",
+    "Sources/NIOWarpApp/MouseMappingMath.swift": "89004df09a11613709920e0c2b12879f86cf6e3545cdba30bb1b93a1b0e7b30c",
+    "Sources/NIOWarpApp/MouseMappingPanel.swift": "29866536412910a5716eca2b760c0d993e10afe20c3d43b7d237bbe9c3326138",
+    "Sources/NIOWarpApp/MouseWarpDeltaCompensator.swift": "df764571a6dec9e4f6f9fe2a712ed1013ba6a4f0e15e6ef33383473cad95fe39",
+    "Sources/NIOWarpApp/NativeMouseInputCapture.swift": "8a4cc1428b01da85adc098c481828399ec497c5fe64ab0d8e79ba4edbc091002",
+    "Sources/NIOWarpApp/OwnedPresentationDisplay.swift": "588a4a8d740fb79be92252b6de42782978fc9051d2a4cd6a90f3ff4c0e7d5c6f",
+    "Sources/NIOWarpApp/PhaseOneSupport.swift": "086759befd0cc63b70174ee3e78fb8a17f70b1b9861fea6a3750e777741f01b8",
+    "Sources/NIOWarpApp/ProtoPieConfiguration.swift": "a513f246f0d624d74de632da20b14f7e867f6b91afe757f24ed34dda5c129792",
+    "Sources/NIOWarpApp/ProtoPieCoordinator.swift": "384f73c99dfdb1dd009379643d54cc9f72c6ba37a706520e6785204374b6b94c",
+    "Sources/NIOWarpApp/ProtoPieCursorResourceLoader.swift": "0e2edfd997d88978d55f798b65c77c15410a0dad66d3cca174cb28d593f8ff77",
+    "Sources/NIOWarpApp/ProtoPieCursorStyle.swift": "25b3db295792b732d2fdc3ccfe21104548e1579a43bc2a9017ad921e8d41d033",
+    "Sources/NIOWarpApp/ProtoPiePanel.swift": "3cadd142c7f10df9448f4981edbbad450165724f6d066d76a8b840132eacf9be",
+    "Sources/NIOWarpApp/ProtoPiePresentation.swift": "1b4c2d0749ddb7f5ea21bdd7e0bea4a836bc31db69e271c35c41b0b80a56cfdd",
+    "Sources/NIOWarpApp/ProtoPieSystemDriver.swift": "ded08047c4c48d9fe00b9ca5ff6520fa7f051c94659f11bbc74b437b246537e4",
+    "Sources/NIOWarpApp/ProtoPieWidthFit.swift": "d0d2d2fa273c5b744476a0f04c44b8493a5247fd26f5aed5cfc5d8f597db1ed3",
+    "Sources/NIOWarpApp/WarpAlignment.swift": "e83339678c58a2a37fb65f5e7fb72c4dbf7c86fa15eecc9e1153f782d6bc890b",
+    "Sources/NIOWarpApp/WarpConfiguration.swift": "eebbd1bf44209e77910fa901d830ed124dea2e2afd034a998d0d62c4519d7754",
+    "Sources/NIOWarpApp/WarpMath.swift": "3348db5438c8d864433c00c8668101c13954d3c88fbb70260ef39a6714d259cc",
+    "Sources/NIOWarpApp/WorkbenchWindowPlacement.swift": "919cc3d5f706af1a81079b450284c287e6bd9be8eb0251f939ea881876c2073e",
+    "Sources/NIOWarpApp/main.swift": "fc9bdceb994b1166e2e87363996831f4f4b0adb47b383ba60a64706c28691de7",
+    "config/default-warp-configuration.json": "f1a367b112b0809274f20356d5d4d9eaff883e8dc30a7728badc755c80b4d87c"
+  },
+  "rollbackCodeTag": "nio-warp-before-independent-pointer-20260918",
+  "rollbackCommit": "6d0d8f4434820d7b2fd64239426d9c96e8070353",
+  "stable51PairedBackup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-094509Z-before-v0130",
+  "previousCandidate55Backup": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/app-installs/20260918-100520Z-before-v0134",
+  "live": {
+    "result": "PASS",
+    "sourceViewport": [
+      7680,
+      2800
+    ],
+    "pageNotReloaded": true,
+    "firstClickOnlyFocus": true,
+    "normalCursor": {
+      "cursorSHA256": "a38b6a1c705839989fcc89318934d10b29d5574c5d847eb8dd568017be2fff46",
+      "cursorSize": [
+        53,
+        53
+      ],
+      "frontPID": 51392,
+      "hotspot": [
+        26,
+        26
+      ],
+      "point": [
+        994,
+        -399
+      ]
+    },
+    "pressedCursor": {
+      "cursorSHA256": "8bab5d5ad0003056ba550b2d897a704ad68517e424c01d0f58fa2b8f9445131e",
+      "cursorSize": [
+        50,
+        50
+      ],
+      "frontPID": 51392,
+      "hotspot": [
+        25,
+        25
+      ],
+      "point": [
+        994,
+        -399
+      ]
+    },
+    "clickEvents": [
+      {
+        "buttons": 1,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "mousedown",
+        "x": 3882,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "mouseup",
+        "x": 3882,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "click",
+        "x": 3882,
+        "y": 1927
+      }
+    ],
+    "dragEvents": [
+      {
+        "buttons": 1,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "mousedown",
+        "x": 3882,
+        "y": 1927
+      },
+      {
+        "buttons": 1,
+        "detail": 0,
+        "dy": 0,
+        "trusted": true,
+        "type": "mousemove",
+        "x": 3942,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "mouseup",
+        "x": 3942,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "click",
+        "x": 3942,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 0,
+        "dy": 80,
+        "trusted": true,
+        "type": "wheel",
+        "x": 3942,
+        "y": 1927
+      }
+    ],
+    "keyEvents": [
+      {
+        "code": "Space",
+        "key": " ",
+        "keyCode": 32,
+        "location": 0,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Space",
+        "key": " ",
+        "keyCode": 32,
+        "location": 0,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "ArrowRight",
+        "key": "ArrowRight",
+        "keyCode": 39,
+        "location": 0,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "ArrowRight",
+        "key": "ArrowRight",
+        "keyCode": 39,
+        "location": 0,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      }
+    ],
+    "numpadEvents": [
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad0",
+        "key": "0",
+        "keyCode": 96,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad0",
+        "key": "0",
+        "keyCode": 96,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad1",
+        "key": "1",
+        "keyCode": 97,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad1",
+        "key": "1",
+        "keyCode": 97,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad3",
+        "key": "3",
+        "keyCode": 99,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad3",
+        "key": "3",
+        "keyCode": 99,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad4",
+        "key": "4",
+        "keyCode": 100,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad4",
+        "key": "4",
+        "keyCode": 100,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      }
+    ],
+    "escEvents": [
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "buttons": 1,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "mousedown",
+        "x": 3942,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "mouseup",
+        "x": 3942,
+        "y": 1927
+      },
+      {
+        "buttons": 0,
+        "detail": 1,
+        "dy": 0,
+        "trusted": true,
+        "type": "click",
+        "x": 3942,
+        "y": 1927
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "repeat": false,
+        "trusted": true,
+        "type": "keyup"
+      }
+    ],
+    "stoppedAfterEsc": true,
+    "testOverlayRemoved": true
+  },
+  "originalPageKeyReplay": {
+    "result": "PASS",
+    "events": [
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad0",
+        "key": "0",
+        "keyCode": 96,
+        "location": 3,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad0",
+        "key": "0",
+        "keyCode": 96,
+        "location": 3,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad1",
+        "key": "1",
+        "keyCode": 97,
+        "location": 3,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad1",
+        "key": "1",
+        "keyCode": 97,
+        "location": 3,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad2",
+        "key": "2",
+        "keyCode": 98,
+        "location": 3,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad3",
+        "key": "3",
+        "keyCode": 99,
+        "location": 3,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad3",
+        "key": "3",
+        "keyCode": 99,
+        "location": 3,
+        "trusted": true,
+        "type": "keyup"
+      },
+      {
+        "code": "Numpad4",
+        "key": "4",
+        "keyCode": 100,
+        "location": 3,
+        "trusted": true,
+        "type": "keydown"
+      },
+      {
+        "code": "Numpad4",
+        "key": "4",
+        "keyCode": 100,
+        "location": 3,
+        "trusted": true,
+        "type": "keyup"
+      }
+    ],
+    "pageNotReloaded": true,
+    "allKeysReleased": true,
+    "observersRemoved": true,
+    "mappingLeftActive": true
+  },
+  "physicalUserAcceptance": {
+    "result": "PASS",
+    "feedback": "鼠标和键盘都正常",
+    "date": "2026-09-18",
+    "scope": "开发机本机鼠标移动/点击及数字键盘201234原演示交互"
+  },
+  "artifacts": "artifacts/protopie-pointer-focus-v0130-20260918/",
+  "checkedAt": "2026-09-18T10:09:15.381308+00:00",
+  "testSuites": {
+    "UI": {
+      "assertionCount": 2236,
+      "failureCount": 0,
+      "failures": [],
+      "result": "PASS",
+      "runtime": "Compiled original production sources and original test method bodies with minimal XCTest assertion shim; NOT formal XCTest",
+      "skips": [],
+      "testCount": 40,
+      "tests": [
+        {
+          "assertions": 3,
+          "failures": 0,
+          "name": "AppDelegateSmoke.testLastWindowCloseKeepsAppAliveWithoutLaunching"
+        },
+        {
+          "assertions": 35,
+          "failures": 0,
+          "name": "TabLayoutTests.testSevenModulesHaveRequestedOrderWithProtoPieLastAndCanvasDefault"
+        },
+        {
+          "assertions": 28,
+          "failures": 0,
+          "name": "TabLayoutTests.testCommandNumberShortcutsIncludeMouseAndKeepProtoPieSeventh"
+        },
+        {
+          "assertions": 23,
+          "failures": 0,
+          "name": "TabLayoutTests.testMouseTabUsesRealPanelAndChangesOnlyInputPreferences"
+        },
+        {
+          "assertions": 8,
+          "failures": 0,
+          "name": "TabLayoutTests.testMouseDirectionControlLoadsAndIsDisabledWhileStartingOrControlling"
+        },
+        {
+          "assertions": 16,
+          "failures": 0,
+          "name": "TabLayoutTests.testMousePanelUsesOriginalCursorWithoutPointerShapeControls"
+        },
+        {
+          "assertions": 15,
+          "failures": 0,
+          "name": "TabLayoutTests.testMouseDirectionControlRemainsReachableInMinimumWorkbench"
+        },
+        {
+          "assertions": 5,
+          "failures": 0,
+          "name": "TabLayoutTests.testMigratedControlWindowFitsVisibleFrameWithoutChangingCalibration"
+        },
+        {
+          "assertions": 6,
+          "failures": 0,
+          "name": "TabLayoutTests.testSmallVisibleFrameAllowsShrinkingAndLargerScreenRestoresMinimum"
+        },
+        {
+          "assertions": 36,
+          "failures": 0,
+          "name": "TabLayoutTests.testExistingSectionsAreAssignedToTheirSemanticModules"
+        },
+        {
+          "assertions": 26,
+          "failures": 0,
+          "name": "TabLayoutTests.testSwitchingModulesPreservesUnsubmittedInputsAndNeverAppliesConfiguration"
+        },
+        {
+          "assertions": 48,
+          "failures": 0,
+          "name": "TabLayoutTests.testOfflineAllModulesNavigateAndGeometryControlsRemainReadOnly"
+        },
+        {
+          "assertions": 15,
+          "failures": 0,
+          "name": "TabLayoutTests.testSharedPreviewAndEmbeddedEditorsDoNotCreateAdditionalWindows"
+        },
+        {
+          "assertions": 17,
+          "failures": 0,
+          "name": "TabLayoutTests.testGlobalStatusStaysOutsideModulePagesAcrossNavigation"
+        },
+        {
+          "assertions": 297,
+          "failures": 0,
+          "name": "TabLayoutTests.testQuitButtonIsUniqueAtTopRightAndAvailableOfflineAcrossAllModules"
+        },
+        {
+          "assertions": 29,
+          "failures": 0,
+          "name": "TabLayoutTests.testQuitCancellationKeepsConfigurationHistoryAndDraftsUnchanged"
+        },
+        {
+          "assertions": 14,
+          "failures": 0,
+          "name": "TabLayoutTests.testQuitConfirmationRequiresSecondClickAndDoesNotStackSheets"
+        },
+        {
+          "assertions": 10,
+          "failures": 0,
+          "name": "TabLayoutTests.testCanvasDimensionDraftSurvivesAValidatedBezierSubmission"
+        },
+        {
+          "assertions": 23,
+          "failures": 0,
+          "name": "TabLayoutTests.testOfflineAdvancedPolynomialCanExpandWhileParametersRemainReadOnly"
+        },
+        {
+          "assertions": 8,
+          "failures": 0,
+          "name": "TabLayoutTests.testOfflineUndoDoesNotConsumeSavedHistory"
+        },
+        {
+          "assertions": 9,
+          "failures": 0,
+          "name": "TabLayoutTests.testUndoDuringValidationCancelsCandidateWithoutConsumingEarlierHistory"
+        },
+        {
+          "assertions": 118,
+          "failures": 0,
+          "name": "TabLayoutTests.testModuleNavigationKeepsTheSharedPreviewContainerSizeFixed"
+        },
+        {
+          "assertions": 35,
+          "failures": 0,
+          "name": "TabLayoutTests.testReconnectRestoresNavigationCameraDraftsAndSelectionOnlyForSameDisplay"
+        },
+        {
+          "assertions": 15,
+          "failures": 0,
+          "name": "TabLayoutTests.testEachInspectorRetainsIndependentScrollPositionAcrossModules"
+        },
+        {
+          "assertions": 1008,
+          "failures": 0,
+          "name": "TabLayoutTests.testMinimumWorkbenchShowsAllSevenTabsAndReachableInspectorControls"
+        },
+        {
+          "assertions": 42,
+          "failures": 0,
+          "name": "TabLayoutTests.testOutputVerticalPositionMovesWholeImageAndPersistsWithoutChangingCurveOrCanvas"
+        },
+        {
+          "assertions": 19,
+          "failures": 0,
+          "name": "TabLayoutTests.testOfflineOutputVerticalPositionControlsDoNotChangeCalibration"
+        },
+        {
+          "assertions": 50,
+          "failures": 0,
+          "name": "TabLayoutTests.testProtoPieOutputPositionUsesSamePersistedGeometryAsCanvasInBothDirections"
+        },
+        {
+          "assertions": 45,
+          "failures": 0,
+          "name": "TabLayoutTests.testProtoPieOutputPositionPreciseEntryEndEditingResetAndInternalCropDisclosure"
+        },
+        {
+          "assertions": 20,
+          "failures": 0,
+          "name": "TabLayoutTests.testOfflineProtoPieOutputPositionCannotMutateSavedGeometry"
+        },
+        {
+          "assertions": 25,
+          "failures": 0,
+          "name": "TabLayoutTests.testFocusedUntouchedProtoPiePositionEditorCannotRestoreOldCanvasValueOnBlur"
+        },
+        {
+          "assertions": 74,
+          "failures": 0,
+          "name": "TabLayoutTests.testVerticalAspectActionsPersistReadoutAndResetWithoutChangingLegacyCalibration"
+        },
+        {
+          "assertions": 20,
+          "failures": 0,
+          "name": "TabLayoutTests.testOfflineVerticalAspectControlsRejectActionsWithoutChangingSavedConfiguration"
+        },
+        {
+          "assertions": 26,
+          "failures": 0,
+          "name": "TabLayoutTests.testVerticalAspectReadoutAndResetRemainReachableInMinimumWorkbench"
+        },
+        {
+          "assertions": 19,
+          "failures": 0,
+          "name": "MouseMappingSettingsTests.testMissingCorruptAndUnknownModeSettingsDefaultToPreviewWithoutWriting"
+        },
+        {
+          "assertions": 13,
+          "failures": 0,
+          "name": "MouseMappingSettingsTests.testLegacyPreferencesKeepEveryChoiceAndDefaultOnlyNewDirectionField"
+        },
+        {
+          "assertions": 8,
+          "failures": 0,
+          "name": "MouseMappingSettingsTests.testExplicitDirectionRoundTripsForBothModesWithoutResettingOtherChoices"
+        },
+        {
+          "assertions": 19,
+          "failures": 0,
+          "name": "MouseMappingSettingsTests.testFiniteLimitsAndNonfiniteValuesAreSanitizedWithoutChangingModeOrPreviewChoice"
+        },
+        {
+          "assertions": 3,
+          "failures": 0,
+          "name": "MouseMappingSettingsTests.testSavingSanitizedPreferencesPreservesCalibrationAndProtoPieKeys"
+        },
+        {
+          "assertions": 6,
+          "failures": 0,
+          "name": "MouseMappingSettingsTests.testControllerConstructionAndPreferencesNeverStartInputOrOpenWindows"
+        }
+      ],
+      "testSourceSHA256": {
+        "TabLayoutTests": "f167a6b85aa1790d6e81a94fce32649b3644c4e05bffa3cf6965ffb6350d624e",
+        "MouseMappingSettingsTests": "883a5b8ca5c2288b8ce7251083fcee5dbbb1e61a53d3b4c9a1b883a5b130904a"
+      },
+      "virtualDisplayBridgeSHA256": {
+        "module.modulemap": "422ff31944bdd9fb83f6fbc0b19e71021a2f2db06eadf1dd6118bc947d7f8d90",
+        "NIOVirtualDisplay.m.o": "053cde238eaf75a513d6c7bf2377d0a3375113a0049a6abc123979dba494e6f6"
+      },
+      "virtualDisplayBridgeSourceSHA256": {
+        "native/Sources/NIOVirtualDisplay/NIOVirtualDisplay.m": "20f065594cd1d09f9554451be45480435f1b8e87d922c173694bf966bdbda5b1",
+        "native/Sources/NIOVirtualDisplay/include/NIOVirtualDisplay.h": "4debcdd437154a91b90bfb930a7ef1bfb7bb4f005a8981ed9eaf938f29cff8d3"
+      },
+      "productionSourceSHA256": {
+        "native/Sources/NIOWarpApp/BezierWarp.swift": "d2eff5603a280578fc88b179b7ca504c89b24a012909e45141ca980e850da7a9",
+        "native/Sources/NIOWarpApp/BezierWarpEditor.swift": "5beb9c3b605d48cc65776adc175e8c4f69184b9ea0e2bfef7c7d1caba18bea23",
+        "native/Sources/NIOWarpApp/CalibrationGrid.swift": "de968379474ac274bb2e958ee20c0cfaafeb19fe955b907338ce09c7ab1a4371",
+        "native/Sources/NIOWarpApp/CanvasGeometryPreview.swift": "ad51c0ee04657f28fbd51caf48bf35b380351c065eca41fe3a35a00080cdeaae",
+        "native/Sources/NIOWarpApp/CanvasReference.swift": "0eb7225ce35123e07258d516ca57b718d3ae17d641f4cdb4225eff59d459ae9a",
+        "native/Sources/NIOWarpApp/CaptureSupport.swift": "e7ed0e711cecbe513a435e1d2446f3dae0ee4f9f2d6cd0eecb4bffe61d0b6a94",
+        "native/Sources/NIOWarpApp/DisplaySessionPolicy.swift": "06238aeb1686877e905d97006ed6a03baa34d4a8de5bda7f157619032a71358f",
+        "native/Sources/NIOWarpApp/LocalWarp.swift": "c6eaacb85bfcb5d404aa1f1c1a339ca5b1f27de8706bd46859b6af335b975aad",
+        "native/Sources/NIOWarpApp/LocalWarpEditor.swift": "c0403df8707fae89410ebcf8ba13c6447499d5bc4686fc19fc8b461d2f42dd1b",
+        "native/Sources/NIOWarpApp/LocalWarpUpdates.swift": "0616c7e526f297e0b207f33d68644c14177579d4078ec89ed40b47f07809353c",
+        "native/Sources/NIOWarpApp/MouseCaptureFrame.swift": "19a2deee8800665c8c169ff21a3211c59d8ed0680883c316d9061926aaa7fbe6",
+        "native/Sources/NIOWarpApp/MouseInputCapture.swift": "f37f21a32dae9b9c53981a86a61c5cefee42d667cd6a5529e8e55f219dbbbb19",
+        "native/Sources/NIOWarpApp/MouseInputTransport.swift": "00c260230755b5fe68ee44732ecf3e6174c4bdaedf43436213a00af8d7abdb16",
+        "native/Sources/NIOWarpApp/MouseKeyboardEvent.swift": "d86a5e0d6640bde93aac854300b70086d20984b950e1856fe575dab9e598d236",
+        "native/Sources/NIOWarpApp/MouseMappingController.swift": "f0dd6a148145b611a1bdca15b8d2ddfa67704631c150f155dcc5760956840561",
+        "native/Sources/NIOWarpApp/MouseMappingMath.swift": "89004df09a11613709920e0c2b12879f86cf6e3545cdba30bb1b93a1b0e7b30c",
+        "native/Sources/NIOWarpApp/MouseMappingPanel.swift": "29866536412910a5716eca2b760c0d993e10afe20c3d43b7d237bbe9c3326138",
+        "native/Sources/NIOWarpApp/MouseWarpDeltaCompensator.swift": "df764571a6dec9e4f6f9fe2a712ed1013ba6a4f0e15e6ef33383473cad95fe39",
+        "native/Sources/NIOWarpApp/NativeMouseInputCapture.swift": "8a4cc1428b01da85adc098c481828399ec497c5fe64ab0d8e79ba4edbc091002",
+        "native/Sources/NIOWarpApp/OwnedPresentationDisplay.swift": "588a4a8d740fb79be92252b6de42782978fc9051d2a4cd6a90f3ff4c0e7d5c6f",
+        "native/Sources/NIOWarpApp/PhaseOneSupport.swift": "086759befd0cc63b70174ee3e78fb8a17f70b1b9861fea6a3750e777741f01b8",
+        "native/Sources/NIOWarpApp/ProtoPieConfiguration.swift": "a513f246f0d624d74de632da20b14f7e867f6b91afe757f24ed34dda5c129792",
+        "native/Sources/NIOWarpApp/ProtoPieCoordinator.swift": "384f73c99dfdb1dd009379643d54cc9f72c6ba37a706520e6785204374b6b94c",
+        "native/Sources/NIOWarpApp/ProtoPieCursorResourceLoader.swift": "0e2edfd997d88978d55f798b65c77c15410a0dad66d3cca174cb28d593f8ff77",
+        "native/Sources/NIOWarpApp/ProtoPieCursorStyle.swift": "25b3db295792b732d2fdc3ccfe21104548e1579a43bc2a9017ad921e8d41d033",
+        "native/Sources/NIOWarpApp/ProtoPiePanel.swift": "3cadd142c7f10df9448f4981edbbad450165724f6d066d76a8b840132eacf9be",
+        "native/Sources/NIOWarpApp/ProtoPiePresentation.swift": "1b4c2d0749ddb7f5ea21bdd7e0bea4a836bc31db69e271c35c41b0b80a56cfdd",
+        "native/Sources/NIOWarpApp/ProtoPieSystemDriver.swift": "ded08047c4c48d9fe00b9ca5ff6520fa7f051c94659f11bbc74b437b246537e4",
+        "native/Sources/NIOWarpApp/ProtoPieWidthFit.swift": "d0d2d2fa273c5b744476a0f04c44b8493a5247fd26f5aed5cfc5d8f597db1ed3",
+        "native/Sources/NIOWarpApp/WarpAlignment.swift": "e83339678c58a2a37fb65f5e7fb72c4dbf7c86fa15eecc9e1153f782d6bc890b",
+        "native/Sources/NIOWarpApp/WarpConfiguration.swift": "eebbd1bf44209e77910fa901d830ed124dea2e2afd034a998d0d62c4519d7754",
+        "native/Sources/NIOWarpApp/WarpMath.swift": "3348db5438c8d864433c00c8668101c13954d3c88fbb70260ef39a6714d259cc",
+        "native/Sources/NIOWarpApp/WorkbenchWindowPlacement.swift": "919cc3d5f706af1a81079b450284c287e6bd9be8eb0251f939ea881876c2073e",
+        "native/Sources/NIOWarpApp/main.swift": "fc9bdceb994b1166e2e87363996831f4f4b0adb47b383ba60a64706c28691de7"
+      },
+      "additionalProbe": "One direct AppDelegate termination-policy smoke check; creates delegate but never calls launch handler, starts capture, or sets the application delegate",
+      "bootBoundary": "Removed only final MainActor.assumeIsolated application.run bootstrap; full production class definitions compiled unchanged",
+      "exitCode": 0,
+      "checkedAt": "2026-09-18T10:05:07.269987+00:00"
+    },
+    "transportAndCursorKeyboard": {
+      "assertionCount": 674,
+      "failureCount": 0,
+      "failures": [],
+      "result": "PASS",
+      "runtime": "Standalone Swift binary with minimal assertion shim; NOT formal XCTest",
+      "testCount": 60,
+      "tests": [
+        {
+          "assertions": 18,
+          "durationSeconds": 0.04881095886230469,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testParsesOriginalNormalAndPressedCSSWithoutChangingHotspot"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0001360177993774414,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testUnquotedAndSingleQuotedAssetsDefaultMissingHotspotToZero"
+        },
+        {
+          "assertions": 48,
+          "durationSeconds": 0.003509044647216797,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testRealComputedImageSetPrefersOneDppxRegardlessOfEntryOrder"
+        },
+        {
+          "assertions": 21,
+          "durationSeconds": 0.0020880699157714844,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testRetinaOnlyAssetUsesLogicalSizeAndCSSHotspot"
+        },
+        {
+          "assertions": 16,
+          "durationSeconds": 0.0012230873107910156,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testImageSetRejectsInvalidDensityAndRetinaLimits"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 0.00011301040649414062,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testImageSetDataURLCommaRemainsPartOfAsset"
+        },
+        {
+          "assertions": 8,
+          "durationSeconds": 0.00016498565673828125,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testMalformedCSSDoesNotSilentlyInventACircle"
+        },
+        {
+          "assertions": 24,
+          "durationSeconds": 0.007771015167236328,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testBuiltinCSSUsesSystemCursorAndNoneDoesNotDrawAnImage"
+        },
+        {
+          "assertions": 13,
+          "durationSeconds": 0.000720977783203125,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testRejectsOversizedCorruptMissingAndOutOfBoundsImages"
+        },
+        {
+          "assertions": 13,
+          "durationSeconds": 0.003934979438781738,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testCursorRequestIsOrderedAfterPressAndCachesOnlyIdenticalCSS"
+        },
+        {
+          "assertions": 5,
+          "durationSeconds": 0.0012519359588623047,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testRejectsCursorOutsideViewportBeforeQueryingPage"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0014389753341674805,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testUnavailableResourceFailsWithoutReturningItsURL"
+        },
+        {
+          "assertions": 11,
+          "durationSeconds": 3.695487976074219e-05,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testPublicAssetFallbackAllowsOnlyExactHTTPSHostWithoutCredentials"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 0.0017709732055664062,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testPageFetchSuccessNeverUsesNativeFallback"
+        },
+        {
+          "assertions": 9,
+          "durationSeconds": 0.001618027687072754,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testBlockedPageFetchLoadsOnlyBoundOriginalAssetAndCachesIt"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 0.0011969804763793945,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testBlockedPageFetchFromOtherHostNeverInvokesNativeLoader"
+        },
+        {
+          "assertions": 8,
+          "durationSeconds": 0.003666996955871582,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testNativeFallbackRejectsOversizedDataAndSuppressesURLBearingErrors"
+        },
+        {
+          "assertions": 12,
+          "durationSeconds": 0.002485036849975586,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testClosingOrNavigationDuringNativeLoadCannotInstallLateCursor"
+        },
+        {
+          "assertions": 6,
+          "durationSeconds": 0.0019609928131103516,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testCloseRejectsLateCursorAndClearsCachedOriginalAsset"
+        },
+        {
+          "assertions": 1,
+          "durationSeconds": 0.0010529756546020508,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testNavigationRejectsLateCursorWithoutReadingAssetFromNewPage"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0009580850601196289,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testFocusEmulationIsScopedAndAlwaysRestoredOnClose"
+        },
+        {
+          "assertions": 1,
+          "durationSeconds": 0.0010330677032470703,
+          "failureCount": 0,
+          "name": "ProtoPieCursorStyleTests.testCloseDuringFocusAcknowledgementRejectsSuccessAndStillDisables"
+        },
+        {
+          "assertions": 13,
+          "durationSeconds": 0.0010170936584472656,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testBindsDedicatedDynamicSocketAndReturnsCSSViewportWithoutMutatingPage"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0007109642028808594,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testRejectsStudioBeforeOpeningAnyConnection"
+        },
+        {
+          "assertions": 7,
+          "durationSeconds": 0.0010559558868408203,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testActivatesOnlyBoundTargetOnBrowserConnectionWithoutNavigating"
+        },
+        {
+          "assertions": 5,
+          "durationSeconds": 0.0009570121765136719,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testActivationRejectsUnconnectedAndClosedTransportWithoutSending"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0009570121765136719,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testActivationRejectsLateAcknowledgementAfterConcurrentClose"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0011119842529296875,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testActivationFromPreviousBindingCannotCompleteAfterReconnect"
+        },
+        {
+          "assertions": 12,
+          "durationSeconds": 0.004767060279846191,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testRejectsWrongProcessTargetURLOrWindowBeforeEnablingInput"
+        },
+        {
+          "assertions": 11,
+          "durationSeconds": 0.0010219812393188477,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testMoveCoalescingCannotCrossButtonsWheelOrFlushAndMaintainsOrder"
+        },
+        {
+          "assertions": 7,
+          "durationSeconds": 0.0009139776229858398,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testReleaseWaitsForInflightDownAndDiscardsPendingBusinessEvents"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.000908970832824707,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testReleaseClearsAllPressedButtonsOnSamePage"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0008370876312255859,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testReloadInvalidatesBindingAndNeverSendsOldReleaseToNewDocument"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 0.0007909536361694336,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testRefreshRejectsSilentPageEpochChangeBeforeBusinessClick"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0008809566497802734,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testFullscreenExitInvalidatesAndReleasesExistingDragWithoutTogglingFullscreen"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0008269548416137695,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testDesktopOriginChangesPreserveBindingWhenCapturedWindowMovesWithBrowser"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0016199350357055664,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testViewportResizeAndZoomInvalidateGeneration"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0008410215377807617,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testTimeoutAfterDownAttemptsReleaseBeforeClosingSameSocket"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.000825047492980957,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testDisconnectedTargetClearsQueueWithoutRetargetingRelease"
+        },
+        {
+          "assertions": 5,
+          "durationSeconds": 0.0008950233459472656,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testOldBindingCannotSendToNewConnectionAndOutOfViewportIsNeverClamped"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 4.601478576660156e-05,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testURLMatchingRetainsPrivateShareQueryAndAllowsOnlySceneHashChange"
+        },
+        {
+          "assertions": 6,
+          "durationSeconds": 0.002932906150817871,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testMalformedDynamicPortNeverFallsBackToSharedChromePort"
+        },
+        {
+          "assertions": 5,
+          "durationSeconds": 0.0002110004425048828,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testSocketMatchesOutOfOrderRepliesToMonotonicRequestIDsOnOneWire"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0602799654006958,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testSocketTimeoutDropsLateReplyAndKeepsWireForCleanupRequest"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.00010907649993896484,
+          "failureCount": 0,
+          "name": "MouseInputTransportTests.testSocketDisconnectResumesPendingAndDeliversFailureOnlyOnce"
+        },
+        {
+          "assertions": 62,
+          "durationSeconds": 0.00032901763916015625,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testArrowsWASDAndNavigationUseBrowserKeyCodeAndNativeKeyCode"
+        },
+        {
+          "assertions": 13,
+          "durationSeconds": 4.303455352783203e-05,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testTextShiftRepeatAndReleasePreserveLayoutWithoutTypingOnKeyUp"
+        },
+        {
+          "assertions": 9,
+          "durationSeconds": 3.600120544433594e-05,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testSpaceReturnAndNumericKeypadKeepSemantics"
+        },
+        {
+          "assertions": 16,
+          "durationSeconds": 2.8967857360839844e-05,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testSystemShortcutsEscapeAndInvalidValuesNeverBecomeCDPInput"
+        },
+        {
+          "assertions": 40,
+          "durationSeconds": 0.00013899803161621094,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testLeftRightShiftAndAltHaveBalancedIdentityAndLocation"
+        },
+        {
+          "assertions": 144,
+          "durationSeconds": 0.009297013282775879,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testOnsiteNumberSequencePreservesMainRowAndKeypadIdentityThroughKeyUp"
+        },
+        {
+          "assertions": 9,
+          "durationSeconds": 0.001716017723083496,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testKeysShareMouseOrderingAndRepeatDoesNotCoalesceOrDuplicateOwnership"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 0.000982046127319336,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testShortcutIsRejectedWithoutClosingOrdinaryInputBinding"
+        },
+        {
+          "assertions": 7,
+          "durationSeconds": 0.0020079612731933594,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testRepeatWithoutDownAndDuplicateDownAreRejected"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 0.0010489225387573242,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testCloseWaitsForUncertainKeyDownAndReleasesBeforeSocketClose"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0009490251541137695,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testTimedOutKeyDownStillAttemptsReleaseOnSamePage"
+        },
+        {
+          "assertions": 7,
+          "durationSeconds": 0.0010689496994018555,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testAllHeldKeysAndMouseButtonsReleaseOnStop"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 0.0009169578552246094,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testReloadNeverReleasesOldKeysIntoNewDocument"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0009239912033081055,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testSilentPageEpochChangeRejectsQueuedKeyBeforeDispatch"
+        },
+        {
+          "assertions": 2,
+          "durationSeconds": 0.0009191036224365234,
+          "failureCount": 0,
+          "name": "MouseKeyboardEventTests.testOldViewportCannotSendKeyToNewBinding"
+        }
+      ],
+      "testSource": "Original test method bodies unchanged",
+      "checkedAt": "2026-09-18T10:04:02.721306+00:00",
+      "sourceSHA256": {
+        "native/Sources/NIOWarpApp/ProtoPieConfiguration.swift": "a513f246f0d624d74de632da20b14f7e867f6b91afe757f24ed34dda5c129792",
+        "native/Sources/NIOWarpApp/MouseInputTransport.swift": "00c260230755b5fe68ee44732ecf3e6174c4bdaedf43436213a00af8d7abdb16",
+        "native/Sources/NIOWarpApp/ProtoPieCursorStyle.swift": "25b3db295792b732d2fdc3ccfe21104548e1579a43bc2a9017ad921e8d41d033",
+        "native/Sources/NIOWarpApp/ProtoPieCursorResourceLoader.swift": "0e2edfd997d88978d55f798b65c77c15410a0dad66d3cca174cb28d593f8ff77",
+        "native/Sources/NIOWarpApp/MouseKeyboardEvent.swift": "d86a5e0d6640bde93aac854300b70086d20984b950e1856fe575dab9e598d236"
+      },
+      "testSHA256": {
+        "native/Tests/NIOWarpAppTests/ProtoPieCursorStyleTests.swift": "a0b7a65141d78bb36b4e7dc9781b9ce363ff43eead803bff22ea0e131b9baeb8",
+        "native/Tests/NIOWarpAppTests/MouseInputTransportTests.swift": "66500bb40605906e98d6fdd7bc9eb810ae14124febb4710312befe3b1869dcfa",
+        "native/Tests/NIOWarpAppTests/MouseKeyboardEventTests.swift": "9f2d5251c6bc067aeefa8763dbf77f7f2eaf5417dce8736c45869ecffaa78dc2"
+      },
+      "exitCode": 0
+    },
+    "nativeOwnership": {
+      "assertionCount": 158,
+      "failures": [],
+      "runtime": "Original production sources and original test bodies compiled with local assertion shim, NOT formal XCTest",
+      "testCount": 23,
+      "sourceSHA256": {
+        "native/Sources/NIOWarpApp/NativeMouseInputCapture.swift": "8a4cc1428b01da85adc098c481828399ec497c5fe64ab0d8e79ba4edbc091002",
+        "native/Sources/NIOWarpApp/MouseInputCapture.swift": "f37f21a32dae9b9c53981a86a61c5cefee42d667cd6a5529e8e55f219dbbbb19",
+        "native/Sources/NIOWarpApp/MouseWarpDeltaCompensator.swift": "df764571a6dec9e4f6f9fe2a712ed1013ba6a4f0e15e6ef33383473cad95fe39",
+        "native/Sources/NIOWarpApp/MouseKeyboardEvent.swift": "d86a5e0d6640bde93aac854300b70086d20984b950e1856fe575dab9e598d236",
+        "native/Tests/NIOWarpAppTests/NativeMouseScopeTests.swift": "0b0b9e10be9e9624c9574e5eeaf9d2eb8936d4f064e2bf6b088ee1338a916cee",
+        "native/Tests/NIOWarpAppTests/NativeKeyboardOwnershipTests.swift": "0ed12516c28ef381ba084d3fb41a4de7e5240a7a49f23d0696bb0b87b3839b70"
+      }
+    },
+    "warpTimestamp": {
+      "assertionCount": 122,
+      "failureCount": 0,
+      "failures": [],
+      "result": "PASS",
+      "runtime": "Standalone Swift binary with minimal assertion shim; NOT formal XCTest",
+      "testCount": 11,
+      "tests": [
+        {
+          "assertions": 6,
+          "durationSeconds": 0.0003299713134765625,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testFirstHardwareMoveDropsUntrackedOldOrExternalWarp"
+        },
+        {
+          "assertions": 4,
+          "durationSeconds": 4.8041343688964844e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testObservedQuantizedWarpIsRemovedFromBothAxes"
+        },
+        {
+          "assertions": 20,
+          "durationSeconds": 0.00028204917907714844,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testVerticalFeedbackTraceRecoversSmallHandMotion"
+        },
+        {
+          "assertions": 22,
+          "durationSeconds": 0.0002040863037109375,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testHorizontalReversalDoesNotSuppressSubsequentHandMovement"
+        },
+        {
+          "assertions": 6,
+          "durationSeconds": 4.696846008300781e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testMultipleWarpsAccumulateAndAreConsumedOnlyOnce"
+        },
+        {
+          "assertions": 6,
+          "durationSeconds": 4.398822784423828e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testQueuedOlderEventDoesNotConsumeFutureWarp"
+        },
+        {
+          "assertions": 3,
+          "durationSeconds": 2.110004425048828e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testPrimingKeepsWarpsNewerThanQueuedFirstEvent"
+        },
+        {
+          "assertions": 8,
+          "durationSeconds": 5.602836608886719e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testSyntheticDeltaBypassesCorrectionAndReprimesHardware"
+        },
+        {
+          "assertions": 6,
+          "durationSeconds": 3.695487976074219e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testRestartOrSurfaceLeaveClearsOldWarpAndPrimesAgain"
+        },
+        {
+          "assertions": 30,
+          "durationSeconds": 0.02214205265045166,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testZeroTimestampCursorSnapshotDoesNotReprimeEveryHardwareMove"
+        },
+        {
+          "assertions": 11,
+          "durationSeconds": 4.696846008300781e-05,
+          "failureCount": 0,
+          "name": "MouseWarpDeltaCompensatorTests.testCompletedWarpClockDoesNotChargeQueuedOlderEventsForFutureMovement"
+        }
+      ],
+      "testSource": "Original test method bodies unchanged",
+      "checkedAt": "2026-09-18T10:03:08.686274+00:00",
+      "sourceSHA256": {
+        "native/Sources/NIOWarpApp/MouseWarpDeltaCompensator.swift": "df764571a6dec9e4f6f9fe2a712ed1013ba6a4f0e15e6ef33383473cad95fe39",
+        "native/Sources/NIOWarpApp/MouseInputCapture.swift": "f37f21a32dae9b9c53981a86a61c5cefee42d667cd6a5529e8e55f219dbbbb19",
+        "native/Sources/NIOWarpApp/MouseKeyboardEvent.swift": "a881abe438090250cc7c09b04c3a4a7685c32c1bcc9036c72795a4132bfb13fd",
+        "native/Sources/NIOWarpApp/NativeMouseInputCapture.swift": "e79a28c6b569e1f30bbb447e53486964c595297dc07937eaedc09a80e8539756"
+      },
+      "testSHA256": {
+        "native/Tests/NIOWarpAppTests/MouseWarpDeltaCompensatorTests.swift": "b51b0fe2a970a0960b04a556959bf4a7e69b999d69d76ee4ae0bc358cd6ca293"
+      },
+      "exitCode": 0
+    },
+    "pointerPresentation": {
+      "assertionCount": 45,
+      "failureCount": 0,
+      "failures": [],
+      "result": "PASS",
+      "runtime": "Compiled original production sources and original test method bodies with minimal XCTest assertion shim; NOT formal XCTest",
+      "skips": [],
+      "testCount": 4,
+      "tests": [
+        {
+          "assertions": 15,
+          "failures": 0,
+          "name": "IndependentPointerPresentationTests.testOutputSurfaceAcceptsFirstClickOnlyWhileArmedAndDoesNotPaintAPointer"
+        },
+        {
+          "assertions": 17,
+          "failures": 0,
+          "name": "IndependentPointerPresentationTests.testOriginalCursorImageAndHotspotSurviveAssignmentAndCursorRectRefresh"
+        },
+        {
+          "assertions": 7,
+          "failures": 0,
+          "name": "IndependentPointerPresentationTests.testAppKitInstallsTheSameSystemCursorAssetAndRestoresPreviousCursor"
+        },
+        {
+          "assertions": 6,
+          "failures": 0,
+          "name": "IndependentPointerPresentationTests.testOutputWindowCanBecomeKeyOnlyForMappedInputAndNeverBecomesMain"
+        }
+      ],
+      "testSourceSHA256": {
+        "IndependentPointerPresentationTests": "884aafa4f0dd91b97c71e6250b571c7bf32262459c133b7cc71f1238daf9ebfc"
+      },
+      "virtualDisplayBridgeSHA256": {
+        "module.modulemap": "422ff31944bdd9fb83f6fbc0b19e71021a2f2db06eadf1dd6118bc947d7f8d90",
+        "NIOVirtualDisplay.m.o": "053cde238eaf75a513d6c7bf2377d0a3375113a0049a6abc123979dba494e6f6"
+      },
+      "virtualDisplayBridgeSourceSHA256": {
+        "native/Sources/NIOVirtualDisplay/NIOVirtualDisplay.m": "20f065594cd1d09f9554451be45480435f1b8e87d922c173694bf966bdbda5b1",
+        "native/Sources/NIOVirtualDisplay/include/NIOVirtualDisplay.h": "4debcdd437154a91b90bfb930a7ef1bfb7bb4f005a8981ed9eaf938f29cff8d3"
+      },
+      "productionSourceSHA256": {
+        "native/Sources/NIOWarpApp/BezierWarp.swift": "d2eff5603a280578fc88b179b7ca504c89b24a012909e45141ca980e850da7a9",
+        "native/Sources/NIOWarpApp/BezierWarpEditor.swift": "5beb9c3b605d48cc65776adc175e8c4f69184b9ea0e2bfef7c7d1caba18bea23",
+        "native/Sources/NIOWarpApp/CalibrationGrid.swift": "de968379474ac274bb2e958ee20c0cfaafeb19fe955b907338ce09c7ab1a4371",
+        "native/Sources/NIOWarpApp/CanvasGeometryPreview.swift": "ad51c0ee04657f28fbd51caf48bf35b380351c065eca41fe3a35a00080cdeaae",
+        "native/Sources/NIOWarpApp/CanvasReference.swift": "0eb7225ce35123e07258d516ca57b718d3ae17d641f4cdb4225eff59d459ae9a",
+        "native/Sources/NIOWarpApp/CaptureSupport.swift": "e7ed0e711cecbe513a435e1d2446f3dae0ee4f9f2d6cd0eecb4bffe61d0b6a94",
+        "native/Sources/NIOWarpApp/DisplaySessionPolicy.swift": "06238aeb1686877e905d97006ed6a03baa34d4a8de5bda7f157619032a71358f",
+        "native/Sources/NIOWarpApp/LocalWarp.swift": "c6eaacb85bfcb5d404aa1f1c1a339ca5b1f27de8706bd46859b6af335b975aad",
+        "native/Sources/NIOWarpApp/LocalWarpEditor.swift": "c0403df8707fae89410ebcf8ba13c6447499d5bc4686fc19fc8b461d2f42dd1b",
+        "native/Sources/NIOWarpApp/LocalWarpUpdates.swift": "0616c7e526f297e0b207f33d68644c14177579d4078ec89ed40b47f07809353c",
+        "native/Sources/NIOWarpApp/MouseCaptureFrame.swift": "19a2deee8800665c8c169ff21a3211c59d8ed0680883c316d9061926aaa7fbe6",
+        "native/Sources/NIOWarpApp/MouseInputCapture.swift": "f37f21a32dae9b9c53981a86a61c5cefee42d667cd6a5529e8e55f219dbbbb19",
+        "native/Sources/NIOWarpApp/MouseInputTransport.swift": "836861a11f98cab5bf99710beb9fb0702b2acaa09bd6b4b18fa56fe9491523ea",
+        "native/Sources/NIOWarpApp/MouseMappingController.swift": "43b9a6e8265c865df1d47aadab27dd8faf0308a490b544ad2dfd66ac2a4fe1da",
+        "native/Sources/NIOWarpApp/MouseMappingMath.swift": "89004df09a11613709920e0c2b12879f86cf6e3545cdba30bb1b93a1b0e7b30c",
+        "native/Sources/NIOWarpApp/MouseMappingPanel.swift": "f3bc4a1b090cf0da8635ef1037536d0233dc145f6474ec4b75e641e5f86fff1a",
+        "native/Sources/NIOWarpApp/MouseWarpDeltaCompensator.swift": "df764571a6dec9e4f6f9fe2a712ed1013ba6a4f0e15e6ef33383473cad95fe39",
+        "native/Sources/NIOWarpApp/NativeMouseInputCapture.swift": "a89e77d4177f83a6e5ce70819890b9b405b97ebd6aebcfea19d4298c262e4d11",
+        "native/Sources/NIOWarpApp/OwnedPresentationDisplay.swift": "588a4a8d740fb79be92252b6de42782978fc9051d2a4cd6a90f3ff4c0e7d5c6f",
+        "native/Sources/NIOWarpApp/PhaseOneSupport.swift": "086759befd0cc63b70174ee3e78fb8a17f70b1b9861fea6a3750e777741f01b8",
+        "native/Sources/NIOWarpApp/ProtoPieConfiguration.swift": "a513f246f0d624d74de632da20b14f7e867f6b91afe757f24ed34dda5c129792",
+        "native/Sources/NIOWarpApp/ProtoPieCoordinator.swift": "384f73c99dfdb1dd009379643d54cc9f72c6ba37a706520e6785204374b6b94c",
+        "native/Sources/NIOWarpApp/ProtoPieCursorStyle.swift": "653098ba62a36ed72adb698509be2093227276cd25fd6ac5eb0ad879cd9cc139",
+        "native/Sources/NIOWarpApp/ProtoPiePanel.swift": "3cadd142c7f10df9448f4981edbbad450165724f6d066d76a8b840132eacf9be",
+        "native/Sources/NIOWarpApp/ProtoPiePresentation.swift": "1b4c2d0749ddb7f5ea21bdd7e0bea4a836bc31db69e271c35c41b0b80a56cfdd",
+        "native/Sources/NIOWarpApp/ProtoPieSystemDriver.swift": "ded08047c4c48d9fe00b9ca5ff6520fa7f051c94659f11bbc74b437b246537e4",
+        "native/Sources/NIOWarpApp/ProtoPieWidthFit.swift": "d0d2d2fa273c5b744476a0f04c44b8493a5247fd26f5aed5cfc5d8f597db1ed3",
+        "native/Sources/NIOWarpApp/WarpAlignment.swift": "e83339678c58a2a37fb65f5e7fb72c4dbf7c86fa15eecc9e1153f782d6bc890b",
+        "native/Sources/NIOWarpApp/WarpConfiguration.swift": "eebbd1bf44209e77910fa901d830ed124dea2e2afd034a998d0d62c4519d7754",
+        "native/Sources/NIOWarpApp/WarpMath.swift": "3348db5438c8d864433c00c8668101c13954d3c88fbb70260ef39a6714d259cc",
+        "native/Sources/NIOWarpApp/WorkbenchWindowPlacement.swift": "919cc3d5f706af1a81079b450284c287e6bd9be8eb0251f939ea881876c2073e",
+        "native/Sources/NIOWarpApp/main.swift": "fc9bdceb994b1166e2e87363996831f4f4b0adb47b383ba60a64706c28691de7"
+      },
+      "additionalProbe": "Real AppKit view/cursor/window behavior only; no event tap, browser, virtual display, capture, or application launch; cursor set probe restores the previous system cursor",
+      "bootBoundary": "Removed only final MainActor.assumeIsolated application.run bootstrap; full production class definitions compiled unchanged",
+      "exitCode": 0,
+      "checkedAt": "2026-09-18T09:44:06.405945+00:00"
+    }
+  },
+  "acceptedBaseline": {
+    "path": "/Users/futurus/mycc/2-Projects/nio-warp-demo/.rollback/accepted-baselines/20260918-101000Z-v0134",
+    "version": "0.13.4 (56)",
+    "userAcceptance": "鼠标和键盘都正常",
+    "sha256": {
+      "preferences-accepted.plist": "ba37fa96950455c0857397e7db23bd91bddf050ca718c4d88b388a7402b11397",
+      "native-source.tar.gz": "116fae19dccac635fca6219b55b90e7ac94d9b7ae83af7d60c32d0086c72410b",
+      "NIOWarpApp-v0.13.4-56.zip": "a7483753ce460e3b38f26418041c44cfbb2e63460e37b1ba2672bc83561aad21"
+    }
+  },
+  "hardwareObservation": {
+    "samples": 25,
+    "firstMovementCount": 179,
+    "lastMovementCount": 179,
+    "nonzeroCorrectedSamples": 25
+  }
+}
