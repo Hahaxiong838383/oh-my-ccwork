@@ -674,6 +674,7 @@ kill -9 $(systemctl show -p MainPID --value xray); sleep 5; systemctl is-active 
   ③ 确认是同一台后再 `ssh-keygen -R` 更新 known_hosts、重装公钥；④ 装自愈：
   `/etc/ssh/root-authorized-keys` + oneshot service（`After=cloud-init.target`）+ 每小时 timer，
   被清自动补回（实测清空后能恢复）。
-- 🔴 **"带宽上不去"先怀疑上游限速，不是配置**：单流 5.6MB/s、4 并发总和仍 5.8MB/s、换 OVH/Hetzner
-  同为 5.6–5.7MB/s ⇒ 服务商入向硬限（本例 46Mbps），sysctl/BBR 再调也越不过去。反过来，
-  服务器→中国方向可能并不受限（本例同机回传 118Mbps），别把两个方向混为一谈。
+- 🔴 **"带宽上不去"先怀疑上游限速，但不是一次测量就能定论**：本例上午单流 5.6MB/s、4 并发总和仍 5.8MB/s、
+  换 OVH/Hetzner 同为 5.6–5.7MB/s，看着像 46Mbps 硬限；**4 小时后同一台机复测 78MB/s（Cloudflare/OVH）**，
+  说明那是临时限速或链路拥塞。判据要四步：单流 → 多并发看总和 → 换 2–3 个源站 → **隔 ≥2 小时再测一次**，
+  四步都齐才敢写「硬限」。另注意方向不对称（同机回传中国当时 118Mbps），别把一个方向套到另一个。
