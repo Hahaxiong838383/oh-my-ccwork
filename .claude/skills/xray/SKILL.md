@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
 ---
 
 # xray - Xray 代理管理
@@ -41,6 +41,15 @@ UID 迁移、观察器重建与更新线取舍见该参考。
 
 断电后代理栈不自启、DNS 全挂、以及"某条线优先"的正确做法，先读
 [自愈入口与线路偏好](references/tv-proxy-selfheal-20261120.md)：事务重基线要自带兜底，守护的 `recovery_hold_ms` 与候选顺序都不可改，线路偏好只能由 lane-hold 断言实现。
+
+## 电视盒改「网关层代理」模式（2026-11-21）
+
+电视盒里不再跑 sing-box、改为把默认网关/DNS 指向局域网网关机（Armbian）时，先读
+[电视盒网关层架构](references/tv-gateway-architecture-20261121.md)。该文给出一套已验收的架构
+（4K60 连续 5.5 分钟）、**七个必修坑**：`sniff` 必须显式给 sniffer、TUN 转发流量不按域名路由要用
+IP 段兜底、Android 按网卡分表改 main 表无效、旧栈 `VIDEO_DNS` 链会静默打死 DNS、Magisk
+`service.d` 执行任意扩展名文件、DHCP 会重写默认路由需网关侧兜底、DNS 必须 `ipv4_only`。
+需要双网关冗余时，同文第 4 节给出 TR3000+U 盘的做法与 **extroot 死锁**教训（U 盘只能做数据盘）。
 
 ## Grok Bot App 无法刷新、网页版正常
 

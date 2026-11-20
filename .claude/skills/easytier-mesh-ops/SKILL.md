@@ -26,6 +26,7 @@ description: 家↔公司 EasyTier 异地组网（chuan-mesh）的部署、排�
 | fnos2 | `10.10.10.22` | 家有线 `.115` | 飞牛2号，家侧子网网关（备），Docker 部署 | PortRestricted |
 | home-studio | `10.10.10.23` | 家有线 `.133` | **家侧主力开发机**（非网关，刻意不配 proxy_network） | PortRestricted |
 | maxtkf-server | `10.10.10.24` | 家有线 `.77` | Windows 11 普通节点，SYSTEM 开机任务（非网关） | PortRestricted |
+| tr3000 | `10.10.10.40` | 家 LAN `.254`（OpenWrt 25.12，WiFi 关闭） | 备用代理网关宿主（U 盘上跑 musl sing-box，见 §十） | — |
 | air | `10.10.10.31` | 移动 | 笔记本 | PortRestricted |
 
 **子网映射**（末位不变只换前缀）：公司 `192.168.61.X`→`10.10.61.X`，家 `192.168.1.X`→`10.10.1.X`
@@ -268,6 +269,55 @@ ssh dev198-mesh 'for p in 5000 8080 443 80; do curl -s -o /dev/null -w "$p %{htt
 
 虚拟 IP 别撞：`.1` 中继 / `.11-.19` 公司 / `.21-.29` 家 / `.31-.39` 移动。
 
+### 6.1 无网络栈的机器：装不了客户端时走 SSH L3 桥接（2026-11-20 云沙箱实战）
+
+**触发场景**：给云沙箱（Simular box、部分托管容器）加组网，`deploy-node.sh` 全套跑不下来。
+
+**先做 3 条探测，别急着装二进制**——90% 的「装不上」是被误诊成配置问题：
+
+```bash
+ip -brief addr show; ip route show            # 只有 lo + 169.254.x/32、无默认路由 = 无网络栈
+timeout 5 bash -c 'cat < /dev/null > /dev/tcp/1.1.1.1/443' && echo raw-OK || echo raw-BLOCKED
+ss -lntp | grep -E '3128|1080'                # 本地 HTTP CONNECT / SOCKS 代理
+```
+
+三条命中「无默认路由 + 裸连 unreachable + 只有本地代理」⇒ **EasyTier / tailscaled 都装不进去**：
+两者都要 raw socket，且**都不支持经 HTTP 代理出站**。别浪费时间编译、别怀疑密钥。
+
+**唯一可行通路**（前提：`/dev/net/tun` 存在且 `ip tuntap add` 成功，`sudo` 有 CAP_NET_ADMIN）：
+
+```
+机器(tun0 10.10.200.2/32) --HTTP CONNECT 代理--> 中继:22 --ssh -w 0:200--> tun200 10.10.200.1
+                                                                            | MASQUERADE 出 easytier0
+                                                                            v 10.10.10.0/24
+```
+
+- 隧道网段固定取 `10.10.200.0/30`，**不要塞进 `10.10.10.0/24`**（EasyTier 是 L3 点对点，凭空给它一个 /24 里的地址不会生效，只会制造"地址有了但谁也连不上"的假象）
+- 中继侧必须同时配四样：`tun200` 对端 IP、`net.ipv4.ip_forward=1`、`POSTROUTING -s 10.10.200.0/30 -o easytier0 -j MASQUERADE`、`FORWARD` 双向 ACCEPT
+- 反向（mesh → 机器）**不要指望 tun 方向**（实测 L3 前向通、反向 ICMP/TCP 均不通），用 `ssh -R 中继IP:端口:127.0.0.1:端口` 做应用层映射，实测可靠
+- 需要 tailscale 网段/家里内网时，再叠一条 `ssh -D 127.0.0.1:1085 用户@10.10.10.<家节点>`，用 `nc -X 5 -x 127.0.0.1:1085` 走它
+
+**这个方案的定位要说清**：机器**不会**出现在 EasyTier 设备列表里，mesh 侧看到的源 IP 是中继的 `10.10.10.1`。它是「借道接入」，不是「成为节点」。要真节点只能让它能直连 UDP——物理不可能时别硬凑。
+
+**四个必踩的坑**：
+
+| 症状 | 真因 | 修法 |
+|---|---|---|
+| `swapon failed: Invalid argument` | 根 fs 是 overlayfs | `losetup` 把文件变 block device 再 swapon |
+| `modprobe zram` → `Module not found` | 镜像裁掉了内核模块树 | `apt install linux-modules-extra-$(uname -r)`（apt 包跨镜像保留） |
+| 机器内 `ssh` 内网报 `SOCKSv5 Host unreachable` | 镜像全局 `ssh_config.d/*.conf` 强制 `ProxyCommand nc -X 5` | 显式 `-o ProxyCommand=none` |
+| 隧道重连后对端 tun 消失、IP 全丢 | **`ssh -w` 会话结束时 sshd 会删掉服务端 tunN 设备** | 桥接脚本每次执行都重建对端 tun 地址 + NAT（幂等） |
+
+**改 sshd_config 前先验末尾换行**——`printf '\nPermitTunnel ...'` 若文件尾无 `\n` 会拼进上一条变成
+`PubkeyAuthentication noPermitTunnel point-to-point`，**sshd 直接起不来**（本次实战把中继 SSH 打死，
+靠已建立的连接才救回）。必查：`tail -c 1 /etc/ssh/sshd_config | od -c` 应见 `\n`，改完先 `sshd -t` 再 reload。
+
+**临时性机器的收尾**：一旦机器下线，中继侧要回滚 4 处——`PermitTunnel`、`GatewayPorts`、
+MASQUERADE/FORWARD 规则、`ip_forward`。改前备份 `sshd_config.bak.<ts>`，并把回滚清单写进记忆，
+否则半年后没人知道那条 NAT 是谁加的。
+
+实例存档：`~/.claude/projects/-home-hahaxiong83-mycc/memory/project_box_cloud_mesh_bridge.md`
+
 ---
 
 ## 七、写脚本时的两个反复踩的坑
@@ -467,3 +517,60 @@ ET_EXPECT_PEERS="hk-relay mini studio dev198 fnos2 home-studio ZZ_ALERT_DRILL_ZZ
 ✅ **但这条链路已整体实证**：2026-08-17 首次接入时跑完整演练，川哥人工确认手机收到 **3 条飞书**
 （cc 直发的演练标记 + Kuma 的 DOWN + Kuma 的 recovery）。⇒ `push → Kuma → 飞书` 是活的，
 **别因为"日志里查不到"就判它不可信、更别另起炉灶重造**。收口方式只有一个：重跑演练 + 人工确认。
+
+## 十、把 mesh 节点当备用代理网关（2026-11-21 · TR3000 实例）
+
+主网关（Armbian `192.168.1.19`）之外想再加一层冗余时，可以选一台**算力够、有 USB 接口**的 mesh
+节点做备用网关，把 sing-box 二进制和配置放在 U 盘上跑，不占 overlay。
+
+### 10.1 extroot 在本类机型上不可行（血的教训）
+
+TR3000 的 `kmod-usb-storage` 装在 overlay 里；把 overlay 迁到 U 盘后形成死锁：
+**挂载 U 盘 → 需要 USB 驱动 → 驱动在 U 盘上 → 永远挂不上**，路由器直接起不来（SSH/ARP 全无），
+只能拔 U 盘 + 断电才恢复。
+
+**结论：U 盘只做数据盘**。`/etc/config/fstab` 里挂 `/mnt/usb`，挂不上就跳过，绝不要把 `target` 设成 `/overlay`。
+
+### 10.2 二进制必须是 musl 版
+
+GitHub 官方 `sing-box-*-linux-arm64` 是 glibc 动态链接，OpenWrt 上执行报 `not found`。
+正确做法是从 OpenWrt 包提取：
+
+```sh
+apk fetch sing-box                     # 或直接下 sing-box-<ver>-r1.apk
+mkdir x && cd x && apk extract --allow-untrusted ../sing-box-<ver>-r1.apk
+./usr/bin/sing-box version             # 看 tags 里有没有 with_quic
+```
+
+`sing-box-tiny` 无 `with_quic`（跑不了 hy2）；要 hy2 必须用完整包（42.4M）。
+
+### 10.3 配置差异（相对主网关）
+
+| 项 | 值 | 原因 |
+|---|---|---|
+| TUN 地址 | `172.20.0.1/30` | 避免与主网关 `172.19.0.1/30` 冲突 |
+| TUN 名 | 自动变 `tun1` | EasyTier 已占 `tun0` |
+| MTU | **1280** | 1400 在 Reality/hy2 上丢大包，表现为 TLS 握手失败 |
+| `route_exclude_address` | `10.10.10.0/24`、`192.168.1.0/24`、本 TUN 段 | 否则 EasyTier 自己的流量被卷进代理，隧道抖动 |
+| socks / clash | 1081 / 9091 | 避开主网关的 1080 / 9090 |
+
+### 10.4 OpenWrt 侧三件必做
+
+1. **防火墙 zone**：新建 `tun` zone（`device tun1`、`masq=1`、`mtu_fix=1`）+ `forwarding lan→tun`。
+   不加这条，局域网 ping 得通、TCP 也连得上（那是路由器本机），但**转发流量全被 fw4 丢掉**。
+2. **DNS**：`dnsmasq` 加 `list interface 'lan'` + `noresolv=1` + `server=8.8.8.8`（本机查询会被
+   sing-box 的 `hijack-dns` 解析）。默认 dnsmasq 只监听回环/隧道地址，LAN 地址要显式加。
+3. **自启**：init 脚本里直接 exec 会撞上"U 盘还没挂载"。用包装脚本最多等 90 秒再 exec，
+   `procd_set_param respawn 3600 5 5` 兜住崩溃。
+
+### 10.5 客户端回退判据必须是功能健康
+
+主网关**进程**挂了但主机还在，`ping` 照样通 → 只按可达性判断永远不会切。正确判据：
+
+```sh
+健康 = 当前网关 ping 通 && busybox nc -w 4 142.250.0.1 443 成功
+连续 2 次不健康 → 切另一条；每 10 秒一轮
+```
+
+用 Google IP 当探针：国内直连该地址必失败，能通就说明代理链真的在工作。实测切换 **18 秒**，
+备用路径同样能播 4K（12 Mbps）。
