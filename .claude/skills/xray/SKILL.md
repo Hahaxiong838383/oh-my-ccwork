@@ -30,11 +30,18 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排�
 [电视 DNS 与冷启动维护](references/tv-dns-coldboot.md)。该模式维护设备上的 sing-box、
 Magisk 启动链和应用偏好；下面的 `launchctl`、`networksetup`、`~/xray/` 客户端命令不用于电视。
 先核当前前台与用户允许的中断范围，再选择只读取证、下次启动部署或已授权的重启验收。
+
+2026-11-19 起 `org.smarttube.beta` 已是官方 32.79（UID 10087，可自助更新、无全局画质上限）；
+UID 迁移、观察器重建与更新线取舍见该参考。
 启动慢、桌面联网浮窗或重启截图验收，再读
 [启动耗时与联网提示](references/tv-startup-status.md)：按本 boot 的真实就绪门计时，保留播放归属与验收边界。
 
 线路优先级、探针口、软件重启后的选择器恢复和吞吐比较，读
 [电视 HY2 路径与恢复](references/tv-hy2-path-20261112.md)。配置里的 selector 默认值不等于守护优先级；当前线路健康时，空等 5 分钟不会切回更高优先级。
+
+断电后代理栈不自启、DNS 全挂、以及"某条线优先"的正确做法，先读
+[自愈入口与线路偏好](references/tv-proxy-selfheal-20261120.md)：事务重基线要自带兜底，守护的 `recovery_hold_ms` 与候选顺序都不可改，线路偏好只能由 lane-hold 断言实现。
+
 ## Grok Bot App 无法刷新、网页版正常
 
 先读 `2-Projects/vps-proxy/grok-bot-proxy.md`，不要直接切节点或重启主 Xray。

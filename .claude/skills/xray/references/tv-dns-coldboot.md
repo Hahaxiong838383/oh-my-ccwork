@@ -121,3 +121,23 @@ Android 可能先以旧日期启动再校时；不要用墙钟或校时前异常
 历史验收不承诺下一版本或长期稳定性。2026-10-24 已观察一次实际断电后自动恢复与
 SmartTube 1440p 持续帧增长、drop/error 为 0；2026-10-30 最终版本仅软件重启已验，
 该版物理拔电与 SmartTube 实际影片仍未验。验收后仍区分“已启用”“自动冷启动通过”“缓存命中已验”和“长期性能未验”。
+
+## 2026-11-19 回官方签名、UID 迁移与观察器（替代本地补丁线）
+
+- 现状真值：`org.smarttube.beta` = **官方 32.79 / 2469**（证书 `10:97:35…` Yurii L），UID **10087**。
+  本地重签补丁线（32.71 + 10s 起播缓冲 + route-quality 画质上限）已退役；回滚包与数据快照在设备
+  `/data/adb/smarttube-official-20261119/`（`data-32.71.tar`）与 `/data/adb/smarttube-autocap-20261119/installed-before.apk`。
+- **签名决定更新能力**：同包名不同签名，Android 必拒（`signatures do not match previously installed version`）。
+  官方线 → 应用内更新可用、但**没有全局画质上限**；本地补丁线 → 有上限/缓冲补丁，但每次升级都要同签名重建，
+  且 32.79 上 warmup 补丁能套、route-quality 的 selector dex 会撞 dexlib2 `code_item` 写出错误，暂不可套。
+- **UID 迁移**（换签名只能卸载重装，Android 不保证复用 UID，本次 10086→10087）必须同批改：
+  `config.json` 与 `youtube-failover/main-config.json` 的三处 `user_id`（tun `include_uid`、正向规则、反向 logical 规则），
+  以及 `active-main.sha256`（= 新 config 的 sha）、`release-id`=`enabled`、`uid-map.json`、`manifest.json`
+  （files 哈希 / uid_map / previous_release_id）。只改 config 会让下次 boot `main_config_mismatch` 拒绝启动。
+  数据恢复顺序：tar 备份 → 解包到 `/data/data` → `chown -R <新UID>` → `restorecon -R`，账号与偏好可保留。
+- **观察器耦合**：`playback-observer/observer.dex` 自带一份 `YoutubeFailover`，`Config.parseCandidates`
+  硬校验“候选顺序 + worker 绑定”。改过 `guard-config.json` 候选顺序后必须重建 observer，否则每 30s 崩
+  `YoutubeFailover$TypedError: CandidateOrderOrWorker`，`observations.jsonl` **静默停更**（本次停在 11-12 无人发现）。
+  重建只动 observer.dex，`guard.dex` 不碰。
+- **画质实况**：官方线无上限时，4K60 AV1 在 4–10Mbps 链路必重缓冲（实测播放中 12–13MB/10s、缓存仅 ~2.5s 后回 state6）；
+  降级靠播放器内“Switch resolution”选一次，App 会把它记进 `video_player_data` 的格式项。并行拉流对该链路无增益（3 路合计≈单流）。
