@@ -209,3 +209,41 @@ rx=$(adb shell 'cat /sys/class/net/eth0/statistics/rx_bytes')           # 差分
 4. 网关 `journalctl -u dsh-gateway` 看该连接走的哪个 outbound（`direct` 就是分流没命中）
 5. 网关侧 `curl -x socks5h://127.0.0.1:1080 https://www.youtube.com` 是否 200
 6. 仍不通 → 查 MTU（TUN 降到 1280 试）、查 `dns.strategy` 是否 `ipv4_only`
+
+## 8. SmartTube 播放失败 ≠ 网络问题：先查 `SabrPoTokenError`（2026-11-22 实测）
+
+症状：SmartTube 报播放错误（用户常转述为「403」），但**所有网络指标都正常**——各出口访问
+`www.youtube.com` 200、`youtubei.googleapis.com` 405、DNS 干净、路由稳定、网关日志也没有异常。
+
+真相在 logcat：
+
+```
+ExoPlayerController: onPlayerError: ExoPlaybackException:
+  ...source.sabr.parser.exceptions.SabrPoTokenError: PoToken error: PENDING
+```
+
+YouTube 对 **SABR 流**要求 PoToken，SmartTube 用 `challenge-solver` 跑 YouTube 的 player JS 生成它。
+**缓存里的 player 版本过期后，token 会一直 PENDING**，播放直接失败。
+
+### 修复（1 分钟，无需改任何网络配置）
+
+```sh
+adb shell am force-stop org.smarttube.beta
+adb shell 'rm -rf /data/data/org.smarttube.beta/files/challenge-solver/*                   /data/data/org.smarttube.beta/files/tcl-challenge-solver/*'
+adb shell 'rm -f "/data/data/org.smarttube.beta/shared_prefs/yt_cache_service2%KEY%challenge-solver.xml"                  "/data/data/org.smarttube.beta/shared_prefs/yt_cache_service2%KEY%tcl-challenge-solver.xml"'
+adb shell 'am start -a android.intent.action.VIEW -d "https://www.youtube.com/watch?v=VIDEO_ID" org.smarttube.beta'
+```
+
+重启后 App 会重新拉当前 `tv-player-*.js` 生成 token，实测立刻恢复播放。
+
+### 判读要点
+
+| 现象 | 可能原因 | 判别 |
+|---|---|---|
+| 播放失败/报 403 | **PoToken** | logcat 有 `SabrPoTokenError` / `PoToken error: PENDING` |
+| 播放卡顿 | 带宽不足 | `state=3` 但码率低、buffer 反复 |
+| 打不开、转圈 | 路由/DNS | 网关日志里没有该连接，或 DNS 不干净 |
+| 国内直连 YouTube 返回什么 | 超时(000)，**不是 403** | 所以「路由漂移→403」这个假设不成立 |
+
+**教训**：不要一看到 403 就往出口 IP / 分流规则上想。先抓一条 `logcat | grep -E "PoToken|SabrPoTokenError"`，
+能省掉整轮网络排查。
