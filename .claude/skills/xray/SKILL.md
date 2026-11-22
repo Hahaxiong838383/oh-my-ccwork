@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余、多出口带宽择优、IPv6 出口接入与证书续期）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
 ---
 
 # xray - Xray 代理管理
@@ -50,6 +50,27 @@ UID 迁移、观察器重建与更新线取舍见该参考。
 IP 段兜底、Android 按网卡分表改 main 表无效、旧栈 `VIDEO_DNS` 链会静默打死 DNS、Magisk
 `service.d` 执行任意扩展名文件、DHCP 会重写默认路由需网关侧兜底、DNS 必须 `ipv4_only`。
 需要双网关冗余时，同文第 4 节给出 TR3000+U 盘的做法与 **extroot 死锁**教训（U 盘只能做数据盘）。
+
+## 网关层「多出口择优」与 IPv6 出口（2026-11-22 起现行）
+
+要给电视选出「实测带宽最好」的出口、加/删出口、换测速源，或排查「明明节点不慢但电视卡」，先读
+[网关层出口优选与 IPv6 接入](references/tv-gateway-exit-picking-20261122.md)。要点：
+
+- **先查 CPU 和磁盘，再怀疑出口**：`/var/log` 是 47M zram 卷，写满会让 rsyslog 自旋（实测 1.5 核、
+  5 分钟 5 万条日志），同一出口吞吐从 19 掉到 9 MB/s。已装 `dsh-log-guard.timer` 兜底。
+- **测速源与方法**：Google 固定版本大包 + Hetzner 新加坡 1GB（Range）交叉；文件 ≥50MB、
+  `identity`、不跟重定向、8s 窗口、**有效速率 = size/(total−ttfb)**（裸 `speed_download` 对 1MB 文件低估 4.6×）。
+  Cloudflare `__down` 只做快检，`bytes≥1e8` 直接 403。
+- **判决用中位不用最大**：并行探路 3 轮取中位 → 前二串行 3 采取中位。突发型通道（一采 15MB/s、后两采 0.1）
+  用最大值会被判成好通道，切过去电视立刻卡。
+- **REALITY 兼容坑**：sing-box 1.14.4 ↔ Xray 26.11.9 握手不通（`reality verification failed`），
+  同参数换 xray 客户端可通 → 服务端无罪；新 v6 出口改 **VLESS+TLS** 即通。
+- **野草云端口 ACL**：面板防火墙客户不可关，新端口不报白在 v6 上会被静默丢弃；放行后由
+  `dsh-enable-hkv6.sh` 自动接入（幂等）。
+- **原生 v6 到 HK 不稳**：首采 13–15 MB/s，随后 0.04–0.4（xray 客户端复测同样坍缩 → 网络层），
+  只能当备路；`dns.strategy=ipv4_only` 必须保留，v6 出口写字面地址。
+- **证书**：xray 以 `xray` 用户运行，读不到 `/etc/letsencrypt`；用
+  `/etc/letsencrypt/renewal-hooks/deploy/sync-xray-cert.sh` 比对 sha256 后同步到 `/etc/xray/tls` 并重启 xray。
 
 ## Grok Bot App 无法刷新、网页版正常
 
