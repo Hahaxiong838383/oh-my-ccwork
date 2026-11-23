@@ -34,7 +34,7 @@ core:      [mycc, .mycc-global]          # PKM 中枢 + 外置共享状态
 private:   [work-private]                # 隐私 vault
 runtime:   [bin, local, go, models, nltk_data]
 legacy:    [cc-monitor-oss, lnmem-data, xray, scripts, Archive, iterm2-logs]  # 历史例外：保留，禁新增同类
-projects:  [MyAgent, task-board, home-lan, dsh-stack]  # 独立项目仓（2026-07-26：MyAgent、task-board；2026-10-06：home-lan=家里局域网与飞牛 NAS；2026-11-12：dsh-stack=DSH CLI 独立实例）
+projects:  [MyAgent, task-board, home-lan, dsh-stack, fsd-reality]  # 独立项目仓（2026-07-26：MyAgent、task-board；2026-10-06：home-lan=家里局域网与飞牛 NAS；2026-11-12：dsh-stack=DSH CLI 独立实例；2026-11-23：fsd-reality=FSD v15 Reality View 端到端实时渲染方案设计仓）
 agent_cfg: ['.claude', '.codex', '.gemini', '.grok', '.windsurf', '.continue', '.augment', '.agents', '.dsh']
 # 合法点目录基线（系统/语言工具/AI 工具运行时）。新增点目录会被 lint 抓到供审查——防 agent 用 .xxx/ 绕过
 allowed_dot_dirs: ['.Trash', '.aliyun', '.android', '.boss-agent', '.bun', '.bytertc', '.cache', '.cargo', '.cc-airplayer', '.cc-switch', '.claude-mem', '.codeg', '.cola', '.coli', '.conda', '.config', '.cups', '.deepface', '.geo-login', '.gnupg', '.gradle', '.hermes', '.kaggle', '.keras', '.lark-cli', '.letta', '.lnmem', '.lnmem-fpga', '.local', '.matplotlib', '.mem0', '.modelscope', '.mycc-mcp', '.npm', '.obsidian', '.ollama', '.omlx', '.omp', '.openclaw', '.opencli', '.openpencil', '.pg0', '.promptfoo', '.rhinocode', '.rustup', '.sogouinput', '.ssh', '.streamlit', '.swiftpm', '.tauri', '.tmux', '.zsh', '.zsh_sessions']
