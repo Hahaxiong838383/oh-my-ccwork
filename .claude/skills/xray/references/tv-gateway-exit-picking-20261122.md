@@ -76,3 +76,20 @@ xray 读不到 `/etc/letsencrypt`（700 root）。做法：
 - 证书复制到 `/etc/xray/tls/{fullchain,privkey}.pem`（`xray:xray`，640）
 - `/etc/letsencrypt/renewal-hooks/deploy/sync-xray-cert.sh`：比对 sha256，变了才复制并 `systemctl restart xray`
   （未变则跳过，避免续期钩子把 xray 白重启一次）
+
+## 九、电视盒日志后台（2026-11-23 起）
+
+`dsh-tvlog.service`（网关常驻，`Restart=always`）负责把电视 logcat 收成可控的三层结构：
+
+| 文件 | 内容 | 保留 |
+|---|---|---|
+| `/var/lib/dsh/tvlog/tv-YYYYmmdd-HH.log` | 只收 `*:W`（警告及以上），剔除 adbd/hwc_nn/ActivityThread 等刷屏 tag | **24 小时**（`find -mmin +1440 -delete`），按小时切分 |
+| `tail.log` | 每 2 分钟覆盖写最近 4000 行**完整**日志（含 D/I），用于事后还原现场 | 固定 ~400KB，只留最新 |
+| `events.log` | 命中 `PlaybackException/ERROR_CODE/Response code: 4xx/5xx/LOGIN_REQUIRED/not a bot/SabrPoToken/FATAL/ANR` 的汇总行 | 到 50MB 滚动一次 |
+
+- 实测量：W 流 206 行/分 ≈ **25MB/天**；目录总量兜底 400MB（超了先删最旧）。
+- adb 掉线（电视关机）→ 每 60 秒重试 `adb connect`，不刷日志。
+- 排查入口：`grep -nE "ERROR_CODE|PlaybackException|503|403" /var/lib/dsh/tvlog/events.log | tail`；
+  需要完整上下文看 `tail.log`（近 5–10 分钟全量）。
+- 注意：电视 4K 硬解时 `screencap` 是黑屏，**不要用截图判断是否在播**；用
+  `dumpsys media_session` 的 `state` + `PlaybackState.error` + `rx_bytes` 差分。
