@@ -177,3 +177,70 @@ nc www.youtube.com 443 → OK
 - `dsh-tvlog` 若每 7 秒重连并回放整段 logcat，会把 adbd 拖到 `offline`（已用 `-T 1` + 退避修掉），
   排查 adb 不稳时先看它。
 - IPv6 现在靠 `disable_ipv6=1` 关闭；若将来要启用双栈，必须让 Armbian 成为电视链路上唯一的 IPv6 默认路由来源。
+
+## 十二、如果要给电视开 IPv6 双栈：方案评审（2026-11-25，codex 分析，**未实施**）
+
+> 结论：**为 YouTube 提速，现在不值得开**。IPv4 `hk-hy2` 已稳定 15–19MB/s（120–152Mbps），
+> 而原生 v6 到 HK 是「13–15MB/s 峰值、随后 0.04–0.4MB/s」的突发型。
+> 真要做，前提是先把「唯一 RA 来源」和「数据面闭合」两件事分开做，且只在无播放时切。
+
+### 12.1 现场复核到的新事实
+
+- 电视内核 `5.4.210-android12-9-…`，`eth0.disable_ipv6=1`、无 v6 地址、`accept_redirects=0`。
+- **Armbian 除在用的 USB 网卡 `eth1`（r8152）外，还有板载 `eth0`（meson8b-dwmac，当前 NO-CARRIER）** ——
+  独立下联在物理上可行。
+- 80 秒被动抓包（AF_PACKET 非混杂）看到主路由 RA：源 `fe80::cacd:55ff:fe02:763c` / MAC `c8:cd:55:02:76:3c`，
+  `preference=medium`，Router Lifetime 7200s，携带 `2409:8a00:8471:48c0::/64` 的 PIO（A=1,L=1）+ RDNSS。
+- sing-box `tun-in` 只有 `172.19.0.1/30`（IPv4），IPv6 只有 link-local；走 `proxy` 的 14 条 IP 段**全是 v4**；
+  `route.final=direct`。
+
+### 12.2 RA 方案排序（「唯一默认路由来源」只有隔离能保证）
+
+| 排名 | 方案 | 关键判断 |
+|---|---|---|
+| 1 | **板载 eth0 做电视专用下联**（独立子网） | 唯一能天然做到「只有 Armbian 发 RA」。代价：搬线 + 电视静态 IPv4/ADB/守卫都要重规划 |
+| 2 | VLAN / 独立 AP 二层隔离 | 需 802.1Q 管理与端口划分；单臂 VLAN 共享 USB 链路带宽 |
+| 3 | 交换机端口级压制上游 RA | 取决于设备是否支持按端口过滤 ICMPv6 type 134；组播 RA 发往 `ff02::1`，按目的 MAC 匹配无效 |
+| 4 | 电视侧 `ip6tables` 只收 Armbian RA | 丢 RA 不会立刻清地址，但旧 RA 到期/切换留空窗会触发 `LOST_PROVISIONING`（同类风险我们已踩过）；只能在 v6 关闭态先装白名单再开 |
+| 5 | Armbian 发 `pref=high`、主路由 `medium` | **能影响选路但不能保证唯一**：内核会同时保留两条 default（同 metric、`pref` 字段不同），主路由仍可能被选中 |
+
+要点：Android 的 `RouteInfo` 没有 preference 字段，preference 只体现在内核路由属性与下一跳选择上，
+所以「靠 preference 独占」不成立。
+
+### 12.3 数据面必须同时堵两条漏
+
+1. Linux 直接把电视的原始 v6 包从上联 `eth1` 转发出去（现在 `forwarding=1` + 默认路由走主路由 = 直连出境）。
+2. 包进了 TUN 但命中 `route.final=direct`，由网关新建 v6 socket 直连。
+
+做法要点（仅设计）：TUN 增加独立 v6 前缀（如 `fd7b:...:ffff::1/126`），`auto_route` 在 1.14 的 Linux 实现可覆盖转发流量；
+再用 `inbound + source_ip_cidr + ip_version: 6` 的规则把电视 v6 准入流量固定到 `hk-hy2`，末尾对电视 v6 加 `reject`，
+并在 `ip6tables` 侧拒绝电视原始 v6 走上联兜底。
+
+### 12.4 地址来源三选一
+
+| 方案 | 稳定性 | 备注 |
+|---|---|---|
+| ① ISP `/64` PIO | 差（前缀会从 `fcb0` 变 `48c0`） | 需持续跟踪上游前缀与寿命；`L=1` 还会让同前缀邻居直连 |
+| **② 新 ULA `/64` + 代理（MVP 首选）** | 好（ISP 换前缀不影响） | 注意 Android `isGlobalPreferred()` **排除 ULA**，`isIpv6Provisioned()` 可能为 false，应用可能仍偏 IPv4；无需 NAT66 |
+| ③ 只发默认路由、不发地址 | 无法公网通信 | 只有 `fe80::` 源地址，单独不可用 |
+
+### 12.5 DNS 与 AAAA
+
+只在「电视专用」的 DNS 策略里放开：对 YouTube 域名集合的 AAAA 查 `remote`（可继续走 IPv4 传输的 8.8.8.8），
+其余 AAAA 及 `HTTPS/SVCB` 一律 `NOERROR` 空答案，避免 `ipv6hint` 成为第二条地址来源；
+A 查询保持现有分流。前提是 DNS 规则能区分「来自电视」的请求（独立入口或实例）。
+
+### 12.6 若将来做，MVP 五阶段（每步只读验收，切换只在无播放时）
+
+0. 保持现状，记录基线（已完成）。
+1. 用备用客户端验证 eth0/VLAN 独立下联 + ULA + 唯一 RA（搬线/改电视静态 IPv4 必须无播放）。
+2. 先验数据面：测试客户端走 v6 TUN、准入流量固定 hk-hy2、未知 v6 拒绝；核对 RPDB/TUN/上联抓包
+   （隔离环境可做；生产 sing-box 重载须无播放）。
+3. 最后才开电视 IPv6 与 AAAA，验唯一网关、真实选源、DNS 正负样本、TCP/QUIC 路径。
+4. 一步止血回滚：`echo 1 > /proc/sys/net/ipv6/conf/eth0/disable_ipv6`（root），并恢复 `99-gateway.sh` 的开机行为。
+
+### 12.7 结论
+
+**先不做。** 现有单栈（v4 + hk-hy2）已经满足 4K；v6 的唯一潜在收益是绕开 v4 晚高峰限速，
+而目前没有证据表明晚高峰 v4 会被压到 4K 门槛以下（`/var/lib/dsh/v6ab.csv` 仍在采样）。
+等 `v6ab` 数据出现「晚高峰 v4 < 2.5MB/s 且 v6 明显更好」再启动上面的 MVP。
