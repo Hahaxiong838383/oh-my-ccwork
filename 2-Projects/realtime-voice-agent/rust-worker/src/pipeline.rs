@@ -709,7 +709,19 @@ pub fn spawn_stt(stt_cfg: SttConfig, room_name: &str) -> SttPre {
     let (stt_ev_tx, stt_ev_rx) = mpsc::channel::<SttEvent>(64);
     let diagnostic = crate::asr_diagnostics::InputDiagnostic::for_room(room_name);
     let stt_pcm_tx = crate::asr_diagnostics::PcmSender::new(stt_pcm_tx, diagnostic.clone());
-    info!(room = %room_name, nonstream = stt_cfg.nonstream, "asr stream task spawned (preconnect)");
+    let asr_provider = match &stt_cfg.personal_route {
+        crate::stt_volc::PersonalAsrRoute::Local { .. } => "feiniu-zh",
+        crate::stt_volc::PersonalAsrRoute::Online => "doubao_asr",
+        crate::stt_volc::PersonalAsrRoute::Inherit => "inherit",
+    };
+    info!(
+        room = %room_name,
+        nonstream = stt_cfg.nonstream,
+        asr_provider,
+        end_window_ms = stt_cfg.end_window_ms,
+        enable_ddc = stt_cfg.enable_ddc,
+        "asr stream task spawned (preconnect)"
+    );
     let rn = room_name.to_string();
     let span = tracing::info_span!("asr_stream", room = %room_name);
     let task = tokio::spawn(async move {
@@ -770,15 +782,40 @@ pub struct Prebuilt {
     pub vad: SileroVad,
     pub bank: Option<FillerBank>,
     pub stt: SttPre,
+    pub stt_cfg: SttConfig,
     pub started_at: Instant,
 }
 
 pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
+    prebuild_with(room_name, String::new()).await
+}
+
+pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebuilt> {
     let started_at = Instant::now();
+    let speech = crate::personal_providers::prepare(&room_name, &metadata)?;
+    let stt_cfg = match &speech {
+        Some(plan) => plan.stt.clone(),
+        None => stt_cfg_for_room(&room_name),
+    };
+    let tts_cfg = match &speech {
+        Some(plan) => plan.tts.clone(),
+        None => TtsCfg::from_env()?,
+    };
+    if let Some(plan) = &speech {
+        info!(
+            room = %room_name,
+            revision = plan.revision,
+            asr = %plan.asr_id,
+            tts = %plan.tts_id,
+            tts_provider = tts_cfg.provider_name(),
+            llm_profile = %plan.llm_id,
+            llm_route = plan.llm_route(),
+            "personal speech snapshot"
+        );
+    }
     // ASR 预连最先起(握手最长,0.4–0.6 s)
-    let stt = spawn_stt(stt_cfg_for_room(&room_name), &room_name);
+    let stt = spawn_stt(stt_cfg.clone(), &room_name);
     let cfg = PipelineConfig::from_env();
-    let tts_cfg = TtsCfg::from_env()?;
     info!(
         room = %room_name,
         tts_provider = tts_cfg.provider_name(),
@@ -789,6 +826,9 @@ pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
     // per-device 身份路由:room(sn-<SN>-<ts>)随 query 传大脑,由大脑按 SN 反查该设备 brain 账号
     // (多设备防串号;非 sn- 房间大脑忽略 room 走 token 兜底语义)。
     llm_cfg.room = room_name.clone();
+    if crate::personal::is_room(&room_name) && std::env::var("AGENT_NAME").ok().as_deref() == Some(crate::personal::AGENT) {
+        anyhow::ensure!(crate::personal::brain_route(&llm_cfg), "personal_llm_route_rejected");
+    }
     // 本地音频回声对撞库(2026-09-01):异步拉该设备文案,拉不到=空库 fail-open。
     // 只对 sn- 设备房拉(web/probe 房没有本地音频,省一次空转)。
     let echo_local_texts: Arc<StdMutex<Vec<(String, String)>>> = Arc::new(StdMutex::new(Vec::new()));
@@ -849,7 +889,7 @@ pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
         has_speaker = speaker.is_some(),
         "pipeline prebuilt"
     );
-    Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, stt, started_at })
+    Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, stt, stt_cfg, started_at })
 }
 
 /// B23：签发 metadata 里与 ordered 输入相关的受信声明（job 层解析，pipeline 只认这里，不认设备自述）。
@@ -901,7 +941,7 @@ pub async fn run_pipeline(
 ) -> Result<()> {
     // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
     // 回声库拉取/ASR 预连)此处直接接管;无预组装路径(web 调试直连)原地组装,行为一致。
-    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, mut bank, stt, started_at: prebuilt_at } = match prebuilt {
+    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, mut bank, stt, stt_cfg, started_at: prebuilt_at } = match prebuilt {
         Some(p) => p,
         None => prebuild(room_name.clone()).await?,
     };
@@ -945,7 +985,7 @@ pub async fn run_pipeline(
     );
 
     // STT 长连:由预组装接管(握手已在建房阶段完成)。
-    let stt = take_stt_preconnect(stt, || spawn_stt(stt_cfg_for_room(&room_name), &room_name)).await?;
+    let stt = take_stt_preconnect(stt, || spawn_stt(stt_cfg.clone(), &room_name)).await?;
     let SttPre { pcm_tx: stt_pcm_tx, ev_rx: mut stt_ev_rx, task: mut stt_task } = stt;
     // ordered_pcm 需要主动收流(drop 唯一发送端 → 供应商 LastNoSeq → 唯一裁决点);现役路径永远是 Some,行为不变
     stt_pcm_tx.phase("ordered_or_initial");
@@ -1133,11 +1173,11 @@ pub async fn run_pipeline(
         if let Some(reason) = orch.pending_phase_switch.take() {
             let (pre, mut spawned_at) = match stt2.take() {
                 Some(x) => x,
-                None => (spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()),
+                None => (spawn_stt(stt_cfg.clone(), &room_name), Instant::now()),
             };
             let pre = match take_stt_preconnect(pre, || {
                 spawned_at = Instant::now();
-                spawn_stt(stt_cfg_for_room(&room_name), &room_name)
+                spawn_stt(stt_cfg.clone(), &room_name)
             }).await {
                 Ok(pre) => pre,
                 Err(error) => { exit_error = Some(error); break; }
@@ -1368,7 +1408,7 @@ pub async fn run_pipeline(
                     stt_pcm_tx.take(); // 主动收流:供应商回 LastNoSeq → Closed → 裁决
                     // B23:首句已收流 → 立即预连第二条 STT(与首答 final/LLM/TTS/本地承接并行),切 RTC 时直接接管
                     if stt2.is_none() && orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false) {
-                        stt2 = Some((spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()));
+                        stt2 = Some((spawn_stt(stt_cfg.clone(), &room_name), Instant::now()));
                     }
                 }
             }
@@ -1485,7 +1525,7 @@ pub async fn run_pipeline(
                     orch.ordered_end_stream_pending = false;
                     stt_pcm_tx.take();
                     if stt2.is_none() && orch.ordered.as_ref().map(|o| o.first_turn_rtc()).unwrap_or(false) {
-                        stt2 = Some((spawn_stt(stt_cfg_for_room(&room_name), &room_name), Instant::now()));
+                        stt2 = Some((spawn_stt(stt_cfg.clone(), &room_name), Instant::now()));
                     }
                 }
             }

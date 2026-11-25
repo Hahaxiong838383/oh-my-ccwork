@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
+import { publicProviderStatus } from './providers.js';
 import { chatDeltas, cpaWebSearch, cpaWebSearchEnabled, searchFetch, type TextTurn } from './upstream.js';
 
 const dataDir = process.env.BRAIN_DATA_DIR;
@@ -261,7 +262,9 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
 }
 
 const app = new Hono();
-app.get('/health', (c) => c.json({ ok: true, service: 'personal-brain' }));
+app.get('/health', (c) => c.json({
+  ok: true, service: 'personal-brain', build: process.env.BRAIN_BUILD ?? null, providers: publicProviderStatus(),
+}));
 app.use('/v1/*', async (c, next) => {
   if (!timingSafeEqual(digest(c.req.header('authorization') ?? ''), expectedAuth)) {
     return c.json({ error: { message: 'unauthorized', type: 'invalid_request_error' } }, 401);

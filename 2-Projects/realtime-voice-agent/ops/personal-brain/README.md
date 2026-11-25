@@ -41,6 +41,14 @@ NAS 配置文件在 `/vol1/1000/docker/personal-voice-runtime/private/brain.env`
 
 个人进程仅加载构建清单中的复用模块和专用配置。该入口、数据库和模型配置与 P003 生产签票、存量数据库及方舟服务隔离。
 
+## 私有供应商文件
+
+容器读取 `PERSONAL_PROVIDERS_FILE=/run/personal-providers/providers.json`。飞牛把 `/vol1/1000/docker/personal-voice-runtime/private/providers/` 整目录以只读方式挂到 `/run/personal-providers`，换文件时先写临时文件再在同一目录内改名。文件缺失、三个 `active` 都是 `null`，或文件通不过契约时，聊天、非流式答复和记忆抽取继续使用 `service.env` 里的个人 CPA。识别保持飞牛中文 ASR，合成保持飞牛五音色。校验失败时 `/health` 的 `providers.state` 为 `invalid`，进程不使用文件里的密钥。
+
+`active.llm` 只能指向 `driver=deepseek` 的档案。同一文件可以放多档模型，每档使用自己的 `DEEPSEEK_MODEL`。选定后，流式聊天、普通聊天、搜索规划里的 `chat/completions`，以及记忆抽取，都把该模型原样发给 `https://api.deepseek.com/v1/chat/completions`。深度模型档案不会因此去掉 `tools`。档案里的 `DEEPSEEK_API_KEY` 只进入这一个官方请求，不接受档案指定的地址。`/v1/responses` 的网页搜索仍用个人 CPA，请求保持 `store:false`。DeepSeek 的 `tools/search` 仍只使用原来的 `BRAIN_DEEPSEEK_SEARCH_KEY`。人格记忆仍由原来的提示词组装和抽取链路处理。
+
+`APP_ID`、访问令牌和 API key 放在 `secrets`。资源 ID、模型名、音色名、可选的官方 ASR 地址，以及 `VOLC_ASR_END_WINDOW_MS`、`VOLC_ASR_ENABLE_DDC` 放在 `config`。这些键都使用大写环境变量名。`/health` 只返回修订号、档案 ID、驱动和 DeepSeek 模型名。本服务不拨打 ASR 或 TTS，也不把语音密钥转发到其他地址。
+
 ## 重建和验收
 
 在本目录用 `BRAIN_BUILD=<版本> ./build.sh`，构建从 P003 的锁文件安装临时依赖、做 TypeScript 检查，并打包到固定摘要的 Node 24 基础镜像。将同标签镜像加载到飞牛 2，再在运行目录执行 `BRAIN_BUILD=<版本> docker compose -f compose.brain.yaml up -d --no-build --wait`。重建保留 `brain-data/` 和私密配置，选回已验证标签时要明示所用版本。备份 SQLite 时使用在线备份或停该服务后保存数据库及其 WAL。
@@ -49,7 +57,13 @@ NAS 配置文件在 `/vol1/1000/docker/personal-voice-runtime/private/brain.env`
 
 ## 飞牛 2 发布记录 · 2026-11-25
 
-### 当前版本 `personal-brain:20261125.7`
+### 当前版本 `personal-brain:20261125.9`
+
+- 飞牛 2 容器 `personal-brain-brain-1` 为 `healthy`。飞牛回读镜像 ID 为 `sha256:83d184ad40789b2844e7f26f33beb34052ad5430aab06e97ae2a7ed81677440e`，标签 `personal-brain:20261125.9`。运行中的 `/app/server.mjs` SHA256 为 `616ed5e0a2274a0ebe37b0f3d77d6e37d4f01feb1d974695108e5cab4ed70c32`，`/app/verify.mjs` 为 `5aa359000f8341b41399812018e1f4d934ab3cb99986c496b1dd841247f7c119`，与本地构建上下文一致。
+- 供应商目录只读挂载。现有 `providers.json` 未改，`active` 三个选择都是 `null`。`/health` 回读 `providers.state=ready`、`revision=1`，聊天模型仍是个人 CPA `gpt-6.1-sol`，识别与合成回退仍是飞牛中文 ASR 和五音色。容器内写探测返回 `EROFS`。伦敦时间工具返回 200。
+- 回滚到本改动之前：在 `/vol1/1000/docker/personal-voice-runtime` 执行 `BRAIN_BUILD=20261125.7 docker compose -f compose.brain.yaml up -d --no-build --no-deps --wait brain`。`.7` 不读取供应商文件。若要同时去掉挂载，先把 `compose.brain.yaml.bak-20261125.7` 覆盖回 `compose.brain.yaml`，再执行同一条命令。
+
+### 上一版 `personal-brain:20261125.7`
 
 - 飞牛 2 正式容器 `personal-brain-brain-1` 回读为 `healthy`，镜像 ID 为 `sha256:f9327b3ca9cf168281c2ee3bfe7bd34f155a092e7e9fef3db913243c13d09edf`。逐文件 SHA256 为 `d4f5e67c727e5350f12be21a6df3f961b28de88c165d1e2a82989fb882f923c1`（`/app/server.mjs`）和 `5aa359000f8341b41399812018e1f4d934ab3cb99986c496b1dd841247f7c119`（`/app/verify.mjs`），与本地构建一致。变更源码保留在本工作树。
 - 个人 CPA 实测返回已完成的 `web_search_call` 与 `url_citation`。从 worker 私网测试得到 Python 3.14.0 的首次发布日期为 2025 年 10 月 7 日，已回读[官方发布公告](https://www.python.org/downloads/release/python-3140/)。鉴权、时钟、央视、实际天气、终止块引用、同房接续、私有查询拦截与同房取消通过。隔离库确认取消任务无结果，拒绝的私有查询未入任务表。

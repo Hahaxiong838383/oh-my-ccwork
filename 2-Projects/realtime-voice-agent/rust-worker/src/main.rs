@@ -36,6 +36,7 @@ mod llm;
 mod ordered_pcm;
 mod pipeline;
 mod personal;
+mod personal_providers;
 mod playout;
 mod preflight;
 mod audit_capture;

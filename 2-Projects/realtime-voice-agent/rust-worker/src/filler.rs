@@ -142,7 +142,8 @@ pub(crate) fn skip_prerecorded_fillers(personal_local: bool, filler_enabled: Opt
 impl FillerBank {
     /// FILLER_ENABLED=0 / 资产缺失 → None(静默降级,不影响主链路)。
     pub fn load_from_env() -> Option<Self> {
-        let personal_local = crate::stt_volc::personal_local_speech::endpoint().is_some();
+        let personal_local = crate::stt_volc::personal_local_speech::endpoint().is_some()
+            || crate::personal_providers::engaged();
         if skip_prerecorded_fillers(personal_local, std::env::var("FILLER_ENABLED").ok().as_deref()) {
             if personal_local {
                 info!("prerecorded filler bank skipped: personal speech selects the voice");

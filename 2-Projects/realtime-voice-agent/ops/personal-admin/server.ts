@@ -2,6 +2,7 @@ import {readFileSync} from 'node:fs';
 import {createServer, get as httpsGet} from 'node:https';
 import {Hono} from 'hono';
 import {privateTalk} from './talk-gateway';
+import {activateProfile, createProfile, ProviderError, publicView, readDocument, updateProfile, withProviders} from './providers';
 import {serve} from '@hono/node-server';
 import {getCookie,setCookie,deleteCookie} from 'hono/cookie';
 import {bodyLimit} from 'hono/body-limit';
@@ -136,6 +137,45 @@ app.put('/api/voices/active',async c=>{
     if (!check.ok || (await check.json()).active!==data.id) throw Error();
     return c.json({active:data.id});
   } catch {return c.json({error:'未取得合成服务的生效确认，请重新读取'},503);}
+});
+function providerFail(c: {json: (body: object, status: number) => Response}, error: unknown) {
+  if (error instanceof ProviderError) {
+    return c.json(error.revision === undefined ? {error: error.message} : {error: error.message, revision: error.revision}, error.status);
+  }
+  return c.json({error:'供应商配置暂时无法处理'}, 503);
+}
+const providersFile = () => process.env.PERSONAL_PROVIDERS_FILE || '';
+app.get('/api/providers', c => {
+  const file = providersFile();
+  if (!file) return c.json({error:'未配置供应商文件'}, 503);
+  try {
+    const loaded = readDocument(file);
+    return c.json(publicView(loaded.doc, loaded.persisted));
+  } catch (error) { return providerFail(c, error); }
+});
+app.post('/api/providers', async c => {
+  const file = providersFile();
+  if (!file) return c.json({error:'未配置供应商文件'}, 503);
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({error:'请求无效'}, 400);
+  try { return c.json(await withProviders(file, doc => createProfile(doc, body as Record<string, unknown>))); }
+  catch (error) { return providerFail(c, error); }
+});
+app.put('/api/providers/active/:kind', async c => {
+  const file = providersFile();
+  if (!file) return c.json({error:'未配置供应商文件'}, 503);
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({error:'请求无效'}, 400);
+  try { return c.json(await withProviders(file, doc => activateProfile(doc, c.req.param('kind'), body as Record<string, unknown>, workerSnapshot().jobs === 0))); }
+  catch (error) { return providerFail(c, error); }
+});
+app.put('/api/providers/:id', async c => {
+  const file = providersFile();
+  if (!file) return c.json({error:'未配置供应商文件'}, 503);
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({error:'请求无效'}, 400);
+  try { return c.json(await withProviders(file, doc => updateProfile(doc, c.req.param('id'), body as Record<string, unknown>, workerSnapshot().jobs === 0))); }
+  catch (error) { return providerFail(c, error); }
 });
 app.post('/api/voices/preview',async c=>{
   const data=await c.req.json().catch(()=>({}));

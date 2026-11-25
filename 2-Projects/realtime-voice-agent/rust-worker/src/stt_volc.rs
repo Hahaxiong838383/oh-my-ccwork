@@ -27,6 +27,15 @@ pub enum SttEvent {
     Closed,
 }
 
+/// 个人房间的识别路线。`Inherit` 保留进程级本地语音开关，只给未启用私有档案的旧路径。
+/// `Local` 和 `Online` 钉在本次任务的快照上，不再读别的房间或后来换掉的凭据。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum PersonalAsrRoute {
+    Inherit,
+    Local { base: String },
+    Online,
+}
+
 #[derive(Clone)]
 pub struct SttConfig {
     /// Independent DNS families/address racing; bounded connect applies to
@@ -60,6 +69,7 @@ pub struct SttConfig {
     /// ASR websocket 端点。默认老 bigmodel(生产现状);nonstream 灰度命中时由
     /// pipeline 改写为 ASYNC_ASR_URL(bigmodel_async,官方现行推荐端点)。
     pub url: String,
+    pub personal_route: PersonalAsrRoute,
 }
 
 /// 双向流式新端点(官方现行文档唯一出现的双向流式地址;老 bigmodel 已从文档消失)。
@@ -110,6 +120,7 @@ impl SttConfig {
                 .filter(|v| !v.is_empty()),
             nonstream: false,
             url: ASR_URL.to_string(),
+            personal_route: PersonalAsrRoute::Inherit,
         }
     }
 }
@@ -243,8 +254,16 @@ pub async fn run_asr_stream_observed(
     cfg: SttConfig, pcm_rx: &mut mpsc::Receiver<Vec<i16>>, event_tx: mpsc::Sender<SttEvent>,
     diagnostic: Option<std::sync::Arc<crate::asr_diagnostics::InputDiagnostic>>,
 ) -> Result<AsrEnd> {
-    if let Some(url) = personal_local_speech::endpoint() {
-        return personal_local_speech::run_asr(&url, pcm_rx, event_tx).await;
+    match &cfg.personal_route {
+        PersonalAsrRoute::Local { base } => {
+            return personal_local_speech::run_asr(base, pcm_rx, event_tx).await;
+        }
+        PersonalAsrRoute::Online => {}
+        PersonalAsrRoute::Inherit => {
+            if let Some(url) = personal_local_speech::endpoint() {
+                return personal_local_speech::run_asr(&url, pcm_rx, event_tx).await;
+            }
+        }
     }
     let mut observed = crate::asr_diagnostics::Observation::new(uuid::Uuid::new_v4().to_string(), diagnostic);
     let result = run_asr_stream_inner(cfg, pcm_rx, event_tx, &mut observed).await;
@@ -748,6 +767,7 @@ mod tests {
             boosting_table_id: None,
             nonstream: false,
             url: ASR_URL.to_string(),
+            personal_route: PersonalAsrRoute::Inherit,
         }
     }
 

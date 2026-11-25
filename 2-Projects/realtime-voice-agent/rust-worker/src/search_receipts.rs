@@ -29,6 +29,7 @@ impl Bank {
         // 个人本地音色由服务当场选择。固定标签或上一轮音色都不能打开旧预录。
         if voice == crate::stt_volc::personal_local_speech::VOICE_UNREPORTED
             || crate::stt_volc::personal_local_speech::endpoint().is_some()
+            || crate::personal_providers::engaged()
         {
             tracing::info!("search receipt bank skipped: personal speech selects the voice");
             return None;

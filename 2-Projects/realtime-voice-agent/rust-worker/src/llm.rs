@@ -361,6 +361,9 @@ async fn stream_chat_inner(
     client: &reqwest::Client, cfg: &LlmConfig, messages: Vec<Value>,
     tx: mpsc::Sender<String>, search_context: Option<Value>, store: Option<bool>,
 ) -> Result<ChatOutcome> {
+    if !crate::personal::llm_request_allowed(cfg) {
+        anyhow::bail!("personal_llm_route_rejected");
+    }
     let personal = store.is_some() || crate::personal::voice_brain(cfg);
     let mut body = json!({
         "model": cfg.model,
@@ -382,12 +385,17 @@ async fn stream_chat_inner(
         .send()
         .await
         .context("llm request")?;
-    anyhow::ensure!(
-        resp.status().is_success(),
-        "llm http {}: {}",
-        resp.status(),
-        resp.text().await.unwrap_or_default().chars().take(300).collect::<String>()
-    );
+    if !resp.status().is_success() {
+        let status = resp.status();
+        if std::env::var("AGENT_NAME").ok().as_deref() == Some(crate::personal::AGENT) {
+            anyhow::bail!("llm http {status}");
+        }
+        anyhow::bail!(
+            "llm http {}: {}",
+            status,
+            resp.text().await.unwrap_or_default().chars().take(300).collect::<String>()
+        );
+    }
 
     let mut stripper = cfg.strip_leading_filler.then(LeadingFillerStripper::new);
     let mut dev = DevMarkStripper::new(); // Phase 2a:无条件剥 [[DEV:N]],标记绝不进流/历史
@@ -625,10 +633,12 @@ fn build_client() -> reqwest::Client {
 
 impl Llm {
     pub fn new(cfg: LlmConfig) -> Self {
-        let fb = LlmConfig::fallback_from_env(&cfg).map(|f| {
+        // 个人 Worker 不持有、不发送大模型灾备厂商凭据。P003 仍按原环境变量决定。
+        let personal = std::env::var("AGENT_NAME").ok().as_deref() == Some(crate::personal::AGENT);
+        let fb = if personal { None } else { LlmConfig::fallback_from_env(&cfg).map(|f| {
             info!(model = %f.model, "llm bounded disaster configured");
             (build_client(), f)
-        });
+        }) };
         Self { cfg, client: build_client(), fb, history: Vec::new(), version: 0, speaker_slot: None }
     }
 

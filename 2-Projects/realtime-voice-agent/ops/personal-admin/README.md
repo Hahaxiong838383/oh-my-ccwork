@@ -26,6 +26,16 @@
 
 部署运行时覆盖文件后，私人对话入口为 https://pa.hahaxiong.cc:8666/talk/ 。同域名的管理 API 需要登录，语音签票需要设备凭据。飞牛在这几条路径只转发固定的北京网页、设备签票和房间信令，使用北京试点 CA 验证上游。收到的设备签票仍由北京服务签发。管理 Cookie 不转给北京。WebRTC 音频直连北京 ECS。
 
+## 语音供应商
+
+私人供应商文件由 `PERSONAL_PROVIDERS_FILE=/run/personal-providers/providers.json` 指定。运行时把飞牛目录 `/vol1/1000/docker/personal-voice-runtime/private/providers/` 整目录可读写挂到 `/run/personal-providers`，保存时在同一目录建立临时文件并原子改名，权限为 `0600`。`revision` 同时保护新增、编辑和选择；提交的版本落后时返回 409。
+
+`active` 里的 `null` 分别表示继续使用个人 CPA、飞牛中文识别和飞牛五音色。选择云端合成后，通话音色页会说明飞牛五音色只在切回内置后生效，供应商页显示当前云端音色。改变当前选择，或编辑已被选中的配置，只在 Worker 已注册且没有通话时允许。新增和编辑未选项不受此限制。
+
+接口只返回密钥是否已经保存。应用 ID 也按密钥处理。编辑时把密钥留空会保留原值。DeepSeek 固定走官方 `https://api.deepseek.com`，请求里不能带其他地址。豆包识别地址只接受两个官方 `openspeech.bytedance.com` 端点。响应和日志都不包含密钥或由密钥派生的值。文件不存在时读取返回 revision 0，且不会创建文件，因此不会改变现有通话默认。
+
+`GET /api/providers` 返回 `{revision,profiles,active,fallback,fields}`。`POST /api/providers` 与 `PUT /api/providers/:id` 接收 `{revision,kind,driver,name,config,secrets}`。`PUT /api/providers/active/:kind` 接收 `{revision,id}`，`id` 可为 `null`。配置和密钥的键使用大写环境变量名。
+
 ## 配置工作室与通话音色
 
 运行顶栏每五秒读取北京签票、个人大脑和 Worker 的通话占用。Worker 心跳失效时显示占用未知。刷新探针不会覆盖正在编辑的词表。词表可查看相对后台已保存草稿的增删；衔接短语保存后仍需另行核实 Worker 加载。
