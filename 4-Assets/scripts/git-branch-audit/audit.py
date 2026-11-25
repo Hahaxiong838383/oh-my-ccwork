@@ -67,7 +67,7 @@ def proof_matches(proof, commit, fingerprint):
                      and node[proof['digest_key']] == fingerprint)
 
 
-def audit(records, refs, observations):
+def audit(records, refs, observations, scope=None):
     heads = {ref[11:]: sha for ref, sha in refs.items() if ref.startswith('refs/heads/')}
     branches = records['branches']
     if records['default_branch'] not in heads or not isinstance(branches, dict):
@@ -103,8 +103,14 @@ def audit(records, refs, observations):
         if not timedelta(0) <= age <= timedelta(hours=24):
             issues.append('实机样本时间异常或已超过 24 小时')
         actual = observations['components']
-        for name in sorted(set(actual) | set(releases)):
-            if name not in releases:
+        covered = {name for name, release in releases.items()
+                   if scope is None or release.get('scope', 'p003') == scope}
+        if scope:
+            if not covered:
+                raise ValueError(f'采样范围缺少已登记组件 {scope}')
+            print(f'本轮实机采样 {scope}，覆盖 {len(covered)} 个组件；其余 {len(releases) - len(covered)} 个只核发布来源')
+        for name in sorted(set(actual) | covered):
+            if name not in covered:
                 issues.append(f'线上组件未登记 {name}')
             elif not actual.get(name) or actual[name] != releases[name]['sha256']:
                 issues.append(f'线上指纹缺失或与发布记录不符 {name}')
@@ -149,7 +155,8 @@ def main():
         observations = observe()
     elif args.observed:
         observations = json.loads(args.observed.read_text())
-    return audit(registry, refs, observations)
+    scope = 'p003' if args.p003_live else (observations or {}).get('scope')
+    return audit(registry, refs, observations, scope)
 
 
 if __name__ == '__main__':
