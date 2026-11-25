@@ -11,8 +11,11 @@ services:
     environment:
       TZ: Asia/Shanghai
       BRAIN_DATA_DIR: /data
+      BRAIN_BUILD: ${BRAIN_BUILD:?}
+      PERSONAL_PROVIDERS_FILE: /run/personal-providers/providers.json
     volumes:
       - ./brain-data:/data
+      - /vol1/1000/docker/personal-voice-runtime/private/providers:/run/personal-providers:ro
     networks:
       worker:
         aliases: [personal-brain]

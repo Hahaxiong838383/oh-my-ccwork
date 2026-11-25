@@ -63,9 +63,7 @@ type ResolvedExtractLlm = {
   provider: string; source: string;
 };
 function resolveExtractLlm(): ResolvedExtractLlm {
-  return { apiKey: process.env.BRAIN_UPSTREAM_API_KEY,
-    baseUrl: process.env.BRAIN_UPSTREAM_BASE_URL, model: process.env.BRAIN_UPSTREAM_MODEL,
-    provider: 'personal', source: 'env', extraBody: {} };
+  return extractionTarget();
 }
 """
 # Reuse the original small provider helper verbatim when staging.
@@ -73,7 +71,17 @@ provider = (source / 'providers/minimax-llm.ts').read_text()
 helper = re.search(r'^export function stripThink\(.*?^}', provider, re.M | re.S)
 if not helper:
     raise SystemExit('P003 stripThink moved')
-path.write_text(helper.group() + '\n' + header + text[start:])
+fetch = """    const res = await fetch(`${cfg.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${cfg.apiKey}` },
+      signal: ctrl.signal,
+      body: JSON.stringify(body),
+    });"""
+body = text[start:]
+if body.count(fetch) != 1:
+    raise SystemExit('P003 extraction fetch moved')
+body = body.replace(fetch, fetch.replace("method: 'POST',", "method: 'POST', redirect: 'error',"), 1)
+path.write_text("import { extractionTarget } from '../providers.js';\n" + helper.group() + '\n' + header + body)
 
 path = target / 'tools/search-tasks.ts'
 text = path.read_text()
