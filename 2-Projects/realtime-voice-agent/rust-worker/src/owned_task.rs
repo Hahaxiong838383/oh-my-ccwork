@@ -4,6 +4,7 @@ use tokio::task::{JoinError, JoinHandle};
 pub struct OwnedTask<T>(JoinHandle<T>);
 impl<T> OwnedTask<T> {
     pub fn new(task: JoinHandle<T>) -> Self { Self(task) }
+    pub fn is_finished(&self) -> bool { self.0.is_finished() }
     pub fn abort(&self) { self.0.abort(); }
 }
 impl<T> Future for OwnedTask<T> {

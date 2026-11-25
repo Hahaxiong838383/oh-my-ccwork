@@ -1,0 +1,32 @@
+name: personal-text
+services:
+  rtc:
+    image: ${TEXT_RUNTIME_IMAGE:?set a locally verified runtime image}
+    init: true
+    restart: unless-stopped
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    entrypoint: ["/app/voice-rust-worker", "--personal-text-relay"]
+    env_file:
+      - ../private/livekit.env
+      - ../private/brain.env
+    environment:
+      AGENT_NAME: personal-xiaoke
+      SSL_CERT_FILE: /etc/ssl/certs/ca-certificates.crt
+      HOME: /tmp
+    volumes:
+      - ./voice-rust-worker:/app/voice-rust-worker:ro
+      - ../private/edge-ca-bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    networks: [brain, egress]
+    mem_limit: 384m
+networks:
+  brain:
+    name: personal-voice-private
+    external: true
+  egress:
+    name: personal-brain_egress
+    external: true

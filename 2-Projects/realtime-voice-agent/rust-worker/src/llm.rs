@@ -321,6 +321,8 @@ pub struct ChatOutcome {
     pub interrupted: bool,
     /// Phase 2a 观察:本轮 LLM 输出中剥出的 [[DEV:N]] 标记(已从 full/流中移除)。
     pub dev_labels: Vec<u32>,
+    pub personal: Option<crate::personal::Metadata>,
+    pub done: bool,
 }
 
 impl ChatOutcome {
@@ -345,12 +347,28 @@ pub async fn stream_chat_with_context(
     tx: mpsc::Sender<String>,
     search_context: Option<Value>,
 ) -> Result<ChatOutcome> {
+    stream_chat_inner(client, cfg, messages, tx, search_context, None).await
+}
+
+pub async fn stream_personal_text(
+    client: &reqwest::Client, cfg: &LlmConfig, messages: Vec<Value>,
+    tx: mpsc::Sender<String>, store: bool,
+) -> Result<ChatOutcome> {
+    stream_chat_inner(client, cfg, messages, tx, None, Some(store)).await
+}
+
+async fn stream_chat_inner(
+    client: &reqwest::Client, cfg: &LlmConfig, messages: Vec<Value>,
+    tx: mpsc::Sender<String>, search_context: Option<Value>, store: Option<bool>,
+) -> Result<ChatOutcome> {
+    let personal = store.is_some() || crate::personal::voice_brain(cfg);
     let mut body = json!({
         "model": cfg.model,
         "messages": messages,
         "stream": true,
         "temperature": 0.7,
     });
+    if let Some(store) = store { body["store"] = json!(store); }
     if let Some(context)=search_context {body["search_dialogue_context"]=context;}
     if matches!(cfg.thinking.as_str(), "disabled" | "enabled" | "adaptive") {
         body["thinking"] = json!({"type": cfg.thinking});
@@ -382,20 +400,36 @@ pub async fn stream_chat_with_context(
     let mut n_chunks: u64 = 0;
     let mut interrupted = false;
     let mut stream = resp.bytes_stream();
-    let mut pending = String::new();
+    let mut pending = Vec::new();
+    let mut final_metadata = None;
+    let mut done = false;
     'outer: while let Some(chunk) = stream.next().await {
         let chunk = chunk.context("llm sse read")?;
-        pending.push_str(&String::from_utf8_lossy(&chunk));
-        // SSE 事件以空行分隔;逐个完整事件消费,残段留 pending
-        while let Some(pos) = pending.find("\n\n") {
-            let event: String = pending.drain(..pos + 2).collect();
+        if personal {
+            pending.extend_from_slice(&chunk);
+            anyhow::ensure!(pending.len() <= 1_048_576, "personal SSE event too large");
+        } else {
+            pending.extend_from_slice(String::from_utf8_lossy(&chunk).as_bytes());
+        }
+        // Wait for a complete event before decoding personal UTF-8. A network
+        // chunk can end in the middle of a Chinese character or a source title.
+        while let Some(pos) = pending.windows(2).position(|pair| pair == b"\n\n") {
+            let event: Vec<u8> = pending.drain(..pos + 2).collect();
+            let event = String::from_utf8_lossy(&event);
             for line in event.lines() {
                 let Some(data) = line.strip_prefix("data:") else { continue };
                 let data = data.trim();
                 if data == "[DONE]" {
+                    done = true;
                     break 'outer;
                 }
                 let Ok(v) = serde_json::from_str::<Value>(data) else { continue };
+                if personal {
+                    anyhow::ensure!(v.get("error").is_none(), "personal brain SSE failed");
+                    if v["choices"][0]["finish_reason"] == "stop" {
+                        final_metadata = crate::personal::Metadata::from_final(&v);
+                    }
+                }
                 let delta = &v["choices"][0]["delta"]["content"];
                 if let Some(text) = delta.as_str() {
                     if text.is_empty() {
@@ -459,6 +493,8 @@ pub async fn stream_chat_with_context(
         duration_ms: t0.elapsed().as_millis() as u64,
         interrupted,
         dev_labels: dev.labels,
+        personal: if done && !interrupted { final_metadata } else { None },
+        done,
     })
 }
 
@@ -969,12 +1005,12 @@ mod tests {
         };
         let mut llm = Llm::new(cfg);
         llm.push_user("你好");
-        llm.settle(&ChatOutcome { full: "答".into(), ttft_ms: 1, duration_ms: 1, interrupted: false, dev_labels: vec![] });
+        llm.settle(&ChatOutcome { full: "答".into(), ttft_ms: 1, duration_ms: 1, interrupted: false, dev_labels: vec![], personal: None, done: true });
         assert_eq!(llm.history.len(), 2);
         // 打断:不动,由 set_last_assistant 修正
         llm.push_user("再问");
         let v = llm.history_version();
-        llm.settle(&ChatOutcome { full: "半截".into(), ttft_ms: 1, duration_ms: 1, interrupted: true, dev_labels: vec![] });
+        llm.settle(&ChatOutcome { full: "半截".into(), ttft_ms: 1, duration_ms: 1, interrupted: true, dev_labels: vec![], personal: None, done: true });
         assert_eq!(llm.history.len(), 3);
         assert!(llm.history_version() > v);
         llm.set_last_assistant("半");
@@ -982,7 +1018,7 @@ mod tests {
         assert_eq!(llm.history[3]["content"], "半");
         // 空回复回滚 user
         llm.push_user("第三问");
-        llm.settle(&ChatOutcome { full: String::new(), ttft_ms: 0, duration_ms: 0, interrupted: false, dev_labels: vec![] });
+        llm.settle(&ChatOutcome { full: String::new(), ttft_ms: 0, duration_ms: 0, interrupted: false, dev_labels: vec![], personal: None, done: true });
         assert_eq!(llm.history.len(), 4);
     }
     #[test]
@@ -1064,6 +1100,34 @@ mod disaster_tests {
     }
     const ANSWER:&str="data: {\"choices\":[{\"delta\":{\"content\":\"正文。\"}}]}\n\ndata: [DONE]\n\n";
     fn config(e:&Endpoint)->LlmConfig { LlmConfig {base_url:e.url.clone(),api_key:"test".into(),model:"test".into(),instructions:"".into(),thinking:"off".into(),strip_leading_filler:false,url_query:"".into(),room:"".into()} }
+    #[tokio::test]
+    async fn personal_metadata_requires_terminal_choice_and_done() {
+        const TERMINAL: &str = concat!(
+            "data: {\"choices\":[{\"delta\":{\"content\":\"正文。\"}}],\"tool\":\"weather\"}\n\n",
+            "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"tool\":\"search\",",
+            "\"sources\":[{\"title\":\"Python 发布公告\",\"url\":\"https://www.python.org/downloads/\",\"date\":null}]}\n\n",
+        );
+        let _ = rustls::crypto::ring::default_provider().install_default();
+        let client = reqwest::Client::new();
+        for (complete, body) in [(true, concat!(
+            "data: {\"choices\":[{\"delta\":{\"content\":\"正文。\"}}],\"tool\":\"weather\"}\n\n",
+            "data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"stop\"}],\"tool\":\"search\",",
+            "\"sources\":[{\"title\":\"Python 发布公告\",\"url\":\"https://www.python.org/downloads/\",\"date\":null}]}\n\n",
+            "data: [DONE]\n\n",
+        )), (false, TERMINAL)] {
+            let server = endpoint(0, 200, body).await;
+            let (tx, _rx) = mpsc::channel(16);
+            let reply = stream_personal_text(&client, &config(&server), vec![], tx, false).await.unwrap();
+            assert_eq!(reply.full, "正文。");
+            assert_eq!(reply.done, complete);
+            assert_eq!(reply.personal.is_some(), complete);
+            if let Some(metadata) = reply.personal {
+                let metadata = serde_json::to_value(metadata).unwrap();
+                assert_eq!(metadata["tool"], "search");
+                assert_eq!(metadata["sources"][0]["title"], "Python 发布公告");
+            }
+        }
+    }
     #[tokio::test]
     async fn disaster_fast_main_never_calls_backup() {
         let m=endpoint(40,200,ANSWER).await; let f=endpoint(10,200,ANSWER).await;

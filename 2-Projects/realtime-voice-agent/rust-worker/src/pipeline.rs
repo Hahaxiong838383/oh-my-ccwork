@@ -418,6 +418,7 @@ struct ExitSignalPending {
 }
 
 struct Orchestrator {
+    personal_device: Option<String>,
     search: Option<crate::search_tasks::SearchSession>,
     search_turn: bool,
     search_user_speaking: bool,
@@ -863,6 +864,7 @@ pub struct OrderedCtx {
 }
 
 pub struct ReadyCtx {
+    pub personal_device: Option<String>,
     pub onboarding: Option<serde_json::Value>,
     pub session_id: Option<String>,
     pub business: Option<crate::business_runtime::Runtime>,
@@ -989,6 +991,7 @@ pub async fn run_pipeline(
     let search = llm.try_lock().ok().and_then(|g| crate::search_tasks::SearchSession::from_config(&g.prewarm_parts().1, tts_cfg.provider_name(), tts_cfg.voice()));
     let onboarding = crate::llm::LlmConfig::from_env().and_then(|cfg| crate::voice_onboarding::Runtime::from_metadata(ready.onboarding.as_ref(), ready.trace_id.as_deref(), ready.session_id.as_deref(), crate::ordered_pcm::expected_device_identity(&room_name).as_deref(), &cfg.base_url, &cfg.url_query));
     let mut orch = Orchestrator {
+        personal_device: ready.personal_device.clone(),
         onboarding,
         onboarding_deferred: None,
         search,
@@ -3825,6 +3828,7 @@ impl Orchestrator {
         let llm = self.llm.clone();
         let search_history_handoff = self.search_history_handoff.clone();
         let room_name = self.room_name.clone();
+        let personal_device = self.personal_device.clone();
         let ev_tx = self.turn_ev_tx.clone();
         let min_len = self.cfg.tts_min_sentence_len;
         let first_clause_min = self.turn_first_clause_min;
@@ -3969,6 +3973,13 @@ impl Orchestrator {
                             (delta_rx, h, false)
                         }
                     };
+                    struct AbortPersonal(Option<tokio::task::AbortHandle>);
+                    impl Drop for AbortPersonal {
+                        fn drop(&mut self) {
+                            if let Some(task) = &self.0 { task.abort(); }
+                        }
+                    }
+                    let _personal_cancel = AbortPersonal(personal_device.as_ref().map(|_| llm_join.abort_handle()));
                     let mut seg = Segmenter::new(min_len).with_first_clause_min(first_clause_min);
                     // 2b(2026-09-03):[[DEV:N]] 在流里一解析到就派发(带内 token,见 llm::dev_inband),
                     // 不再等整段回复合成完——动作跟着回复开头走。一轮只派首个,其余 multi_label 记 suppressed。
@@ -4055,6 +4066,11 @@ impl Orchestrator {
                     }
                     match llm_join.await {
                         Ok(Ok(outcome)) => {
+                            if let (Some(device), Some(metadata)) = (&personal_device, &outcome.personal)
+                                && !ctl_tts.aborted() {
+                                let _ = crate::personal::send(&lp, device,
+                                    json!({"type":"voice_result", "id":id.to_string(), "metadata":metadata})).await;
+                            }
                             if spec_mode {
                                 llm.lock().await.settle(&outcome);
                             }
@@ -4116,7 +4132,7 @@ impl Orchestrator {
 
 // Forced job abort/panic is the fallback path: never detach a talking turn or
 // lose the final conservative cursor merely because run_pipeline did not return.
-impl Drop for Orchestrator {fn drop(&mut self){if self.search.is_some(){self.hard_abort_current();if let Some(search)=&mut self.search{search.close();}}}}
+impl Drop for Orchestrator {fn drop(&mut self){if self.search.is_some() || self.personal_device.is_some(){self.hard_abort_current();if let Some(search)=&mut self.search{search.close();}}}}
 
 /// 已播样本数 → 真实说出的文本(整句边界 + 句内按样本比例折算字符,截断历史用)。
 fn truncate_spoken(synth: &str, progress: &[(usize, u64)], played_samples: u64) -> String {

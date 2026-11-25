@@ -113,6 +113,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         .map(|r| r.name.clone())
         .unwrap_or_default();
     anyhow::ensure!(crate::search_canary::job_allowed(&config.agent_name,&room_name,&job.metadata), "canary_job_rejected");
+    let personal_device = crate::personal::assigned_device(&config.agent_name, &room_name, &job.metadata);
+    anyhow::ensure!(config.agent_name != crate::personal::AGENT || personal_device.is_some(), "invalid personal dispatch");
     let sid = job.room.as_ref().map(|r| r.sid.as_str()).unwrap_or_default();
     let mut close_intent = match crate::room_cleanup::CloseIntent::begin(&config.agent_name, &room_name, sid, &job.metadata) {
         Ok(intent) => intent,
@@ -156,7 +158,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     }
     // 预组装(2026-09-07):ASR 预连 + VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/回声库拉取,全部与建房/发布出声轨/
     // 等用户音轨并行;订到轨后 pipeline 直接接管。OwnedTask 保证提前退出/未接管结果被丢弃时取消 ASR。
-    let mut prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
+    let mut audio_enabled = personal_device.is_none() || crate::personal::audio_configured();
+    let mut prebuilt_task = audio_enabled.then(|| OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
     info!(job_id = %job.id, room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "worker_room_connect_start");
 
     let startup_deadline = business.as_ref().and_then(|w| w.startup_deadline());
@@ -173,6 +176,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             return Err(error.context("room connect"));
         }
     };
+    let room = std::sync::Arc::new(room);
+    let personal_text = personal_device.clone().and_then(|device| crate::personal::spawn(room.clone(), device));
     let connect_ms = t0.elapsed().as_millis() as u64;
     info!(
         room = %room_name,
@@ -231,7 +236,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let ordered_local_receipt = meta.local_receipt.as_deref() == Some("v1");
     let ordered_first_turn = input_mode == crate::ordered_pcm::InputMode::OrderedPcm && meta.oneshot_first_turn.as_deref() == Some("v1");
     let ordered_ctx = pipeline::OrderedCtx { local_receipt: ordered_local_receipt, first_turn_rtc: ordered_first_turn, session_id: meta.session_id.clone() };
-    let expected_device = crate::ordered_pcm::expected_device_identity(&room_name);
+    let expected_device = personal_device.clone().or_else(|| crate::ordered_pcm::expected_device_identity(&room_name));
     let mut participant_lifecycle = StartupParticipant::new(expected_device.clone());
     // Participants present at Room::connect need not emit ParticipantConnected.
     for p in room.remote_participants().values() {
@@ -250,6 +255,12 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     let mut watchdog = tokio::time::interval(std::time::Duration::from_secs(1));
     watchdog.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
 
+    let startup_expired = |lifecycle: &StartupParticipant| {
+        lifecycle.expired(t0.elapsed().as_millis() as u64) &&
+            !personal_device.as_ref().is_some_and(|device| {
+                room.remote_participants().contains_key(&ParticipantIdentity::from(device.as_str()))
+            })
+    };
     loop {
         let ev = match next_job_wake(events.recv(), &mut pipeline_task, &mut watchdog).await {
             JobWake::Room(Some(ev)) => ev,
@@ -259,6 +270,10 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     Ok(Ok(())) => info!(job_id = %job.id, room = %room_name, room_sid = %sid, "pipeline ended → closing job"),
                     Ok(Err(e)) => warn!(job_id = %job.id, room = %room_name, room_sid = %sid, error = %e, "pipeline failed → closing job"),
                     Err(e) => warn!(job_id = %job.id, room = %room_name, room_sid = %sid, panic = e.is_panic(), cancelled = e.is_cancelled(), "pipeline join failed → closing job"),
+                }
+                if personal_text.is_some() {
+                    audio_enabled = false;
+                    continue;
                 }
                 break;
             }
@@ -272,7 +287,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     }
                     if matches!(decision, crate::business_watchdog::Decision::Close(_)) { break; }
                 }
-                if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) {
+                if startup_expired(&participant_lifecycle) {
                     info!(room=%room_name, "startup participant recovery expired → closing job");
                     break;
                 }
@@ -297,7 +312,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 continue;
             }
         };
-        if participant_lifecycle.expired(t0.elapsed().as_millis() as u64) { break; }
+        if startup_expired(&participant_lifecycle) { break; }
         match ev {
             // 设备控制包。⚠️ worker 自己的 ack 也走 control topic,
             // 过滤在 control::parse 里(只认 src=android),不然会自己取消自己。
@@ -419,6 +434,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 publication,
                 participant,
             } => {
+                if !audio_enabled { continue; }
                 if !current_remote(&room, &participant) || !participant_lifecycle.accepts(
                     &participant.identity().to_string(), &participant.sid().to_string()) {
                     info!(job_id = %job.id, room = %room_name, room_sid = %sid,
@@ -518,6 +534,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             let beat2 = beat.clone();
             let ready = pipeline::ReadyCtx {
                 business: business.clone(),
+                personal_device: personal_device.clone(),
                 onboarding: meta.voice_onboarding.clone(),
                 session_id: meta.session_id.clone(),
                 trace_id: meta.trace_id.clone(),
@@ -536,6 +553,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
         }
     }
 
+    drop(personal_text);
     // Both a still-running prebuild and a completed result own their ASR task.
     drop(prebuilt_task.take());
     if let Some(t) = pipeline_task.take() {
