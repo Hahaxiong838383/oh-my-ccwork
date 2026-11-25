@@ -93,3 +93,37 @@ xray 读不到 `/etc/letsencrypt`（700 root）。做法：
   需要完整上下文看 `tail.log`（近 5–10 分钟全量）。
 - 注意：电视 4K 硬解时 `screencap` 是黑屏，**不要用截图判断是否在播**；用
   `dumpsys media_session` 的 `state` + `PlaybackState.error` + `rx_bytes` 差分。
+
+## 十、电视「连不上」的头号原因：默认路由被 Android 抢回主路由（2026-11-25 复盘）
+
+**现象**：电视重启后 SmartTube 打不开/播不动，网关侧 ping、adb 都正常；`dsh-tv-guard` 日志刷
+`repaired drift` 与 `current=192.168.1.1` 交替出现；严重时 adb 报 `device offline`。
+
+**根因两层**：
+1. 电视重启后 DHCP 把默认网关设回 `192.168.1.1`（主路由），YouTube 走直连 → 不通。
+   v1 守卫用 `ip route replace default via 192.168.1.19` 去改 **main / table eth0**，
+   但 Android 的 netd 由 ConnectivityService 驱动，会周期性把这些表**重新装回** DHCP 版本，
+   于是形成「守卫改回来 → netd 改回去」的拉锯，电视一半时间走直连。
+2. 新上的 `dsh-tvlog` 每 7 秒重连一次 adb logcat，且每次都从缓冲区开头重放（几分钟就 3.7MB），
+   把 adbd 拖到 `offline`，守卫的 adb 调用也跟着失败（日志里 `current=` 为空）。
+
+**修法（v2，已上线）：
+- **策略路由**：新建 `table 100`（`default via 192.168.1.19` + `192.168.1.0/24 dev eth0 scope link`），
+  再插一条 `ip rule add priority 9000 from all lookup 100`。netd 只维护 10000 以上的规则与自己的表，
+  **碰不到 9000**，所以种下即稳定。
+- 判据改为「table 100 的 default 网关 == GW **且** 存在 9000 规则」；注意 `ip rule` 行尾有空格，
+  匹配要用 `[[:space:]]` 而不是 `$`（这个坑让 v2 首版误判失败）。
+- 守卫仍每 5 秒跑一次（`OnUnitActiveSec=5`），健康时静默退出（0.18s）。
+- `dsh-tvlog` 改用 `logcat -T 1`（从当前开始，不回放历史）+ 秒退退避 20s；
+  修完实测 75 秒内只有 1 次 `streaming`，文件 11–30KB，不再拖垮 adbd。
+
+**复查命令**：
+```bash
+adb -s 192.168.1.144:5555 shell "ip route get 8.8.8.8"     # 必须 via 192.168.1.19 table 100
+adb -s 192.168.1.144:5555 shell "ip rule | grep 9000"      # 必须有 9000: from all lookup 100
+```
+电视侧 `ip route` / `table eth0` 里仍是 `via 192.168.1.1` 也没关系——策略规则优先于它们。
+
+**旁证**：日志后台在 2026-11-24 23:46 抓到一条真实播放错误
+`ExoPlayerController: onPlayerError ... HttpDataSourceException: SocketTimeoutException`，
+正是路由错误时段的产物；修好后 `events.log` 无新增。
