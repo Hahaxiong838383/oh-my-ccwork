@@ -5,6 +5,10 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 # voice-agent-ops — 部署与排障 SOP
 
+## 小可私人版（北京 ECS／飞牛 2）
+
+私人版与 P003 是两个运行环境。先核对域名、容器与发布实物，再选择对应流程。[配置工作室、音色切换、Lucky 公网验收与回退](references/personal-studio-release.md)
+
 ## 已归档的 P003 运维记录
 
 - [方舟产品回复、设备事实与配表核验](references/ark-facts-and-product-replies.md)
