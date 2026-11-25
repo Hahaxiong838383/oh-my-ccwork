@@ -20,11 +20,11 @@
 - 原始 Rust 构建提交 `2592754456024f356b09375190949dd25e6aab12` 是本分支祖先。开发前基线和当前提交中的 `rust-worker` 树均为 `a11963f947ba1987aff863bb4ac4c990a2fe4f7d`。原始二进制 SHA256 回读为 `0578ca2e4c5a0caa357a3dd62bddcc6a26464abf34b1a507092fe771f3c19e56`。
 - 候选二进制为 `/data/home-studio/artifacts/personal-voice/worker-build/voice-rust-worker-personal-data-1f9f6cfd504609bdb66719ca262c1b5480ea139b05c58a8ee9436a39c81a1ae1`。飞牛文字容器使用相同实物，SHA256 为 `1f9f6cfd504609bdb66719ca262c1b5480ea139b05c58a8ee9436a39c81a1ae1`。Compose 实机 SHA256 为 `cafd357091ed848e8d22cf29326fbe301c012ccbdd29bc6f5a987df3f41552db`。构建来自基线 Rust 树叠加本工作树的个人通道源码，待根任务收录。
 - Debian Bookworm 的大脑镜像缺少构建所需的 glibc 和 libstdc++ 版本，文字组件实机已改用 Ubuntu 24.04 运行镜像。
-- 原 worker 的无麦克风启动有 60 秒上限。如果原二进制正好被派到文字房，可能会在到期时删除整个房间。候选版本会在可信设备仍在线时保留房间，无 ASR/TTS 配置时也维持文字服务。根任务应在个人池空房时替换唯一的 `personal-xiaoke`，回读运行中二进制，再按服务接入情况退役中继。语音输入到来源展示的真实验收仍依赖个人 ASR/TTS 凭据。
+- 原 worker 的无麦克风启动有 60 秒上限。如果原二进制正好被派到文字房，可能会在到期时删除整个房间。候选版本会在可信设备仍在线时保留房间，无 ASR/TTS 配置时也维持文字服务。个人池已在零活动房间时切换到支持文字的 Worker，浏览器验证搜索和取消均由派单 Worker 自己应答。临时文字中继已停止，配置和镜像保留供回退。语音输入到来源展示的真实验收仍依赖个人 ASR/TTS 凭据。
 
 ## 2026-11-25 实机验收
 
 - 北京 `/talk/` 静态发布为 `/opt/personal-edge/clients/2e59ea8147b14be2`。实机 `index.html` SHA256 为 `bef9f24ed5d01a78bd95f243e608ec274adaa42b1a23af6c7cf23241c512eb69`，`voice.js` 为 `3e0f619200deaa4b0171c0455675a9f5bc67df736383e1d70a93b2f887af48d0`。现有私人 HTTPS 入口回读到相同脚本。
 - 北京直连在 Chromium 独立信任库导入试点 CA 后验收。私人 HTTPS 入口走它现有的 HTTPS 与北京信令转发。两个入口各用一台临时设备，在零次麦克风请求的情况下通过 Enter 向真实大脑查 Python 3.14.0 发布公告，从可靠通道获得 `search` 和来源，点击后打开 Python 官网公告。重复提交 ID 仅产生一条答复。停止查询收到取消回执，同房随后收到时钟答复。
 - 匿名及无效设备签票返回 401，指定房间的篡改请求体返回 400，合法设备票访问管理接口分别返回 401 和 403。两台临时设备已撤销。上述两个房间各有一条 `delivered` 和一条 `cancelled` 的查询任务回执，持久会话表均为零行。
-- Rust release 构建和三个新增范围测试通过。全量运行通过 639 项，忽略 2 项，另外三个原有 onboarding HTTP/SQLite fixture 因当前工作树缺少 Node 的 `tsx` 依赖而启动失败。排除这三个 fixture 再跑，639 项通过。
+- Rust release 构建和三个新增范围测试通过。补齐测试工作树里锁定版本的 Node 依赖后，含原有 onboarding HTTP/SQLite fixture 的全量 release 测试 642 项通过、2 项忽略。

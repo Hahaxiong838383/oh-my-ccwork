@@ -49,10 +49,10 @@
 <text x="879" y="512" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">UDP / ICE-TCP / TURN-UDP</text>
 <rect x="1310" y="259" width="376" height="103" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
 <text x="1326" y="292" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">Rust 语音 Worker</text>
-<text x="1326" y="321" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">收音、判停、打断、回传字幕和声音</text>
-<text x="1326" y="346" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">并发按已配置的 Worker 槽位接单</text>
+<text x="1326" y="321" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">本地识别和合成 · 判停与打断</text>
+<text x="1326" y="346" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">回传字幕和音轨 · 接单上限 2 路</text>
 <rect x="1310" y="425" width="376" height="104" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
-<text x="1326" y="458" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">文字通道</text>
+<text x="1326" y="458" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">Worker 文字通道</text>
 <text x="1326" y="487" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">可靠数据消息、取消和来源回执</text>
 <text x="1326" y="512" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">麦克风关闭时可继续交谈</text>
 <line x1="297.0" y1="312.0" x2="420.0" y2="312.0" stroke="#2762BC" stroke-width="2.5"/>
@@ -151,6 +151,6 @@
 <polygon points="1129,906 1119.0,910.5 1119.0,901.5" fill="#087953"/>
 <text x="1143" y="912" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">私人管理入口</text>
 <text x="1701" y="912" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="570" text-anchor="end" fill="#172D49">私人试运行 · 能力验收见回执</text>
-<text x="40" y="947" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">设备票由北京独立签发。房间媒体直接往返北京，飞牛只转发网页、签票请求和信令。</text>
+<text x="40" y="947" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">北京独立签票与转发音轨。飞牛本地运行中文语音模型，联网回答使用个人模型与资料源。</text>
 <text x="1701" y="947" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="500" text-anchor="end" fill="#4D637B">5 路并发仍为压测目标。</text>
 </svg>

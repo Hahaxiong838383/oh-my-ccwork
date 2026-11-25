@@ -28,4 +28,4 @@ PERSONAL_LOCAL_SPEECH_URL=http://personal-local-speech:8091
 
 在飞牛停止并删除 `personal-local-speech` 容器，去掉 worker 上的 `PERSONAL_LOCAL_SPEECH_URL`，再发布不含该接点的 worker。模型目录可留在 `/vol1/1000/docker/personal-local-speech/models`。不要删除其他项目的容器。
 
-飞牛源端实测人声样本识别为「价格太高的原因」。合成「今天天气怎么样」用了 109 ms，音频 1.537 秒，PCM 非零。将该音频送回识别得到「今天天气怎么」，末字有漏识。浏览器双向通话另见[部署回执](../../docs/个人版部署验收.md)。
+飞牛最终镜像为 `personal-local-speech:20261125.4`。同一连接静默 32 秒后，公开人声样本正确转写为「价格太高的原因」；合成「今天天气怎么样」用时 105 ms，得到 1.482 秒非静音音频，回送识别逐字一致。浏览器业务路径与并发验收详见[部署回执](../../docs/个人版部署验收.md)。
