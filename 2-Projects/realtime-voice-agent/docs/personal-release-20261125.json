@@ -1,5 +1,5 @@
 {
-  "sampled_at": "2026-11-25T05:33:31+00:00",
+  "sampled_at": "2026-11-25T05:42:04+00:00",
   "scope": "personal-voice",
   "fingerprint_method": "单文件为实机 SHA256。多文件按记录内路径排序，逐项拼接 UTF-8 路径、零字节和原始 32 字节 SHA256，再取整体 SHA256。语音模型遍历 /models 下的所有普通文件，以相对路径计算。",
   "model_file_count": 362,
@@ -80,12 +80,12 @@
       "nas_image_id": "sha256:19afbde51fa8e3a33beae8179502434326c0d5151c02b0369e2d2095ac139b1e"
     },
     "personal-local-speech": {
-      "sha256": "0cfc1bc789016cd6825f7cd170a0c120760dc2fee40a73ababf9f2abd5b23e34",
-      "source_commit": "d3bad2815d6123d87129b3060149ca00f8317b3d",
+      "sha256": "969e67e02ad58ae5820566867ffaa5db4ddcbe981191d285db418317bdab6a12",
+      "source_commit": "2e5d1045f3b3144454caa7c8061a3083d22a4057",
       "files": {
-        "/app/server.py": "0cfc1bc789016cd6825f7cd170a0c120760dc2fee40a73ababf9f2abd5b23e34"
+        "/app/server.py": "969e67e02ad58ae5820566867ffaa5db4ddcbe981191d285db418317bdab6a12"
       },
-      "nas_image_id": "sha256:6a94f5edf32f1195b8c13efe95b4c9b86192eb4300a4e85c2380a4461894f0c1"
+      "nas_image_id": "sha256:4a85d5f0ab21a9664cfd3517d62f8d9de47e9fa462e01743bfa9c20d40298d0c"
     },
     "personal-speech-models": {
       "sha256": "377d6109009f0c8e2d4780173b5a3bb7838c481f835615a40c64d63c6f1298e3",
