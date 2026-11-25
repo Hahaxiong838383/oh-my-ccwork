@@ -1,0 +1,7 @@
+{
+  "name": "xiaoke-personal-voice",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {"build": "node build.mjs"},
+  "dependencies": {"livekit-client": "2.15.6"}
+}

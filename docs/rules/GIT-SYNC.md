@@ -20,7 +20,7 @@
 
 1. **任务登记**。mycc 使用 `tasks/git-branch-register.json`。分支键为完整远端分支名；`task` 写具体任务或任务单，`state` 使用 `active`（在做）、`done`（已完成待清理）、`keep`（明确保留）或 `archived`（已归档）。`keep` 填 `until`。登记随任务单更新，巡检按默认分支上已发布的登记判断；准备中的变更可以显式传 `--registry` 预检。
 2. **发布登记**。每个组件在 `releases` 登记 `source_commit`、`source_ref`、`maintainer_branch` 和 `sha256`。在 `proof` 指向不可变的构建证据（提交及 JSON 文件、组件字段、摘要字段），静态文件可直接指向源码提交与文件路径；SHA 必须来自发布实物或已核验的发布清单。P003 的采样范围是 hk2 运行中的语音 worker 进程、阿里云 PM2 服务端发布清单的 245 个文件、以及管理后台入口 HTML。服务端按相对路径排序，逐项拼接 UTF-8 路径、零字节、文件 SHA256 的 32 个原始字节，再取整体 SHA256；发布范围变化时一并更新采样清单。
-3. **只读巡检**。在仓库根运行 `python3 -B 4-Assets/scripts/git-branch-audit/audit.py --p003-live`。home-studio 每日 09:45 由用户级 timer 执行；查记录用 `journalctl --user -u git-branch-audit.service -n 60`。其他机器可使用 `--observed <文件>` 传入取自实机的 JSON，格式为 `{"at":"带时区的采样时间","components":{"组件名":"SHA256"}}`。不带实机样本时，发布部分报告未验。本地缺少最新默认分支对象时，GitHub 仓库可经已登录的 gh 只读获取登记或核验祖先关系。取证对象缺失且未能验证时，会显式报错。
+3. **只读巡检**。在仓库根运行 `python3 -B 4-Assets/scripts/git-branch-audit/audit.py --p003-live`。home-studio 每日 09:45 由用户级 timer 执行；查记录用 `journalctl --user -u git-branch-audit.service -n 60`。其他机器可使用 `--observed <文件>` 传入取自实机的 JSON，格式为 `{"at":"带时区的采样时间","components":{"组件名":"SHA256"}}`。个人语音组件在登记中使用 `scope: personal-voice`；其独立采样 JSON 增加 `"scope":"personal-voice"`。每日 `--p003-live` 只核 P003 的实机指纹，同时核对全部组件的发布证据和远端来源。未指定范围的样本须覆盖全量发布。不带实机样本时，发布部分报告未验。本地缺少最新默认分支对象时，GitHub 仓库可经已登录的 gh 只读获取登记或核验祖先关系。取证对象缺失且未能验证时，会显式报错。
 4. **看结果**。逐分支对照线上 refs 与任务登记，列出无任务、任务已完成但分支仍在的例外；逐组件对照实机指纹、维护分支、发布提交能否从远端引用找回。返回 0 表示核验通过，1 表示有待处理项，2 表示无法完成核验。巡检只读取资料，不会推送、删分支、改工作树或部署。
 5. **跨机同步**。其他电脑在已授权的工作区同步 mycc，将其 Claude、Codex、Grok、Gemini、Hermes、Cursor、DSH 等实际使用的全局或项目入口指向 `~/mycc/docs/rules/GIT-SYNC.md`。其他位置检出仓库时使用其实际路径。新会话中核对可读取的规则；每套生产环境指定一台机器定时采样即可。
 

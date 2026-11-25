@@ -1,0 +1,24 @@
+port: 18780
+bind_addresses: ["127.0.0.1"]
+key_file: /run/credentials/personal-edge-livekit.service/livekit.keys
+rtc:
+  node_ip: 60.205.5.246
+  use_external_ip: false
+  advertise_internal_ip: true
+  tcp_port: 18782
+  udp_port: 18782
+turn:
+  enabled: true
+  udp_port: 18785
+  relay_range_start: 18850
+  relay_range_end: 18977
+  allow_restricted_peer_cidrs: ["172.17.37.109/32"]
+room:
+  empty_timeout: 30
+  departure_timeout: 15
+  max_participants: 2
+  enabled_codecs:
+    - mime: audio/opus
+    - mime: audio/red
+logging:
+  level: info

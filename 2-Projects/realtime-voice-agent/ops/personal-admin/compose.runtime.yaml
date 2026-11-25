@@ -1,0 +1,15 @@
+services:
+  admin:
+    environment:
+      WORKER_STATUS_FILE: /run/worker-state/worker.json
+      TALK_SITE_ORIGIN: https://pa.hahaxiong.cc:8666
+    volumes:
+      - /vol1/1000/docker/personal-voice-runtime/cache/state:/run/worker-state:ro
+      - /vol1/1000/docker/personal-voice-runtime/private/brain.env:/run/brain-access.env:ro
+    networks:
+      - default
+      - voice
+networks:
+  voice:
+    external: true
+    name: personal-voice-private

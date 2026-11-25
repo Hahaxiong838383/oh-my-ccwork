@@ -8,6 +8,8 @@ services:
     security_opt: ["no-new-privileges:true"]
     environment:
       ADMIN_BUILD: ${ADMIN_BUILD}
+      EDGE_HEALTH_URL: ${EDGE_HEALTH_URL:-}
+      BRAIN_HEALTH_URL: ${BRAIN_HEALTH_URL:-}
     volumes:
       - ./data:/app/data
       - ./private:/run/private:ro

@@ -1,6 +1,11 @@
 {
   "default_branch": "main",
   "branches": {
+    "personal/voice-c-deployment-20261125": {
+      "task": "小可个人版方案 C，部署北京独立签票、飞牛语音与大脑、私人后台和真实通话验收",
+      "state": "keep",
+      "until": "个人设备蜂窝和锁屏实测后复核，发布源可从 main 找回；清理前复查工作树及 PR。"
+    },
     "backup/mycc-main-20261117": {
       "task": "2026-11-17 多机主线同步与恢复",
       "state": "keep",
@@ -193,6 +198,171 @@
       "proof": {
         "kind": "file",
         "object": "40e712abbd1812f70a2d7b09f1f7b07fcd9d7200:2-Projects/P003GameDemo20260513/apps/web/public/admin/index.html"
+      }
+    },
+    "personal-edge-livekit": {
+      "scope": "personal-voice",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "85a58024d9b36542712514e0e926c0adb74f6182bcb19a664b9d9eb98ad01b52",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-edge-livekit"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-edge-ticket": {
+      "scope": "personal-voice",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "4853ff065261b884e54dda29f259a6184cb5c3979c3aa4088dc6cfae9ef1e55b",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-edge-ticket"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-edge-gateway": {
+      "scope": "personal-voice",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "fb9505379a62c7257ad8be1ee59e3f0f1054240efdd7933263dd025f4c1c98f8",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-edge-gateway"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-edge-sfu-config": {
+      "scope": "personal-voice",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "b8a08b2781d662465c50655508a5ac0a8f9f012e5ae62e7e262f2482f95e4ec9",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-edge-sfu-config"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-browser": {
+      "scope": "personal-voice",
+      "source_commit": "ee0415421ec3652a61612c46373cd63a8d63fc8b",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "76a509d5a31edee213e2478b5aae4316ae8c130c0564045c5faa8c57d167743b",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-browser"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-admin": {
+      "scope": "personal-voice",
+      "source_commit": "f3b9b7c9043a0d3d89e2b9193b2257121807507b",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "43c4c7b86728c3bc454bd9c5d3ae438b9d0b184f312616ba7872d44ede74497c",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-admin"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-brain": {
+      "scope": "personal-voice",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "d4f5e67c727e5350f12be21a6df3f961b28de88c165d1e2a82989fb882f923c1",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-brain"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-worker": {
+      "scope": "personal-voice",
+      "source_commit": "d3bad2815d6123d87129b3060149ca00f8317b3d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "5ceb2d4d2bdd38f799c27aea033c3fce0bd185d08be00d79131a0bde9167e98a",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-worker"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-worker-eot": {
+      "scope": "personal-voice",
+      "source_commit": "d3bad2815d6123d87129b3060149ca00f8317b3d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "779953dbe1fc648bf632270aecd020e8bbdb948d6a28714da9ecb9d44e41b4b9",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-worker-eot"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-local-speech": {
+      "scope": "personal-voice",
+      "source_commit": "2e5d1045f3b3144454caa7c8061a3083d22a4057",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "969e67e02ad58ae5820566867ffaa5db4ddcbe981191d285db418317bdab6a12",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-local-speech"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "personal-speech-models": {
+      "scope": "personal-voice",
+      "source_commit": "d3bad2815d6123d87129b3060149ca00f8317b3d",
+      "source_ref": "refs/heads/main",
+      "maintainer_branch": "main",
+      "sha256": "377d6109009f0c8e2d4780173b5a3bb7838c481f835615a40c64d63c6f1298e3",
+      "proof": {
+        "object": "0fd02a510ce50bb1faddc43217f2389d0ae731b5:2-Projects/realtime-voice-agent/docs/personal-release-20261125.json",
+        "keys": [
+          "deployments",
+          "personal-speech-models"
+        ],
+        "digest_key": "sha256"
       }
     }
   }

@@ -1,0 +1,30 @@
+name: personal-brain
+services:
+  brain:
+    image: personal-brain:${BRAIN_BUILD:?}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    env_file: ./private/service.env
+    environment:
+      TZ: Asia/Shanghai
+      BRAIN_DATA_DIR: /data
+    volumes:
+      - ./brain-data:/data
+    networks:
+      worker:
+        aliases: [personal-brain]
+      egress:
+        gw_priority: 1
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+networks:
+  worker:
+    name: personal-voice-private
+    external: true
+  egress: {}

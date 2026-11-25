@@ -57,15 +57,48 @@ pub(crate) fn reconnect_backoff(consecutive_failures: u32) -> Duration {
     Duration::from_secs(u64::from((consecutive_failures * 2).clamp(1, RECONNECT_BACKOFF_MAX_SECS)))
 }
 
+async fn report_personal_status(state: Arc<WorkerState>, capacity: usize, path: std::path::PathBuf) {
+    let temporary = path.with_extension("next");
+    let mut interval = tokio::time::interval(Duration::from_secs(5));
+    loop {
+        interval.tick().await;
+        let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+            .unwrap_or_default().as_millis() as u64;
+        let status = serde_json::json!({
+            "service": "personal-xiaoke",
+            "sampled_ms": now,
+            "registered": crate::search_canary::recent_registration(now),
+            "jobs": state.active_jobs.load(Ordering::Relaxed),
+            "capacity": capacity,
+        });
+        let write = async {
+            tokio::fs::write(&temporary, status.to_string()).await?;
+            tokio::fs::rename(&temporary, &path).await
+        }.await;
+        if let Err(error) = write {
+            warn!(%error, "could not update personal worker status");
+        }
+    }
+}
+
 pub async fn run(config: Config) -> Result<()> {
     let state = Arc::new(WorkerState {
         active_jobs: AtomicUsize::new(0),
         reconnect_failures: AtomicU32::new(0),
     });
+    if config.agent_name == crate::personal::AGENT {
+        if let Some(path) = std::env::var_os("PERSONAL_STATUS_FILE") {
+            tokio::spawn(report_personal_status(state.clone(), config.max_jobs, path.into()));
+        }
+    }
     tokio::spawn(crate::search_canary::health_loop(config.agent_name.clone(),state.clone()));
     loop {
         crate::search_canary::signal(false);
-        match run_connection(&config, state.clone()).await {
+        let connection = run_connection(&config, state.clone()).await;
+        if config.agent_name == crate::personal::AGENT {
+            crate::search_canary::signal(false);
+        }
+        match connection {
             Ok(()) => {
                 info!("worker connection closed");
                 note_registered(&state);

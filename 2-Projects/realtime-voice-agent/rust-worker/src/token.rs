@@ -47,6 +47,15 @@ pub fn room_list_jwt(api_key: &str, api_secret: &str) -> Result<String> {
     sign(api_key, api_secret, VideoGrants { room_list: true, ..Default::default() })
 }
 
+pub fn personal_relay_jwt(api_key: &str, api_secret: &str, room: &str, identity: &str) -> Result<String> {
+    let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)?.as_secs();
+    Ok(encode(&Header::new(Algorithm::HS256), &serde_json::json!({
+        "iss": api_key, "sub": identity, "nbf": now.saturating_sub(5), "exp": now + 60,
+        "video": {"roomJoin": true, "room": room, "canPublish": false,
+                  "canSubscribe": false, "canPublishData": true}
+    }), &EncodingKey::from_secret(api_secret.as_bytes()))?)
+}
+
 fn sign(api_key: &str, api_secret: &str, video: VideoGrants) -> Result<String> {
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?

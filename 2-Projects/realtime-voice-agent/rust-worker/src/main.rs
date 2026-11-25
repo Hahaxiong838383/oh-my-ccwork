@@ -35,6 +35,7 @@ mod voice_connect;
 mod llm;
 mod ordered_pcm;
 mod pipeline;
+mod personal;
 mod playout;
 mod preflight;
 mod audit_capture;
@@ -76,6 +77,9 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cfg = config::Config::from_env()?;
+    if std::env::args().nth(1).as_deref() == Some("--personal-text-relay") {
+        return personal::relay(cfg).await;
+    }
     search_canary::validate_startup(&cfg.agent_name,cfg.max_jobs)?;
     // Build the shared place dictionary before accepting jobs, including P1.
     // First-turn weather parsing must not allocate it on the audio event loop.

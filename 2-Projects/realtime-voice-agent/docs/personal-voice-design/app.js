@@ -40,7 +40,7 @@ const STYLE_META = {
 };
 
 const state = {
-  theme: "console",
+  theme: "glass",
   view: "overview",       // overview | mobile | web | admin | matrix
   mobileMode: "duplex",   // duplex | listening | muted | hold | approval | collision | restricted | hardware | ended
   mobileInterrupted: false,

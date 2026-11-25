@@ -1,0 +1,18 @@
+[Unit]
+Description=Personal voice LiveKit server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+DynamicUser=yes
+LoadCredential=livekit.keys:/opt/personal-edge/private/livekit.keys
+ExecStart=/opt/personal-edge/bin/livekit-server --config /opt/personal-edge/livekit.yaml
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+UMask=0077
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

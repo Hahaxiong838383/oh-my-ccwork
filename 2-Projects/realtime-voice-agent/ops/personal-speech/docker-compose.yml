@@ -1,0 +1,33 @@
+name: personal-local-speech
+services:
+  speech:
+    container_name: personal-local-speech
+    image: personal-local-speech:${SPEECH_BUILD:?set SPEECH_BUILD}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: "1000:1000"
+    environment:
+      TZ: Asia/Shanghai
+      HOME: /tmp
+      PYTHONDONTWRITEBYTECODE: "1"
+      ASR_MODEL_DIR: /models/asr
+      TTS_MODEL_DIR: /models/tts
+      TTS_SID: "0"
+      TTS_VOICE: piper-zh-huayan-medium
+      BIND: 0.0.0.0
+      PORT: "8091"
+    volumes:
+      - ./models/asr:/models/asr:ro
+      - ./models/tts:/models/tts:ro
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    networks: [private]
+    mem_limit: 1610612736
+    cpus: 2
+networks:
+  private:
+    name: personal-voice-private
+    external: true

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="glass"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><title>小可 · 语音会话</title><link rel="stylesheet" href="./style.css"><script defer src="./livekit.js"></script><script defer src="./voice.js"></script></head>
+<body><header><strong>小可</strong><span>私人语音助手</span></header>
+<main><section class="call" aria-labelledby="title"><h1 id="title">语音会话</h1><div class="orb" aria-hidden="true"></div><p id="status" role="status">尚未连接</p>
+<form id="start"><label for="device">本机设备凭据</label><input id="device" type="password" autocomplete="off" spellcheck="false" required placeholder="输入这台设备的专用凭据"><div class="actions"><button id="connect">开始通话</button><button id="connect-text" class="secondary">仅用文字</button></div></form>
+<div id="controls" hidden><button id="mic">静音</button><button id="end" class="secondary">结束通话</button></div><button id="audio" hidden>启用声音</button>
+<p id="error" role="alert"></p></section><section class="history"><h2>本次对话</h2><p id="empty">说话或发送文字后，对话会出现在这里。</p><ol id="lines" aria-live="polite"></ol>
+<form id="compose" hidden>
+  <label for="message">发消息给小可</label>
+  <textarea id="message" rows="3" maxlength="4096" required></textarea>
+  <label class="memory"><input id="store" type="checkbox"> 允许小可记住这条消息</label>
+  <div class="actions"><button id="send" disabled>发送</button><button id="cancel" class="secondary" type="button" hidden>停止回复</button></div>
+  <p id="text-status" role="status"></p>
+</form></section></main><div id="tracks" hidden></div></body></html>

@@ -1,0 +1,19 @@
+[Unit]
+Description=Personal voice device ticket service
+After=network.target
+
+[Service]
+DynamicUser=yes
+StateDirectory=personal-edge-ticket
+StateDirectoryMode=0700
+LoadCredential=livekit.keys:/opt/personal-edge/private/ticket.keys
+ExecStart=/usr/bin/python3 -B /opt/personal-edge/ticket.py serve
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+UMask=0077
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
