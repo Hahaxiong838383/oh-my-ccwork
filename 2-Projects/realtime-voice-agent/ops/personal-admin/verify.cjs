@@ -16,6 +16,7 @@ async function verify() {
     });
     await page.goto(origin);
     assert.equal((await context.request.get(origin + '/api/voices')).status(), 401);
+    assert.equal((await context.request.get(origin + '/api/providers')).status(), 401);
     await page.locator('#pass').fill(fs.readFileSync(0, 'utf8').trim());
     await page.locator('#signin button').click();
     await page.waitForFunction(() => document.querySelector('#voiceChoice').options.length >= 2);
@@ -52,6 +53,7 @@ async function verify() {
     await page.click('#logout');
     await page.locator('#signin:visible').waitFor();
     assert.equal((await context.request.get(origin + '/api/voices')).status(), 401);
+    assert.equal((await context.request.get(origin + '/api/providers')).status(), 401);
   } finally { await browser.close(); }
 }
 verify().catch(error => { console.error(error.message); process.exitCode = 1; });

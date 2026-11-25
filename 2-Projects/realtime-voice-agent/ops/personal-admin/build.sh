@@ -6,7 +6,22 @@ deps=${SERVER_NODE_MODULES:-$server/node_modules}
 : "${ADMIN_BUILD:?set release identifier}"
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
-NODE_PATH="$deps" "$deps/.bin/esbuild" "$here/server.ts" --bundle --platform=node --format=esm --target=node24 --banner:js="import { createRequire } from 'node:module';const require=createRequire(import.meta.url);" --outfile="$stage/server.mjs"
+node --input-type=module - "$deps" "$here" "$stage" <<'JS'
+import {createRequire} from 'node:module';
+const require = createRequire(import.meta.url);
+const esbuild = require(process.argv[2] + '/esbuild');
+await esbuild.build({
+  entryPoints: [process.argv[3] + '/server.ts'],
+  bundle: true,
+  platform: 'node',
+  format: 'esm',
+  target: 'node24',
+  outfile: process.argv[4] + '/server.mjs',
+  banner: {js: "import { createRequire } from 'node:module';const require=createRequire(import.meta.url);"},
+  nodePaths: [process.argv[2]],
+  logLevel: 'info',
+});
+JS
 cp "$server/src/analytics/event-property-schema-v1.json" "$stage/"
 cp "$here/index.html" "$here/Dockerfile" "$stage"
 python3 - "$here/../../docs/personal-voice-design" "$stage/design.html" <<'PYTHON'

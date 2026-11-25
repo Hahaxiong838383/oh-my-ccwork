@@ -4,9 +4,11 @@ services:
       WORKER_STATUS_FILE: /run/worker-state/worker.json
       SPEECH_ORIGIN: http://personal-local-speech:8091
       TALK_SITE_ORIGIN: https://pa.hahaxiong.cc:8666
+      PERSONAL_PROVIDERS_FILE: /run/personal-providers/providers.json
     volumes:
       - /vol1/1000/docker/personal-voice-runtime/cache/state:/run/worker-state:ro
       - /vol1/1000/docker/personal-voice-runtime/private/brain.env:/run/brain-access.env:ro
+      - /vol1/1000/docker/personal-voice-runtime/private/providers:/run/personal-providers
     networks:
       - default
       - voice
