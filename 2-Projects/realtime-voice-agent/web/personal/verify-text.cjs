@@ -73,7 +73,9 @@ async function main() {
     assert.equal(await link.getAttribute('rel'), 'noopener noreferrer');
     const search = await page.evaluate(() => window.wire.find(frame => frame.metadata?.tool === 'search'));
     assert.equal(search.kind, 0);
-    assert(search.sender === 'personal-text-relay' || search.sender.startsWith('agent-'));
+    if (process.env.VOICE_TEST_REQUIRE_AGENT === '1') assert(search.sender.startsWith('agent-'));
+    else assert(search.sender === 'personal-text-relay' || search.sender.startsWith('agent-'));
+    console.log('回复来自', search.sender.startsWith('agent-') ? '派单 Worker' : '文字中继');
     assert.equal(search.metadata.sources[0].url, href.toString());
     const opened = page.waitForEvent('popup');
     await link.click();

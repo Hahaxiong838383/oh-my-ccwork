@@ -112,7 +112,7 @@ function refresh(session) {
   if (active !== session || !session.connected) return;
   const { room, pending, peer } = session;
   const peers = [...room.remoteParticipants.values()];
-  const voice = peers.some(isWorker);
+  const voice = peers.some(peer => isWorker(peer) && peer.sid === session.voicePeer);
   const text = peer && room.remoteParticipants.get(peer.identity)?.sid === peer.sid;
   el('send').disabled = session.reconnecting || !text || !!pending;
   el('cancel').hidden = !pending || pending.cancelling;
@@ -137,6 +137,7 @@ function receive(session, data, participant, kind, topic) {
   }
   if (frame.type === 'ready' && session.hellos.get(participant.sid) === frame.id) {
     session.hellos.delete(participant.sid);
+    if (isWorker(participant) && frame.voice === true) session.voicePeer = participant.sid;
     if (!session.peer || isWorker(participant)) session.peer = participant;
     refresh(session);
     return;
