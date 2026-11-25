@@ -1,0 +1,98 @@
+{
+  "sampled_at": "2026-11-25T06:41:45+00:00",
+  "scope": "personal-voice",
+  "fingerprint_method": "单文件为实机 SHA256。多文件按记录内路径排序，逐项拼接 UTF-8 路径、零字节和原始 32 字节 SHA256，再取整体 SHA256。语音模型遍历 /models 下的所有普通文件，以相对路径计算。",
+  "model_file_count": 418,
+  "deployments": {
+    "personal-edge-livekit": {
+      "sha256": "85a58024d9b36542712514e0e926c0adb74f6182bcb19a664b9d9eb98ad01b52",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "files": {
+        "bin/livekit-server": "85a58024d9b36542712514e0e926c0adb74f6182bcb19a664b9d9eb98ad01b52"
+      }
+    },
+    "personal-edge-ticket": {
+      "sha256": "4853ff065261b884e54dda29f259a6184cb5c3979c3aa4088dc6cfae9ef1e55b",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "files": {
+        "ticket.py": "4853ff065261b884e54dda29f259a6184cb5c3979c3aa4088dc6cfae9ef1e55b"
+      }
+    },
+    "personal-edge-gateway": {
+      "sha256": "fb9505379a62c7257ad8be1ee59e3f0f1054240efdd7933263dd025f4c1c98f8",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "files": {
+        "nginx.conf": "fb9505379a62c7257ad8be1ee59e3f0f1054240efdd7933263dd025f4c1c98f8"
+      }
+    },
+    "personal-edge-sfu-config": {
+      "sha256": "b8a08b2781d662465c50655508a5ac0a8f9f012e5ae62e7e262f2482f95e4ec9",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "files": {
+        "livekit.yaml": "b8a08b2781d662465c50655508a5ac0a8f9f012e5ae62e7e262f2482f95e4ec9"
+      }
+    },
+    "personal-browser": {
+      "sha256": "76a509d5a31edee213e2478b5aae4316ae8c130c0564045c5faa8c57d167743b",
+      "source_commit": "ee0415421ec3652a61612c46373cd63a8d63fc8b",
+      "files": {
+        "index.html": "346aff8a31339c24946223f01a70ba549cbe2ab3958b5015d9b34d3cc3116745",
+        "voice.js": "21b87d71449340c1a339b438c72e32a257b7564f47361d030e1897ee927e22e7",
+        "style.css": "5fd54301d8e4b2bd1db499d4beab1210988dd93633f95f7947af96b15e8c7bcc",
+        "livekit.js": "71ede404c69bf43c94bf158d979a796a2b546fc8c18256634e75a741b486435f",
+        "LIVEKIT-LICENSE": "09e8a9bcec8067104652c168685ab0931e7868f9c8284b66f5ae6edae5f1130b"
+      }
+    },
+    "personal-admin": {
+      "sha256": "d283a2a8d8c1688a821e6e9b3f5fb9c14b6fe41c62af9283f690ecef34f462ef",
+      "source_commit": "8f7d22f60d5cfca128caddd690069ac9354e4428",
+      "files": {
+        "/app/server.mjs": "5057cb84107b43aa2669ab41902f9a5fd1378ab05549fcca2047e703cb641347",
+        "/app/index.html": "951bcd01cb3238b227ed11ad49ccd66b2574918e8f2a35910c0e0f4f00ff6cee",
+        "/app/design.html": "5c02ba1508ce9da058687da650e718ab2d283aea18baa9083ae825387dfe35b9",
+        "/app/event-property-schema-v1.json": "7050d0be830669b63d444245f26fff2407fc3daf4d4b0866e4b2b309be06b1bc"
+      },
+      "nas_image_id": "sha256:fcb77a542c515e531beff2db07f5c94da07b026f6b0293485a2d008e973d0d88"
+    },
+    "personal-brain": {
+      "sha256": "d4f5e67c727e5350f12be21a6df3f961b28de88c165d1e2a82989fb882f923c1",
+      "source_commit": "fb1f64df4f151dd32b52d379e9a372dbf9bceb4d",
+      "files": {
+        "/app/server.mjs": "d4f5e67c727e5350f12be21a6df3f961b28de88c165d1e2a82989fb882f923c1"
+      },
+      "nas_image_id": "sha256:f9327b3ca9cf168281c2ee3bfe7bd34f155a092e7e9fef3db913243c13d09edf"
+    },
+    "personal-worker": {
+      "sha256": "f249b6ce3daad39622fdff9723c5d3aaec42cc5a878823cd6ba4b79cbbea97cf",
+      "source_commit": "f164d207675e0e2c8acf8be68cd1ac5c7683b3c3",
+      "files": {
+        "/usr/local/bin/voice-rust-worker": "f249b6ce3daad39622fdff9723c5d3aaec42cc5a878823cd6ba4b79cbbea97cf"
+      },
+      "nas_image_id": "sha256:cc6099fc3e15309bd216a0fdfd1ec944b51e8cc198740440bf71a7d7e4889cf6"
+    },
+    "personal-worker-eot": {
+      "sha256": "779953dbe1fc648bf632270aecd020e8bbdb948d6a28714da9ecb9d44e41b4b9",
+      "source_commit": "d3bad2815d6123d87129b3060149ca00f8317b3d",
+      "files": {
+        "/opt/voice/eot_sidecar.py": "cc7f6da99731eab4b5a9339bbfbd5a71d957ad0b2a5f076073e12d3ca028677b",
+        "/opt/voice/assets/silero_vad.onnx": "597d30b3ec076608d059477bb14cfeffdf951bf5cae370d38f65d33bbfe82004"
+      },
+      "nas_image_id": "sha256:cc6099fc3e15309bd216a0fdfd1ec944b51e8cc198740440bf71a7d7e4889cf6"
+    },
+    "personal-local-speech": {
+      "sha256": "50cebde21f0dc820002186bb94c3dac49bec28cfb5fbef42f562b40f78c3ea8f",
+      "source_commit": "bc2ab5b7e200d7136a6dda09879371ce22d79663",
+      "files": {
+        "/app/server.py": "50cebde21f0dc820002186bb94c3dac49bec28cfb5fbef42f562b40f78c3ea8f"
+      },
+      "nas_image_id": "sha256:89bcd75a267b68dd93e7e649b26bf3eac9c856a08a11a58a40faa304afe9343c"
+    },
+    "personal-speech-models": {
+      "sha256": "e1be5aec61db013833e6341d889db71192bc68599f366435acda04b94fc6ea0e",
+      "source_commit": "bc2ab5b7e200d7136a6dda09879371ce22d79663",
+      "files": {
+        "/models (sorted regular-file manifest)": "e1be5aec61db013833e6341d889db71192bc68599f366435acda04b94fc6ea0e"
+      }
+    }
+  }
+}
