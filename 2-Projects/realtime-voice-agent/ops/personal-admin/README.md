@@ -15,3 +15,7 @@
 依赖来自仓库 `2-Projects/P003GameDemo20260513/apps/server/package-lock.json`。在独立构建目录安装锁定依赖后，以 `SERVER_NODE_MODULES` 指向其 `node_modules`。在本目录执行 `ADMIN_BUILD=<新版本> ./build.sh`，再向飞牛传输并加载同标签镜像。现有部署的 Compose 用 `.env` 中的 `ADMIN_BUILD` 选定镜像。在运行目录用 `docker compose up -d --no-build` 更换此服务。回退时选回已验证镜像并确认数据格式兼容。运行目录中的数据与私密配置跨重建保留。
 
 验收顺序为核对证书、检查 `/health` 的服务名、匿名访问 `/api/settings` 返回 401、浏览器登录保存配置并重载，最后退出后再次检查 401。浏览器和反代应保留同源请求；只读查询与写入均需登录，写入额外要求自定义请求头。
+
+## 发布记录 · 2026-11-25
+
+飞牛 2 运行容器 `personal-voice-admin-admin-1`，镜像标签 `personal-voice-admin:46dfe37dff15`。构建源码为 `46dfe37dff15dcf1bb44aed6d1069c1b791258d1`，合入后从远端 main 可达。以飞牛 Docker inspect 读取运行容器 Image，值为 `sha256:e19bef5061e9e9736bf78e9270116d848fe98d761ace7799d654727c7f5f6c68`。内网端口回读为 `192.168.1.115:18783 → 8443/tcp`。从另一台内网机器核对证书和健康响应，并以 390px 宽 Chromium 实际登录、保存和重载设置、退出、确认匿名 401。三种主题分别切换手机、Web、后台，九种组合均可操作。同镜像逻辑的隔离实例另外验证热词草稿写入回读、陈旧版本冲突和非法概率拒绝。
