@@ -1,0 +1,40 @@
+name: personal-voice-worker
+services:
+  worker:
+    image: personal-voice-worker:${WORKER_BUILD:?set WORKER_BUILD}
+    restart: unless-stopped
+    init: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    user: "1000:1000"
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    env_file:
+      - ./private/livekit.env
+      - ./private/brain.env
+    environment:
+      TZ: Asia/Shanghai
+      AGENT_NAME: personal-xiaoke
+      PERSONAL_STATUS_FILE: /var/cache/personal-voice/state/worker.json
+      WORKER_MAX_JOBS: "2"
+      VAD_MODEL_PATH: /opt/voice/assets/silero_vad.onnx
+      EOT_SIDECAR_PYTHON: /opt/voice/venv/bin/python
+      EOT_SIDECAR_SCRIPT: /opt/voice/eot_sidecar.py
+      EOT_SOCK: /tmp/eot.sock
+      SPEAKER_ID_ENABLED: "0"
+      FILLER_ENABLED: "0"
+      TTS_POOL_ENABLED: "0"
+      HOME: /var/cache/personal-voice
+    volumes:
+      - ./cache:/var/cache/personal-voice
+    networks:
+      - private
+      - egress
+    mem_limit: 2147483648
+networks:
+  private:
+    name: personal-voice-private
+    external: true
+  egress:
+    name: personal-brain_egress
+    external: true

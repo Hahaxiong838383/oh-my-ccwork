@@ -50,6 +50,18 @@ app.get('/api/design',c=>{
   return c.html(readFileSync('/app/design.html','utf8'));
 });
 app.post('/api/logout',c=>{sessions.delete(getCookie(c,'voice_owner')!);deleteCookie(c,'voice_owner',{path:'/'});return c.json({ok:true});});
+function workerStatus() {
+  if (!process.env.WORKER_STATUS_FILE) return '未接入状态采样';
+  try {
+    const sample = JSON.parse(readFileSync(process.env.WORKER_STATUS_FILE,'utf8'));
+    const age = Date.now() - sample.sampled_ms;
+    if (sample.service !== 'personal-xiaoke' || !Number.isSafeInteger(sample.sampled_ms) ||
+        !Number.isSafeInteger(sample.jobs) || !Number.isSafeInteger(sample.capacity) ||
+        sample.jobs < 0 || sample.capacity < 1 || typeof sample.registered !== 'boolean') return '采样数据异常';
+    if (age < -2000 || age > 20000) return '状态采样已过期';
+    return sample.registered ? '北京已注册 · '+sample.jobs+'/'+sample.capacity+' 路占用' : '正在连接北京';
+  } catch { return '尚无有效采样'; }
+}
 async function brainStatus() {
   if (!process.env.BRAIN_HEALTH_URL) return '未接入状态采样';
   try {
@@ -80,7 +92,7 @@ async function ticketStatus() {
 app.get('/api/settings',async c=>{
   const [brain, ticket] = await Promise.all([brainStatus(), ticketStatus()]);
   return c.json({
-    build:process.env.ADMIN_BUILD,worker:'未接入状态采样',brain,ticket,
+    build:process.env.ADMIN_BUILD,worker:workerStatus(),brain,ticket,
     sampledAt:new Date().toISOString(),
     drafts:Object.fromEntries(HOTWORD_KINDS.map(kind=>[kind,hotwordStore.draftOf(kind)])),
     probabilities:getFillerStyleSettings().probabilities

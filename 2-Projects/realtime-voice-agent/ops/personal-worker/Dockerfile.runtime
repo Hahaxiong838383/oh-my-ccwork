@@ -1,0 +1,5 @@
+FROM public.ecr.aws/docker/library/ubuntu:24.04
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get -o Acquire::Retries=2 update -qq && apt-get install -y --no-install-recommends python3 python3-venv ca-certificates libgomp1 libstdc++6 libgcc-s1 && rm -rf /var/lib/apt/lists/*
+COPY wheels /tmp/wheels
+RUN python3 -m venv /opt/voice/venv && /opt/voice/venv/bin/pip install --no-index --find-links=/tmp/wheels livekit-local-inference==0.2.5 livekit==1.1.9 livekit-api==1.2.3 numpy==2.5.5 && rm -rf /tmp/wheels && /opt/voice/venv/bin/python -c 'from livekit import local_inference, rtc, api; import numpy; local_inference.init_eot(); print(type(local_inference.EOT()).__name__)'

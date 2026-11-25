@@ -74,6 +74,10 @@ fn validate_config(agent:&str,max:usize,get:&impl Fn(&str)->String,w:Option<&Win
 }
 static LAST_SIGNAL:std::sync::atomic::AtomicU64=std::sync::atomic::AtomicU64::new(0);
 pub fn signal(connected:bool){LAST_SIGNAL.store(if connected {now_ms()}else{0},std::sync::atomic::Ordering::Relaxed);}
+pub(crate) fn recent_registration(now: u64) -> bool {
+    let last = LAST_SIGNAL.load(std::sync::atomic::Ordering::Relaxed);
+    last > 0 && now.saturating_sub(last) < 45_000
+}
 pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::WorkerState>) {
  let Some(profile)=profile(&agent)else{return};
  let Ok(path)=std::env::var("P003_SEARCH_CANARY_HEALTH_FILE")else{return};
@@ -85,8 +89,8 @@ pub async fn health_loop(agent:String,state:std::sync::Arc<crate::worker::Worker
  let mut timer=tokio::time::interval(std::time::Duration::from_secs(5));
  loop {
   timer.tick().await;
-  let now=now_ms();let last=LAST_SIGNAL.load(std::sync::atomic::Ordering::Relaxed);
-  let mut payload=serde_json::json!({"agent":agent,"at_ms":now,"registered":last>0&&now.saturating_sub(last)<45000,"jobs":state.active_jobs.load(std::sync::atomic::Ordering::Relaxed),"ordered_pcm_v1":true,"generation":generation});
+  let now=now_ms();
+  let mut payload=serde_json::json!({"agent":agent,"at_ms":now,"registered":recent_registration(now),"jobs":state.active_jobs.load(std::sync::atomic::Ordering::Relaxed),"ordered_pcm_v1":true,"generation":generation});
   if std::env::var("P003_ROOM_CLEANUP_V1").is_ok_and(|v|v=="1") {
    let raw=match std::env::var("P003_ROOM_CLEANUP_STATUS_FILE") {
     Ok(path)=>tokio::fs::read_to_string(path).await.unwrap_or_default(),Err(_)=>String::new(),
