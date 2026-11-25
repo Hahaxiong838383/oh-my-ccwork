@@ -127,3 +127,53 @@ adb -s 192.168.1.144:5555 shell "ip rule | grep 9000"      # 必须有 9000: fro
 **旁证**：日志后台在 2026-11-24 23:46 抓到一条真实播放错误
 `ExoPlayerController: onPlayerError ... HttpDataSourceException: SocketTimeoutException`，
 正是路由错误时段的产物；修好后 `events.log` 无新增。
+
+## 十一、根治「默认网关被 Android 抢回」（2026-11-25 晚，codex 审核后重做）
+
+### 11.1 结论：策略路由只是止血，根治点在 Android 的静态以太网配置
+
+codex 用 AOSP 源码 + 实机 dump 审核后推翻了我两个判断：
+
+| 我原来的说法 | 审核结论（附依据） |
+|---|---|
+| 「netd 管不到 9000 段规则」 | **只对日常增删成立**。`RouteController::Init()` 会 `flushRules()` 删掉 IPv4/IPv6 所有非 0 优先级的规则，9000 也删；netd 进程重启会再走一遍 |
+| 「v1 被 netd 周期性覆盖」 | 确认是 **netd 重装 Ethernet 表**，但触发者不是 DHCP 续租，**是电视侧脚本每 10 秒的 `ip -6 addr flush dev eth0`**：AOSP `IpClient.compareProvisioning()` 把「IPv6 配置全丢」判为 `LOST_PROVISIONING` → Ethernet `stop()`/`start()` → 新 netId（现场 260→261）→ 用 Android 保存的静态配置（网关 .1）重建路由 |
+
+**关键事实**：这台电视的 `eth0` 本来就是 **STATIC**，配置写在
+`/data/misc/ethernet/ipconfig.txt`（v3 二进制，131B），里面 `gateway` 一直是 `192.168.1.1`。
+所以任何「事后改路由」都会输——Android 每次重建都按这个文件装回 `.1`。
+
+### 11.2 已实施的根治
+
+1. **改 Android 的静态配置**：把 `ipconfig.txt` 里 `gateway` 的 `192.168.1.1` 换成 `192.168.1.19`
+   （按字节模式 `00 0b "192.168.1.1"` → `00 0c "192.168.1.19"`，131B→132B；
+   备份 `/data/local/tmp/ipconfig.bak2.txt` 与同目录 `ipconfig.txt.bak-20261125`）。
+   重启后 `dumpsys ethernet` 显示 `Gateway 192.168.1.19`，Android 自己就把
+   `default via 192.168.1.19 proto static` 装进 `table eth0` —— **无需任何外部改路由**。
+   （codex 提示的 `IEthernetManager` Binder 方案可免重启，但需要自己编 DEX；改文件 + 重启更简单可靠。）
+2. **停掉制造风暴的电视侧脚本**：旧 `/data/adb/dsh-gateway/watch.sh` 退役（改名 `.disabled-20261125`），
+   新的 `service.d/99-gateway.sh` 只做两件事：**关 eth0 的 IPv6**（`disable_ipv6=1`，防止 AAAA 直连出境）
+   + 把实际网关写进 `/data/local/tmp/gw-check.log` 供事后核查。**不再 flush IPv6 地址、不再改路由。**
+3. **网关侧守卫降级为「校验 + 应急兜底」**（`dsh-tv-guard.sh` v3，5s 一次）：
+   读 `table eth0` 的默认网关，等于 .19 就静默退出；连续 2 次不对才装应急策略路由
+   （table 100 + rule 9000），并在恢复正常后自动清掉应急规则。codex 指出旧版 `has_rule()`
+   无论结果都 `echo yes` 导致误判，v3 改为直接判断实际网关，从根上避开该 bug。
+
+### 11.3 验收（重启后实测）
+
+```
+dumpsys ethernet → Static configuration: ... Gateway 192.168.1.19
+ip route get 8.8.8.8 → via 192.168.1.19 dev eth0 table eth0    # Android 自己的表
+ip -4 rule | grep 9000 → 无                                      # 没有任何补丁规则
+disable_ipv6=1, eth0 无 IPv6 地址
+nc www.youtube.com 443 → OK
+```
+
+### 11.4 仍需注意
+
+- `ipconfig.txt` 是 v3 二进制，改错会让以太网配置整体失效（Android 会退回 DHCP，然后网关又变 .1）。
+  改前必备份、改后必须 `dumpsys ethernet` 验证；解析不了就用「按字节模式替换」而不是重写。
+- 电视重启后 `adb root` 会失效，写 `/data/adb/**` 前先 `adb root`。
+- `dsh-tvlog` 若每 7 秒重连并回放整段 logcat，会把 adbd 拖到 `offline`（已用 `-T 1` + 退避修掉），
+  排查 adb 不稳时先看它。
+- IPv6 现在靠 `disable_ipv6=1` 关闭；若将来要启用双栈，必须让 Armbian 成为电视链路上唯一的 IPv6 默认路由来源。
