@@ -10,6 +10,10 @@ async function verify() {
   try {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
     const page = await context.newPage();
+    await page.addInitScript(() => {
+      const create = URL.createObjectURL.bind(URL);
+      URL.createObjectURL = blob => { window.previewBlob = blob; return create(blob); };
+    });
     await page.goto(origin);
     assert.equal((await context.request.get(origin + '/api/voices')).status(), 401);
     await page.locator('#pass').fill(fs.readFileSync(0, 'utf8').trim());
@@ -23,13 +27,15 @@ async function verify() {
     const before = await readVoices();
     for (const voice of before.voices) {
       await page.selectOption('#voiceChoice', voice.id);
+      const preview = page.waitForResponse(r => new URL(r.url()).pathname === '/api/voices/preview');
       await page.click('#preview');
-      await page.waitForFunction(() => document.querySelector('#sample').readyState >= 2);
+      const response = await preview;
+      assert.equal(response.status(), 200);
+      await page.waitForFunction(() => document.querySelector('#sample').readyState >= 2 && document.querySelector('#sample').currentTime > 0);
       const energy = await page.evaluate(async () => {
-        const player = document.querySelector('#sample');
         const audio = new AudioContext();
         try {
-          const bytes = await (await fetch(player.src)).arrayBuffer();
+          const bytes = await window.previewBlob.arrayBuffer();
           const clip = await audio.decodeAudioData(bytes);
           const pcm = clip.getChannelData(0);
           return { seconds: clip.duration, rms: Math.sqrt(pcm.reduce((sum, n) => sum + n * n, 0) / pcm.length) };
