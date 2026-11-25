@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余、多出口带宽择优、IPv6 出口接入与证书续期）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Claude 的 SSH 专线、双桌面入口和回显测速，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余、多出口带宽择优、IPv6 出口接入与证书续期）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
 ---
 
 # xray - Xray 代理管理
@@ -11,6 +11,12 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，手机节点排�
 
 - 用户说"切换代理"、"关 v2ray"、"启动 xray"、"代理不通"、"网络不行"
 - 需要检查或修复代理配置时
+
+## Hostinger Claude 桌面入口
+
+排查 Air / Windows 的「Hostinger Claude」时，从桌面文件或快捷方式的实际目标开始。核对启动器拉起的 Xray 进程连接了指定节点，再从远端对应的 tmux **客户端进程**读取 `SSH_CONNECTION`。复用中的 Claude 进程可能保留第一次连接的环境。最后核对应用自己的代理与鉴权状态。这样能分别回答“这次 SSH 从哪进来”“Claude 从哪出去”和“账号能否工作”。
+
+比较线路时，用同一台客户端、同一 SSH 程序和同一台目标机交替测试。让远端收到一个按键后返回可区分的字符，分别记握手时间、回显中位数、P90 和超时次数。Tailscale 同时采样实际 peer 路径；到最近 DERP 的 ping 只覆盖第一段。端口分工、换机验收和恢复入口见[项目交接记录](../../../2-Projects/vps-proxy/2026-11-26-Hostinger-Claude-远程开发交接.md)。
 
 ## VLESS / REALITY 端口不可达模式
 
