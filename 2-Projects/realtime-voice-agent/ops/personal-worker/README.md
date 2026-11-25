@@ -10,3 +10,5 @@
 4. 检查个人池没有活动房间，再运行 `docker compose --env-file worker.release.env -f compose.worker.yaml up -d --no-build`。回读运行容器的镜像 ID 和 `/usr/local/bin/voice-rust-worker` SHA256。确认注册、判停侧车启动、浏览器发起一次完整通话。回退时使用上一版的发布文件与镜像，并重新验收。
 
 `WORKER_MAX_JOBS=2` 为初始接单上限。试点默认关闭声纹。本实例的云端语音设置需要单独授权。语音供应商、实测路径、实机指纹均以[本次部署回执](../../docs/个人版部署验收.md)为准。
+
+个人房间读取只读挂载的 `PERSONAL_PROVIDERS_FILE=/run/personal-providers/providers.json`。Worker 只按房间快照切换 ASR/TTS。`active.asr` 或 `active.tts` 为 null 时分别走飞牛本地识别和本地五音色。语言模型请求始终使用 `http://personal-brain:8080/v1`，Worker 不读取、不改写、不发送大模型厂商密钥。无关的 LLM 条目不会让语音失效。P003 不读这个文件。

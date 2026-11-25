@@ -159,7 +159,8 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
     // 预组装(2026-09-07):ASR 预连 + VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/回声库拉取,全部与建房/发布出声轨/
     // 等用户音轨并行;订到轨后 pipeline 直接接管。OwnedTask 保证提前退出/未接管结果被丢弃时取消 ASR。
     let mut audio_enabled = personal_device.is_none() || crate::personal::audio_configured();
-    let mut prebuilt_task = audio_enabled.then(|| OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
+    let metadata_for_speech = job.metadata.clone();
+    let mut prebuilt_task = audio_enabled.then(|| OwnedTask::new(tokio::spawn(pipeline::prebuild_with(room_name.clone(), metadata_for_speech))));
     info!(job_id = %job.id, room = %room_name, elapsed_ms = t0.elapsed().as_millis() as u64, "worker_room_connect_start");
 
     let startup_deadline = business.as_ref().and_then(|w| w.startup_deadline());
@@ -386,7 +387,7 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                     mic_stream = None;
                     user_info = None;
                     drop(prebuilt_task.take());
-                    prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild(room_name.clone()))));
+                    prebuilt_task = Some(OwnedTask::new(tokio::spawn(pipeline::prebuild_with(room_name.clone(), job.metadata.clone()))));
                     // LocalTrackSubscribed is a one-shot per publication in the
                     // SDK. Republish before input starts so the new SID must
                     // establish its own output readiness, not inherit the old one.

@@ -45,7 +45,15 @@ fn personal_room(room: &str) -> bool {
     room.strip_prefix("pv-").is_some_and(hex_id)
 }
 
+pub(crate) fn is_room(room: &str) -> bool {
+    personal_room(room)
+}
+
 pub fn audio_configured() -> bool {
+    // 档案已挂上时，房间快照会在 prebuild 里失败可见；不要在这里静默关掉语音。
+    if crate::personal_providers::engaged() {
+        return true;
+    }
     if crate::stt_volc::personal_local_speech::endpoint().is_some() { return true; }
     let has = |key| std::env::var(key).is_ok_and(|value| !value.trim().is_empty());
     let volc = has("VOLC_APP_ID") && has("VOLC_ACCESS_TOKEN");
@@ -180,10 +188,19 @@ enum Action {
     Cancel,
 }
 
-fn brain_route(config: &LlmConfig) -> bool {
+pub(crate) fn brain_route(config: &LlmConfig) -> bool {
     config.base_url.trim_end_matches('/') == "http://personal-brain:8080/v1"
         && config.model == "personal-brain"
         && config.url_query.is_empty()
+}
+
+/// 个人 Worker 的每一次语言模型请求都只能打到 personal-brain。其他 agent 保持原路由。
+pub(crate) fn allow_llm_request(agent: Option<&str>, config: &LlmConfig) -> bool {
+    agent != Some(AGENT) || brain_route(config)
+}
+
+pub(crate) fn llm_request_allowed(config: &LlmConfig) -> bool {
+    allow_llm_request(std::env::var("AGENT_NAME").ok().as_deref(), config)
 }
 
 pub fn voice_brain(config: &LlmConfig) -> bool {
@@ -445,6 +462,31 @@ async fn relay_room(url: &str, token: &str, sid: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn personal_worker_rejects_vendor_llm_endpoint() {
+        let brain = LlmConfig {
+            base_url: "http://personal-brain:8080/v1".into(),
+            api_key: "brain-auth".into(),
+            model: "personal-brain".into(),
+            instructions: String::new(),
+            thinking: "off".into(),
+            strip_leading_filler: false,
+            url_query: String::new(),
+            room: "pv-0123456789abcdef0123456789abcdef".into(),
+        };
+        assert!(allow_llm_request(Some(AGENT), &brain));
+        assert!(brain_route(&brain));
+        let mut vendor = brain.clone();
+        vendor.base_url = "https://api.deepseek.com".into();
+        vendor.model = "deepseek-v4".into();
+        assert!(!allow_llm_request(Some(AGENT), &vendor));
+        assert!(allow_llm_request(Some("voice-worker-rust"), &vendor));
+        vendor.base_url = "http://personal-brain:8080/v1".into();
+        vendor.model = "personal-brain".into();
+        vendor.url_query = "token=forward".into();
+        assert!(!allow_llm_request(Some(AGENT), &vendor));
+    }
 
     #[test]
     fn binding_requires_personal_dispatch_and_signed_ticket_shape() {

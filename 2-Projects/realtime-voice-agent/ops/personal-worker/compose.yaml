@@ -16,6 +16,7 @@ services:
       TZ: Asia/Shanghai
       AGENT_NAME: personal-xiaoke
       PERSONAL_LOCAL_SPEECH_URL: ${PERSONAL_LOCAL_SPEECH_URL:-}
+      PERSONAL_PROVIDERS_FILE: /run/personal-providers/providers.json
       PERSONAL_OWNER_ID: owner
       PERSONAL_STATUS_FILE: /var/cache/personal-voice/state/worker.json
       WORKER_MAX_JOBS: "2"
@@ -29,6 +30,7 @@ services:
       HOME: /var/cache/personal-voice
     volumes:
       - ./cache:/var/cache/personal-voice
+      - /vol1/1000/docker/personal-voice-runtime/private/providers:/run/personal-providers:ro
     networks:
       - private
       - egress

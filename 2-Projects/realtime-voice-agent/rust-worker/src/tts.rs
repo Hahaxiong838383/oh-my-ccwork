@@ -26,6 +26,12 @@ use crate::{tts_volc, tts_xfyun};
 pub enum TtsCfg {
     Volc(tts_volc::TtsConfig),
     Xfyun(tts_xfyun::XfyunTtsConfig),
+    /// 个人房间钉死的飞牛本地五音色。不读进程级开关，也不借用别的房间。
+    PersonalLocal(String),
+    /// 个人房间钉死的豆包合成。不回落到本地语音，也不进入进程级连接池。
+    SnapshotVolc(tts_volc::TtsConfig),
+    /// 个人房间钉死的讯飞合成。`preconnect` 来自该档案，不跟别的房间共用。
+    SnapshotXfyun { config: tts_xfyun::XfyunTtsConfig, preconnect: bool },
 }
 
 impl TtsCfg {
@@ -53,10 +59,13 @@ impl TtsCfg {
     }
 
     pub fn provider_name(&self) -> &'static str {
-        if crate::stt_volc::personal_local_speech::endpoint().is_some() {
-            return crate::stt_volc::personal_local_speech::PILOT_PROVIDER;
-        }
         match self {
+            Self::PersonalLocal(_) => crate::stt_volc::personal_local_speech::PILOT_PROVIDER,
+            Self::SnapshotVolc(_) => "doubao_tts",
+            Self::SnapshotXfyun { .. } => "xfyun_tts",
+            Self::Volc(_) | Self::Xfyun(_) if crate::stt_volc::personal_local_speech::endpoint().is_some() => {
+                crate::stt_volc::personal_local_speech::PILOT_PROVIDER
+            }
             Self::Volc(_) => "volc",
             Self::Xfyun(_) => "xfyun",
         }
@@ -64,40 +73,48 @@ impl TtsCfg {
 
     /// 音色标识(进启动日志,让"听到的声音不对"能一眼对账)
     pub fn voice(&self) -> &str {
-        if crate::stt_volc::personal_local_speech::endpoint().is_some() {
-            // 普通 /v1/tts 不带音色 ID，生效 ID 只在成功响应的 X-TTS-Voice。
-            return crate::stt_volc::personal_local_speech::VOICE_UNREPORTED;
-        }
         match self {
-            Self::Volc(c) => &c.speaker,
-            Self::Xfyun(c) => &c.vcn,
+            Self::PersonalLocal(_) => crate::stt_volc::personal_local_speech::VOICE_UNREPORTED,
+            Self::SnapshotVolc(config) => &config.speaker,
+            Self::SnapshotXfyun { config, .. } => &config.vcn,
+            Self::Volc(_) | Self::Xfyun(_) if crate::stt_volc::personal_local_speech::endpoint().is_some() => {
+                // 普通 /v1/tts 不带音色 ID，生效 ID 只在成功响应的 X-TTS-Voice。
+                crate::stt_volc::personal_local_speech::VOICE_UNREPORTED
+            }
+            Self::Volc(config) => &config.speaker,
+            Self::Xfyun(config) => &config.vcn,
         }
     }
 
     /// job 启动时预热。火山=预建池连接;讯飞=空操作(协议不允许复用)。
     pub async fn prewarm(&self) {
-        if let Some(url) = crate::stt_volc::personal_local_speech::endpoint() {
-            crate::stt_volc::personal_local_speech::prewarm(&url).await;
-            return;
-        }
         match self {
-            Self::Volc(c) => tts_volc::prewarm_pool(c).await,
-            Self::Xfyun(c) => tts_xfyun::prewarm_pool(c).await,
+            Self::PersonalLocal(base) => crate::stt_volc::personal_local_speech::prewarm(base).await,
+            Self::SnapshotVolc(config) => tts_volc::prewarm_pool(config).await,
+            Self::SnapshotXfyun { config, .. } => tts_xfyun::prewarm_pool(config).await,
+            Self::Volc(_) | Self::Xfyun(_) if crate::stt_volc::personal_local_speech::endpoint().is_some() => {
+                if let Some(url) = crate::stt_volc::personal_local_speech::endpoint() {
+                    crate::stt_volc::personal_local_speech::prewarm(&url).await;
+                }
+            }
+            Self::Volc(config) => tts_volc::prewarm_pool(config).await,
+            Self::Xfyun(config) => tts_xfyun::prewarm_pool(config).await,
         }
     }
 
     /// 起一条 turn 级预建连流水线。**turn 一开始就调**(与 LLM 并行),
     /// 这样第一句拿到的是已经握好手的连接。
     ///
-    /// 火山有进程级池,不需要,返回 `Off`。
+    /// 火山有进程级池,不需要,返回 `Off`。个人快照不借用这个进程级入口。
     pub fn start_prewarm(&self) -> Prewarm {
-        if crate::stt_volc::personal_local_speech::endpoint().is_some() {
-            return Prewarm::off();
-        }
         match self {
-            Self::Volc(_) => Prewarm::off(),
+            Self::PersonalLocal(_) | Self::SnapshotVolc(_) | Self::Volc(_) => Prewarm::off(),
+            Self::SnapshotXfyun { config, preconnect } => {
+                if *preconnect { Prewarm::arm(config.clone()) } else { Prewarm::off() }
+            }
+            Self::Xfyun(_) if crate::stt_volc::personal_local_speech::endpoint().is_some() => Prewarm::off(),
             // 环境开关:置 0 即退回「每句现连」的旧行为,不必换二进制
-            Self::Xfyun(c) if preconnect_enabled() => Prewarm::arm(c.clone()),
+            Self::Xfyun(config) if preconnect_enabled() => Prewarm::arm(config.clone()),
             Self::Xfyun(_) => Prewarm::off(),
         }
     }
@@ -118,43 +135,65 @@ impl TtsCfg {
         ctl: &PlayoutControl,
         warm: &mut Prewarm,
     ) -> Result<(u64, usize)> {
-        if let Some(url) = crate::stt_volc::personal_local_speech::endpoint() {
-            return crate::stt_volc::personal_local_speech::synthesize(&url, text, audio_tx).await;
-        }
         match self {
-            Self::Volc(c) => tts_volc::synthesize(c, text, audio_tx).await,
-            Self::Xfyun(c) => {
-                let waiting = std::time::Instant::now();
-                let (room,turn)=ctl.trace_identity();
-                let mut timing=DispatchTiming{start:waiting,room:room.into(),turn,prewarm_ms:None,finished:false};
-                let recovery = connection_recovery_mode();
-                let conn = if recovery {
-                    let acquired = warm.take_for_sentence(c).await;
-                    // Preserve the pipeline for the following sentence even if
-                    // this acquisition failed; the old candidate is already gone.
-                    *warm = self.start_prewarm();
-                    Some(acquired?)
-                } else {
-                    warm.take().await
-                };
-                let wait_ms = waiting.elapsed().as_millis() as u64;
-                timing.prewarm_ms=Some(wait_ms);
-                if !recovery { *warm = self.start_prewarm(); }
-                let (provider_ms, bytes) = if recovery {
-                    // No hidden cold reconnect after the shared acquisition budget.
-                    tts_xfyun::synthesize_connected(c, text, audio_tx, ctl, conn.expect("acquired connection")).await?
-                } else {
-                    tts_xfyun::synthesize(c, text, audio_tx, ctl, conn).await?
-                };
-                // The caller starts its timer before take(): include the handshake
-                // wait that used to disappear from body_ready_since_turn_ms.
-                timing.finished=true;
-                let first_pcm_ms = wait_ms.saturating_add(provider_ms);
-                tracing::info!(prewarm_wait_ms=wait_ms,provider_ttfb_ms=provider_ms,first_pcm_ms,"tts dispatch timing");
-                Ok((first_pcm_ms, bytes))
+            Self::PersonalLocal(base) => {
+                let delivered = crate::stt_volc::personal_local_speech::synthesize(base, text, audio_tx).await?;
+                log_audio_delivered(self.provider_name(), delivered.1);
+                Ok(delivered)
             }
+            Self::SnapshotVolc(config) => {
+                let delivered = tts_volc::synthesize(config, text, audio_tx).await?;
+                log_audio_delivered(self.provider_name(), delivered.1);
+                Ok(delivered)
+            }
+            Self::SnapshotXfyun { config, .. } => self.synthesize_xfyun(config, text, audio_tx, ctl, warm, true).await,
+            Self::Volc(_) | Self::Xfyun(_) if crate::stt_volc::personal_local_speech::endpoint().is_some() => {
+                let url = crate::stt_volc::personal_local_speech::endpoint().expect("checked");
+                crate::stt_volc::personal_local_speech::synthesize(&url, text, audio_tx).await
+            }
+            Self::Volc(config) => tts_volc::synthesize(config, text, audio_tx).await,
+            Self::Xfyun(config) => self.synthesize_xfyun(config, text, audio_tx, ctl, warm, false).await,
         }
     }
+
+    async fn synthesize_xfyun(
+        &self,
+        config: &tts_xfyun::XfyunTtsConfig,
+        text: &str,
+        audio_tx: &mpsc::Sender<Vec<u8>>,
+        ctl: &PlayoutControl,
+        warm: &mut Prewarm,
+        personal_snapshot: bool,
+    ) -> Result<(u64, usize)> {
+        let waiting = std::time::Instant::now();
+        let (room, turn) = ctl.trace_identity();
+        let mut timing = DispatchTiming { start: waiting, room: room.into(), turn, prewarm_ms: None, finished: false };
+        let recovery = connection_recovery_mode();
+        let conn = if recovery {
+            let acquired = warm.take_for_sentence(config).await;
+            *warm = self.start_prewarm();
+            Some(acquired?)
+        } else {
+            warm.take().await
+        };
+        let wait_ms = waiting.elapsed().as_millis() as u64;
+        timing.prewarm_ms = Some(wait_ms);
+        if !recovery { *warm = self.start_prewarm(); }
+        let (provider_ms, bytes) = if recovery {
+            tts_xfyun::synthesize_connected(config, text, audio_tx, ctl, conn.expect("acquired connection")).await?
+        } else {
+            tts_xfyun::synthesize(config, text, audio_tx, ctl, conn).await?
+        };
+        timing.finished = true;
+        let first_pcm_ms = wait_ms.saturating_add(provider_ms);
+        tracing::info!(prewarm_wait_ms = wait_ms, provider_ttfb_ms = provider_ms, first_pcm_ms, "tts dispatch timing");
+        if personal_snapshot { log_audio_delivered(self.provider_name(), bytes); }
+        Ok((first_pcm_ms, bytes))
+    }
+}
+
+fn log_audio_delivered(provider: &str, bytes: usize) {
+    tracing::info!(provider, bytes, "tts audio delivered");
 }
 
 /// Emits even when the synth future is dropped mid-handshake/provider streaming.
@@ -165,6 +204,10 @@ impl Drop for DispatchTiming {fn drop(&mut self){tracing::info!(room=%self.room,
 /// 留这个开关是因为这条线正在被演示:出问题时改一行 env + 重启即可退回,
 /// 不用换二进制。默认开。
 fn preconnect_enabled() -> bool {
+    preconnect_from_env()
+}
+
+pub(crate) fn preconnect_from_env() -> bool {
     preconnect_from(std::env::var("XFYUN_TTS_PRECONNECT").ok().as_deref())
 }
 
