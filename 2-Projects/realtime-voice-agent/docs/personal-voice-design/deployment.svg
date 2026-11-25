@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1744" height="964" viewBox="0 0 1744 964">
+<title>小可个人语音助手 · 部署与通信架构</title>
+<rect x="0" y="0" width="1744" height="964" rx="0" fill="white" stroke="none" stroke-width="1.5" stroke-dasharray="none"/>
+<text x="40" y="42" font-family="Noto Sans CJK SC, sans-serif" font-size="18" font-weight="650" text-anchor="start" fill="#2762BC">实时语音系统   /   部署视图</text>
+<text x="40" y="96" font-family="Noto Sans CJK SC, sans-serif" font-size="43" font-weight="750" text-anchor="start" fill="#172D49">小可个人语音助手</text>
+<text x="418" y="94" font-family="Noto Sans CJK SC, sans-serif" font-size="27" font-weight="450" text-anchor="start" fill="#4D637B">部署边界与通信链路</text>
+<text x="1702" y="54" font-family="Noto Sans CJK SC, sans-serif" font-size="17" font-weight="550" text-anchor="end" fill="#4D637B">2026.11.25</text>
+<text x="1702" y="87" font-family="Noto Sans CJK SC, sans-serif" font-size="19" font-weight="600" text-anchor="end" fill="#172D49">单主人  ·  3–5 台设备</text>
+<line x1="40" y1="119" x2="1704" y2="119" stroke="#AABCCD" stroke-width="1.4"/>
+<text x="40" y="153" font-family="Noto Sans CJK SC, sans-serif" font-size="23" font-weight="700" text-anchor="start" fill="#172D49">语音会话</text>
+<text x="158" y="153" font-family="Noto Sans CJK SC, sans-serif" font-size="17" font-weight="550" text-anchor="start" fill="#2762BC">目标架构  /  待联调</text>
+<rect x="40" y="173" width="281" height="347" rx="9" fill="#F7FAFD" stroke="#9CAFC3" stroke-width="1.6" stroke-dasharray="none"/>
+<text x="58" y="204" font-family="Noto Sans CJK SC, sans-serif" font-size="22" font-weight="700" text-anchor="start" fill="#172D49">个人设备</text>
+<text x="58" y="230" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#4D637B">手机或浏览器 · 各自持有设备凭据</text>
+<line x1="41" y1="246" x2="320" y2="246" stroke="#D2DCE6" stroke-width="1.4"/>
+<rect x="461" y="173" width="297" height="347" rx="9" fill="#F7FAFD" stroke="#9CAFC3" stroke-width="1.6" stroke-dasharray="none"/>
+<text x="479" y="204" font-family="Noto Sans CJK SC, sans-serif" font-size="22" font-weight="700" text-anchor="start" fill="#172D49">阿里云 · 北京 ECS</text>
+<text x="479" y="230" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#4D637B">公网接入 · 2 vCPU / 2 GiB / 3 Mbps</text>
+<line x1="462" y1="246" x2="757" y2="246" stroke="#D2DCE6" stroke-width="1.4"/>
+<rect x="913" y="173" width="387" height="657" rx="9" fill="#F7FAFD" stroke="#9CAFC3" stroke-width="1.6" stroke-dasharray="none"/>
+<text x="931" y="204" font-family="Noto Sans CJK SC, sans-serif" font-size="22" font-weight="700" text-anchor="start" fill="#172D49">飞牛 2 · Docker</text>
+<text x="931" y="230" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#4D637B">家庭侧计算 · i5-8500 / 16 GiB</text>
+<line x1="914" y1="246" x2="1299" y2="246" stroke="#D2DCE6" stroke-width="1.4"/>
+<rect x="1440" y="173" width="264" height="489" rx="9" fill="#F7FAFD" stroke="#9CAFC3" stroke-width="1.6" stroke-dasharray="none"/>
+<text x="1458" y="204" font-family="Noto Sans CJK SC, sans-serif" font-size="22" font-weight="700" text-anchor="start" fill="#172D49">外部服务</text>
+<text x="1458" y="230" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#4D637B">按配置选用供应商</text>
+<line x1="1441" y1="246" x2="1703" y2="246" stroke="#D2DCE6" stroke-width="1.4"/>
+<rect x="55" y="263" width="251" height="231" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="71" y="296" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">语音客户端</text>
+<text x="71" y="325" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">设备登记、申请房间票</text>
+<text x="71" y="350" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">麦克风采集 / 字幕 / 播放</text>
+<line x1="71" y1="362" x2="290" y2="362" stroke="#C3D0DE" stroke-width="1.4"/>
+<text x="71" y="394" font-family="Noto Sans CJK SC, sans-serif" font-size="18" font-weight="650" text-anchor="start" fill="#172D49">设备工具</text>
+<text x="71" y="424" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">接收动作，按设备权限执行</text>
+<text x="71" y="452" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">返回执行结果或超时</text>
+<rect x="476" y="258" width="267" height="102" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="492" y="291" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">独立签票服务</text>
+<text x="492" y="320" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">校验设备、绑定主人和房间</text>
+<text x="492" y="345" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">签发短期票；密钥留在北京</text>
+<rect x="476" y="378" width="267" height="118" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="492" y="411" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">LiveKit 房间</text>
+<text x="492" y="440" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">信令与任务调度 · SFU 转发</text>
+<text x="492" y="465" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">UDP 优先，TURN 中继回退</text>
+<rect x="930" y="258" width="351" height="230" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="946" y="291" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">Rust 语音 Worker</text>
+<text x="946" y="320" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">主动注册、接单入房</text>
+<text x="946" y="345" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">收发音轨、推送字幕及设备指令</text>
+<line x1="947" y1="355" x2="1264" y2="355" stroke="#C3D0DE" stroke-width="1.4"/>
+<text x="947" y="386" font-family="Noto Sans CJK SC, sans-serif" font-size="18" font-weight="650" text-anchor="start" fill="#172D49">实时语音处理</text>
+<text x="947" y="417" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">语音活动检测 / 判停 sidecar / 打断</text>
+<text x="947" y="448" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">流式识别 → 请求回答 → 合成与播报</text>
+<rect x="930" y="558" width="351" height="110" rx="6" fill="white" stroke="#8FAED2" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="946" y="591" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">个人大脑</text>
+<text x="946" y="620" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">对话编排 · 工具调用 · 异步搜索</text>
+<text x="946" y="645" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">记忆召回与抽取 · 反馈驱动人格成长</text>
+<path d="M930 730 C930 716.6666666666666 1120 716.6666666666666 1120 730 V795 C1120 808.3333333333334 930 808.3333333333334 930 795 Z" fill="#EEF0FA" stroke="#878BAC" stroke-width="1.6"/>
+<path d="M930 730 C930 742.0 1120 742.0 1120 730" fill="none" stroke="#878BAC" stroke-width="1.4"/>
+<text x="1025" y="766" font-family="Noto Sans CJK SC, sans-serif" font-size="20" font-weight="650" text-anchor="middle" fill="#172D49">个人 SQLite</text>
+<text x="1025" y="791" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="400" text-anchor="middle" fill="#4D637B">独立持久卷</text>
+<text x="1137" y="747" font-family="Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" text-anchor="start" fill="#4D637B">会话 / 偏好 / 成长账本</text>
+<text x="1137" y="772" font-family="Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" text-anchor="start" fill="#4D637B">按主人隔离 · 加密备份</text>
+<rect x="1456" y="262" width="231" height="110" rx="6" fill="white" stroke="#B8A4CE" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="1472" y="295" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">云语音服务</text>
+<text x="1472" y="324" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">ASR 流式转写</text>
+<text x="1472" y="349" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">TTS 语音合成</text>
+<rect x="1456" y="541" width="231" height="105" rx="6" fill="white" stroke="#B8A4CE" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="1472" y="574" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">模型与搜索服务</text>
+<text x="1472" y="603" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">LLM 推理、天气、新闻</text>
+<text x="1472" y="628" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">检索结果携带来源</text>
+<line x1="306.0" y1="317.0" x2="471.0" y2="317.0" stroke="#2762BC" stroke-width="2.5"/>
+<polygon points="475,317 465.0,321.5 465.0,312.5" fill="#2762BC"/>
+<text x="391" y="280" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#2762BC">HTTPS</text>
+<text x="391" y="299" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#2762BC">换取短期房间票</text>
+<line x1="306.0" y1="408.0" x2="471.0" y2="408.0" stroke="#2762BC" stroke-width="2.5"/>
+<polygon points="475,408 465.0,412.5 465.0,403.5" fill="#2762BC"/>
+<text x="391" y="398" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#2762BC">WSS 入房</text>
+<line x1="310.0" y1="458.0" x2="471.0" y2="458.0" stroke="#007C96" stroke-width="3.4"/>
+<polygon points="475,458 465.0,462.5 465.0,453.5" fill="#007C96"/>
+<polygon points="306,458 316.0,453.5 316.0,462.5" fill="#007C96"/>
+<text x="391" y="448" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#007C96">WebRTC / 音轨</text>
+<line x1="930.0" y1="408.0" x2="748.0" y2="408.0" stroke="#2762BC" stroke-width="2.5"/>
+<polygon points="744,408 754.0,403.5 754.0,412.5" fill="#2762BC"/>
+<text x="837" y="376" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#2762BC">WSS 注册</text>
+<text x="837" y="395" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#2762BC">接单 / 入房</text>
+<line x1="748.0" y1="458.0" x2="926.0" y2="458.0" stroke="#007C96" stroke-width="3.4"/>
+<polygon points="930,458 920.0,462.5 920.0,453.5" fill="#007C96"/>
+<polygon points="744,458 754.0,453.5 754.0,462.5" fill="#007C96"/>
+<text x="837" y="448" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#007C96">WebRTC / 音轨</text>
+<line x1="1281.0" y1="320.0" x2="1451.0" y2="320.0" stroke="#7950AC" stroke-width="2.5"/>
+<polygon points="1455,320 1445.0,324.5 1445.0,315.5" fill="#7950AC"/>
+<text x="1370" y="289" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#7950AC">流式 API</text>
+<text x="1370" y="308" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#7950AC">音频 / 文本</text>
+<line x1="1281.0" y1="609.0" x2="1451.0" y2="609.0" stroke="#7950AC" stroke-width="2.5"/>
+<polygon points="1455,609 1445.0,613.5 1445.0,604.5" fill="#7950AC"/>
+<text x="1370" y="577" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#7950AC">HTTPS</text>
+<text x="1370" y="596" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#7950AC">推理 / 检索</text>
+<line x1="1025.0" y1="489.0" x2="1025.0" y2="553.0" stroke="#2762BC" stroke-width="2.5"/>
+<polygon points="1025,557 1020.5,547.0 1029.5,547.0" fill="#2762BC"/>
+<text x="1042" y="528" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="520" text-anchor="start" fill="#2762BC">转写文本 → 流式回复</text>
+<line x1="1025.0" y1="669.0" x2="1025.0" y2="715.0" stroke="#61768C" stroke-width="2.5"/>
+<polygon points="1025,719 1020.5,709.0 1029.5,709.0" fill="#61768C"/>
+<text x="1043" y="698" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="400" text-anchor="start" fill="#4D637B">读写个人状态</text>
+<rect x="40" y="551" width="842" height="279" rx="10" fill="#F2F9F5" stroke="#8AB6A1" stroke-width="1.5" stroke-dasharray="none"/>
+<text x="61" y="588" font-family="Noto Sans CJK SC, sans-serif" font-size="22" font-weight="700" text-anchor="start" fill="#172D49">私人运维入口</text>
+<text x="246" y="588" font-family="Noto Sans CJK SC, sans-serif" font-size="17" font-weight="700" text-anchor="start" fill="#087953">已上线</text>
+<rect x="326" y="611" width="538" height="175" rx="7" fill="#FBFEFC" stroke="#91B7A4" stroke-width="1.5" stroke-dasharray="5 4"/>
+<text x="341" y="637" font-family="Noto Sans CJK SC, sans-serif" font-size="17" font-weight="650" text-anchor="start" fill="#087953">飞牛 2</text>
+<rect x="58" y="662" width="159" height="83" rx="6" fill="white" stroke="#85B69E" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="74" y="695" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">管理浏览器</text>
+<text x="74" y="724" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">主人登录</text>
+<rect x="342" y="662" width="174" height="83" rx="6" fill="white" stroke="#85B69E" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="358" y="695" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">Lucky</text>
+<text x="358" y="724" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">按来源放行</text>
+<rect x="627" y="652" width="220" height="104" rx="6" fill="white" stroke="#85B69E" stroke-width="1.7" stroke-dasharray="none"/>
+<text x="643" y="685" font-family="Noto Sans CJK SC, sans-serif" font-size="21" font-weight="700" text-anchor="start" fill="#172D49">私人管理后台</text>
+<text x="643" y="714" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">Docker · 独立鉴权</text>
+<text x="643" y="739" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">热词草稿 / 衔接短语</text>
+<line x1="218.0" y1="705.0" x2="337.0" y2="705.0" stroke="#087953" stroke-width="2.5"/>
+<polygon points="341,705 331.0,709.5 331.0,700.5" fill="#087953"/>
+<text x="278" y="677" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#087953">HTTPS</text>
+<text x="278" y="696" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#087953">:8666</text>
+<line x1="517.0" y1="705.0" x2="622.0" y2="705.0" stroke="#087953" stroke-width="2.5"/>
+<polygon points="626,705 616.0,709.5 616.0,700.5" fill="#087953"/>
+<text x="570" y="677" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#087953">HTTPS</text>
+<text x="570" y="696" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="550" text-anchor="middle" fill="#087953">:18783</text>
+<text x="61" y="810" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">管理台可保存配置。Worker 加载回执、会话诊断和备份管理待接入。</text>
+<line x1="40" y1="854" x2="1704" y2="854" stroke="#C3D0DE" stroke-width="1.4"/>
+<line x1="43.0" y1="885.0" x2="86.0" y2="885.0" stroke="#2762BC" stroke-width="2.5"/>
+<polygon points="90,885 80.0,889.5 80.0,880.5" fill="#2762BC"/>
+<text x="103" y="891" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">控制请求 / 应用调用</text>
+<line x1="358.0" y1="885.0" x2="404.0" y2="885.0" stroke="#007C96" stroke-width="3.4"/>
+<polygon points="408,885 398.0,889.5 398.0,880.5" fill="#007C96"/>
+<polygon points="354,885 364.0,880.5 364.0,889.5" fill="#007C96"/>
+<text x="422" y="891" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">双向实时媒体</text>
+<line x1="656.0" y1="885.0" x2="706.0" y2="885.0" stroke="#7950AC" stroke-width="2.5"/>
+<polygon points="710,885 700.0,889.5 700.0,880.5" fill="#7950AC"/>
+<text x="724" y="891" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">供应商 API 调用</text>
+<line x1="976.0" y1="885.0" x2="1026.0" y2="885.0" stroke="#087953" stroke-width="2.5"/>
+<polygon points="1030,885 1020.0,889.5 1020.0,880.5" fill="#087953"/>
+<text x="1044" y="891" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">独立管理链路</text>
+<text x="1700" y="891" font-family="Noto Sans CJK SC, sans-serif" font-size="15" font-weight="450" text-anchor="end" fill="#4D637B">箭头指向请求接收方</text>
+<text x="40" y="935" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="680" text-anchor="start" fill="#172D49">容量口径</text>
+<text x="127" y="935" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="start" fill="#4D637B">预计 3–5 台设备；5 间房同时通话是压测目标。</text>
+<text x="1702" y="935" font-family="Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" text-anchor="end" fill="#4D637B">个人实例独立签票、独立数据卷；方舟知识库不接入。</text>
+</svg>

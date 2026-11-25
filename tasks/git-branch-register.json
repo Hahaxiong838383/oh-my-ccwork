@@ -1,6 +1,10 @@
 {
   "default_branch": "main",
   "branches": {
+    "personal/voice-c-deployment-20261125": {
+      "task": "小可个人版方案 C，部署北京独立签票、飞牛语音与大脑、私人后台和真实通话验收",
+      "state": "active"
+    },
     "backup/mycc-main-20261117": {
       "task": "2026-11-17 多机主线同步与恢复",
       "state": "keep",
