@@ -38,9 +38,13 @@ async function main() {
       const confirmed = await page.waitForFunction(host => {
         const link = [...document.querySelectorAll('#lines .sources a')].find(a => {
           const url = new URL(a.href);
-          return url.protocol === 'https:' && (url.hostname === host || url.hostname.endsWith('.' + host));
+          const row = a.closest('li')?.closest('.sources')?.parentElement;
+          return row?.querySelector('strong')?.textContent === '小可' && row.querySelector('span')?.textContent.trim().length > 4
+            && url.protocol === 'https:' && (url.hostname === host || url.hostname.endsWith('.' + host));
         });
-        return link?.href || false;
+        if (!link) return false;
+        const row = link.closest('.sources').parentElement;
+        return {url:link.href, caption:[...row.children].filter(n=>n.tagName==='SPAN').map(n=>n.textContent).join('')};
       }, process.env.VOICE_TEST_SOURCE_HOST, {timeout:45000});
       console.log('语音工具来源', await confirmed.jsonValue());
     }

@@ -165,7 +165,11 @@ def main() -> None:
     elapsed = int(headers.get("x-elapsed-ms", "0"))
     duration = (len(pcm) / 2 / rate) if rate else 0
     level = rms(pcm)
-    reference = recognize(host, port, wav_pcm(wav))
+    reference_pcm = wav_pcm(wav)
+    reference = recognize(host, port, reference_pcm)
+    after_silence = recognize(host, port, bytes(2 * 16000 * 32) + reference_pcm)
+    if not reference or after_silence != reference:
+        raise SystemExit("32 秒静默后的同一连接未能识别后续人声")
     heard = recognize(host, port, downsample(pcm, rate, 16000))
     report = {
         "health_label": health.get("label"),
@@ -178,6 +182,7 @@ def main() -> None:
         "tts_rms": round(level, 1),
         "tts_bytes": len(pcm),
         "asr_reference": reference,
+        "asr_after_32s_silence": after_silence,
         "asr_roundtrip": heard,
     }
     print(json.dumps(report, ensure_ascii=False))

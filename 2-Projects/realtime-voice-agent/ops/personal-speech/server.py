@@ -259,6 +259,7 @@ async def asr(request: web.Request) -> web.WebSocketResponse:
     stream = await asyncio.to_thread(new_stream)
     pending = bytearray()
     total = 0
+    segment_samples = 0
     try:
         async for message in socket:
             if message.type == web.WSMsgType.BINARY:
@@ -270,10 +271,14 @@ async def asr(request: web.Request) -> web.WebSocketResponse:
                 del pending[:usable]
                 samples = pcm16_to_float(raw)
                 total += len(samples)
-                if total > MAX_AUDIO_SAMPLES:
-                    await socket.send_json({"type": "error", "error": "audio too long"})
-                    break
+                segment_samples += len(samples)
                 text, ended = await asyncio.to_thread(feed, stream, samples)
+                if not ended and segment_samples >= MAX_AUDIO_SAMPLES:
+                    text = await asyncio.to_thread(finish, stream)
+                    stream = await asyncio.to_thread(new_stream)
+                    ended = True
+                if ended:
+                    segment_samples = 0
                 if ended and text:
                     await socket.send_json({"type": "final", "text": text})
                 elif text:
