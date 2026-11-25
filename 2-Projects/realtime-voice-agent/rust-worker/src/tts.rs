@@ -65,7 +65,8 @@ impl TtsCfg {
     /// 音色标识(进启动日志,让"听到的声音不对"能一眼对账)
     pub fn voice(&self) -> &str {
         if crate::stt_volc::personal_local_speech::endpoint().is_some() {
-            return crate::stt_volc::personal_local_speech::PILOT_VOICE;
+            // 普通 /v1/tts 不带音色 ID，生效 ID 只在成功响应的 X-TTS-Voice。
+            return crate::stt_volc::personal_local_speech::VOICE_UNREPORTED;
         }
         match self {
             Self::Volc(c) => &c.speaker,

@@ -134,10 +134,19 @@ pub struct FillerBank {
     recent: VecDeque<String>, // 最近 3 条文案滑窗防重复
 }
 
+/// 个人本地语音的问候和承接必须走当次合成。预录 wav 没有音色身份，会把旧音色播出去。
+pub(crate) fn skip_prerecorded_fillers(personal_local: bool, filler_enabled: Option<&str>) -> bool {
+    personal_local || filler_enabled.is_some_and(|value| value != "1")
+}
+
 impl FillerBank {
     /// FILLER_ENABLED=0 / 资产缺失 → None(静默降级,不影响主链路)。
     pub fn load_from_env() -> Option<Self> {
-        if std::env::var("FILLER_ENABLED").map(|v| v != "1").unwrap_or(false) {
+        let personal_local = crate::stt_volc::personal_local_speech::endpoint().is_some();
+        if skip_prerecorded_fillers(personal_local, std::env::var("FILLER_ENABLED").ok().as_deref()) {
+            if personal_local {
+                info!("prerecorded filler bank skipped: personal speech selects the voice");
+            }
             return None;
         }
         let dir = std::env::var("FILLER_DIR").map(PathBuf::from).unwrap_or_else(|_| {
@@ -325,6 +334,14 @@ mod tests {
     use super::*;
 
     const DEVICE_ROOM: &str = "sn-BJP00326070803800006-123";
+    #[test]
+    fn personal_local_never_plays_prerecorded_fillers() {
+        assert!(skip_prerecorded_fillers(true, None));
+        assert!(skip_prerecorded_fillers(true, Some("1")));
+        assert!(skip_prerecorded_fillers(false, Some("0")));
+        assert!(!skip_prerecorded_fillers(false, None));
+        assert!(!skip_prerecorded_fillers(false, Some("1")));
+    }
     #[test]
     fn style_ark_metadata_validation_and_room_boundary() {
         let valid = serde_json::json!({"version":1,"style":"quiet","probability":0.1});

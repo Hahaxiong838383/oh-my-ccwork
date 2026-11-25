@@ -11,7 +11,8 @@ use tokio_tungstenite::tungstenite::Message as WsMessage;
 use tracing::{info, warn};
 
 pub const PILOT_PROVIDER: &str = "personal-local-pilot";
-pub const PILOT_VOICE: &str = "piper-zh-huayan-medium";
+/// 服务还没在本次响应里报音色。这不是音色 ID，不能拿去对预录缓存。
+pub const VOICE_UNREPORTED: &str = "unreported";
 
 pub fn endpoint() -> Option<String> {
     let raw = std::env::var("PERSONAL_LOCAL_SPEECH_URL").ok();
@@ -49,7 +50,13 @@ pub async fn prewarm(base: &str) {
     };
     match client.get(format!("{base}/health")).send().await {
         Ok(response) if response.status().is_success() => {
-            info!(provider = PILOT_PROVIDER, voice = PILOT_VOICE, "personal local speech pilot ready");
+            let body = response.text().await.unwrap_or_default();
+            let voice = health_voice(&body);
+            info!(
+                provider = PILOT_PROVIDER,
+                voice = voice.as_deref().unwrap_or(VOICE_UNREPORTED),
+                "personal local speech pilot ready"
+            );
         }
         Ok(response) => warn!(status = %response.status(), "personal local speech health"),
         Err(error) => warn!(%error, "personal local speech health"),
@@ -66,15 +73,21 @@ pub async fn synthesize(
     if text.is_empty() {
         return Ok((0, 0));
     }
-    info!(provider = PILOT_PROVIDER, voice = PILOT_VOICE, chars = text.chars().count(), "personal local tts");
     let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::Client::builder().timeout(Duration::from_secs(25)).build()?;
     let response = client
         .post(format!("{base}/v1/tts"))
-        .json(&serde_json::json!({"text": text}))
+        .json(&tts_request(text))
         .send()
         .await
         .context("personal local tts")?;
+    let voice = tts_voice_header(response.headers());
+    info!(
+        provider = PILOT_PROVIDER,
+        voice = voice.as_deref().unwrap_or(VOICE_UNREPORTED),
+        chars = text.chars().count(),
+        "personal local tts"
+    );
     if !response.status().is_success() {
         bail!("personal local tts status {}", response.status());
     }
@@ -195,6 +208,28 @@ fn ws_url(base: &str) -> String {
     }
 }
 
+pub fn tts_request(text: &str) -> serde_json::Value {
+    serde_json::json!({"text": text})
+}
+
+pub fn reported_voice_id(raw: Option<&str>) -> Option<&str> {
+    let value = raw?.trim();
+    if value.is_empty() || value.len() > 128 || value.chars().any(|c| c.is_control() || c.is_whitespace()) {
+        return None;
+    }
+    Some(value)
+}
+
+pub fn health_voice(body: &str) -> Option<String> {
+    let body = body.get(..body.len().min(8192))?;
+    let value: serde_json::Value = serde_json::from_str(body).ok()?;
+    reported_voice_id(value.get("voice").and_then(|item| item.as_str())).map(str::to_string)
+}
+
+pub fn tts_voice_header(headers: &reqwest::header::HeaderMap) -> Option<String> {
+    reported_voice_id(headers.get("x-tts-voice").and_then(|value| value.to_str().ok())).map(str::to_string)
+}
+
 fn nonzero_pcm(body: &[u8]) -> bool {
     body.chunks(2).any(|sample| sample.len() == 2 && sample != [0, 0])
 }
@@ -236,7 +271,7 @@ static URL_WARNED: AtomicBool = AtomicBool::new(false);
 
 #[cfg(test)]
 mod tests {
-    use super::endpoint_from;
+    use super::{endpoint_from, health_voice, reported_voice_id, tts_request, tts_voice_header, VOICE_UNREPORTED};
 
     #[test]
     fn only_private_personal_url_is_enabled() {
@@ -253,5 +288,106 @@ mod tests {
             endpoint_from(Some("http://192.168.1.115:18091"), Some(agent)).as_deref(),
             Some("http://192.168.1.115:18091")
         );
+    }
+
+    #[test]
+    fn service_names_the_voice_and_the_old_header_is_not_a_fallback() {
+        let body = tts_request("你好");
+        let keys: Vec<_> = body.as_object().unwrap().keys().cloned().collect();
+        assert_eq!(keys, ["text"]);
+        let historical = "piper-zh-huayan-medium";
+        assert_ne!(VOICE_UNREPORTED, historical);
+        assert_eq!(health_voice(r#"{"ok":true,"voice":"piper-zh-xiaoyan"}"#).as_deref(), Some("piper-zh-xiaoyan"));
+        assert_eq!(health_voice(&format!(r#"{{"ok":true,"voice":"{historical}"}}"#)).as_deref(), Some(historical));
+        assert_eq!(health_voice(r#"{"ok":true}"#), None);
+        assert_eq!(health_voice("not-json"), None);
+        assert_eq!(reported_voice_id(Some("  piper-zh-xiaoyan  ")), Some("piper-zh-xiaoyan"));
+        assert_eq!(reported_voice_id(None), None);
+        assert_eq!(reported_voice_id(Some("")), None);
+        assert_eq!(reported_voice_id(Some("bad voice")), None);
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("x-voice", historical.parse().unwrap());
+        assert_eq!(tts_voice_header(&headers), None);
+        headers.insert("x-tts-voice", "piper-zh-xiaoyan".parse().unwrap());
+        assert_eq!(tts_voice_header(&headers).as_deref(), Some("piper-zh-xiaoyan"));
+    }
+
+    #[tokio::test]
+    async fn plain_tts_uses_the_response_voice_and_still_accepts_an_old_service() {
+        let pcm = [1u8, 2, 3, 4];
+        let (tx, mut rx) = tokio::sync::mpsc::channel(2);
+        let drain = tokio::spawn(async move { while rx.recv().await.is_some() {} });
+        let (named_url, named_rx) = serve(named_response(&pcm)).await;
+        let named_result = super::synthesize(&named_url, "你好", &tx).await.unwrap();
+        let named_request = named_rx.await.unwrap();
+        assert!(named_result.1 >= pcm.len());
+        assert!(named_request.contains(r#""text":"你好""#));
+        assert!(!named_request.contains("\"voice\""));
+        assert!(!named_request.contains("piper-zh-huayan-medium"));
+
+        let (old_url, old_rx) = serve(old_response(&pcm)).await;
+        let old_result = super::synthesize(&old_url, "你好", &tx).await.unwrap();
+        let old_request = old_rx.await.unwrap();
+        assert!(old_result.1 >= pcm.len());
+        assert!(!old_request.contains("x-tts-voice"));
+        assert!(!old_request.contains("piper-zh-huayan-medium"));
+        drop(tx);
+        drain.await.unwrap();
+    }
+
+    async fn serve(payload: Vec<u8>) -> (String, tokio::sync::oneshot::Receiver<String>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let (request_tx, request_rx) = tokio::sync::oneshot::channel();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            let mut buf = [0u8; 2048];
+            loop {
+                let n = tokio::io::AsyncReadExt::read(&mut socket, &mut buf).await.unwrap();
+                if n == 0 { break; }
+                request.extend_from_slice(&buf[..n]);
+                let Some(split) = request.windows(4).position(|mark| mark == b"\r\n\r\n") else { continue; };
+                let header_end = split + 4;
+                let need = std::str::from_utf8(&request[..header_end]).ok().and_then(content_length).unwrap_or(0);
+                while request.len() < header_end + need {
+                    let n = tokio::io::AsyncReadExt::read(&mut socket, &mut buf).await.unwrap();
+                    if n == 0 { break; }
+                    request.extend_from_slice(&buf[..n]);
+                }
+                break;
+            }
+            let _ = request_tx.send(String::from_utf8_lossy(&request).into_owned());
+            tokio::io::AsyncWriteExt::write_all(&mut socket, &payload).await.unwrap();
+        });
+        (format!("http://127.0.0.1:{port}"), request_rx)
+    }
+
+    fn content_length(headers: &str) -> Option<usize> {
+        for line in headers.lines() {
+            let Some((name, value)) = line.split_once(':') else { continue };
+            if name.eq_ignore_ascii_case("content-length") {
+                return value.trim().parse().ok();
+            }
+        }
+        None
+    }
+
+    fn named_response(pcm: &[u8]) -> Vec<u8> {
+        response(pcm, "X-Voice: piper-zh-huayan-medium\r\nX-TTS-Voice: piper-zh-xiaoyan\r\n")
+    }
+
+    fn old_response(pcm: &[u8]) -> Vec<u8> {
+        response(pcm, "X-Voice: piper-zh-huayan-medium\r\n")
+    }
+
+    fn response(pcm: &[u8], extra: &str) -> Vec<u8> {
+        let mut raw = format!(
+            "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nX-Sample-Rate: 24000\r\n{}Connection: close\r\n\r\n",
+            pcm.len(), extra
+        ).into_bytes();
+        raw.extend_from_slice(pcm);
+        raw
     }
 }
