@@ -1,6 +1,6 @@
 ---
 name: chenchuan-site-content
-description: 陈川个人站内容更新工艺：项目卡/文章的口径铁律、数字核实流程、渲染注意、部署与公网验收。用于用户提到"个人站加项目卡""更新个人站内容""写文章上站""writing 板块""个人站文案"时。视频线走 chenchuan-site-media。
+description: 陈川个人站内容更新工艺：项目卡/文章的口径铁律、数字核实流程、渲染注意、部署与公网验收。用于用户提到"个人站加项目卡""更新个人站内容""首页媒体报道""完整首页预览""写文章上站""writing 板块""个人站文案"时。视频线走 chenchuan-site-media。
 ---
 
 # chenchuan-site-content（多引擎入口）
