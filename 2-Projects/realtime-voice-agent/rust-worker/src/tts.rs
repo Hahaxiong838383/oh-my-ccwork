@@ -53,6 +53,9 @@ impl TtsCfg {
     }
 
     pub fn provider_name(&self) -> &'static str {
+        if crate::stt_volc::personal_local_speech::endpoint().is_some() {
+            return crate::stt_volc::personal_local_speech::PILOT_PROVIDER;
+        }
         match self {
             Self::Volc(_) => "volc",
             Self::Xfyun(_) => "xfyun",
@@ -61,6 +64,9 @@ impl TtsCfg {
 
     /// 音色标识(进启动日志,让"听到的声音不对"能一眼对账)
     pub fn voice(&self) -> &str {
+        if crate::stt_volc::personal_local_speech::endpoint().is_some() {
+            return crate::stt_volc::personal_local_speech::PILOT_VOICE;
+        }
         match self {
             Self::Volc(c) => &c.speaker,
             Self::Xfyun(c) => &c.vcn,
@@ -69,6 +75,10 @@ impl TtsCfg {
 
     /// job 启动时预热。火山=预建池连接;讯飞=空操作(协议不允许复用)。
     pub async fn prewarm(&self) {
+        if let Some(url) = crate::stt_volc::personal_local_speech::endpoint() {
+            crate::stt_volc::personal_local_speech::prewarm(&url).await;
+            return;
+        }
         match self {
             Self::Volc(c) => tts_volc::prewarm_pool(c).await,
             Self::Xfyun(c) => tts_xfyun::prewarm_pool(c).await,
@@ -80,6 +90,9 @@ impl TtsCfg {
     ///
     /// 火山有进程级池,不需要,返回 `Off`。
     pub fn start_prewarm(&self) -> Prewarm {
+        if crate::stt_volc::personal_local_speech::endpoint().is_some() {
+            return Prewarm::off();
+        }
         match self {
             Self::Volc(_) => Prewarm::off(),
             // 环境开关:置 0 即退回「每句现连」的旧行为,不必换二进制
@@ -104,6 +117,9 @@ impl TtsCfg {
         ctl: &PlayoutControl,
         warm: &mut Prewarm,
     ) -> Result<(u64, usize)> {
+        if let Some(url) = crate::stt_volc::personal_local_speech::endpoint() {
+            return crate::stt_volc::personal_local_speech::synthesize(&url, text, audio_tx).await;
+        }
         match self {
             Self::Volc(c) => tts_volc::synthesize(c, text, audio_tx).await,
             Self::Xfyun(c) => {

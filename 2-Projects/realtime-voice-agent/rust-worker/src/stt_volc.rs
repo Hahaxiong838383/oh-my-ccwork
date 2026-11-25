@@ -15,6 +15,8 @@ use tracing::{info, warn, Instrument};
 
 use crate::volc::{gzip, Flags, Frame, MsgType, ASR_URL, COMP_GZIP, SER_JSON};
 
+pub(crate) mod personal_local_speech;
+
 #[derive(Debug, Clone)]
 pub enum SttEvent {
     Interim(String),
@@ -241,6 +243,9 @@ pub async fn run_asr_stream_observed(
     cfg: SttConfig, pcm_rx: &mut mpsc::Receiver<Vec<i16>>, event_tx: mpsc::Sender<SttEvent>,
     diagnostic: Option<std::sync::Arc<crate::asr_diagnostics::InputDiagnostic>>,
 ) -> Result<AsrEnd> {
+    if let Some(url) = personal_local_speech::endpoint() {
+        return personal_local_speech::run_asr(&url, pcm_rx, event_tx).await;
+    }
     let mut observed = crate::asr_diagnostics::Observation::new(uuid::Uuid::new_v4().to_string(), diagnostic);
     let result = run_asr_stream_inner(cfg, pcm_rx, event_tx, &mut observed).await;
     observed.outcome = match &result {

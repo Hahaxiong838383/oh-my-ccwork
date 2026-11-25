@@ -21,11 +21,12 @@ async function main() {
     await page.locator('#connect').click();
     assert.equal((await ticket).status(),200);
     await page.locator('#controls:visible').waitFor();
-    await page.waitForFunction(() => {
+    await page.waitForFunction(expected => {
       const lines = [...document.querySelectorAll('#lines li')];
       return ['小可','我'].every(who => lines.some(line => line.querySelector('strong')?.textContent === who))
+          && (!expected || lines.some(line => line.querySelector('strong')?.textContent === '小可' && new RegExp(expected).test(line.textContent)))
           && document.querySelector('#tracks audio')?.currentTime > 0;
-    }, null, {timeout:90000});
+    }, process.env.VOICE_TEST_ANSWER || '', {timeout:90000});
     const userLines = await page.locator('#lines li').evaluateAll(lines =>
       lines.filter(line => line.querySelector('strong')?.textContent === '我').map(line => line.querySelector('span').textContent));
     assert(userLines.some(line => line.includes(VOICE_TEST_EXPECT)), '输入字幕与合成录音不一致');
@@ -33,6 +34,16 @@ async function main() {
       .filter(line => line.querySelector('strong')?.textContent === '小可')
       .map(line => line.innerText).join(' '));
     if (process.env.VOICE_TEST_ANSWER) assert.match(answer, new RegExp(process.env.VOICE_TEST_ANSWER));
+    if (process.env.VOICE_TEST_SOURCE_HOST) {
+      const confirmed = await page.waitForFunction(host => {
+        const link = [...document.querySelectorAll('#lines .sources a')].find(a => {
+          const url = new URL(a.href);
+          return url.protocol === 'https:' && (url.hostname === host || url.hostname.endsWith('.' + host));
+        });
+        return link?.href || false;
+      }, process.env.VOICE_TEST_SOURCE_HOST, {timeout:45000});
+      console.log('语音工具来源', await confirmed.jsonValue());
+    }
     const media = await page.waitForFunction(async () => {
       for (const participant of active.room.remoteParticipants.values()) {
         if (!participant.isAgent) continue;

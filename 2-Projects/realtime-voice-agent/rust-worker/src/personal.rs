@@ -46,6 +46,7 @@ fn personal_room(room: &str) -> bool {
 }
 
 pub fn audio_configured() -> bool {
+    if crate::stt_volc::personal_local_speech::endpoint().is_some() { return true; }
     let has = |key| std::env::var(key).is_ok_and(|value| !value.trim().is_empty());
     let volc = has("VOLC_APP_ID") && has("VOLC_ACCESS_TOKEN");
     let asr = volc || has("VOLC_ASR_API_KEY");
@@ -55,6 +56,11 @@ pub fn audio_configured() -> bool {
         _ => false,
     };
     asr && tts
+}
+
+fn matches_owner(owner: &str) -> bool {
+    let configured = std::env::var("PERSONAL_OWNER_ID").unwrap_or_else(|_| "owner".to_owned());
+    slug(owner) && owner == configured
 }
 
 pub fn assigned_device(agent: &str, room: &str, metadata: &str) -> Option<String> {
@@ -67,7 +73,7 @@ pub fn assigned_device(agent: &str, room: &str, metadata: &str) -> Option<String
         return None;
     }
     let binding: Binding = serde_json::from_str(metadata).ok()?;
-    (slug(&binding.owner_id) && slug(&binding.device_id))
+    (matches_owner(&binding.owner_id) && slug(&binding.device_id))
         .then(|| format!("personal:{}:{}", binding.owner_id, binding.device_id))
 }
 
@@ -75,7 +81,7 @@ fn device_identity(identity: &str) -> bool {
     identity
         .strip_prefix("personal:")
         .and_then(|id| id.split_once(':'))
-        .is_some_and(|(owner, device)| slug(owner) && slug(device))
+        .is_some_and(|(owner, device)| matches_owner(owner) && slug(device))
 }
 
 #[derive(Serialize, Debug)]
@@ -260,7 +266,8 @@ async fn serve(
                         Action::Hello => {
                             if last_hello.is_some_and(|t| t.elapsed() < Duration::from_millis(450)) { continue; }
                             last_hello = Some(Instant::now());
-                            let _ = send(&lp, &device, json!({"type":"ready", "id":id})).await;
+                            let voice = lp.identity().as_str() != RELAY && audio_configured();
+                            let _ = send(&lp, &device, json!({"type":"ready", "id":id, "voice":voice})).await;
                         }
                         Action::Cancel => {
                             if current.as_ref().is_some_and(|(running, sid, _)| running == &id && *sid == p.sid()) {
@@ -448,6 +455,8 @@ mod tests {
             Some("personal:owner:test-1")
         );
         assert!(assigned_device("voice-worker-rust", room, meta).is_none());
+        assert!(assigned_device(AGENT, room, r#"{"owner_id":"other","device_id":"test-1"}"#).is_none());
+        assert!(!device_identity("personal:other:test-1"));
         assert!(assigned_device(AGENT, "pv-other", meta).is_none());
         assert!(
             assigned_device(

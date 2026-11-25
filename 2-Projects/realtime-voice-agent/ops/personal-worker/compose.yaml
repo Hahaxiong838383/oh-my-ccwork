@@ -15,6 +15,8 @@ services:
     environment:
       TZ: Asia/Shanghai
       AGENT_NAME: personal-xiaoke
+      PERSONAL_LOCAL_SPEECH_URL: ${PERSONAL_LOCAL_SPEECH_URL:-}
+      PERSONAL_OWNER_ID: owner
       PERSONAL_STATUS_FILE: /var/cache/personal-voice/state/worker.json
       WORKER_MAX_JOBS: "2"
       VAD_MODEL_PATH: /opt/voice/assets/silero_vad.onnx
