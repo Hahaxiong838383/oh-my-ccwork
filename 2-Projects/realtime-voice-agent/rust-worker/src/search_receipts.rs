@@ -26,6 +26,13 @@ struct Manifest { version: u8, provider: String, voice: String, clips: Vec<Entry
 struct Entry { id: String, file: String, text: String, sha256: String }
 impl Bank {
     pub fn from_env(provider: &str, voice: &str) -> Option<Self> {
+        // 个人本地音色由服务当场选择。固定标签或上一轮音色都不能打开旧预录。
+        if voice == crate::stt_volc::personal_local_speech::VOICE_UNREPORTED
+            || crate::stt_volc::personal_local_speech::endpoint().is_some()
+        {
+            tracing::info!("search receipt bank skipped: personal speech selects the voice");
+            return None;
+        }
         if std::env::var("P003_SEARCH_RECEIPTS_V1").ok().as_deref()!=Some("1") { return None; }
         let path=std::env::var("P003_SEARCH_RECEIPTS_DIR").ok()?;
         match Self::load(Path::new(&path),provider,voice) {
@@ -89,6 +96,17 @@ mod tests {
         m["clips"][0]["file"]=serde_json::json!("../escape.wav");save(&dir,&m);assert!(Bank::load(&dir,"xfyun","synthetic-voice").is_err());
         m["clips"][0]["file"]=serde_json::json!("lookup.wav");m["clips"][0]["sha256"]=serde_json::json!("0".repeat(64));save(&dir,&m);assert!(Bank::load(&dir,"xfyun","synthetic-voice").is_err());
         m["clips"].as_array_mut().unwrap().pop();save(&dir,&m);assert!(Bank::load(&dir,"xfyun","synthetic-voice").is_err());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+    #[test]
+    fn historical_voice_cache_does_not_bind_when_the_service_has_not_named_a_voice(){
+        let (dir, mut m)=fixture();
+        m["provider"]=serde_json::json!("personal-local-pilot");
+        m["voice"]=serde_json::json!("piper-zh-huayan-medium");
+        save(&dir,&m);
+        assert!(Bank::load(&dir,"personal-local-pilot","piper-zh-huayan-medium").is_ok());
+        assert!(Bank::load(&dir,"personal-local-pilot",crate::stt_volc::personal_local_speech::VOICE_UNREPORTED).is_err());
+        assert!(Bank::from_env("personal-local-pilot",crate::stt_volc::personal_local_speech::VOICE_UNREPORTED).is_none());
         std::fs::remove_dir_all(dir).unwrap();
     }
     #[test]

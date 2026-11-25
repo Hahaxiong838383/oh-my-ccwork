@@ -1,34 +1,133 @@
 <!doctype html>
-<html lang="zh-CN" data-theme="glass"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>小可 · 私人语音管理</title>
+<html lang="zh-CN" data-theme="glass">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小可 · 配置工作室</title>
 <style>
-:root{color-scheme:light;--ink:#141b2d;--soft:#414e64;--accent:#4f46e5;--edge:#c5cfdf;--surface:rgba(255,255,255,.88)}
-*{box-sizing:border-box}body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.6 system-ui,sans-serif;background:radial-gradient(ellipse at 10% 0%,#d8d9fc 0,transparent 43%),radial-gradient(ellipse at 91% 18%,#cde8e5 0,transparent 47%),#eaf0f7}
-header{background:var(--surface);border-bottom:1px solid var(--edge);padding:16px max(5vw,20px);display:flex;align-items:center;justify-content:space-between}
-main{max-width:960px;margin:36px auto;padding:0 20px}h1{font-size:clamp(28px,4vw,36px);line-height:1.2;letter-spacing:-.03em}h2{font-size:20px;margin:0 0 14px}
-section{background:var(--surface);border:1px solid var(--edge);border-radius:20px;margin:18px 0;padding:clamp(18px,3vw,30px);box-shadow:0 4px 24px #304b7010}
-label{display:block;margin:10px 0}input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:10px;border:1px solid #9aa9bc;border-radius:9px;background:#fff;color:var(--ink)}
-button{padding:9px 18px;background:var(--accent);color:white;border:0;border-radius:12px;cursor:pointer;font-weight:600}button:disabled{opacity:.6}a{color:#4338a8}:focus-visible{outline:3px solid #0f766e;outline-offset:2px}
-#login{max-width:460px;margin:10vh auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:12px}.grid div{background:#edf1fa;border:1px solid #dce2f0;border-radius:12px;padding:12px}.hint,small{color:var(--soft)}#msg{position:sticky;bottom:12px;background:#fff4cf;color:#3e3015;padding:10px;border-radius:9px}#msg:empty{display:none}[hidden]{display:none!important}
-</style>
-<header><strong>小可 · 私人语音管理</strong><button id="logout" hidden>退出</button></header>
-<main><section id="login"><h1>管理员登录</h1><form id="signin"><label>管理员口令<input id="pass" type="password" autocomplete="current-password" required></label><button>登录</button></form></section>
-<div id="panel" hidden><h1>语音工作台</h1><p><a href="/talk/">打开个人对话</a></p><p><a href="/api/design" target="_blank" rel="noopener">三套设计预览</a> <small>手机、Web 对话与管理台 · 演示数据</small></p><section><h2>服务状态</h2><div class="grid" id="services"></div><small id="build"></small></section>
-<section><h2>试问个人大脑</h2><form id="diagnose"><label for="question">输入文字检查回答、工具和搜索来源</label><input id="question" placeholder="例如，北京现在几点？" maxlength="600" required><p><button id="ask">发送试问</button></p></form><small>独立诊断会话，不写入长期记忆。</small><p id="reply" role="status"></p><ul id="sources"></ul></section>
-<section><h2>热词草稿</h2><label>词表<select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select></label><label>每行一个词<textarea id="words" rows="4"></textarea></label><button id="saveWords">保存草稿</button> <small id="edited"></small></section>
-<section><h2>衔接短语</h2><div class="grid" id="probs"></div><button id="saveProbs">保存设置</button></section><p class="hint">配置保存在飞牛。个人 worker 接入并回报加载版本后，才能核实通话实际使用的配置。</p></div><p role="status" id="msg"></p></main>
+:root{color-scheme:light;--ink:#202338;--muted:#536079;--line:#d3daea;--violet:#5245a8;--pale:#edeafd;--good:#1e6453;--surface:#fffffff5}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 8% 0%,#dedbfa 0,transparent 44%),radial-gradient(ellipse at 97% 4%,#d8eae7 0,transparent 42%),#f0f2f8;color:var(--ink);font:16px/1.55 system-ui,"Noto Sans CJK SC",sans-serif}
+header{background:var(--surface);border-bottom:1px solid var(--line)}.bar,main{max-width:1230px;margin:auto;padding:0 clamp(16px,4vw,54px)}.bar,.spread,.actions,.identity,.pair{display:flex;align-items:center;gap:12px}.bar,.spread{justify-content:space-between}.bar{min-height:68px}.identity{font-size:19px;font-weight:750}.mark{display:flex;align-items:center;justify-content:center;gap:3px;width:36px;height:36px;background:var(--violet);border-radius:10px}.mark i{width:3px;height:10px;background:white;border-radius:3px}.mark i:nth-child(2){height:20px}.mark i:nth-child(3){height:14px}
+main{padding-top:28px;padding-bottom:48px}h1,h2,h3,p{margin:0}h1{font-size:clamp(29px,4vw,39px);line-height:1.25;letter-spacing:-.03em;margin-bottom:8px}h2{font-size:21px}h3{font-size:17px}p,small,.muted{color:var(--muted)}small{font-size:14px}
+.card,.runtime{border:1px solid var(--line);border-radius:17px;background:var(--surface);padding:clamp(16px,2.4vw,28px)}.runtime{margin:20px 0;display:grid;grid-template-columns:1.65fr 1fr 1fr;gap:18px}.runtime>div+div{border-left:1px solid var(--line);padding-left:20px}.runtime h3{margin-bottom:5px}.status{font-size:17px;font-weight:650}.slots{display:inline-flex;gap:4px}.slots i{border:1px solid #6b738b;width:20px;height:11px;background:#fff;border-radius:3px}.slots i.used{background:var(--violet);border-color:var(--violet)}.bad{color:#8b4717}
+.workspace{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(295px,1fr);gap:18px;align-items:start}.editor{padding:0;overflow:hidden}.inside{padding:clamp(17px,2.4vw,28px)}.tabs{display:flex;background:#f8f8fd;border-bottom:1px solid var(--line);gap:3px;padding:0 12px}.tabs button{background:none;color:var(--muted);border:0;border-radius:0;padding:14px 12px}.tabs button[aria-pressed=true]{box-shadow:inset 0 -3px var(--violet);color:var(--violet)}.sub{margin:5px 0 17px}.active{background:#e9f4ef;color:#245e4e;padding:12px 14px;border-radius:9px;margin:15px 0}.readout{background:#f3f4fa;padding:12px 14px;border-radius:9px;margin-top:15px}.actions{flex-wrap:wrap;margin-top:14px}.bar .actions{margin:0}button,a.action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid transparent;border-radius:8px;padding:8px 14px;background:var(--violet);color:white;font:inherit;font-weight:650;text-decoration:none;cursor:pointer}button.light,a.action{background:white;border-color:var(--line);color:#403869}button:disabled{opacity:.52;cursor:default}a{color:#443198}:focus-visible{outline:3px solid #117b71;outline-offset:2px}
+label{display:block;font-size:15px;font-weight:600;margin:12px 0 5px}input,select,textarea{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:#fff;border:1px solid #9aa5bc;border-radius:8px}textarea{resize:vertical}audio{display:block;width:100%;margin-top:15px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.diff{white-space:pre-line;color:var(--muted);overflow-wrap:anywhere;margin:8px 0}.meta{margin-top:17px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}#login{max-width:440px;margin:8vh auto}#msg:not(:empty){position:sticky;bottom:10px;z-index:2;background:#fff0d6;color:#583a14;padding:10px 14px;border-radius:9px;border:1px solid #d9bd8d;margin-top:12px}#sources{padding-left:22px;overflow-wrap:anywhere}#reply{white-space:pre-wrap;overflow-wrap:anywhere}#clock{min-height:22px}.subtle{font-size:14px;color:var(--muted)}[hidden]{display:none!important}
+@media(max-width:790px){.workspace{grid-template-columns:1fr}.runtime{gap:9px}.runtime>div+div{padding-left:10px}}@media(max-width:560px){.bar{min-height:60px}.identity{font-size:16px}.bar .actions{gap:6px}.bar button,.bar .action{font-size:14px;padding:7px 9px}.runtime{grid-template-columns:1fr 1fr}.runtime>div:first-child{grid-column:1/-1;border-bottom:1px solid var(--line);padding-bottom:9px}.runtime>div:nth-child(2){padding-left:0;border:0}.tabs button{padding:12px 9px}.tabs{padding:0 4px}.spread{flex-wrap:wrap}.meta{font-size:13px}}
+</style></head><body>
+<header><div class="bar"><div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>小可私人管理</div><div class="actions" id="ownerLinks" hidden><a class="action" href="/talk/">打开对话 ↗</a><button class="light" id="logout">退出</button></div></div></header>
+<main>
+<section id="login" class="card"><h1>管理员登录</h1><form id="signin"><label for="pass">管理员口令</label><input id="pass" type="password" autocomplete="current-password" required><div class="actions"><button>登录工作室</button></div></form></section>
+<div id="panel" hidden>
+<div class="spread"><div><h1>配置工作室</h1><p>管理通话音色、热词和衔接短语。</p></div><button id="refresh" class="light">刷新服务状态</button></div>
+<section class="runtime" aria-label="运行总览" id="services"><div><h3>通话占用</h3><div class="pair"><span class="status" id="worker">读取中</span><span class="slots" id="slots" aria-hidden="true"></span></div><small id="clock"></small></div><div><h3>北京签票</h3><span class="status" id="ticket">读取中</span></div><div><h3>飞牛个人大脑</h3><span class="status" id="brain">读取中</span></div></section>
+<div class="workspace"><section class="card editor"><nav class="tabs" aria-label="配置类别"><button data-view="voice" aria-pressed="true">通话音色</button><button data-view="hotwords" aria-pressed="false">热词草稿</button><button data-view="filler" aria-pressed="false">衔接短语</button></nav>
+<div class="inside" id="voice"><h2>通话音色</h2><div id="actual" class="active" role="status">正在读取合成服务</div><label for="voiceChoice">备选音色</label><select id="voiceChoice" disabled></select><p class="subtle" id="voiceDesc"></p><audio id="sample" controls hidden></audio><div class="actions"><button id="preview" class="light" disabled>试听样音</button><button id="apply" disabled>应用到通话</button><button class="light" id="reloadVoice">重读音色</button></div><p class="subtle" id="voiceHint"></p></div>
+<div class="inside" id="hotwords" hidden><h2>热词草稿</h2><p class="sub">词表保存到后台，通话加载状态待确认。</p><label for="kind">词表</label><select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select><label for="words">每行一个词</label><textarea id="words" rows="5"></textarea><p class="diff" id="diff"></p><div class="actions"><button id="saveWords">保存草稿</button><small id="edited"></small></div></div>
+<div class="inside" id="filler" hidden><h2>衔接短语</h2><p class="sub">设置各风格使用衔接短语的概率。</p><div class="grid" id="probs"></div><div class="actions"><button id="saveProbs">写入后台</button></div><p class="readout">通话端加载版本待确认。</p></div></section>
+<section class="card"><h2>试问个人大脑</h2><p class="sub">验证文字回答、工具和搜索来源。诊断对话不写入长期记忆。</p><form id="diagnose"><label for="question">测试问题</label><input id="question" placeholder="例如，北京现在几点？" maxlength="600" required><div class="actions"><button id="ask" class="light">发送试问</button></div></form><div id="result" class="readout" hidden><p id="reply" role="status"></p><small id="tool"></small><ul id="sources"></ul></div></section></div>
+<div class="meta"><small id="build"></small><a href="/api/design" target="_blank" rel="noopener">查看设计预览</a></div></div><p id="msg" role="status"></p></main>
 <script>
-const el=id=>document.getElementById(id);let state;
-function display(active){el('login').hidden=active;el('panel').hidden=!active;el('logout').hidden=!active}
-async function api(path,method='GET',body){const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json','X-Voice-Admin':'1'},body:body===undefined?undefined:JSON.stringify(body)});const j=await r.json();if(!r.ok){if(r.status===401)display(false);throw Error(j.error||'请求失败')}return j}
-function draft(){const d=state.drafts[el('kind').value];el('words').value=d?d.words.join('\n'):'';el('edited').textContent=d?'保存于 '+new Date(d.created_at).toLocaleString():'尚无草稿'}
-async function load(){state=await api('settings');display(true);draft();el('build').textContent='后台版本 '+state.build+' · 状态采样 '+new Date(state.sampledAt).toLocaleTimeString();el('services').replaceChildren();for(const [name,v] of [['管理后台','在线'],['语音 worker',state.worker],['个人大脑',state.brain],['北京签票',state.ticket]]){const d=document.createElement('div');d.append(name,document.createElement('br'),v);el('services').append(d)}el('probs').replaceChildren();for(const [k,label] of Object.entries({default:'默认',chatty:'健谈',quiet:'安静',funny:'幽默'})){const l=document.createElement('label');l.textContent=label+'（%）';const i=document.createElement('input');i.type='number';i.min=0;i.max=100;i.step='any';i.id='p-'+k;i.value=+(100*state.probabilities[k]).toFixed(4);l.append(i);el('probs').append(l)}}
-function act(fn){return async e=>{e.preventDefault();el('msg').textContent='';try{await fn()}catch(err){el('msg').textContent=err.message}}}
-el('diagnose').onsubmit=act(async()=>{el('ask').disabled=true;el('sources').replaceChildren();el('reply').textContent='正在查询…';try{const r=await api('diagnostics/chat','POST',{question:el('question').value});el('reply').textContent=r.text;for(const src of r.sources){const li=document.createElement('li'),a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title;li.append(a);el('sources').append(li)}}catch(e){el('reply').textContent='';throw e}finally{el('ask').disabled=false}});
-el('signin').onsubmit=act(async()=>{await api('login','POST',{password:el('pass').value});el('pass').value='';await load()});
-el('logout').onclick=act(async()=>{await api('logout','POST');location.reload()});
-el('kind').onchange=draft;
-el('saveWords').onclick=act(async()=>{const k=el('kind').value;state.drafts[k]=await api('drafts/'+k,'PUT',{words:el('words').value.split('\n').map(x=>x.trim()).filter(Boolean),previous:state.drafts[k]?.id??null});draft();el('msg').textContent='草稿已保存'});
-el('saveProbs').onclick=act(async()=>{const probabilities={};for(const k of Object.keys(state.probabilities)){const v=el('p-'+k).valueAsNumber;if(!Number.isFinite(v)||v<0||v>100)throw Error('请填写 0 到 100 的数字');probabilities[k]=v/100}await api('probabilities','PUT',{probabilities});el('msg').textContent='设置已保存'});
-load().catch(e=>{if(e.message!=='请登录')el('msg').textContent=e.message});
-</script></html>
+const el=id=>document.getElementById(id);
+let settings, slots, catalog, editingKind='asr', edits={}, sampleUrl, interval, voiceBusy=false, refreshing=false;
+function showOwner(active){
+  el('login').hidden=active;el('panel').hidden=!active;el('ownerLinks').hidden=!active;
+  if(!active){clearInterval(interval);clearSample()}
+}
+function clearSample(){
+  const audio=el('sample');audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true;
+  if(sampleUrl)URL.revokeObjectURL(sampleUrl);sampleUrl=null;
+}
+async function api(path,method='GET',body){
+  const r=await fetch('/api/'+path,{method,headers:{'Content-Type':'application/json','X-Voice-Admin':'1'},
+    body:body===undefined?undefined:JSON.stringify(body)});
+  if(!r.ok){if(r.status===401)showOwner(false);const err=await r.json().catch(()=>({}));throw Error(err.error||'请求失败')}
+  return path==='voices/preview'?r.blob():r.json();
+}
+function handle(fn){return async e=>{e.preventDefault();el('msg').textContent='';try{await fn()}catch(err){el('msg').textContent=err.message}}}
+function status(s){
+  slots=s.slots;el('worker').textContent=s.worker;el('ticket').textContent=s.ticket;el('brain').textContent=s.brain;
+  ['worker','ticket','brain'].forEach(id=>el(id).classList.toggle('bad',id==='worker'?slots.jobs===null:s[id]!=='在线'));
+  el('slots').replaceChildren();
+  if(slots.capacity!==null)for(let i=0;i<Math.min(slots.capacity,12);i++){const slot=document.createElement('i');if(i<slots.jobs)slot.className='used';el('slots').append(slot)}
+  const time=slots.at||s.sampledAt;
+  el('clock').textContent=time?(slots.at?'Worker 心跳 ':'后台读取 ')+new Date(time).toLocaleTimeString():'等待重新采样';
+  if(s.build)el('build').textContent='后台版本 '+s.build;
+  voiceControls();
+}
+async function refresh(){
+  if(refreshing)return;refreshing=true;
+  try{status(await api('status'))}catch(err){status({slots:{jobs:null,capacity:null},worker:'占用未知',brain:'状态未知',ticket:'状态未知'});throw err}
+  finally{refreshing=false}
+}
+function voiceControls(){
+  const selected=catalog?.voices.find(v=>v.id===el('voiceChoice').value);
+  el('preview').disabled=!selected||voiceBusy;el('voiceChoice').disabled=!catalog||voiceBusy;
+  el('apply').disabled=!selected||voiceBusy||selected.id===catalog?.active||slots?.jobs!==0;
+  el('reloadVoice').disabled=voiceBusy;el('voiceDesc').textContent=selected?.description||'';
+  el('voiceHint').textContent=slots?.jobs===0?'在空闲时切换；试听只播放样音。':'通话占用或状态未知，空闲后可切换。';
+}
+async function readVoices(preferred){
+  try{const data=await api('voices');catalog=data;el('voiceChoice').replaceChildren();
+    for(const v of data.voices)el('voiceChoice').add(new Option(v.name,v.id));
+    el('voiceChoice').value=data.voices.some(v=>v.id===preferred)?preferred:data.active;
+    el('actual').textContent='合成服务正在使用　'+data.voices.find(v=>v.id===data.active).name;
+  }catch(err){catalog=null;el('voiceChoice').replaceChildren();el('actual').textContent=err.message;clearSample()}
+  finally{voiceControls()}
+}
+async function voiceAction(fn){voiceBusy=true;voiceControls();try{await fn()}finally{voiceBusy=false;voiceControls()}}
+el('voiceChoice').onchange=()=>{clearSample();voiceControls()};
+el('reloadVoice').onclick=handle(()=>voiceAction(async()=>{clearSample();await readVoices()}));
+el('preview').onclick=handle(()=>voiceAction(async()=>{
+  clearSample();const blob=await api('voices/preview','POST',{id:el('voiceChoice').value});
+  sampleUrl=URL.createObjectURL(blob);el('sample').src=sampleUrl;el('sample').hidden=false;
+  await el('sample').play().catch(()=>{el('msg').textContent='样音已就绪，点播放即可试听'});
+}));
+el('apply').onclick=handle(()=>voiceAction(async()=>{
+  const id=el('voiceChoice').value;
+  try{await api('voices/active','PUT',{id,previous:catalog.active});await readVoices(id);
+    if(catalog?.active!==id)throw Error('未取得当前音色，请重读');el('msg').textContent='合成服务已确认使用所选音色'}
+  catch(err){await readVoices(id);throw err}
+}));
+for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{for(const tab of document.querySelectorAll('[data-view]')){
+  const selected=b===tab;el(tab.dataset.view).hidden=!selected;tab.setAttribute('aria-pressed',String(selected))}};
+function words(){return el('words').value.split('\n').map(s=>s.trim()).filter(Boolean)}
+function showDiff(){
+  const before=settings.drafts[editingKind]?.words||[],after=words();
+  const added=after.filter(w=>!before.includes(w)),removed=before.filter(w=>!after.includes(w));
+  el('diff').textContent=[added.length?'新增　'+added.join('、'):'',removed.length?'移除　'+removed.join('、'):''].filter(Boolean).join('\n');
+}
+function showDraft(){
+  const d=settings.drafts[editingKind];el('words').value=edits[editingKind]??(d?.words||[]).join('\n');
+  el('edited').textContent=d?'已写入后台 · '+new Date(d.created_at).toLocaleString():'尚无已保存草稿';showDiff();
+}
+el('words').oninput=()=>{edits[editingKind]=el('words').value;showDiff()};
+el('kind').onchange=()=>{editingKind=el('kind').value;showDraft()};
+el('saveWords').onclick=handle(async()=>{
+  const kind=editingKind,raw=el('words').value;
+  const saved=await api('drafts/'+kind,'PUT',{words:words(),previous:settings.drafts[kind]?.id??null});
+  settings.drafts[kind]=saved;if(edits[kind]===raw)delete edits[kind];if(editingKind===kind)showDraft();
+  el('msg').textContent='词表已写入后台，通话加载待确认';
+});
+el('saveProbs').onclick=handle(async()=>{
+  const probabilities={};for(const k of Object.keys(settings.probabilities)){const v=el('p-'+k).valueAsNumber;
+    if(!Number.isFinite(v)||v<0||v>100)throw Error('请填写 0 到 100 的数字');probabilities[k]=v/100}
+  await api('probabilities','PUT',{probabilities});el('msg').textContent='概率已写入后台，通话加载待确认';
+});
+el('diagnose').onsubmit=handle(async()=>{
+  el('ask').disabled=true;el('result').hidden=false;el('tool').textContent='';el('sources').replaceChildren();el('reply').textContent='正在试问…';
+  try{const r=await api('diagnostics/chat','POST',{question:el('question').value});el('reply').textContent=r.text;
+    if(r.tool)el('tool').textContent='调用工具　'+r.tool;
+    for(const src of r.sources){const li=document.createElement('li'),a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title;li.append(a);el('sources').append(li)}
+  }catch(err){el('reply').textContent=err.message}finally{el('ask').disabled=false}
+});
+async function load(){
+  settings=await api('settings');showOwner(true);status(settings);showDraft();
+  el('probs').replaceChildren();for(const [k,name] of Object.entries({default:'默认',chatty:'健谈',quiet:'安静',funny:'幽默'})){
+    const label=document.createElement('label');label.textContent=name+'（%）';const input=document.createElement('input');
+    input.type='number';input.min=0;input.max=100;input.step='any';input.id='p-'+k;input.value=+(100*settings.probabilities[k]).toFixed(4);label.append(input);el('probs').append(label)}
+  clearInterval(interval);interval=setInterval(()=>{if(!document.hidden)refresh().catch(()=>{})},5000);await readVoices();
+}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!el('panel').hidden)refresh().catch(()=>{})});
+el('refresh').onclick=handle(refresh);
+el('signin').onsubmit=handle(async()=>{await api('login','POST',{password:el('pass').value});el('pass').value='';await load()});
+el('logout').onclick=handle(async()=>{await api('logout','POST');location.reload()});
+load().catch(err=>{if(err.message!=='请登录')el('msg').textContent=err.message});
+</script></body></html>

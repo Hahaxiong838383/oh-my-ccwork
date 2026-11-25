@@ -24,7 +24,7 @@ app.use('*',async(c,next)=>{
   c.header('Referrer-Policy','no-referrer');
   c.header('X-Frame-Options','DENY');
   c.header('X-Content-Type-Options','nosniff');
-  c.header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; form-action 'self'; base-uri 'none'");
+  c.header('Content-Security-Policy',"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src 'self' blob:; frame-ancestors 'none'; form-action 'self'; base-uri 'none'");
   if (c.req.method!=='GET' && c.req.header('X-Voice-Admin')!=='1') return c.json({error:'请求来源无效'},403);
   await next();
 });
@@ -50,17 +50,21 @@ app.get('/api/design',c=>{
   return c.html(readFileSync('/app/design.html','utf8'));
 });
 app.post('/api/logout',c=>{sessions.delete(getCookie(c,'voice_owner')!);deleteCookie(c,'voice_owner',{path:'/'});return c.json({ok:true});});
-function workerStatus() {
-  if (!process.env.WORKER_STATUS_FILE) return '未接入状态采样';
+interface WorkerSnapshot { status: string; jobs: number | null; capacity: number | null; at: string | null }
+function workerSnapshot(): WorkerSnapshot {
+  const unknown = (status: string): WorkerSnapshot => ({status,jobs:null,capacity:null,at:null});
+  if (!process.env.WORKER_STATUS_FILE) return unknown('未接入状态采样');
   try {
     const sample = JSON.parse(readFileSync(process.env.WORKER_STATUS_FILE,'utf8'));
     const age = Date.now() - sample.sampled_ms;
     if (sample.service !== 'personal-xiaoke' || !Number.isSafeInteger(sample.sampled_ms) ||
         !Number.isSafeInteger(sample.jobs) || !Number.isSafeInteger(sample.capacity) ||
-        sample.jobs < 0 || sample.capacity < 1 || typeof sample.registered !== 'boolean') return '采样数据异常';
-    if (age < -2000 || age > 20000) return '状态采样已过期';
-    return sample.registered ? '北京已注册 · '+sample.jobs+'/'+sample.capacity+' 路占用' : '正在连接北京';
-  } catch { return '尚无有效采样'; }
+        sample.jobs < 0 || sample.capacity < 1 || sample.jobs > sample.capacity || typeof sample.registered !== 'boolean') return unknown('采样数据异常');
+    if (age < -2000 || age > 20000) return unknown('状态采样已过期');
+    if (!sample.registered) return unknown('正在连接北京');
+    return {status:'北京已注册 · '+sample.jobs+'/'+sample.capacity+' 路占用',jobs:sample.jobs,
+      capacity:sample.capacity,at:new Date(sample.sampled_ms).toISOString()};
+  } catch { return unknown('尚无有效采样'); }
 }
 async function brainStatus() {
   if (!process.env.BRAIN_HEALTH_URL) return '未接入状态采样';
@@ -89,14 +93,59 @@ async function ticketStatus() {
     });
   } catch { return '暂时不可达'; }
 }
+async function runtimeStatus() {
+  const [brain,ticket] = await Promise.all([brainStatus(),ticketStatus()]);
+  const slots = workerSnapshot();
+  return {build:process.env.ADMIN_BUILD,worker:slots.status,slots,brain,ticket,sampledAt:new Date().toISOString()};
+}
+app.get('/api/status',async c=>c.json(await runtimeStatus()));
 app.get('/api/settings',async c=>{
-  const [brain, ticket] = await Promise.all([brainStatus(), ticketStatus()]);
   return c.json({
-    build:process.env.ADMIN_BUILD,worker:workerStatus(),brain,ticket,
-    sampledAt:new Date().toISOString(),
+    ...(await runtimeStatus()),
     drafts:Object.fromEntries(HOTWORD_KINDS.map(kind=>[kind,hotwordStore.draftOf(kind)])),
     probabilities:getFillerStyleSettings().probabilities
   });
+});
+const speechOrigin = process.env.SPEECH_ORIGIN;
+const voiceId = (v:unknown):v is string => typeof v==='string' && /^[A-Za-z0-9][A-Za-z0-9._-]{0,95}$/.test(v);
+async function voiceRequest(path:string, method='GET', payload?:object) {
+  if (!speechOrigin) throw Error('未配置语音服务');
+  return fetch(new URL(path,speechOrigin),{method,redirect:'error',headers:{'Content-Type':'application/json'},
+    body:payload ? JSON.stringify(payload) : undefined,signal:AbortSignal.timeout(path.endsWith('preview') ? 30000 : 12000)});
+}
+app.get('/api/voices',async c=>{
+  try {
+    const res=await voiceRequest('/v1/voices');
+    if (!res.ok) throw Error();
+    const data=await res.json();
+    if (!Array.isArray(data.voices) || !data.voices.some((v:{id:string})=>v.id===data.active)) throw Error();
+    return c.json({active:data.active,voices:data.voices.map((v:{id:string;name:string;description?:string})=>({
+      id:v.id,name:v.name,description:v.description||''}))});
+  } catch {return c.json({error:'暂时无法读取合成服务的音色'},503);}
+});
+app.put('/api/voices/active',async c=>{
+  const data=await c.req.json().catch(()=>({}));
+  if (!voiceId(data.id)||!voiceId(data.previous)) return c.json({error:'音色参数无效'},400);
+  if (workerSnapshot().jobs!==0) return c.json({error:'请在 Worker 已注册且通话全部结束后切换音色'},409);
+  try {
+    const res=await voiceRequest('/v1/voices/active','PUT',{id:data.id,previous:data.previous});
+    if (res.status===409) return c.json({error:'当前音色已变化，请重新读取后再应用'},409);
+    if ([400,404,422].includes(res.status)) return c.json({error:'该音色不可用'},400);
+    if (!res.ok) throw Error();
+    const check=await voiceRequest('/v1/voices');
+    if (!check.ok || (await check.json()).active!==data.id) throw Error();
+    return c.json({active:data.id});
+  } catch {return c.json({error:'未取得合成服务的生效确认，请重新读取'},503);}
+});
+app.post('/api/voices/preview',async c=>{
+  const data=await c.req.json().catch(()=>({}));
+  if (!voiceId(data.id)) return c.json({error:'请选择音色'},400);
+  try {
+    const res=await voiceRequest('/v1/voices/preview','POST',{id:data.id});
+    if ([400,404,422].includes(res.status)) return c.json({error:'该音色不可用'},400);
+    if (!res.ok || !/^audio\/(x-)?wav/i.test(res.headers.get('content-type')||'')) throw Error();
+    return new Response(res.body,{headers:{'Content-Type':'audio/wav','Cache-Control':'no-store'}});
+  } catch {return c.json({error:'试听暂时无法生成'},503);}
 });
 let testingBrain = false;
 app.post('/api/diagnostics/chat', async c => {

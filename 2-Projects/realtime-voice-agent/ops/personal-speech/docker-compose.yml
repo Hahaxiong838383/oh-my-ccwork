@@ -17,11 +17,15 @@ services:
       TTS_MODEL_DIR: /models/tts
       TTS_SID: "0"
       TTS_VOICE: piper-zh-huayan-medium
+      VOICES_DIR: /models/voices
+      VOICE_STATE_PATH: /state/active.json
       BIND: 0.0.0.0
       PORT: "8091"
     volumes:
       - ./models/asr:/models/asr:ro
       - ./models/tts:/models/tts:ro
+      - ./models/voices:/models/voices:ro
+      - ./state:/state
     tmpfs:
       - /tmp:size=64m,mode=1777
     networks: [private]
