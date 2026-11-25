@@ -3,6 +3,7 @@ const el = id => document.getElementById(id);
 const { Room, RoomEvent, Track } = LivekitClient;
 let active;
 let muted = false;
+let agentDeadline;
 const segments = new Map();
 function status(text) { el('status').textContent = text; }
 function displayRoom(connected) {
@@ -34,6 +35,15 @@ function transcript(items, participant) {
 function ready(room) {
   if (active !== room) return;
   const present = [...room.remoteParticipants.values()].some(p => p.isAgent);
+  if (present) {
+    clearTimeout(agentDeadline); agentDeadline = undefined;
+  } else if (!agentDeadline) {
+    agentDeadline = setTimeout(() => {
+      if (active !== room) return;
+      el('error').textContent = '小可暂时没有接听，请稍后重试。';
+      room.disconnect();
+    },15000);
+  }
   status(!present ? '已入房，等待小可接听' : muted ? '麦克风已静音' : '小可已接通，可以说话');
 }
 el('start').onsubmit = async event => {
@@ -52,7 +62,7 @@ el('start').onsubmit = async event => {
   room.on(RoomEvent.Reconnecting, () => { if (active === room) status('正在重连'); });
   room.on(RoomEvent.Disconnected, () => {
     if (active !== room) return;
-    active = null; displayRoom(false); el('tracks').replaceChildren(); status('通话已结束');
+    clearTimeout(agentDeadline); agentDeadline=undefined; active = null; displayRoom(false); el('tracks').replaceChildren(); status('通话已结束');
   });
   try {
     status('正在申请房间');
