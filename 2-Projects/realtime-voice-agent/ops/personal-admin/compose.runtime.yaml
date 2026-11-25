@@ -1,5 +1,7 @@
 services:
   admin:
+    environment:
+      TALK_SITE_ORIGIN: https://pa.hahaxiong.cc:8666
     volumes:
       - /vol1/1000/docker/personal-voice-runtime/private/brain.env:/run/brain-access.env:ro
     networks:

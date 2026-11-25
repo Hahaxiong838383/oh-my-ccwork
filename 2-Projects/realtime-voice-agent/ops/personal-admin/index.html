@@ -13,7 +13,7 @@ button{padding:9px 18px;background:var(--accent);color:white;border:0;border-rad
 </style>
 <header><strong>小可 · 私人语音管理</strong><button id="logout" hidden>退出</button></header>
 <main><section id="login"><h1>管理员登录</h1><form id="signin"><label>管理员口令<input id="pass" type="password" autocomplete="current-password" required></label><button>登录</button></form></section>
-<div id="panel" hidden><h1>语音工作台</h1><p><a href="/api/design" target="_blank" rel="noopener">三套设计预览</a> <small>手机、Web 对话与管理台 · 演示数据</small></p><section><h2>服务状态</h2><div class="grid" id="services"></div><small id="build"></small></section>
+<div id="panel" hidden><h1>语音工作台</h1><p><a href="/talk/">打开个人对话</a></p><p><a href="/api/design" target="_blank" rel="noopener">三套设计预览</a> <small>手机、Web 对话与管理台 · 演示数据</small></p><section><h2>服务状态</h2><div class="grid" id="services"></div><small id="build"></small></section>
 <section><h2>试问个人大脑</h2><form id="diagnose"><label for="question">输入文字检查回答、工具和搜索来源</label><input id="question" placeholder="例如，北京现在几点？" maxlength="600" required><p><button id="ask">发送试问</button></p></form><small>独立诊断会话，不写入长期记忆。</small><p id="reply" role="status"></p><ul id="sources"></ul></section>
 <section><h2>热词草稿</h2><label>词表<select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select></label><label>每行一个词<textarea id="words" rows="4"></textarea></label><button id="saveWords">保存草稿</button> <small id="edited"></small></section>
 <section><h2>衔接短语</h2><div class="grid" id="probs"></div><button id="saveProbs">保存设置</button></section><p class="hint">配置保存在飞牛。个人 worker 接入并回报加载版本后，才能核实通话实际使用的配置。</p></div><p role="status" id="msg"></p></main>

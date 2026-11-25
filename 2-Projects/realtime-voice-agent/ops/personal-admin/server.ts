@@ -1,6 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {createServer, get as httpsGet} from 'node:https';
 import {Hono} from 'hono';
+import {privateTalk} from './talk-gateway';
 import {serve} from '@hono/node-server';
 import {getCookie,setCookie,deleteCookie} from 'hono/cookie';
 import {bodyLimit} from 'hono/body-limit';
@@ -15,6 +16,7 @@ process.env.STUDIO_GUEST_USER='';
 process.env.STUDIO_EDITOR_USERS='';
 const page=readFileSync('/app/index.html','utf8');
 const app=new Hono();
+const upgradeTalk=privateTalk(app,process.env.EDGE_HEALTH_URL);
 const sessions=new Map<string,number>();
 const lifetime=8*3600;
 app.use('*',async(c,next)=>{
@@ -127,4 +129,5 @@ app.put('/api/probabilities',async c=>{
   if(!validFillerProbabilities(body.probabilities)) return c.json({error:'各项须为 0–100%'},400);
   return c.json(saveFillerStyleSettings(body.probabilities,'owner'));
 });
-serve({fetch:app.fetch,port:8443,createServer,serverOptions:{cert:readFileSync('/run/private/cert.pem'),key:readFileSync('/run/private/key.pem')}});
+const server=serve({fetch:app.fetch,port:8443,createServer,serverOptions:{cert:readFileSync('/run/private/cert.pem'),key:readFileSync('/run/private/key.pem')}});
+if(upgradeTalk) server.on('upgrade',upgradeTalk);
