@@ -1,0 +1,5 @@
+__pycache__/
+.private/
+*.env
+*.key
+*.sqlite3*
