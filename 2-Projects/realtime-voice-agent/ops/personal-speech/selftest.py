@@ -147,7 +147,6 @@ def recognize(host: str, port: int, pcm: bytes) -> str:
             text = str(event.get("text") or "").strip()
             if text:
                 finals.append(text)
-            break
     socket_ws.sock.close()
     return "".join(finals)
 
@@ -188,7 +187,7 @@ def main() -> None:
     print(json.dumps(report, ensure_ascii=False))
     if health.get("original_xiaoke_voice") is not False:
         raise SystemExit("健康检查没有标明这不是原音色")
-    if rate != 24000 or duration < 0.4 or level < 100 or not reference:
+    if rate != 24000 or duration < 0.4 or level < 100 or reference != "价格太高的原因" or heard != question:
         raise SystemExit("TTS 时长、能量或公开样音识别未通过")
 
 

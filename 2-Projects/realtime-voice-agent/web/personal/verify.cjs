@@ -21,12 +21,13 @@ async function main() {
     await page.locator('#connect').click();
     assert.equal((await ticket).status(),200);
     await page.locator('#controls:visible').waitFor();
-    await page.waitForFunction(expected => {
+    await page.waitForFunction(([input, answer]) => {
       const lines = [...document.querySelectorAll('#lines li')];
       return ['小可','我'].every(who => lines.some(line => line.querySelector('strong')?.textContent === who))
-          && (!expected || lines.some(line => line.querySelector('strong')?.textContent === '小可' && new RegExp(expected).test(line.textContent)))
+          && lines.some(line => line.querySelector('strong')?.textContent === '我' && line.textContent.includes(input))
+          && (!answer || lines.some(line => line.querySelector('strong')?.textContent === '小可' && new RegExp(answer).test(line.textContent)))
           && document.querySelector('#tracks audio')?.currentTime > 0;
-    }, process.env.VOICE_TEST_ANSWER || '', {timeout:90000});
+    }, [VOICE_TEST_EXPECT, process.env.VOICE_TEST_ANSWER || ''], {timeout:90000});
     const userLines = await page.locator('#lines li').evaluateAll(lines =>
       lines.filter(line => line.querySelector('strong')?.textContent === '我').map(line => line.querySelector('span').textContent));
     assert(userLines.some(line => line.includes(VOICE_TEST_EXPECT)), '输入字幕与合成录音不一致');

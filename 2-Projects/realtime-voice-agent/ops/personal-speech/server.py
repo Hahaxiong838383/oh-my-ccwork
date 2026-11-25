@@ -158,6 +158,8 @@ def feed(stream, samples: list[float]) -> tuple[str, bool]:
 
 def finish(stream) -> str:
     with ASR_LOCK:
+        # Flush the right-context window when a sender ends without trailing silence.
+        stream.accept_waveform(16000, [0.0] * 12000)
         stream.input_finished()
         while RECOGNIZER.is_ready(stream):
             RECOGNIZER.decode_stream(stream)
@@ -260,6 +262,7 @@ async def asr(request: web.Request) -> web.WebSocketResponse:
     pending = bytearray()
     total = 0
     segment_samples = 0
+    waiting_for_speech = True
     try:
         async for message in socket:
             if message.type == web.WSMsgType.BINARY:
@@ -271,14 +274,21 @@ async def asr(request: web.Request) -> web.WebSocketResponse:
                 del pending[:usable]
                 samples = pcm16_to_float(raw)
                 total += len(samples)
+                if waiting_for_speech:
+                    # Keep an idle socket open without feeding an unbounded silence
+                    # prefix to the transducer. Four PCM counts are below -78 dBFS.
+                    if not any(abs(sample) > 4 / 32768 for sample in samples):
+                        continue
+                    waiting_for_speech = False
                 segment_samples += len(samples)
                 text, ended = await asyncio.to_thread(feed, stream, samples)
                 if not ended and segment_samples >= MAX_AUDIO_SAMPLES:
                     text = await asyncio.to_thread(finish, stream)
-                    stream = await asyncio.to_thread(new_stream)
                     ended = True
                 if ended:
                     segment_samples = 0
+                    waiting_for_speech = True
+                    stream = await asyncio.to_thread(new_stream)
                 if ended and text:
                     await socket.send_json({"type": "final", "text": text})
                 elif text:
