@@ -15,6 +15,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     TTS_MODEL_DIR=/models/tts \
     TTS_SID=0 \
     TTS_VOICE=piper-zh-huayan-medium \
+    VOICES_DIR=/models/voices \
+    VOICE_STATE_PATH=/state/active.json \
     BIND=0.0.0.0 \
     PORT=8091
 EXPOSE 8091
