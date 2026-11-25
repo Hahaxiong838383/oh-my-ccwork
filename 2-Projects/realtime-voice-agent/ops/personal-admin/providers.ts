@@ -47,6 +47,7 @@ interface FieldSpec {
   required?: boolean;
   label: string;
   pattern?: RegExp;
+  range?: [number, number];
   options?: {value: string; label: string}[];
 }
 interface DriverSpec {
@@ -69,7 +70,7 @@ const drivers: Record<string, DriverSpec> = {
     kind: 'asr', label: '豆包识别', note: '填写应用 ID 与访问令牌，或只填写识别 API Key',
     config: [
       {key: 'VOLC_ASR_RESOURCE_ID', required: true, label: '资源 ID', pattern: TOKEN_RE},
-      {key: 'VOLC_ASR_END_WINDOW_MS', label: '断句静音窗口（毫秒）', pattern: /^[1-9]\d{0,4}$/},
+      {key: 'VOLC_ASR_END_WINDOW_MS', label: '断句静音窗口（20–2000 毫秒）', pattern: /^[1-9]\d{0,3}$/, range: [20, 2000]},
       {key: 'VOLC_ASR_ENABLE_DDC', label: '识别结果顺滑', options: [
         {value: '', label: '默认'}, {value: '1', label: '开启'}, {value: '0', label: '关闭'},
       ]},
@@ -85,6 +86,7 @@ const drivers: Record<string, DriverSpec> = {
       {key: 'VOLC_ASR_API_KEY', label: '识别 API Key'},
     ],
     authorize(secrets) {
+      if (Boolean(secrets.VOLC_APP_ID) !== Boolean(secrets.VOLC_ACCESS_TOKEN)) throw new ProviderError('应用 ID 和访问令牌需要同时填写', 400);
       const pair = Boolean(secrets.VOLC_APP_ID && secrets.VOLC_ACCESS_TOKEN);
       if (!pair && !secrets.VOLC_ASR_API_KEY) throw new ProviderError('需要应用 ID 与访问令牌，或识别 API Key', 400);
     },
@@ -152,7 +154,8 @@ function checkValue(spec: FieldSpec, value: string) {
     if (!spec.options.some(item => item.value === value)) fail('请求无效', 400);
     return;
   }
-  if (spec.pattern && !spec.pattern.test(value)) fail('请求无效', 400);
+  if (spec.pattern && !spec.pattern.test(value)) fail(spec.label + '格式无效', 400);
+  if (spec.range && (Number(value) < spec.range[0] || Number(value) > spec.range[1])) fail(spec.label + '超出范围', 400);
   if (value.includes('://')) fail('不接受自定义接口地址', 400);
 }
 
@@ -181,7 +184,7 @@ function applyFields(spec: DriverSpec, current: Profile | undefined, configIn: S
   for (const field of spec.secrets) {
     const value = secretsIn[field.key];
     if (value == null || value === '') continue;
-    if (!SECRET_RE.test(value) || value.includes('://')) fail('密钥格式无效', 400);
+    if (!SECRET_RE.test(value) || value.includes('://') || (spec.kind !== 'llm' && value.length > 256)) fail('密钥格式无效', 400);
     secrets[field.key] = value;
   }
   for (const field of spec.config) if (field.required && !config[field.key]) fail('请填写' + field.label, 400);

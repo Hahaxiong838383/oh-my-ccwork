@@ -56,3 +56,14 @@ test('后台允许保存的配置数量能被运行时读取', () => {
   doc = select(doc,'llm',doc.profiles.at(-1).id);
   assert.equal(interpretProviders(doc)?.llm.profile,doc.active.llm);
 });
+
+test('后台拒绝 Worker 无法使用的断句窗口、凭据长度和不完整鉴权组合', () => {
+  const config = {VOLC_ASR_RESOURCE_ID:'sample'};
+  const key = {VOLC_ASR_API_KEY:'fixture-only-key'};
+  for (const window of ['19','2001'])
+    assert.throws(() => create(empty(),'asr','doubao_asr',{...config,VOLC_ASR_END_WINDOW_MS:window},key), e => e.status === 400);
+  for (const window of ['20','2000'])
+    assert.ok(create(empty(),'asr','doubao_asr',{...config,VOLC_ASR_END_WINDOW_MS:window},key));
+  assert.throws(() => create(empty(),'asr','doubao_asr',config,{...key,VOLC_APP_ID:'fixture-orphan'}), e => e.status === 400);
+  assert.throws(() => create(empty(),'asr','doubao_asr',config,{VOLC_ASR_API_KEY:'x'.repeat(257)}), e => e.status === 400);
+});
