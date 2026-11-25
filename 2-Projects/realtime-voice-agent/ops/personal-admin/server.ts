@@ -84,6 +84,35 @@ app.get('/api/settings',async c=>{
     probabilities:getFillerStyleSettings().probabilities
   });
 });
+let testingBrain = false;
+app.post('/api/diagnostics/chat', async c => {
+  if (!process.env.BRAIN_HEALTH_URL) return c.json({error:'个人大脑尚未接入'},503);
+  const input = await c.req.json().catch(() => ({}));
+  if (typeof input.question !== 'string' || !input.question.trim() || input.question.length > 600) {
+    return c.json({error:'请输入 1 至 600 字的试问'},400);
+  }
+  if (testingBrain) return c.json({error:'已有试问运行中'},429);
+  testingBrain = true;
+  try {
+    const key = readFileSync('/run/brain-access.env','utf8').match(/^LLM_API_KEY=([a-f0-9]{64})$/m)?.[1];
+    if (!key) return c.json({error:'大脑诊断授权未配置'},503);
+    const response = await fetch(new URL('/v1/chat/completions',process.env.BRAIN_HEALTH_URL),{
+      method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key,
+        'X-Personal-Session':'admin-diagnostic-'+crypto.randomUUID()},
+      body:JSON.stringify({model:'personal-brain',stream:false,store:false,messages:[{role:'user',content:input.question.trim()}]}),
+      signal:AbortSignal.timeout(45000)
+    });
+    if (!response.ok) return c.json({error:'大脑暂时无法完成试问'},502);
+    const result = await response.json();
+    const text = result.choices?.[0]?.message?.content;
+    if (typeof text!=='string' || !text.trim()) return c.json({error:'大脑没有返回正文'},502);
+    const sources = (Array.isArray(result.sources)?result.sources:[]).slice(0,10)
+      .filter((s: {url?:string})=>typeof s.url==='string' && /^https?:\/\//.test(s.url))
+      .map((s: {title?:string;url:string})=>({title:s.title||s.url,url:s.url}));
+    return c.json({text,tool:typeof result.tool==='string'?result.tool:null,sources});
+  } catch { return c.json({error:'大脑连接失败或试问超时'},502); }
+  finally { testingBrain = false; }
+});
 app.put('/api/drafts/:kind',async c=>{
   const kind=HOTWORD_KINDS.find(k=>k===c.req.param('kind'));
   if (!kind) return c.json({error:'无此词表'},404);
