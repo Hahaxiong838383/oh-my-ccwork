@@ -1,5 +1,5 @@
 import {readFileSync} from 'node:fs';
-import {createServer} from 'node:https';
+import {createServer, get as httpsGet} from 'node:https';
 import {Hono} from 'hono';
 import {serve} from '@hono/node-server';
 import {getCookie,setCookie,deleteCookie} from 'hono/cookie';
@@ -48,11 +48,42 @@ app.get('/api/design',c=>{
   return c.html(readFileSync('/app/design.html','utf8'));
 });
 app.post('/api/logout',c=>{sessions.delete(getCookie(c,'voice_owner')!);deleteCookie(c,'voice_owner',{path:'/'});return c.json({ok:true});});
-app.get('/api/settings',c=>c.json({
-  build:process.env.ADMIN_BUILD,worker:'未接入',brain:'未接入',ticket:'未接入',
-  drafts:Object.fromEntries(HOTWORD_KINDS.map(kind=>[kind,hotwordStore.draftOf(kind)])),
-  probabilities:getFillerStyleSettings().probabilities
-}));
+async function brainStatus() {
+  if (!process.env.BRAIN_HEALTH_URL) return '未接入状态采样';
+  try {
+    const response = await fetch(process.env.BRAIN_HEALTH_URL, {signal: AbortSignal.timeout(1800)});
+    const data = await response.json();
+    return response.ok && data.service === 'personal-brain' && data.ok === true ? '在线' : '健康响应异常';
+  } catch { return '暂时不可达'; }
+}
+async function ticketStatus() {
+  if (!process.env.EDGE_HEALTH_URL) return '未接入状态采样';
+  try {
+    const ca = readFileSync('/run/private/edge-ca.crt');
+    return await new Promise<string>((resolve) => {
+      const request = httpsGet(process.env.EDGE_HEALTH_URL!, {ca, signal: AbortSignal.timeout(1800)}, response => {
+        let body = '';
+        response.setEncoding('utf8');
+        response.on('data', chunk => { body += chunk; if (body.length > 4096) request.destroy(); });
+        response.on('error', () => resolve('暂时不可达'));
+        response.on('end', () => {
+          try { resolve(response.statusCode === 200 && JSON.parse(body).service === 'personal-edge-ticket' ? '在线' : '健康响应异常'); }
+          catch { resolve('健康响应异常'); }
+        });
+      });
+      request.on('error', () => resolve('暂时不可达'));
+    });
+  } catch { return '暂时不可达'; }
+}
+app.get('/api/settings',async c=>{
+  const [brain, ticket] = await Promise.all([brainStatus(), ticketStatus()]);
+  return c.json({
+    build:process.env.ADMIN_BUILD,worker:'未接入状态采样',brain,ticket,
+    sampledAt:new Date().toISOString(),
+    drafts:Object.fromEntries(HOTWORD_KINDS.map(kind=>[kind,hotwordStore.draftOf(kind)])),
+    probabilities:getFillerStyleSettings().probabilities
+  });
+});
 app.put('/api/drafts/:kind',async c=>{
   const kind=HOTWORD_KINDS.find(k=>k===c.req.param('kind'));
   if (!kind) return c.json({error:'无此词表'},404);

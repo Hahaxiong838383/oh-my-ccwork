@@ -1,0 +1,9 @@
+services:
+  admin:
+    networks:
+      - default
+      - voice
+networks:
+  voice:
+    external: true
+    name: personal-voice-private
