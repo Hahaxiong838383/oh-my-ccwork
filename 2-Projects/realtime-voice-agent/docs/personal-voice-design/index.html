@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="console">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>个人语音助手 UI 设计方案（3套风格 × 3端交互原型）</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <!-- Global Showcase Switcher -->
+  <header class="studio-header">
+    <div class="studio-header-inner">
+      <div class="brand-title">
+        <div class="brand-mark" aria-hidden="true">VA</div>
+        <div class="brand-text">
+          <h1>个人语音助手 · 3套风格可视化交互原型</h1>
+          <p>单主人 · 3–5台独立签票 · 全双工可打断 · 三层记忆与人格成长溯源 · 飞牛内部后台</p>
+        </div>
+      </div>
+
+      <div class="switcher-group">
+        <div class="segmented" role="group" aria-label="切换视觉风格">
+          <button class="seg-btn" data-theme-btn="paper">风格 A · 暖纸静听</button>
+          <button class="seg-btn active" data-theme-btn="console">风格 B · 飞牛声学台</button>
+          <button class="seg-btn" data-theme-btn="glass">风格 C · 柔雾伴生</button>
+        </div>
+
+        <div class="segmented" role="group" aria-label="切换预览视图">
+          <button class="seg-btn active" data-view-btn="overview">三端总览</button>
+          <button class="seg-btn" data-view-btn="mobile">手机语音</button>
+          <button class="seg-btn" data-view-btn="web">Web 会话</button>
+          <button class="seg-btn" data-view-btn="admin">飞牛后台</button>
+          <button class="seg-btn" data-view-btn="matrix">对比与推荐</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <!-- Active Style Manifesto Banner -->
+    <section class="style-banner" aria-live="polite">
+      <div>
+        <h2 id="style-title"></h2>
+        <p id="style-desc"></p>
+      </div>
+      <div class="swatch-row" id="style-swatches"></div>
+    </section>
+
+    <!-- Top Grid: Mobile Voice + Web Conversation -->
+    <div id="overview-top-grid" class="overview-top-grid">
+      <!-- SURFACE 1: Mobile Voice -->
+      <section class="surface-section" id="section-mobile">
+        <div class="surface-header">
+          <div class="surface-title">
+            <h3>1. 手机语音</h3>
+            <span class="badge badge-neutral">单线程 · 全双工</span>
+          </div>
+          <div class="state-pills" role="group" aria-label="手机语音状态切换">
+            <button class="state-pill active" data-mobile-mode="duplex">在说可打断+后台查</button>
+            <button class="state-pill" data-mobile-mode="listening">在听/停顿</button>
+            <button class="state-pill" data-mobile-mode="muted">静音自己</button>
+            <button class="state-pill" data-mobile-mode="hold">暂停 Hold</button>
+            <button class="state-pill" data-mobile-mode="approval">屏幕批准</button>
+            <button class="state-pill" data-mobile-mode="collision">两台同时答</button>
+            <button class="state-pill" data-mobile-mode="restricted">锁屏/后台/到顶</button>
+            <button class="state-pill" data-mobile-mode="hardware">拒权/硬件禁麦</button>
+            <button class="state-pill" data-mobile-mode="ended">结束回文字稿</button>
+          </div>
+        </div>
+
+        <div class="phone-shell">
+          <div class="phone-screen" id="mobile-screen-mount"></div>
+        </div>
+      </section>
+
+      <!-- SURFACE 2: Web Conversation -->
+      <section class="surface-section" id="section-web">
+        <div class="surface-header">
+          <div class="surface-title">
+            <h3>2. Web 会话</h3>
+            <span class="badge badge-neutral">统一时间线 · 看清本轮</span>
+          </div>
+          <div class="state-pills" role="group" aria-label="Web会话状态切换">
+            <button class="state-pill active" data-web-mode="live_cards">边说边字+晚到卡片</button>
+            <button class="state-pill" data-web-mode="approval">固定批准条</button>
+            <button class="state-pill" data-web-mode="sources">记忆来源核对</button>
+            <button class="state-pill" data-web-mode="temp_chat">临时聊天(锁定)</button>
+            <button class="state-pill" data-web-mode="fallback">拒麦/到顶降级</button>
+          </div>
+        </div>
+
+        <div class="web-frame" id="web-frame-mount"></div>
+      </section>
+    </div>
+
+    <!-- SURFACE 3: Private Web Admin (fnOS) -->
+    <section class="surface-section" id="section-admin">
+      <div class="surface-header">
+        <div class="surface-title">
+          <h3>3. 私人 Web 管理台（飞牛 fnOS 内部后台）</h3>
+          <span class="badge badge-neutral">最近通话优先 · 权限分层</span>
+        </div>
+      </div>
+
+      <div class="admin-frame">
+        <!-- Whole-page Debug Recording Active Warning -->
+        <div class="recording-global-banner hidden" id="admin-recording-banner" role="alert">
+          <div>
+            ⚠️ 全页警示：正在留存调试录音（含设备原始音频）— 排障完成后请务必立即关闭并销毁文件
+          </div>
+          <button class="btn btn-sm" id="btn-kill-recording" style="background:#fff;color:#111;border-color:transparent;">
+            关闭并删除全部调试录音
+          </button>
+        </div>
+
+        <div class="admin-shell">
+          <nav class="admin-nav" aria-label="管理台导航">
+            <div class="admin-nav-label">日常维护</div>
+            <button class="nav-item active" data-admin-tab="runs">
+              <span>最近通话与排障</span>
+              <span class="mono" style="font-size:11px;">5</span>
+            </button>
+            <button class="nav-item" data-admin-tab="memory">
+              <span>三层记忆架构</span>
+              <span class="mono" style="font-size:11px;">3层</span>
+            </button>
+            <button class="nav-item" data-admin-tab="persona">
+              <span>人格成长账本</span>
+              <span class="mono" style="font-size:11px;">溯源</span>
+            </button>
+            <div class="admin-nav-label">终端与边界</div>
+            <button class="nav-item" data-admin-tab="devices">
+              <span>设备签票与分权</span>
+              <span class="mono" style="font-size:11px;">4台</span>
+            </button>
+          </nav>
+
+          <div class="admin-main" id="admin-main-mount"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Matrix & Recommendation -->
+    <section class="surface-section" id="section-matrix">
+      <div class="surface-header">
+        <div class="surface-title">
+          <h3>三套风格权衡与落地推荐</h3>
+          <span class="badge badge-listen">全系满足 WCAG AA ≥ 4.5:1</span>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>维度</th>
+              <th>风格 A · 暖纸静听</th>
+              <th>风格 B · 飞牛声学台（推荐首选）</th>
+              <th>风格 C · 柔雾伴生</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>核心气质</strong></td>
+              <td>纸面手账 · 桌面声学器，温润低噪</td>
+              <td>暗房工程台 · 飞牛 fnOS 原生精密感</td>
+              <td>现代空间玻璃 · 边缘氛围光、轻盈通透</td>
+            </tr>
+            <tr>
+              <td><strong>最大优势</strong></td>
+              <td>长时间读文字稿、编辑记忆与人格成长最护眼、最有陪伴温度</td>
+              <td>状态机/多设备仲裁/试跑真跑/音频排障零歧义，夜间手机与内网后台一致</td>
+              <td>手机与桌面日常颜值最高，非打扰式卡片渐入体验顺滑</td>
+            </tr>
+            <tr>
+              <td><strong>主要代价</strong></td>
+              <td>管理台排障信息密度偏低，夜间暗室刺眼（需另配暗色）</td>
+              <td>对纯休闲情感闲聊略偏理性硬核</td>
+              <td>毛玻璃需严控半透明对比度，老旧移动浏览器 GPU 开销稍高</td>
+            </tr>
+            <tr>
+              <td><strong>落地建议</strong></td>
+              <td>适合作为「日间浅色护眼主题」提供一键切换</td>
+              <td><strong>推荐作为首版默认主风格</strong>（尤其契合飞牛单主人自托管与多设备排障刚需）</td>
+              <td>若更偏重移动端日常「轻伴随感」，可与风格 B 组合：前台 C + 后台 B</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

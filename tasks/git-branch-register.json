@@ -131,6 +131,10 @@
     "codex/p003-curated-regressions-20261119": {
       "task": "P003 六支归档、搜索半句发布版本回归与 dev198 核实",
       "state": "done"
+    },
+    "codex/personal-voice-admin-20261125": {
+      "task": "个人语音管理后台飞牛内网首发、三端交互设计与产品架构",
+      "state": "done"
     }
   },
   "releases": {
