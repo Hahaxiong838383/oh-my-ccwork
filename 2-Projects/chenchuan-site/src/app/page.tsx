@@ -1,5 +1,6 @@
 import { Hero } from '@/components/home/Hero'
 import { Stats } from '@/components/home/Stats'
+import { MediaCoverage } from '@/components/home/MediaCoverage'
 import { ProjectGrid } from '@/components/home/ProjectGrid'
 import { AIWorkflow } from '@/components/home/AIWorkflow'
 import { AINativeDay } from '@/components/home/AINativeDay'
@@ -29,6 +30,7 @@ export default async function HomePage() {
         tickerItems={ticker.map((it) => ({ title: it.title, source: it.source, url: it.url }))}
       />
       <Stats patentCount={patents.length} />
+      <MediaCoverage />
       <ProjectGrid projects={projects} />
       <AIWorkflow />
       <AINativeDay />
