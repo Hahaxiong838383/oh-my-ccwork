@@ -17,7 +17,9 @@
 | `dsh-media-v6ab.conf` | `/etc/systemd/system/dsh-v6ab.service.d/90-tv-idle.conf` |
 | `dsh-tv-boot-audit.service`、`dsh-tv-boot-audit.timer` | `/etc/systemd/system/`，同名 |
 
-网关已启用 `dsh-tv-boot-audit.timer`。每次观察到新的 boot ID，前四分钟分时记录 Android 配网失败次数、网卡和 DNS、规则、YouTube 可达性、两条家庭直播源的 TS 数据，并在播放器恰好处于前台时采样硬解帧。最近 12 次结果在 `/var/lib/dsh-tv-boot-audit/<boot-id>.json`。结果 `observed_checks_pass` 需要覆盖自然启动并收到本次启动的早期、晚期、SmartTube 三种回执。`late_join_checks_pass` 表示盒已运行后才开始观察。实机当前这一轮得到后者，默认网络编号保持 110，两频道返回有效媒体。未操作前台或重启盒子。冷启动仍待自然发生。
+网关已启用 `dsh-tv-boot-audit.timer`。每次观察到新的 boot ID，前四分钟分时记录 Android 配网失败次数、网卡和 DNS、规则、YouTube 可达性、两条家庭直播源的 TS 数据，并在播放器恰好处于前台时采样硬解帧。最近 12 次结果在 `/var/lib/dsh-tv-boot-audit/<boot-id>.json`。结果 `observed_checks_pass` 需要覆盖自然启动并收到本次启动的早期、晚期、SmartTube 三种回执。`late_join_checks_pass` 表示盒已运行后才开始观察。
+
+2026-11-26 20:08 用户断电重启，启动编号 `1b0969ef-60c4-484d-b0e2-d9d2842e5ae8`，20:13 验收结果为 `observed_checks_pass`。开机第 45 至 295 秒共五次采样，默认网络编号始终为 101，IPv4 网关和唯一 DNS 均为 `192.168.1.19`，以太网无全局 IPv6 地址和 IPv6 默认路由。Android 配网失败 0 次，旧脚本进程 0 个。盒端两路家庭直播均读到有效 MPEG-TS。前台 DIYP 的 1080p 直播在 30 秒内从 275 增至 1936 帧。随后 SmartTube 同一条 1080p 视频在 65 秒内从 282 增至 4353 帧。两段的掉帧、帧错误和硬件错误均为 0，全程只读采样。
 
 系统网络稳定期间还观察到独立的应用故障。1440p 视频在 262.168 秒缓冲见底并自动重载。短时把新请求换到 Rack 后仍报 SABR 重载和音轨选择数组越界，已恢复原 ZGO 出口。随后另一条 1080p 视频恢复硬解。此段无法证明原 1440p 视频已恢复，也不能用 YouTube 的 204 响应推定所有视频都可连续播放。[官方 32.80 音轨选择源码](https://github.com/yuliskov/SmartTube/blob/32.80/common/src/main/java/com/liskovsoft/smartyoutubetv2/common/exoplayer/selector/TrackSelectorManager.java#L319)
 
