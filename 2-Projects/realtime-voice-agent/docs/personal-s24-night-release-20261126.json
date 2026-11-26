@@ -1,0 +1,35 @@
+{
+  "sampled_at": "2026-11-26T22:17:45+08:00",
+  "scope": "personal-voice",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "sha256": "863b1df79fe6392fcee96c25eb4c574cdcedf44cb607b19bc5733e2d29f284a6",
+      "packageName": "cc.hahaxiong.xiaoke.night",
+      "versionCode": 1000001,
+      "versionName": "V1.0.1",
+      "size": 193170,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000001.apk",
+      "files": {
+        "xiaoke-night-1000001.apk": "863b1df79fe6392fcee96c25eb4c574cdcedf44cb607b19bc5733e2d29f284a6"
+      },
+      "nas_paths": [
+        "/vol1/1000/mobile/night/xiaoke-night-1000001.apk",
+        "/vol1/1000/文件临时缓存/xiaoke-night-1000001.apk"
+      ],
+      "verification": "飞牛两处文件、公网整包、Android 11 系统安装确认后读取的 base.apk 全部一致。覆盖起点为同签名的内部测试包（999999）。"
+    },
+    "s24-night-server": {
+      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "sha256": "720779bb36699cb8ff83719be83220ea29f0c08e5e23003a730e9d6c220d78d7",
+      "files": {
+        "app/cli.py": "de70a4b29b7f7bfe4767981dc3d3e1aabe1881adb2f1b55ec61e8bd486a5b038",
+        "app/night_server.py": "07fc2a60e22f169dc9d2d41be269f65a3f51a6831551898fd7a907c0b3e263c6",
+        "app/release_info.py": "d41378e84670b3d93c86fcf79697ad7ea3541363901b91ad7feb169ed0ac7830",
+        "app/schema.sql": "930721abe6732c563338cd3e8bcb253afc483270052b4b6b2174e3d0b6f4a784",
+        "compose.yaml": "1021320d1d2f8b87e0f9634a0465b360f2233dbbd0c05a96055afcc3eb4ac70b"
+      },
+      "verification": "飞牛 2 实际运行目录每个文件与源码逐个比对。按相对路径排序，依次拼接 UTF-8 路径、零字节、原始 SHA-256 后计算整体 SHA-256。仅采样应用、数据库结构、分析工具、版本解析与容器配置。"
+    }
+  }
+}

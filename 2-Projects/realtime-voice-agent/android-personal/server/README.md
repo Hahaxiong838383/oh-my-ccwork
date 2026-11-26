@@ -212,7 +212,7 @@ sudo install -d -o 1000 -g 1001 -m 700 /vol1/1000/docker/personal-night-ota/priv
 sudo install -d -o 1000 -g 1001 -m 755 /vol1/1000/mobile/night
 
 # 2) 代码（rsync 自本仓）
-rsync -a --delete night_server.py cli.py allowlist_admin.py sql/ tools/ \
+rsync -a night_server.py cli.py allowlist_admin.py sql/ tools/ \
   hahaxiong83@192.168.1.115:/vol1/1000/docker/personal-night-ota/app/
 
 # 3) 起容器
@@ -276,7 +276,7 @@ ssh hahaxiong83@192.168.1.115 \
 
 它会打印真实 sha256、会对外产出的 `latest.json`，以及命名不合规、web 侧不会认的文件。
 
-我**不会**替你上传 APK、也不会手写 manifest——这两件事都由你放文件 + 服务端现算完成。
+将同签名的新版本 APK 放入发布目录后，服务端按文件计算版本清单。
 
 ---
 
@@ -290,7 +290,7 @@ ssh hahaxiong83@192.168.1.115 \
 | Lucky 入口 | `pa.hahaxiong.cc/mobile/night → http://127.0.0.1:18786`（新增，`Key=db2jBKxlyvWQ477T`） |
 | 私有 admin | `pa.hahaxiong.cc → https://192.168.1.115:18783` **未改动**，`/` 仍返回「小可 · 配置工作室」 |
 | 允许表 | `/vol1/1000/docker/personal-night-ota/private/allowlist.json`，1 条 `phone-01`，`sha256:67a65152c970…` |
-| 诊断库 | `/vol1/1000/docker/personal-night-ota/data/diagnostics.sqlite3`，`0600`，当前 0 行（自测行已清） |
+| 诊断库 | `/vol1/1000/docker/personal-night-ota/data/diagnostics.sqlite3`，`0600`，按技术事件 ID 去重，按保留期限清理 |
 | APK 发布目录 | `/vol1/1000/mobile/night/`，当前版本从实际 APK 计算，用完整下载回读验收 |
 | 公网实测 | `https://pa.hahaxiong.cc:8666/mobile/night/healthz` → 200（证书 `*.hahaxiong.cc`，2027-02-21 到期） |
 
