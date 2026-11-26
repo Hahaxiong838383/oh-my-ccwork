@@ -8,6 +8,8 @@
 
 # VPS API Proxy Hub
 
+[Hostinger VPS + 固定家宽出口部署 Claude Code（含部署流程图和运行架构图）](Hostinger-VPS与固定家宽出口部署Claude-Code.md)
+
 [Hostinger Claude 双端入口、线路实测与登录前交接（2026-11-26）](2026-11-26-Hostinger-Claude-远程开发交接.md)
 
 [Hostinger 开发机备份、恢复和容量保护部署说明](hostinger-protection/README.md)
