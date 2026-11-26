@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Claude 的 SSH 专线、双桌面入口和回显测速，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余、多出口带宽择优、IPv6 出口接入与证书续期）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Claude 的 SSH 入口、固定 ISP 出口、回显测速与部署验收，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余、多出口带宽择优、IPv6 出口接入与证书续期）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
 ---
 
 # xray - Xray 代理管理
@@ -12,9 +12,13 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Cla
 - 用户说"切换代理"、"关 v2ray"、"启动 xray"、"代理不通"、"网络不行"
 - 需要检查或修复代理配置时
 
-## Hostinger Claude 桌面入口
+## Hostinger Claude 部署与排查
 
-排查 Air / Windows 的「Hostinger Claude」时，从桌面文件或快捷方式的实际目标开始。核对启动器拉起的 Xray 进程连接了指定节点，再从远端对应的 tmux **客户端进程**读取 `SSH_CONNECTION`。复用中的 Claude 进程可能保留第一次连接的环境。最后核对应用自己的代理与鉴权状态。这样能分别回答“这次 SSH 从哪进来”“Claude 从哪出去”和“账号能否工作”。
+从[完整部署手册（含流程图和架构图）](../../../2-Projects/vps-proxy/Hostinger-VPS与固定家宽出口部署Claude-Code.md)查当前拓扑；按故障发生的位置取证。
+
+- **桌面连入。** 从 Air 的 Dock 或 Windows 快捷方式打开新窗口，在新 Bash 中检查 `id -un`、`pwd` 和 `SSH_CONNECTION`，并核对本次客户端 Xray 的对端。正常落点是开发用户家目录；需要接续任务时再进入 tmux。验证换机接回已有会话，要查新接入的 tmux 客户端；旧 Claude 进程可能保留首次连接的环境。
+- **应用出口。** 在同一登录 shell 核对代理变量是否存在，并将实测公网 IP 与私有配置约定的出口比对。只输出核对结果，避免带认证信息的代理 URL 进入日志。未认证 API 的 401 证明请求到达认证端点；账号能否工作要由授权后的真实模型答复验证。固定出口的测量无法推断封号概率。
+- **凭据与恢复。** EasyTier 可供用户访问 home-studio 的密码库；维护端经 Tailscale SSH 下发指定凭据，并主动拉取备份。GitHub 以认证身份和实际私库操作验收。恢复演练选未提交修改、未跟踪文件和真实会话，核对内容、Git 状态及原会话 ID。未登录阶段可在隔离断网副本用真实 CLI 续接，在线追问单列待验。具体命令见[备份与容量保护手册](../../../2-Projects/vps-proxy/hostinger-protection/README.md)。
 
 比较线路时，用同一台客户端、同一 SSH 程序和同一台目标机交替测试。让远端收到一个按键后返回可区分的字符，分别记握手时间、回显中位数、P90 和超时次数。Tailscale 同时采样实际 peer 路径；到最近 DERP 的 ping 只覆盖第一段。端口分工、换机验收和恢复入口见[项目交接记录](../../../2-Projects/vps-proxy/2026-11-26-Hostinger-Claude-远程开发交接.md)。
 
