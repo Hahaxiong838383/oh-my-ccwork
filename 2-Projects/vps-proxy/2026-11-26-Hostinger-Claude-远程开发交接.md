@@ -2,7 +2,7 @@
 
 ## 从桌面继续
 
-点击 MacBook Air 的 Dock 图标或 maxtkf Windows 的桌面快捷方式「Hostinger Claude」，都会以普通用户打开交互式 Bash，起始目录为 Hostinger 的文件系统根目录 `/`。要在项目中工作，先用 `cd` 进入相应目录。每个窗口有独立的 Shell，可以直接输入 Git 或其他命令。已从两个入口分别执行命令，核对了远端主机、工作目录、DMIT 入站地址与 `claude` 可执行路径。
+点击 MacBook Air 的 Dock 图标或 maxtkf Windows 的桌面快捷方式「Hostinger Claude」，都会以普通用户打开交互式 Bash，起始目录为 `hahaxiong83` 的家目录 `/home/hahaxiong83`（`~`）。要在项目中工作，先用 `cd` 进入相应目录。每个窗口有独立的 Shell，可以直接输入 Git 或其他命令。已从两个入口分别执行命令，核对了远端主机、工作目录、DMIT 入站地址与 `claude` 可执行路径。
 
 需要新开 Claude 时输入 `claude`。需要接回先前保留的对话时，输入 `tmux attach -t hostinger-claude`；在其中按 Ctrl+B、松开后按 D，回到当前 Shell。普通 Shell 中直接运行的命令随该终端会话管理，需要跨设备保持运行的任务放在 tmux 中。
 
