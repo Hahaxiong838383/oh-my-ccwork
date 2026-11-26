@@ -1,0 +1,93 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T07:59:17+08:00",
+  "deployments": {
+    "s24-night-apk": {
+      "sha256": "3a572bc7256777e80c551da3ff1dc7e021d5632f65b7897a44868f7922e71483",
+      "packageName": "cc.hahaxiong.xiaoke.night",
+      "versionCode": 1000004,
+      "versionName": "V1.0.4",
+      "size": 226277,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000004.apk",
+      "source_commit": "401122af8f35f378846151c1349e2277324b476e",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f",
+      "files": {
+        "xiaoke-night-1000004.apk": "3a572bc7256777e80c551da3ff1dc7e021d5632f65b7897a44868f7922e71483"
+      },
+      "verification": "公网清单、完整下载、飞牛两处副本与正式 APK 一致。"
+    }
+  },
+  "acceptance": {
+    "production_voice_smoke": {
+      "bargeDuringOutput": true,
+      "clockReplyHeard": true,
+      "levels": 371,
+      "events": [
+        "call_start",
+        "mic_on",
+        "connected",
+        "mic_off",
+        "rx_audio",
+        "rx_caption",
+        "tx_caption",
+        "spoken_interrupt",
+        "cancel_ack",
+        "call_end"
+      ],
+      "ended": "通话已结束",
+      "active": 0
+    },
+    "webview_tests": [
+      "OTA status, progress, cancellation, retry, installation result",
+      "Late identity and existing RTC audio publication, reconnect, resume gesture",
+      "Playwright held touch, direction reversal and release, pointer and legacy touch input",
+      "Five PCM-driven avatar assertions and six animation tests"
+    ],
+    "android": {
+      "public_ota_android11": {
+        "from": 1000003,
+        "to": 1000004,
+        "installed_sha256": "3a572bc7256777e80c551da3ff1dc7e021d5632f65b7897a44868f7922e71483",
+        "old_client_requires_second_tap_after_first_source_grant": true
+      },
+      "android14_speaker_output": [
+        {
+          "versionCode": 1000003,
+          "reply": {
+            "samples": 527655,
+            "rms": 0.0046,
+            "peak": 0.0284,
+            "loudPackets": 502
+          },
+          "silence_during_input_samples": 215696
+        },
+        {
+          "versionCode": 1000004,
+          "reply": {
+            "samples": 455704,
+            "rms": 0.0042,
+            "peak": 0.0322,
+            "loudPackets": 372
+          },
+          "silence_during_input_samples": 215715
+        }
+      ],
+      "android14_notifications": {
+        "覆盖方式": "adb install -r，从 1000003 覆盖到 1000004",
+        "Android14权限弹窗": "UI Automator 点击 ALLOW，系统权限回读 granted=true",
+        "channel": "night_updates",
+        "id": 11262,
+        "title": "小可更新完成",
+        "body": "已更新至 V1.0.4",
+        "点击路径": "退至系统首页，拉下通知栏，点真实应用通知，应用维护控件可见",
+        "维护界面所见": [
+          "应用更新",
+          "检查更新",
+          "同步诊断记录"
+        ]
+      },
+      "handset_report": "用户观察到自己的字幕和小可的回复字幕，无法听见小可。该具体通话的物理输出原因未确认。"
+    },
+    "verified_on_physical_s24": false
+  }
+}
