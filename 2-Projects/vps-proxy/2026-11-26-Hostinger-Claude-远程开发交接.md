@@ -2,7 +2,7 @@
 
 ## 从桌面继续
 
-点击 MacBook Air 的 Dock 图标或 maxtkf Windows 的桌面快捷方式「Hostinger Claude」，都会以普通用户进入 Hostinger 项目目录的交互式 Bash。每个窗口有独立的 Shell，可以直接输入 Git 或其他命令。已从两个入口分别执行命令，核对了远端主机、工作目录、DMIT 入站地址与 `claude` 可执行路径。
+点击 MacBook Air 的 Dock 图标或 maxtkf Windows 的桌面快捷方式「Hostinger Claude」，都会以普通用户打开交互式 Bash，起始目录为 Hostinger 的文件系统根目录 `/`。要在项目中工作，先用 `cd` 进入相应目录。每个窗口有独立的 Shell，可以直接输入 Git 或其他命令。已从两个入口分别执行命令，核对了远端主机、工作目录、DMIT 入站地址与 `claude` 可执行路径。
 
 需要新开 Claude 时输入 `claude`。需要接回先前保留的对话时，输入 `tmux attach -t hostinger-claude`；在其中按 Ctrl+B、松开后按 D，回到当前 Shell。普通 Shell 中直接运行的命令随该终端会话管理，需要跨设备保持运行的任务放在 tmux 中。
 
@@ -28,6 +28,6 @@ DMIT 新节点上传 13.2–13.9 Mbps、下载 9.3–11.6 Mbps。每个方向测
 |---|---|
 | Claude Code 2.1.326 已运行。请求抵达 Anthropic API，未认证请求收到 401。 | Claude 授权后用一个真实请求验收。 |
 | Git、gh 已安装，GitHub HTTPS 可以读公开仓库 HEAD。检查时 gh 的用户认证失败。 | 为目标私库授予所需权限，再核对登录身份和目标仓库访问。 |
-| 当前工作目录为空，Git 无法生成提交作者身份。 | 确定目标仓库与提交署名，配置 Git 姓名和邮箱，再在仓库中工作。 |
+| 登录前检查时，预设的 Claude 项目目录为空，Git 无法生成提交作者身份。 | 确定目标仓库与提交署名，配置 Git 姓名和邮箱，再在仓库中工作。 |
 
 首次授权后的换机验收可用一个只读问题：从一端在该 tmux 会话中让 Claude 读取项目中的指定文件，另一端用上述 tmux 命令接回同一会话并追问刚读到的内容。交接时尚未执行这一步。
