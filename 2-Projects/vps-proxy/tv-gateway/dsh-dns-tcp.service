@@ -1,8 +1,9 @@
 [Unit]
-Description=Forward TV TCP DNS through the gateway's existing DNS route
-After=dsh-gateway.service
+Description=Forward TV TCP DNS to the local relay
+After=dsh-dns-relay.service
+Wants=dsh-dns-relay.service
 
 [Service]
-ExecStart=/usr/lib/systemd/systemd-socket-proxyd 8.8.8.8:53
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 127.0.0.1:19553
 DynamicUser=yes
 NoNewPrivileges=yes

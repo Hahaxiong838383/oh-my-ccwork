@@ -42,6 +42,8 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Cla
 2. **定位重复配网。** 在同一启动内，将 Android 默认网络重建、IpClient 配网失败和 DIYP 读流错误按时序对齐。核对 Magisk 启动目录中的可执行备份及真实进程命令行。退役入口应移出启动目录，并查清它此前拉起的进程。保留 Android 对地址和路由的管理，核对有线口的实际 IPv4 网关与唯一 DNS，并确认全局 IPv6 地址数和 IPv6 默认路由数均为零。`fe80::` 链路本地地址可以保留。[盒端启动接线与回退](../../../2-Projects/vps-proxy/tv-gateway/x96-install.md)
 3. **核对实播。** DIYP 先读盒端两条家庭直播源的 MPEG-TS 正文。DIYP 可能没有 MediaSession，处于前台时连续读 `/sys/class/vdec/vdec_status` 的帧数和错误数。SmartTube 对齐同一视频、清晰度、缓冲位置、媒体分片与硬解帧增量，尤其看能否越过原卡点。换片或切台后另起一段。YouTube 的 204 只记作可达，出口切换的效果用该视频连接上实际增长的字节判断。仅验过 1080p 时，单列高码率原片的验收状态。
 
+若 SmartTube 报 `UnknownHostException`，同时核对 Android `dumpsys dnsresolver`、网关 `dsh-dns-relay.service` 日志与正在收包的媒体出口。远程 DNS 和媒体可能共用一条失联线路。前台呈错误状态 7 且无硬解时，用真实出口故障、可用备用及同片恢复核验守护。DNS 备用路径可以在回环测试端口模拟主上游失联。[故障时序与验证方法](../../../2-Projects/vps-proxy/tv-gateway/README.md#冷启动通过后的第二次播放错误)
+
 ## 盒端运行 sing-box 的旧部署
 
 电视盒 Android 上的 SmartTube / YouTube DNS、断电后代理恢复或开机缓存问题，先读

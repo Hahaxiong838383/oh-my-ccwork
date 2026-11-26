@@ -43,6 +43,14 @@ SmartTube 32.80 在同一位置反复重载，音视频缓冲见底。故障窗�
 
 ## 网关 DNS
 
-上一版电视配置已将 UDP 与 TCP 的 53 端口都重定向到网关，网关原先仅接受 UDP。将本目录两份 systemd 单元安装到网关 `/etc/systemd/system/`，执行 `systemctl daemon-reload`、`systemctl enable --now dsh-dns-tcp.socket` 可启用 TCP。该监听转发至 `8.8.8.8:53`，在当前网关的策略路由中经 tun0 进入现有 DNS 分流。原 UDP 中继独立运行。
+电视把 UDP 和 TCP 53 发给网关。网关现役 `dsh-dns-relay.service` 运行 `/usr/local/sbin/dsh-dns-relay.py`，监听 LAN 的 UDP 53 和回环 TCP 19553。`dsh-dns-tcp.socket` 接收 LAN 的 TCP 53，由 `dsh-dns-tcp.service` 交给回环监听。两种协议优先走现有 sing-box DNS 分流。YouTube、Googlevideo、缩略图和播放器 API 的 A 查询如遇超时或 SERVFAIL，会经独立香港 SOCKS 入口尝试有证书校验的 DNS-over-TLS。备用入口按探针映射中的名称查端口。国内域名、AAAA 和有效的否定回答沿用原策略。两个香港入口共享香港节点。
 
-电视端 TCP 查询 YouTube 和央视分别得到 8 条、3 条回答，保留的无效测试域名返回 NXDOMAIN。停用此扩展可执行 `systemctl disable --now dsh-dns-tcp.socket` 和 `systemctl stop dsh-dns-tcp.service`。
+升级时先将中继部署到网关并确认回环 TCP 19553 已监听，再应用本目录 TCP 服务单元。离线回归运行 `python3 dsh-dns-relay-test.py` 和 `bash dsh-media-test.sh`。验证备用路径时，在单独的回环测试端口启动中继，将测试进程的主上游指向本地未监听端口。实测 UDP 与 TCP 各获得 8 条 A 记录。生产盒端验证了 YouTube UDP、缩略图 TCP、央视 IPv4、YouTube AAAA 空回答与无效域名 NXDOMAIN。
+
+## 冷启动通过后的第二次播放错误
+
+11 月 26 日 20:17:57 起，SmartTube 的两条流先超时，随后 YouTube 及缩略图域名报 `UnknownHostException`。网关同期记录电视 UDP DNS 超时，媒体和远程 DNS 都走失联的 ZGO 出口。Android 默认网络仍为 101。原线路短暂恢复后，同片又停在 607.024 秒。出口守护已连续两次探测失败，但旧逻辑只将播放器状态 6（缓冲）列入恢复条件，漏掉了状态 7（错误）且硬解已停止的现场。
+
+修正后的守护复核当前出口故障、备用可达，以及前台 SmartTube 的活动会话和解码状态。20:22:10 它自动把新连接切到香港。20:22:54 至 20:24:26，同片 1080p 硬解从 633 帧增至 6227 帧，掉帧与解码错误均为 0。两条实际 Googlevideo 连接走香港，音视频分片推进到 730 秒和 732.5 秒。20:24:01 网关启用了上述 DNS 回退，播放窗口跨过了此次部署。
+
+此次变更的旧文件位于网关 `/var/backups/dsh-tv-media-20261126.UzaaqH/before/`。撤回 DNS 时需成对恢复中继程序和 TCP 服务单元，再执行 `systemctl daemon-reload` 并重启这两个 DNS 服务。出口恢复条件可单独从同目录还原 `/usr/local/sbin/dsh-media-state.sh`。

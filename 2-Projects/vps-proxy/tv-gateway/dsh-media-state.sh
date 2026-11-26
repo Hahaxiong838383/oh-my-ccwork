@@ -36,11 +36,40 @@ idle() {
     grep -q 'Sessions Stack - have [0-9][0-9]* sessions:' <<< "$view" &&
     ! grep -Eq 'state=PlaybackState \{state=(3|4|5|6|8|9|10|11),' <<< "$view"
 }
+smarttube_stalled() {
+    # The resumed Activity and the MediaSession can belong to different apps.
+    # Check every session in the stack; a software player can have no vdec.
+    awk '
+        function finish_session() {
+            if (!pkg || active == "active=false") return
+            if (active != "active=true" || states != 1) { bad=1; return }
+            if (pkg == "package=org.smarttube.beta") {
+                if (state == 6 || state == 7) stalled++
+                else bad=1
+            } else if (state !~ /^[012]$/) bad=1
+        }
+        $1 == "mResumedActivity:" { resumed++; if (/ org\.smarttube\.beta\//) foreground++ }
+        /Sessions Stack - have [0-9]+ sessions:/ { stacks++; expected=$5 }
+        $1 ~ /^package=/ {
+            finish_session()
+            pkg=$1; sessions++; states=0; active=""; state=""
+        }
+        pkg && $1 ~ /^active=/ { active=$1 }
+        pkg && $1 == "state=PlaybackState" && $2 ~ /^\{state=[0-9]+,$/ {
+            state=$2; sub(/^\{state=/, "", state); sub(/,$/, "", state); states++
+        }
+        END {
+            finish_session()
+            exit !(resumed == 1 && foreground == 1 && stacks == 1 &&
+                   sessions == expected && stalled == 1 && !bad)
+        }' <<< "$1"
+}
 sample() {
     local raw
     raw=$(tv 'cat /sys/class/vdec/vdec_status') || return 1
     raw=${raw//$'\r'/}
     if grep -Eiq '^[[:space:]]*No vdec\.[[:space:]]*$' <<< "$raw"; then
+        grep -Eivq '^[[:space:]]*(No vdec\.)?[[:space:]]*$' <<< "$raw" && return 1
         echo none
     else
         awk '$1=="frame" && $2=="count" && $3==":" && $4~/^[0-9]+$/ {print $4; found=1} END{exit !found}' <<< "$raw"
@@ -59,12 +88,7 @@ can-recover)
     if [ "$after" = none ]; then
         view=$(snapshot) || exit 1
         idle "$view" && exit 0
-        # Without a hardware decoder a software player could be progressing.
-        # Allow a stalled SmartTube session only with both foreground and
-        # package-specific buffering evidence.
-        grep -q 'mResumedActivity:.* org\.smarttube\.beta/' <<< "$view" || exit 1
-        awk '/^[[:space:]]*package=/ {st=($1=="package=org.smarttube.beta")}
-             st && /state=PlaybackState \{state=6,/ {found=1} END {exit !found}' <<< "$view"
+        smarttube_stalled "$view"
     fi
     ;;
 *) exit 2 ;;
