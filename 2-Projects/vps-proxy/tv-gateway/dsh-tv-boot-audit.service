@@ -1,0 +1,11 @@
+[Unit]
+Description=Observe TV network and media after natural boots
+After=dsh-tv-guard.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/sbin/dsh-tv-boot-audit.py
+StateDirectory=dsh-tv-boot-audit
+StateDirectoryMode=0700
+UMask=0077
+TimeoutStartSec=45

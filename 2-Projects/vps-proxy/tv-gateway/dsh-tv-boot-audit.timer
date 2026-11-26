@@ -1,0 +1,10 @@
+[Unit]
+Description=Sample the existing TV ADB session for boot verification
+
+[Timer]
+OnBootSec=12s
+OnUnitInactiveSec=20s
+AccuracySec=2s
+
+[Install]
+WantedBy=timers.target
