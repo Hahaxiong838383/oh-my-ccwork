@@ -1,0 +1,8 @@
+[Unit]
+Description=Forward TV TCP DNS through the gateway's existing DNS route
+After=dsh-gateway.service
+
+[Service]
+ExecStart=/usr/lib/systemd/systemd-socket-proxyd 8.8.8.8:53
+DynamicUser=yes
+NoNewPrivileges=yes

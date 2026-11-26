@@ -1,0 +1,9 @@
+[Unit]
+Description=TCP DNS listener for the TV's LAN gateway
+
+[Socket]
+ListenStream=192.168.1.19:53
+FreeBind=yes
+
+[Install]
+WantedBy=sockets.target
