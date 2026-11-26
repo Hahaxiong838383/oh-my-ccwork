@@ -1,0 +1,51 @@
+{
+  "sampled_at": "2026-11-26T23:50:29+08:00",
+  "scope": "personal-voice",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "d3428589736776eecfbce583922c59becbde0830",
+      "sha256": "fd3cdc1684ed0912597133c4f21205b2a9d98d4f1f4b706db9e58be14688e056",
+      "packageName": "cc.hahaxiong.xiaoke.night",
+      "versionCode": 1000002,
+      "versionName": "V1.0.2",
+      "size": 193170,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000002.apk",
+      "files": {
+        "xiaoke-night-1000002.apk": "fd3cdc1684ed0912597133c4f21205b2a9d98d4f1f4b706db9e58be14688e056"
+      },
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f",
+      "verification": "完整下载经 HTTPS 与飞牛两处副本核对，已签名 APK 解包后通过五项头像像素回归。"
+    },
+    "personal-brain": {
+      "source_commit": "d3428589736776eecfbce583922c59becbde0830",
+      "sha256": "2c3e2fdd907e4313f90fc2ee7fe11e21ffc3c6450d7f87c7591c8c3c42195db1",
+      "files": {
+        "/app/server.mjs": "2c3e2fdd907e4313f90fc2ee7fe11e21ffc3c6450d7f87c7591c8c3c42195db1"
+      },
+      "verification_script_sha256": "754b5ebca5a6baeb411f3a5e143c56354376ddd4979eaca7a65cb02e72a4becc",
+      "nas_image_id": "sha256:4560033e8e7264abc5a3d146bce525b8c1dcea75cb3b06bfe1daedf06f4513e8",
+      "image": "personal-brain:night-20261126.102b",
+      "verification": "飞牛运行中容器取证，与已构建的服务器及验证脚本逐文件比对。北京个人 Worker 与后台供应商修订 24 沿用。",
+      "rollback_image": "personal-brain:20261125.9"
+    }
+  },
+  "acceptance": {
+    "news": {
+      "input": "现在国内有什么新闻给我讲一条就好",
+      "first_remote_audio_ms": 1722,
+      "first_reply_caption_over_20_characters_ms": 5520,
+      "previous_same_input_first_reply_caption_over_20_characters_ms": 22419,
+      "sources": [
+        "https://news.cctv.com/2026/11/26/ARTIWP044fvhz1BVzoI5uPyF261126.shtml"
+      ]
+    },
+    "museum": {
+      "first_remote_audio_ms": 1675,
+      "first_phrase_verified_from_decoded_audio": "我来查一下",
+      "first_reply_caption_over_20_characters_ms": 13516,
+      "sources": [
+        "https://www.dpm.org.cn/Visit.html?isappinstalled=0"
+      ]
+    }
+  }
+}
