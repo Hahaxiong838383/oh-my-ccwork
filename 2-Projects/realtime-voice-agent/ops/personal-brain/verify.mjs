@@ -42,6 +42,12 @@ async function until(read, label) {
 
 assert.equal((await request('现在几点？', 'verify-unauthorized', { headers: { Authorization: 'Bearer wrong' } })).status, 401);
 assert.equal((await request('现在几点？', '../../wrong')).status, 400);
+for (const question of ['你能联网搜索吗？', '小可，你有哪些工具？']) {
+  const result = await chat(question, 'verify-capability', { body: { store: false } });
+  assert.equal(result.tool, 'capabilities');
+  assert.match(result.text, /可以.*查.*天气.*时间/u);
+  assert.equal(result.sources, undefined);
+}
 const clock = await chat('伦敦现在几点？', 'verify-clock');
 assert.equal(clock.tool, 'clock');
 assert.match(clock.text, /^伦敦现在是.+点/);
@@ -91,8 +97,18 @@ if (process.env.BRAIN_VERIFY_SKIP_SEARCH !== '1') {
   }
 }
 
+if (process.env.BRAIN_VERIFY_SINGLE_CCTV === '1') {
+  const bulletin = await chat('现在国内有什么新闻给我讲一条就好', 'verify-single-domestic', { body: { store: false } });
+  assert.equal(bulletin.tool, 'search');
+  assert.equal(bulletin.sources?.length, 1);
+  const [article] = bulletin.sources;
+  assert.match(article.url, /^https:\/\/news\.cctv\.com\/[0-9/]+\/ARTI.+\.shtml$/);
+  assert.ok(article.date && bulletin.text.includes(article.title));
+  console.log('single current domestic bulletin delivered its verified article', article.url);
+}
+
 if (process.env.BRAIN_VERIFY_CPA_SEARCH === '1') {
-  const question = '帮我查查 Python 3.14 官方更新说明或 3.14.0 发布公告，首个正式版本是哪天发布的？';
+  const question = '你能不能帮我查一下 Python 3.14 官方更新说明或 3.14.0 发布公告，首个正式版本是哪天发布的？';
   const room = 'verify-cpa-web';
   const response = await request(question, room, { body: { stream: true, store: false } });
   assert.equal(response.status, 200);

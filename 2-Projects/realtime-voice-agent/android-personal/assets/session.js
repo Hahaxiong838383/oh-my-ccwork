@@ -35,10 +35,56 @@
       p.reject(Error(code==='http-401'?'设备凭据无效，请重新配对':code==='http-429'?'签票过于频繁，请稍后重试':'签票失败，请检查网络后重试'));
     } else p.resolve(value);
   }
+  // Tap the tracks already owned by LiveKit. The silent sink keeps Android's audio
+  // graph pulling frames without playing the microphone or doubling the reply.
+  function meter(ctx, track) {
+    const source = ctx.createMediaStreamSource(new MediaStream([track]));
+    const analyser = ctx.createAnalyser(), silent = ctx.createGain();
+    analyser.fftSize = 1024; silent.gain.value = 0;
+    source.connect(analyser); analyser.connect(silent); silent.connect(ctx.destination);
+    const data = new Float32Array(analyser.fftSize);
+    return {
+      read() {
+        analyser.getFloatTimeDomainData(data);
+        let power = 0;
+        for (const x of data) power += x * x;
+        return Math.sqrt(power / data.length);
+      },
+      close() { source.disconnect(); analyser.disconnect(); silent.disconnect(); }
+    };
+  }
+  function stopMicMeter(s) {
+    if (s.micMeter) {
+      cancelAnimationFrame(s.micMeter.frame);
+      s.micMeter.meter?.close(); s.micMeter = null;
+    }
+    window.NightView?.micLevel?.(0);
+  }
+  function startMicMeter(s) {
+    stopMicMeter(s);
+    const local = s.room.localParticipant;
+    const input = s.micMeter = { frame: 0, track: null, meter: null };
+    function measure() {
+      if (!valid(s) || s.micMeter !== input) return;
+      const pub = local.getTrackPublication(LivekitClient.Track.Source.Microphone);
+      const track = pub?.track?.mediaStreamTrack;
+      if (track !== input.track) {
+        input.meter?.close(); input.meter = null; input.track = track;
+        if (track) {
+          try { input.meter = meter(s.ctx, track); } catch { /* RTC levels remain available. */ }
+        }
+      }
+      const energy = input.meter ? input.meter.read() : local.audioLevel || 0;
+      const listening = !model.muted && track?.enabled && !pub.isMuted;
+      window.NightView?.micLevel?.(listening ? Math.min(1, Math.max(0, (energy - .007) * 10)) : 0);
+      input.frame = requestAnimationFrame(measure);
+    }
+    measure();
+  }
   function detach(s) {
     if (!s.output) return;
     cancelAnimationFrame(s.output.frame);
-    s.output.source?.disconnect(); s.output.analyser?.disconnect();
+    s.output.meter?.close();
     for (const node of s.output.track.detach()) { node.pause(); node.remove(); }
     s.output = null; level(0);
   }
@@ -48,22 +94,21 @@
     const audio = track.attach();
     audio.autoplay = true; audio.hidden = true;
     document.body.appendChild(audio);
-    const source = s.ctx.createMediaStreamSource(new MediaStream([track.mediaStreamTrack]));
-    const analyser = s.ctx.createAnalyser(); analyser.fftSize = 1024;
-    source.connect(analyser); // Playback uses the attached audio element only.
-    const samples = new Float32Array(analyser.fftSize);
-    const output = s.output = {track, sid:peer.sid, audio, source, analyser, frame:0};
+    let playbackMeter;
+    try { playbackMeter = meter(s.ctx, track.mediaStreamTrack); } catch { /* Use LiveKit's speaker level. */ }
+    const output = s.output = {track, sid:peer.sid, audio, meter:playbackMeter, frame:0};
     let env = 0, audibleAt = 0;
     function measure() {
       if (!valid(s) || s.output !== output) return;
-      analyser.getFloatTimeDomainData(samples);
-      let power=0; for(const x of samples) power+=x*x;
-      const rms=Math.sqrt(power/samples.length);
-      const target = audio.paused || audio.muted ? 0 : Math.min(1, Math.max(0,(rms-.003)*8));
+      const rms = playbackMeter?.read() || 0;
+      const rtcLevel = peer.isSpeaking ? peer.audioLevel || 0 : 0;
+      const strength = rms > .002 ? (rms - .002) * 8 : rtcLevel * 2;
+      const target = audio.paused || audio.muted ? 0 : Math.min(1, strength);
       env+=(target-env)*(target>env?.62:.24);
       level(env<.001?0:env);
       const now=performance.now();
-      if (target>.025) { if(!s.hadAudio){mark('rx_audio');s.hadAudio=true;} audibleAt=now; if(!s.audible){s.audible=true;refresh(s);} }
+      if (rms > .005 && !audio.paused && !audio.muted && !s.hadAudio) { mark('rx_audio'); s.hadAudio=true; }
+      if (target>.025) { audibleAt=now; if(!s.audible){s.audible=true;refresh(s);} }
       else if(s.audible && now-audibleAt>320){s.audible=false;refresh(s);}
       output.frame=requestAnimationFrame(measure);
     }
@@ -153,7 +198,7 @@
     session=null;mark('call_end');
     clearInterval(s.poll);clearTimeout(s.deadline);clearTimeout(s.cancel?.timer);
     for(const [id,req] of pendingNative)if(req.s===s)settleNative(id,{error:'已结束'});
-    detach(s); void s.ctx?.close().catch(()=>{});
+    detach(s); stopMicMeter(s); void s.ctx?.close().catch(()=>{});
     void s.room.disconnect().catch(()=>{});
     host?.setCall(false);
     show({phase:'idle',active:false,muted:false,level:0,status});
@@ -204,7 +249,7 @@
       s.stage='开启麦克风';show({status:'正在开启麦克风'});
       await room.localParticipant.setMicrophoneEnabled(true);
       if(!valid(s))return;
-      mark('mic_on');syncPeers(s);s.poll=setInterval(()=>syncPeers(s),1200);
+      startMicMeter(s);mark('mic_on');syncPeers(s);s.poll=setInterval(()=>syncPeers(s),1200);
       s.deadline=setTimeout(()=>{if(valid(s)&&!s.ready)finish(s,'小可接听超时，请重试');},22000);
     }catch(e){if(valid(s))mark('transport_error');if(valid(s))finish(s, e?.message?.includes('凭据')?'设备凭据无效，请重新配对':/权限|超时|签票|已结束/.test(e?.message||'')?e.message:(s.stage||'建立通话')+'失败'+connectionHint(e));}
   }

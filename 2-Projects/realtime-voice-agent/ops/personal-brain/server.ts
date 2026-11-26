@@ -6,6 +6,7 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
+import { isVoiceCompletion, withVoiceProgress } from './voice-progress.js';
 import { publicProviderStatus } from './providers.js';
 import { chatDeltas, cpaWebSearch, cpaWebSearchEnabled, searchFetch, type TextTurn } from './upstream.js';
 
@@ -53,8 +54,9 @@ if (!profileStore.getProfile(ownerId)) profileStore.upsertProfile(ownerId, { nic
 
 const searchKey = process.env.BRAIN_DEEPSEEK_SEARCH_KEY;
 const domains = ['news.cctv.com', 'cctv.com', 'gov.cn', 'news.cn', 'cas.cn', 'nasa.gov', 'chnmuseum.cn', 'dpm.org.cn'];
+const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公开资料和最新消息' : '可以查央视新闻和航天动态';
 const persona = '你是个人语音伙伴小可。中文口语自然、温暖、好奇，日常先直接回答，主人要求详细讲时讲完整。';
-const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有相关记忆就直说。无工具回执时禁止宣称已联网、已查到或操作了设备。';
+const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有相关记忆就直说。' + availableSearch + '，也支持天气与时间。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
 const weather = new FixedWeather();
 function weatherIntent(text: string) {
   const q = text.replace(/[\s，。！？,.!?]/gu, '');
@@ -69,6 +71,27 @@ function weatherIntent(text: string) {
   const result = placeWeatherSchema.safeParse({ place, day_offset: day, metric });
   return result.success ? { request: result.data } : {};
 }
+// Accept a short, unqualified domestic bulletin. Every word must belong to
+// this request; named sources, topics, dates and quantities stay with normal search.
+function singleDomesticBulletin(query: string): string | undefined {
+  const q = query.normalize('NFKC').replace(/[\s,，。!?！？、：:]/gu, '');
+  if (q.length > 60 || !/(?:国内|我国|中国)/u.test(q) || !q.includes('新闻') ||
+      !/(?:今天|今日|现在|目前|最新|最近|近期)/u.test(q) ||
+      !/(?:[一1]条|简短|简要)/u.test(q) || /[一1]条.*[一1]条/u.test(q)) return;
+  const rest = q.replace(/有什么|有哪些|有没有|怎么样|今天|今日|现在|目前|最新|最近|近期|国内|我国|中国|新闻|给我|帮我|跟我|可以|请你|只要|就好|就行|即可|[一1]条|简短|简要|说说|讲讲|播报|播一播|听听|说|讲|播|听|来|请|的|点|吗|呢|吧|啊/gu, '');
+  if (rest) return;
+  return /今天|今日|现在|目前/u.test(q) ? '央视今天国内新闻' : '央视最新国内新闻';
+}
+
+function verifiedHeadline(evidence: readonly { title: string; url: string; date: string | null }[]): SearchResult | undefined {
+  const item = evidence.find(({ title, date }) => date && title.length <= 100 && !/[<>]|\[\[|\]\]|https?:\/\//i.test(title));
+  if (!item?.date) return;
+  const { title, url, date } = item;
+  const published = new Intl.DateTimeFormat('zh-CN', {
+    month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai',
+  }).format(Date.parse(date));
+  return { text: `央视网${published}报道，${title}。`, sources: [{ title, url, date }] };
+}
 const tasks = new SearchTasks({
   dbPath: join(dataDir, 'search.sqlite'),
   enabled: () => true,
@@ -77,6 +100,16 @@ const tasks = new SearchTasks({
   async execute(query, signal, task) {
     const target = weatherIntent(query)?.request;
     if (target) return weather.run(target, signal, task.createdAt);
+    const bulletin = singleDomesticBulletin(query);
+    if (bulletin) {
+      try {
+        const items = await cctvNews.run(bulletin, AbortSignal.any([signal, AbortSignal.timeout(2_500)]));
+        const quick = verifiedHeadline(items);
+        if (quick) { report('search_verified_single_bulletin'); return quick; }
+      } catch { signal.throwIfAborted(); }
+      // Preserve the actual wording and requested date when falling back to the web.
+      if (!searchKey && !cpaWebSearchEnabled) return { text: '暂时没查到可核实的这条国内新闻。', sources: [] };
+    }
     const useWebFallback = cpaWebSearchEnabled && !cctvNews.supports(query);
     const webFallback = async () => {
       const remaining = task.deadline - Date.now();
@@ -92,13 +125,7 @@ const tasks = new SearchTasks({
     const executor = new SearchExecutor({
       grounding: true, domains, apiKey: searchKey ?? 'cctv-public', fetch: searchFetch,
       onCctvEvidence(evidence) {
-        const item = evidence.find(({ title }) => title.length <= 100 && !/[<>]|\[\[|\]\]|https?:\/\//i.test(title));
-        if (!item?.date) return;
-        const { title, url, date } = item;
-        const published = new Intl.DateTimeFormat('zh-CN', {
-          month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai',
-        }).format(Date.parse(date));
-        headline = { text: `央视网${published}报道的标题是，${title}。`, sources: [{ title, url, date }] };
+        headline = verifiedHeadline(evidence);
       },
     });
     try {
@@ -130,7 +157,16 @@ const requestBody = z.object({
   max_tokens: z.number().int().positive().optional(),
   store: z.boolean().default(true),
 });
-const searchPrefix = /^(?:小可[，,\s]*)?(?:(?:请|麻烦你?)\s*)?(?:(?:帮我|给我|请你)\s*)?(?:联网(?:查|搜)?|上网(?:查|搜)?|查询|检索|搜索|搜一搜|搜一下|搜搜|查一查|查一下|查查|查)/u;
+// Spoken requests often include a vocative or a question before the actual subject.
+const searchPrefix = /^(?:小可[，,\s]*)?(?:(?:你可不可以|你能不能|可不可以|能不能|可以|你能|请你?|麻烦你?|帮我|给我|替我|帮忙|到网上|去网上|在网上|上网|联网)\s*)*(?:搜索|检索|查询|搜一搜|查一查|查查|搜搜|搜|查)(?:一下|下)?[，,：:\s]*/u;
+const capability = /^(?:小可)?(?:请问)?(?:你|小可)?(?:到底|现在|目前|真的|还|也)?(?:能不能|可不可以|能否|能|可以|会不会|会|支持|有没有|有)(?:帮我)?(?:联网|上网|访问互联网|搜索|查询)(?:搜索|检索|查询|查资料|查东西|找资料|信息|网页|功能|能力|吗|么|呢|啊|呀|了|不能)*$/u;
+const toolList = /^(?:小可)?(?:请问)?你(?:都|现在|目前)?(?:能做什么|会什么|能干什么|能帮我做什么|有哪些(?:功能|工具)|有什么(?:功能|工具))(?:呢|啊|呀|吗)?$/u;
+const noWeb = /(?:不(?:要|用|准|许|需要)|别|禁止)(?:再|去|帮我)?(?:联网|上网|搜索|查询|搜|查)|(?:离线回答|只凭记忆|别发到网上)/u;
+const currentFacts = [
+  /(?:最新|实时|现任|现行|当日|今日).{0,24}(?:版本|发布|规则|进展|动态|新闻|行情|汇率|价格|比分|政策|消息|赛果|排名|总统|总理|市长|董事长|负责人)/u,
+  /(?:汇率|油价|金价|股价|票价|比分|航班动态|最新版本)(?:今天|现在|目前|是多少|怎么样|如何|多少)/u,
+  /(?:今天|现在|目前|最近|本周|这周).{0,32}(?:汇率|油价|金价|股价|比分|价格|发布了|上映|发布会|新政策|有哪些新|稳定版)/u,
+];
 const cancelSearch = /^(?:取消搜索|停止搜索|不用查了|别查了|取消查询)[。！？!?.\s]*$/u;
 const resumeSearch = /^(?:继续|接着)(?:播报|说)?(?:刚才的)?(?:搜索|查询)结果[。！？!?.\s]*$/u;
 const privateSearch = /(?:长(?:期|远)记忆|个人记忆|私有记忆|私密|聊天记录|对话记录|通讯录|联系人|收藏夹|备忘录|(?:我|你|咱们)(?:以前|之前|上次|刚才|昨天|曾经)?(?:说过|提过|告诉过|记过|记得|记下|存过|聊过|提到|留下|喜欢|不喜欢|偏好|住在)|(?:刚才|上次|之前)(?:那|的|聊|说)|怎么称呼我)/u;
@@ -159,7 +195,7 @@ function report(event: string) {
   process.stderr.write(JSON.stringify({ service: 'personal-brain', event }) + '\n');
 }
 
-async function querySearch(query: string, room: string, signal: AbortSignal): Promise<SearchResult> {
+async function querySearch(query: string, room: string, signal: AbortSignal, onSearch?: () => void): Promise<SearchResult> {
   const empty = (text: string) => ({ text, sources: [] });
   if (!query || /^(?:一下|一下子|个|这个|那|那个|天气|深|北|上)[。！？?\s]*$/u.test(query)) {
     return empty(query === '天气' ? '你想查哪个城市的天气？' : '你想查什么？');
@@ -172,7 +208,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal): Pr
   const weatherRequest = weatherIntent(query);
   if (weatherRequest?.unsupported) return empty('可以查今天、明天或后天的天气。你想查哪一天？');
   if (weatherRequest && !weatherRequest.request) return empty('你想查哪个城市的天气？');
-  if (!weatherRequest && !cctvNews.supports(query) && !searchKey && !cpaWebSearchEnabled) {
+  if (!weatherRequest && !singleDomesticBulletin(query) && !cctvNews.supports(query) && !searchKey && !cpaWebSearchEnabled) {
     return empty('目前可查央视国内新闻和航天动态，这个主题暂时没有可用的查询来源。');
   }
   const taskOwner: SearchOwner = { subject: owner.accountId, session: room };
@@ -181,6 +217,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal): Pr
   try {
     signal.throwIfAborted();
     task = tasks.submit(taskOwner, { turn: delivery, query, protocol: 1, phase: 'committed' });
+    if (task.status === 'queued' || task.status === 'running') onSearch?.();
     while (task.status === 'queued' || task.status === 'running') {
       await delay(100, undefined, { signal });
       tasks.tick();
@@ -207,7 +244,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal): Pr
 type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
-  onText: (text: string) => Promise<void>): Promise<Reply> {
+  onText: (text: string) => Promise<void>, onSearch?: () => void): Promise<Reply> {
   const user = messages.at(-1)!.content;
   const history = messages.slice(0, -1);
   const direct = async (text: string, tool?: string, sources?: SearchResult['sources']): Promise<Reply> => {
@@ -223,11 +260,17 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     const result = id ? tasks.searchResult({ subject: owner.accountId, session: room }, id) : undefined;
     return direct(result?.text ?? '这次会话还没有可以接续的搜索结果。', 'search', result?.sources);
   }
+  const compact = user.replace(/[，。！？、?！,!.\s]/gu, '');
+  if (capability.test(compact) || toolList.test(compact)) {
+    return direct(`${availableSearch}，也能查天气和时间。你想查什么？`, 'capabilities');
+  }
+  const allowNetwork = !noWeb.test(user);
   const search = searchPrefix.exec(user);
   const query = search ? user.slice(search[0].length).trim() : user;
   const weatherRequest = weatherIntent(query);
-  if (search || weatherRequest || cctvNews.supports(query)) {
-    const result = await querySearch(query, room, signal);
+  const automatic = currentFacts.some((pattern) => pattern.test(query)) && !/(?:故事|作文|虚构|编一个|写一首|翻译|模拟|假设|是什么意思|是什么原理)/u.test(query);
+  if (allowNetwork && (search || weatherRequest || singleDomesticBulletin(query) || cctvNews.supports(query) || automatic)) {
+    const result = await querySearch(query, room, signal, onSearch);
     return direct(result.text, weatherRequest ? 'weather' : 'search', result.sources);
   }
   const clarify = searchDialogueClarification(user);
@@ -252,9 +295,20 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   };
   // Use the server's completed history for extraction. Only the current
   // trusted worker's context is used for the voice reply.
+  // The model may request a lookup without supplying arguments. Only the user's
+  // current, validated words may leave the service as a search query.
+  let allowLookup = allowNetwork && !privateSearch.test(user) && Boolean(searchKey || cpaWebSearchEnabled);
+  if (allowLookup) {
+    try { validateQuery(user); } catch { allowLookup = false; }
+  }
   for await (const delta of chatDeltas(policy ? `${prompt}\n\n${policy}` : prompt,
-    [...stripClockTurns(history), { role: 'user', content: user }], signal)) {
-    await forward(claimFilter.feed(parens.feed(exits.feed(delta).text)));
+    [...stripClockTurns(history), { role: 'user', content: user }], signal, allowLookup)) {
+    if ('search' in delta) {
+      const result = await querySearch(user, room, signal);
+      await forward(result.text);
+      return { text, sources: result.sources, tool: 'search', excluded: true };
+    }
+    await forward(claimFilter.feed(parens.feed(exits.feed(delta.text).text)));
   }
   await forward(claimFilter.feed(parens.feed(exits.flush().text) + parens.flush()) + claimFilter.flush());
   if (!text.trim()) throw new Error('chat_empty');
@@ -308,8 +362,8 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   const signal = AbortSignal.any([controller.signal, c.req.raw.signal, AbortSignal.timeout(60_000)]);
   const response = { id: `chatcmpl-${randomUUID()}`, created: Math.floor(Date.now() / 1000), model: 'personal-brain' };
   const finish = () => { if (active.get(room) === controller) active.delete(room); };
-  const run = async (onText: (text: string) => Promise<void>) => {
-    const reply = await answer(room, messages, store, signal, onText);
+  const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void) => {
+    const reply = await answer(room, messages, store, signal, onText, onSearch);
     signal.throwIfAborted();
     if (store) persist(room, user.content, reply.text, reply.excluded);
     return reply;
@@ -339,7 +393,10 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
     }) });
     try {
       await chunk({ role: 'assistant', content: '' }, null);
-      const reply = await run((text) => chunk({ content: text }, null));
+      const write = (text: string) => chunk({ content: text }, null);
+      const reply = isVoiceCompletion(tagged, !!c.req.header('x-personal-session'))
+        ? await withVoiceProgress(room, run, write, signal)
+        : await run(write);
       await chunk({}, 'stop', details(reply));
       await stream.writeSSE({ data: '[DONE]' });
     } catch {
