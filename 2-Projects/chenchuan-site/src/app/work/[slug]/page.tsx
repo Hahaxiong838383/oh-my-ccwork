@@ -5,6 +5,7 @@ import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { Tag } from '@/components/shared/Tag'
 import { getProjects, getProjectBySlug } from '@/lib/data'
+import { XiaokeGallery } from './XiaokeGallery'
 import { projects as localProjects } from '@/data/projects'
 
 interface Props {
@@ -93,6 +94,8 @@ export default async function ProjectDetailPage({ params }: Props) {
           </div>
         </BlurFade>
 
+        {slug === 'ai-hardware-voice-prototype' && <XiaokeGallery />}
+
         {/* Description - support \n as paragraphs */}
         <BlurFade delay={0.3}>
           <div className="mx-auto mb-12 max-w-3xl space-y-4">
@@ -175,7 +178,7 @@ export default async function ProjectDetailPage({ params }: Props) {
         )}
 
         {/* Images */}
-        {project.images && project.images.length > 0 && (
+        {slug !== 'ai-hardware-voice-prototype' && project.images && project.images.length > 0 && (
           <BlurFade delay={0.48}>
             <div className="mb-12">
               <h3 className="mb-6 font-mono text-xs uppercase tracking-widest text-text-muted">

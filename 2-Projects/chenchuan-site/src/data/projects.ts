@@ -58,11 +58,6 @@ export const projects: Project[] = [
       stack: 'Android / Kotlin 对接设备，Godot / GDScript 呈现场景，Rust 管进度与语音，LiveKit / WebRTC 传输音频。',
       result: '成长玩法已在真机验证，one-shot 完成专项验收，待合包发布。',
     },
-    images: [
-      '/media/kidshub-scenes/kidshub-welcome.png',
-      '/media/kidshub-scenes/kidshub-ask.png',
-      '/media/kidshub-scenes/kidshub-companion.png',
-    ],
     relatedSlugs: ['myjavis-voice-companion', 'health-education-ai'],
   },
   {
