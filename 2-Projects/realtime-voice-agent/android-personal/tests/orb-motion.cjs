@@ -86,7 +86,7 @@ test('speech articulation is measured and the listening microphone is isolated',
   assert.equal(quiet.energy,0);
   assert.equal(quiet.articulation,'pause');
   assert.equal(stressed.articulation,'stress');
-  assert.ok(stressed.energy>0.91 && stressed.scaleX-quiet.scaleX>0.055);
+  assert.ok(stressed.energy>0.91 && stressed.scaleX-quiet.scaleX>.009 && Math.abs(stressed.scaleX/stressed.scaleY-1)<.025);
   const pause=advance(b,1.4,{phase:'speaking',active:true,playback:0});
   assert.equal(pause.energy,0);
   assert.equal(pause.articulation,'pause');

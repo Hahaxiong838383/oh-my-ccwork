@@ -81,22 +81,50 @@
     }
     measure();
   }
+  function clearPlaybackPrompt(s) {
+    s.retryPlayback?.remove(); s.retryPlayback = null;
+  }
+  function promptPlayback(s) {
+    if (!valid(s) || s.retryPlayback) return;
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'top-pill'; button.textContent = '恢复声音';
+    s.retryPlayback = button;
+    document.getElementById('status-banner').append(button);
+    button.onclick = () => {
+      const output = s.output;
+      // Both calls start within the actual user gesture. startAudio plays the
+      // LiveKit-owned elements, while our analyser uses its own AudioContext.
+      void s.ctx.resume().catch(() => {});
+      void s.room.startAudio().then(() => {
+        if (valid(s) && s.output === output && !output?.audio.paused) {
+          clearPlaybackPrompt(s); refresh(s);
+        }
+      }).catch(() => {});
+    };
+    refresh(s);
+  }
   function detach(s) {
-    if (!s.output) return;
-    cancelAnimationFrame(s.output.frame);
-    s.output.meter?.close();
-    for (const node of s.output.track.detach()) { node.pause(); node.remove(); }
-    s.output = null; level(0);
+    const output = s.output;
+    if (!output) return;
+    s.output = null; s.audible = false;
+    cancelAnimationFrame(output.frame);
+    output.meter?.close();
+    output.audio.onplaying = output.audio.onpause = null;
+    output.track.detach(output.audio); output.audio.pause(); output.audio.remove();
+    clearPlaybackPrompt(s); level(0);
   }
   function attach(s, track, peer) {
-    if (!valid(s) || !worker(peer) || track.kind !== LivekitClient.Track.Kind.Audio) return;
+    if (s.output?.track === track && s.output.sid === peer.sid && s.output.audio.isConnected) return;
     detach(s);
-    const audio = track.attach();
+    const audio = track.attach(document.createElement('audio'));
     audio.autoplay = true; audio.hidden = true;
     document.body.appendChild(audio);
     let playbackMeter;
     try { playbackMeter = meter(s.ctx, track.mediaStreamTrack); } catch { /* Use LiveKit's speaker level. */ }
     const output = s.output = {track, sid:peer.sid, audio, meter:playbackMeter, frame:0};
+    const current = () => valid(s) && s.output === output;
+    audio.onplaying = () => { if (current()) { clearPlaybackPrompt(s); refresh(s); } };
+    audio.onpause = () => { if (current() && audio.paused) promptPlayback(s); };
     let env = 0, audibleAt = 0;
     function measure() {
       if (!valid(s) || s.output !== output) return;
@@ -112,13 +140,14 @@
       else if(s.audible && now-audibleAt>320){s.audible=false;refresh(s);}
       output.frame=requestAnimationFrame(measure);
     }
-    audio.play().catch(()=>{ if (valid(s)) show({status:'系统暂停播放，请重接通话'}); });
+    audio.play().catch(() => { if (current() && audio.paused) promptPlayback(s); });
     measure(); refresh(s);
   }
   function refresh(s) {
     if (!valid(s) || !s.connected) return;
     let phase, status;
     if (s.reconnecting) {phase='connecting';status='网络中断，正在重连';}
+    else if (s.retryPlayback) {phase='listening';status='播放已暂停';}
     else if (!s.ready) {phase='connecting';status='等待小可接听';}
     else if (s.cancel) {phase='listening';status='正在打断';}
     else if (s.audible || s.speaking) {phase='speaking';status='小可在说';}
@@ -127,9 +156,22 @@
     else {phase='listening';status='小可在听';}
     if(phase!==model.phase || status!==model.status) show({phase,status});
   }
+  function syncOutput(s, peers, removed) {
+    if (!valid(s) || !s.connected) return;
+    const peer = peers.find(p => p.sid === s.peer?.sid) || peers[0];
+    // The SDK fires Unsubscribed before replacing publication.track. Skip the
+    // removed object explicitly if it is still visible during that callback.
+    const tracks = [...(peer?.audioTrackPublications.values() || [])]
+      .map(publication => publication.track)
+      .filter(track => track && track !== removed && track.mediaStreamTrack.readyState !== 'ended');
+    const track = tracks.includes(s.output?.track) ? s.output.track : tracks[0];
+    if (track) attach(s, track, peer); else detach(s);
+  }
+  function workers(s) { return [...s.room.remoteParticipants.values()].filter(worker); }
   function syncPeers(s) {
     if (!valid(s) || !s.connected) return;
-    const peers=[...s.room.remoteParticipants.values()].filter(worker);
+    const peers=workers(s);
+    syncOutput(s,peers);
     const ready=peers.some(p=>s.peer?.sid===p.sid);
     if (!ready) {
       if(s.peer){s.parts.clear();s.turn=null;s.segments.clear();s.thinking=false;s.speaking=false;s.audible=false;show({mine:'',reply:''});}
@@ -150,7 +192,7 @@
     if(!valid(s)||!worker(p)||s.room.remoteParticipants.get(p.identity)?.sid!==p.sid) return;
     let f; try{f=JSON.parse(decode.decode(data));}catch{return;}
     if(topic==='personal.v1.output' && f.type==='ready' && f.voice===true && s.hellos.get(p.sid)===f.id){
-      if(!s.ready)mark('connected');s.peer=p;s.ready=true;s.hellos.delete(p.sid);refresh(s);
+      if(!s.ready)mark('connected');s.peer=p;s.ready=true;s.hellos.delete(p.sid);syncOutput(s,workers(s));refresh(s);
     } else if(topic==='control' && f.type==='cancel.ack' && f.src==='worker' && s.cancel && s.cancel.seq===f.seq && s.trace===f.trace_id){
       mark('cancel_ack');clearTimeout(s.cancel.timer);s.cancel=null;s.thinking=false;s.speaking=false;refresh(s);
     } else if(topic==='state' && f.k==='speaking' && typeof f.speaking==='boolean'){
@@ -198,7 +240,7 @@
     session=null;mark('call_end');
     clearInterval(s.poll);clearTimeout(s.deadline);clearTimeout(s.cancel?.timer);
     for(const [id,req] of pendingNative)if(req.s===s)settleNative(id,{error:'已结束'});
-    detach(s); stopMicMeter(s); void s.ctx?.close().catch(()=>{});
+    detach(s); clearPlaybackPrompt(s); stopMicMeter(s); void s.ctx?.close().catch(()=>{});
     void s.room.disconnect().catch(()=>{});
     host?.setCall(false);
     show({phase:'idle',active:false,muted:false,level:0,status});
@@ -227,8 +269,9 @@
       if(!valid(s))return;
       s.stage='连接语音房间';show({status:'正在连接北京语音房间'});
       if(new URL(ticket.url).origin!==signalUrl || !ticket.token)throw Error('签票地址无效');
-      room.on(E.TrackSubscribed,(t,_,p)=>attach(s,t,p));
-      room.on(E.TrackUnsubscribed,t=>{if(valid(s)&&s.output?.track===t){detach(s);s.audible=false;refresh(s);}});
+      room.on(E.TrackSubscribed,()=>syncOutput(s,workers(s)));
+      room.on(E.TrackUnsubscribed,t=>{syncOutput(s,workers(s),t);refresh(s);});
+      room.on(E.ParticipantAttributesChanged,()=>syncPeers(s));
       room.on(E.DataReceived,(...args)=>receive(s,...args));
       room.on(E.TranscriptionReceived,(items,p)=>transcript(s,items,p));
       room.on(E.ParticipantConnected,()=>syncPeers(s));
@@ -244,7 +287,8 @@
         await room.connect(ticket.url,ticket.token,{rtcConfig:{iceTransportPolicy:'relay'},peerConnectionTimeout:21000});
       }
       if(!valid(s)){await room.disconnect();return;}
-      s.joined=true;s.connected=true;s.stage='打开回放';show({status:'已入房，正在打开回放'}); await room.startAudio();
+      s.joined=true;s.connected=true;s.stage='打开回放';show({status:'已入房，正在打开回放'});
+      await room.startAudio().catch(()=>promptPlayback(s));
       if(!valid(s))return;
       s.stage='开启麦克风';show({status:'正在开启麦克风'});
       await room.localParticipant.setMicrophoneEnabled(true);
@@ -276,22 +320,123 @@
   document.addEventListener('visibilitychange',()=>{if(document.hidden && session) finish(session);});
   window.addEventListener('pagehide',()=>{if(session) finish(session);});
   function setupService() {
-    const get=id=>document.getElementById(id), panel=get('service-panel');
-    let tick;
-    function draw(){
-      const summary=host?.diagnostics?.() || '暂无诊断记录';
-      const ota=host?.updateStatus?.() || '尚未检查';
-      get('diag-summary').textContent=summary;get('ota-status').textContent=ota;
-      get('ota-install').hidden=!/已下载|可以安装|待安装/.test(ota);
-      get('ota-install').disabled=!!session;
+    const get = id => document.getElementById(id);
+    const app = get('app'), panel = get('service-panel'), home = get('ota-home'), maintenance = get('btn-service');
+    const install = get('ota-install'), check = get('ota-check');
+    const phases = {
+      idle: '等待检查更新', checking: '正在检查更新', current: '已是最新版本', available: '发现新版本',
+      downloading: '正在下载', verifying: '正在校验安装包', ready: '新版已就绪', wait_permission: '等待安装授权',
+      preparing_install: '正在准备安装', pending_confirmation: '等待系统确认', installing: '系统正在安装',
+      success: '升级成功', cancelled: '已取消安装', error: '更新未完成'
+    };
+    let snapshot, timer, opener;
+    function snapshotFromHost() {
+      if (!host?.updateSnapshot) return null;
+      try {
+        const state = JSON.parse(host.updateSnapshot());
+        return state && Object.prototype.hasOwnProperty.call(phases, state.state) ? state : null;
+      } catch { return null; }
     }
-    get('btn-service').onclick=()=>{panel.hidden=!panel.hidden;clearInterval(tick);if(!panel.hidden){draw();tick=setInterval(draw,1500);}};
-    get('service-close').onclick=()=>{panel.hidden=true;clearInterval(tick);};
-    get('diag-send').onclick=()=>{host?.syncDiagnostics?.();draw();};
-    get('ota-check').onclick=()=>{host?.checkUpdate?.();draw();};
-    get('ota-install').onclick=()=>{if(!session)host?.installUpdate?.();};
-    function badge(){const v=host?.updateStatus?.()||'';get('btn-service').textContent=/已下载|可以安装|待安装/.test(v)?'更新可用':'维护';}
-    badge();setInterval(()=>{if(!document.hidden&&!session)badge();},15000);
+    function setText(element, value) {
+      if (element.textContent !== value) element.textContent = value;
+    }
+    function bytes(n) {
+      if (n < 1024) return n + ' B';
+      if (n < 1048576) return (n / 1024).toFixed(1) + ' KiB';
+      return (n / 1048576).toFixed(1) + ' MiB';
+    }
+    const inCall = () => Boolean(session) || app.dataset.active === 'true';
+    const hasAmount = value => Number.isSafeInteger(value) && value >= 0;
+    function draw() {
+      snapshot = snapshotFromHost();
+      if (!panel.hidden) setText(get('diag-summary'), host?.diagnostics?.() || '暂无诊断记录');
+      home.hidden = !snapshot;
+      if (!snapshot) {
+        get('ota-transfer').hidden = true; install.hidden = true;
+        setText(get('ota-phase'), ''); setText(get('ota-version'), '');
+        setText(get('ota-status'), host?.updateStatus?.() || '更新状态暂不可用');
+        check.disabled = !host?.checkUpdate;
+        return;
+      }
+      const s = snapshot, kind = s.state, transferring = kind === 'downloading';
+      const written = hasAmount(s.downloadedBytes) ? s.downloadedBytes : null;
+      const total = hasAmount(s.totalBytes) && s.totalBytes > 0 ? s.totalBytes : null;
+      const percent = written !== null && total !== null ? Math.min(100, Math.floor(written * 100 / total))
+        : Number.isInteger(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null;
+      const label = phases[kind];
+      const homeLabel = transferring && percent !== null ? '正在下载 ' + percent + '%'
+        : transferring && written !== null ? '已下载 ' + bytes(written) : label;
+      setText(get('ota-home-text'), homeLabel);
+      home.setAttribute('aria-label', '应用更新，' + homeLabel);
+      home.dataset.tone = ['error', 'cancelled'].includes(kind) ? 'error'
+        : ['available', 'ready', 'wait_permission', 'success'].includes(kind) ? 'action'
+        : ['idle', 'current'].includes(kind) ? 'quiet' : 'active';
+      get('ota-home-progress').hidden = !transferring;
+      get('ota-transfer').hidden = !transferring;
+      if (transferring) {
+        for (const id of ['ota-home-progress', 'ota-progress']) {
+          const bar = get(id);
+          if (percent === null) bar.removeAttribute('value'); else bar.value = percent;
+        }
+        const amount = written !== null ? bytes(written) + (total ? ' / ' + bytes(total) : '') : '';
+        setText(get('ota-bytes'), [percent === null ? '' : percent + '%', amount].filter(Boolean).join(' · '));
+      }
+      setText(get('ota-phase'), label);
+      const call = inCall();
+      const detail = call && ['ready', 'wait_permission'].includes(kind) ? '通话结束后可继续安装。' : String(s.message || '');
+      setText(get('ota-status'), detail === label ? '' : detail);
+      const installed = s.installedVersionName || (s.installedVersionCode > 0 ? String(s.installedVersionCode) : '');
+      const target = s.versionName || (s.versionCode > 0 ? String(s.versionCode) : '');
+      const versions = [];
+      if (installed) versions.push('当前 ' + installed);
+      if (target && s.versionCode > s.installedVersionCode) versions.push('新版 ' + target);
+      setText(get('ota-version'), versions.join('  →  '));
+      const waiting = kind === 'wait_permission', retryInstall = ['cancelled', 'error'].includes(kind);
+      install.hidden = !s.canInstall && !(call && ['ready','wait_permission'].includes(kind));
+      install.disabled = call || !s.canInstall;
+      setText(install, waiting ? '继续授权安装' : retryInstall ? '重试安装' : '安装新版');
+      check.disabled = !host?.checkUpdate || !!s.busy || (kind === 'error' && !s.canRetry) || ['pending_confirmation','installing','preparing_install'].includes(kind);
+      setText(check, kind === 'available' ? '立即下载' : kind === 'error' && s.canRetry ? '重试更新' : '检查更新');
+    }
+    function refresh() {
+      clearTimeout(timer);
+      if (document.hidden) return;
+      draw();
+      const fast = ['checking', 'downloading', 'verifying', 'preparing_install', 'pending_confirmation', 'installing'].includes(snapshot?.state);
+      timer = setTimeout(refresh, fast ? 350 : panel.hidden ? 2500 : 1100);
+    }
+    function openPanel(open, trigger) {
+      if (open && panel.hidden) opener = trigger || maintenance;
+      panel.hidden = !open;
+      app.classList.toggle('service-open', open);
+      for (const button of [home, maintenance]) button.setAttribute('aria-expanded', String(open));
+      refresh();
+    }
+    home.onclick = () => openPanel(true, home);
+    maintenance.onclick = () => openPanel(panel.hidden, maintenance);
+    function close() {
+      if (!panel.hidden) { openPanel(false); opener?.focus(); }
+    }
+    get('service-close').onclick = close;
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    get('diag-send').onclick = () => { host?.syncDiagnostics?.(); refresh(); };
+    check.onclick = () => { if (!check.disabled) { host?.checkUpdate?.(); refresh(); } };
+    install.onclick = () => {
+      const current = snapshotFromHost();
+      if (!inCall() && current?.canInstall) host?.installUpdate?.();
+      refresh();
+    };
+    window.addEventListener('night-open-update', () => { if (!inCall()) openPanel(true); else refresh(); });
+    window.addEventListener('night-ota-change', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('pageshow', refresh);
+    window.addEventListener('pagehide', () => clearTimeout(timer));
+    let lastCall = inCall();
+    new MutationObserver(() => {
+      const next = inCall();
+      if (next !== lastCall) { lastCall = next; refresh(); }
+    }).observe(app, {attributes: true, attributeFilter: ['data-active']});
+    refresh();
   }
   setupService();
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>show({})); else show({});

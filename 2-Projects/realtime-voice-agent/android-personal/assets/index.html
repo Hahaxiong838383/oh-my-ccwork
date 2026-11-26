@@ -13,10 +13,14 @@
     <header class="topbar">
       <div class="top-left">
         <span id="live-dot" class="live-dot" aria-hidden="true"></span>
+        <button id="ota-home" class="ota-home" type="button" aria-controls="service-panel" aria-expanded="false" hidden>
+          <span id="ota-home-text"></span>
+          <progress id="ota-home-progress" max="100" aria-label="更新包下载进度" hidden></progress>
+        </button>
       </div>
 
       <div class="top-actions">
-        <button id="btn-service" class="top-pill top-pill-ghost" type="button" aria-controls="service-panel">维护</button>
+        <button id="btn-service" class="top-pill top-pill-ghost" type="button" aria-controls="service-panel" aria-expanded="false">维护</button>
         <button id="btn-forget" class="top-pill top-pill-ghost" type="button" hidden>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -35,10 +39,13 @@
 
     <section id="service-panel" class="service-panel" aria-label="诊断与更新" hidden>
       <div class="service-heading"><strong>诊断与更新</strong><button id="service-close" type="button">关闭</button></div>
+      <h2>应用更新</h2>
+      <p id="ota-phase" class="ota-phase" role="status" aria-live="polite"></p>
+      <div id="ota-transfer" hidden><progress id="ota-progress" max="100" aria-label="下载进度"></progress><span id="ota-bytes"></span></div>
+      <p id="ota-status"></p><p id="ota-version"></p>
+      <div class="ota-actions"><button id="ota-install" type="button" hidden>安装新版</button><button id="ota-check" type="button">检查更新</button></div>
       <h2>通话诊断</h2><p id="diag-summary"></p><button id="diag-send" type="button">同步诊断记录</button>
       <small>仅回传通话事件、时间和版本。录音、字幕和设备密钥不随日志上传。</small>
-      <h2>应用更新</h2><p id="ota-status"></p><button id="ota-check" type="button">检查更新</button>
-      <button id="ota-install" type="button" hidden>安装新版</button>
     </section>
     <section id="color-popover" class="color-popover" role="dialog" aria-label="选择主题色" hidden>
       <div class="popover-head">
@@ -59,6 +66,7 @@
     </section>
 
     <section class="stage" aria-live="polite">
+      <div class="gaze-surface" aria-hidden="true"></div>
       <div id="avatar-wrap" class="avatar-wrap">
         <canvas id="orb-canvas" role="img" aria-label="小可的语音表情"></canvas>
       </div>

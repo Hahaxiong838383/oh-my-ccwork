@@ -53,11 +53,16 @@ final class OtaConfig {
     }
 
     /** 打开“安装未知应用”里本应用那一条；打不开就只剩提示。 */
-    static void openInstallSettings(Activity activity) {
-        try {
-            activity.startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:" + activity.getPackageName())));
-        } catch (RuntimeException ignored) {
+    static boolean openInstallSettings(Activity activity) {
+        Intent[] screens = {
+            new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + activity.getPackageName())),
+            new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES),
+            new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + activity.getPackageName()))
+        };
+        for (Intent screen : screens) {
+            try { activity.startActivity(screen); return true; }
+            catch (RuntimeException ignored) {}
         }
+        return false;
     }
 }

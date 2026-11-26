@@ -17,36 +17,13 @@ public final class NightOtaInstallReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (context == null || intent == null || !ACTION.equals(intent.getAction())) return;
         int status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
-        NightOta ota = NightOta.get(context);
+        int session = intent.getIntExtra("nightSession", intent.getIntExtra(PackageInstaller.EXTRA_SESSION_ID, -1));
+        Intent confirm = null;
         if (status == PackageInstaller.STATUS_PENDING_USER_ACTION) {
-            if (!ota.takeInstallGesture()) {
-                ota.note("安装确认已过期，请再点一次安装");
-                return;
-            }
-            if (OtaConfig.inCall(context)) {
-                ota.note("正在通话，等通话结束再点安装");
-                return;
-            }
-            Intent confirm = Build.VERSION.SDK_INT >= 33
-                    ? intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent.class)
-                    : getIntentLegacy(intent);
-            if (confirm == null) {
-                ota.note("系统安装确认没有打开，可以再点一次安装");
-                return;
-            }
-            confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                context.startActivity(confirm);
-            } catch (RuntimeException ex) {
-                ota.note("系统安装确认没有打开，可以再点一次安装");
-            }
-            return;
+            confirm = Build.VERSION.SDK_INT >= 33
+                    ? intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent.class) : getIntentLegacy(intent);
         }
-        if (status == PackageInstaller.STATUS_SUCCESS) {
-            ota.onInstalled();
-        } else {
-            ota.note("系统没有完成安装，安装包还在，没有自动重试");
-        }
+        NightOta.get(context).installCallback(session, status, confirm);
     }
 
     @SuppressWarnings("deprecation")

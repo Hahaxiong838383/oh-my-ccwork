@@ -153,8 +153,9 @@
     const visits = new Map();
     let phase, cueIndex = 0, cueAge = 0, now = 0, age = 0;
     let reference = '', expression = 0, fromExpression = 0, morphAge = 1;
-    let expressionAt = Infinity, blinkAt = Infinity, blinkAge = 1;
+    let expressionAt = Infinity, blinkAt = Infinity, blinkAge = 1, secondBlink = false;
     let energy = 0, previousEnergy = 0, attack = 0, speechPause = 0;
+    let listeningFor=0, pauseFor=0, nodAge=Infinity, nextNod=0;
     let touchAge = Infinity, touchIndex = -1, touchX = 0, touchY = 0;
 
     const interval = range => range ? (range.min + random() * (range.max-range.min))/1000 : Infinity;
@@ -181,7 +182,11 @@
         if (pool.length) setExpression(pool[Math.floor(random()*pool.length)]);
         expressionAt = now + interval(table.expressionCadence);
       }
-      if (now >= blinkAt) { blinkAge = 0; blinkAt = now + interval(table.blinkCadence); }
+      if (now >= blinkAt) {
+        blinkAge = 0;
+        secondBlink = !secondBlink && random()<.16;
+        blinkAt = now + (secondBlink ? .48 : interval(table.blinkCadence));
+      }
     }
     function tap(x, y) {
       touchIndex = (touchIndex+1) % touches.length; touchAge = 0;
@@ -195,6 +200,7 @@
       if (phase !== nextPhase) {
         phase = nextPhase; age = 0; cueAge = 0; cueIndex = 0; speechPause = 0;
         energy = 0; previousEnergy = 0; attack = 0;
+        listeningFor=0; pauseFor=0; nodAge=Infinity;
       }
       now += dt; age += dt; cueAge += dt; touchAge += dt; morphAge += dt; blinkAge += dt;
       const sequence = sequences[phase];
@@ -247,19 +253,29 @@
       }
       let articulation = 'quiet';
       if (!reduced) {
-        goal.breath = Math.sin(2*Math.PI*now/5.7 + clockOffset);
+        goal.breath = .8*Math.sin(2*Math.PI*now/5.8+clockOffset)+.2*Math.sin(2*Math.PI*now/13.3);
         const swell = phase === 'muted' ? 0.004 : 0.011;
         goal.scaleX += goal.breath*swell; goal.scaleY += goal.breath*swell*0.65;
         goal.lift -= goal.breath*swell*0.8;
         gesture(goal, cue[3], cue[4], cueAge/cue[2]);
         if (speaking) {
           articulation = speechPause > 0.18 ? 'pause' : attack > 0.12 ? 'attack' : energy > 0.52 ? 'stress' : 'flow';
-          goal.scaleX += 0.075*energy; goal.scaleY -= 0.048*energy;
+          goal.scaleX += .014*energy; goal.scaleY += .014*energy;
           goal.lift -= 0.054*energy + 0.035*attack;
           goal.gazeY += 0.19*energy; goal.roll += 0.075*energy*Math.sin(now*2.25);
-          goal.eyeOpenL -= 0.28*energy; goal.eyeOpenR -= 0.24*energy;
+          goal.eyeOpenL -= .07*energy; goal.eyeOpenR -= .06*energy;
         } else if (phase === 'listening') {
           articulation = energy > 0.045 ? 'attend' : 'quiet';
+          nodAge += dt;
+          if (energy>.08) { listeningFor+=dt; pauseFor=0; }
+          else {
+            pauseFor+=dt;
+            if (pauseFor>.12 && listeningFor>1.4 && now>=nextNod) {
+              nodAge=0; nextNod=now+2.8; listeningFor=0;
+            }
+            if (pauseFor>.5) listeningFor=0;
+          }
+          if (nodAge<.39) goal.gazeY += .27*Math.sin(Math.PI*nodAge/.39);
           goal.gazeY += 0.26*energy; goal.roll -= 0.13*energy;
           goal.scaleY += 0.055*energy; goal.lift += 0.03*energy;
         }
@@ -271,12 +287,15 @@
           goal.accent = Math.max(goal.accent, reach);
         }
         // Fast close, tiny hold, slower open. Eyelids stay paired across an interrupted blink.
-        if (blinkAge < 0.165 && !touching) {
-          const open = blinkAge < 0.055 ? 1-ease(blinkAge/0.055)
-            : blinkAge < 0.072 ? 0.025 : ease(unit((blinkAge-0.072)/0.093));
+        if (blinkAge < .25 && !touching) {
+          const open = blinkAge < .07 ? 1-ease(blinkAge/.07)
+            : blinkAge < .10 ? .03 : .03+.97*ease(unit((blinkAge-.10)/.15));
           goal.eyeOpenL *= open; goal.eyeOpenR *= open;
         }
       }
+      const size=(goal.scaleX+goal.scaleY)/2;
+      const squash=clamp((goal.scaleX-goal.scaleY)*.5,-.009,.009);
+      goal.scaleX=size+squash; goal.scaleY=size-squash;
       for (const key of Object.keys(rest)) {
         const speed = key === 'eyeOpenL' || key === 'eyeOpenR' ? 65 : key === 'accent' ? 20 : 11;
         pose[key] = reduced ? goal[key] : approach(pose[key], goal[key], dt, speed);

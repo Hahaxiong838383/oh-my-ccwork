@@ -123,18 +123,30 @@ async function exercise(browser, fallback) {
   const client = await page.context().newCDPSession(page);
   const send = (type, points) => client.send('Input.dispatchTouchEvent', {type, touchPoints: points});
   await reset();
-  await send('touchStart', [{x: cx, y: cy}]);
-  await send('touchMove', [{x: cx - 30, y: cy + 45}]);
+  for (const startX of [cx, 18]) {
+    await reset();
+    await send('touchStart', [{x: startX, y: cy}]);
+    await page.waitForTimeout(680);
+    for (const x of [cx-118, cx, cx+118]) {
+      await send('touchMove', [{x, y:cy}]);
+      await page.waitForTimeout(180);
+      const target = (await look())[0];
+      assert.ok(x === cx ? Math.abs(target)<.08 : Math.sign(target)===Math.sign(x-cx) && Math.abs(target)>.40, JSON.stringify({fallback,startX,x,cx,target,actions:await page.evaluate(()=>actions.slice(-5))}));
+      const sample=await canvas.evaluate(paintedEyes);
+      assert.ok(sample.areas.length >= 2, 'both eyes visible while finger stays down');
+      if (x!==cx) assert.ok(x<cx ? sample.x<.44 : sample.x>.56, 'face follows the live finger before release');
+    }
+    await send('touchEnd', []);
+    await page.waitForTimeout(300);
+    assert.equal(await page.evaluate(() => actions.at(-1)[0]), 'clearLook');
+    assert.equal(await count('touch'), 0, 'a drag must never fire the tap expression');
+  }
+  await send('touchStart', [{x:cx,y:cy}]); await send('touchCancel', []);
+  assert.equal(await page.evaluate(() => actions.at(-1)[0]), 'clearLook');
+  await send('touchStart', [{x:cx-5,y:cy}]);
+  await send('touchStart', [{x:cx-5,y:cy,id:0},{x:cx+5,y:cy,id:1}]);
   await send('touchEnd', []);
-  await send('touchStart', [{x: cx, y: cy}]);
-  await send('touchCancel', []);
-  await send('touchStart', [{x: cx - 5, y: cy}]);
-  await send('touchStart', [{x: cx - 5, y: cy, id: 0}, {x: cx + 5, y: cy, id: 1}]);
-  await send('touchEnd', []);
-  assert.equal(await count('touch') + await count('lookAt'), 0, 'drag, cancellation and pinch are not taps');
-  await send('touchStart', [{x: cx, y: cy}]);
-  await page.waitForTimeout(720); await send('touchEnd', []);
-  assert.equal(await count('touch') + await count('lookAt'), 0, 'long press leaves native handling intact');
+  assert.equal(await count('touch'), 0, 'pinch is not a tap');
 
   await page.setViewportSize({width: 730, height: 415});
   await page.waitForTimeout(120);
@@ -145,7 +157,8 @@ async function exercise(browser, fallback) {
     await reset();
     await page.mouse.move(after.x+after.width/2, after.y+after.height/2);
     await page.mouse.down(); await page.mouse.move(5, 5); await page.mouse.up();
-    assert.equal(await count('touch') + await count('lookAt'), 0);
+    assert.equal(await count('touch'), 0);
+    assert.ok(await count('lookAt') >= 2); await reset();
     await page.mouse.click(after.x + after.width/2, after.y + after.height/2, {button:'right'});
     assert.equal(await count('touch') + await count('lookAt'), 0, 'context click leaves native handling intact');
   }

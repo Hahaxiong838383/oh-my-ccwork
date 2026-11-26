@@ -29,7 +29,7 @@ function installRoomFixture() {
       const local = tone(this.ctx, 320), remote = tone(this.ctx, 180);
       window.probe = { local: local.gain, remote: remote.gain };
       this.remoteTrack = remote.track;
-      this.peer = { identity: 'agent-fixture', sid: 'PA_fixture', isAgent: true, attributes: { 'lk.agent.name': 'personal-xiaoke' } };
+      this.peer = { identity: 'agent-fixture', sid: 'PA_fixture', audioTrackPublications: new Map(), isAgent: true, attributes: { 'lk.agent.name': 'personal-xiaoke' } };
       this.remoteParticipants = new Map([[this.peer.identity, this.peer]]);
       const pub = { isMuted: false, track: { mediaStreamTrack: local.track } };
       this.localParticipant = {
@@ -49,9 +49,10 @@ function installRoomFixture() {
       await this.ctx.resume();
       const audio = document.createElement('audio');
       audio.srcObject = new MediaStream([this.remoteTrack]);
-      this.events.get('TrackSubscribed')({
-        kind: 'audio', mediaStreamTrack: this.remoteTrack, attach: () => audio, detach: () => [audio],
-      }, null, this.peer);
+      const track = {kind:'audio', mediaStreamTrack:this.remoteTrack, attach:() => audio, detach:() => [audio]};
+      const publication = {track};
+      this.peer.audioTrackPublications.set('TR_fixture', publication);
+      this.events.get('TrackSubscribed')(track, publication, this.peer);
     }
     async startAudio() {}
     async disconnect() { await this.ctx.close(); }
