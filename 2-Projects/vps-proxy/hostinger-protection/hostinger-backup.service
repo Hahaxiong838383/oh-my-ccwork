@@ -1,0 +1,9 @@
+[Unit]
+Description=Pull an encrypted development snapshot from Hostinger
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/lib/hostinger-protection/backup
+TimeoutStartSec=5h
+Nice=10
+UMask=0077

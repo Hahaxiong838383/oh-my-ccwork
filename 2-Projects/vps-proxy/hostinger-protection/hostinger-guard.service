@@ -1,0 +1,9 @@
+[Unit]
+Description=Check Hostinger disk and memory, clean safe caches under pressure
+
+[Service]
+Type=oneshot
+StateDirectory=hostinger-guard
+ExecStart=/usr/local/libexec/hostinger-guard
+TimeoutStartSec=5min
+Nice=10

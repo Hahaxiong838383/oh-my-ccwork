@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# 从包含本套文件的临时目录运行，使用当前开发用户的 sudo。
+set -euo pipefail
+cd "$(dirname "$0")"
+sudo -n install -m 755 export-home /usr/local/libexec/hostinger-export-home
+sudo -n install -m 755 guard.py /usr/local/libexec/hostinger-guard
+sudo -n install -m 755 hostinger-build /usr/local/bin/hostinger-build
+sudo -n install -m 644 hostinger-guard.{service,timer} /etc/systemd/system/
+sudo -n install -m 644 login-notice.sh /etc/profile.d/hostinger-notice.sh
+mkdir -p "$HOME/.local/bin" "$HOME/.claude"
+for tool in make gmake git; do
+    [[ -x /usr/bin/$tool ]] || continue
+    link="$HOME/.local/bin/$tool"
+    if [[ -L $link && $(readlink "$link") == /usr/local/bin/hostinger-build ]]; then continue; fi
+    ln -s /usr/local/bin/hostinger-build "$link"
+done
+if ! grep -Fq '## Hostinger 的构建和备份约定' "$HOME/.claude/CLAUDE.md" 2>/dev/null; then
+    printf '\n' >> "$HOME/.claude/CLAUDE.md"
+    cat claude-build.md >> "$HOME/.claude/CLAUDE.md"
+fi
+install -d "$HOME/.config/systemd/user"
+install -m 644 hostinger-builds.slice "$HOME/.config/systemd/user/"
+systemctl --user daemon-reload
+sudo -n install -d /etc/systemd/journald.conf.d
+sudo -n install -m 644 journal-limits.conf /etc/systemd/journald.conf.d/60-hostinger-capacity.conf
+sudo -n systemctl reload systemd-journald
+sudo -n systemctl daemon-reload
+sudo -n systemctl enable --now hostinger-guard.timer
+sudo -n systemctl start hostinger-guard.service

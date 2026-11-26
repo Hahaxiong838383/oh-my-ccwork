@@ -1,0 +1,7 @@
+[Unit]
+Description=Combined memory budget for Hostinger builds
+
+[Slice]
+MemoryAccounting=yes
+MemoryHigh=4G
+MemoryMax=5G

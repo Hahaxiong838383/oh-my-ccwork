@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+tool=${0##*/}
+if [[ $tool != hostinger-build ]]; then
+    if [[ $tool == git ]]; then
+        git_args=("$@")
+        while (( $# )); do
+            case "$1" in
+                -C|-c|--git-dir|--work-tree|--namespace|--exec-path|--config-env) shift; (( $# )) && shift ;;
+                --) shift; break ;;
+                -*) shift ;;
+                *) break ;;
+            esac
+        done
+        if [[ ${1:-} != clone ]]; then exec /usr/bin/git "${git_args[@]}"; fi
+        set -- "${git_args[@]}"
+    fi
+    set -- "/usr/bin/$tool" "$@"
+fi
+if (( $# == 0 )); then echo '用法：hostinger-build 命令 [参数...]' >&2; exit 2; fi
+for disk in / .; do
+    read -r free block inodes total < <(stat -f -c '%a %S %d %c' "$disk")
+    if (( free*block < 5*1024**3 || inodes*100 < total*2 )); then
+        echo '根盘或工作盘低于 5 GiB 可用，或剩余 inode 不足 2%，请先处理磁盘告警。' >&2
+        exit 75
+    fi
+done
+if grep -q '/hostinger-build-[^/]*\.scope' /proc/self/cgroup; then exec "$@"; fi
+exec systemd-run --user --scope --quiet --slice=hostinger-builds.slice --unit="hostinger-build-$(cat /proc/sys/kernel/random/uuid)" \
+    --property=MemoryHigh=4G --property=MemoryMax=5G -- "$@"

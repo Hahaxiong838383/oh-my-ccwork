@@ -10,6 +10,8 @@
 
 [Hostinger Claude 双端入口、线路实测与登录前交接（2026-11-26）](2026-11-26-Hostinger-Claude-远程开发交接.md)
 
+[Hostinger 开发机备份、恢复和容量保护部署说明](hostinger-protection/README.md)
+
 > 迁移当天历史入口（2026-10-29，电视状态已由顶部10-30记录更新）：[RackNerd迁移与双栈复盘](2026-10-29-RackNerd迁移与双栈复盘.md)。新节点已在家庭网络由交付URI重建客户端验证，手机蜂窝待验；电视仍使用ZGO原选路，Cloudflare维护搁置。下文是早期API服务部署记录；4000/4001等服务在2026-07-25盘点已不存在，不能作为当前运行清单。
 
 > 美国 VPS 上的多模型 API 代理服务，支持 Gemini + GPT-5.4（Codex），OpenAI 兼容接口，供 Agent 直接调用。

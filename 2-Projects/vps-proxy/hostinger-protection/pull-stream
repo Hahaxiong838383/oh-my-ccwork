@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""向 restic 流式交付，源端错误或目标盘余量过低均使本次快照失败。"""
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+ssh = ["ssh", "-T", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes",
+       "-o", "ConnectTimeout=15", "-o", "ServerAliveInterval=30",
+       "-o", "ServerAliveCountMax=3", "-F",
+       str(Path.home()/".config/hostinger-protection/ssh.conf"), "hostinger-backup",
+       "/usr/local/libexec/hostinger-export-home"]
+with subprocess.Popen(ssh, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE) as source:
+    try:
+        while chunk := source.stdout.read(1024 * 1024):
+            if shutil.disk_usage("/data").free < 8 * 1024**3:
+                raise OSError("备份盘可用空间不足 8 GiB")
+            sys.stdout.buffer.write(chunk)
+        sys.stdout.buffer.flush()
+    except BaseException:
+        source.kill()
+        raise
+    sys.exit(source.wait())

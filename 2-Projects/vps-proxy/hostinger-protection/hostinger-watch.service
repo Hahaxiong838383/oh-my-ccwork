@@ -1,0 +1,7 @@
+[Unit]
+Description=Monitor freshness and resources of Hostinger backups
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/lib/hostinger-protection/watch.py
+TimeoutStartSec=60

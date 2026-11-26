@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# 在标准输出上仅发送 tar。文件列表使用相对路径，符号链接按链接保存。
+set -euo pipefail
+cd "$HOME"
+shopt -s nullglob
+sources=()
+for path in */; do
+    path=${path%/}
+    if [[ $path != work-private && ! -L $path ]] && ! mountpoint -q -- "$path"; then sources+=("$path"); fi
+done
+[[ -d mycc ]] || { echo '缺少预期工作区 mycc' >&2; exit 1; }
+for path in .claude/{projects,tasks,plans,file-history,skills,agents,commands,rules,CLAUDE.md} .local/bin/hostinger-claude; do
+    [[ ! -e $path ]] || sources+=("$path")
+done
+# settings.json 可能含 env、钩子命令或密钥，只导出已知非敏感的显示设置。
+settings=$(mktemp -d)
+trap 'rm -rf -- "$settings"' EXIT
+mkdir -p "$settings/.claude"
+python3 - "$settings/.claude/settings.json" <<'PY'
+import json, pathlib, sys
+src = pathlib.Path.home() / ".claude/settings.json"
+data = json.loads(src.read_text()) if src.is_file() else {}
+allowed = {k: data[k] for k in ("theme", "autoUpdatesChannel", "language") if k in data}
+pathlib.Path(sys.argv[1]).write_text(json.dumps(allowed, ensure_ascii=False) + "\n")
+PY
+exclude=()
+for pattern in work-private node_modules .venv __pycache__ .pytest_cache .mypy_cache .gradle .next '.env' '.env.*' .ssh .gnupg .aws .npmrc .netrc .pypirc .git-credentials .mycc-secrets.env .credentials.json 'settings.local.json' '*.pem' '*.p12' '*.key' 'id_ed25519' 'id_rsa' '*/.config/gh' '*/.cargo/credentials.toml'; do
+    exclude+=("--exclude=$pattern")
+done
+exec_tar=(tar --create --file=- --one-file-system --exclude-caches-all "${exclude[@]}")
+"${exec_tar[@]}" "${sources[@]}" -C "$settings" .claude/settings.json

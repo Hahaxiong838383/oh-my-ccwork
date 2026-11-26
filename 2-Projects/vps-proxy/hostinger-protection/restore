@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+"""按路径解包到新目录。既有 VPS 工作区和旧恢复目录均不会被覆盖。"""
+import argparse
+import os
+from pathlib import Path, PurePosixPath
+import shutil
+import subprocess
+import tarfile
+import tempfile
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("snapshot", help="restic 快照 ID，或 latest")
+parser.add_argument("paths", nargs="+", help="归档中的相对文件或目录，例如 mycc/2-Projects/demo")
+args = parser.parse_args()
+paths = {PurePosixPath(p) for p in args.paths}
+if any(p.is_absolute() or ".." in p.parts or not p.parts for p in paths):
+    parser.error("请指定非空的相对路径")
+if not os.path.ismount("/data"):
+    parser.error("/data 未挂载")
+base = Path("/data/home-studio/backups/hostinger")
+dest = Path(tempfile.mkdtemp(prefix="restore-", dir=base))
+print(f"恢复目录 {dest}", flush=True)
+cmd = Path.home()/".local/lib/hostinger-protection/backup"
+matched = set()
+with subprocess.Popen([cmd, "restic", "dump", args.snapshot, "/home.tar"], stdout=subprocess.PIPE) as source:
+    try:
+        with tarfile.open(fileobj=source.stdout, mode="r|") as archive:
+            for member in archive:
+                name = PurePosixPath(member.name)
+                selected = {p for p in paths if p == name or p in name.parents}
+                if selected:
+                    if shutil.disk_usage(dest).free - member.size < 8 * 1024**3:
+                        raise RuntimeError("恢复后备份盘将少于 8 GiB 可用，停止解包")
+                    archive.extract(member, dest, filter="data")
+                    matched.update(selected)
+            # tar 结束标志后可能仍有填充块，完整消费并核对 restic 退出码。
+            while source.stdout.read(1024 * 1024):
+                pass
+        if source.wait() or paths != matched:
+            raise RuntimeError(f"归档读取失败或缺少路径：{paths - matched}")
+    except BaseException:
+        source.kill()
+        raise
+print("恢复完成")

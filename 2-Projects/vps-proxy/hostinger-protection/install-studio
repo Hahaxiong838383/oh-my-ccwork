@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# 预先准备 ssh.conf 和 Vaultwarden 条目 ID。新仓库才加 --init。
+set -eu
+umask 077
+cd "$(dirname "$0")"
+mountpoint -q /data
+test -s "$HOME/.config/hostinger-protection/ssh.conf"
+test -s "$HOME/.config/hostinger-protection/vault-item-id"
+bin="$HOME/.local/lib/hostinger-protection"
+units="$HOME/.config/systemd/user"
+root=/data/home-studio/backups/hostinger
+install -d -m700 "$root" "$bin" "$HOME/.local/state/hostinger-protection"
+mkdir -p "$units"
+install -m700 backup repo-password pull-stream restore watch.py "$bin/"
+install -m644 hostinger-{backup,watch}.{timer,service} "$units/"
+if [[ ${1:-} == --init ]]; then
+    test ! -e "$root/repo" || { echo '仓库已存在'; exit 2; }
+    "$bin/backup" restic init
+fi
+"$bin/backup" restic cat config >/dev/null
+systemctl --user daemon-reload
+systemctl --user enable --now hostinger-backup.timer hostinger-watch.timer
+systemctl --user start hostinger-backup.service
+systemctl --user start hostinger-watch.service

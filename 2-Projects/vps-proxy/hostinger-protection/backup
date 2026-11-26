@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+umask 077
+export PATH="$HOME/.local/bin:$HOME/local/node/bin:/usr/bin:/bin"
+root=/data/home-studio/backups/hostinger
+export RESTIC_REPOSITORY="$root/repo"
+export RESTIC_PASSWORD_COMMAND="$HOME/.local/lib/hostinger-protection/repo-password"
+state="$HOME/.local/state/hostinger-protection"
+mountpoint -q /data || { echo '/data 未挂载'; exit 1; }
+mkdir -p "$state"
+case "${1:-run}" in
+    restic) shift; exec restic --no-cache "$@" ;;
+    run) ;;
+    *) exit 2 ;;
+esac
+exec 9>"$state/backup.lock"
+flock -n 9 || { echo '已有备份任务运行'; exit 1; }
+(( $(df -B1 --output=avail /data | tail -1) > 8*1024**3 )) || { echo '目标盘可用空间低于 8 GiB'; exit 1; }
+restic --no-cache backup --host hostinger --tag vps-home --stdin-filename home.tar \
+    --stdin-from-command -- "$HOME/.local/lib/hostinger-protection/pull-stream"
+date +%s > "$state/last-success.new"
+mv "$state/last-success.new" "$state/last-success"
+# 只回送成功时间，供 VPS 在 home-studio 离线时也能独立报警。
+ssh -T -F "$HOME/.config/hostinger-protection/ssh.conf" hostinger-backup \
+    'set -eu; umask 077; d="$HOME/.local/state/hostinger-backup"; mkdir -p "$d"; date +%s > "$d/receipt.new"; mv "$d/receipt.new" "$d/receipt"'
+restic --no-cache forget --host hostinger --tag vps-home --keep-within 48h --keep-daily 7 --keep-weekly 4
+week=$(date +%G-%V)
+if [[ $(cat "$state/maintenance-week" 2>/dev/null || :) != "$week" ]]; then
+    restic --no-cache prune --max-repack-size 512M
+    restic --no-cache check --read-data-subset=5%
+    printf '%s\n' "$week" > "$state/maintenance-week"
+fi
