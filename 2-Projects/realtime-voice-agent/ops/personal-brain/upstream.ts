@@ -123,9 +123,18 @@ export const searchFetch: typeof fetch = (input, init) => {
   });
 };
 
-export async function* chatDeltas(system: string, messages: TextTurn[], signal: AbortSignal) {
+type ChatDelta = { text: string } | { search: true };
+const lookupTool = {
+  type: 'function', function: {
+    name: 'lookup_current_public_question',
+    description: '对本轮完整的公开问题联网核实实时、时效性或不确定的公开事实。没有主题时先问用户。无需传入查询文本。',
+    parameters: { type: 'object', properties: {}, additionalProperties: false },
+  },
+};
+export async function* chatDeltas(system: string, messages: TextTurn[], signal: AbortSignal, allowLookup: boolean): AsyncGenerator<ChatDelta> {
   const response = await requestChat({
     stream: true, max_tokens: 2048,
+    ...(allowLookup ? { tools: [lookupTool], tool_choice: 'auto' } : {}),
     messages: [{ role: 'system', content: system }, ...messages],
   }, signal);
   if (!response.ok || !response.body) {
@@ -134,6 +143,8 @@ export async function* chatDeltas(system: string, messages: TextTurn[], signal: 
   }
   let pending = '';
   let stopped = false;
+  let functionName = '', args = '';
+  let hasCall = false;
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   try {
     for (;;) {
@@ -151,8 +162,24 @@ export async function* chatDeltas(system: string, messages: TextTurn[], signal: 
         const event = JSON.parse(data);
         if (event.error) throw new Error('chat_upstream_error');
         const choice = event.choices?.[0];
-        if (choice?.finish_reason === 'stop' || choice?.finish_reason === 'length') stopped = true;
-        if (typeof choice?.delta?.content === 'string') yield choice.delta.content;
+        for (const part of choice?.delta?.tool_calls ?? []) {
+          if (!allowLookup || part.index !== 0 || (part.type && part.type !== 'function')) throw new Error('unexpected_chat_tool');
+          hasCall = true;
+          functionName += part.function?.name ?? '';
+          args += part.function?.arguments ?? '';
+          if (functionName.length > 64 || args.length > 128) throw new Error('invalid_chat_tool');
+        }
+        if (choice?.finish_reason === 'tool_calls') {
+          if (!hasCall || functionName !== lookupTool.function.name || !/^\s*\{\s*\}\s*$/u.test(args)) throw new Error('invalid_chat_tool');
+          signal.throwIfAborted();
+          yield { search: true };
+          return;
+        }
+        if (choice?.finish_reason === 'stop' || choice?.finish_reason === 'length') {
+          if (hasCall) throw new Error('incomplete_chat_tool');
+          stopped = true;
+        }
+        if (typeof choice?.delta?.content === 'string') yield { text: choice.delta.content };
       }
     }
   } finally {

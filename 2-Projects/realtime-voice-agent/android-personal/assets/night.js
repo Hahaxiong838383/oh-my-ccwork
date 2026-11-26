@@ -149,7 +149,7 @@
 
   /**
    * Original pure-Canvas organic deep-blue orb renderer.
-   * Sole voice deformation driver: real remote playback level passed in [0, 1].
+   * Speech shapes follow remote playback; the listening pose follows the local microphone.
    */
   function OrganicOrb(canvas, initialColor) {
     this.canvas = canvas;
@@ -170,6 +170,9 @@
 
     // Audio level driven strictly by external real remote playback signal.
     this.targetLevel = 0;
+    this.micTarget = 0;
+    this.micAmp = 0;
+    this.motionPreference = global.matchMedia('(prefers-reduced-motion: reduce)');
     this.amp = 0;
     this.prevAmp = 0;
 
@@ -211,6 +214,8 @@
     this.phase = phase || 'idle';
     this.active = Boolean(active);
     this.muted = Boolean(muted);
+    if (!this.active || this.muted) this.micAmp = this.micTarget = 0;
+    if (!this.active) this.amp = this.targetLevel = 0;
   };
 
   OrganicOrb.prototype.setLevel = function (value) {
@@ -280,6 +285,8 @@
 
   OrganicOrb.prototype.step = function (dt) {
     this.clock += dt;
+    var micTarget = this.phase === 'listening' && !this.muted ? this.micTarget : 0;
+    this.micAmp += (micTarget - this.micAmp) * (1 - Math.exp(-dt * (micTarget > this.micAmp ? 22 : 9)));
 
     // 1. Real remote playback envelope (fast attack, silky release, zero synthetic floor).
     var rate = this.targetLevel > this.amp ? 26 : 11;
@@ -354,7 +361,14 @@
     var w = this.width;
     var h = this.height;
     var dpr = this.dpr;
-    var amp = this.amp;
+    var reduced = this.motionPreference.matches;
+    var amp = reduced ? 0 : this.amp;
+    // Reduced motion keeps the three distinct facial postures, without pulsing or wandering.
+    var talking = this.phase === 'speaking' && this.active;
+    var listening = this.phase === 'listening' && this.active && !this.muted;
+    var thinking = this.phase === 'thinking';
+    var articulation = talking ? (reduced ? .48 : Math.sqrt(clamp(this.amp, 0, 1))) : 0;
+    var attention = listening ? (reduced ? .32 : Math.sqrt(clamp(this.micAmp, 0, 1))) : 0;
     var hsl = this.hsl;
     var isError = this.phase === 'error' || this.phase === 'failed';
     var dimFactor = this.active ? (this.muted ? 0.62 : 1.0) : 0.72;
@@ -368,8 +382,9 @@
     var baseR = Math.min(w, h) * 0.285;
     // Real sound drives smooth volumetric expansion.
     var R = baseR * (1 + amp * 0.115);
-    var sx = 1 - this.stretch * 0.65 + amp * 0.025;
-    var sy = 1 + this.stretch * 0.85 + amp * 0.015;
+    var stretch = reduced ? 0 : this.stretch;
+    var sx = 1 - stretch * 0.65 + amp * 0.025;
+    var sy = 1 + stretch * 0.85 + amp * 0.015;
 
     // 1. Deep Obsidian Outer Ambient Glow
     var auraRadius = Math.min(Math.min(w, h) * 0.495, R * (1.44 + amp * 0.16));
@@ -507,30 +522,24 @@
 
     // 4. Expressive Eyes & Natural Blinking
     var blinkAmt = 0;
-    if (this.isBlinking) {
+    if (this.isBlinking && !reduced) {
       // Smooth sine bell 0 -> 1 -> 0
       blinkAmt = Math.sin(clamp(this.blinkPhase, 0, 1) * Math.PI);
       blinkAmt = blinkAmt * blinkAmt;
     }
 
-    var eyeOffsetX = this.gazeX * R * 0.17;
-    var eyeOffsetY = this.gazeY * R * 0.14 - amp * R * 0.025;
-    var eyeSpacing = R * 0.255;
-    var eyeW = R * 0.125;
-    var baseEyeH = R * 0.245;
-
-    if (this.phase === 'listening') {
-      baseEyeH *= 1.08;
-    } else if (this.muted || !this.active) {
-      baseEyeH *= 0.88;
-    } else if (isError) {
-      baseEyeH *= 0.78;
-    }
-    baseEyeH *= (1 + amp * 0.12);
+    var gazeX = reduced ? 0 : this.gazeX;
+    var gazeY = reduced ? 0 : this.gazeY;
+    var eyeOffsetX = gazeX * R * .17 + (thinking ? R * .10 : 0);
+    var eyeOffsetY = gazeY * R * .14 - R * (thinking ? .12 : attention * .11);
+    var eyeSpacing = R * .285;
+    var eyeW = R * .145;
+    var baseEyeH = R * (this.muted && !talking ? .095 : thinking ? .17 : .25);
+    baseEyeH += R * (attention * .11 - articulation * .08);
 
     var openH = Math.max(2.2, baseEyeH * (1 - blinkAmt * 0.92));
     var eyeRadius = Math.min(eyeW * 0.5, openH * 0.5);
-    var eyeCenterY = cy - R * 0.04 + eyeOffsetY;
+    var eyeCenterY = cy - R * .12 + eyeOffsetY;
 
     var useDarkEyes = this.lum > 0.62;
     var eyeFill = useDarkEyes ? 'rgba(9, 13, 24, 0.92)' : 'rgba(246, 250, 255, 0.95)';
@@ -543,8 +552,8 @@
     ctx.fillStyle = eyeFill;
 
     // Slight spherical foreshortening based on gazeX
-    var leftScaleX = 1 - Math.max(0, -this.gazeX) * 0.12;
-    var rightScaleX = 1 - Math.max(0, this.gazeX) * 0.12;
+    var leftScaleX = 1 - Math.max(0, -gazeX) * 0.12;
+    var rightScaleX = 1 - Math.max(0, gazeX) * 0.12;
 
     var leftX = cx - eyeSpacing + eyeOffsetX;
     var rightX = cx + eyeSpacing + eyeOffsetX;
@@ -557,6 +566,48 @@
 
     roundRectPath(ctx, rightX - rw * 0.5, eyeCenterY - openH * 0.5, rw, openH, eyeRadius);
     ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = eyeFill;
+    if (listening || thinking) {
+      // Lift both brows to meet the user's voice; an asymmetric brow marks thought.
+      var lift = R * (.23 + attention * .19);
+      for (var side = -1; side <= 1; side += 2) {
+        var ex = cx + side * eyeSpacing + eyeOffsetX;
+        var ey = eyeCenterY - lift - (thinking && side === 1 ? R * .09 : 0);
+        ctx.lineWidth = R * .047;
+        ctx.beginPath();
+        ctx.moveTo(ex - R * .10, ey);
+        ctx.quadraticCurveTo(ex, ey - R * (.075 + attention * .045), ex + R * .10, ey - side * R * .035);
+        ctx.stroke();
+      }
+    }
+    var mouthX = cx + eyeOffsetX * .45;
+    var mouthY = cy + R * .25;
+    if (talking) {
+      var half = R * (.21 - articulation * .075);
+      var opening = R * (.018 + articulation * .26);
+      ctx.beginPath();
+      ctx.moveTo(mouthX - half, mouthY);
+      ctx.bezierCurveTo(mouthX - half * .75, mouthY - opening, mouthX + half * .75, mouthY - opening, mouthX + half, mouthY);
+      ctx.bezierCurveTo(mouthX + half, mouthY + opening * 1.45, mouthX - half, mouthY + opening * 1.45, mouthX - half, mouthY);
+      ctx.closePath();
+      ctx.fillStyle = '#111b36';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(236,247,255,.94)';
+      ctx.lineWidth = Math.max(1.5, R * .036);
+      ctx.stroke();
+    } else {
+      // Small relaxed smile, or a thoughtful lopsided line while waiting.
+      var halfSmile = R * (thinking ? .11 : .19);
+      var curve = R * (thinking || this.muted ? .015 : .1 + attention * .08);
+      ctx.lineWidth = R * .046;
+      ctx.beginPath();
+      ctx.moveTo(mouthX - halfSmile, mouthY);
+      ctx.quadraticCurveTo(mouthX, mouthY + curve, mouthX + halfSmile, mouthY - (thinking ? R * .04 : 0));
+      ctx.stroke();
+    }
 
     // Subtle specular glint inside eyes when open
     if (!useDarkEyes && openH > eyeW * 0.9) {
@@ -927,6 +978,9 @@
 
   global.NightView = {
     render: render,
-    level: level
+    level: level,
+    micLevel: function (value) {
+      if (orb) orb.micTarget = clamp(Number(value) || 0, 0, 1);
+    }
   };
 })(window);

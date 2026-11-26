@@ -10,7 +10,7 @@
 #   ./src ./res ./AndroidManifest.xml
 #
 # 输出：
-#   build/xiaoke-night-host-V1.0.1.apk   已签名、zipalign、非 debuggable
+#   build/xiaoke-night-host-V1.0.2.apk   已签名、zipalign、非 debuggable
 #   build/build-info.json                 产物指纹（含 SDK 来源、证书指纹，不含任何口令）
 #
 # 环境变量（全部可选）：
@@ -35,8 +35,8 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
 PKG="cc.hahaxiong.xiaoke.night"
-VERSION_NAME="V1.0.1"
-VERSION_CODE="1000001"
+VERSION_NAME="V1.0.2"
+VERSION_CODE="1000002"
 MIN_SDK="26"
 TARGET_SDK="34"
 LIVEKIT_LOCKED="2.15.6"
