@@ -25,66 +25,84 @@
       clearLook();
     }
 
+    function follow(x, y) {
+      const point = orb.localPoint(x, y);
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
+      orb.lookAt(Math.tanh(point.x * .82), Math.tanh(point.y * .69));
+    }
+
+    function release(delay) {
+      win.clearTimeout(lookTimer);
+      lookTimer = win.setTimeout(clearLook, delay);
+    }
+
     function respond(x, y, onOrb) {
-      var point = orb.localPoint(x, y);
-      if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) return;
       if (onOrb) {
+        const point = orb.localPoint(x, y);
         clearLook();
         orb.touch(point.x, point.y);
-        return;
+      } else {
+        follow(x, y);
+        release(750);
       }
-      // Normalise the vector as a whole: a tall screen corner is more up than left.
-      var length = Math.max(1, Math.hypot(point.x, point.y));
-      // A tap turns the face toward the target while keeping the nearer eye on the visible hemisphere.
-      orb.lookAt(.54 * point.x / length, .54 * point.y / length);
-      win.clearTimeout(lookTimer);
-      lookTimer = win.setTimeout(clearLook, 1200);
     }
 
     function start(id, x, y, target) {
-      press = { id: id, x: x, y: y, at: performance.now(), onOrb: target === canvas && orb.hitTest(x, y) };
+      const surface = !target.closest('button, input, label, #service-panel, #color-popover, .subtitles, .bottom-bar');
+      press = { id, x, y, at: performance.now(), surface, dragged: false,
+        onOrb: target === canvas && orb.hitTest(x, y) };
+      if (surface) {
+        win.clearTimeout(lookTimer);
+        follow(x, y);
+      }
     }
     function move(id, x, y) {
-      if (press && press.id === id && Math.hypot(x - press.x, y - press.y) > 10) press = null;
+      if (!press || press.id !== id) return;
+      if (Math.hypot(x - press.x, y - press.y) > 7) press.dragged = true;
+      if (press.surface) follow(x, y);
     }
     function finish(id, x, y, target) {
+      const tap = press;
+      if (!tap || tap.id !== id) return;
       move(id, x, y);
-      var tap = press;
       press = null;
-      if (!tap || tap.id !== id || performance.now() - tap.at > 600) return;
+      if (tap.dragged || performance.now() - tap.at > 600) {
+        if (tap.surface) release(250);
+        return;
+      }
       respond(x, y, tap.onOrb && target === canvas && orb.hitTest(x, y));
     }
 
     if (win.PointerEvent) {
       doc.addEventListener('pointerdown', function (e) {
-        if (!e.isPrimary || e.button !== 0) { press = null; return; }
+        if (!e.isPrimary || e.button !== 0) { reset(); return; }
         start(e.pointerId, e.clientX, e.clientY, e.target);
       }, options);
       doc.addEventListener('pointermove', function (e) { move(e.pointerId, e.clientX, e.clientY); }, options);
       doc.addEventListener('pointerup', function (e) {
         if (e.isPrimary && e.button === 0) finish(e.pointerId, e.clientX, e.clientY, e.target);
       }, options);
-      doc.addEventListener('pointercancel', function () { press = null; }, options);
+      doc.addEventListener('pointercancel', reset, options);
     } else {
       // Some older system WebViews only expose Touch Events plus a compatibility click.
       doc.addEventListener('touchstart', function (e) {
-        if (e.touches.length !== 1) { press = null; return; }
+        if (e.touches.length !== 1) { reset(); return; }
         var t = e.touches[0];
         start(t.identifier, t.clientX, t.clientY, e.target);
       }, options);
       doc.addEventListener('touchmove', function (e) {
-        if (e.touches.length !== 1) { press = null; return; }
+        if (e.touches.length !== 1) { reset(); return; }
         var t = e.touches[0];
         move(t.identifier, t.clientX, t.clientY);
       }, options);
       doc.addEventListener('touchend', function (e) {
         lastTouchEnd = performance.now();
-        if (e.touches.length || !e.changedTouches.length) { press = null; return; }
+        if (e.touches.length || !e.changedTouches.length) { reset(); return; }
         var t = e.changedTouches[0];
         finish(t.identifier, t.clientX, t.clientY, e.target);
       }, options);
       doc.addEventListener('touchcancel', function () {
-        lastTouchEnd = performance.now(); press = null;
+        lastTouchEnd = performance.now(); reset();
       }, options);
       function realMouse(e) {
         return performance.now() - lastTouchEnd > 700 && !(e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents);
@@ -126,7 +144,9 @@
     });
     canvas.addEventListener('blur', function () { spaceHeld = false; });
     doc.addEventListener('scroll', reset, options);
-    doc.addEventListener('contextmenu', function () { press = null; }, options);
+    doc.addEventListener('contextmenu', function (e) {
+      if (press && press.surface) e.preventDefault();
+    }, {capture: true});
     doc.addEventListener('visibilitychange', function () { if (doc.hidden) reset(); });
     win.addEventListener('resize', reset, options);
     // Canvas/input blur is dispatched after pointerup when a tap changes focus.

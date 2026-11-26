@@ -62,9 +62,11 @@ public final class NightHostActivity extends Activity {
     private PermissionRequest activeCapture;
     private boolean micDialogOpen;
     private boolean foreground;
+    private boolean pageLoaded;
+    private boolean openUpdates;
     private volatile boolean trustedPage;
     private volatile boolean finishing;
-    private boolean callActive;
+    private volatile boolean callActive;
 
     private final Runnable hardRelease = new Runnable() {
         @Override
@@ -171,7 +173,16 @@ public final class NightHostActivity extends Activity {
             }
 
             @Override
+            public void onPageFinished(WebView view, String url) {
+                if (!NightAssets.START_URL.equals(url) || !pageTrusted()) return;
+                pageLoaded = true;
+                showRequestedUpdate();
+                maybeRequestNotifications();
+            }
+
+            @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                pageLoaded = false;
                 trustedPage = NightAssets.START_URL.equals(url);
             }
         });
@@ -310,6 +321,10 @@ public final class NightHostActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_UPDATES && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            OtaNotifications.update(this, NightOta.snapshot(this));
+        }
         if (requestCode != REQ_MIC) {
             return;
         }
@@ -317,6 +332,35 @@ public final class NightHostActivity extends Activity {
         boolean granted = grantResults != null && grantResults.length > 0
                 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
         answerPendingMic(granted && micGranted());
+    }
+
+    private static final int REQ_UPDATES = 4102;
+
+    private void maybeRequestNotifications() {
+        if (android.os.Build.VERSION.SDK_INT < 33 || !pageLoaded || !hasWindowFocus() || !foreground
+                || finishing || micDialogOpen || isInVoiceCall() || OtaConfig.inCall(this)
+                || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) return;
+        android.content.SharedPreferences prefs = getSharedPreferences("night_notifications", MODE_PRIVATE);
+        if (prefs.getBoolean("asked", false)) return;
+        // A settings round trip may resume a pending install; let that flow keep focus.
+        String phase = NightOta.snapshot(this).optString("state");
+        if ("wait_permission".equals(phase) || "preparing_install".equals(phase)
+                || "pending_confirmation".equals(phase) || "installing".equals(phase)) return;
+        prefs.edit().putBoolean("asked", true).apply();
+        requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_UPDATES);
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+        if (hasFocus) maybeRequestNotifications();
+    }
+
+    private void showRequestedUpdate() {
+        if (openUpdates && pageLoaded && pageTrusted()) {
+            openUpdates = false;
+            web.evaluateJavascript("window.dispatchEvent(new Event('night-open-update'))", null);
+        }
     }
 
     private boolean micGranted() {
@@ -389,6 +433,24 @@ public final class NightHostActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        NightOta.resumed(this);
+    }
+
+    @Override
+    protected void onPause() {
+        NightOta.paused(this);
+        super.onPause();
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == NightOta.CONFIRM_REQUEST) NightOta.confirmationReturned(this, resultCode);
+    }
+
+    @Override
     protected void onStop() {
         foreground = false;
         releaseSession("background");
@@ -425,6 +487,12 @@ public final class NightHostActivity extends Activity {
             return;
         }
         String action = intent.getAction();
+        if (OtaNotifications.OPEN.equals(action)) {
+            openUpdates = true;
+            // Consume the intent so restoring this Activity will not reopen the panel.
+            intent.setAction(null);
+            showRequestedUpdate();
+        }
         if (ACTION_BACK.equals(action) || ACTION_BACK_GENERIC.equals(action)) {
             main.postDelayed(new Runnable() {
                 @Override

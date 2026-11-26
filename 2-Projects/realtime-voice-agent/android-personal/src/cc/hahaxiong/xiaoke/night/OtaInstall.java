@@ -18,7 +18,7 @@ import java.io.OutputStream;
 final class OtaInstall {
     private OtaInstall() {}
 
-    static void install(Context context) throws IOException {
+    static void install(Context context, NightOta ota) throws IOException {
         Context app = context.getApplicationContext() == null ? context : context.getApplicationContext();
         if (!OtaConfig.canInstall(app)) throw new IOException("install permission");
         File apk = OtaFiles.ready(app);
@@ -28,12 +28,6 @@ final class OtaInstall {
         if (problem != null) throw new IOException(problem);
 
         PackageInstaller installer = app.getPackageManager().getPackageInstaller();
-        for (PackageInstaller.SessionInfo stale : installer.getMySessions()) {
-            try {
-                installer.abandonSession(stale.getSessionId());
-            } catch (RuntimeException ignored) {
-            }
-        }
         PackageInstaller.SessionParams params =
                 new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
         params.setAppPackageName(OtaContract.PACKAGE);
@@ -44,15 +38,18 @@ final class OtaInstall {
         boolean committed = false;
         try (PackageInstaller.Session session = installer.openSession(sessionId);
              InputStream in = new FileInputStream(apk)) {
+            ota.trackSession(sessionId);
             try (OutputStream out = session.openWrite("base.apk", 0L, apk.length())) {
                 byte[] buffer = new byte[OtaContract.BUFFER];
                 int size;
                 while ((size = in.read(buffer)) >= 0) out.write(buffer, 0, size);
                 session.fsync(out);
             }
-            Intent callback = new Intent(app, NightOtaInstallReceiver.class).setAction(NightOtaInstallReceiver.ACTION);
-            PendingIntent pending = PendingIntent.getBroadcast(app, OtaContract.JOB_ID, callback,
+            Intent callback = new Intent(app, NightOtaInstallReceiver.class).setAction(NightOtaInstallReceiver.ACTION)
+                    .putExtra("nightSession", sessionId);
+            PendingIntent pending = PendingIntent.getBroadcast(app, sessionId, callback,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
+            ota.submitting(sessionId);
             session.commit(pending.getIntentSender());
             committed = true;
         } finally {

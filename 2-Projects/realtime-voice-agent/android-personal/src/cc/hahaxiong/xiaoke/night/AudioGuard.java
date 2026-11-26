@@ -11,7 +11,6 @@ final class AudioGuard {
     private final AudioManager audio;
     private boolean active, previousSpeaker;
     private int previousMode;
-    private AudioDeviceInfo previousDevice;
     private boolean selectedSpeaker;
 
     AudioGuard(Context context) {
@@ -25,8 +24,8 @@ final class AudioGuard {
         try {
             audio.setMode(AudioManager.MODE_IN_COMMUNICATION);
             if (Build.VERSION.SDK_INT >= 31) {
-                previousDevice = audio.getCommunicationDevice();
-                if (previousDevice == null || previousDevice.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
+                AudioDeviceInfo route = audio.getCommunicationDevice();
+                if (route == null || route.getType() == AudioDeviceInfo.TYPE_BUILTIN_EARPIECE) {
                     for (AudioDeviceInfo d : audio.getAvailableCommunicationDevices()) {
                         if (d.getType() == AudioDeviceInfo.TYPE_BUILTIN_SPEAKER) {
                             selectedSpeaker = audio.setCommunicationDevice(d);
@@ -45,14 +44,14 @@ final class AudioGuard {
         active = false;
         try {
             if (selectedSpeaker && Build.VERSION.SDK_INT >= 31) {
+                // Release our selection. Re-selecting the prior system route here
+                // would give our process an active request after the call ends.
                 audio.clearCommunicationDevice();
-                if (previousDevice != null) audio.setCommunicationDevice(previousDevice);
             } else if (selectedSpeaker) {
                 audio.setSpeakerphoneOn(previousSpeaker);
             }
         } catch (RuntimeException ignored) { }
         try { audio.setMode(previousMode); } catch (RuntimeException ignored) { }
-        previousDevice = null;
         selectedSpeaker = false;
     }
 }

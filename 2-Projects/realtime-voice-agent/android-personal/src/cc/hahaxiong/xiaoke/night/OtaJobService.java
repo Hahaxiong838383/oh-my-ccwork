@@ -14,8 +14,7 @@ import android.content.Context;
 public final class OtaJobService extends JobService {
     @Override
     public boolean onStartJob(JobParameters params) {
-        NightOta.get(this).onJob(this, params);
-        return true;
+        return NightOta.get(this).onJob(this, params);
     }
 
     @Override

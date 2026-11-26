@@ -11,6 +11,7 @@ public final class OtaBootReceiver extends BroadcastReceiver {
         if (context == null || intent == null) return;
         String action = intent.getAction();
         if (!Intent.ACTION_BOOT_COMPLETED.equals(action) && !Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) return;
+        if (Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)) NightOta.replaced(context);
         OtaJobService.ensureSchedule(context);
     }
 }

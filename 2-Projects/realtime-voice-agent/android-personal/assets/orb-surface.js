@@ -6,25 +6,52 @@
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
   const mix = (a, b, t) => a + (b - a) * t;
 
-  // Convert the reference face-space contours into tangent-plane coordinates once.
-  // Each pair retains its inter-eye spacing, left/right asymmetry and inclination;
-  // remove its camera framing before applying our own head rotation.
-  function eyeShapes(expressions) {
-    return expressions.map(pair => {
-      const centers = pair.map(points => {
-        let x = 0, y = 0;
-        for (let i = 0; i < points.length; i += 2) { x += points[i]; y += points[i + 1]; }
-        const n = points.length / 2;
-        return { x: x / n, y: y / n };
-      });
-      const centerX = (centers[0].x + centers[1].x) / 2;
-      const centerY = (centers[0].y + centers[1].y) / 2;
-      return pair.map((points, eye) => ({
-        centerY: (centers[eye].y - centerY) * .0096 - .24,
-        ring: Float32Array.from(points, (p, i) => i % 2
-          ? (p - centerY) * .0096 - .24 : (p - centerX) * .0104),
-      }));
-    });
+  // Frontal expression parameters, indexed by the reference state's expression IDs.
+  // Width, height, smile curvature, mirrored tilt, one-sided eyelid adjustment.
+  // The source's 2D rings already contain camera perspective. Author these in the
+  // local eye socket so head rotation applies perspective exactly once.
+  const faces = [
+    [1,1,0,0,0], [1.02,1.05,.04,0,0], [1.07,.86,.18,.02,0],
+    [1.14,1.16,0,0,0], [1,.63,-.11,0,0], [.98,.90,-.05,.05,.07],
+    [1.07,.88,.20,.025,0], [.98,.86,-.07,-.07,0], [1.02,1.03,0,.025,.055],
+    [1,.90,.04,.025,.10], [1.04,1.06,.03,0,0], [1.09,.83,.22,.035,0],
+    [.99,.96,.06,.025,.08], [1.06,.47,-.08,0,0], [.99,.85,-.08,-.06,.08],
+    [1.01,.98,.025,.04,.035], [1,.90,.02,-.045,.04], [1.08,.91,.16,.02,0],
+    [.99,1.04,.02,-.025,.06], [1.03,1.02,.085,0,0], [1.02,.92,.06,.055,.05],
+    [1.12,1.13,.01,0,0], [1.03,.57,-.09,0,0], [.98,.88,-.055,-.05,.06],
+    [1.02,.85,.13,.035,.04]
+  ];
+
+  function eyeShapes() {
+    return faces.map(([width, height, arch, tilt, asymmetry]) => [-1,1].map(side => {
+      const ring = [], w = .115 * width, h = .25 * (height - (side > 0 ? asymmetry : 0));
+      const cap = Math.min(w, h), spine = h-cap;
+      const angle = tilt*side, cs = Math.cos(angle), sn = Math.sin(angle);
+      for (let i=0; i<48; i++) {
+        let x, y;
+        if (i<16 || (i>=24 && i<40)) {
+          const lower = i>=24;
+          const t = (lower ? i-24 : i)*Math.PI/16 + (lower ? 0 : Math.PI);
+          x=w*Math.cos(t); y=(lower ? spine : -spine) + cap*Math.sin(t);
+        } else {
+          const right=i<24, t=(right ? i-16 : i-40)/8;
+          x=right ? w : -w; y=(right ? 1 : -1)*mix(-spine,spine,t);
+        }
+        y += arch * h * ((x/w)**2 - .45);
+        ring.push(cs*x-sn*y,sn*x+cs*y);
+      }
+      return {centerY:h*.2, ring};
+    }));
+  }
+
+  function spring(axis, target, dt, rate, reduced) {
+    if (reduced) {axis.x=target; axis.v=0; return target;}
+    const steps=Math.max(1,Math.ceil(dt*120)), step=dt/steps;
+    for (let i=0; i<steps; i++) {
+      axis.v+=(rate*rate*(target-axis.x)-1.72*rate*axis.v)*step;
+      axis.x+=axis.v*step;
+    }
+    return axis.x;
   }
 
   // Each pixel is lit from its actual surface normal. The key, sky reflection and
@@ -41,12 +68,12 @@
         const x = (col - r) / r, rho2 = x * x + y * y;
         if (rho2 > 1.005) continue;
         const z = Math.sqrt(Math.max(0, 1 - rho2));
-        const light = Math.max(0, -.50 * x - .70 * y + .50 * z);
-        const diffuse = .23 + .66 * light + .12 * z;
+        const light = Math.max(0, -.42 * x - .68 * y + .60 * z);
+        const diffuse = .17 + .55 * Math.pow(light,1.18) + .085 * z;
         const reflectedX = 2 * z * x, reflectedY = 2 * z * y;
         const u = (reflectedX + .51) / .40, v = (reflectedY + .72) / .27;
         const sheen = z > .55 ? Math.exp(-u * u - v * v) * .18 * (z - .55) / .45 : 0;
-        const rim = Math.pow(1 - z, 2.8) * (.105 + .11 * Math.max(0, .82 * x - .50 * y));
+        const rim = Math.pow(1 - z, 3.3) * (.14 + .16 * Math.max(0, .82 * x - .50 * y));
         const bounce = Math.max(0, .32 * x + y - .24) * .22;
         const offset = (row * size + col) * 4;
         out[offset]     = rgb[0] * diffuse + 247 * sheen + 130 * rim + 24 * bounce;
@@ -71,6 +98,13 @@
       z: orient.cp * turnedZ - orient.sp * y,
     };
   }
+
+  // Eye centres are mirror images at ±18° longitude and 4° above the equator.
+  function socket(sign) {
+    const lon=sign*Math.PI/10, lat=-4*Math.PI/180;
+    return {cy:Math.cos(lon),sy:Math.sin(lon),cp:Math.cos(lat),sp:Math.sin(lat)};
+  }
+  const leftSocket=socket(-1), rightSocket=socket(1);
 
   function horizon(a, b) {
     const t = a.z / (a.z - b.z);
@@ -109,7 +143,8 @@
       this.canvas = canvas;
       this.ctx = canvas.getContext('2d');
       this.motion = global.NightOrbMotion.create(seed === undefined ? Math.floor(Math.random() * 0x100000000) : seed);
-      this.shapes = eyeShapes(global.GrokReference.expressionRings);
+      this.shapes = eyeShapes();
+      this.turn = Array.from({length:4}, () => ({x:0,v:0}));
       this.reduced = global.matchMedia('(prefers-reduced-motion: reduce)');
       this.phase = 'idle';
       this.active = this.muted = false;
@@ -196,18 +231,19 @@
         mic: this.micTarget, playback: this.playback, reduced,
       });
       const p = this.pointer;
-      // Near the centre a small movement invites eye contact; a drag to the
-      // extreme edge can reveal the unmarked back of the head.
-      const yaw = p ? p.x * (1.26 + 1.35 * p.x * p.x) : pose.gazeX * .85;
-      const pitch = p ? p.y * (.84 + .55 * p.y * p.y) : pose.gazeY * .58;
-      const ease = reduced ? 1 : 1 - Math.exp(-dt * (p ? 15 : 8));
-      this.yaw = mix(this.yaw, yaw, ease); this.pitch = mix(this.pitch, pitch, ease);
+      const x = p ? p.x : pose.gazeX, y = p ? p.y : pose.gazeY;
+      const headX = spring(this.turn[0], x*(p ? .59 : .38), dt, p ? 15 : 10, reduced);
+      const headY = spring(this.turn[1], y*(p ? .38 : .33), dt, p ? 15 : 10, reduced);
+      const eyeX = spring(this.turn[2], x*.11, dt, 27, reduced);
+      const eyeY = spring(this.turn[3], y*.078, dt, 27, reduced);
+      this.yaw = headX+eyeX; this.pitch = headY+eyeY;
+      if (!reduced) { pose.roll += headX*.10; pose.lift += headY*.035; }
       this.draw(pose);
     }
     draw(pose) {
       const ctx = this.ctx, w = this.width, h = this.height;
       const radius = Math.min(w, h) * .345;
-      const cx = w / 2, cy = h * .485 + radius * pose.lift;
+      const cx = w / 2 + (this.reduced.matches ? 0 : radius*this.turn[0].x*.065), cy = h * .485 + radius * pose.lift;
       const rx = radius * pose.scaleX, ry = radius * pose.scaleY;
       this.geometry = { cx, cy, rx, ry, cos: Math.cos(pose.roll), sin: Math.sin(pose.roll) };
       const size = Math.min(512, Math.max(64, Math.round(2 * radius * this.canvas.width / w)));
@@ -240,14 +276,21 @@
         for (let i = 0; i < a.ring.length; i += 2) {
           const u = mix(a.ring[i], b.ring[i], t);
           const v = blinkCenter + (mix(a.ring[i + 1], b.ring[i + 1], t) - blinkCenter) * open;
-          const pt = surfacePoint(u, v, orient);
+          const local = surfacePoint(u, v, side === 0 ? leftSocket : rightSocket);
+          const forward = orient.cy*local.z-orient.sy*local.x;
+          const pt = {x:orient.cy*local.x+orient.sy*local.z,
+            y:orient.cp*local.y+orient.sp*forward,z:orient.cp*forward-orient.sp*local.y};
           ring.push(pt); depth += pt.z;
         }
         if (!frontContour(ctx, ring)) continue;
         const facing = clamp(depth / ring.length, 0, 1);
+        // A narrow contact shadow anchors the inlay to the shell without a halo.
+        ctx.lineWidth = .014;
+        ctx.strokeStyle = this.darkInk ? 'rgba(221,231,245,.22)' : 'rgba(6,10,19,.26)';
+        ctx.stroke();
         if (this.darkInk) ctx.fillStyle = 'rgb(20,25,34)';
         else {
-          const v = Math.round(220 + 28 * facing);
+          const v = Math.round(216 + 26 * facing + (this.reduced.matches ? 0 : 5*pose.energy));
           ctx.fillStyle = 'rgb(' + v + ',' + (v+2) + ',' + (v+3) + ')';
         }
         ctx.fill();
