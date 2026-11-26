@@ -15,6 +15,7 @@
 .story section[id] { scroll-margin-top:84px; }
 .scenes,.chapter { border-bottom:1px solid #d9ded3; }
 .scenegrid,.ledger { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px; margin-top:16px; }
+.official { display:inline-block; margin-top:12px; padding-block:5px; color:var(--green); font-size:14px; font-weight:600; text-decoration:underline; text-underline-offset:4px; }
 .scenes details { margin-top:12px; }
 .scenes details .scenegrid { grid-template-columns:repeat(4,minmax(0,1fr)); }
 .story figure { min-width:0; margin:0; }

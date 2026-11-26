@@ -13,10 +13,11 @@ const scenes: Plate[] = [
 
 function Figure({ plate, caption }: { plate: Plate; caption?: string }) {
   const [file, title, width, height] = plate
+  const src = file.startsWith('/') ? file : base + file
   return (
     <figure>
-      <a href={base + file} target="_blank" rel="noopener noreferrer" aria-label={`查看大图：${title}`}>
-        <img src={base + file} alt={title} width={width} height={height} loading="lazy" decoding="async" />
+      <a href={src} target="_blank" rel="noopener noreferrer" aria-label={`查看大图：${title}`}>
+        <img src={src} alt={title} width={width} height={height} loading="lazy" decoding="async" />
       </a>
       <figcaption>{caption ?? title}</figcaption>
     </figure>
@@ -30,9 +31,10 @@ export function XiaokeGallery() {
         <div>
           <p className={styles.line}>KidsHub AI · 青少年智能读写台</p>
           <h1>小可与成长世界</h1>
-          <p>孩子可以一边和小可说话，一边照料读写台里的生态缸。养成进度可以存下来，聊天呢？我想知道，过些日子再开口，小可还能不能接上上次的话。</p>
+          <p>照片里，孩子们面前摆着爱视可空间光学读写台。小可就是这台读写设备里的 AI 语音伙伴。孩子可以直接和它说话，也可以在屏幕上照料自己的生态缸。我想知道，过些日子再开口，小可还能不能接上上次的话。</p>
+          <a className={styles.official} href="https://www.eyescare-ai.com/" target="_blank" rel="noopener noreferrer">访问 EyesCare 爱视可产品官网 ↗</a>
         </div>
-        <Figure plate={['festival.webp', '感恩节活动主界面', 800, 480]} />
+        <Figure plate={['/media/health-education/classroom-students.jpg', '孩子们在教室里使用读写台', 1280, 853]} caption="教室里的读写台 · 照片来自本站「K12 儿童智能硬件」项目" />
       </header>
 
       <nav aria-label="小可项目页目录">
@@ -42,6 +44,10 @@ export function XiaokeGallery() {
       <section id="device" className={styles.scenes}>
         <h2>在读写台上，怎么和小可相处？</h2>
         <p>说话时，小可和声波一起出现在屏幕上。轮到它思考、开口，表情和声波也随之变化。聊完回到主界面，还能看看今天的任务，接着上次的进度去养成。</p>
+        <div className={styles.scenegrid}>
+          <Figure plate={['eyescare-desk.webp', '爱视可空间光学读写台与桌面使用场景', 1090, 616]} caption="读写台展开后的样子。图片来自 EyesCare 爱视可产品官网。" />
+          <Figure plate={['festival.webp', '感恩节活动主界面', 800, 480]} />
+        </div>
         <div className={styles.scenegrid}>
           <Figure plate={['voice-listen.webp', '小可听你说话时的界面', 1086, 382]} />
           <Figure plate={['voice-response.webp', '从思考到开口回应', 1136, 388]} />
