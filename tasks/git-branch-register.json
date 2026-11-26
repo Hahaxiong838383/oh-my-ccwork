@@ -369,6 +369,36 @@
         ],
         "digest_key": "sha256"
       }
+    },
+    "s24-night-apk": {
+      "scope": "personal-voice",
+      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "source_ref": "refs/heads/personal/s24-night-apk",
+      "maintainer_branch": "personal/s24-night-apk",
+      "sha256": "863b1df79fe6392fcee96c25eb4c574cdcedf44cb607b19bc5733e2d29f284a6",
+      "proof": {
+        "object": "b34551e7412782e5a37d0ce5475f2679e9a9f77b:2-Projects/realtime-voice-agent/docs/personal-s24-night-release-20261126.json",
+        "keys": [
+          "deployments",
+          "s24-night-apk"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "s24-night-server": {
+      "scope": "personal-voice",
+      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "source_ref": "refs/heads/personal/s24-night-apk",
+      "maintainer_branch": "personal/s24-night-apk",
+      "sha256": "720779bb36699cb8ff83719be83220ea29f0c08e5e23003a730e9d6c220d78d7",
+      "proof": {
+        "object": "b34551e7412782e5a37d0ce5475f2679e9a9f77b:2-Projects/realtime-voice-agent/docs/personal-s24-night-release-20261126.json",
+        "keys": [
+          "deployments",
+          "s24-night-server"
+        ],
+        "digest_key": "sha256"
+      }
     }
   }
 }
