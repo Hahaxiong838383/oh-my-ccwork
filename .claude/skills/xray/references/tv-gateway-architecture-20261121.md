@@ -1,5 +1,7 @@
 # 电视盒代理从设备迁到网关层：架构、七个坑与验收（2026-11-21）
 
+X96 于 11 月 26 日完成静态 IPv4 断电开机验收。本文记录迁移时的方案。现役盒端接线、网关应急路由条件及前台播放取证见[实机运维记录](../../../../2-Projects/vps-proxy/tv-gateway/README.md)。
+
 本篇记录一次架构级改造：**电视盒不再自己跑代理**，改为把默认网关/DNS 指向局域网里的
 Armbian 盒子（`192.168.1.19`），由它跑 sing-box TUN + 分流；TR3000（`192.168.1.254`）+ U 盘
 做备用网关，电视盒侧做自动回退。
@@ -78,7 +80,7 @@ ip route replace default via $GW dev eth0 table eth0
 ```
 
 表现：`nslookup` 对**任何**域名都失败（包括国内），`ping` 报 `unknown host`。
-清理：删链 + 让重建它的 `video-dns-guard.sh` 改名失效。
+退役时先核实跳转和启动来源。若来源是 Magisk 通用启动目录里的可执行脚本，把入口移出启动目录，再核对实际进程及残留规则。
 
 ### 坑 5｜Magisk `service.d` 执行**任意扩展名**的文件
 
@@ -90,7 +92,7 @@ ip route replace default via $GW dev eth0 table eth0
 DHCP 续约/网络栈重建会把 `table eth0` 的 default 改回主路由。在 `service.d` 里起的守护
 （即使 `setsid`）在该上下文里 `ip route replace` 不生效。
 
-**可行解**：由**网关侧**兜底——Armbian 上用 systemd timer 每 30 秒 `adb shell` 纠正：
+以下为 11 月 21 日网关侧定时纠正路由的历史实现。现役 X96 已采用 Android 静态以太网配置。前台排障时复用现有 ADB 会话，只读默认网络和路由。
 
 ```sh
 # /usr/local/sbin/dsh-tv-guard.sh  +  dsh-tv-guard.timer (OnUnitActiveSec=30)
@@ -225,7 +227,9 @@ ExoPlayerController: onPlayerError: ExoPlaybackException:
 YouTube 对 **SABR 流**要求 PoToken，SmartTube 用 `challenge-solver` 跑 YouTube 的 player JS 生成它。
 **缓存里的 player 版本过期后，token 会一直 PENDING**，播放直接失败。
 
-### 修复（1 分钟，无需改任何网络配置）
+### 此次 PoToken 故障的处理记录
+
+此操作会停止 SmartTube 并清除挑战缓存。仅在日志重现上述 PENDING 错误，且用户已同意中断播放和清理缓存时使用。若保护状态为 OK、缓冲耗尽且分片仍在传输，先看原视频的分片速度和解码进度。
 
 ```sh
 adb shell am force-stop org.smarttube.beta

@@ -37,7 +37,7 @@ docker run --rm --pull never --network none --user 0 --cap-add NET_ADMIN \
 
 回归覆盖启动前无 eth0、重复执行、重复启动 watcher、移除两条规则后由地址事件恢复，以及 IPv4 默认路由、IPv6 地址和内核开关保留。以真实报文检查 RA 丢弃、发往外部的 IPv6 请求及链路本地 DNS 被拒，同时从 veth 对端收到普通链路本地和组播 UDP。
 
-自然开机后，在同一 boot ID 上核对 X96Network 的 early、late 标记和七条实际规则。若早期 logd 未接收标记，记录早期阶段未取得证据。确认 dumpsys network_stack 的最近一次 IpClient 配置持续成功，dumpsys ethernet 的有效 DNS 只有 .19，ip -4 route show table eth0 的默认网关为 .19，ip -6 route show table eth0 无外网默认路由。在播放期间读取默认 netId 和播放器进度，并独立取一个直播源片段验证。下一次自然重新配网时重复上述核验，关注 RA 规则计数是否增长。进入生产网络时保持正常播放；重写和丢规则的故障注入只在隔离命名空间里做。
+自然开机后，在同一 boot ID 上核对 X96Network 的 early、late 标记和七条实际规则。若早期 logd 未接收标记，读取 /data/misc/x96-boot-status/early，核对其中的 boot ID 与 uptime。同一次开机的日志和文件均未提供 early 回执时，记为早期阶段未验证。确认 dumpsys network_stack 的最近一次 IpClient 配置持续成功，dumpsys ethernet 的有效 DNS 只有 .19，ip -4 route show table eth0 的默认网关为 .19，ip -6 route show table eth0 无外网默认路由。在播放期间读取默认 netId 和播放器进度，并独立取一个直播源片段验证。下一次自然重新配网时重复上述核验，关注 RA 规则计数是否增长。进入生产网络时保持正常播放；重写和丢规则的故障注入只在隔离命名空间里做。
 
 ## 撤回
 

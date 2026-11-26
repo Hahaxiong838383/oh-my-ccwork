@@ -1,6 +1,6 @@
 ---
 name: xray
-description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Claude 的 SSH 入口、固定 ISP 出口、回显测速与部署验收，手机节点排障、VPS 迁移与双栈接入，以及 Android 电视盒后台网络测试、SmartTube/YouTube DNS、启动恢复/提速与联网状态浮窗、电视盒改网关层代理（网关 TUN 分流/双网关冗余、多出口带宽择优、IPv6 出口接入与证书续期）；不处理 Netflix 登录、遥控适配或 DRM；以及 X 平台定向路由（ZGO）与 DSH 抓取进程局部代理核验。
+description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Claude 的 SSH 入口、固定 ISP 出口、回显测速与部署验收，手机节点排障、VPS 迁移与双栈接入，Android 电视盒后台测试、X96 静态 IPv4 冷启动、DIYP 直播与 SmartTube 卡顿、YouTube DNS、启动提速与联网浮窗，网关 TUN 分流、双网关冗余、多出口择优、IPv6 出口与证书续期，以及 X 平台定向路由（ZGO）与 DSH 进程局部代理核验。Netflix 登录、遥控适配和 DRM 不在此技能范围内。
 ---
 
 # xray - Xray 代理管理
@@ -34,7 +34,15 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Cla
 [迁移与双栈验收](references/migration-dualstack.md)。先核备份与主机身份，再处理运行时引用；
 从实际交付 URI 验证两种地址，电视使用独立有界探针，保留初次失败与正式切换的边界。
 
-## 电视盒 sing-box / SmartTube 模式
+## X96 断电后无网、DIYP 断流或 SmartTube 卡住
+
+现役 X96 使用 Armbian 网关，电视有线口仅走 IPv4。用户正在看电视时，复用网关已有的 ADB 会话。先记录前台应用、内核启动编号与 uptime，再看本次启动和同一段播放。切台、重启 adbd、强停播放器或大流量测速都会干扰这项观察。[实机记录与网关脚本](../../../2-Projects/vps-proxy/tv-gateway/README.md)
+
+1. **辨认开机故障。** 在已连接盒子的网关上，用 `adb -s <盒子序列号> shell cat /proc/sys/kernel/random/boot_id` 取编号，读取 `/var/lib/dsh-tv-boot-audit/<boot-id>.json`。若为 `observing`，等该编号的四分钟采样结束。`observed_checks_pass` 覆盖实际开机，`late_join_checks_pass` 只覆盖进入观察后的运行时段。此时保留前台，等下一次自然开机补验。核对本次 early、late、transport 回执与分时 netId、IpClient 配网历史。netId 的绝对值在不同开机间可以变化。
+2. **定位重复配网。** 在同一启动内，将 Android 默认网络重建、IpClient 配网失败和 DIYP 读流错误按时序对齐。核对 Magisk 启动目录中的可执行备份及真实进程命令行。退役入口应移出启动目录，并查清它此前拉起的进程。保留 Android 对地址和路由的管理，核对有线口的实际 IPv4 网关与唯一 DNS，并确认全局 IPv6 地址数和 IPv6 默认路由数均为零。`fe80::` 链路本地地址可以保留。[盒端启动接线与回退](../../../2-Projects/vps-proxy/tv-gateway/x96-install.md)
+3. **核对实播。** DIYP 先读盒端两条家庭直播源的 MPEG-TS 正文。DIYP 可能没有 MediaSession，处于前台时连续读 `/sys/class/vdec/vdec_status` 的帧数和错误数。SmartTube 对齐同一视频、清晰度、缓冲位置、媒体分片与硬解帧增量，尤其看能否越过原卡点。换片或切台后另起一段。YouTube 的 204 只记作可达，出口切换的效果用该视频连接上实际增长的字节判断。仅验过 1080p 时，单列高码率原片的验收状态。
+
+## 盒端运行 sing-box 的旧部署
 
 电视盒 Android 上的 SmartTube / YouTube DNS、断电后代理恢复或开机缓存问题，先读
 [电视 DNS 与冷启动维护](references/tv-dns-coldboot.md)。该模式维护设备上的 sing-box、
@@ -57,8 +65,7 @@ UID 迁移、观察器重建与更新线取舍见该参考。
 电视盒里不再跑 sing-box、改为把默认网关/DNS 指向局域网网关机（Armbian）时，先读
 [电视盒网关层架构](references/tv-gateway-architecture-20261121.md)。该文给出一套已验收的架构
 （4K60 连续 5.5 分钟）、**七个必修坑**：`sniff` 必须显式给 sniffer、TUN 转发流量不按域名路由要用
-IP 段兜底、Android 按网卡分表改 main 表无效、旧栈 `VIDEO_DNS` 链会静默打死 DNS、Magisk
-`service.d` 执行任意扩展名文件、DHCP 会重写默认路由需网关侧兜底、DNS 必须 `ipv4_only`。
+IP 段兜底、Android 按网卡分表、旧栈 `VIDEO_DNS` 链残留、Magisk 启动目录扫描可执行文件等。X96 现役静态地址由 Android 管理，路由偏离时的应急条件与 DNS 转发见上面的冷启动入口。
 需要双网关冗余时，同文第 4 节给出 TR3000+U 盘的做法与 **extroot 死锁**教训（U 盘只能做数据盘）。
 
 ## 网关层「多出口择优」与 IPv6 出口（2026-11-22 起现行）

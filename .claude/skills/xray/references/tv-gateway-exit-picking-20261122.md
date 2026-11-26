@@ -1,5 +1,7 @@
 # 网关层出口优选与 IPv6 接入（2026-11-22）
 
+网关上游可以使用 IPv6 出口。X96 有线口独立采用静态 IPv4；其开机策略和播放中测速约束以 [11 月 26 日实机记录](../../../../2-Projects/vps-proxy/tv-gateway/README.md) 为准。
+
 > 场景：电视盒 YouTube 4K 由 Armbian 网关（`192.168.1.19` / 组网 `10.10.10.25`）跑 sing-box 分流，
 > 多出口（hy2/REALITY）择优。本文是「怎么选出口、怎么测、哪些坑」的现行真值。
 > 配套文档：`2-Projects/vps-proxy/2026-11-22-测速源调研与出口实测.md`、
@@ -143,7 +145,7 @@ codex 用 AOSP 源码 + 实机 dump 审核后推翻了我两个判断：
 `/data/misc/ethernet/ipconfig.txt`（v3 二进制，131B），里面 `gateway` 一直是 `192.168.1.1`。
 所以任何「事后改路由」都会输——Android 每次重建都按这个文件装回 `.1`。
 
-### 11.2 已实施的根治
+### 11.2 11 月 25 日的部署记录
 
 1. **改 Android 的静态配置**：把 `ipconfig.txt` 里 `gateway` 的 `192.168.1.1` 换成 `192.168.1.19`
    （按字节模式 `00 0b "192.168.1.1"` → `00 0c "192.168.1.19"`，131B→132B；
@@ -151,15 +153,13 @@ codex 用 AOSP 源码 + 实机 dump 审核后推翻了我两个判断：
    重启后 `dumpsys ethernet` 显示 `Gateway 192.168.1.19`，Android 自己就把
    `default via 192.168.1.19 proto static` 装进 `table eth0` —— **无需任何外部改路由**。
    （codex 提示的 `IEthernetManager` Binder 方案可免重启，但需要自己编 DEX；改文件 + 重启更简单可靠。）
-2. **停掉制造风暴的电视侧脚本**：旧 `/data/adb/dsh-gateway/watch.sh` 退役（改名 `.disabled-20261125`），
-   新的 `service.d/99-gateway.sh` 只做两件事：**关 eth0 的 IPv6**（`disable_ipv6=1`，防止 AAAA 直连出境）
-   + 把实际网关写进 `/data/local/tmp/gw-check.log` 供事后核查。**不再 flush IPv6 地址、不再改路由。**
+2. 当日尝试退役 `watch.sh`，并由晚期 `99-gateway.sh` 写 `disable_ipv6=1`。11 月 26 日查实，留在 `service.d` 的可执行备份仍会拉起旧进程。现役版本已将入口移出启动目录，早期过滤 eth0 路由通告，晚期在网络事件后复查规则。[现役盒端接线及回退](../../../../2-Projects/vps-proxy/tv-gateway/x96-install.md)
 3. **网关侧守卫降级为「校验 + 应急兜底」**（`dsh-tv-guard.sh` v3，5s 一次）：
    读 `table eth0` 的默认网关，等于 .19 就静默退出；连续 2 次不对才装应急策略路由
    （table 100 + rule 9000），并在恢复正常后自动清掉应急规则。codex 指出旧版 `has_rule()`
    无论结果都 `echo yes` 导致误判，v3 改为直接判断实际网关，从根上避开该 bug。
 
-### 11.3 验收（重启后实测）
+### 11.3 11 月 25 日的重启读数
 
 ```
 dumpsys ethernet → Static configuration: ... Gateway 192.168.1.19
@@ -176,7 +176,7 @@ nc www.youtube.com 443 → OK
 - 电视重启后 `adb root` 会失效，写 `/data/adb/**` 前先 `adb root`。
 - `dsh-tvlog` 若每 7 秒重连并回放整段 logcat，会把 adbd 拖到 `offline`（已用 `-T 1` + 退避修掉），
   排查 adb 不稳时先看它。
-- IPv6 现在靠 `disable_ipv6=1` 关闭；若将来要启用双栈，必须让 Armbian 成为电视链路上唯一的 IPv6 默认路由来源。
+- 11 月 26 日起，验收看 eth0 全局 IPv6 地址数和 IPv6 默认路由数均为零，同时核对 Android 管理的 IPv4 网关与 DNS。链路本地 IPv6 可保留。
 
 ## 十二、如果要给电视开 IPv6 双栈：方案评审（2026-11-25，codex 分析，**未实施**）
 
@@ -237,7 +237,7 @@ A 查询保持现有分流。前提是 DNS 规则能区分「来自电视」的�
 2. 先验数据面：测试客户端走 v6 TUN、准入流量固定 hk-hy2、未知 v6 拒绝；核对 RPDB/TUN/上联抓包
    （隔离环境可做；生产 sing-box 重载须无播放）。
 3. 最后才开电视 IPv6 与 AAAA，验唯一网关、真实选源、DNS 正负样本、TCP/QUIC 路径。
-4. 一步止血回滚：`echo 1 > /proc/sys/net/ipv6/conf/eth0/disable_ipv6`（root），并恢复 `99-gateway.sh` 的开机行为。
+4. 若将来开展双栈试验，先记录当时已通过冷启动的 IPv4 基线。退出试验按已核验的[盒端接线及回退](../../../../2-Projects/vps-proxy/tv-gateway/x96-install.md)恢复，并复核实际路由与播放。
 
 ### 12.7 结论
 
