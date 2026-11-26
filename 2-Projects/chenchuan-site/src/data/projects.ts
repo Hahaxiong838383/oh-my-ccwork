@@ -36,7 +36,7 @@ export const projects: Project[] = [
   {
     slug: 'ai-hardware-voice-prototype',
     title: 'KidsHub AI｜小可与成长世界',
-    subtitle: '把日常对话和生态缸养成放进读写台',
+    subtitle: '读写台上的语音伙伴，和一座可以慢慢养起来的生态缸',
     description: '小可记住孩子的兴趣和约定，日常参与积累成进度和奖励。与 MyJavis 共用 Rust 实时全双工语音引擎，新做的 one-shot 让唤醒词和问题可以连着说。',
     fullDescription: '孩子为什么愿意继续用读写台，是我做 KidsHub 时关心的问题。我把小可的日常对话和生态缸养成放在一起：小可记住孩子的兴趣和约定，日常参与则积累成进度和奖励。记错了可以改，使用中断后也能接着上次的进度继续。\n\n语音与 MyJavis 共用 Rust 重写的实时双向全双工引擎，支持低延时交流和中途插话。新做的 one-shot 允许唤醒词和问题连着说，通过暂存、按顺序补传音频，处理建连时容易丢掉的前半句话。\n\nAndroid/Kotlin 对接设备，Godot/GDScript 做界面和动画，Rust 游戏运行时保存进度与奖励；实时音频通过 LiveKit/WebRTC 传输。\n\n成长玩法已在真机验证，one-shot 完成专项验收，待合包发布。孩子是否愿意长期使用，还要继续观察。\n\n我负责产品定义、交互取舍、AI 协同软件实现与验证推进；硬件、供应链与量产由公司跨职能团队共同推进。',
     tags: ['Android', 'Kotlin', 'Godot', 'GDScript', 'Rust', 'LiveKit / WebRTC'],
@@ -53,8 +53,8 @@ export const projects: Project[] = [
     color: '#22C55E',
     featured: true,
     brief: {
-      problem: '孩子为什么愿意继续用读写台，交流能否接着上次继续？',
-      solution: '把可纠正的伙伴记忆、实时对话和生态缸成长放在同一段使用体验里。',
+      problem: '隔了几周再聊天，小可还接得上吗？',
+      solution: '把聊过的话记进账本，标出哪些兴趣还待确认；下一次接话时按需取用。',
       stack: 'Android / Kotlin 对接设备，Godot / GDScript 呈现场景，Rust 管进度与语音，LiveKit / WebRTC 传输音频。',
       result: '成长玩法已在真机验证，one-shot 完成专项验收，待合包发布。',
     },

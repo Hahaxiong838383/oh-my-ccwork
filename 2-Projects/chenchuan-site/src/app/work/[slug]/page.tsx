@@ -63,86 +63,88 @@ export default async function ProjectDetailPage({ params }: Props) {
           </Link>
         </BlurFade>
 
-        <BlurFade delay={0.1}>
-          <div className="mb-3 flex items-center gap-3">
-            <div
-              className="h-3 w-3 rounded-full"
-              style={{ backgroundColor: project.color }}
-            />
-            <span className="font-mono text-sm text-text-muted">{project.year}</span>
-          </div>
-        </BlurFade>
+        {slug === 'ai-hardware-voice-prototype' ? <XiaokeGallery /> : (
+          <>
+            <BlurFade delay={0.1}>
+              <div className="mb-3 flex items-center gap-3">
+                <div
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: project.color }}
+                />
+                <span className="font-mono text-sm text-text-muted">{project.year}</span>
+              </div>
+            </BlurFade>
 
-        <BlurFade delay={0.15}>
-          <h1 className="mb-2 text-3xl font-bold tracking-tight text-text-primary md:text-5xl">
-            {project.title}
-          </h1>
-        </BlurFade>
+            <BlurFade delay={0.15}>
+              <h1 className="mb-2 text-3xl font-bold tracking-tight text-text-primary md:text-5xl">
+                {project.title}
+              </h1>
+            </BlurFade>
 
-        <BlurFade delay={0.2}>
-          <p className="mb-2 text-lg text-text-secondary">{project.subtitle}</p>
-          <p className="mb-6 text-sm text-accent">
-            {project.company} · {project.role}
-          </p>
-        </BlurFade>
-
-        <BlurFade delay={0.25}>
-          <div className="mb-8 flex flex-wrap gap-1.5">
-            {project.tags.map((tag) => (
-              <Tag key={tag}>{tag}</Tag>
-            ))}
-          </div>
-        </BlurFade>
-
-        {slug === 'ai-hardware-voice-prototype' && <XiaokeGallery />}
-
-        {/* Description - support \n as paragraphs */}
-        <BlurFade delay={0.3}>
-          <div className="mx-auto mb-12 max-w-3xl space-y-4">
-            {project.fullDescription.split('\n\n').map((para, i) => (
-              <p key={i} className="text-base leading-relaxed text-text-secondary">
-                {para}
+            <BlurFade delay={0.2}>
+              <p className="mb-2 text-lg text-text-secondary">{project.subtitle}</p>
+              <p className="mb-6 text-sm text-accent">
+                {project.company} · {project.role}
               </p>
-            ))}
-          </div>
-        </BlurFade>
+            </BlurFade>
 
-        {/* Highlights */}
-        <BlurFade delay={0.35}>
-          <div className="mb-12 rounded-xl border border-white/[0.06] bg-bg-card p-6">
-            <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
-              设计与实现
-            </h3>
-            <ul className="space-y-2.5">
-              {project.highlights.map((h) => (
-                <li key={h} className="flex items-start gap-2 text-sm text-text-secondary">
-                  <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
-                  {h}
-                </li>
-              ))}
-            </ul>
-            {'brief' in project && project.brief && (
-              <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-text-secondary">
-                <span className="text-text-primary">技术：</span>{project.brief.stack}
-              </p>
-            )}
-          </div>
-        </BlurFade>
-
-        {/* Wins */}
-        {project.wins.length > 0 && (
-          <BlurFade delay={0.4}>
-            <div className="mb-12">
-              <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
-                项目进展
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {project.wins.map((win) => (
-                  <Tag key={win} variant="teal">{win}</Tag>
+            <BlurFade delay={0.25}>
+              <div className="mb-8 flex flex-wrap gap-1.5">
+                {project.tags.map((tag) => (
+                  <Tag key={tag}>{tag}</Tag>
                 ))}
               </div>
-            </div>
-          </BlurFade>
+            </BlurFade>
+
+            {/* Description - support \n as paragraphs */}
+            <BlurFade delay={0.3}>
+              <div className="mx-auto mb-12 max-w-3xl space-y-4">
+                {project.fullDescription.split('\n\n').map((para, i) => (
+                  <p key={i} className="text-base leading-relaxed text-text-secondary">
+                    {para}
+                  </p>
+                ))}
+              </div>
+            </BlurFade>
+
+            {/* Highlights */}
+            <BlurFade delay={0.35}>
+              <div className="mb-12 rounded-xl border border-white/[0.06] bg-bg-card p-6">
+                <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
+                  设计与实现
+                </h3>
+                <ul className="space-y-2.5">
+                  {project.highlights.map((h) => (
+                    <li key={h} className="flex items-start gap-2 text-sm text-text-secondary">
+                      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+                {'brief' in project && project.brief && (
+                  <p className="mt-5 border-t border-border pt-4 text-sm leading-relaxed text-text-secondary">
+                    <span className="text-text-primary">技术：</span>{project.brief.stack}
+                  </p>
+                )}
+              </div>
+            </BlurFade>
+
+            {/* Wins */}
+            {project.wins.length > 0 && (
+              <BlurFade delay={0.4}>
+                <div className="mb-12">
+                  <h3 className="mb-4 font-mono text-xs uppercase tracking-widest text-text-muted">
+                    项目进展
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {project.wins.map((win) => (
+                      <Tag key={win} variant="teal">{win}</Tag>
+                    ))}
+                  </div>
+                </div>
+              </BlurFade>
+            )}
+          </>
         )}
 
         {/* Videos */}

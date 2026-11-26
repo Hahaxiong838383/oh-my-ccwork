@@ -28,6 +28,14 @@ export function ProjectGrid({ projects }: Props) {
                 className="group h-full cursor-pointer"
                 gradientColor={`${project.color}20`}
               >
+                {project.slug === 'ai-hardware-voice-prototype' ? (
+                  <div className="p-6">
+                    <img src="/media/kidshub-20261126/home.webp" width={400} height={240} loading="lazy" decoding="async" alt="小可在读写台上的活动主界面" className="mb-4 aspect-[5/3] w-full rounded-lg object-cover" />
+                    <h3 className="mb-2 text-lg font-semibold text-text-primary">{project.title}</h3>
+                    <p className="text-sm leading-relaxed text-text-secondary">孩子在读写台上和小可聊天，也照料自己的成长世界。过几周再开口，小可还记得上次聊过什么吗？</p>
+                    <span className="mt-4 inline-block text-sm font-medium text-accent">看产品界面和内测实录 →</span>
+                  </div>
+                ) : (
                 <div className="p-6">
                   <div className="mb-3 flex items-center gap-2">
                     <div
@@ -76,6 +84,7 @@ export function ProjectGrid({ projects }: Props) {
                     </div>
                   ) : null}
                 </div>
+                )}
               </MagicCard>
             </Link>
           </BlurFade>
