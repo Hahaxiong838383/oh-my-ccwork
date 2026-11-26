@@ -62,20 +62,30 @@ function installRoomFixture() {
 async function facePixels(canvas) {
   const { width, height } = canvas;
   const data = canvas.getContext('2d').getImageData(0, 0, width, height).data;
-  function feature(top, bottom) {
-    let first = height, last = -1;
-    for (let y = Math.ceil(height * top); y < height * bottom; y++) {
-      let bright = 0;
-      for (let x = Math.ceil(width * .32); x < width * .68; x++) {
-        const i = (y * width + x) * 4;
-        if (Math.min(data[i], data[i+1], data[i+2], data[i+3]) > 201) bright++;
-      }
-      if (bright >= 3) { first = Math.min(first, y); last = y; }
+  // Locate opaque, near-white eye islands in the sphere's central area.
+  const mask = new Uint8Array(width * height), seen = new Uint8Array(mask.length);
+  for (let y = Math.floor(height * .14); y < height * .77; y++)
+    for (let x = Math.floor(width * .19); x < width * .81; x++) {
+      const pos = y * width + x, i = pos * 4;
+      const lo = Math.min(data[i], data[i+1], data[i+2]), hi = Math.max(data[i], data[i+1], data[i+2]);
+      if (lo >= 192 && hi-lo < 48 && data[i+3] > 205) mask[pos] = 1;
     }
-    return { top: first / height, height: Math.max(0, last-first+1) / height };
+  const islands = [];
+  for (let pos=0; pos<mask.length; pos++) {
+    if (!mask[pos] || seen[pos]) continue;
+    const queue = [pos]; seen[pos]=1;
+    let sumX=0, sumY=0, low=height, high=0;
+    for(let n=0;n<queue.length;n++){
+      const at=queue[n], x=at%width, y=Math.floor(at/width);
+      sumX+=x; sumY+=y; low=Math.min(low,y); high=Math.max(high,y);
+      for(const next of [at-1,at+1,at-width,at+width]) if(mask[next]&&!seen[next]){
+        seen[next]=1;queue.push(next);
+      }
+    }
+    if(queue.length>width*height*.00032) islands.push({x:sumX/queue.length/width,y:sumY/queue.length/height,area:queue.length,height:(high-low+1)/height});
   }
   const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', data));
-  return { brow: feature(.25, .48), mouth: feature(.54, .69), digest: digest.join('-') };
+  return {islands, digest: digest.join('-')};
 }
 
 async function run() {
@@ -89,6 +99,7 @@ async function run() {
       const url = new URL(route.request().url());
       const types = { 'index.html': 'text/html', 'night.css': 'text/css', 'night.js': 'text/javascript', 'session.js': 'text/javascript' };
       const name = url.pathname.slice(1) || 'index.html';
+      if (['orb-reference','orb-motion','orb-surface','orb-input'].some(script => name === script+'.js')) types[name]='text/javascript';
       if (url.origin !== origin) return route.abort();
       if (name === 'livekit.js') return route.fulfill({ contentType: 'text/javascript', body: '' });
       if (!Object.hasOwn(types, name)) return route.abort();
@@ -113,13 +124,15 @@ async function run() {
     const stillLoud = await capture('remote', .20), stillSoft = await capture('remote', .06);
     await capture('remote', 0); await phase('muted');
     await page.click('#btn-stop'); await phase('idle');
+    const twoEyes = sample => sample.islands.length === 2;
     const checks = {
-      'microphone raises the brows': quiet.brow.top - listening.brow.top > .035,
-      'muting relaxes the listening face': muted.brow.top - listening.brow.top > .04,
-      'speech has a visible mouth': soft.mouth.height > .022,
-      'louder playback opens the mouth wider': loud.mouth.height - soft.mouth.height > .025,
-      'reduced motion holds the speaking pose': stillLoud.digest === stillSoft.digest && stillSoft.mouth.height > .022,
+      'listening uses two eye silhouettes': twoEyes(quiet) && twoEyes(listening),
+      'microphone activity changes the listening frame': quiet.digest !== listening.digest,
+      'mute remains an eye-only pose': twoEyes(muted),
+      'reply is animated without a mouth or brows': twoEyes(soft) && twoEyes(loud) && soft.digest !== loud.digest,
+      'reduced motion holds the speaking pose': twoEyes(stillSoft) && stillLoud.digest === stillSoft.digest,
     };
+    if(process.env.AVATAR_PIXEL_DETAILS) console.log({quiet,listening,muted,soft,loud,stillSoft});
     for (const [name, pass] of Object.entries(checks)) console.log((pass ? 'PASS ' : 'FAIL ') + name);
     assert(Object.values(checks).every(Boolean), 'facial expression pixel regression');
   } finally { await browser.close(); }

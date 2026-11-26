@@ -1,0 +1,75 @@
+{
+  "sampled_at": "2026-11-27T06:55:15+08:00",
+  "scope": "personal-voice",
+  "deployments": {
+    "s24-night-apk": {
+      "sha256": "a79977c19f71929117e295df9db86c7fa73dfb83e8562b8d336e6eb46da9d08a",
+      "packageName": "cc.hahaxiong.xiaoke.night",
+      "versionCode": 1000003,
+      "versionName": "V1.0.3",
+      "size": 213989,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000003.apk",
+      "source_commit": "6e94a8f094e40a2bb093d3b97d8b35a99f405f40",
+      "files": {
+        "xiaoke-night-1000003.apk": "a79977c19f71929117e295df9db86c7fa73dfb83e8562b8d336e6eb46da9d08a"
+      },
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f",
+      "verification": "公网完整下载、飞牛发布目录及文件临时缓存均与签名包一致。Android 11 从 1000002 通过应用内更新升级至 1000003，系统已安装的 base.apk 指纹与发布物一致。"
+    }
+  },
+  "acceptance": {
+    "reference": {
+      "repository": "https://github.com/Coiggahou2002/grokbot-web",
+      "commit": "616c1dd451f105a10a903e01eed8f82370968681",
+      "reference_states": 39,
+      "expression_pairs": 25,
+      "points_per_eye": 48
+    },
+    "device": "Android 11 emulator, stock WebView 83",
+    "screen_size": [
+      1440,
+      3040
+    ],
+    "gesture_checks": {
+      "pointsRecognized": true,
+      "touchChangesPose": true,
+      "looksLeft": true,
+      "looksRight": true,
+      "sideSeparation": true
+    },
+    "eye_centroid_x_in_sphere_radii": {
+      "rest": -0.0542,
+      "touch": -0.0252,
+      "left": -0.7006,
+      "right": 0.6407
+    },
+    "web_tests": {
+      "audio_and_render": 5,
+      "motion_model": 6,
+      "input_paths": [
+        "Pointer Events",
+        "Touch Events fallback"
+      ]
+    },
+    "personal_voice": {
+      "bargeDuringOutput": true,
+      "clockReplyHeard": true,
+      "levels": 360,
+      "events": [
+        "call_start",
+        "mic_on",
+        "connected",
+        "mic_off",
+        "rx_audio",
+        "rx_caption",
+        "tx_caption",
+        "spoken_interrupt",
+        "cancel_ack",
+        "call_end"
+      ],
+      "ended": "通话已结束",
+      "active": 0
+    },
+    "s24_hardware_tested": false
+  }
+}

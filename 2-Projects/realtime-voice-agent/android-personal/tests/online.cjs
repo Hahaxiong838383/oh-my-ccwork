@@ -18,7 +18,7 @@ async function ticket(){
  try {
   const p=await browser.newPage({viewport:{width:412,height:850}});
   await p.route(site+'/night-app/**',r=>{const name=new URL(r.request().url()).pathname.split('/').pop()||'index.html';
-   if(!['index.html','livekit.js','night.css','night.js','session.js'].includes(name))return r.abort();
+   if(!['index.html','livekit.js','night.css','orb-reference.js','orb-motion.js','orb-surface.js','orb-input.js','night.js','session.js'].includes(name))return r.abort();
    return r.fulfill({path:name==='livekit.js'?sdk:path.join(assets,name),contentType:name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html'});
   });
   p.on('pageerror',e=>console.error('page error',e.name,String(e.message).slice(0,110)));

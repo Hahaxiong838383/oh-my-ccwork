@@ -1,0 +1,259 @@
+// Canvas 2D orthographic rendering of two closed eye contours on a unit sphere.
+// Expression data and the motion clock are supplied by orb-reference.js and orb-motion.js.
+(function (global) {
+  'use strict';
+  const TAU = Math.PI * 2;
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const mix = (a, b, t) => a + (b - a) * t;
+
+  // Convert the reference face-space contours into tangent-plane coordinates once.
+  // Each pair retains its inter-eye spacing, left/right asymmetry and inclination;
+  // remove its camera framing before applying our own head rotation.
+  function eyeShapes(expressions) {
+    return expressions.map(pair => {
+      const centers = pair.map(points => {
+        let x = 0, y = 0;
+        for (let i = 0; i < points.length; i += 2) { x += points[i]; y += points[i + 1]; }
+        const n = points.length / 2;
+        return { x: x / n, y: y / n };
+      });
+      const centerX = (centers[0].x + centers[1].x) / 2;
+      const centerY = (centers[0].y + centers[1].y) / 2;
+      return pair.map((points, eye) => ({
+        centerY: (centers[eye].y - centerY) * .0096 - .24,
+        ring: Float32Array.from(points, (p, i) => i % 2
+          ? (p - centerY) * .0096 - .24 : (p - centerX) * .0104),
+      }));
+    });
+  }
+
+  // Each pixel is lit from its actual surface normal. The key, sky reflection and
+  // cool rim are fixed in world space. Repaint this material only on size/tint change.
+  function paintMaterial(size, rgb) {
+    const texture = document.createElement('canvas');
+    texture.width = texture.height = size;
+    const ctx = texture.getContext('2d');
+    const pixels = ctx.createImageData(size, size);
+    const out = pixels.data, r = (size - 1) / 2;
+    for (let row = 0; row < size; row++) {
+      const y = (row - r) / r;
+      for (let col = 0; col < size; col++) {
+        const x = (col - r) / r, rho2 = x * x + y * y;
+        if (rho2 > 1.005) continue;
+        const z = Math.sqrt(Math.max(0, 1 - rho2));
+        const light = Math.max(0, -.50 * x - .70 * y + .50 * z);
+        const diffuse = .23 + .66 * light + .12 * z;
+        const reflectedX = 2 * z * x, reflectedY = 2 * z * y;
+        const u = (reflectedX + .51) / .40, v = (reflectedY + .72) / .27;
+        const sheen = z > .55 ? Math.exp(-u * u - v * v) * .18 * (z - .55) / .45 : 0;
+        const rim = Math.pow(1 - z, 2.8) * (.105 + .11 * Math.max(0, .82 * x - .50 * y));
+        const bounce = Math.max(0, .32 * x + y - .24) * .22;
+        const offset = (row * size + col) * 4;
+        out[offset]     = rgb[0] * diffuse + 247 * sheen + 130 * rim + 24 * bounce;
+        out[offset + 1] = rgb[1] * diffuse + 248 * sheen + 193 * rim + 48 * bounce;
+        out[offset + 2] = rgb[2] * diffuse + 251 * sheen + 249 * rim + 95 * bounce;
+        out[offset + 3] = 255 * clamp((1 - Math.sqrt(rho2)) * r + .5, 0, 1);
+      }
+    }
+    ctx.putImageData(pixels, 0, 0);
+    return texture;
+  }
+
+  // Exponential map from the tangent plane to the sphere, followed by yaw and
+  // pitch in camera coordinates. Keep depth until the limb has been clipped.
+  function surfacePoint(u, v, orient) {
+    const d = Math.hypot(u, v), k = d > 1e-6 ? Math.sin(d) / d : 1;
+    const x = u * k, y = v * k, z = Math.cos(d);
+    const turnedZ = orient.cy * z - orient.sy * x;
+    return {
+      x: orient.cy * x + orient.sy * z,
+      y: orient.cp * y + orient.sp * turnedZ,
+      z: orient.cp * turnedZ - orient.sp * y,
+    };
+  }
+
+  function horizon(a, b) {
+    const t = a.z / (a.z - b.z);
+    const x = mix(a.x, b.x, t), y = mix(a.y, b.y, t), len = Math.hypot(x, y);
+    return { x: x / len, y: y / len };
+  }
+
+  // A contour straddling the horizon follows the *circular silhouette* between
+  // exit and re-entry. A chord here cuts a visible notch out of the far eye.
+  function frontContour(ctx, ring) {
+    const first = ring.findIndex(p => p.z > 0);
+    if (first < 0) return false;
+    let previous = ring[first], exit;
+    ctx.beginPath();
+    ctx.moveTo(previous.x, previous.y);
+    for (let i = 1; i <= ring.length; i++) {
+      const next = ring[(first + i) % ring.length];
+      if (previous.z > 0 && next.z <= 0) {
+        exit = horizon(previous, next);
+        ctx.lineTo(exit.x, exit.y);
+      } else if (previous.z <= 0 && next.z > 0) {
+        const entry = horizon(previous, next);
+        const a = Math.atan2(exit.y, exit.x), b = Math.atan2(entry.y, entry.x);
+        const delta = Math.atan2(Math.sin(b - a), Math.cos(b - a));
+        ctx.arc(0, 0, 1, a, a + delta, delta < 0);
+      }
+      if (next.z > 0) ctx.lineTo(next.x, next.y);
+      previous = next;
+    }
+    ctx.closePath();
+    return true;
+  }
+
+  class NightSphere {
+    constructor(canvas, color, seed) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.motion = global.NightOrbMotion.create(seed === undefined ? Math.floor(Math.random() * 0x100000000) : seed);
+      this.shapes = eyeShapes(global.GrokReference.expressionRings);
+      this.reduced = global.matchMedia('(prefers-reduced-motion: reduce)');
+      this.phase = 'idle';
+      this.active = this.muted = false;
+      this.playback = this.micTarget = 0;
+      this.spokenFor = this.quietFor = 0;
+      this.yaw = this.pitch = 0;
+      this.pointer = null;
+      this.geometry = null;
+      this.frame = this.lastTime = 0;
+      this.onFrame = this.onFrame.bind(this);
+      this.setColor(color);
+      this.resize();
+    }
+    setColor(color) {
+      if (color === this.color) return;
+      const n = parseInt(color.slice(1), 16);
+      this.color = color;
+      this.rgb = [n >> 16 & 255, n >> 8 & 255, n & 255];
+      this.darkInk = this.rgb[0] * .2126 + this.rgb[1] * .7152 + this.rgb[2] * .0722 > 183;
+      this.material = null;
+    }
+    setState(phase, active, muted) {
+      this.phase = phase; this.active = active; this.muted = muted;
+      if (!active || muted) this.micTarget = 0;
+      if (!active) this.playback = 0;
+    }
+    setLevel(value) { this.playback = clamp(Number(value) || 0, 0, 1); }
+    resize() {
+      const box = this.canvas.getBoundingClientRect();
+      if (!box.width || !box.height) return;
+      const dpr = Math.min(global.devicePixelRatio || 1, 3);
+      this.width = box.width; this.height = box.height;
+      const w = Math.round(box.width * dpr), h = Math.round(box.height * dpr);
+      if (this.canvas.width !== w || this.canvas.height !== h) {
+        this.canvas.width = w; this.canvas.height = h;
+        this.material = null; this.geometry = null;
+      }
+    }
+    localPoint(clientX, clientY) {
+      const box = this.canvas.getBoundingClientRect(), g = this.geometry;
+      if (!g || !box.width || !box.height) return { x: Infinity, y: Infinity };
+      const x = (clientX - box.left) * this.width / box.width - g.cx;
+      const y = (clientY - box.top) * this.height / box.height - g.cy;
+      return { x: (g.cos * x + g.sin * y) / g.rx, y: (-g.sin * x + g.cos * y) / g.ry };
+    }
+    hitTest(clientX, clientY) {
+      const p = this.localPoint(clientX, clientY);
+      return p.x * p.x + p.y * p.y <= 1;
+    }
+    lookAt(x, y) { this.pointer = { x: clamp(x, -1, 1), y: clamp(y, -1, 1) }; }
+    clearLook() { this.pointer = null; }
+    touch(x, y) {
+      const p = this.pointer || { x: 0, y: 0 };
+      this.motion.tap(Number.isFinite(x) ? x : p.x, Number.isFinite(y) ? y : p.y);
+    }
+    start() {
+      if (this.frame) return;
+      this.lastTime = performance.now();
+      this.frame = global.requestAnimationFrame(this.onFrame);
+    }
+    stop() {
+      global.cancelAnimationFrame(this.frame); this.frame = 0;
+    }
+    onFrame(now) {
+      const dt = clamp((now - this.lastTime) / 1000, 0, .050);
+      this.lastTime = now;
+      this.render(dt);
+      this.frame = global.requestAnimationFrame(this.onFrame);
+    }
+    render(dt) {
+      if (!this.ctx || !this.width || !this.height) return;
+      const reduced = this.reduced.matches;
+      if (this.phase !== 'speaking') {
+        this.spokenFor = this.quietFor = 0;
+      } else if (this.playback > .025) {
+        this.spokenFor += dt; this.quietFor = 0;
+      } else {
+        this.quietFor += dt;
+        if (this.quietFor > .32) this.spokenFor = 0;
+      }
+      const phase = this.phase === 'speaking' && this.spokenFor > .52 ? 'streaming' : this.phase;
+      const pose = this.motion.step(dt, {
+        phase: phase, active: this.active, muted: this.muted,
+        mic: this.micTarget, playback: this.playback, reduced,
+      });
+      const p = this.pointer;
+      // Near the centre a small movement invites eye contact; a drag to the
+      // extreme edge can reveal the unmarked back of the head.
+      const yaw = p ? p.x * (1.26 + 1.35 * p.x * p.x) : pose.gazeX * .85;
+      const pitch = p ? p.y * (.84 + .55 * p.y * p.y) : pose.gazeY * .58;
+      const ease = reduced ? 1 : 1 - Math.exp(-dt * (p ? 15 : 8));
+      this.yaw = mix(this.yaw, yaw, ease); this.pitch = mix(this.pitch, pitch, ease);
+      this.draw(pose);
+    }
+    draw(pose) {
+      const ctx = this.ctx, w = this.width, h = this.height;
+      const radius = Math.min(w, h) * .345;
+      const cx = w / 2, cy = h * .485 + radius * pose.lift;
+      const rx = radius * pose.scaleX, ry = radius * pose.scaleY;
+      this.geometry = { cx, cy, rx, ry, cos: Math.cos(pose.roll), sin: Math.sin(pose.roll) };
+      const size = Math.min(512, Math.max(64, Math.round(2 * radius * this.canvas.width / w)));
+      if (!this.material || this.material.width !== size) this.material = paintMaterial(size, this.rgb);
+      ctx.setTransform(this.canvas.width / w, 0, 0, this.canvas.height / h, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      ctx.save();
+      ctx.translate(cx, h * .485 + radius * 1.12);
+      ctx.scale(radius * .86, radius * .105);
+      const shadow = ctx.createRadialGradient(0, 0, 0, 0, 0, 1);
+      shadow.addColorStop(0, 'rgba(2,3,8,.48)'); shadow.addColorStop(1, 'rgba(2,3,8,0)');
+      ctx.fillStyle = shadow; ctx.fillRect(-1, -1, 2, 2);
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(cx, cy); ctx.rotate(pose.roll); ctx.scale(rx, ry);
+      ctx.save();
+      ctx.rotate(-pose.roll); // The lamp stays put as the eye plane and body roll.
+      ctx.drawImage(this.material, -1, -1, 2, 2);
+      ctx.restore();
+      ctx.beginPath(); ctx.arc(0, 0, .999, 0, TAU); ctx.clip();
+      const orient = { cy: Math.cos(this.yaw), sy: Math.sin(this.yaw), cp: Math.cos(this.pitch), sp: Math.sin(this.pitch) };
+      const eyesFrom = this.shapes[pose.fromExpression], eyesTo = this.shapes[pose.expression];
+      for (let side = 0; side < 2; side++) {
+        const a = eyesFrom[side], b = eyesTo[side], t = pose.expressionMix;
+        const blinkCenter = mix(a.centerY, b.centerY, t);
+        const open = Math.max(.052, side === 0 ? pose.eyeOpenL : pose.eyeOpenR);
+        const ring = [];
+        let depth = 0;
+        for (let i = 0; i < a.ring.length; i += 2) {
+          const u = mix(a.ring[i], b.ring[i], t);
+          const v = blinkCenter + (mix(a.ring[i + 1], b.ring[i + 1], t) - blinkCenter) * open;
+          const pt = surfacePoint(u, v, orient);
+          ring.push(pt); depth += pt.z;
+        }
+        if (!frontContour(ctx, ring)) continue;
+        const facing = clamp(depth / ring.length, 0, 1);
+        if (this.darkInk) ctx.fillStyle = 'rgb(20,25,34)';
+        else {
+          const v = Math.round(220 + 28 * facing);
+          ctx.fillStyle = 'rgb(' + v + ',' + (v+2) + ',' + (v+3) + ')';
+        }
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  global.NightSphere = NightSphere;
+})(window);
