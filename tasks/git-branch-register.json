@@ -1,6 +1,11 @@
 {
   "default_branch": "main",
   "branches": {
+    "personal/s24-night-apk": {
+      "task": "小可暗夜剧场 Android APK，个人语音、诊断回传与独立 OTA",
+      "state": "keep",
+      "until": "作为 Android 发布维护分支，待 S24 安装验证及后续版本移交后复核。"
+    },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
       "state": "keep",
@@ -361,6 +366,36 @@
         "keys": [
           "deployments",
           "personal-speech-models"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "s24-night-apk": {
+      "scope": "personal-voice",
+      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "source_ref": "refs/heads/personal/s24-night-apk",
+      "maintainer_branch": "personal/s24-night-apk",
+      "sha256": "863b1df79fe6392fcee96c25eb4c574cdcedf44cb607b19bc5733e2d29f284a6",
+      "proof": {
+        "object": "b34551e7412782e5a37d0ce5475f2679e9a9f77b:2-Projects/realtime-voice-agent/docs/personal-s24-night-release-20261126.json",
+        "keys": [
+          "deployments",
+          "s24-night-apk"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "s24-night-server": {
+      "scope": "personal-voice",
+      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "source_ref": "refs/heads/personal/s24-night-apk",
+      "maintainer_branch": "personal/s24-night-apk",
+      "sha256": "720779bb36699cb8ff83719be83220ea29f0c08e5e23003a730e9d6c220d78d7",
+      "proof": {
+        "object": "b34551e7412782e5a37d0ce5475f2679e9a9f77b:2-Projects/realtime-voice-agent/docs/personal-s24-night-release-20261126.json",
+        "keys": [
+          "deployments",
+          "s24-night-server"
         ],
         "digest_key": "sha256"
       }

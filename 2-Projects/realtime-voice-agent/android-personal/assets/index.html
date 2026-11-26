@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#06070A">
+  <meta name="color-scheme" content="dark">
+  <title>暗夜剧场</title>
+  <link rel="stylesheet" href="night.css">
+</head>
+<body>
+  <main id="app" class="night-app" data-phase="idle" data-paired="false" data-active="false" data-muted="false">
+    <header class="topbar">
+      <div class="top-left">
+        <span id="live-dot" class="live-dot" aria-hidden="true"></span>
+      </div>
+
+      <div class="top-actions">
+        <button id="btn-service" class="top-pill top-pill-ghost" type="button" aria-controls="service-panel">维护</button>
+        <button id="btn-forget" class="top-pill top-pill-ghost" type="button" hidden>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M18.84 12.25l1.72-1.71a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M5.17 11.75l-1.71 1.71a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            <line x1="2" y1="2" x2="22" y2="22"/>
+          </svg>
+          <span>重配</span>
+        </button>
+
+        <button id="btn-palette" class="top-pill" type="button" aria-expanded="false" aria-controls="color-popover">
+          <span class="color-chip" aria-hidden="true"></span>
+          <span>换色</span>
+        </button>
+      </div>
+    </header>
+
+    <section id="service-panel" class="service-panel" aria-label="诊断与更新" hidden>
+      <div class="service-heading"><strong>诊断与更新</strong><button id="service-close" type="button">关闭</button></div>
+      <h2>通话诊断</h2><p id="diag-summary"></p><button id="diag-send" type="button">同步诊断记录</button>
+      <small>仅回传通话事件、时间和版本。录音、字幕和设备密钥不随日志上传。</small>
+      <h2>应用更新</h2><p id="ota-status"></p><button id="ota-check" type="button">检查更新</button>
+      <button id="ota-install" type="button" hidden>安装新版</button>
+    </section>
+    <section id="color-popover" class="color-popover" role="dialog" aria-label="选择主题色" hidden>
+      <div class="popover-head">
+        <span>光晕主题色</span>
+        <span id="color-hex" class="popover-hex">#4F7DF3</span>
+      </div>
+      <div id="swatch-row" class="swatch-row">
+        <button class="swatch-dot" type="button" data-color="#4F7DF3" aria-label="深海蓝"></button>
+        <button class="swatch-dot" type="button" data-color="#38BDF8" aria-label="冰川青"></button>
+        <button class="swatch-dot" type="button" data-color="#10B981" aria-label="翠影绿"></button>
+        <button class="swatch-dot" type="button" data-color="#A855F7" aria-label="暮光紫"></button>
+        <button class="swatch-dot" type="button" data-color="#EC4899" aria-label="霓虹粉"></button>
+        <button class="swatch-dot" type="button" data-color="#F59E0B" aria-label="琥珀金"></button>
+        <label class="swatch-custom" title="自定义颜色">
+          <input id="color-custom" type="color" value="#4F7DF3" aria-label="自定义颜色">
+        </label>
+      </div>
+    </section>
+
+    <section class="stage" aria-live="polite">
+      <div id="avatar-wrap" class="avatar-wrap">
+        <canvas id="orb-canvas" aria-label="语音助手球体"></canvas>
+      </div>
+
+      <div id="status-banner" class="status-banner" role="status" hidden>
+        <span id="status-text" class="status-text"></span>
+      </div>
+
+      <div id="subtitles" class="subtitles">
+        <p id="mine-wrap" class="sub-mine" hidden>
+          <span class="sub-tag">主人</span>
+          <span id="mine-text" class="sub-mine-text"></span>
+        </p>
+        <p id="reply-wrap" class="sub-reply" hidden>
+          <span id="reply-text" class="sub-reply-text"></span>
+          <span id="reply-cursor" class="live-cursor" aria-hidden="true" hidden></span>
+        </p>
+      </div>
+    </section>
+
+    <footer class="bottom-bar">
+      <section id="panel-pair" class="pair-card" aria-label="设备配对">
+        <form id="pair-form" class="pair-form" novalidate>
+          <div class="pair-head">配对密钥</div>
+          <div class="pair-row">
+            <input
+              id="pair-key"
+              class="pair-input"
+              type="password"
+              autocomplete="off"
+              autocapitalize="off"
+              autocorrect="off"
+              spellcheck="false"
+              enterkeyhint="done"
+              placeholder="输入配对密钥"
+              aria-label="配对密钥"
+            >
+            <button id="btn-pair" class="pair-btn" type="submit">配对</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="panel-start" class="dock-shell dock-shell-single" aria-label="开始通话" hidden>
+        <button id="btn-start" class="start-btn" type="button">
+          <span class="start-btn-icon" aria-hidden="true">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="2" width="6" height="12" rx="3"/>
+              <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
+              <line x1="12" y1="19" x2="12" y2="22"/>
+            </svg>
+          </span>
+          <span class="start-btn-label">开始</span>
+        </button>
+      </section>
+
+      <section id="panel-active" class="dock-shell" aria-label="通话控制" hidden>
+        <div class="dock-grid">
+          <button id="btn-mute" class="ctrl-btn ctrl-mute" type="button" aria-pressed="false">
+            <span class="ctrl-circle" aria-hidden="true">
+              <svg class="icon-mic-on" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="2" width="6" height="12" rx="3"/>
+                <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+              </svg>
+              <svg class="icon-mic-off" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="2" y1="2" x2="22" y2="22"/>
+                <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/>
+                <path d="M5 10v2a7 7 0 0 0 12 5"/>
+                <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/>
+                <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+              </svg>
+            </span>
+            <span id="mute-label" class="ctrl-label">静音</span>
+          </button>
+
+          <button id="btn-interrupt" class="ctrl-btn ctrl-interrupt" type="button">
+            <span class="ctrl-circle" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 11V6a2 2 0 0 0-4 0v4"/>
+                <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
+                <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
+                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.9-2.5L3.3 16a2 2 0 0 1 2.9-2.7L8 15"/>
+              </svg>
+            </span>
+            <span class="ctrl-label">打断</span>
+          </button>
+
+          <button id="btn-stop" class="ctrl-btn ctrl-stop" type="button">
+            <span class="ctrl-circle" aria-hidden="true">
+              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
+                <line x1="22" y1="2" x2="2" y2="22"/>
+              </svg>
+            </span>
+            <span class="ctrl-label">挂断</span>
+          </button>
+        </div>
+      </section>
+    </footer>
+  </main>
+
+  <script src="livekit.js"></script>
+  <script src="night.js"></script>
+  <script src="session.js"></script>
+</body>
+</html>
