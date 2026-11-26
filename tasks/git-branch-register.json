@@ -1,6 +1,11 @@
 {
   "default_branch": "main",
   "branches": {
+    "personal/s24-night-apk": {
+      "task": "小可暗夜剧场 Android APK，个人语音、诊断回传与独立 OTA",
+      "state": "keep",
+      "until": "作为 Android 发布维护分支，待 S24 安装验证及后续版本移交后复核。"
+    },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
       "state": "keep",

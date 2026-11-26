@@ -1,0 +1,54 @@
+# 小可夜航 (night) OTA + 诊断后端 —— 飞牛2 独立 sidecar
+#
+# 只暴露在 127.0.0.1:18786，由 Lucky 8666/TLS 规则的 pa.hahaxiong.cc/mobile/night
+# 子路径反代进来。不动 P003、不动 MyJavis、不动线上 provider、不碰私有 admin 容器。
+#
+# 用法：
+#   docker compose -f /vol1/1000/docker/personal-night-ota/compose.yaml up -d
+#   docker logs -f night-ota
+
+services:
+  night-ota:
+    image: docker.1ms.run/library/python:3.11-slim
+    container_name: night-ota
+    command: ["python3", "-u", "/app/night_server.py"]
+    working_dir: /app
+    restart: unless-stopped
+    user: "1000:1001"            # 飞牛主账号 hahaxiong83，读发布目录里的 APK 需要用它的身份
+    read_only: true              # 根文件系统只读，只用挂载点写
+    tmpfs:
+      - /tmp:rw,size=8m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NIGHT_LISTEN: 0.0.0.0:18786
+      NIGHT_PUBLISH_DIR: /srv/night/publish
+      NIGHT_DATA_DIR: /srv/night/data
+      NIGHT_DB: /srv/night/data/diagnostics.sqlite3
+      NIGHT_ALLOWLIST: /srv/night/private/allowlist.json
+      NIGHT_RETENTION_DAYS: "45"
+      NIGHT_MAX_ROWS: "500000"
+      NIGHT_RATE_LIMIT_PER_MIN: "60"
+      NIGHT_RATE_BURST: "20"
+      PYTHONUNBUFFERED: "1"
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:18786:18786"
+    volumes:
+      - /vol1/1000/docker/personal-night-ota/app:/app:ro
+      - /vol1/1000/mobile/night:/srv/night/publish:ro
+      - /vol1/1000/docker/personal-night-ota/data:/srv/night/data
+      - /vol1/1000/docker/personal-night-ota/private:/srv/night/private:ro
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:18786/mobile/night/healthz',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
