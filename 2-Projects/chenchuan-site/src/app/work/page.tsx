@@ -1,3 +1,4 @@
+import { TaskRouterCard } from '@/components/shared/TaskRouterCard'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
@@ -17,6 +18,7 @@ export default async function WorkPage() {
     <div className="pt-24">
       <SectionWrapper>
         <SectionTitle label="All Work" title="全部项目" />
+        <TaskRouterCard />
         <div className="grid gap-6 md:grid-cols-2">
           {projects.map((project, i) => (
             <BlurFade key={project.slug} delay={i * 0.06}>

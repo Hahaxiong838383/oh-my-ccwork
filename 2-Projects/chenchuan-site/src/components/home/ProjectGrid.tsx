@@ -1,5 +1,6 @@
 'use client'
 
+import { TaskRouterCard } from '@/components/shared/TaskRouterCard'
 import Link from 'next/link'
 import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { SectionTitle } from '@/components/shared/SectionTitle'
@@ -18,6 +19,7 @@ export function ProjectGrid({ projects }: Props) {
   return (
     <SectionWrapper id="work">
       <SectionTitle label="精选项目" title="代表作品" />
+      <TaskRouterCard />
       <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
         {featured.map((project, i) => (
           <BlurFade key={project.slug} delay={i * 0.08}>
