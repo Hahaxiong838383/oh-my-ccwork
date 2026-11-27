@@ -70,11 +70,27 @@
   "verification": {
     "window": "2026-11-27 12:43–12:44 +08:00",
     "result": "主网关健康检查受控失效后，17 秒内自动转至备网关，解除故障后 25 秒内自动回主。三个阶段均核验实际以太网下一跳、UDP/TCP DNS 回答及 TLS 图片正文。前台 31 个采样的解码帧均有推进，掉帧与解码错误为零。",
-    "pending": "下一次自然冷启动复验。",
     "evidence": {
       "x96": "/data/adb/dsh-gateway/ha-before-20261127.*/",
       "armbian": "/var/backups/dsh-tv-ha-20261127.*/（drill.log、playback.tsv 及三态路径采样）"
     },
-    "boot_audit": "稳定阶段需同时观察到本次启动的主备回执、单实例守护和实际业务路由；同一次开机只读核对通过，冷启动等下次自然开机。"
+    "boot_audit": "稳定阶段要求本次启动的有效主备回执、恰好一个守护实例和实测业务路由。",
+    "cold_boot": {
+      "observation": "early_boot",
+      "status": "observed_checks_pass",
+      "started_at": "2026-11-27T12:56:12+08:00",
+      "completed_at": "2026-11-27T13:00:28+08:00",
+      "sample_uptime_seconds": [
+        32,
+        78,
+        102,
+        154,
+        287
+      ],
+      "actual_gateway_and_dns": "192.168.1.19",
+      "ha_controller_count_each": 1,
+      "result": "五次采样均为主态，IPv4 配网失败零次。抓包复核 UDP/TCP DNS 与 HTTPS 的实际下一跳，两路家庭直播源取得有效 TS，前台 DIYP 持续解码。",
+      "audit_sha256": "cc408b183a8d44cfa1a8835a9f7f9017fd16220a040ad0a11a08cb069e0cea84"
+    }
   }
 }
