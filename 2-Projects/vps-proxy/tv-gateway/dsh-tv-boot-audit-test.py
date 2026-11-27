@@ -33,6 +33,8 @@ eth0
 2026-11-26T19:31:04.613 success
 WATCH
 scanned
+init_visible
+ha_controller
 UID
 package:org.smarttube.beta uid:10087
 RULE
@@ -49,13 +51,18 @@ assert not audit["has_ts"](b"partial" + packet * 9)
 assert not audit["has_ts"](b"<html>error</html>" * 300)
 assert not audit["has_ts"]((packet * 3 + bytes(188)) * 5)
 
-watcher_filter = audit["STATUS"].split("ps -A -o PID,ARGS | awk '")[1].split("'")[0]
+watcher_filter = audit["STATUS"].split('"$processes" | awk \'')[1].split("'")[0]
 fake_ps = ("PID ARGS\n"
+           "1 init second_stage\n"
            "13 /data/adb/magisk/busybox sh /data/adb/dsh-gateway/watch.sh\n"
            "14 logcat /data/adb/dsh-gateway/watch.sh.disabled-20261125\n"
-           "15 sh /data/adb/dsh-gateway/x96-network.sh --watch\n")
+           "15 sh /data/adb/dsh-gateway/x96-network.sh --watch\n"
+           "26795 sh /data/adb/dsh-gateway/x96-gateway-watch.sh\n"
+           "26796 sh /data/adb/dsh-gateway/x96-gateway-watch.sh.bak\n"
+           "26797 cat /data/adb/dsh-gateway/x96-gateway-watch.sh\n"
+           "26798 sh /data/adb/dsh-gateway/x96-gateway-watch.sh --other\n")
 output = subprocess.run(["awk", watcher_filter], input=fake_ps, capture_output=True, text=True, check=True)
-assert output.stdout.splitlines() == ["scanned", "matched"]
+assert output.stdout.splitlines() == ["scanned", "init_visible", "matched", "ha_controller"]
 positive = audit["parse_status"](status.decode().replace("scanned", "scanned\nmatched"), boot_id)
 assert positive["old_watchers"] == 1 and not audit["network_ok"](positive)
 positive = audit["parse_status"](status.decode().replace("global 0", "global 1"), boot_id)
@@ -111,7 +118,14 @@ for before, after in (
     sample = audit["parse_status"](status.decode() + backup.replace(before, after), boot_id)
     assert not audit["network_ok"](sample), before
 stale = audit["parse_status"](status.decode() + backup.replace(boot_id, "prior-boot"), boot_id)
-assert stale["gateway_ha"] is None and audit["network_ok"](stale)
+assert stale["gateway_ha"] is None and not audit["network_ok"](stale)
+assert not audit["network_ok"](audit["parse_status"](status.decode(), boot_id))
+for proc_rows, count in (("", 0), ("ha_controller\nha_controller", 2)):
+    invalid = audit["parse_status"](status.decode().replace("ha_controller", proc_rows) + backup, boot_id)
+    assert invalid["ha_controller_count"] == count and not audit["network_ok"](invalid)
+unknown_proc = audit["parse_status"](status.decode().replace("init_visible", "") + backup, boot_id)
+assert unknown_proc["ha_controller_count"] is None and not audit["network_ok"](unknown_proc)
+assert audit["parse_status"]("", boot_id)["observer_protocol"] == audit["OBSERVER_PROTOCOL"]
 
 with tempfile.TemporaryDirectory() as tmp, patch.dict(audit, STATE=Path(tmp)):
     current_uptime = 12
@@ -131,7 +145,7 @@ with tempfile.TemporaryDirectory() as tmp, patch.dict(audit, STATE=Path(tmp)):
         audit["main"]()
         first = json.loads(dest.read_text())
         assert first["status"] == "observing" and first["samples"][0]["old_watchers"] is None
-        payload = status
+        payload = status + gateway_fixture("192.168.1.19").encode()
         for current_uptime in (39, 72, 132, 252):
             audit["main"]()
         complete = json.loads(dest.read_text())
@@ -142,13 +156,28 @@ with tempfile.TemporaryDirectory() as tmp, patch.dict(audit, STATE=Path(tmp)):
         final = complete["samples"][-1]
         final["gateway_ha"] = audit["gateway_observation"](backup, boot_id)
         assert audit["verdict"](complete) == "observed_checks_pass"
+        for count in (None, 0, 2):
+            final["ha_controller_count"] = count
+            assert audit["verdict"](complete) == "gateway_controller_missing_duplicate_or_unverified"
+        final["ha_controller_count"] = 1
+        for absent in (status.decode(), status.decode()+backup.replace(boot_id, "stale")):
+            final["gateway_ha"] = audit["parse_status"](absent, boot_id)["gateway_ha"]
+            assert audit["verdict"](complete) == "gateway_selection_missing_or_invalid"
+        final["gateway_ha"] = audit["gateway_observation"](backup, boot_id)
         final["gateway_ha"]["marked_packets"] = 0
         assert audit["verdict"](complete) == "gateway_traffic_mark_unverified"
         # A current selection and a fresh root receipt do not prove live DNS/routing.
         final["gateway_ha"] = audit["gateway_observation"](f"receipt {boot_id} 192.168.1.254", boot_id)
         final["boot_files"]["verified"] = 240
         assert audit["verdict"](complete) == "network_unready_or_unverified"
-        del final["boot_files"]["verified"], final["gateway_ha"]
+        del final["boot_files"]["verified"]
+        # Old persisted schema-3 samples had no observer protocol or controller
+        # count. Preserve their original verdict without upgrading their claims.
+        for sample in complete["samples"]:
+            sample.pop("observer_protocol")
+            sample.pop("ha_controller_count")
+            sample.pop("gateway_ha")
+        assert audit["verdict"](complete) == "observed_checks_pass"
         assert final["tcp_rule_present"] and final["tcp_rule_boot_receipt"]
         assert final["ipv6_disabled"] == "0" and audit["network_ok"](final)
         final["provision_failures_after_success"] = 2

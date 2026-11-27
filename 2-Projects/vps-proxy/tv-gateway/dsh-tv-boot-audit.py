@@ -15,6 +15,7 @@ BACKUP = "192.168.1.254"
 LIVE = "192.168.1.211:4022"
 STATE = Path("/var/lib/dsh-tv-boot-audit")
 OFFSETS = (0, 25, 60, 120, 240)
+OBSERVER_PROTOCOL = "x96-ha-controller-v1"
 FILES = {"central": "/sdcard/MiTV/\ufeff央视频道.txt", "beijing": "/sdcard/MiTV/本市频道.txt"}
 
 # Filter on the TV; full process tables, playlist URLs and network dumps never enter the log.
@@ -96,8 +97,13 @@ dumpsys network_stack | awk '/^IpClient\./ {eth=($1=="IpClient.eth0"); if(eth)pr
   /^Other IpClient logs:/ {eth=0}
   eth && /INVOKE onProvisioning(Failure|Success)/ {print $1,($0~/INVOKE onProvisioningFailure/?"failure":"success")}'
 echo WATCH
-ps -A -o PID,ARGS | awk 'NR==1 && $1=="PID" && $2=="ARGS" {print "scanned";next}
+if processes=$(ps -A -o PID,ARGS); then
+printf '%s\n' "$processes" | awk 'NR==1 && $1=="PID" && $2=="ARGS" {print "scanned";next}
+  $1=="1" && ($2=="init" || $2=="/init") {print "init_visible"}
+  $1~/^[0-9]+$/ && NF==3 && ($2=="sh" || $2=="/system/bin/sh") &&
+    $3=="/data/adb/dsh-gateway/x96-gateway-watch.sh" {print "ha_controller"}
   $1~/^[0-9]+$/ {for(i=2;i<=NF;i++) if($i==("/data/adb/dsh-gateway/" "watch.sh")) {print "matched";break}}'
+fi
 echo UID
 cmd package list packages --user 0 -U org.smarttube.beta
 echo RULE
@@ -233,7 +239,11 @@ def parse_status(data, boot_id):
         delta = int(frames[1][1]) - int(frames[0][1])
         if delta >= 0:
             frame_delta = delta
-    return {"gateway_ha": gateway_observation(pieces.get("HA", ""), boot_id),
+    # Set by this collector, even if the box returned an empty/partial snapshot.
+    return {"observer_protocol": OBSERVER_PROTOCOL,
+            "ha_controller_count": watcher.count("ha_controller") if
+                "scanned" in watcher and "init_visible" in watcher else None,
+            "gateway_ha": gateway_observation(pieces.get("HA", ""), boot_id),
             "boot_files": boot_files, "receipt_read_uptime": int(read_time[1]) if read_time else None,
             "foreground_app": start[1] if start else None, "decoder_frames_over_one_second": frame_delta,
             "net_id": net_id, "gateway": gateway.group(1) if gateway else None,
@@ -306,6 +316,9 @@ done
 
 def network_ok(sample):
     ha = sample.get("gateway_ha")
+    if sample.get("observer_protocol") == OBSERVER_PROTOCOL and (
+            ha is None or sample.get("ha_controller_count") != 1):
+        return False
     ha_ok = (ha is None or
              ha["selected"] in (GATEWAY, BACKUP) and ha["selected"] == ha["dns_target"] and
              all(ha[key] for key in ("initial_routes_ok", "effective_routes_ok", "policy_ok",
@@ -323,6 +336,12 @@ def verdict(record):
     if len(samples) < 3:
         return "insufficient_samples"
     last_two = samples[-2:]
+    for sample in last_two:
+        if sample.get("observer_protocol") == OBSERVER_PROTOCOL:
+            if (sample.get("gateway_ha") or {}).get("selected") not in (GATEWAY, BACKUP):
+                return "gateway_selection_missing_or_invalid"
+            if sample.get("ha_controller_count") != 1:
+                return "gateway_controller_missing_duplicate_or_unverified"
     if not all(network_ok(s) for s in last_two):
         return "network_unready_or_unverified"
     if last_two[-1]["uptime"] - last_two[0]["uptime"] < 30:
