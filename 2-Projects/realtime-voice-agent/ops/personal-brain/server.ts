@@ -36,10 +36,11 @@ Object.assign(process.env, {
 });
 const { conversationStore } = await import('./p003/conversation-store.js');
 const { profileStore } = await import('./p003/profile-store.js');
-const { assembleSystemPrompt } = await import('./p003/prompt-orchestrator.js');
 const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
-const { detectStyleIntent, applyVoiceStyle } = await import('./p003/style-intent.js');
+const { resolvePersonalStyle, styleHistory } = await import('./personal-style.js');
+const { PersonalMemoryActions, parseMemoryCommand } = await import('./memory-actions.js');
+const { PersonalRecall } = await import('./memory-recall.js');
 const { answerClock, resolveClock, stripClockTurns } = await import('./p003/tools/clock-query.js');
 const { SearchExecutor } = await import('./p003/tools/search-executor.js');
 const { SearchTasks, validateQuery } = await import('./p003/tools/search-tasks.js');
@@ -54,11 +55,13 @@ import type { SearchOwner, SearchResult } from './p003/tools/search-tasks.js';
 const owner = { accountId: ownerId, role: 'device' };
 if (!profileStore.getProfile(ownerId)) profileStore.upsertProfile(ownerId, { nickname: '', birthday: '', gender: '' });
 
+const memory = new PersonalMemoryActions(dataDir, ownerId);
+const recall = new PersonalRecall(dataDir);
 const searchKey = process.env.BRAIN_DEEPSEEK_SEARCH_KEY;
 const domains = ['news.cctv.com', 'cctv.com', 'gov.cn', 'news.cn', 'cas.cn', 'nasa.gov', 'chnmuseum.cn', 'dpm.org.cn'];
 const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公开资料和最新消息' : '可以查央视新闻和航天动态';
 const persona = '你是个人语音伙伴小可。中文口语自然、温暖、好奇，日常先直接回答，主人要求详细讲时讲完整。';
-const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有相关记忆就直说。' + availableSearch + '，也支持天气与时间。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
+const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有依据就回答不记得；不要把你的猜测、此前助手的话或用户问题里的假设说成主人曾经讲过的事实。只有本次实际保存、纠正或遗忘成功才可以确认操作。' + availableSearch + '，也支持天气与时间。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
 const weather = new FixedWeather();
 function verifiedHeadline(evidence: readonly { title: string; url: string; date: string | null }[], limit = 1): SearchResult | undefined {
   const sources = evidence.filter(({title, date}) => date && Number.isFinite(Date.parse(date)) && title.length <= 100
@@ -193,15 +196,16 @@ function persist(session: string, user: string, answer: string, excluded: boolea
     account_id: owner.accountId, session_id: session, memory_excluded: excluded,
   }, user, answer);
   if (excluded) return;
-  const snapshot = conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 })
+  const snapshot = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }))
     .filter((row) => !row.memory_excluded).reverse()
     .map((row) => ({ role: row.role, content: row.text, id: row.id }));
   const decision = scheduler.onTurn(owner.accountId, owner.role, user, snapshot.filter((t) => t.role === 'user').length);
   if (!decision.run) return;
+  const snapshotRevision = memory.revision;
   extractionPending++;
-  extraction = extraction.then(() => extractAndPersist(
+  extraction = extraction.then(() => snapshotRevision === memory.revision ? extractAndPersist(
     owner.accountId, snapshot.slice(-decision.windowMessages), session, { reason: decision.reason },
-  )).catch(() => report('extract_failed')).finally(() => { extractionPending--; });
+  ) : undefined).catch(() => report('extract_failed')).finally(() => { extractionPending--; });
 }
 
 function report(event: string) {
@@ -263,8 +267,8 @@ type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; e
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
   onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false): Promise<Reply> {
-  const user = messages.at(-1)!.content;
-  const history = messages.slice(0, -1);
+  const raw = messages.at(-1)!.content;
+  const history = store ? memory.replyHistory(room, messages.slice(0, -1)) : messages.slice(0, -1);
   const prior = followups.get(room);
   followups.delete(room);
   const context = prior && prior.expires >= Date.now() ? prior : undefined;
@@ -273,6 +277,28 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     await onText(text);
     return { text, sources, tool, excluded: true };
   };
+  const command = parseMemoryCommand(raw);
+  const style = !command || command.op === 'clarify' ? resolvePersonalStyle(owner.accountId, raw, store, history, room) : undefined;
+  if (command && !(command.op === 'clarify' && style && !style.consume)) {
+    if (!store) return direct('这次是临时对话，不能修改长期记忆。','memory_action');
+    if (command.op === 'clarify') return direct(command.text, 'memory');
+    const completed = extraction.then(() => {
+      signal.throwIfAborted();
+      return memory.apply(command,room,raw);
+    });
+    extraction = completed.then(() => {}, () => {});
+    let receipt: string;
+    try { receipt = await completed; }
+    catch { signal.throwIfAborted(); report('memory_action_failed'); return direct('这次没有成功修改记忆。','memory'); }
+    return direct(receipt, 'memory_action');
+  }
+  if (style?.reply) return direct(style.reply, 'style');
+  const user = style?.request || raw;
+  // Answer questions about personal facts from the owner's evidence, before chat or any public lookup.
+  const explicitLookup = searchPrefix.test(user) && !noWeb.test(user);
+  const recalled = explicitLookup ? undefined : recall.answer(owner.accountId, user, store);
+  if (recalled !== undefined) return direct(recalled, 'memory');
+
   // ASR often joins a spoken interruption and its follow-up without punctuation.
   const clockQuestion = (text: string) => text.replace(
     /^\s*(?:小可[\s，,、]*)?(?:先停一下|停一下|先等一下|等一下|打断一下)[\s，,、。！!]*/u, '') || text;
@@ -328,9 +354,8 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   const clarify = searchDialogueClarification(user);
   if (clarify) return direct(clarify);
 
-  const style = store ? detectStyleIntent(user) : null;
-  const policy = style ? applyVoiceStyle(owner.accountId, style, user).policyLine : '';
-  const prompt = store ? assembleSystemPrompt(base, null, owner) : base;
+  const policy = style?.policyLine;
+  const prompt = store ? recall.chatPrompt(base, owner, user) : base;
   if (process.env.BRAIN_VERIFY_PROMPT === '1') {
     report(`prompt_rel=${Number(prompt.includes('【小可当下状态·数据】'))} trait=${Number(prompt.includes('【小可对这个主人的相处倾向·数据】'))} quiet=${Number(prompt.includes('主人设定：安静小可'))}`);
   }
@@ -355,7 +380,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   const quickConversation = voice && !/仔细分析|深入|详细推导|分步推理|深度思考|认真分析|详细分析/u.test(user);
   for await (const delta of chatDeltas(policy ? `${prompt}\n\n${policy}` : prompt,
-    [...stripClockTurns(history), { role: 'user', content: user }], signal, allowLookup, quickConversation)) {
+    [...stripClockTurns(styleHistory(history)), { role: 'user', content: user }], signal, allowLookup, quickConversation)) {
     if ('search' in delta) {
       const result = await querySearch(user, room, signal);
       await forward(result.text);
@@ -365,7 +390,8 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   await forward(claimFilter.feed(parens.feed(exits.flush().text) + parens.flush()) + claimFilter.flush());
   if (!text.trim()) throw new Error('chat_empty');
-  return { text, excluded: false };
+  style?.consume?.();
+  return { text, excluded: Boolean(style && !style.consume) };
 }
 
 const app = new Hono();
@@ -416,9 +442,10 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   const response = { id: `chatcmpl-${randomUUID()}`, created: Math.floor(Date.now() / 1000), model: 'personal-brain' };
   const finish = () => { if (active.get(room) === controller) active.delete(room); };
   const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void) => {
+    const revision = memory.revision;
     const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')));
     signal.throwIfAborted();
-    if (store) persist(room, user.content, reply.text, reply.excluded);
+    if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply.text, reply.excluded);
     return reply;
   };
   const details = (reply: Reply) => ({
