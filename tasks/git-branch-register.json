@@ -297,12 +297,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "d3428589736776eecfbce583922c59becbde0830",
+      "source_commit": "bf6e259b6953b845c9f47646bcd275f225e60cb9",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "main",
-      "sha256": "2c3e2fdd907e4313f90fc2ee7fe11e21ffc3c6450d7f87c7591c8c3c42195db1",
+      "sha256": "15acd8f46947afd3988fe27d60b3ef0345fa792f6afc38622b34596241297bd4",
       "proof": {
-        "object": "b332c31f79c800090a47cd46584a88e698f8d2d7:2-Projects/realtime-voice-agent/docs/personal-s24-night-interaction-20261126.json",
+        "object": "04bea679de3598b367b6c8b98600f0c211c2eb81:2-Projects/realtime-voice-agent/docs/personal-s24-query-prosody-release-20261127.json",
         "keys": [
           "deployments",
           "personal-brain"
@@ -372,12 +372,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "401122af8f35f378846151c1349e2277324b476e",
+      "source_commit": "bf6e259b6953b845c9f47646bcd275f225e60cb9",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "3a572bc7256777e80c551da3ff1dc7e021d5632f65b7897a44868f7922e71483",
+      "sha256": "f4aa79a92b999f08be41a308d3d2e53e0bfb53ff5241d03960183b6b155dec12",
       "proof": {
-        "object": "512534d0161caa29cd664bcc27c27e1fcf39987d:2-Projects/realtime-voice-agent/docs/personal-s24-ota-release-20261127.json",
+        "object": "04bea679de3598b367b6c8b98600f0c211c2eb81:2-Projects/realtime-voice-agent/docs/personal-s24-query-prosody-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"
