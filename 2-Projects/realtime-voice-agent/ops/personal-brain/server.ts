@@ -36,6 +36,7 @@ Object.assign(process.env, {
   MEMORY_REUNION_RECALL: '0',
 });
 const { conversationStore } = await import('./p003/conversation-store.js');
+const { PersonalStoryFeedback, explicitReplyApproval, isReplyFeedback } = await import('./story-feedback.js');
 const { profileStore } = await import('./p003/profile-store.js');
 const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
@@ -58,6 +59,7 @@ if (!profileStore.getProfile(ownerId)) profileStore.upsertProfile(ownerId, { nic
 
 const memory = new PersonalMemoryActions(dataDir, ownerId);
 const recall = new PersonalRecall(dataDir);
+const storyFeedback = new PersonalStoryFeedback(dataDir);
 const searchKey = process.env.BRAIN_DEEPSEEK_SEARCH_KEY;
 const domains = ['news.cctv.com', 'cctv.com', 'gov.cn', 'news.cn', 'cas.cn', 'nasa.gov', 'chnmuseum.cn', 'dpm.org.cn'];
 const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公开资料和最新消息' : '可以查央视新闻和航天动态';
@@ -192,20 +194,38 @@ function remember(room: string, entry: Omit<NonNullable<ReturnType<typeof follow
 let extraction = Promise.resolve();
 let extractionPending = 0;
 
-function persist(session: string, user: string, answer: string, excluded: boolean) {
-  conversationStore.addTurn({
-    account_id: owner.accountId, session_id: session, memory_excluded: excluded,
-  }, user, answer);
+function persist(session: string, user: string, reply: Reply) {
+  const {text: answer, excluded} = reply;
+  const replyFeedback = isReplyFeedback(user);
+  const [feedback] = conversationStore.addTurn({
+    account_id: owner.accountId, session_id: session, memory_excluded: excluded || replyFeedback,
+  }, user, answer, !!reply.feedbackEligible && !replyFeedback);
   if (excluded) return;
-  const snapshot = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }))
-    .filter((row) => !row.memory_excluded).reverse()
+  const recent = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }));
+  // Inspect adjacency before removing excluded turns: a tool response breaks the pair.
+  const [, actualFeedback, priorReply, priorRequest] = recent;
+  const paired = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && priorRequest?.role === 'user';
+  if (replyFeedback) {
+    if (paired) {
+      try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
+      catch { report('story_feedback_failed'); }
+    }
+    return;
+  }
+  const adjacent = paired && !priorReply.memory_excluded && !priorRequest.memory_excluded;
+  // Older binaries persisted pure feedback without an exclusion flag. Keep those
+  // pairs out of subsequent extraction windows without rewriting the transcript.
+  const snapshot = recent.filter((row, index) => {
+    const request = row.role === 'user' ? row : recent[index + 1];
+    return !row.memory_excluded && request?.role === 'user' && !isReplyFeedback(request.text);
+  }).reverse()
     .map((row) => ({ role: row.role, content: row.text, id: row.id }));
   const decision = scheduler.onTurn(owner.accountId, owner.role, user, snapshot.filter((t) => t.role === 'user').length);
   if (!decision.run) return;
   const snapshotRevision = memory.revision;
   extractionPending++;
   extraction = extraction.then(() => snapshotRevision === memory.revision ? extractAndPersist(
-    owner.accountId, snapshot.slice(-decision.windowMessages), session, { reason: decision.reason },
+    owner.accountId, snapshot.slice(-decision.windowMessages), session, { reason: decision.reason, previousReplyId: adjacent ? priorReply.id : undefined },
   ) : undefined).catch(() => report('extract_failed')).finally(() => { extractionPending--; });
 }
 
@@ -264,11 +284,17 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
   }
 }
 
-type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean };
+type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean; feedbackEligible?: boolean };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
   onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void): Promise<Reply> {
   const raw = messages.at(-1)!.content;
+  if (explicitReplyApproval(raw)) {
+    signal.throwIfAborted();
+    const text = '谢谢，我很高兴你喜欢。';
+    await onText(text);
+    return {text, excluded:false};
+  }
   const history = store ? memory.replyHistory(room, messages.slice(0, -1)) : messages.slice(0, -1);
   const prior = followups.get(room);
   followups.delete(room);
@@ -406,7 +432,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   if (!text.trim()) throw new Error('chat_empty');
   style?.consume?.();
-  return { text, excluded: Boolean(style && !style.consume) };
+  return { text, excluded: Boolean(style && !style.consume), feedbackEligible:true };
 }
 
 const app = new Hono();
@@ -460,7 +486,7 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
     const revision = memory.revision;
     const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')), suppressCue);
     signal.throwIfAborted();
-    if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply.text, reply.excluded);
+    if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply);
     return reply;
   };
   const details = (reply: Reply) => ({

@@ -1,0 +1,198 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-28T03:04:25+08:00",
+  "deployments": {
+    "personal-brain": {
+      "source_commit": "0290903abc01998fc7c6529aef87b200332b4626",
+      "image": "personal-brain:growth-feedback-5b928a606e81",
+      "image_id": "sha256:e56ab15c9e7c07c1383c6245266abc194a89f6cd53341dc4f535afc7021d8511",
+      "file": "/app/server.mjs",
+      "sha256": "5b928a606e81888e6bf55ec39f7822f2165926d17036393694f811c14ba52b4a",
+      "previous_image": "personal-brain:brief-weather-379b60842138"
+    }
+  },
+  "acceptance": {
+    "signed_calls": "Three independent voice rooms with an isolated synthetic owner and speech services, running the production images. An additional room used the live personal signing endpoint and owner for a weather lookup. APK client runtime on a browser, prerecorded microphone and remote audio capture.",
+    "private_worker_same": true,
+    "matched_production_brain_and_worker_images": true,
+    "worker_image": "sha256:ce06e5a05b0a4fd6596edd05210509ca1d16c1daf7562fb6995a39395e80fe55",
+    "original_growth_rows": {
+      "originalRows": 16,
+      "missingOrChanged": 0
+    },
+    "original_conversation_rows": {
+      "originalRows": 454,
+      "missingOrChanged": 0
+    },
+    "provider_revision": 29,
+    "old_cross_room_reproduction": {
+      "neutralPlanThenUnrelatedGoodNews": true,
+      "before": 0.5,
+      "after": 0.52,
+      "rule": {
+        "module": "trait",
+        "rule": "reinforce_story_pos",
+        "n": 1
+      }
+    },
+    "temporary_formal_reply": {
+      "shortAcknowledgment": "谢谢，我很高兴你喜欢。",
+      "temporaryRoomRows": 0
+    },
+    "http_regression": {
+      "initial": 0.5,
+      "otherRoom": 0.5,
+      "before": 0.5,
+      "positive": 0.52,
+      "again": 0.52,
+      "n": 0.52,
+      "sameRoomNews": 0.52,
+      "events": [
+        {
+          "rule": "explicit_story_feedback",
+          "old": "0.5",
+          "new": "0.52"
+        }
+      ],
+      "resolves": true
+    },
+    "style_scoped_story": {
+      "initial": 0.5,
+      "otherRoom": 0.5,
+      "before": 0.5,
+      "positive": 0.52,
+      "again": 0.52,
+      "n": 0.52,
+      "sameRoomNews": 0.52,
+      "events": [
+        {
+          "rule": "explicit_story_feedback",
+          "old": "0.5",
+          "new": "0.52"
+        }
+      ],
+      "resolves": true
+    },
+    "unit_tests": {
+      "passed": 51,
+      "skipped_optional_live_weather": 1
+    },
+    "isolated_checks": {
+      "a-hangup": true,
+      "a-count": true,
+      "storyA-remote-audio": true,
+      "b-hangup": true,
+      "b-count": true,
+      "joy-remote-audio": true,
+      "c-hangup": true,
+      "c-count": true,
+      "storyC-remote-audio": true,
+      "feedback-remote-audio": true,
+      "independentRooms": true,
+      "schema": true,
+      "newOwner": true,
+      "negativeAuditStable": true,
+      "roles": true,
+      "storyA-turns-match": true,
+      "storyA-unique-final-sdk-turn-equals-stored-reply": true,
+      "storyA-audio-from-beginning-to-end": true,
+      "joy-turns-match": true,
+      "joy-unique-final-sdk-turn-equals-stored-reply": true,
+      "joy-audio-from-beginning-to-end": true,
+      "storyC-turns-match": true,
+      "storyC-unique-final-sdk-turn-equals-stored-reply": true,
+      "storyC-audio-from-beginning-to-end": true,
+      "feedback-turns-match": true,
+      "feedback-unique-final-sdk-turn-equals-stored-reply": true,
+      "feedback-audio-from-beginning-to-end": true,
+      "story-reply-eligible-in-database": true,
+      "feedback-is-excluded-from-general-extraction": true,
+      "feedback-short-ack": true,
+      "generic-raw-profile-does-not-change": true,
+      "no-feedback-id-or-orphan-generic-preference": true,
+      "storyA-produced": true,
+      "storyC-produced": true,
+      "independent-joy": true,
+      "single-event": true,
+      "exact-feedback": true,
+      "identity-dedup-index": true,
+      "same-room-evidence": true,
+      "before-after": true,
+      "stable-event-after-hangup": true,
+      "no-duplicate-evidence": true,
+      "style-event-separate": true,
+      "single-style-example": true,
+      "style-example-from-praised-reply": true
+    },
+    "official_checks": {
+      "weather-hangup": true,
+      "weather-count": true,
+      "officialWeather-remote-audio": true,
+      "official-no-growth": true,
+      "official-weather": true
+    },
+    "trait_before_after": {
+      "start": 0.5,
+      "storyA": 0.5,
+      "joy": 0.5,
+      "storyC": 0.5,
+      "feedback": 0.52,
+      "repeatAudit": 0.52
+    },
+    "style_samples": {
+      "start": 0,
+      "storyA": 0,
+      "joy": 0,
+      "storyC": 0,
+      "feedback": 1,
+      "repeatAudit": 1
+    },
+    "story_event_count": 1,
+    "style_event_count": 1,
+    "rule": "explicit_story_feedback",
+    "reply_msg_id": "aa2a9901-c461-421c-963b-2be904a1e63d",
+    "feedback_msg_id": "bbd70fde-08f2-4bc5-92d4-21a11720a0c4",
+    "voice": {
+      "storyA": {
+        "room": "ab307b9ed186",
+        "asr": "用一句话讲一个小狐狸的故事",
+        "reply": "小狐狸捡到一颗会发光的果子，舍不得吃，藏进树洞里，夜里却照得满林子亮。",
+        "pcm": 266,
+        "firstBodyAudioMs": 1844,
+        "audioVsCaption": 0.968
+      },
+      "joy": {
+        "room": "c3e04449ba90",
+        "asr": "我今天收到一条好消息特别高兴",
+        "reply": "让我想一想。听你这么说，我也跟着高兴起来了！是啥好消息呀？要是愿意，跟我说说，我陪你一块儿乐。",
+        "pcm": 337,
+        "firstBodyAudioMs": 1454,
+        "audioVsCaption": 0.962
+      },
+      "storyC": {
+        "room": "104728064efe",
+        "asr": "用一句话讲一个小熊的故事",
+        "reply": "小熊把月亮看成了掉进水里的蜂蜜罐，伸手去捞，捞了一夜，最后枕着水声睡着了。",
+        "pcm": 318,
+        "firstBodyAudioMs": 1769,
+        "audioVsCaption": 0.97
+      },
+      "feedback": {
+        "room": "104728064efe",
+        "asr": "这种讲法我喜欢",
+        "reply": "谢谢，我很高兴你喜欢。",
+        "pcm": 73,
+        "firstBodyAudioMs": 1217,
+        "audioVsCaption": 1.0
+      },
+      "officialWeather": {
+        "room": "f5e00eb3639e",
+        "asr": "北京今天的天气怎么样",
+        "reply": "我来查一下。百度天气预报，北京今天11月28日，白天晴，夜间晴，-1到11摄氏度。预报会变化。",
+        "pcm": 375,
+        "firstBodyAudioMs": 1342,
+        "audioVsCaption": 0.79
+      }
+    }
+  }
+}
