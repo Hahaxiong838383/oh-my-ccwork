@@ -40,12 +40,16 @@ pub fn endpoint_from(url: Option<&str>, agent: Option<&str>) -> Option<String> {
 }
 
 pub async fn prewarm(base: &str) {
+    let _ = prewarm_and_voice(base).await;
+}
+
+pub async fn prewarm_and_voice(base: &str) -> Option<String> {
     let _ = rustls::crypto::ring::default_provider().install_default();
     let client = match reqwest::Client::builder().timeout(Duration::from_secs(3)).build() {
         Ok(client) => client,
         Err(error) => {
             warn!(%error, "personal local speech prewarm client");
-            return;
+            return None;
         }
     };
     match client.get(format!("{base}/health")).send().await {
@@ -57,9 +61,16 @@ pub async fn prewarm(base: &str) {
                 voice = voice.as_deref().unwrap_or(VOICE_UNREPORTED),
                 "personal local speech pilot ready"
             );
+            voice
         }
-        Ok(response) => warn!(status = %response.status(), "personal local speech health"),
-        Err(error) => warn!(%error, "personal local speech health"),
+        Ok(response) => {
+            warn!(status = %response.status(), "personal local speech health");
+            None
+        }
+        Err(error) => {
+            warn!(%error, "personal local speech health");
+            None
+        }
     }
 }
 
@@ -68,10 +79,19 @@ pub async fn synthesize(
     text: &str,
     audio_tx: &mpsc::Sender<Vec<u8>>,
 ) -> Result<(u64, usize)> {
+    let (ttfb, sent, _) = synthesize_with_voice(base, text, audio_tx).await?;
+    Ok((ttfb, sent))
+}
+
+pub async fn synthesize_with_voice(
+    base: &str,
+    text: &str,
+    audio_tx: &mpsc::Sender<Vec<u8>>,
+) -> Result<(u64, usize, Option<String>)> {
     let started = std::time::Instant::now();
     let text = text.trim();
     if text.is_empty() {
-        return Ok((0, 0));
+        return Ok((0, 0, None));
     }
     let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::Client::builder().timeout(Duration::from_secs(25)).build()?;
@@ -111,7 +131,7 @@ pub async fn synthesize(
         }
         sent += chunk.len();
     }
-    Ok((started.elapsed().as_millis() as u64, sent))
+    Ok((started.elapsed().as_millis() as u64, sent, voice))
 }
 
 pub async fn run_asr(
