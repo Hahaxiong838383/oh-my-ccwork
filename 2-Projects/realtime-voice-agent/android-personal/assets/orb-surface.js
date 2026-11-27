@@ -330,7 +330,7 @@
       const cx = w / 2 + (this.reduced.matches ? 0 : radius*this.turn[0].x*.065), cy = h * .485 + radius * pose.lift;
       const rx = radius * pose.scaleX, ry = radius * pose.scaleY;
       this.geometry = { cx, cy, rx, ry, cos: Math.cos(pose.roll), sin: Math.sin(pose.roll) };
-      const size = Math.min(512, Math.max(64, Math.round(2 * radius * this.canvas.width / w)));
+      const size = Math.min(this.previewColor ? 128 : 512, Math.max(64, Math.round(2 * radius * this.canvas.width / w)));
 
       ctx.setTransform(this.canvas.width / w, 0, 0, this.canvas.height / h, 0, 0);
       ctx.clearRect(0, 0, w, h);
@@ -345,7 +345,7 @@
           localLevel: local, remoteLevel: remote, level: Math.max(local, remote),
           gazeX: this.pointer?.x ?? pose.gazeX, gazeY: this.pointer?.y ?? pose.gazeY,
           pointerActive: Boolean(this.pointer), reduced: this.reduced.matches,
-          color: this.color, time: this.lastTime
+          color: this.color, customColor: Boolean(this.customColor), time: this.lastTime
         });
         return;
       }
