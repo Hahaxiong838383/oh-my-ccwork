@@ -50,12 +50,12 @@
     },
     "armbian-tv-ha-audit": {
       "host": "Armbian",
-      "source_commit": "753de33df10d03e285b9f519a51b4e39eb39c348",
-      "sha256": "5171d2d1b483130b575b3626b3198827dba87c1ff186a3362d4b6df237649305",
+      "source_commit": "8734360ac1950d31e4581a1d3146ee60de86dca9",
+      "sha256": "d9ec64185bc22b3caad03f04d0bd04c866ad514059ed462a5e8f8659cc976c05",
       "files": [
         {
           "path": "usr/local/sbin/dsh-tv-boot-audit.py",
-          "sha256": "e984a634cd8314d0913d59a634cf9922b032502139ec06f2cfe31a7dabe47053",
+          "sha256": "7a04cf0e38ef6e3b4539a3b2f678e07e3f1dfd753cb9817ac637e8390bf92cbb",
           "source": "2-Projects/vps-proxy/tv-gateway/dsh-tv-boot-audit.py"
         },
         {
@@ -63,7 +63,8 @@
           "sha256": "5a9c1f5b95add3586eb0a8dc9faaf5afd105a2d0db12d150f64904b5ad92320e",
           "source": "2-Projects/vps-proxy/tv-gateway/dsh-tv-guard.sh"
         }
-      ]
+      ],
+      "sampled_at": "2026-11-27T12:53:26+08:00"
     }
   },
   "verification": {
@@ -73,6 +74,7 @@
     "evidence": {
       "x96": "/data/adb/dsh-gateway/ha-before-20261127.*/",
       "armbian": "/var/backups/dsh-tv-ha-20261127.*/（drill.log、playback.tsv 及三态路径采样）"
-    }
+    },
+    "boot_audit": "稳定阶段需同时观察到本次启动的主备回执、单实例守护和实际业务路由；同一次开机只读核对通过，冷启动等下次自然开机。"
   }
 }
