@@ -67,6 +67,9 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
         await page.evaluate(()=>new Promise(requestAnimationFrame));
       }
       if (family !== 'classic') {
+        const stageSize = await page.locator('#avatar-engine').evaluate(host => [
+          host.offsetWidth, host.firstElementChild.offsetWidth, host.offsetHeight, host.firstElementChild.offsetHeight]);
+        assert.deepEqual([stageSize[1],stageSize[3]], [stageSize[0],stageSize[2]]);
         await page.evaluate(()=>{
           NightView.render({paired:true,active:true,phase:'listening'});
           NightView.micLevel(.6);

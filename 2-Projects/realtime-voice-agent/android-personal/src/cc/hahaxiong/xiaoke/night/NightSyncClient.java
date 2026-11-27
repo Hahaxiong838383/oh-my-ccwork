@@ -39,7 +39,7 @@ final class NightSyncClient {
     static final String EXPECTED_PATH = "/mobile/night/sync";
     static final String ENDPOINT = "https://pa.hahaxiong.cc:8666/mobile/night/sync";
 
-    static final long DEFAULT_VERSION_CODE = 1000009L;
+    static final long DEFAULT_VERSION_CODE = 1000010L;
     static final String DEFAULT_ACCENT = "#4F7DF3";
     static final String ACTION_SYNC_LOGS = "sync_logs";
     static final String ACTION_CHECK_UPDATE = "check_update";

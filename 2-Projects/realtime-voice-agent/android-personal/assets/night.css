@@ -745,7 +745,7 @@ body {
 
 /* Appearance shares the stage and audio controls with the current call. */
 #avatar-engine { position:absolute; width:78%; height:78%; top:9.5%; left:11%; pointer-events:none; }
-.avatar-slot { position:absolute; inset:0; }
+.avatar-slot { position:absolute; top:0; left:0; width:100%; height:100%; }
 /* BoopFace handles its own antenna drags, petting and multi-touch on the head. */
 .night-app[data-avatar=boop] #avatar-engine { z-index:1; pointer-events:auto; touch-action:none; }
 #orb-canvas { position:relative; touch-action:none; }

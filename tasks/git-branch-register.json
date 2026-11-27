@@ -4,7 +4,7 @@
     "personal/s24-night-apk": {
       "task": "私人暗夜剧场 S24 头像、交互与 APK 发布维护",
       "state": "keep",
-      "until": "V1.0.9 头像选择已发布，保留私人版维护工作树，下版发布后复核。"
+      "until": "V1.0.10 头像选择已发布，保留私人版维护工作树，下版发布后复核。"
     },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
@@ -382,12 +382,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "a2b464f5690bcde28a03b85240f5b698d441e6a8",
-      "source_ref": "refs/tags/release/personal-voice/v1.0.9",
+      "source_commit": "c7f843ebafdd6b37a8862b92cf33b9dc998fd2f0",
+      "source_ref": "refs/tags/release/personal-voice/v1.0.10",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "9691db08abe22c25baba4f20c3070be50f7627b39ec3bc44e540fc8211682e20",
+      "sha256": "712a91d2c642b327028a020c5401e32ca4ac0356b4077592d6294ae3045991da",
       "proof": {
-        "object": "41c171239ab917b395ded3d6b52a2a2974c1ca64:2-Projects/realtime-voice-agent/docs/personal-s24-avatar-gallery-release-20261127.json",
+        "object": "eb91248e8410c0f31db9b17ce2737b5519121171:2-Projects/realtime-voice-agent/docs/personal-s24-avatar-gallery-v110-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"
