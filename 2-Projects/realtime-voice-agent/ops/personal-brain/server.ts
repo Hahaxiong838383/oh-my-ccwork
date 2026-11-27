@@ -36,7 +36,7 @@ Object.assign(process.env, {
   MEMORY_REUNION_RECALL: '0',
 });
 const { conversationStore } = await import('./p003/conversation-store.js');
-const { PersonalStoryFeedback, explicitReplyApproval } = await import('./story-feedback.js');
+const { PersonalStoryFeedback, explicitReplyApproval, isReplyFeedback } = await import('./story-feedback.js');
 const { profileStore } = await import('./p003/profile-store.js');
 const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
@@ -195,8 +195,9 @@ let extraction = Promise.resolve();
 let extractionPending = 0;
 
 function persist(session: string, user: string, answer: string, excluded: boolean) {
+  const replyFeedback = isReplyFeedback(user);
   const [feedback] = conversationStore.addTurn({
-    account_id: owner.accountId, session_id: session, memory_excluded: excluded,
+    account_id: owner.accountId, session_id: session, memory_excluded: excluded || replyFeedback,
   }, user, answer);
   if (excluded) return;
   const recent = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }));
@@ -204,11 +205,19 @@ function persist(session: string, user: string, answer: string, excluded: boolea
   const [, actualFeedback, priorReply, priorRequest] = recent;
   const adjacent = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && !priorReply.memory_excluded
     && priorRequest?.role === 'user' && !priorRequest.memory_excluded;
-  if (adjacent) {
-    try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
-    catch { report('story_feedback_failed'); }
+  if (replyFeedback) {
+    if (adjacent) {
+      try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
+      catch { report('story_feedback_failed'); }
+    }
+    return;
   }
-  const snapshot = recent.filter((row) => !row.memory_excluded).reverse()
+  // Older binaries persisted pure feedback without an exclusion flag. Keep those
+  // pairs out of subsequent extraction windows without rewriting the transcript.
+  const snapshot = recent.filter((row, index) => {
+    const request = row.role === 'user' ? row : recent[index + 1];
+    return !row.memory_excluded && request?.role === 'user' && !isReplyFeedback(request.text);
+  }).reverse()
     .map((row) => ({ role: row.role, content: row.text, id: row.id }));
   const decision = scheduler.onTurn(owner.accountId, owner.role, user, snapshot.filter((t) => t.role === 'user').length);
   if (!decision.run) return;
@@ -279,12 +288,17 @@ type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; e
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
   onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void): Promise<Reply> {
   const raw = messages.at(-1)!.content;
+  if (explicitReplyApproval(raw)) {
+    signal.throwIfAborted();
+    const text = '谢谢，我很高兴你喜欢。';
+    await onText(text);
+    return {text, excluded:false};
+  }
   const history = store ? memory.replyHistory(room, messages.slice(0, -1)) : messages.slice(0, -1);
   const prior = followups.get(room);
   followups.delete(room);
   const context = prior && prior.expires >= Date.now() ? prior : undefined;
-  const approval = explicitReplyApproval(raw);
-  const command = approval ? undefined : parseMemoryCommand(raw);
+  const command = parseMemoryCommand(raw);
   const style = !command || command.op === 'clarify' ? resolvePersonalStyle(owner.accountId, raw, store, history, room) : undefined;
   const user = style?.request || raw;
   const limit = briefReplyLimit(owner.accountId, user, store, style);
@@ -311,7 +325,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   if (style?.reply) return direct(style.reply, 'style');
   // Answer questions about personal facts from the owner's evidence, before chat or any public lookup.
   const explicitLookup = searchPrefix.test(user) && !noWeb.test(user);
-  const recalled = explicitLookup || approval ? undefined : recall.answer(owner.accountId, user, store);
+  const recalled = explicitLookup ? undefined : recall.answer(owner.accountId, user, store);
   if (recalled !== undefined) return direct(recalled, 'memory');
 
   // ASR often joins a spoken interruption and its follow-up without punctuation.

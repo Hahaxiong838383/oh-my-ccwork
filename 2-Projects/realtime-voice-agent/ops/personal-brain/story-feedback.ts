@@ -20,6 +20,14 @@ export function explicitReplyApproval(text: string): 'story' | 'style' | undefin
   return /故事/u.test(q) && !/方式/u.test(q) ? 'story' : 'style';
 }
 
+// A statement or question about this reply belongs to conversation feedback. It
+// supplies no evidence for a general owner preference, regardless of polarity.
+export function isReplyFeedback(text: string): boolean {
+  const normalized = compact(text).replace(/[?？]+$/u, '').replace(/(?:吗|么)$/u, '')
+    .replace(/不(?:太|怎么)?喜欢/u, '喜欢').replace(/不好听/u, '好听');
+  return !!explicitReplyApproval(normalized);
+}
+
 function isStoryTurn(question: string, answer: string): boolean {
   if (/^(?:(?:好的|当然可以|没问题|可以|嗯)[，。！\s]*)*(?:$|抱歉|暂时不能|我(?:目前|暂时)?(?:不能|没法|无法)|你想听什么)/u.test(answer.trim())) return false;
   // A named storytelling request plus the user's own assessment works for short
@@ -47,8 +55,8 @@ export class PersonalStoryFeedback {
 
   record(owner: string, question: ConversationItem, reply: ConversationItem, feedback: ConversationItem): void {
     const approval = explicitReplyApproval(feedback.text);
-    if (!approval || explicitReplyApproval(question.text) || [question,reply,feedback].some(x =>
-      x.account_id !== owner || x.session_id !== feedback.session_id || x.memory_excluded || isCrisisContent(x.text))
+    if (!approval || isReplyFeedback(question.text) || question.memory_excluded || reply.memory_excluded
+      || [question,reply,feedback].some(x => x.account_id !== owner || x.session_id !== feedback.session_id || isCrisisContent(x.text))
       || question.role !== 'user' || reply.role !== 'assistant' || feedback.role !== 'user'
       || feedback.ts < reply.ts) return;
     const story = isStoryTurn(question.text,reply.text);

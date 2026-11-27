@@ -33,14 +33,20 @@ const explanation = '纸片平铺着，展开的面积大，受到的空气阻�
 const generic = '我明白你的意思了。';
 const long = '聊聊各种颜色吧。';
 const prompts = [];
-let extractionCount = 0;
+const extractionPrompts = [];
+const ack = '谢谢，我很高兴你喜欢。';
+const realInterest = '我每周都会收集邮票。';
 globalThis.fetch = async (input, init) => {
   assert.equal(new URL(input).host, 'feedback.invalid');
   const body = JSON.parse(init.body);
   if (body.stream === false) {
-    extractionCount++;
+    extractionPrompts.push(body.messages.at(-1).content);
     // Deliberately give *every* turn an enthusiastic score to provoke the old false positive.
-    return Response.json({choices:[{message:{content:JSON.stringify({turn_valence:0.9, turn_engagement:0.95})}}]});
+    const interests = [
+      {value:'这种讲法',evidence:'这种讲法我喜欢'},
+      {value:'邮票',evidence:realInterest},
+    ];
+    return Response.json({choices:[{message:{content:JSON.stringify({turn_valence:0.9, turn_engagement:0.95, interests})}}]});
   }
   prompts.push(body.messages[0].content);
   const user = body.messages.at(-1).content;
@@ -100,7 +106,7 @@ try {
   assert.deepEqual(counts(),[0,0]);
   assert(!prompts.some(p=>p.includes('old answer')));
   assert(!db.prepare("SELECT 1 FROM growth_event WHERE rule IN ('reinforce_story_pos','reinforce_story_neg')").get());
-  assert(extractionCount>0);
+  assert(extractionPrompts.length>0);
   assert(Number(db.prepare('SELECT valence_sample_count FROM relation_state WHERE account_id=?').get(owner).valence_sample_count)>0);
 
   // Simulate a partial write failure. Both the example and the trait must roll back.
@@ -149,6 +155,36 @@ try {
   assert.equal(db.prepare('SELECT count(*) AS n FROM personal_memory_fact WHERE account_id=?').get(owner).n,0);
   await say(rooms[12],'随便聊几句吧。');
   assert(!prompts.at(-1).includes(explanation) && !prompts.at(-1).includes('【过去有效的相处方式·参考】'));
+  // Explicit feedback is immediately audible, never sent to the chat or extraction
+  // LLM, and remains addressable in the transcript. Even a faulty extractor that
+  // volunteers a matching interest cannot turn the rating into an owner fact.
+  const room = rooms[11];
+  const countTurns = () => db.prepare('SELECT count(*) AS n FROM dialogs.conversation WHERE session_id=?').get(room).n;
+  const interests = () => JSON.parse(db.prepare('SELECT interests FROM family_member WHERE account_id=?').get(owner).interests);
+  await say(room,'记住，我喜欢吃蓝莓。');
+  assert(interests().some(i=>i.value==='蓝莓' && i.state==='verified'));
+  await say(room,request);
+  const before = [prompts.length,extractionPrompts.length];
+  const turnCount = countTurns();
+  assert((await say(room,confirmed,false)).includes(ack));
+  assert.equal(countTurns(),turnCount);
+  assert((await say(room,confirmed)).includes(ack));
+  assert.deepEqual([prompts.length,extractionPrompts.length],before);
+  const pair = db.prepare('SELECT id,text,memory_excluded FROM dialogs.conversation WHERE session_id=? ORDER BY ts DESC,rowid DESC LIMIT 2').all(room);
+  assert.deepEqual(pair.map(r=>[r.text,r.memory_excluded]), [[ack,1],[confirmed,1]]);
+  assert(db.prepare("SELECT 1 FROM growth_event WHERE rule='explicit_style_feedback' AND feedback_msg_id=?").get(pair[1].id));
+  await say(room,realInterest);
+  assert(extractionPrompts.length>before[1]);
+  assert(extractionPrompts.at(-1).includes(realInterest));
+  assert(!extractionPrompts.at(-1).includes(confirmed) && !extractionPrompts.at(-1).includes(ack));
+  assert(!interests().some(i=>i.value==='这种讲法'));
+  assert(interests().some(i=>i.value==='蓝莓' && i.state==='verified') && interests().some(i=>i.value==='邮票'));
+  // Simulate rows persisted by the previous release. No history rewrite is needed.
+  db.prepare('UPDATE dialogs.conversation SET memory_excluded=0 WHERE id IN (?,?)').run(pair[0].id,pair[1].id);
+  await say(room,'我们再继续聊聊。');
+  assert(extractionPrompts.at(-1).includes('我们再继续聊聊。'));
+  assert(!extractionPrompts.at(-1).includes(confirmed) && !extractionPrompts.at(-1).includes(ack));
+  assert(!interests().some(i=>i.value==='这种讲法'));
   console.log('PASS: private production HTTP, negative/positive, prior evidence, concurrency, replay, failure rollback, relation and prompt');
 } finally {
   globalThis.fetch = nativeFetch;
