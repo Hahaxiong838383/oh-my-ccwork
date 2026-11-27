@@ -2,9 +2,9 @@
   "default_branch": "main",
   "branches": {
     "personal/s24-night-apk": {
-      "task": "小可 Night V1.0.6 说话表情、回放脉冲与私人后台设备双向联动",
+      "task": "小可 Night V1.0.7 头像声脉、语音响应和插话报时",
       "state": "keep",
-      "until": "已发 V1.0.6；待川哥 S24 Ultra 体验确认后再复核该工作树。"
+      "until": "V1.0.7 已发 OTA，私人 Worker 与 Brain 已部署。收到 S24 实机体验并核对下一版发布源后复核。"
     },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
@@ -145,6 +145,11 @@
     "codex/personal-voice-admin-20261125": {
       "task": "个人语音管理后台飞牛内网首发、三端交互设计与产品架构",
       "state": "done"
+    },
+    "personal/filler-speedup-20261127": {
+      "task": "私人 Worker 按音色缓存衔接音、缩短普通与搜索等待",
+      "state": "keep",
+      "until": "飞牛预览字幕前一版 Worker 与插话报时前一版 Brain 回滚镜像关联此提交；下一次版本稳定后复核。"
     }
   },
   "releases": {
@@ -297,12 +302,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "bf6e259b6953b845c9f47646bcd275f225e60cb9",
+      "source_commit": "99ec3ef2d12530c66519d001974699bcfe9903cc",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "main",
-      "sha256": "15acd8f46947afd3988fe27d60b3ef0345fa792f6afc38622b34596241297bd4",
+      "sha256": "3623d17c8afe7a6ccf5d6ad70d35ecddc703a681f247ce5b37d1b879a82859e0",
       "proof": {
-        "object": "04bea679de3598b367b6c8b98600f0c211c2eb81:2-Projects/realtime-voice-agent/docs/personal-s24-query-prosody-release-20261127.json",
+        "object": "d690abf49548199f51f937f7c8bafd289ef57607:2-Projects/realtime-voice-agent/docs/personal-s24-playback-release-20261127.json",
         "keys": [
           "deployments",
           "personal-brain"
@@ -312,12 +317,12 @@
     },
     "personal-worker": {
       "scope": "personal-voice",
-      "source_commit": "af28b7216f3eb9c5496e00b8205dcdee5a671e00",
-      "source_ref": "refs/heads/main",
+      "source_commit": "18fc055746cbc971491e4f145dfbde69e4ab9052",
+      "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "main",
-      "sha256": "843e6c758585d6c135c92169aadedec3c2203539411aca67953ab53da9d3f7bb",
+      "sha256": "c9cc924bc34806032413c6954016ba446331ef53e369d98a7c905fab881c476d",
       "proof": {
-        "object": "05a430c4f355e1e96a67acb762f567201449ada2:2-Projects/realtime-voice-agent/docs/personal-provider-release-20261125.json",
+        "object": "d690abf49548199f51f937f7c8bafd289ef57607:2-Projects/realtime-voice-agent/docs/personal-s24-playback-release-20261127.json",
         "keys": [
           "deployments",
           "personal-worker"
