@@ -56,6 +56,7 @@ public final class NightHostActivity extends Activity {
     private NightAssets assets;
     private SecureStore store;
     private TicketClient tickets;
+    private NightSync sync;
     private NightBridge bridge;
     private AudioGuard audio;
 
@@ -102,6 +103,7 @@ public final class NightHostActivity extends Activity {
         assets = new NightAssets(this);
         store = new SecureStore(this);
         tickets = new TicketClient();
+        sync = new NightSync(this, store);
         audio = new AudioGuard(this);
 
         FrameLayout root = new FrameLayout(this);
@@ -114,7 +116,34 @@ public final class NightHostActivity extends Activity {
 
         configureWebView();
 
-        bridge = new NightBridge(this, web, store, tickets);
+        bridge = new NightBridge(this, web, store, tickets, sync);
+        sync.attachGateway(new NightSync.HostGateway() {
+            @Override
+            public boolean isPageTrusted() {
+                return pageTrusted();
+            }
+
+            @Override
+            public void deliverSyncAccent(String hex) {
+                if (bridge != null) {
+                    bridge.deliverSyncAccent(hex);
+                }
+            }
+
+            @Override
+            public void triggerSyncLogs() {
+                NightDiagnostics.flush(NightHostActivity.this);
+            }
+
+            @Override
+            public void triggerCheckUpdate() {
+                NightDiagnostics.event(NightHostActivity.this, "ota_check");
+                NightOta.check(NightHostActivity.this);
+                if (bridge != null) {
+                    bridge.notifyOtaChange();
+                }
+            }
+        });
         web.addJavascriptInterface(bridge, "NightHost");
         web.loadUrl(NightAssets.START_URL);
 
@@ -176,6 +205,9 @@ public final class NightHostActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 if (!NightAssets.START_URL.equals(url) || !pageTrusted()) return;
                 pageLoaded = true;
+                if (sync != null) {
+                    sync.onPageReady();
+                }
                 showRequestedUpdate();
                 maybeRequestNotifications();
             }
@@ -184,6 +216,9 @@ public final class NightHostActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
                 pageLoaded = false;
                 trustedPage = NightAssets.START_URL.equals(url);
+                if (sync != null) {
+                    sync.onPageStarted(trustedPage);
+                }
             }
         });
 
@@ -406,6 +441,9 @@ public final class NightHostActivity extends Activity {
         if (finishing) {
             return;
         }
+        if (sync != null) {
+            sync.onForeground(false);
+        }
         releaseSession(reason);
         finishing = true;
         main.postDelayed(new Runnable() {
@@ -422,6 +460,9 @@ public final class NightHostActivity extends Activity {
     protected void onStart() {
         super.onStart();
         foreground = true;
+        if (sync != null) {
+            sync.onForeground(true);
+        }
         NightOta.enter(this);
         NightDiagnostics.schedule(this);
         if (web != null) {
@@ -453,6 +494,9 @@ public final class NightHostActivity extends Activity {
     @Override
     protected void onStop() {
         foreground = false;
+        if (sync != null) {
+            sync.onForeground(false);
+        }
         releaseSession("background");
         if (main != null && web != null) {
             main.postDelayed(webViewPause, WEBVIEW_PAUSE_DELAY_MS);
@@ -511,6 +555,9 @@ public final class NightHostActivity extends Activity {
         releaseCapture();
         if (audio != null) {
             audio.exitCall();
+        }
+        if (sync != null) {
+            sync.shutdown();
         }
         if (tickets != null) {
             tickets.shutdown();

@@ -129,11 +129,13 @@
   };
 
   var initialColor = readSavedColor();
+  var currentColor = initialColor;
   var orb = canvasEl ? new global.NightSphere(canvasEl, initialColor) : null;
 
-  function applyColor(rawHex, persist) {
+  function applyColor(rawHex, persist, source) {
     var hex = normalizeHex(rawHex) || DEFAULT_COLOR;
     var rgb = hexToRgb(hex);
+    currentColor = hex;
 
     document.documentElement.style.setProperty('--accent', hex);
     document.documentElement.style.setProperty('--accent-rgb', rgb.r + ', ' + rgb.g + ', ' + rgb.b);
@@ -156,6 +158,9 @@
     }
     if (persist) {
       saveColor(hex);
+    }
+    if (source === 'local') {
+      callVoice('onAccentPick', hex);
     }
   }
 
@@ -340,13 +345,18 @@
   for (var i = 0; i < swatchEls.length; i++) {
     swatchEls[i].addEventListener('click', function () {
       var hex = this.getAttribute('data-color');
-      applyColor(hex, true);
+      applyColor(hex, true, 'local');
     });
   }
 
   if (colorCustomEl) {
     colorCustomEl.addEventListener('input', function () {
-      applyColor(this.value, true);
+      applyColor(this.value, true, 'local');
+    });
+    colorCustomEl.addEventListener('change', function () {
+      if (normalizeHex(this.value) !== currentColor) {
+        applyColor(this.value, true, 'local');
+      }
     });
   }
 
@@ -437,7 +447,7 @@
   if (orb && global.NightOrbInput) global.NightOrbInput.bind(canvasEl, orb);
 
   // Initialize color, clean initial DOM, and animation loop
-  applyColor(initialColor, false);
+  applyColor(initialColor, false, 'init');
   applyStateToDom({ paired: false, active: false });
   if (orb && !document.hidden) {
     orb.start();
@@ -446,6 +456,15 @@
   global.NightView = {
     render: render,
     level: level,
+    accent: function () {
+      return currentColor;
+    },
+    setAccent: function (rawHex, source) {
+      var hex = normalizeHex(rawHex);
+      if (!hex) return false;
+      applyColor(hex, true, source === 'local' ? 'local' : 'remote');
+      return true;
+    },
     speech: function (patch) {
       if (orb && orb.setSpeech) orb.setSpeech(patch);
     },

@@ -91,7 +91,7 @@
     talking: 'speaking', muted: 'muted'
   };
   const rest = {gazeX: 0, gazeY: 0, roll: 0, scaleX: 1, scaleY: 1, lift: 0,
-    eyeOpenL: 1, eyeOpenR: 1, accent: 0, breath: 0};
+    eyeOpenL: 1, eyeOpenR: 1, eyeAimX: 0, eyeAimY: 0, accent: 0, breath: 0};
   const clamp = (n, lo, hi) => Math.min(hi, Math.max(lo, n));
   const finite = value => Number.isFinite(value) ? value : 0;
   const unit = v => clamp(finite(v), 0, 1);
@@ -177,6 +177,7 @@
     let energy = 0, previousEnergy = 0, attack = 0, speechPause = 0;
     let slowEnergy = 0, speechStress = 0, syllableRate = 0, syllableHits = 0, syllableClock = 0, onsetAge = Infinity;
     let speechSeq = -1, speechCue = '', speechGroup = '', speechHold = 0, speechCycleAt = 0, inHush = false, pendingCue = false;
+    let gazeSide = 1, beatAge = Infinity, speechBlinkAt = Infinity, onsetArmed = true;
     let expressionSource = 'state', expressionEstimated = false;
     let listeningFor=0, pauseFor=0, nodAge=Infinity, nextNod=0;
     let touchAge = Infinity, touchIndex = -1, touchX = 0, touchY = 0;
@@ -232,6 +233,7 @@
       speechGroup = speechGroups[name] ? name : 'steady';
       setExpression(id);
       speechHold = 0;
+      gazeSide *= -1;
     }
     // Audio rhythm leads; a revealed caption only selects the base group. The
     // local caption kind is a lexical estimate and is reported as such.
@@ -277,7 +279,7 @@
         chooseSpeech('bright');
         return;
       }
-      const hold = reduced ? 2.3 : clamp(1.85 - syllableRate * 0.35, 1.02, 1.85);
+      const hold = reduced ? 2.3 : clamp(1.40 - syllableRate * 0.10, 0.94, 1.40);
       if (speechHold < hold) return;
       if (speechCue) {
         const base = captionGroup[speechCue];
@@ -300,6 +302,8 @@
         // speaking <-> streaming is one reply. Keep the audio envelope and the
         // expression cycle so short pauses do not restart at the same face.
         if (!sameSpeech) {
+          beatAge = Infinity; onsetArmed = true;
+          speechBlinkAt = now + 2.8 + random()*1.7;
           speechPause = 0;
           energy = 0; previousEnergy = 0; attack = 0; slowEnergy = 0; speechStress = 0;
           syllableRate = 0; syllableHits = 0; syllableClock = 0; onsetAge = Infinity;
@@ -323,14 +327,20 @@
         : phase === 'listening' && !input.muted ? unit(input.mic) : 0;
       energy = busy ? approach(energy, inputLevel, dt, inputLevel>energy ? 26 : 10) : 0;
       if (energy < 0.0005) energy = 0;
-      const rise = energy - previousEnergy;
-      attack = Math.max(attack*Math.exp(-dt*6.4), clamp(rise*2.2, 0, 0.6));
-      // Syllable onsets and a slow envelope separate rhythm from loudness.
-      if (energy > 0.08 && rise > 0.018) { onsetAge = 0; syllableHits += 1; }
-      else onsetAge += dt;
+      // Measure the slope per second. Count one onset per syllable, regardless
+      // of how many 60/120 Hz frames occur while the envelope is rising.
+      const slope = dt > 0 ? (energy - previousEnergy) / dt : 0;
+      attack = Math.max(attack*Math.exp(-dt*7), clamp(slope*.040, 0, .60));
+      onsetAge += dt;
+      beatAge += dt;
+      if (slope <= 0.1) onsetArmed = true;
+      if (onsetArmed && energy > .075 && slope > .78 && onsetAge > .115) {
+        onsetAge = 0; syllableHits++; onsetArmed = false;
+        if (speaking && beatAge > .67 && energy - slowEnergy > .065) beatAge = 0;
+      }
       syllableClock += dt;
-      if (syllableClock >= 0.75) {
-        syllableRate = approach(syllableRate, syllableHits / syllableClock, dt, 0.35);
+      if (syllableClock >= .75 - 1e-8) {
+        syllableRate = approach(syllableRate, syllableHits / syllableClock, syllableClock, 1.5);
         syllableClock = 0; syllableHits = 0;
       }
       slowEnergy = approach(slowEnergy, energy, dt, 1.1);
@@ -353,6 +363,10 @@
         // Captions may arrive before their audio. Only the revealed sentence
         // supplies a cue; the audio rhythm carries everything in between.
         directSpeech(dt, input.speech, reduced);
+        if (!reduced && now >= speechBlinkAt && (attack < .1 || now > speechBlinkAt+.4)) {
+          blinkAge = 0;
+          speechBlinkAt = now + 2.8 + random()*1.7;
+        }
         expressionSource = speechCue ? 'caption' : 'audio';
         expressionEstimated = true;
       } else {
@@ -396,10 +410,38 @@
         if (speaking) {
           articulation = speechPause > 0.18 ? 'pause' : attack > 0.12 ? 'attack'
             : speechStress > 0.18 ? 'stress' : syllableRate > 0.62 ? 'lively' : 'flow';
-          goal.scaleX += .014*energy; goal.scaleY += .014*energy;
-          goal.lift -= 0.054*energy + 0.035*attack;
-          goal.gazeY += 0.19*energy; goal.roll += 0.075*energy*Math.sin(now*2.25);
-          goal.eyeOpenL -= .07*energy; goal.eyeOpenR -= .06*energy;
+          // Let a phrase hold its silhouette while faster syllables accent it.
+          // The eyes seek first, then settle back toward the listener as the head turns.
+          const side = gazeSide;
+          const seek = Math.exp(-speechHold*3.3);
+          const voice = 1 - Math.min(1, speechPause/.48);
+          let turn = .24*side, tilt = .06*side, pitch = -.12;
+          switch (speechGroup) {
+            case 'ask':
+              turn = .48*side; tilt = -.225*side; pitch = -.16;
+              goal.eyeOpenR -= .22; break;
+            case 'warm': case 'lively':
+              turn = .22*side; tilt = .16*side; pitch = .025;
+              goal.lift -= .022; break;
+            case 'bright':
+              turn = .07*side; tilt = .035*side; pitch = -.29;
+              goal.lift -= .032; break;
+            case 'concern':
+              turn = -.32*side; tilt = -.12*side; pitch = .16;
+              goal.eyeOpenL -= .16; break;
+            case 'hush':
+              turn = -.29*side; tilt = .095*side; pitch = .11;
+              goal.eyeOpenL -= .10; goal.eyeOpenR -= .10; break;
+          }
+          goal.gazeX += turn*voice;
+          goal.gazeY += pitch*voice;
+          goal.roll += tilt*voice;
+          goal.eyeAimX = turn*(1.05*seek-.40)*voice;
+          goal.eyeAimY = -.15*seek*voice;
+          const nod = beatAge < .38 ? Math.sin(Math.PI*(beatAge-.06)/.32) : 0;
+          goal.lift += .038*nod - .037*energy;
+          goal.gazeY += .16*nod;
+          goal.scaleX += .018*energy; goal.scaleY += .018*energy;
         } else if (phase === 'listening') {
           articulation = energy > 0.045 ? 'attend' : 'quiet';
           nodAge += dt;
@@ -433,7 +475,7 @@
       const squash=clamp((goal.scaleX-goal.scaleY)*.5,-.009,.009);
       goal.scaleX=size+squash; goal.scaleY=size-squash;
       for (const key of Object.keys(rest)) {
-        const speed = key === 'eyeOpenL' || key === 'eyeOpenR' ? 65 : key === 'accent' ? 20 : 11;
+        const speed = key.startsWith('eyeAim') ? 32 : key === 'eyeOpenL' || key === 'eyeOpenR' ? 65 : key === 'accent' ? 20 : 11;
         pose[key] = reduced ? goal[key] : approach(pose[key], goal[key], dt, speed);
       }
       // referenceState names the eye-contour pool only. During speech,

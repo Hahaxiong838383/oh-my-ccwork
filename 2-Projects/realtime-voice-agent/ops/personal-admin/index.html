@@ -379,7 +379,7 @@ function renderDevices(forceColor){
     const cmdPending=Boolean(d.command&&d.command.status!=='acked');
     return colorPending||cmdPending;
   }).length;
-  el('deviceSummary').textContent='已发现 '+deviceList.length+' 台设备'+(pendingCount?' · '+pendingCount+' 台有待手机确认项':' · 已全部同步')+' · 读取 '+new Date(deviceLastRead||Date.now()).toLocaleTimeString('zh-CN',{hour12:false});
+  el('deviceSummary').textContent='已发现 '+deviceList.length+' 台设备'+(pendingCount?' · '+pendingCount+' 台有待手机确认项':' · 当前无待确认操作')+' · 读取 '+new Date(deviceLastRead||Date.now()).toLocaleTimeString('zh-CN',{hour12:false});
   for(const d of deviceList){
     const btn=document.createElement('button');btn.type='button';btn.className='dev-item';
     btn.setAttribute('aria-pressed',String(d.device===selectedDevice));
