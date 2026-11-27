@@ -104,7 +104,12 @@ if (process.env.BRAIN_VERIFY_SKIP_SEARCH !== '1') {
     const noCity = await chat('今天出门要带伞吗？', 'verify-weather-no-city');
     assert.match(noCity.text, /哪个城市/);
     assert.equal(noCity.sources.length, 0);
-    console.log('live weather source and missing-city clarification passed');
+    const walk = await chat('介绍一下雨后散步的感受', room, {body: {store: false}});
+    assert.equal(walk.tool, undefined, 'walk should go through ordinary chat');
+    assert.equal(walk.sources, undefined);
+    assert.doesNotMatch(walk.text, /查哪个城市|告诉我.{0,6}城市/);
+    assert.match(walk.text, /脚步|雨|泥土|地面|路|空气|水|叶|散步/);
+    console.log('live weather source, missing-city clarification and rain-themed conversation passed');
   }
 }
 

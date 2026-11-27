@@ -17,7 +17,7 @@ process.env.PROFILE_DB_PATH = dbPath;
 after(() => rmSync(stage,{recursive:true,force:true}));
 
 test('private scoped style uses the existing owner store without a switch cooldown or daily limit', async () => {
-  const {resolvePersonalStyle: resolve, styleHistory} = await import(pathToFileURL(join(stage,'personal-style.ts')).href);
+  const {resolvePersonalStyle: resolve, styleHistory, briefReplyLimit} = await import(pathToFileURL(join(stage,'personal-style.ts')).href);
   const db = new DatabaseSync(dbPath,{readOnly:true});
   try {
     const template = () => db.prepare("select template from trait_template where account_id='tester'").get()?.template ?? 'default';
@@ -75,5 +75,32 @@ test('private scoped style uses the existing owner store without a switch cooldo
     inRoom('介绍一下满月').consume();
     assert.equal(inRoom('以后都这样').key,'quiet');assert.equal(template(),'quiet');
     assert.match(inRoom('以后说话稳重一点').reply,/哪一种/);assert.equal(template(),'quiet');
+    const cases = [
+      ['只这一次请简短回答为什么地球会有四季','为什么地球会有四季',2],
+      ['这次说短点印刷术怎样改变了人们的生活','印刷术怎样改变了人们的生活',2],
+      ['介绍一下你自己简短点','介绍一下你自己',2],
+      ['介绍一下你自己用一两句话说完','介绍一下你自己',2],
+      ['只用一句话告诉我北京今天天气','北京今天天气',1],
+    ] as const;
+    for (const [utterance,question,limit] of cases) {
+      const style = inRoom(utterance);
+      assert.equal(style?.request,question,utterance);
+      assert.equal(briefReplyLimit('tester',question,true,style),limit,utterance);
+    }
+    assert.equal(briefReplyLimit('tester','介绍一下你自己',true),2);
+    assert.equal(briefReplyLimit('tester','给我详细讲讲地球的四季',true),0);
+    for (const question of ['这次详细给我讲一个完整的睡前故事','请完整地给我讲讲太阳的一生']) {
+      assert.equal(briefReplyLimit('tester',question,true,inRoom(question)),0,question);
+    }
+    assert.equal(briefReplyLimit('tester','不用详细讲，给我结论',true),2);
+    assert.equal(briefReplyLimit('tester','给我详细讲讲地球的四季',false),0);
+    inRoom('只这一次，请用一句话回答');
+    const pending = inRoom('介绍一下月球');
+    assert.equal(briefReplyLimit('tester',pending.request,true,pending),1);
+    assert.equal(briefReplyLimit('tester','给我讲个故事',true,pending),1);
+    pending.consume();
+    assert.equal(briefReplyLimit('tester','再介绍火星',true),2);
+    inRoom('以后恢复默认');
+    assert.equal(briefReplyLimit('tester','介绍一下月球',true),0);
   } finally {db.close();}
 });
