@@ -1,0 +1,92 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T23:59:48+08:00",
+  "deployments": {
+    "personal-brain": {
+      "source_commit": "b6b018bc5761e0fd34b7f3b9304c50e06c1c5c02",
+      "image": "personal-brain:memory-a2a4768e78f9",
+      "image_id": "sha256:3b5c7dc2a9b3fcaddf261b26d77aba019fc249e349fc99e18cdae28f238ea211",
+      "file": "/app/server.mjs",
+      "sha256": "a2a4768e78f9d5f5b11540d54ff20cdd0aca86d6afd57b380b8cfecc9c6951ab",
+      "previous_image": "personal-brain:no-daily-72eecd07eb06"
+    }
+  },
+  "acceptance": {
+    "database_backup": "三份私人数据库均已在线备份，SQLite quick_check 通过。",
+    "worker_same": true,
+    "provider_revision": 29,
+    "offline_tests": {
+      "passed": 47,
+      "optional_live_weather_skipped": 1
+    },
+    "isolated_http": {
+      "turns": 30,
+      "checks": 16,
+      "failed": [],
+      "styleTemplate": [
+        "default",
+        "quiet",
+        "funny",
+        "chatty",
+        "default",
+        "funny"
+      ]
+    },
+    "isolated_calls": {
+      "tested_server": "personal-brain:memory-e50245f3419e",
+      "rooms": 6,
+      "turns": 14,
+      "checks": 41,
+      "note": "另观察到含雨后散步的一条闲聊误走已有天气路由，该句未用于判定模型风格。",
+      "example": [
+        "你说过不喜欢香菜。",
+        "记住了，喜欢香菜。",
+        "你说过喜欢香菜。",
+        "已经从长期记忆中移除了。",
+        "我不记得这件事，没有能核实的记录。"
+      ]
+    },
+    "final_isolated_release": {
+      "server": "personal-brain:memory-a2a4768e78f9",
+      "real_model_http_verification": true,
+      "fresh_signed_room_after_container_recreation": true,
+      "template": "funny",
+      "remembered_positive": "你说过你喜欢苹果。",
+      "stayed_forgotten": "我不记得这件事，没有能核实的记录。",
+      "quiet_style": "短句为模型表达偏好，首次 HTTP 验收有一次超出字数或句数检查。三次独立复问及完整回归均通过。"
+    },
+    "production_calls": {
+      "client": "已发布 V1.0.14 APK 内客户端资源，通过浏览器使用 WebRTC 和合成麦克风输入，连接正式签票、火山 ASR、私人 Worker 与讯飞 TTS。",
+      "distinct_rooms": 2,
+      "results": [
+        {
+          "asr": "你记得我最喜欢哪位诗人吗",
+          "answer": "我不记得这件事，没有能核实的记录。",
+          "body_first_audio_ms": 1455,
+          "hangup": true
+        },
+        {
+          "asr": "你记得我最喜欢哪位作曲家吗",
+          "answer": "我不记得这件事，没有能核实的记录。",
+          "body_first_audio_ms": 1425,
+          "hangup": true
+        }
+      ]
+    },
+    "forget_semantics": "遗忘影响长期记忆、用于生成的上下文和后续提取。原始通话记录按原有策略保留。",
+    "production_counts": [
+      {
+        "userRows": 1,
+        "assistantRows": 1,
+        "excludedRows": 2,
+        "memoryItemsFromTheseTurns": 0
+      },
+      {
+        "userRows": 1,
+        "assistantRows": 1,
+        "excludedRows": 2,
+        "memoryItemsFromTheseTurns": 0
+      }
+    ]
+  }
+}
