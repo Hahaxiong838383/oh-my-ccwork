@@ -1,0 +1,82 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T11:34:09+08:00",
+  "deployments": {
+    "s24-night-apk": {
+      "versionName": "V1.0.7",
+      "versionCode": 1000007,
+      "size": 242661,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000007.apk",
+      "sha256": "4fc5f03b159868879c5cfb3f2a236732fba51b196cdd4fcacb99206684cf37e8",
+      "source_commit": "746e8b535a4076f248bb3580f3088b9ed07afc54",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    },
+    "personal-worker-compose": {
+      "source_commit": "8dc5c7f361598332544cc4094dabf648b6f8155b",
+      "sha256": "284a26c01e1c0c16b53c3e65557f4649db734f2df0ea87a78100dbef3c974382",
+      "file": "ops/personal-worker/compose.yaml"
+    }
+  },
+  "acceptance": {
+    "remote_track_with_flat_web_audio": {
+      "pulse": {
+        "max": 13.976510067114093,
+        "min": 5.989932885906041,
+        "samples": 62
+      },
+      "bargeDuringOutput": true,
+      "clockReplyHeard": true,
+      "levels": 316,
+      "events": [
+        "call_start",
+        "mic_on",
+        "connected",
+        "mic_off",
+        "rx_audio",
+        "rx_caption",
+        "tx_caption",
+        "spoken_interrupt",
+        "cancel_ack",
+        "call_end"
+      ],
+      "ended": "通话已结束",
+      "active": 0
+    },
+    "android_upgrade": "Android 11 模拟器 V1.0.6 覆盖安装 V1.0.7，包管理器版本及启动后的配对界面核实。S24 未经 ADB 验证。",
+    "apk_delivery": "公网 OTA 回读完整 APK 并逐字节比对；飞牛 2 发布和缓存目录的 SHA256 均核对。",
+    "voice_room": "首段在第 11 字的中文逗号送合成；讯飞热连接，首 PCM 185 毫秒。这一轮播放队列欠载 0 次。168 字长回复播放时「嗯嗯」命中附和词并续播，再问北京时间收到回答和音频。",
+    "asr_ab": {
+      "source": "火山在线接口，同 10 条合成普通话音频逐块按实时速度发送。含短句、停顿与口语纠正。计时为最后一个 final 相对样音结束，未计入 Worker 和手机。",
+      "rows": [
+        {
+          "mode": "async_dual",
+          "window_ms": 150,
+          "last_final_p50_ms": 349,
+          "early_segment_count": 7,
+          "word_substitution_utterances": 1
+        },
+        {
+          "mode": "async_single",
+          "window_ms": 150,
+          "last_final_p50_ms": 194,
+          "early_segment_count": 7,
+          "word_substitution_utterances": 2
+        },
+        {
+          "mode": "async_dual",
+          "window_ms": 800,
+          "last_final_p50_ms": 972,
+          "early_segment_count": 1,
+          "word_substitution_utterances": 0
+        },
+        {
+          "mode": "async_single",
+          "window_ms": 800,
+          "last_final_p50_ms": 750,
+          "early_segment_count": 1,
+          "word_substitution_utterances": 2
+        }
+      ]
+    }
+  }
+}
