@@ -3,14 +3,14 @@
 #
 #   bash scripts/verify.sh [apk 路径]
 #
-# 默认校验 build/xiaoke-night-host-V1.0.11.apk。
+# 默认校验 build/xiaoke-night-host-V1.0.12.apk。
 # 任一条断言不成立即非零退出。
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
-APK="${1:-$PROJECT_DIR/build/xiaoke-night-host-V1.0.11.apk}"
+APK="${1:-$PROJECT_DIR/build/xiaoke-night-host-V1.0.12.apk}"
 TOOLCHAIN="${NIGHT_ANDROID_TOOLCHAIN:-$HOME/.local/share/codeg-android-toolchain}"
 SDK="${NIGHT_ANDROID_SDK:-$TOOLCHAIN/android-sdk}"
 BT="${SDK}/build-tools/${NIGHT_BUILD_TOOLS:-35.0.0}"
@@ -18,8 +18,8 @@ JAVA_HOME="${NIGHT_JAVA_HOME:-$TOOLCHAIN/jdk-21}"
 export JAVA_HOME PATH="$JAVA_HOME/bin:$PATH"
 
 EXPECT_PKG="cc.hahaxiong.xiaoke.night"
-EXPECT_VERSION_NAME="V1.0.11"
-EXPECT_VERSION_CODE="1000011"
+EXPECT_VERSION_NAME="V1.0.12"
+EXPECT_VERSION_CODE="1000012"
 EXPECT_MIN_SDK="26"
 EXPECT_TARGET_SDK="34"
 EXPECT_ORIGIN="https://pa.hahaxiong.cc:8666/night-app/index.html"
@@ -59,6 +59,17 @@ check "targetSdk" "targetSdkVersion:'$EXPECT_TARGET_SDK'" "$(printf '%s\n' "$BAD
 has "launchable-activity" "$BADGING" "launchable-activity: name='$EXPECT_PKG.NightHostActivity'"
 lacks "$BADGING" "application-debuggable" "非 debuggable"
 has "application-label" "$BADGING" "小可 · 暗夜剧场"
+has "桌面入口使用自适应图标" "$BADGING" "icon='res/mipmap-anydpi-v33/ic_launcher.xml'"
+for api in 26 33; do
+  ICON_TREE="$("$BT/aapt2" dump xmltree --file "res/mipmap-anydpi-v$api/ic_launcher.xml" "$APK" 2>/dev/null)"
+  has "Android API $api 自适应图层" "$ICON_TREE" "E: adaptive-icon"
+done
+has "系统主题图标图层" "$ICON_TREE" "E: monochrome"
+if unzip -p "$APK" res/drawable-nodpi-v4/night_b2_art.webp | cmp -s - "$PROJECT_DIR/res/drawable-nodpi/night_b2_art.webp"; then
+  ok "成品内 B2 图像与发布资源相同"
+else
+  no "成品 B2 图像不一致"
+fi
 
 printf '\n— 权限面（通话、后台诊断、系统更新安装）\n'
 PERMS="$(printf '%s\n' "$BADGING" | grep "^uses-permission:" | sed "s/uses-permission: name='\([^']*\)'.*/\1/" | sort)"

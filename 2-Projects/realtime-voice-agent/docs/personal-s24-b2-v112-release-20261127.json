@@ -1,0 +1,27 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T15:44:45+08:00",
+  "release_tag": "release/personal-voice/v1.0.12",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "94aa0e273fa242e02946ba383c1342ff1041ee93",
+      "versionCode": 1000012,
+      "versionName": "V1.0.12",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000012.apk",
+      "size": 1076260,
+      "sha256": "f8aae15a8ee7352c63260fafcceb2eb94d911ae456f32f94335642deaa619337",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "artwork": "B2 探头，依据选定的 B2-peek.png 生成适配图层。",
+    "design_sha256": "b37845ae77cf1253a7d772ef50b59b7f9daa0c6022915ce6d3dc4230dbd200c0",
+    "apk_validation": {
+      "passed": 74,
+      "failed": 0
+    },
+    "android_11": "隔离模拟器从 V1.0.11 原签名覆盖安装；系统应用详情与启动器显示 B2。点击抽屉中的小可进入 NightHostActivity。设备已安装 base.apk 的 SHA-256 与公开下载一致。",
+    "s24_ultra": "本次未在用户 S24 Ultra 上安装测试。",
+    "ota": "飞牛发布目录、文件临时缓存、公网下载全包与本地签名包核对一致。"
+  }
+}
