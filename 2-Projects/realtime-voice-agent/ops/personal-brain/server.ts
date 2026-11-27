@@ -7,8 +7,9 @@ import { bodyLimit } from 'hono/body-limit';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { isVoiceCompletion, withVoiceProgress } from './voice-progress.js';
+import {domesticMarketNews, marketNewsIntent, publicMarketNewsQuery} from './market-news.js';
 import {forecastFallback} from './weather-fallback.js';
-import {weatherIntent, followupPlace, cnMarket, marketSnapshot} from './public-queries.js';
+import {weatherIntent, followupPlace, cnMarket, marketSnapshot, domesticBulletin} from './public-queries.js';
 import { publicProviderStatus } from './providers.js';
 import { chatDeltas, cpaWebSearch, cpaWebSearchEnabled, searchFetch, type TextTurn } from './upstream.js';
 
@@ -59,26 +60,20 @@ const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公�
 const persona = '你是个人语音伙伴小可。中文口语自然、温暖、好奇，日常先直接回答，主人要求详细讲时讲完整。';
 const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有相关记忆就直说。' + availableSearch + '，也支持天气与时间。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
 const weather = new FixedWeather();
-// Accept a short, unqualified domestic bulletin. Every word must belong to
-// this request; named sources, topics, dates and quantities stay with normal search.
-function singleDomesticBulletin(query: string): string | undefined {
-  const q = query.normalize('NFKC').replace(/[\s,，。!?！？、：:]/gu, '');
-  if (q.length > 60 || !/(?:国内|我国|中国)/u.test(q) || !q.includes('新闻') ||
-      !/(?:今天|今日|现在|目前|最新|最近|近期)/u.test(q) ||
-      !/(?:[一1]条|简短|简要)/u.test(q) || /[一1]条.*[一1]条/u.test(q)) return;
-  const rest = q.replace(/有什么|有哪些|有没有|怎么样|今天|今日|现在|目前|最新|最近|近期|国内|我国|中国|新闻|给我|帮我|跟我|可以|请你|只要|就好|就行|即可|[一1]条|简短|简要|说说|讲讲|播报|播一播|听听|说|讲|播|听|来|请|的|点|吗|呢|吧|啊/gu, '');
-  if (rest) return;
-  return /今天|今日|现在|目前/u.test(q) ? '央视今天国内新闻' : '央视最新国内新闻';
-}
-
-function verifiedHeadline(evidence: readonly { title: string; url: string; date: string | null }[]): SearchResult | undefined {
-  const item = evidence.find(({ title, date }) => date && title.length <= 100 && !/[<>]|\[\[|\]\]|https?:\/\//i.test(title));
-  if (!item?.date) return;
-  const { title, url, date } = item;
-  const published = new Intl.DateTimeFormat('zh-CN', {
-    month: 'long', day: 'numeric', timeZone: 'Asia/Shanghai',
-  }).format(Date.parse(date));
-  return { text: `央视网${published}报道，${title}。`, sources: [{ title, url, date }] };
+function verifiedHeadline(evidence: readonly { title: string; url: string; date: string | null }[], limit = 1): SearchResult | undefined {
+  const sources = evidence.filter(({title, date}) => date && Number.isFinite(Date.parse(date)) && title.length <= 100
+    && !/[<>]|\[\[|\]\]|https?:\/\//i.test(title)).slice(0, limit)
+    .map(({title, url, date}) => ({title, url, date}));
+  if (!sources.length) return;
+  const fmt = new Intl.DateTimeFormat('zh-CN', {month:'long', day:'numeric', timeZone:'Asia/Shanghai'});
+  let previousDay = '';
+  const text = sources.map(({title, date}) => {
+    const day = fmt.format(Date.parse(date!));
+    const intro = day === previousDay ? '另一条，' : `央视网${day}报道，`;
+    previousDay = day;
+    return intro + title + (/[。！？]$/u.test(title) ? '' : '。');
+  }).join('');
+  return { text, sources };
 }
 const tasks = new SearchTasks({
   dbPath: join(dataDir, 'search.sqlite'),
@@ -103,16 +98,18 @@ const tasks = new SearchTasks({
         })]);
       } finally { clearTimeout(timer); stop.abort(); startBackup(); }
     }
+    const marketNews = marketNewsIntent(query);
+    if (marketNews === 'today' || marketNews === 'recent') return domesticMarketNews(marketNews, signal, task.createdAt);
     if (cnMarket(query) === 'cn') {
       try { return await marketSnapshot(signal); }
       catch { signal.throwIfAborted(); report('market_snapshot_unavailable'); }
     }
-    const bulletin = singleDomesticBulletin(query);
+    const bulletin = domesticBulletin(query);
     if (bulletin) {
       try {
-        const items = await cctvNews.run(bulletin, AbortSignal.any([signal, AbortSignal.timeout(2_500)]));
-        const quick = verifiedHeadline(items);
-        if (quick) { report('search_verified_single_bulletin'); return quick; }
+        const items = await cctvNews.run(bulletin.query, AbortSignal.any([signal, AbortSignal.timeout(2_500)]));
+        const quick = verifiedHeadline(items, bulletin.count);
+        if (quick) { report('search_verified_domestic_bulletin'); return {...quick, text:'国内新闻，' + quick.text}; }
       } catch { signal.throwIfAborted(); }
       // Preserve the actual wording and requested date when falling back to the web.
       if (!searchKey && !cpaWebSearchEnabled) return { text: '暂时没查到可核实的这条国内新闻。', sources: [] };
@@ -215,15 +212,16 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
     return empty(query === '天气' ? '你想查哪个城市的天气？' : '你想查什么？');
   }
   try {
-    query = validateQuery(query);
     if (privateSearch.test(query)) throw new Error('private_query');
+    query = validateQuery(publicMarketNewsQuery(query));
   }
   catch { return empty('这条查询不能直接发到网上，可以换一个不含个人信息的公开问题。'); }
   const weatherRequest = weatherIntent(query);
   if (weatherRequest?.unsupported) return empty('可以查今天、明天或后天的天气预报，空气质量只支持今天的实况。你想查哪一种？');
   if (weatherRequest?.ambiguous) return empty('有好几个地方同名，可以加上省或市吗？');
   if (weatherRequest && !weatherRequest.request) return empty('你想查哪个城市的天气？');
-  if (!weatherRequest && !singleDomesticBulletin(query) && !cctvNews.supports(query) && !searchKey && !cpaWebSearchEnabled) {
+  const marketNews = marketNewsIntent(query);
+  if (!weatherRequest && (!marketNews || marketNews === 'other-market') && !domesticBulletin(query) && !cctvNews.supports(query) && !searchKey && !cpaWebSearchEnabled) {
     return empty('目前可查央视国内新闻和航天动态，这个主题暂时没有可用的查询来源。');
   }
   const taskOwner: SearchOwner = { subject: owner.accountId, session: room };
@@ -318,7 +316,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   const weatherRequest = weatherIntent(query);
   const automatic = currentFacts.some((pattern) => pattern.test(query)) && !/(?:故事|作文|虚构|编一个|写一首|翻译|模拟|假设|是什么意思|是什么原理)/u.test(query);
-  if (allowNetwork && (search || retry || marketReply || market || weatherRequest || singleDomesticBulletin(query) || cctvNews.supports(query) || automatic)) {
+  if (allowNetwork && (search || retry || marketReply || market || weatherRequest || marketNewsIntent(query) || domesticBulletin(query) || cctvNews.supports(query) || automatic)) {
     const result = await querySearch(query, room, signal, onSearch);
     if (weatherRequest?.target && !weatherRequest.request) remember(room, {weather: weatherRequest.target});
     else if (!result.sources.length && !privateSearch.test(query)) {
