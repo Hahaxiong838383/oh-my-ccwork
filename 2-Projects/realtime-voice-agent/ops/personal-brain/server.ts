@@ -79,7 +79,9 @@ const tasks = new SearchTasks({
   dbPath: join(dataDir, 'search.sqlite'),
   enabled: () => true,
   allowed: (id) => id === ownerId,
-  dailyDeviceLimit: 50,
+  // The personal service has one owner. Omitted limits inherit the shared ledger's daily caps.
+  dailyDeviceLimit: Infinity,
+  dailyGlobalLimit: Infinity,
   async execute(query, signal, task) {
     const target = weatherIntent(query)?.request;
     if (target) {
@@ -250,8 +252,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
     }
     report('search_no_result' + (task.failure ? ':' + task.failure.stage + ':' + task.failure.reason : ''));
     return empty('这次没能查到可核实的来源，可以稍后再试。');
-  } catch (error) {
-    if (error instanceof Error && error.message === 'daily_limit') return empty('今天的联网查询额度已经用完了，明天可以继续查。');
+  } catch {
     if (task) tasks.cancel(taskOwner, task.id);
     signal.throwIfAborted();
     return empty('这次没能查到可核实的来源，可以稍后再试。');
