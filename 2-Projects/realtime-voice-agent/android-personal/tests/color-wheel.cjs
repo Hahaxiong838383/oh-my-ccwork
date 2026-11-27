@@ -39,6 +39,16 @@ module.exports = async function verifyColorWheel(page) {
     await page.locator('.avatar-card[data-variant="'+variant+'"]').click();
     if (view==='2d' && await page.locator('#avatar-view').getAttribute('aria-pressed')==='true') await page.locator('#avatar-view').click();
     await page.locator('#color-custom').click();
+    if (family === 'boop') {
+      // The upstream renderer conceals newly mounted faces until their material loads.
+      // Start measuring a drag only when the selected face is actually on stage.
+      await page.waitForFunction(() => {
+        const face = document.querySelector('#avatar-engine boop-face');
+        if (!face || face.hasAttribute('data-preparing')) return false;
+        const layer = face.shadowRoot.querySelector(face.getAttribute('view')==='3d' ? '.view-3d' : 'svg');
+        return layer && Number(getComputedStyle(layer).opacity) > .95;
+      });
+    }
     const rect = await wheel.boundingBox();
     const x = rect.x+rect.width/2, y=rect.y+rect.height/2, radius=rect.width*.46;
     const before = await page.evaluate(()=>({hex:NightView.accent(), picks:picks.length}));
