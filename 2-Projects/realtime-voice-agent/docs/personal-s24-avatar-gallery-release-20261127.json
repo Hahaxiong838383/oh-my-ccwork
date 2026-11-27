@@ -1,0 +1,82 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T14:39:04+08:00",
+  "release_tag": "release/personal-voice/v1.0.9",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "a2b464f5690bcde28a03b85240f5b698d441e6a8",
+      "versionCode": 1000009,
+      "versionName": "V1.0.9",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000009.apk",
+      "size": 1039137,
+      "sha256": "9691db08abe22c25baba4f20c3070be50f7627b39ec3bc44e540fc8211682e20",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "sources": {
+    "open": {
+      "name": "open-bot-avatar",
+      "commit": "e10afe49d46da8ffcc6545f5d6e8ba1de4ea8c5d",
+      "license": "MIT",
+      "repository": "https://github.com/DominikScholz/open-bot-avatar.git"
+    },
+    "boop": {
+      "name": "BoopFace",
+      "commit": "940fdf7dd844c2052b5ae846374e1ce60b0f5c33",
+      "license": "MIT",
+      "repository": "https://github.com/CX-ArtLab/BoopFace"
+    },
+    "robot": {
+      "name": "robot-heads",
+      "commit": "58ebf6439a8125a769f63b22ffd35bc18834b1b5",
+      "license": "MIT",
+      "repository": "https://github.com/fayazara/robot-heads.git"
+    }
+  },
+  "acceptance": {
+    "catalog": {
+      "classic": {
+        "appearance_options": 1,
+        "preview_actions": 39
+      },
+      "open": {
+        "appearance_options": 69,
+        "preview_actions": 12
+      },
+      "boop": {
+        "appearance_options": 190,
+        "preview_actions": 33
+      },
+      "robot": {
+        "appearance_options": 12,
+        "preview_actions": 10
+      }
+    },
+    "apk_validation": {
+      "passed": 69,
+      "failed": 0
+    },
+    "offline_webview_assets": "按 Android 文档 CSP 在 Chromium 中使用正式 APK 解包资源，逐项切换、逐项试演、检查缩略图有效、重开恢复选择。覆盖横屏、窄屏、减少动态、真实渲染器收到的麦克风及回放音量。",
+    "private_room": {
+      "bargeDuringOutput": true,
+      "clockReplyHeard": true,
+      "levels": 158,
+      "events": [
+        "call_start",
+        "mic_on",
+        "connected",
+        "rx_caption",
+        "rx_audio",
+        "mic_off",
+        "tx_caption",
+        "spoken_interrupt",
+        "cancel_ack",
+        "call_end"
+      ],
+      "ended": "通话已结束",
+      "active": 0
+    },
+    "android": "Android 11 模拟器从 1000008 覆盖升级；回读最终已安装 APK 摘要与下载包相同。首页、外观选择器已截图。",
+    "s24_ultra": "本轮未在用户 S24 Ultra 进行实机体验验收。"
+  }
+}
