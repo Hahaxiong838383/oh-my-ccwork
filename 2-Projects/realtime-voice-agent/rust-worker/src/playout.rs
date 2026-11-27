@@ -35,15 +35,16 @@ pub struct PlayoutControl {
 /// 单测专用:只造控制句柄,不起播放循环(那需要真的 NativeAudioSource)。
 /// 返回 `(守住 watch 接收端的 guard, ctl)`——guard 必须活着,
 /// 否则 `watch::Sender` 会因无接收端而让 `send` 失败,`abort()` 就成了空操作。
-#[cfg(test)]
-pub fn test_control() -> (
+/// 无播轨控制句柄(后台预热合成与单测共用):返回 `(守住 watch 接收端的 guard, ctl)`。
+pub fn detached_control(room: impl Into<String>) -> (
     (watch::Receiver<bool>, watch::Receiver<bool>),
     PlayoutControl,
 ) {
     let (pause_tx, pause_rx) = watch::channel(false);
     let (abort_tx, abort_rx) = watch::channel(false);
     let ctl = PlayoutControl {
-        room:"unit-test".into(),turn_id:0,
+        room: room.into(),
+        turn_id: 0,
         pause_tx,
         abort_tx,
         captured: Arc::new(AtomicU64::new(0)),
@@ -54,6 +55,14 @@ pub fn test_control() -> (
         final_stats: Arc::new(Mutex::new(None)),
     };
     ((pause_rx, abort_rx), ctl)
+}
+
+#[cfg(test)]
+pub fn test_control() -> (
+    (watch::Receiver<bool>, watch::Receiver<bool>),
+    PlayoutControl,
+) {
+    detached_control("unit-test")
 }
 
 impl PlayoutControl {

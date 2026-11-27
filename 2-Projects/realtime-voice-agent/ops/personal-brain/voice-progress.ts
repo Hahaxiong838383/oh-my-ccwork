@@ -40,12 +40,14 @@ export function isVoiceCompletion(room: string | undefined, fromHeader: boolean)
   return !fromHeader && /^pv-[a-f0-9]{32}$/.test(room ?? '');
 }
 
+export const DEFAULT_VOICE_PROGRESS_WINDOWS = {chatWaitMs: 350, searchWaitMs: 250} as const;
+
 export async function withVoiceProgress<T>(
   room: string,
   run: (body: Write, searchStarted: () => void) => Promise<T>,
   write: Write,
   signal: AbortSignal,
-  options = {chatWaitMs: 750, searchWaitMs: 390},
+  options: {chatWaitMs: number; searchWaitMs: number} = DEFAULT_VOICE_PROGRESS_WINDOWS,
 ): Promise<T> {
   let mode: Mode = 'chat';
   let first = true;

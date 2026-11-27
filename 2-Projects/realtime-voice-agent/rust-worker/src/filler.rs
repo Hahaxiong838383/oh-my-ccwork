@@ -330,6 +330,458 @@ impl FillerBank {
     }
 }
 
+/// 个人模式按当前音色缓存的衔接短语(复用既有 TtsCfg 生产合成路径,零额外配置)。
+/// 仅对 personal-xiaoke 的 pv- 房间生效;P003 房间永远返回 None。
+pub mod personal_cache {
+    use std::collections::{HashMap, HashSet, VecDeque};
+    use std::sync::{Arc, Mutex, OnceLock};
+    use std::time::Duration;
+
+    use anyhow::Result;
+    use tokio::sync::mpsc;
+    use tokio::sync::mpsc::error::SendTimeoutError;
+    use tracing::{info, warn};
+
+    use crate::playout::{detached_control, PlayoutControl};
+    use crate::stt_volc::personal_local_speech;
+    use crate::tts::{Prewarm, TtsCfg};
+
+    /// 与 ops/personal-brain/voice-progress.ts 逐字一致;chat[0]/search[0] 排前便于首轮前优先预热。
+    pub const PHRASES: [&str; 6] = [
+        "让我想一想。",
+        "我来查一下。",
+        "我想一下啊。",
+        "让我查一查。",
+        "这个我想想。",
+        "我看下资料。",
+    ];
+
+    const MAX_ENTRIES: usize = 36;
+    const MAX_CLIP_BYTES: usize = 512_000;
+    const PREWARM_PHRASE_TIMEOUT: Duration = Duration::from_secs(15);
+
+    #[derive(Default)]
+    pub(crate) struct Store {
+        entries: HashMap<(String, String), Arc<Vec<u8>>>,
+        order: VecDeque<(String, String)>,
+        in_flight: HashSet<String>,
+    }
+
+    impl Store {
+        pub(crate) fn get(&self, voice_key: &str, phrase: &str) -> Option<Arc<Vec<u8>>> {
+            self.entries.get(&(voice_key.to_string(), phrase.to_string())).cloned()
+        }
+
+        pub(crate) fn put(&mut self, voice_key: &str, phrase: &str, pcm: Vec<u8>) -> bool {
+            if !valid_pcm(&pcm) {
+                return false;
+            }
+            let key = (voice_key.to_string(), phrase.to_string());
+            if let Some(slot) = self.entries.get_mut(&key) {
+                *slot = Arc::new(pcm);
+                return true;
+            }
+            while self.entries.len() >= MAX_ENTRIES {
+                let Some(oldest) = self.order.pop_front() else {
+                    break;
+                };
+                self.entries.remove(&oldest);
+            }
+            self.order.push_back(key.clone());
+            self.entries.insert(key, Arc::new(pcm));
+            true
+        }
+
+        pub(crate) fn missing_phrases(&self, voice_key: &str) -> Vec<&'static str> {
+            PHRASES
+                .iter()
+                .copied()
+                .filter(|phrase| !self.entries.contains_key(&(voice_key.to_string(), (*phrase).to_string())))
+                .collect()
+        }
+
+        fn try_start_prewarm(&mut self, voice_key: &str) -> Option<Vec<&'static str>> {
+            let missing = self.missing_phrases(voice_key);
+            if missing.is_empty() || !self.in_flight.insert(voice_key.to_string()) {
+                return None;
+            }
+            Some(missing)
+        }
+
+        fn finish_prewarm(&mut self, voice_key: &str) {
+            self.in_flight.remove(voice_key);
+        }
+    }
+
+    struct InFlightGuard(String);
+    impl Drop for InFlightGuard {
+        fn drop(&mut self) {
+            if let Ok(mut g) = store().lock() {
+                g.finish_prewarm(&self.0);
+            }
+        }
+    }
+
+    fn store() -> &'static Mutex<Store> {
+        static CACHE: OnceLock<Mutex<Store>> = OnceLock::new();
+        CACHE.get_or_init(|| Mutex::new(Store::default()))
+    }
+
+    fn valid_pcm(pcm: &[u8]) -> bool {
+        !pcm.is_empty()
+            && pcm.len() <= MAX_CLIP_BYTES
+            && pcm.len() % 2 == 0
+            && pcm.chunks_exact(2).any(|s| s != [0, 0])
+    }
+
+    pub fn is_phrase(text: &str) -> bool {
+        let t = text.trim();
+        PHRASES.contains(&t)
+    }
+
+    /// 仅包含决定听感的非敏感音色标识(不含任何密钥);非个人快照路径返回 None。
+    pub fn voice_key(tts_cfg: &TtsCfg, local_voice: Option<&str>) -> Option<String> {
+        match tts_cfg {
+            TtsCfg::SnapshotXfyun { config, .. } => Some(format!(
+                "xfyun_tts:{}:{}:{}",
+                config.vcn.trim(),
+                config.speed,
+                config.oral_level.trim()
+            )),
+            TtsCfg::SnapshotVolc(config) => Some(format!(
+                "doubao_tts:{}:{}:{:.2}",
+                config.resource_id.trim(),
+                config.speaker.trim(),
+                config.speed_ratio
+            )),
+            TtsCfg::PersonalLocal(_) => local_voice
+                .and_then(|v| personal_local_speech::reported_voice_id(Some(v)))
+                .filter(|v| *v != personal_local_speech::VOICE_UNREPORTED)
+                .map(|v| format!("personal_local:{v}")),
+            TtsCfg::Volc(_) | TtsCfg::Xfyun(_) => None,
+        }
+    }
+
+    pub fn get(voice_key: &str, phrase: &str) -> Option<Arc<Vec<u8>>> {
+        store().lock().ok()?.get(voice_key, phrase.trim())
+    }
+
+    pub fn put(voice_key: &str, phrase: &str, pcm: Vec<u8>) -> bool {
+        store()
+            .lock()
+            .map(|mut g| g.put(voice_key, phrase.trim(), pcm))
+            .unwrap_or(false)
+    }
+
+    /// 打断感知的缓存 PCM 投递:pause 满队列时轮询 ctl.aborted(),与 tts_xfyun::send_or_abort 同契约。
+    pub async fn send_cached_or_abort(
+        pcm: &[u8],
+        audio_tx: &mpsc::Sender<Vec<u8>>,
+        ctl: &PlayoutControl,
+    ) -> std::result::Result<(), &'static str> {
+        const POLL: Duration = Duration::from_millis(200);
+        let mut buf = pcm.to_vec();
+        loop {
+            if ctl.aborted() {
+                return Err("aborted");
+            }
+            match audio_tx.send_timeout(buf, POLL).await {
+                Ok(()) => return Ok(()),
+                Err(SendTimeoutError::Timeout(back)) => buf = back,
+                Err(SendTimeoutError::Closed(_)) => return Err("closed"),
+            }
+        }
+    }
+
+    /// 缓存未命中时走真实生产 TTS 合成(实时直通 pcm_tx 零额外首包延迟),成功且未打断后回填缓存。
+    pub async fn synthesize_and_cache(
+        tts_cfg: &TtsCfg,
+        voice_key: &str,
+        phrase: &str,
+        pcm_tx: &mpsc::Sender<Vec<u8>>,
+        ctl: &PlayoutControl,
+        warm: &mut Prewarm,
+    ) -> Result<(u64, usize, bool)> {
+        let (tee_tx, mut tee_rx) = mpsc::channel::<Vec<u8>>(32);
+        let out_tx = pcm_tx.clone();
+        let tee_ctl = ctl.clone();
+        let tee = tokio::spawn(async move {
+            let mut collected = Vec::new();
+            let mut complete = true;
+            while let Some(chunk) = tee_rx.recv().await {
+                if collected.len().saturating_add(chunk.len()) <= MAX_CLIP_BYTES {
+                    collected.extend_from_slice(&chunk);
+                } else {
+                    complete = false;
+                }
+                if send_cached_or_abort(&chunk, &out_tx, &tee_ctl).await.is_err() {
+                    complete = false;
+                    break;
+                }
+            }
+            (collected, complete)
+        });
+        let (ttfb, bytes, resolved_key) = match tts_cfg {
+            TtsCfg::PersonalLocal(base) => {
+                let (t, b, reported) =
+                    personal_local_speech::synthesize_with_voice(base, phrase, &tee_tx).await?;
+                info!(provider = tts_cfg.provider_name(), bytes = b, "tts audio delivered");
+                let actual_key = super::personal_cache::voice_key(tts_cfg, reported.as_deref());
+                (t, b, actual_key)
+            }
+            _ => {
+                let (t, b) = tts_cfg.synthesize(phrase, &tee_tx, ctl, warm).await?;
+                (t, b, Some(voice_key.to_string()))
+            }
+        };
+        drop(tee_tx);
+        let (collected, complete) = tee.await.unwrap_or_else(|_| (Vec::new(), false));
+        let cached = if complete && !ctl.aborted() && bytes > 0 {
+            if let Some(actual_key) = resolved_key {
+                put(&actual_key, phrase, collected)
+            } else {
+                false
+            }
+        } else {
+            false
+        };
+        Ok((ttfb, bytes, cached))
+    }
+
+    async fn synth_one_detached(tts_cfg: &TtsCfg, expected_key: &str, phrase: &str) -> Result<(String, Vec<u8>)> {
+        let (_guard, ctl) = detached_control("personal-filler-prewarm");
+        let (tx, mut rx) = mpsc::channel::<Vec<u8>>(32);
+        let collect = tokio::spawn(async move {
+            let mut pcm = Vec::new();
+            while let Some(chunk) = rx.recv().await {
+                if pcm.len().saturating_add(chunk.len()) > MAX_CLIP_BYTES {
+                    return Vec::new();
+                }
+                pcm.extend_from_slice(&chunk);
+            }
+            pcm
+        });
+        let mut warm = Prewarm::off();
+        let actual_key = match tts_cfg {
+            TtsCfg::PersonalLocal(base) => {
+                let (_, _, reported) =
+                    personal_local_speech::synthesize_with_voice(base, phrase, &tx).await?;
+                voice_key(tts_cfg, reported.as_deref())
+                    .ok_or_else(|| anyhow::anyhow!("local tts voice unreported"))?
+            }
+            _ => {
+                tts_cfg.synthesize(phrase, &tx, &ctl, &mut warm).await?;
+                expected_key.to_string()
+            }
+        };
+        drop(tx);
+        let pcm = collect.await.unwrap_or_default();
+        anyhow::ensure!(valid_pcm(&pcm), "invalid prewarm pcm len={}", pcm.len());
+        Ok((actual_key, pcm))
+    }
+
+    /// 进房时后台预热当前音色缺失的衔接短语;已全部命中时零上游调用。
+    pub fn spawn_prewarm(
+        room: String,
+        tts_cfg: TtsCfg,
+        voice_slot: Arc<Mutex<Option<String>>>,
+    ) {
+        tokio::spawn(async move {
+            let vk = match &tts_cfg {
+                TtsCfg::PersonalLocal(base) => {
+                    let reported = personal_local_speech::prewarm_and_voice(base).await;
+                    let key = voice_key(&tts_cfg, reported.as_deref());
+                    if let Ok(mut g) = voice_slot.lock() {
+                        *g = key.clone();
+                    }
+                    key
+                }
+                _ => {
+                    tts_cfg.prewarm().await;
+                    voice_slot.lock().ok().and_then(|g| g.clone())
+                }
+            };
+            let Some(vk) = vk else {
+                return;
+            };
+            let missing = match store().lock().ok().and_then(|mut g| g.try_start_prewarm(&vk)) {
+                Some(m) => m,
+                None => return,
+            };
+            let _guard = InFlightGuard(vk.clone());
+            let mut warmed = 0usize;
+            for phrase in missing {
+                match tokio::time::timeout(
+                    PREWARM_PHRASE_TIMEOUT,
+                    synth_one_detached(&tts_cfg, &vk, phrase),
+                )
+                .await
+                {
+                    Ok(Ok((actual_key, pcm))) => {
+                        if put(&actual_key, phrase, pcm) {
+                            warmed += 1;
+                        }
+                    }
+                    Ok(Err(error)) => {
+                        warn!(room = %room, voice = %vk, phrase, %error, "personal filler prewarm phrase failed");
+                    }
+                    Err(_) => {
+                        warn!(room = %room, voice = %vk, phrase, "personal filler prewarm phrase timed out");
+                    }
+                }
+            }
+            info!(
+                room = %room,
+                voice = %vk,
+                warmed,
+                total = PHRASES.len(),
+                "personal filler cache prewarmed"
+            );
+        });
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use crate::tts_volc::TtsConfig;
+        use crate::tts_xfyun::XfyunTtsConfig;
+
+        fn xfyun(vcn: &str, speed: i64) -> TtsCfg {
+            TtsCfg::SnapshotXfyun {
+                config: XfyunTtsConfig {
+                    app_id: "secret-app".into(),
+                    api_key: "secret-key".into(),
+                    api_secret: "secret-sec".into(),
+                    vcn: vcn.into(),
+                    speed,
+                    oral_level: "mid".into(),
+                },
+                preconnect: true,
+            }
+        }
+
+        fn volc(speaker: &str) -> TtsCfg {
+            TtsCfg::SnapshotVolc(TtsConfig {
+                app_id: "secret-app".into(),
+                access_token: "secret-tok".into(),
+                resource_id: "seed-tts-2.0".into(),
+                speaker: speaker.into(),
+                speed_ratio: 1.0,
+                pool_enabled: false,
+            })
+        }
+
+        #[test]
+        fn voice_key_isolates_voices_and_never_touches_p003_or_secrets() {
+            let k1 = voice_key(&xfyun("x6_lingxiaoxuan_pro", 50), None).unwrap();
+            let k2 = voice_key(&xfyun("x6_other", 50), None).unwrap();
+            let k3 = voice_key(&xfyun("x6_lingxiaoxuan_pro", 60), None).unwrap();
+            let kv = voice_key(&volc("zh_male_lengkugege"), None).unwrap();
+            let kl1 = voice_key(&TtsCfg::PersonalLocal("http://personal-local-speech:8091".into()), Some("piper-zh-huayan-medium")).unwrap();
+            let kl2 = voice_key(&TtsCfg::PersonalLocal("http://personal-local-speech:8091".into()), Some("piper-zh-xiaoyan")).unwrap();
+            assert_ne!(k1, k2);
+            assert_ne!(k1, k3);
+            assert_ne!(k1, kv);
+            assert_ne!(kl1, kl2);
+            for k in [&k1, &kv, &kl1] {
+                assert!(!k.contains("secret"), "key must not contain secrets: {k}");
+            }
+            // unreported/missing local voice -> None (never cache under unknown voice)
+            assert!(voice_key(&TtsCfg::PersonalLocal("http://personal-local-speech:8091".into()), None).is_none());
+            assert!(voice_key(&TtsCfg::PersonalLocal("http://personal-local-speech:8091".into()), Some("unreported")).is_none());
+            // P003 non-snapshot configs -> None
+            assert!(voice_key(&TtsCfg::Volc(TtsConfig::from_env()), None).is_none());
+            assert!(voice_key(&TtsCfg::Xfyun(XfyunTtsConfig::from_env()), None).is_none());
+        }
+
+        #[test]
+        fn store_caches_by_voice_and_switches_cleanly() {
+            let mut s = Store::default();
+            let pcm_a = vec![1u8, 2, 3, 4];
+            let pcm_b = vec![9u8, 8, 7, 6];
+            assert!(s.put("xfyun_tts:v1:50:mid", "让我想一想。", pcm_a.clone()));
+            assert!(s.put("xfyun_tts:v2:50:mid", "让我想一想。", pcm_b.clone()));
+            assert_eq!(s.get("xfyun_tts:v1:50:mid", "让我想一想。").unwrap().as_slice(), pcm_a.as_slice());
+            assert_eq!(s.get("xfyun_tts:v2:50:mid", "让我想一想。").unwrap().as_slice(), pcm_b.as_slice());
+            assert!(s.get("xfyun_tts:v3:50:mid", "让我想一想。").is_none());
+            // rejects empty / odd-length / all-zero silent PCM
+            assert!(!s.put("xfyun_tts:v1:50:mid", "我来查一下。", vec![]));
+            assert!(!s.put("xfyun_tts:v1:50:mid", "我来查一下。", vec![1, 2, 3]));
+            assert!(!s.put("xfyun_tts:v1:50:mid", "我来查一下。", vec![0, 0, 0, 0]));
+        }
+
+        #[test]
+        fn phrases_match_brain_set_exactly() {
+            for p in [
+                "让我想一想。",
+                "我想一下啊。",
+                "这个我想想。",
+                "我来查一下。",
+                "让我查一查。",
+                "我看下资料。",
+            ] {
+                assert!(is_phrase(p), "missing phrase {p}");
+            }
+            assert!(!is_phrase("现在是北京时间十二点。"));
+            assert!(!is_phrase("让我想一想，今天天气不错。"));
+        }
+
+        #[tokio::test]
+        async fn send_cached_respects_abort_and_delivers_normally() {
+            let (tx, _rx) = mpsc::channel::<Vec<u8>>(1);
+            let (_g, ctl) = detached_control("test-abort");
+            tx.send(vec![0u8; 4]).await.unwrap();
+            ctl.abort();
+            let r = tokio::time::timeout(
+                Duration::from_secs(2),
+                send_cached_or_abort(&[1, 2, 3, 4], &tx, &ctl),
+            )
+            .await
+            .unwrap();
+            assert_eq!(r, Err("aborted"));
+
+            let (tx2, mut rx2) = mpsc::channel::<Vec<u8>>(1);
+            let (_g2, ctl2) = detached_control("test-ok");
+            send_cached_or_abort(&[5, 6, 7, 8], &tx2, &ctl2).await.unwrap();
+            assert_eq!(rx2.recv().await.unwrap(), vec![5, 6, 7, 8]);
+        }
+
+        #[tokio::test]
+        async fn synthesize_and_cache_populates_by_reported_local_voice_and_misses_after_switch() {
+            use tokio::io::{AsyncReadExt, AsyncWriteExt};
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let addr = listener.local_addr().unwrap();
+            let server = tokio::spawn(async move {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                let mut req = [0u8; 2048];
+                let _ = sock.read(&mut req).await;
+                let pcm = [11u8, 22, 33, 44, 55, 66, 77, 88];
+                let resp = format!(
+                    "HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nX-Sample-Rate: 24000\r\nX-TTS-Voice: piper-zh-test-v1\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                    pcm.len()
+                );
+                sock.write_all(resp.as_bytes()).await.unwrap();
+                sock.write_all(&pcm).await.unwrap();
+            });
+            let tts_cfg = TtsCfg::PersonalLocal(format!("http://{addr}"));
+            let vk1 = voice_key(&tts_cfg, Some("piper-zh-test-v1")).unwrap();
+            let vk2 = voice_key(&tts_cfg, Some("piper-zh-test-v2")).unwrap();
+            let (tx, mut rx) = mpsc::channel::<Vec<u8>>(8);
+            let (_g, ctl) = detached_control("test-local-cache");
+            let mut warm = Prewarm::off();
+            let (_, bytes, cached) = synthesize_and_cache(&tts_cfg, &vk1, "让我想一想。", &tx, &ctl, &mut warm)
+                .await
+                .unwrap();
+            server.await.unwrap();
+            assert_eq!(bytes, 8);
+            assert!(cached);
+            assert_eq!(rx.recv().await.unwrap(), vec![11, 22, 33, 44, 55, 66, 77, 88]);
+            assert_eq!(get(&vk1, "让我想一想。").unwrap().as_slice(), &[11, 22, 33, 44, 55, 66, 77, 88]);
+            assert!(get(&vk2, "让我想一想。").is_none(), "switching voice must not hit old voice cache");
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
