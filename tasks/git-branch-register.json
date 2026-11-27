@@ -307,12 +307,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "b6b018bc5761e0fd34b7f3b9304c50e06c1c5c02",
-      "source_ref": "refs/tags/release/personal-voice/brain-memory-style-20261127",
+      "source_commit": "7775b8bb40c50754f63859582d28928a9f88d359",
+      "source_ref": "refs/tags/release/personal-voice/brain-brief-weather-20261128",
       "maintainer_branch": "main",
-      "sha256": "a2a4768e78f9d5f5b11540d54ff20cdd0aca86d6afd57b380b8cfecc9c6951ab",
+      "sha256": "379b608421380c6e3dd8e1afbf2aa1f197d4ba196293a28443b71d52faf38811",
       "proof": {
-        "object": "e6beb04900b634dd6eaf1fb3e9f341a3bf458cab:2-Projects/realtime-voice-agent/docs/personal-brain-memory-style-20261127.json",
+        "object": "ac02615f70f5b1bb1c3103e3f7f28219fe50dfb8:2-Projects/realtime-voice-agent/docs/personal-brain-brief-weather-20261128.json",
         "keys": [
           "deployments",
           "personal-brain"
