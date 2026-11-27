@@ -821,7 +821,7 @@ pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebui
     }
     // ASR 预连最先起(握手最长,0.4–0.6 s)
     let stt = spawn_stt(stt_cfg.clone(), &room_name);
-    let cfg = PipelineConfig::from_env();
+    let mut cfg = PipelineConfig::from_env();
     info!(
         room = %room_name,
         tts_provider = tts_cfg.provider_name(),
@@ -834,6 +834,9 @@ pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebui
     llm_cfg.room = room_name.clone();
     if crate::personal::is_room(&room_name) && std::env::var("AGENT_NAME").ok().as_deref() == Some(crate::personal::AGENT) {
         anyhow::ensure!(crate::personal::brain_route(&llm_cfg), "personal_llm_route_rejected");
+        cfg.exit_hotwords = crate::personal::stop_words();
+        cfg.hotwords = cfg.exit_hotwords.clone();
+        cfg.exit_tail_match = false;
     }
     // 本地音频回声对撞库(2026-09-01):异步拉该设备文案,拉不到=空库 fail-open。
     // 只对 sn- 设备房拉(web/probe 房没有本地音频,省一次空转)。
@@ -1018,15 +1021,16 @@ pub async fn run_pipeline(
     // → job 收尾(关房删房),设备走既有重连路径。容量 1:一次 fatal 就收摊。
     let (fatal_tx, mut fatal_rx) = mpsc::channel::<String>(1);
 
-    let device_commands_on = crate::device_intent::commands_enabled_for(&room_name);
+    let phone = ready.personal_device.is_some();
+    let device_commands_on = !phone && crate::device_intent::commands_enabled_for(&room_name);
     if device_commands_on {
         info!(room = %room_name, "S2-B2 设备命令已启用(canary 命中)");
     }
-    let exit_signal_on = crate::device_intent::exit_signal_enabled_for(&room_name);
+    let exit_signal_on = !phone && crate::device_intent::exit_signal_enabled_for(&room_name);
     if exit_signal_on {
         info!(room = %room_name, "session_exit 信令已启用(v140 canary 命中)");
     }
-    let l2_execute_on = crate::device_intent::l2_execute_enabled_for(&room_name);
+    let l2_execute_on = !phone && crate::device_intent::l2_execute_enabled_for(&room_name);
     if l2_execute_on {
         info!(room = %room_name, "LLM 慢路执行已启用(2b canary 命中;仍需 Android capability>=2)");
     }
@@ -3447,8 +3451,8 @@ impl Orchestrator {
             // 该泛化 cancel 按生命周期合同删除后无人兜底)。契约链上该句只有
             // UserTranscriptFinal 无 UserTurnCommitted——即「这句没发生」。
             let swallow_kind = if let Some(path) = crate::textproc::session_exit_path(&self.cfg.exit_hotwords, &user_text, self.cfg.exit_tail_match) {
-                    Some(("session_exit", path))
-                } else if crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text) {
+                    Some((if self.personal_device.is_some() { "personal_stop" } else { "session_exit" }, path))
+                } else if self.personal_device.is_none() && crate::textproc::is_turn_stop(&self.cfg.hotwords, &user_text) {
                     Some(("stop_only", "exact"))
                 } else { None };
             if let Some((kind, path)) = swallow_kind {
@@ -3473,6 +3477,25 @@ impl Orchestrator {
                 self.tele_text.clear();
                 if let Some(s) = &mut self.snap {
                     s.event("swallowed", &[("text", &user_text), ("kind", kind), ("path", path)]);
+                }
+                // Personal phones keep their mic and room. Tie the UI reset to the
+                // ASR segment so a late data packet cannot clear the next question.
+                if kind == "personal_stop" {
+                    self.paused = None;
+                    self.false_deadline = None;
+                    self.resume_grace = None;
+                    self.pf.reset();
+                    self.set_state(AgentState::Listening);
+                    if let (Some(device), Some(segment)) = (&self.personal_device, self.tr.last_user_final()) {
+                        let packet = json!({"type":"turn_stopped", "segment":segment});
+                        let peer = device.clone();
+                        let lp = self.participant.clone();
+                        tokio::spawn(async move {
+                            if let Err(e) = crate::personal::send(&lp, &peer, packet).await {
+                                warn!(error=%e, "personal stop notification failed");
+                            }
+                        });
+                    }
                 }
                 self.request_interrupt_snapshot("swallowed", format!("{kind}:{path}"));
                 return;

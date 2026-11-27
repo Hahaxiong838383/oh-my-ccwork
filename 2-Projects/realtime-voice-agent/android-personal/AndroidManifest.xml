@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.hahaxiong.xiaoke.night" android:versionCode="1000007" android:versionName="V1.0.7">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="cc.hahaxiong.xiaoke.night" android:versionCode="1000008" android:versionName="V1.0.8">
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />

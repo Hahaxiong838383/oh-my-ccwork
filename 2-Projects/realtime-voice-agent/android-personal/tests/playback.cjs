@@ -112,6 +112,21 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
     await retry.click();
     await page.waitForFunction(()=>!document.querySelector('audio').paused && ![...document.querySelectorAll('button')].some(b=>b.textContent==='恢复声音' && !b.hidden));
 
+    // The control packet and the final transcript travel on separate channels.
+    await page.evaluate(()=>{remoteGain.value=0;});
+    await page.waitForFunction(()=>display.phase==='listening');
+    const stopStates=await page.evaluate(()=>{
+      const E=LivekitClient.RoomEvent, results=[];
+      const final=(id,text)=>room.emit(E.TranscriptionReceived,[{id,text,final:true}],room.localParticipant);
+      const stop=segment=>room.emit(E.DataReceived,new TextEncoder().encode(JSON.stringify({type:'turn_stopped',segment})),peer,0,'personal.v1.output');
+      const first='SG_012345678900',second='SG_012345678901';
+      final(first,'退出');results.push(display.phase);stop(first);results.push(display.phase);
+      stop(second);final(second,'退出');results.push(display.phase);
+      final('SG_012345678902','退出是什么意思');stop(second);results.push(display.phase);
+      return results;
+    });
+    assert.deepEqual(stopStates,['thinking','listening','listening','thinking']);
+
     // The production worker sends interim on the first played sample of each
     // sentence, final on the last. Lost audio must not suppress text.
     await page.evaluate(()=>{ audit.shows=[]; audit.speech=[]; window.remoteGain.value=0; });

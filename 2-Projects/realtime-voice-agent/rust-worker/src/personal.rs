@@ -22,6 +22,13 @@ pub const AGENT: &str = "personal-xiaoke";
 pub const RELAY: &str = "personal-text-relay";
 pub const INPUT: &str = "personal.v1.input";
 pub const OUTPUT: &str = "personal.v1.output";
+
+/// Phone interaction policy. Each phrase stops a reply while retaining the microphone.
+pub fn stop_words() -> HashSet<String> {
+    crate::textproc::parse_hotwords_with(None,
+        "退出,退出吧,退出对话,结束对话,结束聊天,不聊了,我不想聊了,停,停下,停一下,先停一下,别说了,别说话,闭嘴,小可退出,小可停一下")
+}
+
 const MAX_TEXT: usize = 4096;
 const MAX_TURNS: usize = 256;
 const MAX_PACKET: usize = 14_000;
@@ -462,6 +469,17 @@ async fn relay_room(url: &str, token: &str, sid: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn phone_stops_only_on_an_explicit_request() {
+        let words = stop_words();
+        for text in ["退出。", "嗯，退出吧", "先停一下", "小可，退出"] {
+            assert!(crate::textproc::is_stop_only(&words, text), "{text}");
+        }
+        for text in ["不要退出", "退出是什么意思", "晚安", "我要睡觉了", "先停一下，现在北京时间几点"] {
+            assert!(!crate::textproc::is_stop_only(&words, text), "{text}");
+        }
+    }
 
     #[test]
     fn personal_worker_rejects_vendor_llm_endpoint() {
