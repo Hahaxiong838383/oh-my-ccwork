@@ -44,7 +44,7 @@ export const DEFAULT_VOICE_PROGRESS_WINDOWS = {chatWaitMs: 350, searchWaitMs: 25
 
 export async function withVoiceProgress<T>(
   room: string,
-  run: (body: Write, searchStarted: () => void) => Promise<T>,
+  run: (body: Write, searchStarted: () => void, suppressCue: () => void) => Promise<T>,
   write: Write,
   signal: AbortSignal,
   options: {chatWaitMs: number; searchWaitMs: number} = DEFAULT_VOICE_PROGRESS_WINDOWS,
@@ -94,6 +94,10 @@ export async function withVoiceProgress<T>(
         mode = 'search';
         schedule(options.searchWaitMs);
       }
+    }, () => {
+      // The caller resolves the style before its first write or network await.
+      clearTimeout(timer);
+      first = false;
     });
     signal.throwIfAborted();
     await flush();

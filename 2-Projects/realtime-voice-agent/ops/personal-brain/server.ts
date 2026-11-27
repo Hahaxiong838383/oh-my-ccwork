@@ -6,10 +6,11 @@ import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
+import { BriefSpeech, briefToolSpeech } from './brief-speech.js';
 import { isVoiceCompletion, withVoiceProgress } from './voice-progress.js';
 import {domesticMarketNews, marketNewsIntent, publicMarketNewsQuery} from './market-news.js';
 import {forecastFallback} from './weather-fallback.js';
-import {weatherIntent, followupPlace, cnMarket, marketSnapshot, domesticBulletin} from './public-queries.js';
+import {automaticLookupText, weatherIntent, followupPlace, cnMarket, marketSnapshot, domesticBulletin} from './public-queries.js';
 import { publicProviderStatus } from './providers.js';
 import { chatDeltas, cpaWebSearch, cpaWebSearchEnabled, searchFetch, type TextTurn } from './upstream.js';
 
@@ -38,7 +39,7 @@ const { conversationStore } = await import('./p003/conversation-store.js');
 const { profileStore } = await import('./p003/profile-store.js');
 const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
-const { resolvePersonalStyle, styleHistory } = await import('./personal-style.js');
+const { resolvePersonalStyle, styleHistory, briefReplyLimit } = await import('./personal-style.js');
 const { PersonalMemoryActions, parseMemoryCommand } = await import('./memory-actions.js');
 const { PersonalRecall } = await import('./memory-recall.js');
 const { answerClock, resolveClock, stripClockTurns } = await import('./p003/tools/clock-query.js');
@@ -266,19 +267,23 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
 type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
-  onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false): Promise<Reply> {
+  onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void): Promise<Reply> {
   const raw = messages.at(-1)!.content;
   const history = store ? memory.replyHistory(room, messages.slice(0, -1)) : messages.slice(0, -1);
   const prior = followups.get(room);
   followups.delete(room);
   const context = prior && prior.expires >= Date.now() ? prior : undefined;
+  const command = parseMemoryCommand(raw);
+  const style = !command || command.op === 'clarify' ? resolvePersonalStyle(owner.accountId, raw, store, history, room) : undefined;
+  const user = style?.request || raw;
+  const limit = briefReplyLimit(owner.accountId, user, store, style);
+  if (limit) suppressCue?.();
   const direct = async (text: string, tool?: string, sources?: SearchResult['sources']): Promise<Reply> => {
     signal.throwIfAborted();
+    if (limit) text = briefToolSpeech(text, tool, limit);
     await onText(text);
     return { text, sources, tool, excluded: true };
   };
-  const command = parseMemoryCommand(raw);
-  const style = !command || command.op === 'clarify' ? resolvePersonalStyle(owner.accountId, raw, store, history, room) : undefined;
   if (command && !(command.op === 'clarify' && style && !style.consume)) {
     if (!store) return direct('这次是临时对话，不能修改长期记忆。','memory_action');
     if (command.op === 'clarify') return direct(command.text, 'memory');
@@ -293,7 +298,6 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     return direct(receipt, 'memory_action');
   }
   if (style?.reply) return direct(style.reply, 'style');
-  const user = style?.request || raw;
   // Answer questions about personal facts from the owner's evidence, before chat or any public lookup.
   const explicitLookup = searchPrefix.test(user) && !noWeb.test(user);
   const recalled = explicitLookup ? undefined : recall.answer(owner.accountId, user, store);
@@ -316,9 +320,13 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   if (capability.test(compact) || toolList.test(compact) || /^(?:那+)?你(?:都)?(?:能|会|可以)(?:查询|查|搜)什么(?:呢|啊)?$/u.test(compact)) {
     return direct(`${availableSearch}，也能查天气和时间。你想查什么？`, 'capabilities');
   }
-  const allowNetwork = !noWeb.test(user);
   const search = searchPrefix.exec(user);
-  let query = search ? user.slice(search[0].length).trim() : user;
+  const spokenQuery = search ? user.slice(search[0].length).trim() : user;
+  const lookupText = automaticLookupText(spokenQuery);
+  // Keep explicit web searches available. Scenery and science discussion stay on the
+  // ordinary chat path, including the point where the model might request a lookup.
+  const allowNetwork = !noWeb.test(user) && (explicitLookup || lookupText !== undefined);
+  let query = lookupText ?? spokenQuery;
   const retry = /^(?:那|你|帮我|请|就)*(?:再|重新)(?:查查|查一下|搜搜|搜一下|查|搜)(?:看|吧|呗|呢|啊)*$/u.test(compact);
   if (retry) {
     if (!context?.retry) return direct('你想再查什么？告诉我主题就行。');
@@ -354,7 +362,8 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   const clarify = searchDialogueClarification(user);
   if (clarify) return direct(clarify);
 
-  const policy = style?.policyLine;
+  const policy = [style?.policyLine, limit && `当前回答最多${limit}个完整句子。直接说重点，每句尽量不超过四十字，先说结论。`].filter(Boolean).join('\n');
+  const brief = limit ? new BriefSpeech(limit) : undefined;
   const prompt = store ? recall.chatPrompt(base, owner, user) : base;
   if (process.env.BRAIN_VERIFY_PROMPT === '1') {
     report(`prompt_rel=${Number(prompt.includes('【小可当下状态·数据】'))} trait=${Number(prompt.includes('【小可对这个主人的相处倾向·数据】'))} quiet=${Number(prompt.includes('主人设定：安静小可'))}`);
@@ -383,12 +392,18 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     [...stripClockTurns(styleHistory(history)), { role: 'user', content: user }], signal, allowLookup, quickConversation)) {
     if ('search' in delta) {
       const result = await querySearch(user, room, signal);
-      await forward(result.text);
+      const remaining = limit && brief ? Math.max(1, limit - brief.count) as 1|2 : undefined;
+      await forward(remaining ? briefToolSpeech(result.text, 'search', remaining) : result.text);
       return { text, sources: result.sources, tool: 'search', excluded: true };
     }
-    await forward(claimFilter.feed(parens.feed(exits.feed(delta.text).text)));
+    const cleaned = claimFilter.feed(parens.feed(exits.feed(delta.text).text));
+    await forward(brief ? brief.feed(cleaned) : cleaned);
+    if (brief?.done) break; // chatDeltas.finally cancels and releases the upstream body reader.
   }
-  await forward(claimFilter.feed(parens.feed(exits.flush().text) + parens.flush()) + claimFilter.flush());
+  if (!brief?.done) {
+    const tail = claimFilter.feed(parens.feed(exits.flush().text) + parens.flush()) + claimFilter.flush();
+    await forward(brief ? brief.feed(tail) + brief.finish() : tail);
+  }
   if (!text.trim()) throw new Error('chat_empty');
   style?.consume?.();
   return { text, excluded: Boolean(style && !style.consume) };
@@ -441,9 +456,9 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   const signal = AbortSignal.any([controller.signal, c.req.raw.signal, AbortSignal.timeout(60_000)]);
   const response = { id: `chatcmpl-${randomUUID()}`, created: Math.floor(Date.now() / 1000), model: 'personal-brain' };
   const finish = () => { if (active.get(room) === controller) active.delete(room); };
-  const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void) => {
+  const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void, suppressCue?: () => void) => {
     const revision = memory.revision;
-    const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')));
+    const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')), suppressCue);
     signal.throwIfAborted();
     if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply.text, reply.excluded);
     return reply;

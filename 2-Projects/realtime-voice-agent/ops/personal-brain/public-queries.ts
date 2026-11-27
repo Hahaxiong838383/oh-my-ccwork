@@ -20,9 +20,9 @@ const spokenLead = ['我想了解','我想知道','我想问问','我现在在',
   '看一看','看一下','看看','看下','查一查','查一下','查查','查下','查询','查','问一下','在','呃','额','啊'];
 const spokenTail = ['可以吗','行不行','好不好','就好','就行','快一点','快点','这边','那边','的','呢','吧','呗','啊','呀','嘛','吗'];
 const weatherWords = ['天气预报','天气情况','空气质量','需不需要带伞','要不要带伞','用不用带伞','会不会下雨',
-  '下不下雨','会下雨','要带伞','带伞','出门','下雨','降雨','气温','温度','多少度','是多少','多少','天气',
+  '雨会不会停','雨什么时候停','雨停了吗','下不下雨','会下雨','需要带伞','要带伞','带伞','出门','散步','下雨','降雨','气温','温度','多少度','是多少','多少','天气',
   '今天','明天','后天','现在','目前','实时','怎么样','咋样','如何','的'];
-const weatherLead = [...spokenLead, ...weatherWords];
+const weatherLead = ['介绍一下', '描述一下', '去', ...spokenLead, ...weatherWords];
 const weatherTail = ['再告诉我需不需要带伞','再告诉我要不要带伞','告诉我会不会下雨','告诉我下不下雨',
   '你找不着','你查不到', ...spokenTail, ...weatherWords];
 
@@ -42,10 +42,33 @@ function spokenPlace(text: string, lead: string[], tail: string[]): string {
   return rest;
 }
 
-export function weatherIntent(text: string) {
+// A weather word may describe the scene of a story, a memory or a science question.
+// Voice ASR also joins “介绍一【下雨】后散步” across a word boundary.
+const weatherSubject = /雨|雪|气温|天气|气候|气象|带伞|空气质量|多少度/u;
+const descriptive = /感受|感想|心情|心境|氛围|气氛|回忆|假设|假如|如果|描写|描述|形容|想象|写.{0,4}(?:诗|歌|文章|文案|日记|段落)|故事|作文|歌词|为什么|为何|原理|成因|怎么形成|如何形成|是怎么.{0,3}(?:形成|产生)|什么意思|是什么原因|是什么现象|什么是(?:天气|气温|降雨|气候)|(?:天气|气温|降雨|气候)是什么(?:呢|啊|呀)?$|科普/u;
+const scene = /雨后|雪后|雨声|雨中|雪中|雨天|雪天|雨滴|雨点|(?:下雨|下雪|打雷)(?:时|的时候|之?后|之前)/u;
+const weatherSignal = /天气|气温|降雨|下雨|带伞|多少度|空气质量|雨会不会停|雨什么时候停|雨停了吗/u;
+
+// Preserve a real forecast request next to a remark about the weather. Accept a
+// clause only when it reduces to a station or a weather question missing its place.
+// “描述一下北京明天的天气” qualifies; “北京雨后的天气带给人的感受” does not.
+export function automaticLookupText(text: string): string | undefined {
   const q = compact(text);
-  if (!/天气|气温|降雨|下雨|带伞|多少度|空气质量/u.test(q) ||
-      /为什么|原理|是什么|形成|故事|作文|如果|别查|不要查/u.test(q)) return;
+  if (!weatherSubject.test(q) || !(scene.test(q) || descriptive.test(q))) return text;
+  const clauses = text.split(/[，,。；;！？!?]|(?:顺便|另外|不过|但是|再帮我)|(?<=舒服|惬意|开心|感受|感觉)(?=.)|(?=我想去|我准备去)/u);
+  for (const clause of clauses.reverse()) {
+    const part = compact(clause);
+    if (!weatherSignal.test(part)) continue;
+    // A descriptive “给我描述一下下雨” has no forecast date, metric or question.
+    if (!/天气|气温|空气质量|多少度|今天|明天|后天|现在|目前|实时|会不会|下不下雨|雨什么时候停|(?:下雨|带伞|雨停了)(?:吗|么)|要不要|需不需要|用不用/u.test(part)) continue;
+    const place = spokenPlace(part, weatherLead, weatherTail);
+    if (!place || inspectWeatherPlace(place).candidates.length) return clause.trim();
+  }
+}
+
+export function weatherIntent(text: string) {
+  const q = compact(automaticLookupText(text) ?? '');
+  if (!weatherSignal.test(q) || /为什么|原理|是什么(?!天气)|形成|故事|作文|如果|别查|不要查/u.test(q)) return;
   if (/昨天|前天|下周|下个月|第\d|[0-9一二三四五六七八九十]+[月日号]|周[一二三四五六日末]/u.test(q)) return {unsupported: true};
   const day_offset = /后天/u.test(q) ? 2 : /明天/u.test(q) ? 1 : 0;
   const metric = /空气质量/u.test(q) ? 'aqi' : /现在|目前|实时/u.test(q) && day_offset === 0 ? 'current' : 'forecast';

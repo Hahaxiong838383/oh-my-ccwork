@@ -21,7 +21,7 @@ after(() => rmSync(stage, {recursive: true, force: true}));
 
 const {forecastFallback} = await import(pathToFileURL(join(stage, 'weather-fallback.ts')).href);
 
-const {weatherIntent, followupPlace, domesticBulletin} = await import(pathToFileURL(join(stage, 'public-queries.ts')).href);
+const {automaticLookupText, weatherIntent, followupPlace, domesticBulletin} = await import(pathToFileURL(join(stage, 'public-queries.ts')).href);
 test('ordinary spoken news keeps date, requested count and subject', () => {
   assert.deepEqual(domesticBulletin('今天国内有什么新闻？'), {query:'央视今天国内新闻',count:2});
   assert.deepEqual(domesticBulletin('今天有什么新闻'), {query:'央视今天国内新闻',count:2});
@@ -32,9 +32,33 @@ test('ordinary spoken news keeps date, requested count and subject', () => {
     assert.equal(domesticBulletin(q), undefined, q);
   }
 });
+test('scenery, creative writing and weather science stay in conversation', () => {
+  for (const text of [
+    '介绍一下雨后散步的感受', '介绍一下，雨后散步有什么感觉？', '北京雨后散步是什么体验',
+    '我很喜欢下雨的时候出去走走', '聊聊今天雨中散步的心情', '为窗外的雨声写一首小诗', '给我描述一下下雨', '如果下雨你会做什么', '聊聊北京雨后的天气带给人的感受',
+    '描述一下下雨天街上的气氛', '气温为什么会变化', '下雨是怎么形成的', '给我讲个带伞的故事',
+  ]) {
+    assert.equal(automaticLookupText(text), undefined, text);
+    assert.equal(weatherIntent(text), undefined, text);
+  }
+  assert.equal(automaticLookupText('查查今天的新闻'), '查查今天的新闻');
+  assert.equal(automaticLookupText('我喜欢雨后散步的感觉，不过北京明天会不会下雨？'), '北京明天会不会下雨');
+  assert.equal(weatherIntent('查查关于雨后散步的文章'), undefined);
+  for (const text of [
+    '请描述一下北京明天的天气', '我喜欢雨后散步的感觉，不过北京明天会不会下雨？',
+    '北京明天的天气怎么样？我想去雨后散步', '北京明天的天气怎么样我想去雨后散步',
+  ]) assert.deepEqual(weatherIntent(text)?.request,{place:'北京',day_offset:1,metric:'forecast'},text);
+  for (const text of ['雨后散步很舒服，北京现在气温怎么样？','雨后散步很舒服北京现在气温怎么样'])
+    assert.deepEqual(weatherIntent(text)?.request,{place:'北京',day_offset:0,metric:'current'},text);
+  assert.deepEqual(weatherIntent('帮我查一下雨会不会停')?.target,{day_offset:0,metric:'forecast'});
+  assert.deepEqual(weatherIntent('雨会不会停')?.target,{day_offset:0,metric:'forecast'});
+});
+
 test('spoken weather requests keep the complete station, day and metric', () => {
   for (const [text, place, day_offset, metric] of [
     ['你先看看北京的天气怎么样', '北京', 0, 'forecast'],
+    ['介绍一下北京今天的天气', '北京', 0, 'forecast'],
+    ['明天去北京散步需要带伞吗', '北京', 1, 'forecast'],
     ['我在北京，明天要不要带伞？', '北京', 1, 'forecast'],
     ['请你提供一下北京市朝阳区后天的天气预报', '北京市朝阳区', 2, 'forecast'],
     ['你先看看北京朝阳现在的气温', '北京朝阳', 0, 'current'],
@@ -58,6 +82,7 @@ test('spoken weather requests keep the complete station, day and metric', () => 
   assert.equal(followupPlace('你先看看那曲呢'), '那曲');
   assert.equal(followupPlace('明天北京'), undefined);
   assert.equal(weatherIntent('你看看朝阳的天气')?.ambiguous, true);
+  assert.deepEqual(weatherIntent('明天会不会下雨')?.target, {day_offset:1,metric:'forecast'});
   for (const text of ['天气怎么样', '从北京到上海的天气', '查北京大学天气', '不要查北京的天气']) {
     assert.equal(weatherIntent(text)?.request, undefined, text);
   }
@@ -147,7 +172,7 @@ async function withClock(ms, run) {
 
 /** One place per scenario: the page cache is per station, so scenarios never share a station. */
 test('serves today, tomorrow and the day after with a citation', async () => {
-  const at = Date.now() - 2 * 3_600_000;
+  const at = Date.now();
   const fixed = page({at});
   const result = await serving(() => body(fixed), () => forecastFallback(request('北京'), AbortSignal.timeout(5_000), Date.now()));
   assert.equal(result.sources.length, 1);
@@ -161,7 +186,7 @@ test('serves today, tomorrow and the day after with a citation', async () => {
 });
 
 test('uses the resolved station id for a district and keeps its own wording', async () => {
-  const at = Date.now() - 3 * 3_600_000;
+  const at = Date.now();
   const result = await serving(() => body(page({name: '海淀', at})),
     () => forecastFallback(request('海淀', 1), AbortSignal.timeout(5_000), Date.now()));
   assert.equal(result.sources[0].url, 'https://www.weather.com.cn/weather/101010200.shtml');
