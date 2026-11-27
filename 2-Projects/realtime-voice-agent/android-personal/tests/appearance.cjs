@@ -89,6 +89,13 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
         assert.equal(await page.locator('#avatar-engine boop-face').first().getAttribute('view'),'2d');
         await page.locator('#avatar-view').click();
         assert.equal(await page.locator('#avatar-engine boop-face').first().getAttribute('view'),'3d');
+        await page.waitForFunction(()=>{
+          const face=document.querySelector('#avatar-engine boop-face');
+          const layer=face.shadowRoot.querySelector('.view-3d');
+          if (!layer) return false;
+          const a=face.getBoundingClientRect(), b=layer.getBoundingClientRect();
+          return b.width>0 && Math.abs(a.x-b.x)<2 && Math.abs(a.y-b.y)<2;
+        });
         await page.locator('#avatar-group').selectOption({index:2});
         assert.ok(await cards.count()>0 && await cards.count()<count);
         await page.locator('#avatar-group').selectOption('');

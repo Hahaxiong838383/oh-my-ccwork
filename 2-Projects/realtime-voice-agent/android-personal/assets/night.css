@@ -252,7 +252,7 @@ body {
 
 /* Blank stage and avatar receive continuous pointer events. The transcript
    remains its own touch scroller, including while the update panel is open. */
-.stage > .gaze-surface { position: absolute; inset: 0; touch-action: none; }
+.stage > .gaze-surface { position: absolute; top:0; right:0; bottom:0; left:0; touch-action: none; }
 .stage { position: relative; }
 .stage > * { position: relative; }
 #orb-canvas { touch-action: none; }
