@@ -383,7 +383,11 @@ struct Speculation {
     rx: mpsc::Receiver<String>,
 }
 
+// While a long sentence is streaming, its start sample is known before its end.
+struct StreamingCaption { start: u64, text: String }
+
 struct AgentTurn {
+    streaming_caption: Option<Arc<StdMutex<Option<StreamingCaption>>>>,
     search_progress: Option<Arc<StdMutex<crate::search_progress::SearchProgress>>>,
     id: u64,
     task: JoinHandle<()>,
@@ -527,6 +531,7 @@ struct Orchestrator {
     pending_amend: Option<String>,
     search_history_handoff: Arc<StdMutex<Option<(u64, String)>>>,
     bank: Option<FillerBank>,
+    personal_voice_key: Option<Arc<StdMutex<Option<String>>>>,
     pf: PreflightGate,
     spec: Option<Speculation>,
     speaker: Option<SpeakerSidecar>,
@@ -781,6 +786,7 @@ pub struct Prebuilt {
     pub speaker: Option<SpeakerSidecar>,
     pub vad: SileroVad,
     pub bank: Option<FillerBank>,
+    pub personal_voice_key: Option<Arc<StdMutex<Option<String>>>>,
     pub stt: SttPre,
     pub stt_cfg: SttConfig,
     pub started_at: Instant,
@@ -864,9 +870,18 @@ pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebui
         pcfg.room = String::new();
         tokio::spawn(llm::prewarm(pcfg, client));
         // 有界灾备仅故障时启动；禁止备用生成式预热，避免每次开房额外调用。
-        let tc = tts_cfg.clone();
-        tokio::spawn(async move { tc.prewarm().await });
+        if speech.is_none() {
+            let tc = tts_cfg.clone();
+            tokio::spawn(async move { tc.prewarm().await });
+        }
     }
+    let personal_voice_key = if speech.is_some() {
+        let slot = Arc::new(StdMutex::new(crate::filler::personal_cache::voice_key(&tts_cfg, None)));
+        crate::filler::personal_cache::spawn_prewarm(room_name.clone(), tts_cfg.clone(), slot.clone());
+        Some(slot)
+    } else {
+        None
+    };
     // 重活进 blocking 线程(VAD 模型 / 填充语库 93 条读盘 / 声纹注册库),不占 runtime 线程——建房与等音轨正在并行 await。
     let vad_path = cfg.vad_model_path.clone();
     let (vad, bank, speaker) = tokio::task::spawn_blocking(move || -> Result<(SileroVad, Option<FillerBank>, Option<SpeakerSidecar>)> {
@@ -889,7 +904,7 @@ pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebui
         has_speaker = speaker.is_some(),
         "pipeline prebuilt"
     );
-    Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, stt, stt_cfg, started_at })
+    Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, personal_voice_key, stt, stt_cfg, started_at })
 }
 
 /// B23：签发 metadata 里与 ordered 输入相关的受信声明（job 层解析，pipeline 只认这里，不认设备自述）。
@@ -941,7 +956,7 @@ pub async fn run_pipeline(
 ) -> Result<()> {
     // 预组装接管(2026-09-07):job 层在 assignment 到达即开始的重活(VAD 模型/填充语库/声纹库/LLM·TTS 客户端与预热/
     // 回声库拉取/ASR 预连)此处直接接管;无预组装路径(web 调试直连)原地组装,行为一致。
-    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, mut bank, stt, stt_cfg, started_at: prebuilt_at } = match prebuilt {
+    let Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, mut vad, mut bank, personal_voice_key, stt, stt_cfg, started_at: prebuilt_at } = match prebuilt {
         Some(p) => p,
         None => prebuild(room_name.clone()).await?,
     };
@@ -1091,6 +1106,7 @@ pub async fn run_pipeline(
         pending_amend: None,
         search_history_handoff: Arc::new(std::sync::Mutex::new(None)),
         bank,
+        personal_voice_key,
         pf: PreflightGate::new(PreflightConfig::from_env()),
         spec: None,
         speaker,
@@ -2904,13 +2920,16 @@ impl Orchestrator {
         }
         let played = turn.ctl.played_samples();
         let turn_id = turn.id;
+        let pending = turn.streaming_caption.as_ref().map(|slot| slot.lock().unwrap_or_else(|e| e.into_inner()));
+        // track() appends text before publishing its completed sample boundary.
+        let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let synth = turn
             .synth_text
             .lock()
             .map(|s| s.clone())
             .unwrap_or_default();
-        let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
-        for (i, span) in sentence_spans(&synth, &progress).iter().enumerate() {
+        let spans = sentence_spans(&synth, &progress);
+        for (i, span) in spans.iter().enumerate() {
             if i >= self.tr_started && played >= span.start_samples {
                 self.tr.agent_segment(turn_id, i, &span.text, false);
                 self.tr_started = i + 1;
@@ -2918,6 +2937,20 @@ impl Orchestrator {
             if i >= self.tr_finaled && played >= span.end_samples {
                 self.tr.agent_segment(turn_id, i, &span.text, true);
                 self.tr_finaled = i + 1;
+            }
+        }
+        if let Some(pending) = pending {
+            let next = spans.len();
+            let completed = progress.last().map_or(0, |p| p.1);
+            if let Some(caption) = pending.as_ref().filter(|c| c.start == completed) {
+                if self.tr_started == next && played > caption.start {
+                    self.tr.agent_segment(turn_id, next, &caption.text, false);
+                    self.tr_started = next + 1;
+                }
+            } else if self.tr_started > next {
+                // The provider abandoned a partial segment. Its slot can be reused.
+                self.tr.agent_segment(turn_id, next, "", false);
+                self.tr_started = next;
             }
         }
     }
@@ -2966,7 +2999,11 @@ impl Orchestrator {
         played: u64,
     ) {
         let spoken_chars = spoken.chars().count();
-        for (i, span) in sentence_spans(synth, progress).iter().enumerate() {
+        let spans = sentence_spans(synth, progress);
+        if self.tr_started > spans.len() {
+            self.tr.agent_segment(turn_id, spans.len(), "", true);
+        }
+        for (i, span) in spans.iter().enumerate() {
             if i < self.tr_finaled {
                 continue;
             }
@@ -2995,6 +3032,9 @@ impl Orchestrator {
             .unwrap_or_default();
         let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let spans = sentence_spans(&synth, &progress);
+        if self.tr_started > spans.len() {
+            self.tr.agent_segment(turn_id, spans.len(), "", true);
+        }
         for (i, span) in spans.iter().enumerate() {
             if i >= self.tr_finaled {
                 self.tr.agent_segment(turn_id, i, &span.text, true);
@@ -3869,11 +3909,14 @@ impl Orchestrator {
         let search_history_handoff = self.search_history_handoff.clone();
         let room_name = self.room_name.clone();
         let personal_device = self.personal_device.clone();
+        let personal_voice_key = self.personal_voice_key.clone();
         let ev_tx = self.turn_ev_tx.clone();
         let min_len = self.cfg.tts_min_sentence_len;
         let first_clause_min = self.turn_first_clause_min;
         let synth2 = synth_text.clone();
         let prog2 = progress.clone();
+        let streaming_caption = personal_device.as_ref().map(|_| Arc::new(StdMutex::new(None)));
+        let caption_slot = streaming_caption.clone();
         let llm_chars2 = llm_chars.clone();
         let lp = self.participant.clone();
         // 合成侧要能看见打断信号(讯飞在 pause 期间不能裸 send,见 tts_xfyun::send_or_abort);
@@ -3903,6 +3946,16 @@ impl Orchestrator {
                         .await;
                 });
             };
+            let set_caption = |text: Option<&str>| {
+                if let Some(slot) = &caption_slot {
+                    let pending = text.map(|s| StreamingCaption {
+                        start: prog2.lock().unwrap_or_else(|e| e.into_inner()).last().map_or(0, |p: &(usize,u64)| p.1),
+                        text: s.to_owned(),
+                    });
+                    *slot.lock().unwrap_or_else(|e| e.into_inner()) = pending;
+                }
+            };
+            let mut preview_enabled = caption_slot.is_some();
             let mut samples_cum: u64 = 0;
             let mut chars_cum: usize = 0;
             let mut track = |sentence: &str, bytes: usize| {
@@ -4026,6 +4079,7 @@ impl Orchestrator {
                     let mut l2_sent = false;
                     // B 观测:正文首段 ready(TTS 首块)只记一次;tail 路径同样覆盖。
                     let mut body_ready_logged = false;
+                    let mut first_sentence = true;
                     while let Some(delta) = delta_rx.recv().await {
                         let (early_labels, delta) = crate::llm::split_dev_inband(&delta);
                         for label in early_labels {
@@ -4061,7 +4115,64 @@ impl Orchestrator {
                             if sentence.trim().is_empty() {
                                 continue;
                             }
+                            let is_first = std::mem::replace(&mut first_sentence, false);
+                            let filler_voice = if is_first && crate::filler::personal_cache::is_phrase(&sentence) {
+                                personal_voice_key.as_ref().and_then(|slot| slot.lock().ok().and_then(|g| g.clone()))
+                            } else {
+                                None
+                            };
+                            if let Some(vk) = filler_voice {
+                                if let Some(cached) = crate::filler::personal_cache::get(&vk, &sentence) {
+                                    if crate::filler::personal_cache::send_cached_or_abort(&cached, &pcm_tx, &ctl_tts).await.is_ok() {
+                                        let bytes = cached.len();
+                                        info!(
+                                            room = %room_name,
+                                            turn_id = id,
+                                            voice = %vk,
+                                            phrase = %sentence,
+                                            bytes,
+                                            since_turn_ms = turn_started.elapsed().as_millis() as u64,
+                                            "personal filler cache hit"
+                                        );
+                                        publish(json!({"k": "tts", "ttfb_ms": 0}));
+                                        track(&sentence, bytes);
+                                    }
+                                    continue;
+                                }
+                                let synth_t0 = Instant::now();
+                                match crate::filler::personal_cache::synthesize_and_cache(
+                                    &tts_cfg,
+                                    &vk,
+                                    &sentence,
+                                    &pcm_tx,
+                                    &ctl_tts,
+                                    &mut warm,
+                                )
+                                .await
+                                {
+                                    Ok((ttfb, bytes, cached)) => {
+                                        info!(
+                                            room = %room_name,
+                                            turn_id = id,
+                                            voice = %vk,
+                                            phrase = %sentence,
+                                            bytes,
+                                            ttfb_ms = ttfb,
+                                            cached,
+                                            since_turn_ms = synth_t0.duration_since(turn_started).as_millis() as u64 + ttfb,
+                                            "personal filler cache miss"
+                                        );
+                                        publish(json!({"k": "tts", "ttfb_ms": ttfb}));
+                                        track(&sentence, bytes);
+                                    }
+                                    Err(e) => {
+                                        warn!(room = %room_name, error = %e, "tts synthesize failed (personal filler)");
+                                    }
+                                }
+                                continue;
+                            }
                             let synth_t0 = Instant::now();
+                            if preview_enabled { set_caption(Some(&sentence)); }
                             match tts_cfg
                                 .synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
@@ -4076,15 +4187,18 @@ impl Orchestrator {
                                     track(&sentence, bytes);
                                 }
                                 Err(e) => {
+                                    preview_enabled = false;
                                     warn!(room = %room_name, error = %e, "tts synthesize failed");
                                 }
                             }
+                            set_caption(None);
                         }
                     }
                     if let Some(tail) = seg.flush() {
                         let tail = crate::textproc::strip_stage_directions(&tail);
                         if !tail.trim().is_empty() {
                             let synth_t0 = Instant::now();
+                            if preview_enabled { set_caption(Some(&tail)); }
                             match tts_cfg
                                 .synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
@@ -4102,6 +4216,7 @@ impl Orchestrator {
                                     warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
                                 }
                             }
+                            set_caption(None);
                         }
                     }
                     match llm_join.await {
@@ -4155,6 +4270,7 @@ impl Orchestrator {
             }
         });
         self.agent_turn = Some(AgentTurn {
+            streaming_caption,
             search_progress,
             id,
             task,

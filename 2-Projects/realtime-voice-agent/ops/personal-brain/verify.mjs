@@ -51,6 +51,11 @@ for (const question of ['你能联网搜索吗？', '小可，你有哪些工具
 const clock = await chat('伦敦现在几点？', 'verify-clock');
 assert.equal(clock.tool, 'clock');
 assert.match(clock.text, /^伦敦现在是.+点/);
+for (const question of ['先停一下现在北京时间是几点', '等一下，伦敦现在几点？']) {
+  const answer = await chat(question, 'verify-spoken-interrupt', { body: { store: false } });
+  assert.equal(answer.tool, 'clock');
+  assert.match(answer.text, question.includes('北京') ? /北京时间.+点/ : /^伦敦现在是.+点/u);
+}
 const weekday = await chat('北京今天星期几？', 'verify-clock');
 assert.equal(weekday.text, '今天是' + new Intl.DateTimeFormat('zh-CN', {
   timeZone: 'Asia/Shanghai', weekday: 'long',

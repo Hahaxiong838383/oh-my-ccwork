@@ -1,6 +1,6 @@
 {
   "scope": "personal-voice",
-  "sampled_at": "2026-11-27T11:34:09+08:00",
+  "sampled_at": "2026-11-27T12:05:20+08:00",
   "deployments": {
     "s24-night-apk": {
       "versionName": "V1.0.7",
@@ -15,6 +15,22 @@
       "source_commit": "8dc5c7f361598332544cc4094dabf648b6f8155b",
       "sha256": "284a26c01e1c0c16b53c3e65557f4649db734f2df0ea87a78100dbef3c974382",
       "file": "ops/personal-worker/compose.yaml"
+    },
+    "personal-worker": {
+      "source_commit": "18fc055746cbc971491e4f145dfbde69e4ab9052",
+      "image": "personal-voice-worker:c9cc924bc348",
+      "image_id": "sha256:85a6c488c2b4acdc66a2106f045d7cc6fe8cfac705a34a7c3b48e3f52e04e088",
+      "file": "/usr/local/bin/voice-rust-worker",
+      "sha256": "c9cc924bc34806032413c6954016ba446331ef53e369d98a7c905fab881c476d",
+      "previous_image": "personal-voice-worker:3a25bafdef91"
+    },
+    "personal-brain": {
+      "source_commit": "99ec3ef2d12530c66519d001974699bcfe9903cc",
+      "image": "personal-brain:night-clock-99ec3ef2",
+      "image_id": "sha256:fd8326213067b040144d10d02f59a5fa0d04cda6c4336362c92d043e5cdd737f",
+      "file": "/app/server.mjs",
+      "sha256": "3623d17c8afe7a6ccf5d6ad70d35ecddc703a681f247ce5b37d1b879a82859e0",
+      "previous_image": "personal-brain:filler-20261127.1"
     }
   },
   "acceptance": {
@@ -82,7 +98,97 @@
         "two_pass": true,
         "end_window_ms": 300,
         "provider_revision": 26,
-        "room_replay": "同一段含停顿的海边故事请求，在 150 毫秒窗口下被 Worker 分两轮提交；400 毫秒测试一轮，300 毫秒两次回放均完整提交。300 毫秒窗口下的一次报时停口到提交 694 毫秒，随后收到报时音频。不同轮次不能据此计算普遍提速。"
+        "room_replay": "同一段含停顿的海边故事请求，在 150 毫秒窗口下被 Worker 分两轮提交；400 毫秒测试一轮，300 毫秒两次回放均完整提交。300 毫秒窗口下的一次报时停口到提交 694 毫秒，随后收到报时音频。不同轮次不能据此计算普遍提速。",
+        "final_active_revision": 29
+      }
+    },
+    "p003_source_review": {
+      "production_commit": "786a135bcc2f42037b117ec2d3582fcb3af2409b",
+      "reused": [
+        "火山流式双遍、端点提交与插话",
+        "DeepSeek 流式输出、首个可朗读分句先送讯飞",
+        "讯飞热连接与慢连接恢复",
+        "长回复中的附和词处理、打断淡入恢复、截短历史"
+      ],
+      "private_additions": [
+        "衔接音按当前音色预热，短答取消等待",
+        "按已播采样发字幕，打断时撤回未完成段",
+        "安卓播放音量分析读零时按远端说话音量驱动头像和五点脉冲"
+      ],
+      "scope": "仅飞牛私人实例采用这次运行参数与个人分支逻辑。工具执行和记忆写入继续等用户本轮提交。"
+    },
+    "clock_barge_in": {
+      "asr_text": "先停一下现在北京时间是几点",
+      "before": "把插话前缀识别成城市的一部分，误问城市",
+      "after": "私人报时入口先处理句首插话短语，北京、伦敦和美国多时区澄清均经实际服务验证"
+    },
+    "private_stack": {
+      "active_providers": {
+        "llm": "p003-deepseek",
+        "asr": "p003-doubao-asr",
+        "tts": "p003-xfyun-tts"
+      },
+      "provider_revision": 29,
+      "chat_filler_warm_phrases": 6,
+      "chat_filler_first_frame_after_commit_ms": 398,
+      "search_filler_first_frame_after_commit_ms": [
+        349,
+        350
+      ],
+      "search_source": "cctv.com",
+      "fast_answer_first_frame_after_commit_ms": 296,
+      "fast_answer_filler": false,
+      "voice_profile_cache_verified": [
+        "xfyun_tts",
+        "doubao_tts",
+        "personal_local"
+      ],
+      "before_chat_filler_first_frame_after_commit_ms": [
+        948,
+        995
+      ]
+    },
+    "verification_run": {
+      "rust_tests_passed": 661,
+      "rust_tests_failed": 0,
+      "rust_tests_ignored": 2,
+      "android": "Android 模拟器覆盖升级；客户端用公开 APK 的资源连接真实语音房测试，S24 本轮未连接 ADB。"
+    },
+    "screenshot_prompt_replay": {
+      "prompt": "你说一个长点的句子",
+      "input": "合成普通话，经浏览器麦克风送入飞牛真实房间。两次使用同一条音频，模型生成内容随轮次变化。",
+      "filler_caption_to_first_body_caption_ms": {
+        "before": 13400,
+        "after": 1452
+      },
+      "interrupted_during_long_answer": true,
+      "final_time_answer_received": true,
+      "interrupted_pending_caption_cleared": false,
+      "forced_zero_local_analyser": true,
+      "remote_pulse_range_px": [
+        5.99,
+        13.98
+      ],
+      "call_end_audio_elements": 0,
+      "worker_timing": {
+        "utterance_end_to_commit_ms": [
+          987,
+          797
+        ],
+        "long_prompt_filler_first_frame_after_commit_ms": 397,
+        "long_prompt_first_cache_hit_ms": 359,
+        "barge_in_time_answer_first_frame_after_commit_ms": 297,
+        "long_prompt_underrun_ms": 0,
+        "time_reply_underrun_ms": 0
+      },
+      "other_runs": {
+        "filler_wait_from_estimated_speech_end_to_worker_frame_ms": [
+          1030,
+          1087
+        ],
+        "final_run_same_metric_ms": 1384,
+        "retracted_incomplete_caption_in_separate_run": true,
+        "observation": "另一次插话时长句仍在合成，客户端收到该段空的最终字幕以撤回；最终验收中的段落已可结算，按已播内容收尾。三次样本中的一次长轮播放缓冲欠载 164 毫秒。"
       }
     }
   }
