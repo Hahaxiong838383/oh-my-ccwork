@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { setTimeout as delay } from 'node:timers/promises';
-import { isVoiceCompletion, withVoiceProgress } from './voice-progress.js';
+import { DEFAULT_VOICE_PROGRESS_WINDOWS, isVoiceCompletion, withVoiceProgress } from './voice-progress.js';
 
 const windows = {chatWaitMs: 15, searchWaitMs: 5};
 const signal = () => new AbortController().signal;
@@ -97,4 +97,18 @@ test('interrupting before and after acknowledgement never writes late audio', as
     assert.equal(out.length, Number(wait > 0));
     assert.ok(!out.includes('过期的答复。'));
   }
+});
+
+test('default wait windows shorten slow chat and search waits while fast replies still cancel before firing', async () => {
+  assert.deepEqual(DEFAULT_VOICE_PROGRESS_WINDOWS, {chatWaitMs: 350, searchWaitMs: 250});
+  const fastRoom = 'pv-' + 'd'.repeat(32);
+  const out: string[] = [];
+  const reply = await withVoiceProgress(fastRoom, async say => {
+    await delay(30);
+    await say('现在是北京时间十二点。');
+    return '现在是北京时间十二点。';
+  }, async s => { out.push(s); }, signal());
+  await delay(60);
+  assert.equal(reply, '现在是北京时间十二点。');
+  assert.deepEqual(out, ['现在是北京时间十二点。']);
 });
