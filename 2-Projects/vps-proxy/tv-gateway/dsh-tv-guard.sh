@@ -25,17 +25,25 @@ if ! sample=$(adb_tv shell '
     addr=$(echo "$addrs" | awk "{print \$4; exit}")
     gw=$(echo "$routes" | awk "/^default via /{print \$3; exit}")
     owned=$(echo "$rules" | grep -Ec "^9000:[[:space:]]+from all lookup 100[[:space:]]*$")
-    echo "$boot ${uptime%%.*} $(getprop sys.boot_completed) $carrier ${addr:--} ${gw:--} $owned"
+    selected=-
+    if [ -r /data/misc/x96-boot-status/gateway ] &&
+       read -r epoch address extra < /data/misc/x96-boot-status/gateway &&
+       [ "$epoch" = "$boot" ] && [ "$address" = 192.168.1.254 ] && [ -z "$extra" ]; then
+        selected=$address
+    fi
+    echo "$boot ${uptime%%.*} $(getprop sys.boot_completed) $carrier ${addr:--} ${gw:--} $owned $selected"
 ' 2>/dev/null); then
     rm -f "$streak"
     exit 0
 fi
-read -r boot uptime complete carrier address actual owned <<< "${sample//$'\r'/}"
+read -r boot uptime complete carrier address actual owned selected <<< "${sample//$'\r'/}"
 if ! [[ $boot =~ ^[a-f0-9-]{36}$ && $uptime =~ ^[0-9]+$ && $complete == 1 && $carrier == 1 && $address == 192.168.1.144/24 ]]; then
     rm -f "$streak"
     exit 0
 fi
-if [[ $actual == "$gw" && $owned == 0 ]]; then
+# Leave the box's active backup alone, including a residual old priority 9000.
+# The boot audit verifies forwarding independently of this ownership signal.
+if [[ $selected == 192.168.1.254 || ( $actual == "$gw" && $owned == 0 ) ]]; then
     rm -f "$streak"
     exit 0
 fi

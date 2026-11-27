@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Offline acceptance for TV boot sampling. No ADB connection or device changes."""
 import json
+import os
 from pathlib import Path
 import runpy
 import subprocess
@@ -32,6 +33,8 @@ eth0
 2026-11-26T19:31:04.613 success
 WATCH
 scanned
+init_visible
+ha_controller
 UID
 package:org.smarttube.beta uid:10087
 RULE
@@ -48,13 +51,18 @@ assert not audit["has_ts"](b"partial" + packet * 9)
 assert not audit["has_ts"](b"<html>error</html>" * 300)
 assert not audit["has_ts"]((packet * 3 + bytes(188)) * 5)
 
-watcher_filter = audit["STATUS"].split("ps -A -o PID,ARGS | awk '")[1].split("'")[0]
+watcher_filter = audit["STATUS"].split('"$processes" | awk \'')[1].split("'")[0]
 fake_ps = ("PID ARGS\n"
+           "1 init second_stage\n"
            "13 /data/adb/magisk/busybox sh /data/adb/dsh-gateway/watch.sh\n"
            "14 logcat /data/adb/dsh-gateway/watch.sh.disabled-20261125\n"
-           "15 sh /data/adb/dsh-gateway/x96-network.sh --watch\n")
+           "15 sh /data/adb/dsh-gateway/x96-network.sh --watch\n"
+           "26795 sh /data/adb/dsh-gateway/x96-gateway-watch.sh\n"
+           "26796 sh /data/adb/dsh-gateway/x96-gateway-watch.sh.bak\n"
+           "26797 cat /data/adb/dsh-gateway/x96-gateway-watch.sh\n"
+           "26798 sh /data/adb/dsh-gateway/x96-gateway-watch.sh --other\n")
 output = subprocess.run(["awk", watcher_filter], input=fake_ps, capture_output=True, text=True, check=True)
-assert output.stdout.splitlines() == ["scanned", "matched"]
+assert output.stdout.splitlines() == ["scanned", "init_visible", "matched", "ha_controller"]
 positive = audit["parse_status"](status.decode().replace("scanned", "scanned\nmatched"), boot_id)
 assert positive["old_watchers"] == 1 and not audit["network_ok"](positive)
 positive = audit["parse_status"](status.decode().replace("global 0", "global 1"), boot_id)
@@ -62,6 +70,62 @@ assert not audit["network_ok"](positive)
 missing = audit["parse_status"](status.decode().replace("global 0", "").replace("default 0", ""), boot_id)
 assert missing["ipv6_global_addresses"] is None and missing["ipv6_default_routes"] is None
 assert not audit["network_ok"](missing)
+
+def gateway_fixture(selected):
+    primary = "192.168.1.19"
+    return f"""HA
+receipt {boot_id} {selected}
+route plain 8.8.8.8 via {primary} dev eth0 table eth0 src 192.168.1.144
+route source 8.8.8.8 from 192.168.1.144 via {primary} dev eth0 table eth0
+route bound 8.8.8.8 from 192.168.1.144 via {primary} dev eth0 table eth0 mark 0x1006e
+route marked 8.8.8.8 from 192.168.1.144 via {selected} dev eth0 table 189 mark 0x20000000
+route bound_marked 8.8.8.8 from 192.168.1.144 via {selected} dev eth0 table 189 mark 0x2001006e
+route lan 192.168.1.211 from 192.168.1.144 dev eth0 table eth0
+route lan_marked 192.168.1.211 from 192.168.1.144 dev eth0 table 189
+route loopback local 127.0.0.1 from 192.168.1.144 dev lo
+policy 8999: from 192.168.1.144 fwmark 0x20000000/0x20000000 iif lo lookup 189
+nat -A OUTPUT -p udp -m udp --dport 53 -j X96_GW_DNS
+nat -A OUTPUT -p tcp -m tcp --dport 53 -j X96_GW_DNS
+nat -A X96_GW_DNS -m mark --mark 0x40000000/0x40000000 -j ACCEPT
+nat -A X96_GW_DNS -j DNAT --to-destination {selected}
+mangle -A OUTPUT -s 192.168.1.144/32 -o eth0 -j X96_GW_ROUTE
+mangle -A X96_GW_ROUTE -m mark --mark 0x40000000/0x40000000 -j RETURN
+mangle -A X96_GW_ROUTE -d 192.168.1.0/24 -j RETURN
+mangle -A X96_GW_ROUTE -d 224.0.0.0/4 -j RETURN
+mangle -A X96_GW_ROUTE -d 255.255.255.255/32 -j RETURN
+mangle -A X96_GW_ROUTE -j MARK --set-xmark 0x20000000/0x20000000
+marked_packets 52
+"""
+
+
+for selected in ("192.168.1.19", "192.168.1.254"):
+    sample = audit["parse_status"](status.decode() + gateway_fixture(selected), boot_id)
+    assert audit["network_ok"](sample)
+    assert sample["gateway"] == "192.168.1.19" and sample["gateway_ha"]["selected"] == selected
+backup = gateway_fixture("192.168.1.254")
+for before, after in (
+        ("via 192.168.1.254 dev eth0 table 189 mark 0x2001006e", "via 192.168.1.19 dev eth0 table eth0"),
+        ("from 192.168.1.144 dev eth0 table eth0", "from 192.168.1.144 via 192.168.1.254 dev eth0"),
+        ("from 192.168.1.144 dev lo", "from 192.168.1.144 via 192.168.1.254 dev eth0"),
+        ("-j DNAT --to-destination 192.168.1.254", "-j DNAT --to-destination 192.168.1.19"),
+        ("-p tcp -m tcp --dport 53 -j X96_GW_DNS", "-p tcp -m tcp --dport 53 -j RETURN"),
+        ("X96_GW_DNS -m mark --mark 0x40000000/0x40000000 -j ACCEPT", "X96_GW_DNS -j RETURN"),
+        ("-m mark --mark 0x40000000/0x40000000 -j RETURN", "-m mark --mark 0x1 -j RETURN"),
+        ("-j MARK --set-xmark 0x20000000/0x20000000", "-j MARK --set-xmark 0/0xffffffff"),
+        ("iif lo lookup 189", "iif eth0 lookup 189"),
+        (f"receipt {boot_id} 192.168.1.254", f"receipt {boot_id} 192.168.1.99")):
+    assert before in backup
+    sample = audit["parse_status"](status.decode() + backup.replace(before, after), boot_id)
+    assert not audit["network_ok"](sample), before
+stale = audit["parse_status"](status.decode() + backup.replace(boot_id, "prior-boot"), boot_id)
+assert stale["gateway_ha"] is None and not audit["network_ok"](stale)
+assert not audit["network_ok"](audit["parse_status"](status.decode(), boot_id))
+for proc_rows, count in (("", 0), ("ha_controller\nha_controller", 2)):
+    invalid = audit["parse_status"](status.decode().replace("ha_controller", proc_rows) + backup, boot_id)
+    assert invalid["ha_controller_count"] == count and not audit["network_ok"](invalid)
+unknown_proc = audit["parse_status"](status.decode().replace("init_visible", "") + backup, boot_id)
+assert unknown_proc["ha_controller_count"] is None and not audit["network_ok"](unknown_proc)
+assert audit["parse_status"]("", boot_id)["observer_protocol"] == audit["OBSERVER_PROTOCOL"]
 
 with tempfile.TemporaryDirectory() as tmp, patch.dict(audit, STATE=Path(tmp)):
     current_uptime = 12
@@ -81,7 +145,7 @@ with tempfile.TemporaryDirectory() as tmp, patch.dict(audit, STATE=Path(tmp)):
         audit["main"]()
         first = json.loads(dest.read_text())
         assert first["status"] == "observing" and first["samples"][0]["old_watchers"] is None
-        payload = status
+        payload = status + gateway_fixture("192.168.1.19").encode()
         for current_uptime in (39, 72, 132, 252):
             audit["main"]()
         complete = json.loads(dest.read_text())
@@ -90,6 +154,30 @@ with tempfile.TemporaryDirectory() as tmp, patch.dict(audit, STATE=Path(tmp)):
         assert json.loads(dest.read_text()) == complete
         assert set(complete["channels"].values()) == {"ts_ok"}
         final = complete["samples"][-1]
+        final["gateway_ha"] = audit["gateway_observation"](backup, boot_id)
+        assert audit["verdict"](complete) == "observed_checks_pass"
+        for count in (None, 0, 2):
+            final["ha_controller_count"] = count
+            assert audit["verdict"](complete) == "gateway_controller_missing_duplicate_or_unverified"
+        final["ha_controller_count"] = 1
+        for absent in (status.decode(), status.decode()+backup.replace(boot_id, "stale")):
+            final["gateway_ha"] = audit["parse_status"](absent, boot_id)["gateway_ha"]
+            assert audit["verdict"](complete) == "gateway_selection_missing_or_invalid"
+        final["gateway_ha"] = audit["gateway_observation"](backup, boot_id)
+        final["gateway_ha"]["marked_packets"] = 0
+        assert audit["verdict"](complete) == "gateway_traffic_mark_unverified"
+        # A current selection and a fresh root receipt do not prove live DNS/routing.
+        final["gateway_ha"] = audit["gateway_observation"](f"receipt {boot_id} 192.168.1.254", boot_id)
+        final["boot_files"]["verified"] = 240
+        assert audit["verdict"](complete) == "network_unready_or_unverified"
+        del final["boot_files"]["verified"]
+        # Old persisted schema-3 samples had no observer protocol or controller
+        # count. Preserve their original verdict without upgrading their claims.
+        for sample in complete["samples"]:
+            sample.pop("observer_protocol")
+            sample.pop("ha_controller_count")
+            sample.pop("gateway_ha")
+        assert audit["verdict"](complete) == "observed_checks_pass"
         assert final["tcp_rule_present"] and final["tcp_rule_boot_receipt"]
         assert final["ipv6_disabled"] == "0" and audit["network_ok"](final)
         final["provision_failures_after_success"] = 2
@@ -157,4 +245,29 @@ end diyp
             audit["main"]()
         assert json.loads(dest.read_text())["status"] == "late_join_checks_pass"
 
-print("Boot audit offline checks passed")
+# The gateway drift guard must leave the local failover worker in charge while
+# the backup is selected, even if Android's base route drifts at the same time.
+with tempfile.TemporaryDirectory() as tmp:
+    guard = str(Path(__file__).with_name("dsh-tv-guard.sh"))
+    adb_stub = Path(tmp) / "adb"
+    adb_stub.write_text("""#!/bin/sh
+case "$*" in
+ *get-state) echo device ;;
+ *'cat /proc/sys/kernel/random/boot_id'*) echo "$SAMPLE" ;;
+ *'shell id -u') echo 2000 ;;
+ *) echo "$*" >> "$RUNTIME_DIRECTORY/actions" ;;
+esac
+""")
+    adb_stub.chmod(0o755)
+    env = dict(os.environ, RUNTIME_DIRECTORY=tmp, PATH=tmp+":"+os.environ["PATH"])
+    for selected in ("192.168.1.254", "-"):
+        env["SAMPLE"] = f"{boot_id} 900 1 1 192.168.1.144/24 192.168.1.1 1 {selected}"
+        for _ in range(2):
+            subprocess.run(["bash", guard], env=env, check=True)
+        actions = Path(tmp) / "actions"
+        if selected == "192.168.1.254":
+            assert not actions.exists()
+        else:
+            assert actions.read_text().strip().endswith(" root")
+
+print("Boot audit and gateway guard offline checks passed")

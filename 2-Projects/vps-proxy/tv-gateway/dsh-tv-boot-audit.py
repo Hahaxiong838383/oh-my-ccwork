@@ -11,17 +11,60 @@ import time
 
 TV = "192.168.1.144:5555"
 GATEWAY = "192.168.1.19"
+BACKUP = "192.168.1.254"
 LIVE = "192.168.1.211:4022"
 STATE = Path("/var/lib/dsh-tv-boot-audit")
 OFFSETS = (0, 25, 60, 120, 240)
+OBSERVER_PROTOCOL = "x96-ha-controller-v1"
 FILES = {"central": "/sdcard/MiTV/\ufeff央视频道.txt", "beijing": "/sdcard/MiTV/本市频道.txt"}
 
 # Filter on the TV; full process tables, playlist URLs and network dumps never enter the log.
 STATUS = r"""
+root_read() {
+    if [ "$shell_uid" = 0 ]; then "$@"
+    elif [ -u /system/xbin/su ] && [ ! -L /system/xbin/su ]; then /system/xbin/su 0 "$@"
+    else return 1; fi
+}
+shell_uid=$(id -u)
 echo NET
-dumpsys connectivity | grep -E 'Active default network:|NetworkAgentInfo\{.*type: Ethernet'
+network=$(dumpsys connectivity | grep -E 'Active default network:|NetworkAgentInfo\{.*type: Ethernet')
+printf '%s\n' "$network"
 echo ROUTE
 ip -4 route show table eth0
+echo HA
+ha=0
+current_boot=$(cat /proc/sys/kernel/random/boot_id)
+if [ -r /data/misc/x96-boot-status/gateway ] &&
+   read -r epoch selected extra < /data/misc/x96-boot-status/gateway && [ "$epoch" = "$current_boot" ]; then
+    ha=1
+    [ -z "$extra" ] || selected=invalid
+    echo "receipt $epoch $selected"
+    netid=$(echo "$network" | awk '/Active default network: [0-9]+$/ {print $NF; exit}')
+    lookup() {
+        label=$1; shift
+        root_read ip -4 route get "$@" 2>/dev/null | sed -n "1s/^/route $label /p"
+    }
+    lookup plain 8.8.8.8
+    ip -4 rule show | awk '$1=="8999:" {print "policy", $0}'
+    lookup source 8.8.8.8 from 192.168.1.144
+    lookup marked 8.8.8.8 from 192.168.1.144 mark 0x20000000
+    lookup lan_marked 192.168.1.211 from 192.168.1.144 mark 0x20000000
+    lookup loopback 127.0.0.1 from 192.168.1.144 mark 0x20000000
+    case "$netid" in ''|*[!0-9]*) ;; *)
+        lookup bound 8.8.8.8 from 192.168.1.144 mark "$((65536 | netid))"
+        lookup bound_marked 8.8.8.8 from 192.168.1.144 mark "$((0x20010000 | netid))"
+        lookup lan 192.168.1.211 from 192.168.1.144 mark "$((65536 | netid))"
+        ;;
+    esac
+    for table_chain in 'nat OUTPUT' 'nat X96_GW_DNS' 'mangle OUTPUT' 'mangle X96_GW_ROUTE'; do
+        set -- $table_chain
+        # Only inspect the head of built-in chains; other apps may add private rules.
+        root_read iptables -w 1 -t "$1" -S "$2" 2>/dev/null | awk -v section="$1" -v chain="$2" '
+            $1=="-A" && (chain!="OUTPUT" || ++n <= (section=="nat" ? 2 : 1)) {print section, $0}'
+    done
+    root_read iptables -w 1 -t mangle -nvxL X96_GW_ROUTE 2>/dev/null |
+        awk '$1~/^[0-9]+$/ && $3=="MARK" {print "marked_packets", $1}'
+fi
 echo IPV6
 cat /proc/sys/net/ipv6/conf/eth0/disable_ipv6
 echo V6STATE
@@ -32,8 +75,8 @@ if routes=$(ip -6 route show table all 2>/dev/null); then
     echo "default $(echo "$routes" | awk '/^default / && / dev eth0( |$)/ {n++} END {print n+0}')"
 fi
 echo FIREWALL
-if ip6tables -w 1 -S INPUT >/dev/null 2>&1 && ip6tables -w 1 -S OUTPUT >/dev/null 2>&1 && iptables -w 1 -t nat -S OUTPUT >/dev/null 2>&1; then
-    check() { key=$1; shift; "$@" >/dev/null 2>&1; echo "$key $?"; }
+if root_read ip6tables -w 1 -S INPUT >/dev/null 2>&1 && root_read ip6tables -w 1 -S OUTPUT >/dev/null 2>&1 && root_read iptables -w 1 -t nat -S OUTPUT >/dev/null 2>&1; then
+    check() { key=$1; shift; root_read "$@" >/dev/null 2>&1; echo "$key $?"; }
     check ra ip6tables -w 1 -C INPUT -i eth0 -p ipv6-icmp --icmpv6-type router-advertisement -j DROP
     n=0
     for dest in ::2-fe7f:ffff:ffff:ffff:ffff:ffff:ffff:ffff fec0::-feff:ffff:ffff:ffff:ffff:ffff:ffff:ffff; do
@@ -42,7 +85,11 @@ if ip6tables -w 1 -S INPUT >/dev/null 2>&1 && ip6tables -w 1 -S OUTPUT >/dev/nul
     done
     for proto in tcp udp; do
         check v6$proto ip6tables -w 1 -C OUTPUT -o eth0 -p "$proto" --dport 53 -j REJECT --reject-with icmp6-port-unreachable
-        check v4$proto iptables -w 1 -t nat -C OUTPUT -p "$proto" --dport 53 -j DNAT --to-destination 192.168.1.19:53
+        if [ "$ha" = 1 ]; then
+            check v4$proto iptables -w 1 -t nat -C OUTPUT -p "$proto" --dport 53 -j X96_GW_DNS
+        else
+            check v4$proto iptables -w 1 -t nat -C OUTPUT -p "$proto" --dport 53 -j DNAT --to-destination 192.168.1.19:53
+        fi
     done
 fi
 echo PROVISION
@@ -50,12 +97,17 @@ dumpsys network_stack | awk '/^IpClient\./ {eth=($1=="IpClient.eth0"); if(eth)pr
   /^Other IpClient logs:/ {eth=0}
   eth && /INVOKE onProvisioning(Failure|Success)/ {print $1,($0~/INVOKE onProvisioningFailure/?"failure":"success")}'
 echo WATCH
-ps -A -o PID,ARGS | awk 'NR==1 && $1=="PID" && $2=="ARGS" {print "scanned";next}
+if processes=$(ps -A -o PID,ARGS); then
+printf '%s\n' "$processes" | awk 'NR==1 && $1=="PID" && $2=="ARGS" {print "scanned";next}
+  $1=="1" && ($2=="init" || $2=="/init") {print "init_visible"}
+  $1~/^[0-9]+$/ && NF==3 && ($2=="sh" || $2=="/system/bin/sh") &&
+    $3=="/data/adb/dsh-gateway/x96-gateway-watch.sh" {print "ha_controller"}
   $1~/^[0-9]+$/ {for(i=2;i<=NF;i++) if($i==("/data/adb/dsh-gateway/" "watch.sh")) {print "matched";break}}'
+fi
 echo UID
 cmd package list packages --user 0 -U org.smarttube.beta
 echo RULE
-iptables -w 1 -S OUTPUT 2>/dev/null
+root_read iptables -w 1 -S OUTPUT 2>/dev/null
 echo PLAYBACK
 foreground() {
     dumpsys activity activities | awk '/mResumedActivity:/ {
@@ -98,8 +150,55 @@ def boot():
     return None
 
 
+def gateway_observation(block, boot_id):
+    receipt = re.search(rf"^receipt {re.escape(boot_id)} (\S+)$", block, re.M)
+    if not receipt:
+        return None
+    selected = receipt[1]
+    # Preserve route-get results in the record without logging full rule dumps.
+    paths = dict(re.findall(r"^route (\w+) ([^\n]+)", block, re.M))
+    policy = re.findall(r"^policy 8999:\s+(.+)$", block, re.M)
+    policy_ok = len(policy) == 1 and all(re.search(p, policy[0]) for p in (
+        r"\bfrom 192\.168\.1\.144(?:/32)? ", r"\biif lo ", r"\blookup 189(?: |$)",
+        r"\bfwmark 0x20000000/0x20000000 "))
+    def path_matches(name, gateway, table=None, device="eth0"):
+        line = paths.get(name, "")
+        via = re.search(r"\bvia (\S+)", line)
+        return (f" dev {device} " in f" {line} " and
+                (via[1] if via else None) == gateway and
+                (table is None or f" table {table} " in f" {line} "))
+
+    def rules(table, chain):
+        return re.findall(rf"^{table} -A {chain} (.+)$", block, re.M)
+
+    # The mark bypass must terminate nat processing before any legacy DNAT.
+    dns_rules = rules("nat", "X96_GW_DNS")
+    dns_target = re.fullmatch(r"-j DNAT --to-destination (192\.168\.1\.(?:19|254))(?::53)?",
+                              dns_rules[1]) if len(dns_rules) == 2 else None
+    jump = {f"-p {proto} -m {proto} --dport 53 -j X96_GW_DNS" for proto in ("tcp", "udp")}
+    route_rules = [
+        "-m mark --mark 0x40000000/0x40000000 -j RETURN",
+        "-d 192.168.1.0/24 -j RETURN",
+        "-d 224.0.0.0/4 -j RETURN",
+        "-d 255.255.255.255/32 -j RETURN",
+        "-j MARK --set-xmark 0x20000000/0x20000000",
+    ]
+    packets = re.search(r"^marked_packets (\d+)$", block, re.M)
+    return {"selected": selected, "paths": paths, "policy_ok": policy_ok,
+            "initial_routes_ok": all(path_matches(k, GATEWAY) for k in ("plain", "source", "bound")),
+            "effective_routes_ok": all(path_matches(k, selected, 189) for k in ("marked", "bound_marked")),
+            "lan_direct": path_matches("lan", None) and path_matches("lan_marked", None, 189),
+            "loopback_local": path_matches("loopback", None, device="lo"),
+            "dns_jumps_ok": set(rules("nat", "OUTPUT")) == jump,
+            "dns_target": dns_target[1] if dns_target else None,
+            "dns_bypass_ok": bool(dns_rules) and dns_rules[0] == "-m mark --mark 0x40000000/0x40000000 -j ACCEPT",
+            "mark_rules_ok": rules("mangle", "OUTPUT") == ["-s 192.168.1.144/32 -o eth0 -j X96_GW_ROUTE"]
+                             and rules("mangle", "X96_GW_ROUTE") == route_rules,
+            "marked_packets": int(packets[1]) if packets else None}
+
+
 def parse_status(data, boot_id):
-    fields = re.split(r"^(NET|ROUTE|IPV6|V6STATE|FIREWALL|PROVISION|WATCH|UID|RULE|RECEIPT|BOOTFILES|PLAYBACK)\s*$", data, flags=re.M)
+    fields = re.split(r"^(NET|ROUTE|HA|IPV6|V6STATE|FIREWALL|PROVISION|WATCH|UID|RULE|RECEIPT|BOOTFILES|PLAYBACK)\s*$", data, flags=re.M)
     pieces = dict(zip(fields[1::2], fields[2::2]))
     net = pieces.get("NET", "")
     active = re.search(r"Active default network:\s*(\d+)", net)
@@ -140,7 +239,12 @@ def parse_status(data, boot_id):
         delta = int(frames[1][1]) - int(frames[0][1])
         if delta >= 0:
             frame_delta = delta
-    return {"boot_files": boot_files, "receipt_read_uptime": int(read_time[1]) if read_time else None,
+    # Set by this collector, even if the box returned an empty/partial snapshot.
+    return {"observer_protocol": OBSERVER_PROTOCOL,
+            "ha_controller_count": watcher.count("ha_controller") if
+                "scanned" in watcher and "init_visible" in watcher else None,
+            "gateway_ha": gateway_observation(pieces.get("HA", ""), boot_id),
+            "boot_files": boot_files, "receipt_read_uptime": int(read_time[1]) if read_time else None,
             "foreground_app": start[1] if start else None, "decoder_frames_over_one_second": frame_delta,
             "net_id": net_id, "gateway": gateway.group(1) if gateway else None,
             "dns": [x.lstrip("/") for x in dns.group(1).split()] if dns else None,
@@ -211,7 +315,15 @@ done
 
 
 def network_ok(sample):
-    return (bool(sample["net_id"]) and sample["gateway"] == GATEWAY and bool(sample["dns"])
+    ha = sample.get("gateway_ha")
+    if sample.get("observer_protocol") == OBSERVER_PROTOCOL and (
+            ha is None or sample.get("ha_controller_count") != 1):
+        return False
+    ha_ok = (ha is None or
+             ha["selected"] in (GATEWAY, BACKUP) and ha["selected"] == ha["dns_target"] and
+             all(ha[key] for key in ("initial_routes_ok", "effective_routes_ok", "policy_ok",
+                                     "lan_direct", "loopback_local", "dns_jumps_ok", "dns_bypass_ok", "mark_rules_ok")))
+    return (ha_ok and bool(sample["net_id"]) and sample["gateway"] == GATEWAY and bool(sample["dns"])
             and set(sample["dns"]) == {GATEWAY}
             and sample["ipv6_global_addresses"] == 0 and sample["ipv6_default_routes"] == 0
             and sample["old_watchers"] == 0)
@@ -224,6 +336,12 @@ def verdict(record):
     if len(samples) < 3:
         return "insufficient_samples"
     last_two = samples[-2:]
+    for sample in last_two:
+        if sample.get("observer_protocol") == OBSERVER_PROTOCOL:
+            if (sample.get("gateway_ha") or {}).get("selected") not in (GATEWAY, BACKUP):
+                return "gateway_selection_missing_or_invalid"
+            if sample.get("ha_controller_count") != 1:
+                return "gateway_controller_missing_duplicate_or_unverified"
     if not all(network_ok(s) for s in last_two):
         return "network_unready_or_unverified"
     if last_two[-1]["uptime"] - last_two[0]["uptime"] < 30:
@@ -233,6 +351,8 @@ def verdict(record):
     if len(set(stable_ids)) > 1:
         return "default_network_changed_after_startup"
     final = samples[-1]
+    if final.get("gateway_ha") and not final["gateway_ha"]["marked_packets"]:
+        return "gateway_traffic_mark_unverified"
     if final["provision_failures_after_success"] is None:
         return "provisioning_history_unverified"
     if record["observation"] == "early_boot" and any((s["provision_failures_after_success"] or 0) >= 2 for s in samples):
