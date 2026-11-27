@@ -427,12 +427,12 @@
     },
     "armbian-tv-ha-audit": {
       "scope": "tv-gateway",
-      "source_commit": "753de33df10d03e285b9f519a51b4e39eb39c348",
+      "source_commit": "8734360ac1950d31e4581a1d3146ee60de86dca9",
       "source_ref": "refs/heads/tv/x96-ipv4-ha",
       "maintainer_branch": "tv/x96-ipv4-ha",
-      "sha256": "5171d2d1b483130b575b3626b3198827dba87c1ff186a3362d4b6df237649305",
+      "sha256": "d9ec64185bc22b3caad03f04d0bd04c866ad514059ed462a5e8f8659cc976c05",
       "proof": {
-        "object": "cce8c504ceb4a69417c07f628b65db8060ba041e:2-Projects/vps-proxy/tv-gateway/release-20261127.json",
+        "object": "55abd1ba79f30a0502a505dd95f242da464064b3:2-Projects/vps-proxy/tv-gateway/release-20261127.json",
         "keys": [
           "components",
           "armbian-tv-ha-audit"
