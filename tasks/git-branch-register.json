@@ -2,9 +2,9 @@
   "default_branch": "main",
   "branches": {
     "personal/s24-night-apk": {
-      "task": "小可 Night V1.0.7 头像声脉、语音响应和插话报时",
+      "task": "小可 Night V1.0.8 私人通话退出语义、手机控制及头像等宽声脉",
       "state": "keep",
-      "until": "V1.0.7 已发 OTA，私人 Worker 与 Brain 已部署。收到 S24 实机体验并核对下一版发布源后复核。"
+      "until": "V1.0.8 已在飞牛 OTA 发布，待 S24 体验及下版发布后复核。"
     },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
@@ -317,12 +317,12 @@
     },
     "personal-worker": {
       "scope": "personal-voice",
-      "source_commit": "18fc055746cbc971491e4f145dfbde69e4ab9052",
+      "source_commit": "575e0215246ff9f273dd16594d3e0b885942599c",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "main",
-      "sha256": "c9cc924bc34806032413c6954016ba446331ef53e369d98a7c905fab881c476d",
+      "sha256": "3ff07236cec23355a6de48259a5d402af0ce4c438271e36f4bc4cb7298fb57ce",
       "proof": {
-        "object": "d690abf49548199f51f937f7c8bafd289ef57607:2-Projects/realtime-voice-agent/docs/personal-s24-playback-release-20261127.json",
+        "object": "d8dc6c69359e73a5599e67e6390f3942fdc544e1:2-Projects/realtime-voice-agent/docs/personal-s24-exit-pulse-release-20261127.json",
         "keys": [
           "deployments",
           "personal-worker"
@@ -377,12 +377,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "746e8b535a4076f248bb3580f3088b9ed07afc54",
+      "source_commit": "575e0215246ff9f273dd16594d3e0b885942599c",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "4fc5f03b159868879c5cfb3f2a236732fba51b196cdd4fcacb99206684cf37e8",
+      "sha256": "9ee441a65ad71132b52d3a1fe3cef4d7582addd4f5af8205059cf75f46a67635",
       "proof": {
-        "object": "b44bc0b5626c44a5a6e4bba7ea0de46562a52da5:2-Projects/realtime-voice-agent/docs/personal-s24-playback-release-20261127.json",
+        "object": "d8dc6c69359e73a5599e67e6390f3942fdc544e1:2-Projects/realtime-voice-agent/docs/personal-s24-exit-pulse-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"
