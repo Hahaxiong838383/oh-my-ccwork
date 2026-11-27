@@ -1,0 +1,410 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T08:49:34+08:00",
+  "deployments": {
+    "s24-night-apk": {
+      "packageName": "cc.hahaxiong.xiaoke.night",
+      "versionName": "V1.0.5",
+      "versionCode": 1000005,
+      "sha256": "f4aa79a92b999f08be41a308d3d2e53e0bfb53ff5241d03960183b6b155dec12",
+      "size": 230373,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000005.apk",
+      "source_commit": "bf6e259b6953b845c9f47646bcd275f225e60cb9",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f",
+      "files": {
+        "xiaoke-night-1000005.apk": "f4aa79a92b999f08be41a308d3d2e53e0bfb53ff5241d03960183b6b155dec12"
+      }
+    },
+    "personal-brain": {
+      "source_commit": "bf6e259b6953b845c9f47646bcd275f225e60cb9",
+      "sha256": "15acd8f46947afd3988fe27d60b3ef0345fa792f6afc38622b34596241297bd4",
+      "nas_image_id": "sha256:aecbea3392d83394380ff79e9ca8fcd8a166e90cd0c1b768dff3a8884425daf9",
+      "image": "personal-brain:night-20261127.105b",
+      "verification_script_sha256": "cf1521c690601e76e591cf1616bec3ca7e5f133055cd9e986a76e5bb983a2b8b",
+      "files": {
+        "server.mjs": "15acd8f46947afd3988fe27d60b3ef0345fa792f6afc38622b34596241297bd4",
+        "verify.mjs": "cf1521c690601e76e591cf1616bec3ca7e5f133055cd9e986a76e5bb983a2b8b"
+      }
+    }
+  },
+  "acceptance": {
+    "formal_provider_selection": {
+      "asr": "p003-doubao-asr",
+      "llm": "p003-deepseek",
+      "tts": "p003-xfyun-tts"
+    },
+    "provider_revision": 24,
+    "official_tts_contract": "https://www.xfyun.cn/doc/spark/super%20smart-tts.html",
+    "actual_xfyun_frame_keys": {
+      "types": {
+        "audio": [
+          "audio",
+          "bit_depth",
+          "channels",
+          "encoding",
+          "id",
+          "sample_rate",
+          "seq",
+          "status",
+          "type"
+        ]
+      },
+      "frames": 17,
+      "pcm": 151680,
+      "first": 248,
+      "elapsed": 1454
+    },
+    "historical_session_aggregate": {
+      "window": {
+        "since": "2026-11-27T08:00:00+08:00",
+        "until": "2026-11-27T08:22:00+08:00"
+      },
+      "rounds": 9,
+      "search_outcomes": {
+        "answered": 1,
+        "no_evidence": 5
+      },
+      "search_ms": {
+        "n": 6,
+        "min": 3555,
+        "p50": 5991.0,
+        "p90": 7683.0,
+        "max": 7834,
+        "mean": 5867.5
+      },
+      "end_of_utterance_ms": {
+        "n": 9,
+        "min": 576,
+        "p50": 696.0,
+        "p90": 883.0,
+        "max": 907,
+        "mean": 724
+      },
+      "turn_commit_to_first_pcm_ms_including_filler": {
+        "n": 6,
+        "min": 648,
+        "p50": 947.5,
+        "p90": 7773.5,
+        "max": 8999,
+        "mean": 3172.7
+      },
+      "turn_commit_to_search_ready_ms": {
+        "n": 6,
+        "min": 4251,
+        "p50": 6876.5,
+        "p90": 8765.5,
+        "max": 8916,
+        "mean": 6640.2
+      },
+      "measured_xfyun_first_audio_range_ms": [
+        169,
+        218
+      ]
+    },
+    "live_llm_paired_queries_ms": [
+      {
+        "i": 0,
+        "fast": true,
+        "status": 200,
+        "reasoning": false,
+        "first": 699,
+        "sentence": 867,
+        "total": 943
+      },
+      {
+        "i": 0,
+        "fast": false,
+        "status": 200,
+        "reasoning": true,
+        "first": 1553,
+        "sentence": 1624,
+        "total": 1646
+      },
+      {
+        "i": 1,
+        "fast": true,
+        "status": 200,
+        "reasoning": false,
+        "first": 508,
+        "sentence": 672,
+        "total": 1027
+      },
+      {
+        "i": 1,
+        "fast": false,
+        "status": 200,
+        "reasoning": true,
+        "first": 1146,
+        "sentence": 1298,
+        "total": 1947
+      },
+      {
+        "i": 2,
+        "fast": true,
+        "status": 200,
+        "reasoning": false,
+        "first": 449,
+        "sentence": 775,
+        "total": 776
+      },
+      {
+        "i": 2,
+        "fast": false,
+        "status": 200,
+        "reasoning": true,
+        "first": 917,
+        "sentence": 1013,
+        "total": 1014
+      }
+    ],
+    "candidate_cases": [
+      {
+        "q": "今天天气怎么样",
+        "ms": 51,
+        "tool": "weather",
+        "urls": []
+      },
+      {
+        "q": "再查查呗",
+        "ms": 5,
+        "tool": null,
+        "urls": []
+      },
+      {
+        "q": "就看看北京的呗",
+        "ms": 317,
+        "tool": "weather",
+        "urls": [
+          "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+        ]
+      },
+      {
+        "q": "我想知道深圳今天的天气。",
+        "ms": 311,
+        "tool": "weather",
+        "urls": [
+          "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%B9%BF%E4%B8%9C%E6%B7%B1%E5%9C%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+        ]
+      },
+      {
+        "q": "明天空气质量怎么样？",
+        "ms": 10,
+        "tool": "weather",
+        "urls": []
+      },
+      {
+        "q": "今天股票市场怎么样",
+        "ms": 9,
+        "tool": null,
+        "urls": []
+      },
+      {
+        "q": "那那A股呢",
+        "ms": 324,
+        "tool": "search",
+        "urls": [
+          "https://gu.qq.com/sh000001/zs",
+          "https://gu.qq.com/sz399001/zs",
+          "https://gu.qq.com/sz399006/zs"
+        ]
+      },
+      {
+        "q": "还没想到",
+        "ms": 4,
+        "tool": null,
+        "urls": []
+      },
+      {
+        "q": "没事换一个",
+        "ms": 2,
+        "tool": null,
+        "urls": []
+      },
+      {
+        "q": "那你能查什么",
+        "ms": 4,
+        "tool": "capabilities",
+        "urls": []
+      },
+      {
+        "q": "你能查导航吗",
+        "ms": 3,
+        "tool": "capabilities",
+        "urls": []
+      },
+      {
+        "q": "再查查呗",
+        "ms": 3,
+        "tool": null,
+        "urls": []
+      },
+      {
+        "q": "查询一下故宫博物院周一开放吗？",
+        "ms": 6645,
+        "tool": "search",
+        "urls": [
+          "https://www.dpm.org.cn/singles_detail/259831.html"
+        ]
+      }
+    ],
+    "production_diagnostics": [
+      {
+        "q": "我想知道深圳今天的天气。",
+        "ms": 360,
+        "tool": "weather",
+        "sources": [
+          {
+            "title": "百度天气 · 广东深圳",
+            "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%B9%BF%E4%B8%9C%E6%B7%B1%E5%9C%B3%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast"
+          }
+        ]
+      },
+      {
+        "q": "那那A股呢",
+        "ms": 424,
+        "tool": "search",
+        "sources": [
+          {
+            "title": "腾讯行情 · 上证指数",
+            "url": "https://gu.qq.com/sh000001/zs"
+          },
+          {
+            "title": "腾讯行情 · 深证成指",
+            "url": "https://gu.qq.com/sz399001/zs"
+          },
+          {
+            "title": "腾讯行情 · 创业板指",
+            "url": "https://gu.qq.com/sz399006/zs"
+          }
+        ]
+      },
+      {
+        "q": "查询一下故宫博物院周一开放吗？",
+        "ms": 6142,
+        "tool": "search",
+        "sources": [
+          {
+            "title": "故宫博物院参观须知 - 故宫博物院",
+            "url": "https://www.dpm.org.cn/singles_detail/259831.html"
+          }
+        ]
+      }
+    ],
+    "independent_weather_provider": [
+      {
+        "place": "北京",
+        "ms": 74,
+        "text": "中国天气网11月27日07:30预报，北京明天（11月28日）白天多云，夜间晴，-1到11摄氏度。预报会变化。",
+        "url": "https://www.weather.com.cn/weather/101010100.shtml"
+      },
+      {
+        "place": "深圳",
+        "ms": 47,
+        "text": "中国天气网11月27日07:30预报，广东深圳明天（11月28日）多云，14到26摄氏度。预报会变化。",
+        "url": "https://www.weather.com.cn/weather/101280601.shtml"
+      },
+      {
+        "place": "上海",
+        "ms": 91,
+        "text": "中国天气网11月27日07:30预报，上海明天（11月28日）晴，7到16摄氏度。预报会变化。",
+        "url": "https://www.weather.com.cn/weather/101020100.shtml"
+      }
+    ],
+    "forecast_regression_cases": 20,
+    "apk_voice_room": {
+      "client": "Chromium using exact signed APK assets and synthetic microphone through production ticket, ASR, brain, TTS and remote RTC track",
+      "heardMs": "input speech end to first audible output, including any filler",
+      "bodyCaptionMs": "input speech end to first matching substantive subtitle, not the onset of substantive audio",
+      "turns": [
+        {
+          "k": "weather",
+          "heardMs": 1271,
+          "bodyCaptionMs": 2131,
+          "caption": "你想查哪个城市的天气？",
+          "recognized": "今天天气怎么样",
+          "cues": [
+            "warm",
+            "explain",
+            "question"
+          ]
+        },
+        {
+          "k": "beijing",
+          "heardMs": 1693,
+          "bodyCaptionMs": 5420,
+          "caption": "百度天气预报，北京今天11月27日，白天晴，夜间多云，-1到10摄氏度。",
+          "recognized": "就看看北京的呗",
+          "cues": [
+            "explain"
+          ]
+        },
+        {
+          "k": "market",
+          "heardMs": 1114,
+          "bodyCaptionMs": 1625,
+          "caption": "你想了解哪个市场？",
+          "recognized": "今天股票市场怎么样",
+          "cues": [
+            "question",
+            "explain"
+          ]
+        },
+        {
+          "k": "ashare",
+          "heardMs": 1515,
+          "bodyCaptionMs": 5892,
+          "caption": "腾讯行情截至11月26日16点14分，上证指数3476.88点，涨0.01%；",
+          "recognized": "沪深大盘今天行情怎么样",
+          "cues": [
+            "explain"
+          ]
+        }
+      ],
+      "interruption": {
+        "bargeDuringOutput": true,
+        "clockReplyHeard": true,
+        "levels": 271,
+        "events": [
+          "call_start",
+          "connected",
+          "mic_on",
+          "mic_off",
+          "rx_audio",
+          "rx_caption",
+          "tx_caption",
+          "spoken_interrupt",
+          "cancel_ack",
+          "call_end"
+        ],
+        "ended": "通话已结束",
+        "active": 0
+      }
+    },
+    "motion": {
+      "audio_seconds": 11.37,
+      "prior_groups": [
+        "family-0"
+      ],
+      "current_groups": [
+        "steady",
+        "hush",
+        "warm",
+        "ask",
+        "bright"
+      ],
+      "reduced_motion_groups": [
+        "steady",
+        "hush",
+        "warm",
+        "ask"
+      ]
+    },
+    "android": {
+      "emulator_api": 30,
+      "old_version": 1000004,
+      "new_version": 1000005,
+      "resumed_activity": "cc.hahaxiong.xiaoke.night/.NightHostActivity",
+      "physical_s24_verified": false
+    }
+  }
+}
