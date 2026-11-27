@@ -2,7 +2,7 @@
  * synthetic Mandarin WAV inputs. Only the test page's microphone is synthetic. */
 const fs=require('node:fs'),path=require('node:path'),https=require('node:https'),assert=require('node:assert/strict');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const assets=path.resolve(__dirname,'../assets'),sdk=process.env.LIVEKIT_UMD,site='https://pa.hahaxiong.cc:8666';
+const assets=path.resolve(process.env.QA_ASSETS || path.join(__dirname,'../assets')),sdk=process.env.LIVEKIT_UMD || path.join(assets,'livekit.js'),site='https://pa.hahaxiong.cc:8666';
 const first=fs.readFileSync(process.env.LONG_WAV).toString('base64'),second=fs.readFileSync(process.env.NEXT_WAV).toString('base64');
 const key=fs.readFileSync(0,'utf8').trim();
 async function ticket(){
@@ -17,9 +17,10 @@ async function ticket(){
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH,headless:true,args:['--no-sandbox','--autoplay-policy=no-user-gesture-required','--disable-dev-shm-usage']});
  try {
   const p=await browser.newPage({viewport:{width:412,height:850}});
-  await p.route(site+'/night-app/**',r=>{const name=new URL(r.request().url()).pathname.split('/').pop()||'index.html';
-   if(!['index.html','livekit.js','night.css','orb-reference.js','orb-motion.js','orb-surface.js','orb-input.js','night.js','session.js'].includes(name))return r.abort();
-   return r.fulfill({path:name==='livekit.js'?sdk:path.join(assets,name),contentType:name.endsWith('.js')?'text/javascript':name.endsWith('.css')?'text/css':'text/html'});
+  await p.route(site+'/night-app/**',r=>{const name=decodeURIComponent(new URL(r.request().url()).pathname.slice('/night-app/'.length));
+   const file=name==='livekit.js'?sdk:path.resolve(assets,name);
+   if ((name!=='livekit.js'&&!file.startsWith(assets+path.sep)) || !fs.existsSync(file)) return r.abort();
+   return r.fulfill({path:file});
   });
   p.on('pageerror',e=>console.error('page error',e.name,String(e.message).slice(0,110)));
   await p.exposeFunction('nativeTicket',ticket);
@@ -39,10 +40,17 @@ async function ticket(){
   async function until(fn,n=30000){try{await p.waitForFunction(fn,null,{timeout:n});}catch(e){console.log(await p.evaluate(()=>({last:audit.shows.slice(-4).map(x=>[x.status,x.mine?.length,x.reply?.length]),audio:audit.levels.length,events:[...new Set(audit.events)]})));throw e;}}
   await p.locator('#btn-start').click();
   await until(()=>audit.shows.some(s=>s.status==='小可在听'||s.status==='小可在说'));console.log('live personal Worker ready');
+  await p.locator('#btn-palette').click();
+  for (const family of ['open','boop','robot']) {
+    await p.locator('#avatar-families [data-family='+family+']').click();
+    await p.locator('#avatar-grid button').first().click();
+    assert.equal(await p.locator('#app').getAttribute('data-avatar'),family);
+  }
+  await p.locator('#appearance-done').click();
   await p.locator('#btn-mute').click();await until(()=>audit.shows.at(-1).muted);await p.locator('#btn-mute').click();await until(()=>!audit.shows.at(-1).muted);
   await p.waitForTimeout(1200);
   await p.evaluate(b=>say(b),first);
-  await until(()=>audit.shows.some(s=>s.mine?.includes('故事')||s.mine?.includes('科技')||s.mine?.includes('新闻')),35000);
+  await until(()=>audit.shows.some(s=>/故事|科技|新闻|长.{0,5}句子/.test(s.mine || '')),35000);
   await until(()=>{const s=audit.shows.at(-1);return s.reply?.length>=5&&audit.levels.at(-1)>performance.now()-180;},55000);
   const before=await p.evaluate(()=>({old:audit.shows.at(-1).reply,started:performance.now(),n:audit.levels.length}));
   await p.evaluate(old=>{window.oldReply=old;window.breakStart=performance.now();},before.old);

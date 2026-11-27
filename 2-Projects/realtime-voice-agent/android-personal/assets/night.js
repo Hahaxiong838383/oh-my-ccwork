@@ -132,6 +132,8 @@
   var currentColor = initialColor;
   var orb = canvasEl ? new global.NightSphere(canvasEl, initialColor) : null;
 
+  var appearance = orb && global.NightAvatars ? global.NightAvatars.attach(orb) : null;
+
   function applyColor(rawHex, persist, source) {
     var hex = normalizeHex(rawHex) || DEFAULT_COLOR;
     var rgb = hexToRgb(hex);
@@ -166,6 +168,7 @@
 
   function setPopoverOpen(open) {
     if (!colorPopoverEl || !btnPaletteEl) return;
+    if (appearance) appearance.setOpen(open);
     colorPopoverEl.hidden = !open;
     btnPaletteEl.setAttribute('aria-expanded', open ? 'true' : 'false');
   }
@@ -328,6 +331,15 @@
     }
   }
 
+  const closeAppearance = () => {
+    if (!colorPopoverEl || colorPopoverEl.hidden) return false;
+    setPopoverOpen(false);
+    btnPaletteEl.focus({preventScroll: true});
+    return true;
+  };
+  document.getElementById('appearance-done')?.addEventListener('click', closeAppearance);
+  document.getElementById('pair-key')?.addEventListener('focus', closeAppearance);
+  global.NightCloseAppearance = closeAppearance;
   // Wire UI Events
   if (btnPaletteEl) {
     btnPaletteEl.addEventListener('click', function (e) {
@@ -337,6 +349,10 @@
   }
 
   if (colorPopoverEl) {
+    btnPaletteEl.addEventListener('click', function () {
+      const service = document.getElementById('service-panel');
+      if (!colorPopoverEl.hidden && service && !service.hidden) document.getElementById('service-close').click();
+    });
     colorPopoverEl.addEventListener('click', function (e) {
       e.stopPropagation();
     });
@@ -366,7 +382,7 @@
 
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-      setPopoverOpen(false);
+      closeAppearance();
     }
   });
 

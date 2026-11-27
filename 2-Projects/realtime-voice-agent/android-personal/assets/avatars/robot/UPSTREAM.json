@@ -1,0 +1,21 @@
+{
+  "name": "robot-heads",
+  "repository": "https://github.com/fayazara/robot-heads.git",
+  "version": "0.3.0",
+  "commit": "58ebf6439a8125a769f63b22ffd35bc18834b1b5",
+  "license": "MIT",
+  "author": "Fayaz Ahmed",
+  "includedRuntimeFiles": [
+    "src/color.ts",
+    "src/tv/geometry.ts",
+    "src/tv/light.ts",
+    "src/tv/faces.ts",
+    "src/tv/sim.ts",
+    "src/tv/render.ts"
+  ],
+  "excludedFromDelivery": [
+    "src/RobotHead.tsx (React wrapper replaced by framework-free adapter.js)",
+    "src/ticker.ts (global rAF + document pointermove replaced by host-driven update(frame))",
+    "site/ (demo playground, React/Vite/Cloudflare Worker, Open Runde fonts)"
+  ]
+}

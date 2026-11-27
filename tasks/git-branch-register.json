@@ -2,9 +2,9 @@
   "default_branch": "main",
   "branches": {
     "personal/s24-night-apk": {
-      "task": "小可 Night V1.0.8 私人通话退出语义、手机控制及头像等宽声脉",
+      "task": "私人暗夜剧场 S24 头像、交互与 APK 发布维护",
       "state": "keep",
-      "until": "V1.0.8 已通过 S24 Ultra 真机体验并打发布标签，保留私人版维护工作树，下版发布后复核。"
+      "until": "V1.0.9 头像选择已发布，保留私人版维护工作树，下版发布后复核。"
     },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
@@ -382,12 +382,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "575e0215246ff9f273dd16594d3e0b885942599c",
-      "source_ref": "refs/tags/release/personal-voice/v1.0.8",
+      "source_commit": "a2b464f5690bcde28a03b85240f5b698d441e6a8",
+      "source_ref": "refs/tags/release/personal-voice/v1.0.9",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "9ee441a65ad71132b52d3a1fe3cef4d7582addd4f5af8205059cf75f46a67635",
+      "sha256": "9691db08abe22c25baba4f20c3070be50f7627b39ec3bc44e540fc8211682e20",
       "proof": {
-        "object": "8a91894218cb14e2b14107975cf957aa49942854:2-Projects/realtime-voice-agent/docs/personal-s24-exit-pulse-release-20261127.json",
+        "object": "41c171239ab917b395ded3d6b52a2a2974c1ca64:2-Projects/realtime-voice-agent/docs/personal-s24-avatar-gallery-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"

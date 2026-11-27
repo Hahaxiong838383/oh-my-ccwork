@@ -144,6 +144,11 @@
     return true;
   }
 
+  const avatarPhases = {streaming:'speaking', searching:'thinking', reading:'thinking',
+    waiting:'connecting', reconnecting:'connecting', blocked:'error'};
+  const avatarMoods = {steady:'neutral', warm:'happy', bright:'excited', ask:'curious',
+    concern:'worried', hush:'calm', lively:'playful'};
+
   class NightSphere {
     constructor(canvas, color, seed) {
       this.canvas = canvas;
@@ -224,6 +229,7 @@
     clearLook() { this.pointer = null; }
     touch(x, y) {
       const p = this.pointer || { x: 0, y: 0 };
+      if (this.skin) this.skin.touch(clamp((x+1)/2,0,1), clamp((y+1)/2,0,1));
       this.motion.tap(Number.isFinite(x) ? x : p.x, Number.isFinite(y) ? y : p.y);
     }
     start() {
@@ -256,6 +262,7 @@
         phase: phase, active: this.active, muted: this.muted,
         mic: this.micTarget, playback: this.playback, reduced,
         speech: this.speech,
+        referenceState: !this.active && this.previewUntil > this.lastTime ? this.previewState : undefined,
       });
       const p = this.pointer;
       const x = p ? p.x : pose.gazeX, y = p ? p.y : pose.gazeY;
@@ -324,9 +331,25 @@
       const rx = radius * pose.scaleX, ry = radius * pose.scaleY;
       this.geometry = { cx, cy, rx, ry, cos: Math.cos(pose.roll), sin: Math.sin(pose.roll) };
       const size = Math.min(512, Math.max(64, Math.round(2 * radius * this.canvas.width / w)));
-      if (!this.material || this.material.width !== size) this.material = paintMaterial(size, this.rgb);
+
       ctx.setTransform(this.canvas.width / w, 0, 0, this.canvas.height / h, 0, 0);
       ctx.clearRect(0, 0, w, h);
+      if (this.skin) {
+        const phase = pose.phase;
+        const remote = this.active && (phase === 'speaking' || phase === 'streaming') ? this.playback : 0;
+        const local = this.active && !this.muted && phase === 'listening' ? this.micTarget : 0;
+        this.skin.update({
+          phase: avatarPhases[phase] || phase, callPhase: phase,
+          state: phase === 'searching' ? 'searching' : pose.referenceState,
+          mood: avatarMoods[pose.expressionGroup] || pose.referenceState,
+          localLevel: local, remoteLevel: remote, level: Math.max(local, remote),
+          gazeX: this.pointer?.x ?? pose.gazeX, gazeY: this.pointer?.y ?? pose.gazeY,
+          pointerActive: Boolean(this.pointer), reduced: this.reduced.matches,
+          color: this.color, time: this.lastTime
+        });
+        return;
+      }
+      if (!this.material || this.material.width !== size) this.material = paintMaterial(size, this.rgb);
       ctx.save();
       ctx.translate(cx, h * .485 + radius * 1.12);
       ctx.scale(radius * .86, radius * .105);
