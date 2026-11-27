@@ -11218,6 +11218,7 @@ ${pairStyles}
       var currentInputMode = false;
       var manualExpressUntil = 0;
       var manualExpressAction = null;
+      var voiceExpression = false;
       var manualHoldTimer = 0;
       var errorHoldTimer = 0;
       var lastNativePointerAt = -Infinity;
@@ -11246,6 +11247,8 @@ ${pairStyles}
         }
         manualExpressUntil = 0;
         manualExpressAction = null;
+        if (voiceExpression) currentPhase = "";
+        voiceExpression = false;
       }
       function onNativePointer() {
         lastNativePointerAt = performance.now();
@@ -11588,6 +11591,10 @@ ${pairStyles}
         }
         var urgentVoicePhase = phase === "listening" || phase === "thinking" || phase === "speaking" || phase === "error";
         if (manualExpressUntil > now) {
+          if (voiceExpression) {
+            applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+            return;
+          }
           if (urgentVoicePhase && phase !== currentPhase) {
             cancelManualExpress();
           } else if (phase === "idle" || phase === "muted" || phase === "connecting") {
@@ -11660,12 +11667,28 @@ ${pairStyles}
         }
         applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
       }
-      function express(id) {
+      function currentExpression() {
+        var _a, _b, _c;
+        const action = (_a = avatar._activeActionState) == null ? void 0 : _a.action;
+        if (action === "waiting") {
+          const style = ((_b = avatar._waitingFx) == null ? void 0 : _b.variant) || ((_c = avatar._voiceFx) == null ? void 0 : _c.mode) === "thinking" && avatar._voiceFx.style;
+          return style ? "waiting-" + (style === "default" ? "spin" : style) : "";
+        }
+        if (EXPRESSION_SET[action]) return action;
+        return resolveAction(avatar._state) || "";
+      }
+      function express(id, voice) {
         if (destroyed) return;
         var action = resolveAction(id);
         if (!action) return;
         cancelManualExpress();
+        if (voice) avatar.reset();
+        voiceExpression = voice === true;
         if (action === "idle") {
+          if (voiceExpression) {
+            manualExpressAction = "idle";
+            manualExpressUntil = performance.now() + 3200;
+          }
           currentInputMode = false;
           avatar.reset();
           return;
@@ -11790,6 +11813,10 @@ ${pairStyles}
         update,
         touch,
         express,
+        currentExpression,
+        endVoiceExpression: function() {
+          if (voiceExpression) express("idle");
+        },
         destroy
       };
     }

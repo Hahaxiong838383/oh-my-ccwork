@@ -277,6 +277,27 @@ body {
   display: block;
 }
 
+/* Tears sit on the cheeks of the selected head. They never intercept a touch. */
+#avatar-tears { position:absolute; top:48%; left:50%; width:27%; height:20%; transform:translateX(-50%); z-index:2; pointer-events:none; }
+#avatar-tears::before, #avatar-tears::after {
+  content:""; position:absolute; top:0; width:10%; height:27%; border-radius:55% 45% 55% 45% / 76% 74% 26% 24%;
+  background:linear-gradient(145deg,#e0f7ff 12%,#82dbef 58%,#5298c6); transform-origin:50% 0;
+  animation:tear-slide 1.35s ease-in infinite;
+}
+#avatar-tears::before { left:0; }
+#avatar-tears::after { right:0; animation-delay:-.64s; }
+[data-avatar=robot] #avatar-tears { top:49%; width:20%; }
+[data-avatar=open] #avatar-tears { top:47%; width:20%; }
+[data-avatar=boop] #avatar-tears { top:50%; width:23%; }
+@keyframes tear-slide {
+  0% { opacity:.35; transform:translateY(0) scale(.7); }
+  30% { opacity:.95; }
+  100% { opacity:0; transform:translateY(155%) scale(.92); }
+}
+@media (prefers-reduced-motion:reduce) {
+  #avatar-tears::before, #avatar-tears::after { animation:none; opacity:.9; }
+}
+
 /* Bounded Status / Error Banner */
 .status-banner {
   flex-shrink: 0;
@@ -391,7 +412,7 @@ body {
   position: relative;
   z-index: 15;
   flex-shrink: 0;
-  padding: 8px 18px 8px;
+  padding: 3px 18px;
   width: 100%;
 }
 
@@ -476,172 +497,35 @@ body {
   background: rgba(var(--accent-rgb), 0.42);
 }
 
-/* Floating Glass Pill Dock */
-.dock-shell {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 30px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.48);
+/* Individual controls keep the stage and appearance picker available during a call. */
+.night-app[data-paired=true] .bottom-bar { pointer-events:none; padding:6px 18px 4px; }
+.call-controls { --size:56px; --icon:22px; --separation:36px; display:flex; align-items:center; justify-content:center; }
+.call-action {
+  position:relative; display:grid; place-items:center; width:var(--size); height:var(--size); padding:0;
+  pointer-events:auto; border-radius:50%; border:1px solid #393c46; cursor:pointer; touch-action:manipulation;
+  background:radial-gradient(at 30% 22%,#34363f,#171a22 72%); color:#e8eaf0;
+  box-shadow:inset 0 1px 0 #ffffff1f,0 4px 12px #0005;
 }
-
-.dock-shell-single {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 16px;
-}
-
-.start-btn {
-  appearance: none;
-  width: 100%;
-  height: 58px;
-  border-radius: 999px;
-  border: 1px solid rgba(var(--accent-rgb), 0.68);
-  background: rgba(var(--accent-rgb), 0.24);
-  color: #FFFFFF;
-  font-family: var(--font-sans);
-  font-size: 16px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  cursor: pointer;
-  touch-action: manipulation;
-  box-shadow: 0 0 26px rgba(var(--accent-rgb), 0.3);
-  transition: transform 0.15s ease, background-color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.start-btn:active {
-  transform: scale(0.97);
-  background: rgba(var(--accent-rgb), 0.36);
-}
-
-.start-btn-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dock-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.15fr 1fr;
-  align-items: center;
-  gap: 10px;
-}
-
-.ctrl-btn {
-  appearance: none;
-  border: none;
-  background: transparent;
-  color: #E8EDF7;
-  font-family: var(--font-sans);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 2px 0;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.ctrl-circle {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #F4F6FA;
-  position: relative;
-  transition: transform 0.15s ease, background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
-}
-
-.ctrl-label {
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(235, 240, 250, 0.8);
-}
-
-.ctrl-btn:active .ctrl-circle {
-  transform: scale(0.92);
-}
-
-/* Mute Button States */
-.ctrl-mute .icon-mic-off {
-  display: none;
-}
-
-.ctrl-mute.is-muted .icon-mic-on {
-  display: none;
-}
-
-.ctrl-mute.is-muted .icon-mic-off {
-  display: block;
-}
-
-.ctrl-mute.is-muted .ctrl-circle {
-  background: var(--warn-bg);
-  border-color: var(--warn-border);
-  color: var(--warn-text);
-}
-
-.ctrl-mute.is-muted .ctrl-label {
-  color: var(--warn-text);
-}
-
-/* Interrupt Button */
-.ctrl-interrupt .ctrl-circle {
-  width: 60px;
-  height: 60px;
-  background: rgba(var(--accent-rgb), 0.22);
-  border-color: rgba(var(--accent-rgb), 0.65);
-  color: #FFFFFF;
-  box-shadow: 0 0 24px rgba(var(--accent-rgb), 0.34);
-}
-
-.ctrl-interrupt.is-pulsing .ctrl-circle::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(var(--accent-rgb), 0.56);
-  animation: pulseRing 2.1s ease-out infinite;
-}
-
-.ctrl-interrupt .ctrl-label {
-  color: #FFFFFF;
-  font-weight: 600;
-}
-
-/* Hangup Button */
-.ctrl-stop .ctrl-circle {
-  background: var(--danger);
-  border-color: rgba(255, 140, 145, 0.42);
-  color: #FFFFFF;
-  box-shadow: 0 6px 20px rgba(229, 72, 77, 0.36);
-}
-
-.ctrl-stop .ctrl-label {
-  color: var(--danger-text);
-}
+/* Android 11 system WebView has no flex gap. Keep the buttons apart there too. */
+.call-action + .call-action { margin-left:var(--separation); }
+.call-action::before { content:""; position:absolute; top:-4px; right:-4px; bottom:-4px; left:-4px; border-radius:50%; }
+.call-action svg { width:var(--icon); height:var(--icon); fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.call-action:disabled { opacity:.32; pointer-events:none; }
+.call-action:enabled:active { transform:scale(.94); }
+.call-action:focus-visible { outline:2px solid white; outline-offset:3px; }
+#btn-call { color:#f6f8fc; background:radial-gradient(at 30% 22%,rgba(var(--accent-rgb),.34),rgba(var(--accent-rgb),.14)); border-color:rgba(var(--accent-rgb),.56); }
+.night-app[data-active=true] #btn-call { color:white; background:radial-gradient(at 30% 22%,#ef5358,#c9353b 74%,#a8282e); border-color:#e4777b; }
+#btn-mute[aria-pressed=true] { color:#fcd34d; background:radial-gradient(at 30% 22%,#483420,#2b2117); border-color:#916a36; }
+.night-app[data-phase=speaking] #btn-mute[aria-pressed=false] { border-color:rgba(var(--accent-rgb),.44); }
+@media (max-width:350px), (max-height:660px) { .call-controls { --size:50px; --icon:20px; --separation:28px; } }
+.night-app.appearance-open .bottom-bar { padding:4px 14px 2px; }
+.appearance-open .call-controls { --size:48px; --icon:20px; --separation:28px; }
+.sound-off,.call-end,#btn-mute[aria-pressed=true] .sound-on,.night-app[data-active=true] .call-start { display:none; }
+#btn-mute[aria-pressed=true] .sound-off,.night-app[data-active=true] .call-end { display:inline; }
 
 @keyframes blinkCursor {
   0%, 49% { opacity: 1; }
   50%, 100% { opacity: 0.14; }
-}
-
-@keyframes pulseRing {
-  0% { transform: scale(0.96); opacity: 0.68; }
-  72% { transform: scale(1.13); opacity: 0; }
-  100% { transform: scale(1.13); opacity: 0; }
 }
 
 /* Compact / Soft Keyboard Open Adaptation */
@@ -657,7 +541,7 @@ body {
   }
 
   .bottom-bar {
-    padding: 6px 14px 4px;
+    padding: 2px 14px;
   }
 }
 
@@ -740,7 +624,7 @@ body {
 #orb-canvas { position:relative; touch-action:none; }
 .appearance-sheet {
   order:0; display:flex; flex-direction:column; gap:10px; flex:0 1 auto;
-  min-height:0; max-height:47vh; max-height:47dvh; margin:0 12px 5px;
+  min-height:0; max-height:54vh; max-height:54dvh; margin:0 12px 5px;
   padding:14px 14px 9px; color:#ebeaf1; border:1px solid #353842;
   border-radius:22px; background:linear-gradient(150deg,#1a1c23,#101116 70%);
   box-shadow:0 -8px 36px rgba(0,0,0,.22); z-index:2;
@@ -780,7 +664,7 @@ body {
 .appearance-open .avatar-wrap { width:min(49vw,22vh,190px); height:min(49vw,22vh,190px); }
 .appearance-open .stage { gap:2px; }
 .night-app[data-active=true] #appearance-expression { display:none; }
-.night-app[data-active=true] .appearance-sheet { max-height:32vh; max-height:32dvh; gap:4px; padding:5px 12px; }
+.night-app[data-active=true] .appearance-sheet { max-height:39vh; max-height:39dvh; gap:4px; padding:5px 12px; }
 .night-app[data-active=true] .avatar-grid { display:flex; touch-action:pan-x; }
 .night-app[data-active=true] .avatar-card { min-width:78px; min-height:44px; flex-direction:row; padding:4px; }
 .night-app[data-active=true] .avatar-card img,.night-app[data-active=true] .avatar-mini { width:25px; height:25px; flex:none; }

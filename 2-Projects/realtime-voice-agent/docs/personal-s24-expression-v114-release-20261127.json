@@ -1,0 +1,210 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T21:40:19+08:00",
+  "release_tag": "release/personal-voice/v1.0.14",
+  "deployments": {
+    "personal-worker": {
+      "image": "personal-voice-worker:38e119f0f9d1",
+      "image_id": "sha256:ce06e5a05b0a4fd6596edd05210509ca1d16c1daf7562fb6995a39395e80fe55",
+      "sha256": "38e119f0f9d1c754f9b1fb91d68840d6b83f0911b4d1e564883eda16d4b88a68",
+      "file": "/usr/local/bin/voice-rust-worker",
+      "previous_image": "personal-voice-worker:3ff07236cec2",
+      "registered_at": "2026-11-27T21:34:35.641556+08:00",
+      "eot_connected_at": "2026-11-27T21:34:35.701317+08:00",
+      "rollback_env": "worker.release.before-avatar114-3ff07236cec2.env",
+      "source_commit": "c1cfeffce283b37c14b8856924e1b1eb65a1249a"
+    },
+    "s24-night-apk": {
+      "source_commit": "c1cfeffce283b37c14b8856924e1b1eb65a1249a",
+      "versionCode": 1000014,
+      "versionName": "V1.0.14",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000014.apk",
+      "size": 1084519,
+      "sha256": "38ce9578183659d75dc02b2035f0200af170e9ba7f10e2b260f5850abe308d74",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "signed_apk_checks": {
+      "passed": 74,
+      "failed": 0
+    },
+    "appearance": {
+      "variantsAndExpressions": {
+        "classic": [
+          1,
+          40
+        ],
+        "open": [
+          69,
+          13
+        ],
+        "boop": [
+          190,
+          34
+        ],
+        "robot": [
+          12,
+          11
+        ]
+      },
+      "offline": true,
+      "preservedSelection": true
+    },
+    "worker_personal_tests": 26,
+    "private_room_client": "Chromium 加载正式签名 APK 内的界面和 LiveKit SDK，使用普通话测试音频，通过私人签票进入两个独立房间。整个测试关闭设备后台状态同步。",
+    "expression_rounds": [
+      {
+        "caseId": "demo",
+        "passed": true,
+        "metrics": {
+          "calls": [
+            {
+              "op": "inspect",
+              "observed": "happy",
+              "confirmed": false,
+              "tears": false,
+              "visiblePixels": false
+            },
+            {
+              "op": "express",
+              "wanted": "playful",
+              "observed": "playful",
+              "confirmed": true,
+              "tears": false,
+              "visiblePixels": false
+            }
+          ],
+          "audioFrames": 140
+        }
+      },
+      {
+        "caseId": "list",
+        "passed": true,
+        "metrics": {
+          "calls": [
+            {
+              "op": "inspect",
+              "observed": "thinking",
+              "confirmed": false,
+              "tears": false,
+              "visiblePixels": false
+            }
+          ],
+          "audioFrames": 1
+        }
+      },
+      {
+        "caseId": "cry",
+        "passed": true,
+        "metrics": {
+          "calls": [
+            {
+              "op": "inspect",
+              "observed": "thinking",
+              "confirmed": false,
+              "tears": false,
+              "visiblePixels": false
+            },
+            {
+              "op": "express",
+              "wanted": "cry",
+              "observed": "cry",
+              "confirmed": true,
+              "tears": true,
+              "visiblePixels": true
+            }
+          ],
+          "audioFrames": 1
+        }
+      },
+      {
+        "caseId": "now",
+        "passed": true,
+        "metrics": {
+          "calls": [
+            {
+              "op": "inspect",
+              "observed": "thinking",
+              "confirmed": false,
+              "tears": false,
+              "visiblePixels": false
+            }
+          ],
+          "audioFrames": 1
+        }
+      },
+      {
+        "ok": true,
+        "rooms": 1,
+        "hangup": true,
+        "deviceSync": false
+      }
+    ],
+    "mute_rounds": [
+      {
+        "caseId": "output_muted",
+        "passed": true,
+        "metrics": {
+          "upstream": true,
+          "answer": true,
+          "remoteNonzeroBlocks": 18,
+          "allBlocksMuted": true,
+          "pulseNonzero": 0,
+          "muted": true,
+          "volume": 0,
+          "propertiesPanel": true,
+          "active": true
+        }
+      },
+      {
+        "caseId": "output_resumed",
+        "passed": true,
+        "metrics": {
+          "answer": true,
+          "remoteNonzeroBlocks": 27,
+          "pulseNonzero": 104,
+          "rooms": 1
+        }
+      },
+      {
+        "ok": true,
+        "rooms": 1,
+        "hangup": true,
+        "deviceSync": false
+      }
+    ],
+    "cry_visible_pixels": 112,
+    "android_11": "模拟器从 V1.0.13 覆盖安装，配对保留，正式包安装摘要与公网 OTA 整包一致。打开外观面板后两个图标都可见。",
+    "android_controls": {
+      "muteBox": [
+        378,
+        2039,
+        506,
+        2170
+      ],
+      "callBox": [
+        574,
+        2039,
+        706,
+        2170
+      ],
+      "gapScreenPixels": 68
+    },
+    "layout_viewports_css_px": [
+      [
+        412,
+        850
+      ],
+      [
+        320,
+        590
+      ],
+      [
+        820,
+        390
+      ]
+    ],
+    "s24_ultra": "本次未在用户 S24 Ultra 上操作。"
+  }
+}

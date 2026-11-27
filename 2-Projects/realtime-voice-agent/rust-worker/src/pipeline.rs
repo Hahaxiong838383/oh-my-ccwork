@@ -360,6 +360,7 @@ enum InputPhase {
 
 enum TurnKind {
     Say(String),
+    Avatar { device: String, intent: crate::personal_avatar::Intent, question: String, amend: Option<String> },
     // Web evidence must not enter the ordinary chat history / downstream memory extractor.
     BackgroundSay(String),
     BackgroundClip(String, Vec<u8>),
@@ -1938,6 +1939,7 @@ impl Orchestrator {
     async fn start_speculation(&mut self, text: String) {
         if self.session_close.active() || self.onboarding.as_ref().is_some_and(|o|o.active()) { return; }
         if self.search_ack(&text,false){return;}
+        if self.personal_device.is_some() && crate::personal_avatar::intent(&text).is_some() { return; }
         let search_context=self.search.as_ref().and_then(|s|s.dialogue_context());
         if self.search_history_handoff.lock().unwrap_or_else(|e| e.into_inner()).is_some() { return; }
         if self.search.is_some() && crate::search_policy::intent(&text).is_some() { return; }
@@ -3762,6 +3764,12 @@ impl Orchestrator {
                     return;
                 }
             }
+            if let Some(device) = &self.personal_device
+                && let Some(intent) = crate::personal_avatar::intent(&user_text) {
+                if let Some(old) = self.spec.take() { old.task.abort(); }
+                self.start_turn(TurnKind::Avatar { device: device.clone(), intent, question: user_text, amend });
+                return;
+            }
             // S1v3 投机核销:提交文本全等 + 历史版本未变 → 复用;否则作废。
             // try_lock 同 start_speculation 的死锁红线:锁被回复流持着(上一轮孙任务
             // 尚未退出)时当 miss 丢投机,绝不阻塞主循环。
@@ -4019,7 +4027,19 @@ impl Orchestrator {
                     }
                     drop(pcm_tx);let _=playout_task.await;watcher.abort();let _=ev_tx.send(TurnEvent::PlayedOut(id)).await;
                 }
-                TurnKind::Say(text) | TurnKind::BackgroundSay(text) => {
+                line @ (TurnKind::Say(_) | TurnKind::BackgroundSay(_) | TurnKind::Avatar { .. }) => {
+                    let text = match line {
+                        TurnKind::Avatar { device, intent, question, amend } => {
+                            let response = crate::personal_avatar::answer(&lp, &device, intent).await;
+                            let mut history = llm.lock().await;
+                            if let Some(previous) = amend { history.set_last_assistant(&previous); }
+                            history.push_user(&question);
+                            set_caption(Some(&response));
+                            response
+                        }
+                        TurnKind::Say(text) | TurnKind::BackgroundSay(text) => text,
+                        _ => unreachable!(),
+                    };
                     match tts_cfg
                         .synthesize(&text, &pcm_tx, &ctl_tts, &mut warm)
                         .await
@@ -4031,6 +4051,7 @@ impl Orchestrator {
                         }
                         Err(e) => warn!(room = %room_name, error = %e, "say tts failed"),
                     }
+                    set_caption(None);
                     drop(pcm_tx);
                     let _ = playout_task.await;
                     watcher.abort();

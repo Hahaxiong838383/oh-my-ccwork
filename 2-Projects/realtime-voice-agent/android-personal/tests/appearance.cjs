@@ -70,6 +70,7 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
         await page.selectOption('#avatar-expression',id);
         await page.evaluate(()=>new Promise(requestAnimationFrame));
       }
+      await require('./voice-expressions.cjs')(page, family, expressions);
       if (family !== 'classic') {
         const stageSize = await page.locator('#avatar-engine').evaluate(host => [
           host.offsetWidth, host.firstElementChild.offsetWidth, host.offsetHeight, host.firstElementChild.offsetHeight]);
@@ -116,12 +117,24 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
     await page.locator('#btn-palette').click();
     for(const dims of [{width:412,height:850},{width:320,height:590},{width:820,height:390}]){
       await page.setViewportSize(dims);
-      for (const id of ['btn-stop','btn-interrupt','reply-text']) {
+      for (const id of ['btn-call','btn-mute','reply-text']) {
         await page.waitForFunction(id=>{
           const e=document.getElementById(id),r=e.getBoundingClientRect();
           return r.width>0 && r.height>0 && e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));
         },id,{timeout:3000});
       }
+      const controls = page.locator('#panel-active');
+      assert.equal(await controls.locator('button:visible').count(),2);
+      assert.equal((await controls.innerText()).trim(),'');
+      assert.equal(await controls.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)');
+      for (const button of await controls.getByRole('button').all()) {
+        const b = await button.boundingBox();
+        assert.ok(b.width>=48 && b.height>=48,'finger-sized control');
+      }
+      const hush = await page.locator('#btn-mute').boundingBox();
+      const call = await page.locator('#btn-call').boundingBox();
+      assert.ok(call.x - (hush.x + hush.width) >= 28, 'keep mute and hangup apart');
+      await page.locator('#avatar-grid button').last().scrollIntoViewIfNeeded();
       assert.ok(await page.locator('#appearance-expression').isHidden());
     }
     await page.emulateMedia({reducedMotion:'reduce'});

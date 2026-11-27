@@ -183,6 +183,10 @@
       this.material = null;
     }
     setState(phase, active, muted) {
+      if (this.active !== active) {
+        this.previewUntil = 0;
+        if (!active) this.skin?.endVoiceExpression?.();
+      }
       this.phase = phase; this.active = active; this.muted = muted;
       if (!active || muted) this.micTarget = 0;
       if (!active || (phase !== 'speaking' && phase !== 'streaming')) this.clearPulse();
@@ -262,7 +266,7 @@
         phase: phase, active: this.active, muted: this.muted,
         mic: this.micTarget, playback: this.playback, reduced,
         speech: this.speech,
-        referenceState: !this.active && this.previewUntil > this.lastTime ? this.previewState : undefined,
+        referenceState: this.previewUntil > this.lastTime ? this.previewState : undefined,
       });
       const p = this.pointer;
       const x = p ? p.x : pose.gazeX, y = p ? p.y : pose.gazeY;
@@ -273,6 +277,7 @@
       this.yaw = headX+eyeX; this.pitch = headY+eyeY;
       if (!reduced) { pose.roll += headX*.10; pose.lift += headY*.035; }
       this.draw(pose);
+      this.renderedExpression = pose.referenceState;
       if (this.active && (phase === 'speaking' || phase === 'streaming')) this.drawPulse(dt);
     }
     drawPulse(dt) {

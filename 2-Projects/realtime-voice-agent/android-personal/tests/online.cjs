@@ -38,7 +38,7 @@ async function ticket(){
    NightHost.event=e=>audit.events.push(e);
   });
   async function until(fn,n=30000){try{await p.waitForFunction(fn,null,{timeout:n});}catch(e){console.log(await p.evaluate(()=>({last:audit.shows.slice(-4).map(x=>[x.status,x.mine?.length,x.reply?.length]),audio:audit.levels.length,events:[...new Set(audit.events)]})));throw e;}}
-  await p.locator('#btn-start').click();
+  await p.locator('#btn-call').click();
   await until(()=>audit.shows.some(s=>s.status==='小可在听'||s.status==='小可在说'));console.log('live personal Worker ready');
   await p.locator('#btn-palette').click();
   for (const family of ['open','boop','robot']) {
@@ -57,9 +57,9 @@ async function ticket(){
   await p.evaluate(b=>say(b),second);
   await until(()=>audit.shows.some(s=>s.mine?.includes('北京')||s.mine?.includes('几点')),30000);
   await until(()=>{const s=audit.shows.at(-1);return /北京.{0,12}(时间|点|时)|现在.{0,15}(点|时)|[零一二三四五六七八九十0-9]{1,4}[点时].{0,8}分/.test(s.reply)&&s.reply!==window.oldReply&&s.t>window.breakStart&&audit.levels.at(-1)>performance.now()-200;},50000);
-  await p.locator('#btn-interrupt').click();
+  await p.evaluate(()=>Voice.interrupt());
   await until(()=>audit.events.includes('cancel_ack'),6000);
-  await p.locator('#btn-stop').click();
+  await p.locator('#btn-call').click();
   const res=await p.evaluate(()=>({bargeDuringOutput:true,clockReplyHeard:true,levels:audit.levels.length,events:[...new Set(audit.events)],ended:audit.shows.at(-1).status,active:document.querySelectorAll('audio').length}));
   assert(res.levels>before.n);assert.equal(res.active,0);assert.equal(res.ended,'通话已结束');console.log(JSON.stringify(res));
  } finally {await browser.close();}

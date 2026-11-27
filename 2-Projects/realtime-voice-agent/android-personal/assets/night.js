@@ -100,16 +100,12 @@
   var replyCursorEl = document.getElementById('reply-cursor');
 
   var panelPairEl = document.getElementById('panel-pair');
-  var panelStartEl = document.getElementById('panel-start');
   var panelActiveEl = document.getElementById('panel-active');
 
   var pairFormEl = document.getElementById('pair-form');
   var pairInputEl = document.getElementById('pair-key');
-  var btnStartEl = document.getElementById('btn-start');
+  var btnCallEl = document.getElementById('btn-call');
   var btnMuteEl = document.getElementById('btn-mute');
-  var muteLabelEl = document.getElementById('mute-label');
-  var btnInterruptEl = document.getElementById('btn-interrupt');
-  var btnStopEl = document.getElementById('btn-stop');
   var btnForgetEl = document.getElementById('btn-forget');
 
   var btnPaletteEl = document.getElementById('btn-palette');
@@ -202,8 +198,7 @@
 
     // Pairing / Start / Active panels
     if (panelPairEl) panelPairEl.hidden = s.paired;
-    if (panelStartEl) panelStartEl.hidden = !s.paired || s.active;
-    if (panelActiveEl) panelActiveEl.hidden = !s.paired || !s.active;
+    if (panelActiveEl) panelActiveEl.hidden = !s.paired;
     if (btnForgetEl) btnForgetEl.hidden = !s.paired;
 
     if (!prevState.paired && s.paired && pairInputEl) {
@@ -265,16 +260,11 @@
       scrollSubtitlesToEnd();
     }
 
-    // Mute button
-    if (btnMuteEl && muteLabelEl) {
-      btnMuteEl.classList.toggle('is-muted', s.muted);
-      btnMuteEl.setAttribute('aria-pressed', s.muted ? 'true' : 'false');
-      muteLabelEl.textContent = s.muted ? '取消静音' : '静音';
-    }
-
-    // Interrupt pulse indicator
-    if (btnInterruptEl) {
-      btnInterruptEl.classList.toggle('is-pulsing', s.active && isLiveReplyPhase(s.phase));
+    if (btnCallEl) btnCallEl.setAttribute('aria-label', s.active ? (s.phase === 'connecting' ? '取消连接' : '挂断通话') : '开始通话');
+    if (btnMuteEl) {
+      btnMuteEl.disabled = !s.active;
+      btnMuteEl.setAttribute('aria-label', s.muted ? '恢复小可播报' : '静音小可播报');
+      btnMuteEl.setAttribute('aria-pressed', String(s.muted));
     }
 
     if (orb) {
@@ -283,7 +273,8 @@
       else if (s.phase === 'connecting' && /等待小可接听/.test(s.status)) facePhase = 'waiting';
       else if (/需要麦克风权限|请检查权限|设备凭据无效/.test(s.status)) facePhase = 'blocked';
       else if (isErrorState(s.phase, s.status)) facePhase = 'error';
-      orb.setState(facePhase, s.active, s.muted);
+      if (s.active !== prevState.active) appearance?.clearTears();
+      orb.setState(facePhase, s.active, false);
     }
   }
 
@@ -398,31 +389,16 @@
     });
   }
 
-  if (btnStartEl) {
-    btnStartEl.addEventListener('click', function () {
+  if (btnCallEl) {
+    btnCallEl.addEventListener('click', function () {
       setPopoverOpen(false);
-      callVoice('start');
+      callVoice(currentState.active ? 'stop' : 'start');
     });
   }
-
   if (btnMuteEl) {
-    btnMuteEl.addEventListener('click', function () {
-      setPopoverOpen(false);
+    btnMuteEl.addEventListener('click', function (event) {
+      event.stopPropagation();
       callVoice('mute');
-    });
-  }
-
-  if (btnInterruptEl) {
-    btnInterruptEl.addEventListener('click', function () {
-      setPopoverOpen(false);
-      callVoice('interrupt');
-    });
-  }
-
-  if (btnStopEl) {
-    btnStopEl.addEventListener('click', function () {
-      setPopoverOpen(false);
-      callVoice('stop');
     });
   }
 
@@ -467,6 +443,7 @@
   global.NightView = {
     render: render,
     level: level,
+    avatarRequest: request => appearance?.voiceRequest(request),
     accent: function () {
       return committedColor;
     },

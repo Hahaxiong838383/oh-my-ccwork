@@ -155,7 +155,7 @@
         }
       }
       const energy = input.meter ? input.meter.read() : local.audioLevel || 0;
-      const listening = !model.muted && track?.enabled && !pub.isMuted;
+      const listening = track?.enabled && !pub.isMuted;
       window.NightView?.micLevel?.(listening ? Math.min(1, Math.max(0, (energy - .007) * 10)) : 0);
       input.frame = requestAnimationFrame(measure);
     }
@@ -165,7 +165,7 @@
     s.retryPlayback?.remove(); s.retryPlayback = null;
   }
   function promptPlayback(s) {
-    if (!valid(s) || s.retryPlayback) return;
+    if (!valid(s) || model.muted || s.retryPlayback) return;
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'top-pill'; button.textContent = '恢复声音';
     s.retryPlayback = button;
@@ -196,7 +196,10 @@
   function attach(s, track, peer) {
     if (s.output?.track === track && s.output.sid === peer.sid && s.output.audio.isConnected) return;
     detach(s);
-    const audio = track.attach(document.createElement('audio'));
+    const element = document.createElement('audio');
+    element.volume = model.muted ? 0 : 1;
+    const audio = track.attach(element);
+    audio.muted = model.muted;
     audio.autoplay = true; audio.hidden = true;
     document.body.appendChild(audio);
     let playbackMeter;
@@ -215,7 +218,7 @@
       // Preserve short pauses in a working tap before using the remote speaker level.
       const rtcLevel = peer.isSpeaking ? peer.audioLevel || 0 : 0;
       const strength = now - lastPcmAt < 180 ? Math.max(0, pcm - .002) * 8 : rtcLevel * 2;
-      const playing = !audio.paused && !audio.muted && audio.readyState >= 2 && !track.isMuted;
+      const playing = !model.muted && !audio.paused && !audio.muted && audio.readyState >= 2 && !track.isMuted;
       const target = playing ? Math.min(1, strength) : 0;
       env+=(target-env)*(target>env?.62:.24);
       level(env<.001?0:env);
@@ -235,8 +238,8 @@
     else if (s.retryPlayback) {phase='listening';status='播放已暂停';}
     else if (!s.ready) {phase='connecting';status='等待小可接听';}
     else if (s.cancel) {phase='listening';status='正在打断';}
+    else if (model.muted) {phase='listening';status='小可已静音，仍在听';}
     else if (s.audible || s.speaking || (s.speechActive && performance.now()-s.lastVoiceAt < 1800)) {phase='speaking';status='小可在说';}
-    else if (model.muted) {phase='muted';status='麦克风已静音';}
     else if (s.thinking) {phase='thinking';status='小可正在思考';}
     else {phase='listening';status='小可在听';}
     if(phase!==model.phase || status!==model.status) show({phase,status});
@@ -367,6 +370,16 @@
     mark('call_start');
     const s=session={room,ctx:new AudioContext(),hellos:new Map(),parts:new Map(),segments:new Set(),turn:null,seq:0,trace:uid(),
       speech:{index:-1,seq:0,pending:null,lastId:null,lastKind:''},workerDone:false,speechActive:false,lastVoiceAt:0};
+    room.registerRpcMethod('personal.avatar.v1', async ({callerIdentity,payload}) => {
+      const peer = s.peer;
+      if (!valid(s) || !s.ready || s.reconnecting || !worker(peer) || callerIdentity !== peer.identity ||
+          room.remoteParticipants.get(callerIdentity)?.sid !== peer.sid) throw Error('未知语音会话');
+      if (typeof payload !== 'string' || payload.length > 800) throw Error('无效表情请求');
+      const request = JSON.parse(payload);
+      if (!request || !['inspect','express'].includes(request.op)) throw Error('无效表情操作');
+      const result = await window.NightView?.avatarRequest?.(request);
+      return JSON.stringify(result || {ok:false,avatar:null});
+    });
     show({phase:'connecting',status:'正在连接',active:true,muted:false,mine:'',reply:''});
     try{
       await s.ctx.resume(); if(!valid(s))return;
@@ -405,11 +418,25 @@
       s.deadline=setTimeout(()=>{if(valid(s)&&!s.ready)finish(s,'小可接听超时，请重试');},22000);
     }catch(e){if(valid(s))mark('transport_error');if(valid(s))finish(s, e?.message?.includes('凭据')?'设备凭据无效，请重新配对':/权限|超时|签票|已结束/.test(e?.message||'')?e.message:(s.stage||'建立通话')+'失败'+connectionHint(e));}
   }
-  async function mute(){
-    const s=session;if(!s?.connected||s.toggling)return;
-    s.toggling=true;
-    try{const enabled=model.muted;await s.room.localParticipant.setMicrophoneEnabled(enabled);if(valid(s)){mark(enabled?'mic_on':'mic_off');show({muted:!enabled});refresh(s);}}
-    catch{if(valid(s))show({status:'麦克风切换失败'});}finally{s.toggling=false;}
+  function mute() {
+    const s = session;
+    if (!s) return;
+    const muted = !model.muted;
+    const audio = s.output?.audio;
+    if (audio) {
+      audio.volume = muted ? 0 : 1;
+      audio.muted = muted;
+    }
+    if (muted) {
+      clearPlaybackPrompt(s);
+      s.audible = false;
+      endSpeech(s);
+      level(0);
+    } else if (audio?.paused) {
+      audio.play().catch(() => { if (s.output?.audio === audio) promptPlayback(s); });
+    }
+    show({muted});
+    refresh(s);
   }
   async function interrupt(){
     const s=session;if(!s?.peer||s.cancel||s.reconnecting)return;

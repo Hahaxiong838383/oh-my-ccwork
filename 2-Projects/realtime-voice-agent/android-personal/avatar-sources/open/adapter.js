@@ -58,6 +58,7 @@ const EXPRESSIONS = [
 ];
 
 const EXPRESSION_DURATION_MS = {
+  idle: 3200,
   done: 4300,
   working: 4400,
   thinking: 3600,
@@ -574,6 +575,7 @@ function createOpenBotAvatarEngine(deps) {
 
     // Track last committed structural options so reduced-motion / unchanged frames don't churn repaints.
     let lastSig = '';
+    let renderedId = 'idle';
 
     const mounted = mountAvatar(stage, {
       definition: resolved.definition,
@@ -602,6 +604,10 @@ function createOpenBotAvatarEngine(deps) {
 
       if (!force && sig === lastSig) return;
       lastSig = sig;
+      // The renderer's state can be a stock string or one of this adapter's pose definitions.
+      const namedPose = stateKey.replace(/^oba:/, '');
+      renderedId = live.exprId || (look.state === connectingDef ? 'waiting'
+        : (look.state === idleTonedDef || stateKey === 'idle') ? (look.mood === 'happy' ? 'happy' : 'idle') : namedPose);
       mounted.update({
         state: look.state,
         mood: look.mood,
@@ -674,7 +680,7 @@ function createOpenBotAvatarEngine(deps) {
           ? frame.phase.trim().toLowerCase()
           : 'idle';
         // If phase transitions to a new active phase, smoothly yield any manual test expression
-        if (nextPhase !== live.phase && live.exprId && nextPhase !== 'idle') {
+        if (nextPhase !== live.phase && live.exprId && !live.voiceExpression && nextPhase !== 'idle') {
           live.exprId = null;
           live.exprDef = null;
           if (exprTimer !== null) {
@@ -788,12 +794,16 @@ function createOpenBotAvatarEngine(deps) {
         scheduleTouchReset(1200);
       },
 
-      express(id) {
+      currentExpression() { return renderedId; },
+      endVoiceExpression() { if (live.voiceExpression) this.express('reset'); },
+
+      express(id, voice = false) {
         if (destroyed) return;
         const now = perfNow();
         const key = typeof id === 'string' ? id.trim().toLowerCase() : '';
 
-        if (!key || key === 'reset' || key === 'clear' || key === 'idle') {
+        live.voiceExpression = voice;
+        if (!key || key === 'reset' || key === 'clear' || (key === 'idle' && !voice)) {
           live.exprId = null;
           live.exprDef = null;
           if (exprTimer !== null) {

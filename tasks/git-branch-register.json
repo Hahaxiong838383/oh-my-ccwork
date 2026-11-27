@@ -4,7 +4,7 @@
     "personal/s24-night-apk": {
       "task": "私人暗夜剧场 S24 头像、交互与 APK 发布维护",
       "state": "keep",
-      "until": "V1.0.13 中文头像与实时色盘已发布，保留私人版维护工作树，下版发布后复核。"
+      "until": "V1.0.14 语音表情、通话与播报双键已发布，保留私人版维护工作树，下版发布后复核。"
     },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
@@ -322,12 +322,12 @@
     },
     "personal-worker": {
       "scope": "personal-voice",
-      "source_commit": "575e0215246ff9f273dd16594d3e0b885942599c",
-      "source_ref": "refs/tags/release/personal-voice/v1.0.8",
+      "source_commit": "c1cfeffce283b37c14b8856924e1b1eb65a1249a",
+      "source_ref": "refs/tags/release/personal-voice/v1.0.14",
       "maintainer_branch": "main",
-      "sha256": "3ff07236cec23355a6de48259a5d402af0ce4c438271e36f4bc4cb7298fb57ce",
+      "sha256": "38e119f0f9d1c754f9b1fb91d68840d6b83f0911b4d1e564883eda16d4b88a68",
       "proof": {
-        "object": "8a91894218cb14e2b14107975cf957aa49942854:2-Projects/realtime-voice-agent/docs/personal-s24-exit-pulse-release-20261127.json",
+        "object": "29db7ddffc4c4a5aeb63bf6f605d59170b96cdf2:2-Projects/realtime-voice-agent/docs/personal-s24-expression-v114-release-20261127.json",
         "keys": [
           "deployments",
           "personal-worker"
@@ -382,12 +382,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "09a48074e13ff9d87a9d0db28684519b5b79ed5c",
-      "source_ref": "refs/tags/release/personal-voice/v1.0.13",
+      "source_commit": "c1cfeffce283b37c14b8856924e1b1eb65a1249a",
+      "source_ref": "refs/tags/release/personal-voice/v1.0.14",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "46a8e5f407744e7f4976cd985e64999a60e2a8cce1870545dcd632b50f678483",
+      "sha256": "38ce9578183659d75dc02b2035f0200af170e9ba7f10e2b260f5850abe308d74",
       "proof": {
-        "object": "6acbdc2c460a254e1a82da3c81fb2f2132250774:2-Projects/realtime-voice-agent/docs/personal-s24-palette-v113-release-20261127.json",
+        "object": "29db7ddffc4c4a5aeb63bf6f605d59170b96cdf2:2-Projects/realtime-voice-agent/docs/personal-s24-expression-v114-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"

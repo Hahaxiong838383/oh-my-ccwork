@@ -58,7 +58,7 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
             pub.setTrack(makeTrack());
           };
           this.disconnect=async()=>{};
-          this.localParticipant.setMicrophoneEnabled=async()=>{};
+          window.micChanges=[]; this.localParticipant.setMicrophoneEnabled=async enabled=>micChanges.push(enabled);
           this.localParticipant.publishData=async (data,options)=>{
             const frame=JSON.parse(new TextDecoder().decode(data));
             if(options.topic==='personal.v1.input'){
@@ -150,10 +150,19 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
     await page.waitForFunction(()=>Math.abs(audit.level-.36)<.02 && audit.speech.at(-1)?.patch?.kind==='emphasis');
     await page.evaluate(()=>{peer.isSpeaking=false;});
     await page.waitForFunction(()=>audit.level===0);
-    await page.evaluate(()=>{document.querySelector('audio').muted=true; peer.isSpeaking=true;});
+    await page.evaluate(()=>{ Voice.mute(); peer.isSpeaking=true; });
     await page.waitForTimeout(250);
-    assert.equal(await page.evaluate(()=>audit.level),0,'muted playback must stay still with an active speaker');
-    await page.evaluate(()=>{document.querySelector('audio').muted=false;});
+    assert.deepEqual(await page.evaluate(()=>[display.muted,document.querySelector('audio').volume,
+      audit.level,micChanges]),[true,0,0,[true]],'muting the reply must leave the microphone open');
+    await page.evaluate(()=>{
+      pub.setTrack(makeTrack());
+      emitTranscript([['SG_a7_3','静音时仍然收到字幕。',true]]);
+    });
+    assert.deepEqual(await page.evaluate(()=>[document.querySelector('audio').volume,
+      display.reply.endsWith('静音时仍然收到字幕。')]),[0,true],'replacement audio stays quiet; captions continue');
+    await page.evaluate(()=>Voice.mute());
+    await page.waitForFunction(()=>audit.level>.025 && !display.muted);
+    assert.deepEqual(await page.evaluate(()=>[document.querySelector('audio').volume,micChanges]),[1,[true]]);
     // A packet for a cancelled turn cannot restore its text or expression.
     await page.waitForTimeout(250);
     await page.evaluate(()=>Voice.interrupt());

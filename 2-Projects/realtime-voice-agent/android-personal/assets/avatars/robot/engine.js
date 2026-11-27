@@ -1916,6 +1916,8 @@
       var gazeActiveUntil = -1;
       var touchGaze = null;
       var expressState = null;
+      var voiceExpression = false;
+      var renderedId = "";
       var expressUntil = -1;
       var reducedReactUntil = -1;
       var lastStaticSig = "";
@@ -1955,7 +1957,7 @@
           if (phase === "listening") {
             listenAudioSeen = false;
           }
-          if (expressState && phase !== "idle" && phase !== currentPhase) {
+          if (expressState && !voiceExpression && phase !== "idle") {
             expressState = null;
             expressUntil = -1;
           }
@@ -1986,6 +1988,7 @@
         var metrics = syncCanvasSize();
         if (!metrics) return;
         var shownState = animated ? sim.shown : elapsedSec < reducedReactUntil ? "happy" : lastResolvedState;
+        renderedId = (animated ? sim.time < sim.reactUntil : elapsedSec < reducedReactUntil) ? "poke" : shownState;
         var rc = {
           reduced: !animated,
           muted: isMuted && shownState === "sleeping" && !expressState,
@@ -2187,10 +2190,20 @@
             drawCurrent(true);
           }
         },
-        express: function(id) {
+        currentExpression: function() {
+          return renderedId;
+        },
+        endVoiceExpression: function() {
+          if (voiceExpression) {
+            sim.reactUntil = -1;
+            this.express("idle");
+          }
+        },
+        express: function(id, voice) {
           if (destroyed) return;
           var key = typeof id === "string" ? id.trim().toLowerCase() : "";
           if (!key) return;
+          voiceExpression = voice === true;
           if (key === "poke") {
             if (currentReduced) {
               reducedReactUntil = elapsedSec + 1.6;
@@ -2206,7 +2219,11 @@
             return;
           }
           if (!VALID_STATES[key]) return;
-          if (key === "idle") {
+          if (voiceExpression) {
+            sim.reactUntil = -1;
+            reducedReactUntil = -1;
+          }
+          if (key === "idle" && !voiceExpression) {
             expressState = null;
             expressUntil = -1;
             reducedReactUntil = -1;

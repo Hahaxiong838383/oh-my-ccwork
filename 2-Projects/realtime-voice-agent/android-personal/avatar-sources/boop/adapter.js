@@ -458,6 +458,7 @@
     var currentInputMode = false;
     var manualExpressUntil = 0;
     var manualExpressAction = null;
+    var voiceExpression = false;
     var manualHoldTimer = 0;
     var errorHoldTimer = 0;
     var lastNativePointerAt = -Infinity;
@@ -488,6 +489,8 @@
       }
       manualExpressUntil = 0;
       manualExpressAction = null;
+      if (voiceExpression) currentPhase = ''; // Re-enter the live phase after the requested action.
+      voiceExpression = false;
     }
 
     function onNativePointer() {
@@ -869,6 +872,10 @@
 
       // Urgent conversation phases preempt manual expression previews.
       if (manualExpressUntil > now) {
+        if (voiceExpression) {
+          applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+          return;
+        }
         if (urgentVoicePhase && phase !== currentPhase) {
           cancelManualExpress();
         } else if (phase === 'idle' || phase === 'muted' || phase === 'connecting') {
@@ -951,14 +958,27 @@
       applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
     }
 
-    function express(id) {
+    function currentExpression() {
+      const action = avatar._activeActionState?.action;
+      if (action === 'waiting') {
+        const style = avatar._waitingFx?.variant || (avatar._voiceFx?.mode === 'thinking' && avatar._voiceFx.style);
+        return style ? 'waiting-' + (style === 'default' ? 'spin' : style) : '';
+      }
+      if (EXPRESSION_SET[action]) return action;
+      return resolveAction(avatar._state) || '';
+    }
+
+    function express(id, voice) {
       if (destroyed) return;
       var action = resolveAction(id);
       if (!action) return;
 
       cancelManualExpress();
 
+      if (voice) avatar.reset();
+      voiceExpression = voice === true;
       if (action === 'idle') {
+        if (voiceExpression) { manualExpressAction = 'idle'; manualExpressUntil = performance.now() + 3200; }
         currentInputMode = false;
         avatar.reset();
         return;
@@ -1100,6 +1120,8 @@
       update: update,
       touch: touch,
       express: express,
+      currentExpression: currentExpression,
+      endVoiceExpression: function () { if (voiceExpression) express('idle'); },
       destroy: destroy,
     };
   }

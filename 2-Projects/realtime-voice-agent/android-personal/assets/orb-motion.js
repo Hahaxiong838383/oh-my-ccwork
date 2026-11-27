@@ -359,6 +359,9 @@
       if (touching) {
         selectFace(touch[1], reduced);
         expressionSource = 'touch';
+      } else if (declared && face === declared) {
+        selectFace(face, reduced);
+        expressionSource = 'requested';
       } else if (speaking) {
         // Captions may arrive before their audio. Only the revealed sentence
         // supplies a cue; the audio rhythm carries everything in between.

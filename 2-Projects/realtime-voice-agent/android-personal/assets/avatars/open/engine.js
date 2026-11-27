@@ -8149,6 +8149,7 @@
     { id: "shy", label: "Shy" }
   ];
   const EXPRESSION_DURATION_MS = {
+    idle: 3200,
     done: 4300,
     working: 4400,
     thinking: 3600,
@@ -8598,6 +8599,7 @@
         return null;
       }
       let lastSig = "";
+      let renderedId = "idle";
       const mounted = mountAvatar(stage, {
         definition: resolved.definition,
         color: live.color,
@@ -8623,6 +8625,8 @@
         const sig = `${stateKey}|${look.mood}|${live.color}|${live.eyeColor}|${lookAtKey}|${viewKey}|${reducedOpt}`;
         if (!force && sig === lastSig) return;
         lastSig = sig;
+        const namedPose = stateKey.replace(/^oba:/, "");
+        renderedId = live.exprId || (look.state === connectingDef ? "waiting" : look.state === idleTonedDef || stateKey === "idle" ? look.mood === "happy" ? "happy" : "idle" : namedPose);
         mounted.update({
           state: look.state,
           mood: look.mood,
@@ -8683,7 +8687,7 @@
           const dt = live.lastFrameTime === null ? 1 / 60 : clamp((frameClock - live.lastFrameTime) / 1e3, 1e-3, 0.2);
           live.lastFrameTime = frameClock;
           const nextPhase = typeof frame.phase === "string" && frame.phase.trim() ? frame.phase.trim().toLowerCase() : "idle";
-          if (nextPhase !== live.phase && live.exprId && nextPhase !== "idle") {
+          if (nextPhase !== live.phase && live.exprId && !live.voiceExpression && nextPhase !== "idle") {
             live.exprId = null;
             live.exprDef = null;
             if (exprTimer !== null) {
@@ -8772,11 +8776,18 @@
           startPokeLoop();
           scheduleTouchReset(1200);
         },
-        express(id) {
+        currentExpression() {
+          return renderedId;
+        },
+        endVoiceExpression() {
+          if (live.voiceExpression) this.express("reset");
+        },
+        express(id, voice = false) {
           if (destroyed) return;
           const now = perfNow();
           const key = typeof id === "string" ? id.trim().toLowerCase() : "";
-          if (!key || key === "reset" || key === "clear" || key === "idle") {
+          live.voiceExpression = voice;
+          if (!key || key === "reset" || key === "clear" || key === "idle" && !voice) {
             live.exprId = null;
             live.exprDef = null;
             if (exprTimer !== null) {
