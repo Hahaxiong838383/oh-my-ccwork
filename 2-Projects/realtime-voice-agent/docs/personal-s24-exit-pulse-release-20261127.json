@@ -1,5 +1,6 @@
 {
   "scope": "personal-voice",
+  "release_tag": "release/personal-voice/v1.0.8",
   "sampled_at": "2026-11-27T12:52:39+08:00",
   "deployments": {
     "personal-worker": {
@@ -99,7 +100,7 @@
         "providerState": "ready"
       }
     },
-    "android": "Android 11 模拟器从 V1.0.7 覆盖升级到 V1.0.8 ，系统报告 NightHostActivity 已恢复并获得窗口焦点；本轮未连接 S24 真机。",
+    "android": "发版时已在 Android 11 模拟器从 V1.0.7 覆盖升级到 V1.0.8，系统报告 NightHostActivity 已恢复并获得窗口焦点。",
     "apk_validation": {
       "passed": 65,
       "failed": 0
@@ -108,6 +109,13 @@
       "passed": 662,
       "failed": 0,
       "ignored": 2
+    },
+    "s24_ultra": {
+      "date": "2026-11-27",
+      "version": "V1.0.8",
+      "result": "通过",
+      "scope": "使用者在 S24 Ultra 上的整体体验",
+      "user_feedback": "我真机体验完OK了"
     }
   }
 }
