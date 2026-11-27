@@ -14,11 +14,11 @@ PUBLISH_DIR=/vol1/1000/mobile/night
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 echo "==> 目录"
-ssh "$HOST" "mkdir -p $BASE_DIR/app $BASE_DIR/data $BASE_DIR/private $PUBLISH_DIR && chmod 700 $BASE_DIR/private"
+ssh "$HOST" "mkdir -p $BASE_DIR/app $BASE_DIR/bridge $BASE_DIR/data $BASE_DIR/private $PUBLISH_DIR && chmod 700 $BASE_DIR/private"
 
 echo "==> 代码"
 rsync -a --exclude '__pycache__' \
-  "$SRC_DIR/night_server.py" "$SRC_DIR/cli.py" "$SRC_DIR/allowlist_admin.py" \
+  "$SRC_DIR/device_link.py" "$SRC_DIR/night_server.py" "$SRC_DIR/cli.py" "$SRC_DIR/allowlist_admin.py" \
   "$SRC_DIR/sql/" "$SRC_DIR/tools/" \
   "$HOST:$BASE_DIR/app/"
 scp -q "$SRC_DIR/deploy/compose.yaml" "$HOST:$BASE_DIR/compose.yaml"

@@ -11,19 +11,19 @@
   // The source's 2D rings already contain camera perspective. Author these in the
   // local eye socket so head rotation applies perspective exactly once.
   const faces = [
-    [1,1,0,0,0], [1.02,1.05,.04,0,0], [1.07,.86,.18,.02,0],
-    [1.14,1.16,0,0,0], [1,.63,-.11,0,0], [.98,.90,-.05,.05,.07],
+    [1,1,0,0,0], [1.02,1.05,.04,0,0], [1.26,.64,.68,.055,0,.66],
+    [1.14,1.16,0,0,0], [1.05,.52,-.13,0,0,0,.22], [1.06,.88,-.10,.11,.17,0,.16],
     [1.07,.88,.20,.025,0], [.98,.86,-.07,-.07,0], [1.02,1.03,0,.025,.055],
-    [1,.90,.04,.025,.10], [1.04,1.06,.03,0,0], [1.09,.83,.22,.035,0],
-    [.99,.96,.06,.025,.08], [1.06,.47,-.08,0,0], [.99,.85,-.08,-.06,.08],
-    [1.01,.98,.025,.04,.035], [1,.90,.02,-.045,.04], [1.08,.91,.16,.02,0],
+    [1,.90,.04,.025,.10], [1.04,1.06,.03,0,0], [1.30,.60,.77,.045,0,.73],
+    [.99,.96,.06,.025,.08], [1.06,.47,-.08,0,0], [1.08,.85,-.12,-.13,.18,0,.18],
+    [1.06,1.11,.07,.115,.23,0,.12], [1,.90,.02,-.045,.04], [1.19,.72,.54,.025,0,.53],
     [.99,1.04,.02,-.025,.06], [1.03,1.02,.085,0,0], [1.02,.92,.06,.055,.05],
-    [1.12,1.13,.01,0,0], [1.03,.57,-.09,0,0], [.98,.88,-.055,-.05,.06],
+    [1.15,1.18,.01,.02,.07], [1.10,.50,-.16,.02,0,0,.26], [.98,.88,-.055,-.05,.06],
     [1.02,.85,.13,.035,.04]
   ];
 
   function eyeShapes() {
-    return faces.map(([width, height, arch, tilt, asymmetry]) => [-1,1].map(side => {
+    return faces.map(([width, height, arch, tilt, asymmetry, lowerLift = 0, upperFlat = 0]) => [-1,1].map(side => {
       const ring = [], w = .115 * width, h = .25 * (height - (side > 0 ? asymmetry : 0));
       const cap = Math.min(w, h), spine = h-cap;
       const angle = tilt*side, cs = Math.cos(angle), sn = Math.sin(angle);
@@ -37,7 +37,13 @@
           const right=i<24, t=(right ? i-16 : i-40)/8;
           x=right ? w : -w; y=(right ? 1 : -1)*mix(-spine,spine,t);
         }
-        y += arch * h * ((x/w)**2 - .45);
+        // The lower lid cuts upward toward the center of a smile. The top lid
+        // can flatten independently, before either contour is mapped to the sphere.
+        const center = Math.max(0, 1 - (x/w)**2);
+        const rimBlend = clamp((y/h+1)/2, 0, 1);
+        y += h * (arch*(.55-center) - lowerLift*center*rimBlend
+          + upperFlat*center*(1-rimBlend));
+        y += side*asymmetry*.12;
         ring.push(cs*x-sn*y,sn*x+cs*y);
       }
       return {centerY:h*.2, ring};
@@ -150,6 +156,10 @@
       this.active = this.muted = false;
       this.playback = this.micTarget = 0;
       this.speech = null;
+      // Previous remote-playout levels in 16 ms time bins, shared with the
+      // sphere render loop. The center reacts first; the flanks echo each syllable.
+      this.pulseTrail = new Float32Array(6);
+      this.pulseEnvelope = this.pulseTime = this.pulseLight = 0;
       this.spokenFor = this.quietFor = 0;
       this.yaw = this.pitch = 0;
       this.pointer = null;
@@ -170,9 +180,13 @@
     setState(phase, active, muted) {
       this.phase = phase; this.active = active; this.muted = muted;
       if (!active || muted) this.micTarget = 0;
-      if (!active) this.playback = 0;
+      if (!active || (phase !== 'speaking' && phase !== 'streaming')) this.clearPulse();
       // A cue only belongs to the reply that is being spoken right now.
       if (!active || (phase !== 'speaking' && phase !== 'streaming')) this.speech = null;
+    }
+    clearPulse() {
+      this.playback = this.pulseEnvelope = this.pulseTime = this.pulseLight = 0;
+      this.pulseTrail.fill(0);
     }
     setLevel(value) { this.playback = clamp(Number(value) || 0, 0, 1); }
     setSpeech(patch) {
@@ -218,7 +232,7 @@
       this.frame = global.requestAnimationFrame(this.onFrame);
     }
     stop() {
-      global.cancelAnimationFrame(this.frame); this.frame = 0;
+      global.cancelAnimationFrame(this.frame); this.frame = 0; this.clearPulse();
     }
     onFrame(now) {
       const dt = clamp((now - this.lastTime) / 1000, 0, .050);
@@ -247,11 +261,44 @@
       const x = p ? p.x : pose.gazeX, y = p ? p.y : pose.gazeY;
       const headX = spring(this.turn[0], x*(p ? .59 : .38), dt, p ? 15 : 10, reduced);
       const headY = spring(this.turn[1], y*(p ? .38 : .33), dt, p ? 15 : 10, reduced);
-      const eyeX = spring(this.turn[2], x*.11, dt, 27, reduced);
-      const eyeY = spring(this.turn[3], y*.078, dt, 27, reduced);
+      const eyeX = spring(this.turn[2], x*.11 + (p ? 0 : pose.eyeAimX*.28), dt, 29, reduced);
+      const eyeY = spring(this.turn[3], y*.078 + (p ? 0 : pose.eyeAimY*.24), dt, 29, reduced);
       this.yaw = headX+eyeX; this.pitch = headY+eyeY;
       if (!reduced) { pose.roll += headX*.10; pose.lift += headY*.035; }
       this.draw(pose);
+      if (this.active && (phase === 'speaking' || phase === 'streaming')) this.drawPulse(dt);
+    }
+    drawPulse(dt) {
+      const level = this.playback > .018 ? Math.pow((this.playback-.018)/.982, .70) : 0;
+      const follow = level > this.pulseEnvelope ? 32 : 12;
+      this.pulseEnvelope = mix(this.pulseEnvelope, level, 1-Math.exp(-follow*dt));
+      if (this.pulseEnvelope < .009) this.pulseEnvelope = 0;
+      this.pulseTime += dt;
+      while (this.pulseTime >= .016) {
+        this.pulseTrail.copyWithin(1, 0);
+        this.pulseTrail[0] = this.pulseEnvelope;
+        this.pulseTime -= .016;
+      }
+      this.pulseLight = mix(this.pulseLight, this.pulseEnvelope, 1-Math.exp(-3*dt));
+      const reduced = this.reduced.matches, ctx = this.ctx;
+      const scale = Math.min(1, this.width/228);
+      const midY = this.height*.939;
+      const ink = this.rgb.map(v => Math.round(mix(v, 246, .62)));
+      ctx.save();
+      for (let i=-2; i<=2; i++) {
+        const distance = Math.abs(i);
+        const echo = distance ? this.pulseTrail[distance*2] : this.pulseEnvelope;
+        const value = echo * (1 - .24*distance);
+        const radius = 2*scale;
+        const half = reduced ? 0 : 8*value*scale;
+        const x = this.width/2 + i*12*scale;
+        ctx.strokeStyle = 'rgba('+ink.join(',')+','+(.25+.69*(reduced ? this.pulseLight : value))+')';
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.lineWidth = 2*radius; ctx.lineCap = 'round'; ctx.beginPath();
+        if (half < .06) { ctx.arc(x,midY,radius,0,TAU); ctx.fill(); }
+        else { ctx.moveTo(x,midY-half); ctx.lineTo(x,midY+half); ctx.stroke(); }
+      }
+      ctx.restore();
     }
     draw(pose) {
       const ctx = this.ctx, w = this.width, h = this.height;

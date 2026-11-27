@@ -15,6 +15,8 @@
 
 from __future__ import annotations
 
+from device_link import DeviceLink, owner_socket
+
 import errno
 import hashlib
 import hmac
@@ -154,6 +156,11 @@ class Allowlist:
             self._mtime = st.st_mtime
             self._broken = False
         log("allowlist_loaded", entries=len(entries))
+
+    def devices(self) -> list[str]:
+        self.reload()
+        with self._lock:
+            return sorted({device for _, device in self._entries})
 
     def identify(self, token: str) -> str | None:
         """常量时间比较整张表：不提前短路，不暴露命中下标。"""
@@ -468,8 +475,8 @@ class Handler(BaseHTTPRequestHandler):
         path = self._path()
         if not path:
             return self._error(404, "not_found")
-        if path == "/diagnostics":
-            return self._diagnostics()
+        if path in ("/diagnostics", "/sync"):
+            return self._device_request(path)
         return self._error(405, "method_not_allowed", extra_headers=[("Allow", "GET")])
 
     def _route(self, head_only: bool = False) -> None:
@@ -557,7 +564,7 @@ class Handler(BaseHTTPRequestHandler):
             return
 
     # -------------------------------------------------------- diagnostics
-    def _diagnostics(self) -> None:
+    def _device_request(self, path: str) -> None:
         device = self._authenticate()
         if device is None:
             return self._error(401, "unauthorized")
@@ -572,13 +579,18 @@ class Handler(BaseHTTPRequestHandler):
             return self._error(400, "bad_length")
         if length <= 0:
             return self._error(400, "empty_body")
-        if length > MAX_BODY_BYTES:
+        if length > (2048 if path == "/sync" else MAX_BODY_BYTES):
             return self._error(413, "body_too_large")
         raw = self.rfile.read(length)
         try:
             payload = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, ValueError):
             return self._error(400, "bad_json")
+        if path == "/sync":
+            try:
+                return self._send_json(200, self.link.sync(device, payload))
+            except ValueError:
+                return self._error(400, "invalid_snapshot")
         ok, reason, events = self._validate(payload)
         if not ok:
             log("diagnostics_rejected", device=device, reason=reason)
@@ -648,6 +660,7 @@ def build_server(cfg: Config) -> ThreadingHTTPServer:
     store.start_pruner()
     Handler.cfg = cfg
     Handler.allowlist = Allowlist(cfg.allowlist_path)
+    Handler.link = DeviceLink(store, Handler.allowlist)
     Handler.store = store
     Handler.publication = Publication(cfg)
     Handler.limiter = RateLimiter(cfg.rate_per_min, cfg.rate_burst)
@@ -661,6 +674,8 @@ def main() -> int:
     os.makedirs(cfg.data_dir, exist_ok=True)
     try:
         httpd = build_server(cfg)
+        bridge_path = os.getenv("NIGHT_OWNER_SOCKET")
+        bridge = owner_socket(bridge_path, Handler.link) if bridge_path else None
     except OSError as exc:
         if exc.errno == errno.EADDRINUSE:
             log("bind_failed", addr=cfg.listen, error="address in use")
@@ -680,6 +695,9 @@ def main() -> int:
         log("night_ota_stopping")
     finally:
         httpd.server_close()
+        if bridge:
+            bridge.shutdown()
+            bridge.server_close()
     return 0
 
 

@@ -20,11 +20,12 @@ import java.util.regex.Pattern;
  *   ticket(requestId): void            -> window.Voice.onTicket(requestId, {url,token,room} | {error})
  *   setCall(active: boolean): void
  *   micPermission(requestId): void     -> window.Voice.onPermission(requestId, granted:boolean)
+ *   syncState(phase, muted, accent, localAccentPick): void -> window.Voice.onSyncAccent(hex)
  *
  * 约束：
- *   - 只有本地 origin（https://appassets.androidplatform.net）的页面能调；
+ *   - 只有本地 origin（https://pa.hahaxiong.cc:8666/night-app/index.html）的页面能调；
  *   - requestId 必须匹配 [A-Za-z0-9._-]{1,64}，否则直接丢弃（不回显，避免 JS 注入）；
- *   - 凭据没有任何 getter；票据只在原生侧取，明文不进入 WebView 上下文；
+ *   - 凭据没有任何 getter；票据与同步均只在原生侧取凭据，明文不进入 WebView 上下文；
  *   - 所有 WebView/UI 操作都切回主线程。
  */
 public final class NightBridge {
@@ -36,13 +37,15 @@ public final class NightBridge {
     private final WebView web;
     private final SecureStore store;
     private final TicketClient tickets;
+    private final NightSync sync;
     private final Handler main = new Handler(Looper.getMainLooper());
 
-    NightBridge(NightHostActivity host, WebView web, SecureStore store, TicketClient tickets) {
+    NightBridge(NightHostActivity host, WebView web, SecureStore store, TicketClient tickets, NightSync sync) {
         this.host = host;
         this.web = web;
         this.store = store;
         this.tickets = tickets;
+        this.sync = sync;
     }
 
     @JavascriptInterface public void event(String kind) {
@@ -72,6 +75,15 @@ public final class NightBridge {
         });
     }
 
+    @JavascriptInterface
+    public void syncState(final String phase, final boolean muted,
+                          final String accent, final boolean localAccentPick) {
+        if (!host.pageTrusted() || sync == null) {
+            return;
+        }
+        sync.onWebState(phase, muted, accent, localAccentPick);
+    }
+
     // ---------------------------------------------------------------- pairing
 
     @JavascriptInterface
@@ -79,7 +91,11 @@ public final class NightBridge {
         if (!host.pageTrusted()) {
             return false;
         }
-        return store.isPaired();
+        boolean ok = store.isPaired();
+        if (!ok && sync != null) {
+            sync.observeUnpaired();
+        }
+        return ok;
     }
 
     @JavascriptInterface
@@ -90,6 +106,9 @@ public final class NightBridge {
         boolean ok = store.save(key);
         if (ok) {
             Log.i(TAG, "pairing stored");
+            if (sync != null) {
+                sync.onPaired(NightSyncStore.sha256Hex(key.trim()));
+            }
         }
         return ok;
     }
@@ -100,6 +119,9 @@ public final class NightBridge {
             return;
         }
         store.clear();
+        if (sync != null) {
+            sync.onUnpaired();
+        }
         Log.i(TAG, "pairing cleared");
     }
 
@@ -204,6 +226,37 @@ public final class NightBridge {
             @Override
             public void run() {
                 evalVoice("onPermission", quote(requestId) + (granted ? ",true" : ",false"));
+            }
+        });
+    }
+
+    void deliverSyncAccent(final String hex) {
+        final String normalized = NightSyncClient.normalizeAccent(hex);
+        if (normalized == null) {
+            return;
+        }
+        main.post(new Runnable() {
+            @Override
+            public void run() {
+                if (!host.pageTrusted()) {
+                    return;
+                }
+                evalVoice("onSyncAccent", quote(normalized));
+            }
+        });
+    }
+
+    void notifyOtaChange() {
+        main.post(new Runnable() {
+            @Override
+            public void run() {
+                if (web == null || !host.pageTrusted()) {
+                    return;
+                }
+                try {
+                    web.evaluateJavascript("window.dispatchEvent(new Event('night-ota-change'))", null);
+                } catch (Throwable ignored) {
+                }
             }
         });
     }

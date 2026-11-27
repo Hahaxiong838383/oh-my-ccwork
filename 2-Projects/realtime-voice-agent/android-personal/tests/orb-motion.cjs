@@ -167,3 +167,32 @@ test('the simulation is replayable from a seed and survives time gaps or invalid
     assert.ok(geometry(f).every(Number.isFinite));
   }
 });
+
+test('speech blinks naturally and syllable counting survives different display refresh rates', () => {
+  const rates = [30, 60, 120].map(hz => {
+    const motion = create();
+    let blinks = 0, shut = false, last;
+    for (let i=0; i<8*hz; i++) {
+      const pulse = Math.max(0, Math.sin(2*Math.PI*3.7*i/hz));
+      last = motion.step(1/hz, {phase:'speaking', active:true, playback:.18+.56*pulse});
+      if (!shut && last.eyeOpenL < .45 && last.eyeOpenR < .45) blinks++;
+      shut = last.eyeOpenL < .45 && last.eyeOpenR < .45;
+    }
+    assert.ok(blinks >= 1 && blinks <= 3, hz+' Hz blinks '+blinks);
+    return last.syllableRate;
+  });
+  assert.ok(rates.every(v => v>3 && v<4.5), 'onsets per second '+rates);
+  assert.ok(Math.max(...rates)-Math.min(...rates)<.55);
+});
+
+test('the same voice level gives a held question a distinct tilt and an asymmetric gaze', () => {
+  function pose(kind) {
+    const m=create();
+    advance(m,.65,{phase:'speaking',active:true,playback:.24});
+    return advance(m,.34,{phase:'speaking',active:true,playback:.24,speech:{seq:1,kind}});
+  }
+  const question=pose('question'), stress=pose('emphasis');
+  assert.ok(Math.abs(question.roll-stress.roll) > .12);
+  assert.ok(Math.abs(question.eyeOpenL-question.eyeOpenR) > .15);
+  assert.ok(Math.abs(question.eyeAimX-stress.eyeAimX) + Math.abs(question.gazeX-stress.gazeX) > .25);
+});

@@ -26,6 +26,7 @@ services:
       NIGHT_LISTEN: 0.0.0.0:18786
       NIGHT_PUBLISH_DIR: /srv/night/publish
       NIGHT_DATA_DIR: /srv/night/data
+      NIGHT_OWNER_SOCKET: /srv/night/bridge/admin.sock
       NIGHT_DB: /srv/night/data/diagnostics.sqlite3
       NIGHT_ALLOWLIST: /srv/night/private/allowlist.json
       NIGHT_RETENTION_DAYS: "45"
@@ -39,6 +40,7 @@ services:
     volumes:
       - /vol1/1000/docker/personal-night-ota/app:/app:ro
       - /vol1/1000/mobile/night:/srv/night/publish:ro
+      - /vol1/1000/docker/personal-night-ota/bridge:/srv/night/bridge
       - /vol1/1000/docker/personal-night-ota/data:/srv/night/data
       - /vol1/1000/docker/personal-night-ota/private:/srv/night/private:ro
     healthcheck:

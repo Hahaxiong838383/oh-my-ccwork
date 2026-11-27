@@ -7,7 +7,40 @@
   const encode = new TextEncoder(), decode = new TextDecoder();
   let session = null;
   const model = { phase: 'idle', status: '准备就绪', mine: '', reply: '', muted: false, active: false, paired: !!host?.paired(), level: 0 };
-  const show = patch => { Object.assign(model, patch); window.NightView?.render({...model}); };
+  const SYNC_PHASES = new Set(['idle', 'listening', 'speaking', 'thinking', 'searching', 'muted', 'connecting', 'error']);
+  const SYNC_HEX = /^#[0-9A-F]{6}$/;
+  const lastSync = { initialized: false, phase: '', muted: false, accent: '' };
+  function normalizeAccent(raw) {
+    if (typeof raw !== 'string') return '#4F7DF3';
+    const s = raw.trim().toUpperCase();
+    return SYNC_HEX.test(s) ? s : '#4F7DF3';
+  }
+  function currentAccent() {
+    return normalizeAccent(window.NightView?.accent?.());
+  }
+  function syncPhase() {
+    const p = String(model.phase || 'idle').trim().toLowerCase();
+    if (p === 'idle' && !model.active && /(失败|错误|无效|异常|拒绝|超时|断开|权限|error|failed|denied|invalid)/i.test(String(model.status || ''))) {
+      return 'error';
+    }
+    return SYNC_PHASES.has(p) ? p : 'idle';
+  }
+  function pushSyncState(localAccentPick, forcedAccent, forceSend) {
+    if (typeof host?.syncState !== 'function') return;
+    const phase = syncPhase();
+    const muted = Boolean(model.muted);
+    const accent = forcedAccent ? normalizeAccent(forcedAccent) : currentAccent();
+    if (!forceSend && !localAccentPick && lastSync.initialized
+      && lastSync.phase === phase && lastSync.muted === muted) {
+      return;
+    }
+    lastSync.initialized = true;
+    lastSync.phase = phase;
+    lastSync.muted = muted;
+    lastSync.accent = accent;
+    host.syncState(phase, muted, accent, Boolean(localAccentPick));
+  }
+  const show = patch => { Object.assign(model, patch); window.NightView?.render({...model}); pushSyncState(false); };
   const mark = name => host?.event?.(name);
   function countOnce(s, bucket, id, kind) {
     const last = s[bucket];
@@ -383,9 +416,29 @@
   }
   window.Voice={
     start,stop:()=>{if(session)finish(session);},mute,interrupt,
-    pair(key){if(session)return;const ok=!!host?.pair(String(key).trim());if(ok)mark('paired');show({paired:ok||!!host?.paired(),status:ok?'设备已配对':'凭据格式无效'});return ok;},
+    pair(key){
+      if(session)return;
+      const ok=!!host?.pair(String(key).trim());
+      if(ok)mark('paired');
+      show({paired:ok||!!host?.paired(),status:ok?'设备已配对':'凭据格式无效'});
+      if(ok)pushSyncState(false,currentAccent(),true);
+      return ok;
+    },
     forget(){if(session)return;host?.forget();show({paired:!!host?.paired(),mine:'',reply:'',status:'已解除本机配对'});},
-    onTicket:settleNative,onPermission:settleNative
+    onTicket:settleNative,onPermission:settleNative,
+    onAccentPick(hex){
+      if(typeof hex!=='string')return;
+      const norm=hex.trim().toUpperCase();
+      if(!SYNC_HEX.test(norm))return;
+      pushSyncState(true,norm,true);
+    },
+    onSyncAccent(hex){
+      if(typeof hex!=='string')return;
+      const norm=hex.trim().toUpperCase();
+      if(!SYNC_HEX.test(norm))return;
+      lastSync.accent=norm;
+      window.NightView?.setAccent?.(norm,'remote');
+    }
   };
   document.addEventListener('visibilitychange',()=>{if(document.hidden && session) finish(session);});
   window.addEventListener('pagehide',()=>{if(session) finish(session);});
