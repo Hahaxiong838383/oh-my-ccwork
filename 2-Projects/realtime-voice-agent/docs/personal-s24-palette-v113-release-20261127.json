@@ -1,0 +1,82 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T19:09:47+08:00",
+  "release_tag": "release/personal-voice/v1.0.13",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "09a48074e13ff9d87a9d0db28684519b5b79ed5c",
+      "versionCode": 1000013,
+      "versionName": "V1.0.13",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000013.apk",
+      "size": 1080423,
+      "sha256": "46a8e5f407744e7f4976cd985e64999a60e2a8cce1870545dcd632b50f678483",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "catalog_variants_and_expressions": {
+      "classic": [
+        1,
+        39
+      ],
+      "open": [
+        69,
+        12
+      ],
+      "boop": [
+        190,
+        33
+      ],
+      "robot": [
+        12,
+        10
+      ]
+    },
+    "apk_validation": {
+      "passed": 74,
+      "failed": 0
+    },
+    "gallery": "从签名 APK 解包；逐项检查中文名、触摸实时换色像素、明暗、松手保存、后台配色更新与取消拖动、减少动态及窄屏/横屏打开色盘。",
+    "android_11": "模拟器由 V1.0.12 覆盖升级，番茄红电视从旧版选择自动恢复。屏幕在发送 MOVE 后、UP 前采样，检查头像区域红绿像素数，并在重启后回读最后一次选色。",
+    "android_touch": [
+      {
+        "selected": "番茄红电视",
+        "saved": "#17F316",
+        "redGreenPixelCounts": {
+          "start": [
+            3432,
+            0
+          ],
+          "whileDragging": [
+            184,
+            2787
+          ],
+          "release": [
+            191,
+            2735
+          ]
+        }
+      },
+      {
+        "selected": "湖蓝（102）",
+        "saved": "#17F316",
+        "redGreenPixelCounts": {
+          "start": [
+            7006,
+            0
+          ],
+          "whileDragging": [
+            0,
+            7040
+          ],
+          "release": [
+            0,
+            6994
+          ]
+        }
+      }
+    ],
+    "ota": "已验证公网完整下载、飞牛发布目录和文件临时缓存、测试设备已安装包的摘要一致。",
+    "s24_ultra": "本轮未在用户 S24 Ultra 真机验收。"
+  }
+}
