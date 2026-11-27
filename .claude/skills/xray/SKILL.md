@@ -36,14 +36,15 @@ description: Xray 客户端与 VLESS/REALITY 服务端运维，含 Hostinger Cla
 
 ## X96 断电后无网、DIYP 断流或 SmartTube 卡住
 
-现役 X96 有线口仅走 IPv4，首选 Armbian（.19），备用 TR3000（.254）。11 月 27 日起，由盒端维护实际转发与 DNS。排障时把本次启动的 `/data/misc/x96-boot-status/gateway` 回执、`X96Gateway` 切换日志与实际下一跳对齐。用户正在看电视时，复用已有 ADB 会话，先记录前台应用、启动编号与 uptime，再观察同一段播放。切台、重启 adbd、强停播放器或大流量测速都会干扰这项观察。[盒端主备与实播验收](references/tv-gateway-architecture-20261121.md#现役盒端-ipv4-主备2026-11-27)
+现役 X96 有线口仅走 IPv4，首选 Armbian（.19），备用 TR3000（.254），实际转发与 DNS 由盒端选择。前台有人观看时，复用已有 ADB 会话，记录前台应用、启动编号与 uptime，保留当前频道、视频和播放器进程。排障从同一段播放的被动采样开始。[盒端主备与实播验收](references/tv-gateway-architecture-20261121.md#现役盒端-ipv4-主备2026-11-27)
 
-1. **辨认开机故障。** 在已连接盒子的网关上，用 `adb -s <盒子序列号> shell cat /proc/sys/kernel/random/boot_id` 取编号，读取 `/var/lib/dsh-tv-boot-audit/<boot-id>.json`。若为 `observing`，等该编号的四分钟采样结束。`observed_checks_pass` 覆盖实际开机，`late_join_checks_pass` 只覆盖进入观察后的运行时段。此时保留前台，等下一次自然开机补验。核对本次 early、late、transport 回执与分时 netId、IpClient 配网历史。netId 的绝对值在不同开机间可以变化。
+1. **辨认开机故障。** 从盒上读取 `/proc/sys/kernel/random/boot_id`，在已有 ADB 连接的网关取 `/var/lib/dsh-tv-boot-audit/<boot-id>.json`。若为 `observing`，等该编号的采样收尾。`observed_checks_pass` 覆盖实际开机，`late_join_checks_pass` 只覆盖接入后的时段。核对同次 early、late、transport 回执、分时 netId 和 IpClient 配网历史。核验双网关还要看 `/data/misc/x96-boot-status/gateway` 的 boot ID 与所选地址、`ha_controller_count` 是否为 1，以及路由、DNS 转发规则和流量计数。旧版审计缺少这些字段时，记为主备未核验。判断真实下一跳时，核对普通套接字的 DNS 回答、HTTPS 正文与对应以太网目的 MAC。[盒端验读方法](../../../2-Projects/vps-proxy/tv-gateway/x96-install.md#双网关验读)
 2. **定位重复配网。** 在同一启动内，将 Android 默认网络重建、IpClient 配网失败和 DIYP 读流错误按时序对齐。核对 Magisk 启动目录中的可执行备份及真实进程命令行。退役入口应移出启动目录，并查清它此前拉起的进程。保留 Android 对地址和路由的管理，核对有线口的实际 IPv4 网关与唯一 DNS，并确认全局 IPv6 地址数和 IPv6 默认路由数均为零。`fe80::` 链路本地地址可以保留。[盒端启动接线与回退](../../../2-Projects/vps-proxy/tv-gateway/x96-install.md)
-3. **核对实播。** DIYP 先读盒端两条家庭直播源的 MPEG-TS 正文。DIYP 可能没有 MediaSession，处于前台时连续读 `/sys/class/vdec/vdec_status` 的帧数和错误数。SmartTube 对齐同一视频、清晰度、缓冲位置、媒体分片与硬解帧增量，尤其看能否越过原卡点。换片或切台后另起一段。YouTube 的 204 只记作可达，出口切换的效果用该视频连接上实际增长的字节判断。仅验过 1080p 时，单列高码率原片的验收状态。
+3. **核对实播。** DIYP 在前台时，对齐同一直播连接的收包增量与 `/sys/class/vdec/vdec_status` 的帧数、掉帧及错误数。DIYP 可能没有 MediaSession；独立取得的 MPEG-TS 只证明直播源可读。SmartTube 在前台时，对齐同一视频、清晰度、缓冲位置、媒体分片与硬解帧增量，检查是否越过原卡点。换片或切台后另起一段。若前台一直是 DIYP，YouTube 的 DNS、204 或缩略图成功只记为相应服务可达，SmartTube 本次实播记为未观察。
 
 4. **读到 PoToken 报错时，展开异常链。** `TvPoTokenProvider` 获取令牌也依赖 DNS。底层出现 `UnknownHostException` 或 `EAI_NODATA` 时，按报错时间核对 Android `dumpsys dnsresolver`、网关 `dsh-dns-relay.service` 的超时和媒体出口。远程 DNS 与视频可能同时受一个出口失联影响。若出现持续的 `SabrPoTokenError` 且详情为 `PoToken error: PENDING` 且同期解析、连接正常，再查播放器挑战缓存。[两种报错的现场记录](references/tv-gateway-architecture-20261121.md)
 5. **把恢复时间对到具体动作。** 当前台 SmartTube 状态为 7（错误）且硬解已停止，核对原出口连续失败、备用探测和 `journalctl -t dsh-watch` 的实际切换时间，再看同一视频连接的出口、字节和帧数。若还有 DNS 回退改动，在独立回环测试端口让测试实例的主上游失联，分别用 UDP、TCP 查询支持回退的媒体域 A 记录，核对有效回答及 `media A fallback answered via` 日志。一次运行中实播恢复和一次备用解析验证应各有自己的时间与证据。[故障时序与验证方法](../../../2-Projects/vps-proxy/tv-gateway/README.md#冷启动通过后的第二次播放错误)
+6. **认领崩溃进程。** 开机广播会短暂拉起播放器。按包名、PID 对齐 events 的启动、退出、`am_crash`、`am_anr` 与 `dumpsys activity exit-info <包名>`。退出原因为系统回收且标注 `empty` 时，归为后台空进程回收。crash 缓冲如报厂商音频 HAL 的原生崩溃，单列该进程，再核对 HAL、audioserver 是否运行及当前播放器 UID 的音轨是否 started。开机校时前的日志按启动顺序定位。
 
 ## 盒端运行 sing-box 的旧部署
 
