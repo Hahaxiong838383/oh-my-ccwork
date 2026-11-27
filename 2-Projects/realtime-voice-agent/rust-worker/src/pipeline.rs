@@ -383,7 +383,11 @@ struct Speculation {
     rx: mpsc::Receiver<String>,
 }
 
+// While a long sentence is streaming, its start sample is known before its end.
+struct StreamingCaption { start: u64, text: String }
+
 struct AgentTurn {
+    streaming_caption: Option<Arc<StdMutex<Option<StreamingCaption>>>>,
     search_progress: Option<Arc<StdMutex<crate::search_progress::SearchProgress>>>,
     id: u64,
     task: JoinHandle<()>,
@@ -2916,13 +2920,16 @@ impl Orchestrator {
         }
         let played = turn.ctl.played_samples();
         let turn_id = turn.id;
+        let pending = turn.streaming_caption.as_ref().map(|slot| slot.lock().unwrap_or_else(|e| e.into_inner()));
+        // track() appends text before publishing its completed sample boundary.
+        let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let synth = turn
             .synth_text
             .lock()
             .map(|s| s.clone())
             .unwrap_or_default();
-        let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
-        for (i, span) in sentence_spans(&synth, &progress).iter().enumerate() {
+        let spans = sentence_spans(&synth, &progress);
+        for (i, span) in spans.iter().enumerate() {
             if i >= self.tr_started && played >= span.start_samples {
                 self.tr.agent_segment(turn_id, i, &span.text, false);
                 self.tr_started = i + 1;
@@ -2930,6 +2937,20 @@ impl Orchestrator {
             if i >= self.tr_finaled && played >= span.end_samples {
                 self.tr.agent_segment(turn_id, i, &span.text, true);
                 self.tr_finaled = i + 1;
+            }
+        }
+        if let Some(pending) = pending {
+            let next = spans.len();
+            let completed = progress.last().map_or(0, |p| p.1);
+            if let Some(caption) = pending.as_ref().filter(|c| c.start == completed) {
+                if self.tr_started == next && played > caption.start {
+                    self.tr.agent_segment(turn_id, next, &caption.text, false);
+                    self.tr_started = next + 1;
+                }
+            } else if self.tr_started > next {
+                // The provider abandoned a partial segment. Its slot can be reused.
+                self.tr.agent_segment(turn_id, next, "", false);
+                self.tr_started = next;
             }
         }
     }
@@ -2978,7 +2999,11 @@ impl Orchestrator {
         played: u64,
     ) {
         let spoken_chars = spoken.chars().count();
-        for (i, span) in sentence_spans(synth, progress).iter().enumerate() {
+        let spans = sentence_spans(synth, progress);
+        if self.tr_started > spans.len() {
+            self.tr.agent_segment(turn_id, spans.len(), "", true);
+        }
+        for (i, span) in spans.iter().enumerate() {
             if i < self.tr_finaled {
                 continue;
             }
@@ -3007,6 +3032,9 @@ impl Orchestrator {
             .unwrap_or_default();
         let progress = turn.progress.lock().map(|p| p.clone()).unwrap_or_default();
         let spans = sentence_spans(&synth, &progress);
+        if self.tr_started > spans.len() {
+            self.tr.agent_segment(turn_id, spans.len(), "", true);
+        }
         for (i, span) in spans.iter().enumerate() {
             if i >= self.tr_finaled {
                 self.tr.agent_segment(turn_id, i, &span.text, true);
@@ -3887,6 +3915,8 @@ impl Orchestrator {
         let first_clause_min = self.turn_first_clause_min;
         let synth2 = synth_text.clone();
         let prog2 = progress.clone();
+        let streaming_caption = personal_device.as_ref().map(|_| Arc::new(StdMutex::new(None)));
+        let caption_slot = streaming_caption.clone();
         let llm_chars2 = llm_chars.clone();
         let lp = self.participant.clone();
         // 合成侧要能看见打断信号(讯飞在 pause 期间不能裸 send,见 tts_xfyun::send_or_abort);
@@ -3916,6 +3946,16 @@ impl Orchestrator {
                         .await;
                 });
             };
+            let set_caption = |text: Option<&str>| {
+                if let Some(slot) = &caption_slot {
+                    let pending = text.map(|s| StreamingCaption {
+                        start: prog2.lock().unwrap_or_else(|e| e.into_inner()).last().map_or(0, |p: &(usize,u64)| p.1),
+                        text: s.to_owned(),
+                    });
+                    *slot.lock().unwrap_or_else(|e| e.into_inner()) = pending;
+                }
+            };
+            let mut preview_enabled = caption_slot.is_some();
             let mut samples_cum: u64 = 0;
             let mut chars_cum: usize = 0;
             let mut track = |sentence: &str, bytes: usize| {
@@ -4132,6 +4172,7 @@ impl Orchestrator {
                                 continue;
                             }
                             let synth_t0 = Instant::now();
+                            if preview_enabled { set_caption(Some(&sentence)); }
                             match tts_cfg
                                 .synthesize(&sentence, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
@@ -4146,15 +4187,18 @@ impl Orchestrator {
                                     track(&sentence, bytes);
                                 }
                                 Err(e) => {
+                                    preview_enabled = false;
                                     warn!(room = %room_name, error = %e, "tts synthesize failed");
                                 }
                             }
+                            set_caption(None);
                         }
                     }
                     if let Some(tail) = seg.flush() {
                         let tail = crate::textproc::strip_stage_directions(&tail);
                         if !tail.trim().is_empty() {
                             let synth_t0 = Instant::now();
+                            if preview_enabled { set_caption(Some(&tail)); }
                             match tts_cfg
                                 .synthesize(&tail, &pcm_tx, &ctl_tts, &mut warm)
                                 .await
@@ -4172,6 +4216,7 @@ impl Orchestrator {
                                     warn!(room = %room_name, error = %e, "tts synthesize failed (tail)")
                                 }
                             }
+                            set_caption(None);
                         }
                     }
                     match llm_join.await {
@@ -4225,6 +4270,7 @@ impl Orchestrator {
             }
         });
         self.agent_turn = Some(AgentTurn {
+            streaming_caption,
             search_progress,
             id,
             task,
