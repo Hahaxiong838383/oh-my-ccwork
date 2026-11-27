@@ -22,15 +22,25 @@ const assets = path.resolve(process.argv[2] || path.join(__dirname, '../assets')
           for (let i=0; i<frames; i++) orb.render(1/60);
           const ctx = canvas.getContext('2d'), {width:w,height:h} = canvas;
           const rgba = ctx.getImageData(0,0,w,h).data;
-          return [-2,-1,0,1,2].map(i => {
-            const x = Math.floor((size/2+i*12*Math.min(1,size/228))*w/size);
-            let count=0, light=0;
-            for (let y=Math.ceil(.90*h); y<h; y++) {
+          const {cx,rx,ry,cos,sin}=orb.geometry;
+          const radius=Math.hypot(rx*cos,ry*sin), columns=[];
+          for(let x=0;x<w;x++){
+            let rows=0, alpha=0;
+            for(let y=Math.ceil(.90*h);y<h;y++){
               const at=(y*w+x)*4;
-              if (rgba[at]>100 && rgba[at+3]>12) { count++; light+=rgba[at+3]; }
+              if(rgba[at]>100 && rgba[at+3]>3){rows++;alpha=Math.max(alpha,rgba[at+3]);}
             }
-            return {height:count*size/h, light};
+            columns.push({x:(x+.5)*size/w,height:rows*size/h,alpha});
+          }
+          const lit=columns.filter(c=>c.alpha>0);
+          const inBand=(low,high)=>columns.filter(c=>{
+            const u=Math.abs(c.x-cx)/radius;return u>=low && u<=high;
           });
+          const height=(low,high)=>Math.max(0,...inBand(low,high).map(c=>c.height));
+          const alpha=(low,high)=>Math.max(0,...inBand(low,high).map(c=>c.alpha));
+          return {center:height(0,.15),middle:height(.4,.6), centerAlpha:alpha(0,.15),
+            edgeAlpha:alpha(.76,.88),tipAlpha:alpha(.985,1.03),
+            widthRatio:lit.length ? (lit.at(-1).x-lit[0].x)/(2*radius) : 0};
         };
         orb.setState('listening',true,false); orb.micTarget=1;
         const listening=render(0);
@@ -40,14 +50,16 @@ const assets = path.resolve(process.argv[2] || path.join(__dirname, '../assets')
         orb.setState('speaking',true,false); const next=render(0,1);
         return {listening,quiet,soft,loud,pause,interrupt,next};
       }, size);
-      const center = a => a[2].height;
-      assert.equal(center(data.listening),0);
-      assert.ok(center(data.loud)>center(data.soft) && center(data.soft)>center(data.quiet));
-      assert.ok(data.loud[2].height>data.loud[1].height && data.loud[1].height>=data.loud[0].height);
-      assert.deepEqual(data.pause,data.quiet);
-      assert.ok(data.interrupt.every(mark=>mark.height===0));
-      assert.deepEqual(data.next,data.quiet);
-      console.log(size+'px sphere, center pulse, silent / soft / loud (CSS px):', ...[data.quiet,data.soft,data.loud].map(center));
+      assert.equal(data.listening.center,0);
+      assert.ok(data.loud.center>data.soft.center && data.soft.center>data.quiet.center);
+      assert.ok(data.loud.center>data.loud.middle);
+      assert.ok(data.loud.widthRatio>.82 && data.loud.widthRatio<=1.02,JSON.stringify(data.loud));
+      assert.ok(data.loud.centerAlpha>data.loud.edgeAlpha && data.loud.edgeAlpha>data.loud.tipAlpha);
+      assert.ok(data.loud.tipAlpha<10);
+      assert.ok(Math.abs(data.pause.center-data.quiet.center)<=1);
+      assert.equal(data.interrupt.widthRatio,0);
+      assert.ok(Math.abs(data.next.center-data.quiet.center)<=1);
+      console.log(size+'px canvas:',JSON.stringify(data.loud));
     }
     await page.emulateMedia({reducedMotion:'reduce'});
     const samples = await page.evaluate(() => {

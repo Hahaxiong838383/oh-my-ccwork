@@ -29,6 +29,7 @@ pub struct TranscriptPub {
     lp: LocalParticipant,
     route: Route,
     user_seg: String,
+    last_user_final: Option<String>,
 }
 
 fn new_seg_id() -> String {
@@ -38,7 +39,7 @@ fn new_seg_id() -> String {
 
 impl TranscriptPub {
     pub fn new(lp: LocalParticipant, route: Route) -> Self {
-        Self { lp, route, user_seg: new_seg_id() }
+        Self { lp, route, user_seg: new_seg_id(), last_user_final: None }
     }
 
     /// fire-and-forget 发布(与 metrics publish 同款:失败只 debug 不抛,不阻塞热路径)。
@@ -71,15 +72,20 @@ impl TranscriptPub {
     /// 用户 definite:当前段收尾(final=true)并轮换段 id。
     pub fn user_final(&mut self, text: &str) {
         self.publish(&self.route.user_identity, &self.route.user_track_sid, &self.user_seg, text, true);
-        self.user_seg = new_seg_id();
+        let id = std::mem::replace(&mut self.user_seg, new_seg_id());
+        if !text.trim().is_empty() { self.last_user_final = Some(id); }
     }
 
     /// B50 §4:**只轮换段 id,不发包**——把本段 id 交给 `CaptionGate` 缓冲,等 commit 裁决。
     /// 立刻轮换是关键:否则下一句的 interim 会复用同一个段 id,覆盖掉这段还没发的 final
     /// (codex §4「不能把下一句并到残留 interim 上」)。
     pub fn take_seg_for_deferred_final(&mut self) -> String {
-        std::mem::replace(&mut self.user_seg, new_seg_id())
+        let id = std::mem::replace(&mut self.user_seg, new_seg_id());
+        self.last_user_final = Some(id.clone());
+        id
     }
+
+    pub fn last_user_final(&self) -> Option<&str> { self.last_user_final.as_deref() }
 
     /// B52:一批被缓冲的 final 一次性发出。**同一个 spawn 里按序 await**——
     /// 逐条 `publish()` 会各起一个 tokio 任务,批内顺序不作保证,端侧可能倒着收到

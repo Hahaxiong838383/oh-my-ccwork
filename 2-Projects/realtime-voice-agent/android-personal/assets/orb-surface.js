@@ -158,7 +158,7 @@
       this.speech = null;
       // Previous remote-playout levels in 16 ms time bins, shared with the
       // sphere render loop. The center reacts first; the flanks echo each syllable.
-      this.pulseTrail = new Float32Array(6);
+      this.pulseTrail = new Float32Array(10);
       this.pulseEnvelope = this.pulseTime = this.pulseLight = 0;
       this.spokenFor = this.quietFor = 0;
       this.yaw = this.pitch = 0;
@@ -270,7 +270,7 @@
     }
     drawPulse(dt) {
       const level = this.playback > .018 ? Math.pow((this.playback-.018)/.982, .70) : 0;
-      const follow = level > this.pulseEnvelope ? 32 : 12;
+      const follow = level > this.pulseEnvelope ? 42 : 13;
       this.pulseEnvelope = mix(this.pulseEnvelope, level, 1-Math.exp(-follow*dt));
       if (this.pulseEnvelope < .009) this.pulseEnvelope = 0;
       this.pulseTime += dt;
@@ -281,21 +281,38 @@
       }
       this.pulseLight = mix(this.pulseLight, this.pulseEnvelope, 1-Math.exp(-3*dt));
       const reduced = this.reduced.matches, ctx = this.ctx;
-      const scale = Math.min(1, this.width/228);
-      const midY = this.height*.939;
-      const ink = this.rgb.map(v => Math.round(mix(v, 246, .62)));
+      // Use the projected silhouette from this frame, including tilt and breathing.
+      const {cx, rx, ry, cos, sin} = this.geometry;
+      const radius = Math.hypot(rx*cos, ry*sin);
+      const midY = this.height*.938;
+      const halfCount = Math.round(clamp(radius/8.5, 4, 12));
+      const stroke = clamp(radius*.022, 1, 2.3);
+      const maxHalf = Math.min(radius*.112, this.height*.044, 12);
+      const rgb = this.rgb.map(v => Math.round(mix(v, 246, .62))).join(',');
+      const ink = a => 'rgba('+rgb+','+a+')';
+      const light = reduced ? this.pulseLight : this.pulseEnvelope;
       ctx.save();
-      for (let i=-2; i<=2; i++) {
-        const distance = Math.abs(i);
-        const echo = distance ? this.pulseTrail[distance*2] : this.pulseEnvelope;
-        const value = echo * (1 - .24*distance);
-        const radius = 2*scale;
-        const half = reduced ? 0 : 8*value*scale;
-        const x = this.width/2 + i*12*scale;
-        ctx.strokeStyle = 'rgba('+ink.join(',')+','+(.25+.69*(reduced ? this.pulseLight : value))+')';
-        ctx.fillStyle = ctx.strokeStyle;
-        ctx.lineWidth = 2*radius; ctx.lineCap = 'round'; ctx.beginPath();
-        if (half < .06) { ctx.arc(x,midY,radius,0,TAU); ctx.fill(); }
+      const line = ctx.createLinearGradient(cx-radius, midY, cx+radius, midY);
+      const sheen = .10 + .10*light;
+      line.addColorStop(0, ink(0)); line.addColorStop(.18, ink(sheen*.42));
+      line.addColorStop(.5, ink(sheen));
+      line.addColorStop(.82, ink(sheen*.42)); line.addColorStop(1, ink(0));
+      ctx.fillStyle = line;
+      ctx.fillRect(cx-radius, midY-.5, 2*radius, 1);
+      ctx.lineWidth = stroke; ctx.lineCap = 'round';
+      for (let i=-halfCount; i<=halfCount; i++) {
+        const u = Math.abs(i)/halfCount;
+        const edge = clamp((u-.55)/.45, 0, 1);
+        const fade = (1+Math.cos(Math.PI*edge))/2;
+        const lag = u*(this.pulseTrail.length-1);
+        const echo = mix(this.pulseTrail[Math.floor(lag)], this.pulseTrail[Math.ceil(lag)], lag%1);
+        const energy = mix(this.pulseEnvelope, echo, u);
+        const bell = Math.pow(Math.cos(u*Math.PI/2), 1.45);
+        const half = reduced ? 0 : maxHalf*bell*energy;
+        const x = cx + i/halfCount*(radius-stroke/2);
+        ctx.fillStyle = ctx.strokeStyle = ink(fade*(.22+.66*(reduced ? light : energy*(.6+.4*bell))));
+        ctx.beginPath();
+        if (half < .06) { ctx.arc(x,midY,stroke/2,0,TAU); ctx.fill(); }
         else { ctx.moveTo(x,midY-half); ctx.lineTo(x,midY+half); ctx.stroke(); }
       }
       ctx.restore();

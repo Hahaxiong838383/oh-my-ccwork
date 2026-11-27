@@ -281,6 +281,12 @@
       if(!s.ready)mark('connected');
       if(previous && previous.sid!==p.sid){clearSpeech(s,true);s.parts.clear();s.turn=null;}
       s.peer=p;s.ready=true;s.hellos.delete(p.sid);syncOutput(s,workers(s));refresh(s);
+    } else if(topic==='personal.v1.output' && f.type==='turn_stopped' && s.peer?.sid===p.sid
+      && typeof f.segment==='string' && /^SG_[a-f0-9]{12}$/.test(f.segment)){
+      s.stoppedSegment=f.segment;
+      if(s.lastUserCaption===f.segment){
+        s.thinking=false;refresh(s);
+      }
     } else if(topic==='control' && f.type==='cancel.ack' && f.src==='worker' && s.cancel && s.cancel.seq===f.seq && s.trace===f.trace_id){
       mark('cancel_ack');clearTimeout(s.cancel.timer);s.cancel=null;s.thinking=false;s.speaking=false;s.speechActive=false;endSpeech(s);refresh(s);
     } else if(topic==='state' && f.k==='speaking' && typeof f.speaking==='boolean'){
@@ -305,7 +311,7 @@
         }
         if(it.final){s.segments.add(it.id);if(s.segments.size>128)s.segments.delete(s.segments.values().next().value);}
         show({mine:it.text});
-        if(it.final && it.text.trim()){s.thinking=true;refresh(s);}
+        if(it.final && it.text.trim()){s.thinking=it.id!==s.stoppedSegment;refresh(s);}
         continue;
       }
       if(it.text.trim())countOnce(s,'lastReplyCaption',it.id,'rx_caption');

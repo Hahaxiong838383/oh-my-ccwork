@@ -123,7 +123,11 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
             anyhow::bail!("candidate room cleanup registration failed");
         }
     };
-    let meta: JobMeta = serde_json::from_str(&job.metadata).unwrap_or_default();
+    // The private ticket binds an owner and a phone. Company lesson, hardware
+    // and session policies belong only to dispatches from the device service.
+    let meta = if personal_device.is_some() { JobMeta::default() } else {
+        serde_json::from_str(&job.metadata).unwrap_or_default()
+    };
     let mut business = crate::business_runtime::Runtime::from_env(&room_name, meta.voice_idle.as_ref(), t0);
     if let Some(w) = business.as_mut() {
         if w.enforcing() && close_intent.is_none() {
@@ -329,11 +333,17 @@ pub async fn run_job(config: Config, job: proto::Job, url: String, token: String
                 if topic.as_deref() == Some(control::TOPIC)
                     && let Some((ev, kind)) = control::parse(&payload)
                 {
+                    // The phone uses this shared envelope only for the interrupt button.
+                    if let Some(device) = &personal_device {
+                        if !matches!(kind, control::Inbound::Cancel) || !participant.as_ref()
+                            .is_some_and(|p| current_remote(&room, p) && p.identity().as_str() == device) { continue; }
+                    }
                     // participant identity 随包透传:canary.say 的白名单认它,不认 payload 自述
                     let identity = participant.as_ref().map(|p| p.identity().to_string());
                     if ctrl_tx.try_send((ev, kind, identity)).is_err() {
                         warn!(room = %room_name, "control 队列满,丢弃一个控制包");
                     }
+                } else if personal_device.is_some() { continue;
                 } else if topic.as_deref() == Some(control::DEVICE_RESULT_TOPIC) {
                     // S2-B2 + v3.1 R4(codex 复核 §5):result 只认**本房绑定的设备 participant**(用户轨订阅时记下的身份),
                     // 不再只排除 agent- 前缀;payload src 自述在 parse 里二验。身份随包透传给 pipeline 记日志。

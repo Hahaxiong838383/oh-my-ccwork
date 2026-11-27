@@ -1,0 +1,113 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T12:52:39+08:00",
+  "deployments": {
+    "personal-worker": {
+      "source_commit": "575e0215246ff9f273dd16594d3e0b885942599c",
+      "image": "personal-voice-worker:3ff07236cec2",
+      "image_id": "sha256:f8d1e3f8fcdc4ec51f94d6fbfb2661c4a018f778630e9fb585b299147d1d9475",
+      "sha256": "3ff07236cec23355a6de48259a5d402af0ce4c438271e36f4bc4cb7298fb57ce",
+      "file": "/usr/local/bin/voice-rust-worker",
+      "previous_image": "personal-voice-worker:c9cc924bc348"
+    },
+    "s24-night-apk": {
+      "source_commit": "575e0215246ff9f273dd16594d3e0b885942599c",
+      "versionCode": 1000008,
+      "versionName": "V1.0.8",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000008.apk",
+      "size": 242661,
+      "sha256": "9ee441a65ad71132b52d3a1fe3cef4d7582addd4f5af8205059cf75f46a67635",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "before": "同一房间中播放长回复后说「退出」，已识别。超过关房宽限后追加报时，屏幕仍显示小可在听，连续 4.5 秒未出现后续问题字幕或回答。Worker 执行了 session_exit close armed。",
+    "after": {
+      "test": "公开签票、真实飞牛 Worker，Chromium 加载与公开 APK 字节相同的资源，用中文录音模拟麦克风。播报时与聆听时各说一次退出，各继续报时，期间没有挂断或重连。",
+      "handshakes": 1,
+      "rooms": 1,
+      "local_participants": 1,
+      "spoken_stops": 2,
+      "time_answers": 2,
+      "disconnects_before_hangup": 0,
+      "remote_audio_and_captions": true,
+      "button_interrupt_ack_and_followup": true,
+      "hangup_teardown": true
+    },
+    "pulse": {
+      "design": "Google Antigravity；依据每一帧可见球体的投影宽度绘制对称圆头细条，向两端平滑淡至透明。",
+      "canvas_css_px": {
+        "58": {
+          "center": 4.5,
+          "middle": 4,
+          "centerAlpha": 215,
+          "edgeAlpha": 42,
+          "tipAlpha": 0,
+          "widthRatio": 0.9237499936733751
+        },
+        "212": {
+          "center": 16.5,
+          "middle": 12.5,
+          "centerAlpha": 215,
+          "edgeAlpha": 87,
+          "tipAlpha": 0,
+          "widthRatio": 0.9344139397274493
+        },
+        "304": {
+          "center": 23,
+          "middle": 18,
+          "centerAlpha": 215,
+          "edgeAlpha": 55,
+          "tipAlpha": 0,
+          "widthRatio": 0.9345452022213239
+        }
+      },
+      "reduced_motion": "经像素检测，高度固定、随声亮度变化。",
+      "live_pixel_height_range": [
+        1.0,
+        16.97
+      ]
+    },
+    "private_runtime": {
+      "worker_mounts": [
+        {
+          "from": "/vol1/1000/docker/personal-voice-runtime/cache",
+          "to": "/var/cache/personal-voice",
+          "rw": true
+        },
+        {
+          "from": "/vol1/1000/docker/personal-voice-runtime/private/providers",
+          "to": "/run/personal-providers",
+          "rw": false
+        }
+      ],
+      "brain_mounts": [
+        {
+          "from": "/vol1/1000/docker/personal-voice-runtime/brain-data",
+          "to": "/data",
+          "rw": true
+        },
+        {
+          "from": "/vol1/1000/docker/personal-voice-runtime/private/providers",
+          "to": "/run/personal-providers",
+          "rw": false
+        }
+      ],
+      "worker": "private-dispatch-brain-providers",
+      "brain": {
+        "service": "personal-brain",
+        "providerState": "ready"
+      }
+    },
+    "android": "Android 11 模拟器从 V1.0.7 覆盖升级到 V1.0.8 ，系统报告 NightHostActivity 已恢复并获得窗口焦点；本轮未连接 S24 真机。",
+    "apk_validation": {
+      "passed": 65,
+      "failed": 0
+    },
+    "worker_tests": {
+      "passed": 662,
+      "failed": 0,
+      "ignored": 2
+    }
+  }
+}
