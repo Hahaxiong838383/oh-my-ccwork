@@ -1,6 +1,6 @@
 ---
 name: amlogic-armbian-flash
-description: Amlogic 安卓机顶盒从 root ADB 启动 Armbian、选择/修正 DTB、备份并写入 eMMC、回滚和独立启动验收的安全 SOP。用户提到“机顶盒刷 Armbian”“Amlogic 刷 Linux”“S905L/S905X”“aml_autoscript”“armbian-install”“eMMC 找不到”“mmc error -84”“USB 启动后失联”时使用。
+description: Amlogic 安卓机顶盒从 root ADB/telnetd 启动 Armbian、Windows 远端安全写 U 盘、选择/修正 DTB、备份并写入 eMMC、预置静态 IP、回滚和独立启动验收的安全 SOP。用户提到“机顶盒刷 Armbian”“Amlogic 刷 Linux”“Phicomm-T1”“S912”“S905L/S905X”“aml_autoscript”“armbian-install”“eMMC 找不到”“mmc error -84”“USB 启动后失联”时使用。
 ---
 
 # amlogic-armbian-flash（多引擎入口）
