@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
-import { setTimeout as delay } from 'node:timers/promises';
 
 const base = process.env.BRAIN_VERIFY_URL ?? 'http://127.0.0.1:8080';
 const key = process.env.BRAIN_WORKER_KEY ?? process.env.LLM_API_KEY;
@@ -30,16 +29,6 @@ async function chat(question, session, opts) {
 function streamEvents(body) {
   return body.split('\n').filter((line) => line.startsWith('data: ')).map((line) => line.slice(6));
 }
-async function until(read, label) {
-  const start = Date.now();
-  while (Date.now() - start < 40_000) {
-    const row = read();
-    if (row) return row;
-    await delay(250);
-  }
-  throw new Error(label + ' timed out');
-}
-
 assert.equal((await request('现在几点？', 'verify-unauthorized', { headers: { Authorization: 'Bearer wrong' } })).status, 401);
 assert.equal((await request('现在几点？', '../../wrong')).status, 400);
 for (const question of ['你能联网搜索吗？', '小可，你有哪些工具？']) {
@@ -181,34 +170,95 @@ if (process.env.BRAIN_VERIFY_CPA_SEARCH === '1') {
 }
 
 if (profile) {
-  const name = '青梧舵手';
-  const negative = await chat('我让你以后怎么称呼我？', 'verify-clean');
-  assert.ok(!negative.text.includes(name), 'blank-memory control');
-  const first = '请记住，以后叫我' + name + '。我不喜欢香菜，以后不要推荐。';
-  await chat(first, 'verify-memory-a', { body: { user: 'spoofed-owner' } });
-  const row = await until(() => profile.prepare('SELECT account_id,nickname FROM family_member WHERE nickname=?').get(name), 'nickname extract');
-  const memory = await until(() => profile.prepare(
-    "SELECT source_msg_id FROM memory_item WHERE account_id=? AND content LIKE '%香菜%' AND status='active' AND source_msg_id<>''",
-  ).get(row.account_id), 'preference provenance');
-  const original = conversations.prepare('SELECT account_id,session_id,text FROM conversation WHERE id=?').get(memory.source_msg_id);
-  assert.equal(original.session_id, 'verify-memory-a');
-  assert.equal(original.account_id, row.account_id);
-  assert.equal(original.text, first);
-  assert.equal(row.account_id, process.env.BRAIN_OWNER_ID);
-  const second = await chat('我让你以后怎么称呼我？我明确说过不喜欢哪种食材？', 'verify-memory-b');
-  assert.match(second.text, /青梧舵手/);
-  assert.match(second.text, /香菜/);
-  assert.ok(profile.prepare('SELECT last_injected_at FROM memory_item WHERE source_msg_id=? AND last_injected_at>0').get(memory.source_msg_id));
-  console.log('independent-room memory extraction, source pointer and recall passed');
+  // BRAIN_VERIFY_DATA belongs to a disposable instance. A clean owner is the blank-memory control.
+  const owner = process.env.BRAIN_OWNER_ID;
+  assert.ok(owner, 'isolated verification owner required');
+  const template = () => profile.prepare('SELECT template FROM trait_template WHERE account_id=?').get(owner)?.template ?? 'default';
+  async function direct(question, room, tool, opts) {
+    const reply = await chat(question, room, opts);
+    assert.equal(reply.tool, tool, question);
+    assert.equal(reply.sources, undefined, question);
+    return reply.text;
+  }
+  function sourceFor(kind, topic, value, room, original) {
+    const fact = profile.prepare('SELECT value,source_msg_id,source_quote FROM personal_memory_fact WHERE account_id=? AND kind=? AND topic=?')
+      .get(owner, kind, topic);
+    assert.equal(fact?.value, value, topic);
+    assert.ok(fact.source_quote && original.includes(fact.source_quote), topic);
+    const turn = conversations.prepare('SELECT account_id,session_id,role,text FROM conversation WHERE id=?').get(fact.source_msg_id);
+    assert.deepEqual({...turn}, {account_id: owner, session_id: room, role: 'user', text: original});
+    return fact.source_msg_id;
+  }
+  try {
+    const name = '青梧舵手';
+    assert.match(await direct('我让你以后怎么称呼我？', 'verify-clean', 'memory'), /不记得/);
+    const first = '请记住，以后叫我' + name + '。我不喜欢香菜，以后不要推荐。';
+    const saved = await direct(first, 'verify-memory-a', 'memory_action', {body: {user: 'spoofed-owner'}});
+    assert.match(saved, /记住.*青梧舵手.*不喜欢香菜/);
+    assert.equal(profile.prepare('SELECT nickname FROM family_member WHERE account_id=?').get(owner)?.nickname, name);
+    sourceFor('name', '称呼', name, 'verify-memory-a', first);
+    const sourceId = sourceFor('preference', '香菜', '不喜欢', 'verify-memory-a', first);
+    const getInjection = () => profile.prepare("SELECT last_injected_at FROM memory_item WHERE account_id=? AND source_msg_id=? AND status='active'")
+      .get(owner, sourceId);
+    const before = getInjection();
+    assert.ok(before, 'preference has an active evidence row');
+    const second = await direct('我让你以后怎么称呼我？我明确说过不喜欢哪种食材？', 'verify-memory-b', 'memory');
+    assert.match(second, /青梧舵手/);
+    assert.match(second, /不喜欢香菜/);
+    assert.deepEqual(getInjection(), before, 'deterministic recall did not inject an LLM prompt');
+    const unknown = await direct('你记得我的幸运颜色是什么吗？', 'verify-memory-b', 'memory');
+    assert.match(unknown, /不记得/);
+    assert.doesNotMatch(unknown, /青梧舵手|香菜/);
 
-  await chat('你以后回答要简短一点。', 'verify-style-a');
-  assert.equal(profile.prepare('SELECT template FROM trait_template WHERE account_id=?').get(row.account_id)?.template, 'quiet');
-  assert.ok(profile.prepare("SELECT 1 AS found FROM growth_event WHERE account_id=? AND trigger_quote LIKE '%简短一点%'").get(row.account_id));
-  const styled = await chat('打个招呼，然后告诉我你能帮我做些什么。', 'verify-style-b');
-  assert.ok(styled.text.length <= 115 && styled.text.split(/[。！？]+/u).filter(Boolean).length <= 2, 'quiet persona in real reply');
-  console.log('style feedback, growth ledger and next-room reply passed');
+    const correction = '我以前不喜欢香菜，但现在已经喜欢上香菜了。';
+    assert.match(await direct(correction, 'verify-memory-b', 'memory_action'), /记住.*喜欢香菜/);
+    sourceFor('preference', '香菜', '喜欢', 'verify-memory-b', correction);
+    const corrected = await direct('你记得我喜欢香菜吗？', 'verify-memory-c', 'memory');
+    assert.match(corrected, /喜欢香菜/);
+    assert.doesNotMatch(corrected, /不喜欢/);
+    assert.match(await direct('把我喜欢香菜这件事忘掉', 'verify-memory-c', 'memory_action'), /移除/);
+    assert.match(await direct('你记得我喜欢香菜吗？', 'verify-memory-d', 'memory'), /不记得/);
+    assert.match(await direct('把我喜欢香菜这件事忘掉', 'verify-memory-d', 'memory_action'), /没有找到/);
+    assert.match(await direct('我让你以后怎么称呼我？', 'verify-memory-d', 'memory'), /青梧舵手/);
+    console.log('memory action receipts, original user evidence, correction and retraction across rooms passed');
 
-  await chat('临时请求仅回复好的。', 'verify-temporary', { body: { store: false } });
-  assert.equal(conversations.prepare("SELECT 1 FROM conversation WHERE session_id='verify-temporary'").get(), undefined);
-  console.log('temporary conversation leaves no transcript');
+    const transient = {body: {store: false}};
+    const command = '你以后回答要简短一点。';
+    assert.match(await direct(command, 'verify-style-a', 'style'), /以后.*简短/);
+    assert.equal(template(), 'quiet');
+    assert.ok(profile.prepare('SELECT 1 FROM growth_event WHERE account_id=? AND trigger_quote=?').get(owner, command));
+    const styled = await chat('打个招呼，然后告诉我你能帮我做些什么。', 'verify-style-b');
+    assert.equal(styled.tool, undefined);
+    assert.ok(styled.text.length <= 115 && styled.text.split(/[。！？]+/u).filter(Boolean).length <= 2, 'quiet persona in real reply');
+
+    const room = 'verify-style-once';
+    assert.match(await direct('只这一次，说话幽默一点。', room, 'style'), /下一问.*幽默/);
+    assert.match(await direct('以后都这样', room + '-other', 'style'), /想让我以后怎么说/);
+    assert.match(await direct('伦敦现在几点？', room, 'clock'), /伦敦/);
+    const answer = await chat('给我讲讲彩虹是怎么来的。', room);
+    assert.equal(answer.tool, undefined);
+    assert.equal(template(), 'quiet');
+    assert.match(await direct('以后都这样', room, 'style'), /以后.*幽默/);
+    assert.equal(template(), 'funny');
+
+    assert.match(await direct('只这一次，简短点。', room, 'style'), /下一问.*简短/);
+    assert.equal((await chat('给我讲讲海水为什么是咸的。', room)).tool, undefined);
+    assert.equal((await chat('聊聊枫叶为什么会变红。', room)).tool, undefined);
+    assert.match(await direct('以后都这样', room, 'style'), /想让我以后怎么说/);
+    assert.equal(template(), 'funny');
+    for (const [text, key] of [['以后多聊点', 'chatty'], ['以后简短些', 'quiet'], ['以后幽默些', 'funny'], ['以后恢复默认', 'default']]) {
+      assert.match(await direct(text, 'verify-style-switch', 'style'), /以后/);
+      assert.equal(template(), key);
+    }
+    assert.match(await direct('以后都简短点', 'verify-temporary', 'style', transient), /临时对话/);
+    assert.equal(template(), 'default');
+    console.log('temporary and persistent style, cross-room isolation, immediate switches and growth ledger passed');
+
+    await chat('临时请求仅回复好的。', 'verify-temporary', transient);
+    assert.equal(conversations.prepare("SELECT 1 FROM conversation WHERE session_id='verify-temporary'").get(), undefined);
+    console.log('temporary conversation leaves no transcript');
+  } finally {
+    conversations.close();
+    profile.close();
+  }
 }

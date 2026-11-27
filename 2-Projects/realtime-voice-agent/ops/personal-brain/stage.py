@@ -48,6 +48,18 @@ text = remove(r'^  let gameProgress.*\n|^  if \(gameProgress.length\).*\n', text
 text = remove(r'^      // docs/25 问题4.*\n      // .*\n      gameProgress[^;]+;\n', text)
 text = text.replace("import type { AuthContext } from './auth-jwt.js';",
                     "type AuthContext = { accountId: string; role: string };")
+# In the private service, facts supplied to the model must be tied to the owner's words.
+# Keep the shared persona, relationship and persistent style assembly intact.
+for old, new in [
+    ('opts?: { skipInjectReceipt?: boolean }', 'opts?: { skipInjectReceipt?: boolean; personalMemory?: {lines:string[]; ids:string[]} }'),
+    ('buildChildMemoryBlock(meta, auth)', 'buildChildMemoryBlock(meta, auth, opts?.personalMemory)'),
+    ('  auth: AuthContext | null,\n): { text: string; injectedIds:', '  auth: AuthContext | null,\n  personalMemory?: {lines:string[]; ids:string[]},\n): { text: string; injectedIds:'),
+    ('  const episodic =\n    auth?.accountId', '  if (personalMemory) parts.splice(0, parts.length, ...personalMemory.lines);\n  const episodic =\n    !personalMemory && auth?.accountId'),
+    ('injectedIds: episodic?.injectedIds ?? []', 'injectedIds: personalMemory?.ids ?? episodic?.injectedIds ?? []'),
+]:
+    if text.count(old) != 1:
+        raise SystemExit('Personal evidence hook moved: ' + old)
+    text = text.replace(old, new)
 path.write_text(text.replace('孩子', '主人'))
 path = target / 'style-template.ts'
 path.write_text(path.read_text().replace('家长设定', '主人设定').replace('孩子', '主人'))

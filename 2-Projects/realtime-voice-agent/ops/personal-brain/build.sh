@@ -8,7 +8,7 @@ context="$build/context"
 mkdir -p "$build/deps" "$context"
 cp "$source_dir/"{package.json,package-lock.json} "$build/deps/"
 npm ci --prefix "$build/deps" --cache "$build/npm-cache" --ignore-scripts --no-audit --no-fund
-cp "$here/"{server.ts,upstream.ts,providers.ts,voice-progress.ts,public-queries.ts,weather-fallback.ts,market-news.ts} "$build/"
+cp "$here/"{server.ts,upstream.ts,providers.ts,voice-progress.ts,public-queries.ts,weather-fallback.ts,market-news.ts,memory-actions.ts,memory-recall.ts,personal-style.ts} "$build/"
 cp "$source_dir/package.json" "$build/package.json"
 ln -sfn deps/node_modules "$build/node_modules"
 python3 "$here/stage.py" "$source_dir/src" "$build/p003"
