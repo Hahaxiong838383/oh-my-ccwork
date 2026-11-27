@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- The crown and inset eyes follow the crop of the approved full-colour B2 portrait. -->
+    <group android:translateX="18" android:translateY="18"
+        android:scaleX="0.05742" android:scaleY="0.05742">
+        <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF"
+            android:strokeWidth="40" android:strokeLineCap="round"
+            android:pathData="M-120,385 Q160,31 590,31 Q1085,25 1320,585" />
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M377,466 C397,341 570,348 562,479 L522,680 C503,797 329,783 345,663 Z M833,585 C851,481 1008,489 994,601 L965,746 C948,851 792,833 808,728 Z" />
+    </group>
+</vector>
