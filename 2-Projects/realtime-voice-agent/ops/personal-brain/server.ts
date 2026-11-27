@@ -194,24 +194,25 @@ function remember(room: string, entry: Omit<NonNullable<ReturnType<typeof follow
 let extraction = Promise.resolve();
 let extractionPending = 0;
 
-function persist(session: string, user: string, answer: string, excluded: boolean) {
+function persist(session: string, user: string, reply: Reply) {
+  const {text: answer, excluded} = reply;
   const replyFeedback = isReplyFeedback(user);
   const [feedback] = conversationStore.addTurn({
     account_id: owner.accountId, session_id: session, memory_excluded: excluded || replyFeedback,
-  }, user, answer);
+  }, user, answer, !!reply.feedbackEligible && !replyFeedback);
   if (excluded) return;
   const recent = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }));
   // Inspect adjacency before removing excluded turns: a tool response breaks the pair.
   const [, actualFeedback, priorReply, priorRequest] = recent;
-  const adjacent = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && !priorReply.memory_excluded
-    && priorRequest?.role === 'user' && !priorRequest.memory_excluded;
+  const paired = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && priorRequest?.role === 'user';
   if (replyFeedback) {
-    if (adjacent) {
+    if (paired) {
       try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
       catch { report('story_feedback_failed'); }
     }
     return;
   }
+  const adjacent = paired && !priorReply.memory_excluded && !priorRequest.memory_excluded;
   // Older binaries persisted pure feedback without an exclusion flag. Keep those
   // pairs out of subsequent extraction windows without rewriting the transcript.
   const snapshot = recent.filter((row, index) => {
@@ -283,7 +284,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
   }
 }
 
-type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean };
+type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean; feedbackEligible?: boolean };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
   onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void): Promise<Reply> {
@@ -431,7 +432,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   if (!text.trim()) throw new Error('chat_empty');
   style?.consume?.();
-  return { text, excluded: Boolean(style && !style.consume) };
+  return { text, excluded: Boolean(style && !style.consume), feedbackEligible:true };
 }
 
 const app = new Hono();
@@ -485,7 +486,7 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
     const revision = memory.revision;
     const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')), suppressCue);
     signal.throwIfAborted();
-    if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply.text, reply.excluded);
+    if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply);
     return reply;
   };
   const details = (reply: Reply) => ({

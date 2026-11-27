@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { clampTrait, DAILY_ORGANIC_CAP, TRAIT_LABELS, traitStore } from './p003/trait-store.js';
 import { isCrisisContent } from './p003/memory-safety-filter.js';
-import type { ConversationItem } from './p003/conversation-store.js';
+import { conversationStore, type ConversationItem } from './p003/conversation-store.js';
 
 const compact = (text: string) => text.normalize('NFKC').replace(/[\s，、。,.！!~～]/gu, '');
 const reference = '(?:(?:我)?(?:(?:你)?(?:刚刚|刚才)(?:你)?(?:讲|说)(?:的|得)?|(?:你)?(?:刚刚|刚才)(?:的)?|(?:你)?(?:刚)?(?:讲|说)的))?';
@@ -55,7 +55,7 @@ export class PersonalStoryFeedback {
 
   record(owner: string, question: ConversationItem, reply: ConversationItem, feedback: ConversationItem): void {
     const approval = explicitReplyApproval(feedback.text);
-    if (!approval || isReplyFeedback(question.text) || question.memory_excluded || reply.memory_excluded
+    if (!approval || isReplyFeedback(question.text) || !conversationStore.canRateReply(reply.id)
       || [question,reply,feedback].some(x => x.account_id !== owner || x.session_id !== feedback.session_id || isCrisisContent(x.text))
       || question.role !== 'user' || reply.role !== 'assistant' || feedback.role !== 'user'
       || feedback.ts < reply.ts) return;

@@ -157,12 +157,28 @@ path.write_text(text[:position] + """  handoffToChat(owner: SearchOwner, id: str
 path = target / 'conversation-store.ts'
 text = path.read_text()
 text = text.replace('ORDER BY ts DESC LIMIT ?', 'ORDER BY ts DESC, rowid DESC LIMIT ?')
+# The generic-memory exclusion flag also covers ordinary answers with a one-off
+# style instruction. Persist the actual reply path independently in the same turn.
+anchor = "    const cols = this.db.prepare('PRAGMA table_info(conversation)').all() as Array<{ name: string }>;"
+if text.count(anchor) != 1:
+    raise SystemExit('Personal conversation schema hook moved')
+text = text.replace(anchor, anchor + '''
+    if (!cols.some(col => col.name === 'personal_feedback_reply')) {
+      this.db.exec('ALTER TABLE conversation ADD COLUMN personal_feedback_reply INTEGER NOT NULL DEFAULT 0');
+    }''')
 position = text.index('  list(opts:')
-path.write_text(text[:position] + """  addTurn(input: Omit<ConversationAddInput, 'role' | 'text'>, user: string, assistant: string) {
+path.write_text(text[:position] + """  canRateReply(replyId: string): boolean {
+    return !!this.db.prepare("SELECT 1 FROM conversation WHERE id=? AND role='assistant' AND personal_feedback_reply=1").get(replyId);
+  }
+
+  addTurn(input: Omit<ConversationAddInput, 'role' | 'text'>, user: string, assistant: string, feedbackEligible: boolean) {
     this.db.exec('BEGIN IMMEDIATE');
     try {
       const pair = [this.add({ ...input, role: 'user', text: user }),
         this.add({ ...input, role: 'assistant', text: assistant })];
+      if (feedbackEligible) {
+        this.db.prepare('UPDATE conversation SET personal_feedback_reply=1 WHERE id=?').run(pair[1].id);
+      }
       this.db.exec('COMMIT');
       return pair;
     } catch (error) {

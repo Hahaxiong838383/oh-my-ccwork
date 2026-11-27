@@ -29,6 +29,7 @@ Server.prototype.listen = function (options, ...args) {
 
 const request = '请给我讲个故事。';
 const story = '铅笔画了一扇门，橡皮从里面走了出来。';
+const bear = '小熊摘下帽子，把藏在里面的小星星送回夜空。';
 const explanation = '纸片平铺着，展开的面积大，受到的空气阻力也大。';
 const generic = '我明白你的意思了。';
 const long = '聊聊各种颜色吧。';
@@ -50,7 +51,7 @@ globalThis.fetch = async (input, init) => {
   }
   prompts.push(body.messages[0].content);
   const user = body.messages.at(-1).content;
-  const output = user.includes('给我讲个故事') ? story : user.includes('小纸片为什么') ? explanation
+  const output = user.includes('小熊的故事') ? bear : user.includes('给我讲个故事') ? story : user.includes('小纸片为什么') ? explanation
     : user.includes('各种颜色') ? '走在一条安静的小路上，每次回头都能看到不一样的云彩。'.repeat(6)
     : user.includes('需要更多线索') ? '你想听什么样的故事呢？' : generic;
   const chunk = JSON.stringify({choices:[{delta:{content:output}, finish_reason:'stop'}]});
@@ -155,6 +156,36 @@ try {
   assert.equal(db.prepare('SELECT count(*) AS n FROM personal_memory_fact WHERE account_id=?').get(owner).n,0);
   await say(rooms[12],'随便聊几句吧。');
   assert(!prompts.at(-1).includes(explanation) && !prompts.at(-1).includes('【过去有效的相处方式·参考】'));
+  // A one-off style modifier excludes this turn from generic extraction but the
+  // actual spoken reply can still be rated. Tool and style receipts are barriers.
+  const styledRoom = rooms[2];
+  const styledStory = '用一句话讲一个小熊的故事';
+  assert((await say(styledRoom,styledStory)).includes(bear));
+  const lastAssistant = () => db.prepare("SELECT id,text,memory_excluded,personal_feedback_reply FROM dialogs.conversation WHERE session_id=? AND role='assistant' ORDER BY ts DESC,rowid DESC LIMIT 1").get(styledRoom);
+  const source = lastAssistant();
+  assert.equal(source.text,bear);
+  assert.deepEqual([source.memory_excluded,source.personal_feedback_reply],[1,1]);
+  await say(styledRoom,confirmed);
+  assert.deepEqual(counts(),[3,4]);
+  assert.equal(db.prepare("SELECT reply_msg_id FROM growth_event WHERE rule='explicit_story_feedback' ORDER BY rowid DESC").get().reply_msg_id,source.id);
+  await say(styledRoom,'随便说几句话。');
+  assert(!extractionPrompts.at(-1).includes(styledStory) && !extractionPrompts.at(-1).includes(bear));
+  for (const [command, result] of [
+    ['用一句话告诉我现在几点了','clock'], ['用一句话查天气','weather'], ['只这一次，请用一句话回答','style'],
+  ]) {
+    await say(styledRoom,styledStory);
+    const direct = await say(styledRoom,command);
+    assert(direct.includes('"tool":"'+result+'"'), command);
+    const receipt = lastAssistant();
+    assert.deepEqual([receipt.memory_excluded,receipt.personal_feedback_reply],[1,0]);
+    await say(styledRoom,confirmed);
+    assert.deepEqual(counts(),[3,4]);
+  }
+  // Rows carried across an upgrade lack a verifiable reply classification.
+  await say(styledRoom,styledStory);
+  db.prepare('UPDATE dialogs.conversation SET personal_feedback_reply=0 WHERE id=?').run(lastAssistant().id);
+  await say(styledRoom,confirmed);
+  assert.deepEqual(counts(),[3,4]);
   // Explicit feedback is immediately audible, never sent to the chat or extraction
   // LLM, and remains addressable in the transcript. Even a faulty extractor that
   // volunteers a matching interest cannot turn the rating into an owner fact.
