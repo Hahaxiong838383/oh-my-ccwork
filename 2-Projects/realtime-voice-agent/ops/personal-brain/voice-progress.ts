@@ -28,10 +28,11 @@ function pick(mode: Mode, room: string): string | undefined {
   return choices[index];
 }
 
-// The worker emits the first TTS sentence at a terminal mark after at least six
-// Unicode scalars. An upstream token alone does not mean there is playable speech.
+// Match the personal worker’s first segment: six scalars at a sentence ending,
+// or eight at a full-width comma. A token by itself is not playable speech.
 function speakable(text: string): boolean {
-  return /[。！？；!?;…~～\n]/u.test(Array.from(text).slice(5).join(''));
+  const chars = Array.from(text);
+  return /[。！？；!?;…~～\n]/u.test(chars.slice(5).join('')) || chars.slice(7).includes('，');
 }
 
 export function isVoiceCompletion(room: string | undefined, fromHeader: boolean): boolean {

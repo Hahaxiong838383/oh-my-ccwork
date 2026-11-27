@@ -76,7 +76,14 @@
           "early_segment_count": 1,
           "word_substitution_utterances": 2
         }
-      ]
+      ],
+      "production_selection": {
+        "driver": "p003-doubao-asr",
+        "two_pass": true,
+        "end_window_ms": 300,
+        "provider_revision": 26,
+        "room_replay": "同一段含停顿的海边故事请求，在 150 毫秒窗口下被 Worker 分两轮提交；400 毫秒测试一轮，300 毫秒两次回放均完整提交。300 毫秒窗口下的一次报时停口到提交 694 毫秒，随后收到报时音频。不同轮次不能据此计算普遍提速。"
+      }
     }
   }
 }

@@ -15,7 +15,7 @@ test('only worker streaming room IDs receive spoken progress', () => {
   }
 });
 test('quick tool and chat replies pass through without a preface or a timer delay', async () => {
-  for (const body of ['北京时间七点。', '好的。']) {
+  for (const body of ['北京时间七点。', '清晨我们一起出门，', '好的。']) {
     const out: string[] = [];
     const result = await withVoiceProgress(testRoom, async (say, lookup) => {
       lookup();
