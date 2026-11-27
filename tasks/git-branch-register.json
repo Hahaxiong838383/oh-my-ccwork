@@ -307,12 +307,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "99ec3ef2d12530c66519d001974699bcfe9903cc",
-      "source_ref": "refs/heads/personal/s24-night-apk",
+      "source_commit": "26be4db45c7051780fb261277ef9278996d388f7",
+      "source_ref": "refs/tags/release/personal-voice/brain-query-20261127.3",
       "maintainer_branch": "main",
-      "sha256": "3623d17c8afe7a6ccf5d6ad70d35ecddc703a681f247ce5b37d1b879a82859e0",
+      "sha256": "83d850604182a09f5c91544df3ead496a7578f68c56e86d2d33b938876bc80d5",
       "proof": {
-        "object": "d690abf49548199f51f937f7c8bafd289ef57607:2-Projects/realtime-voice-agent/docs/personal-s24-playback-release-20261127.json",
+        "object": "7106b926f8676629a4e97e0a5ef6b341949b11e7:2-Projects/realtime-voice-agent/docs/personal-brain-weather-news-20261127.json",
         "keys": [
           "deployments",
           "personal-brain"
