@@ -19,7 +19,7 @@ NAS 配置文件在 `/vol1/1000/docker/personal-voice-runtime/private/brain.env`
 | `VOLC_PREFLIGHT_ENABLED` | `0`，只发送已提交的语音轮次 |
 | `ORDERED_SPEC_ON_FINAL_ENABLED` | `0`，已提交后再触发有副作用的查询或记忆 |
 
-`stream:true` 返回 SSE，`stream:false` 返回普通 Chat Completion。每轮传可信 worker 的 `?room=`，也接受 `X-Personal-Session`。房间只分隔对话和任务，同一服务固定绑定一个主人。OpenAI 请求的 `user` 字段和系统消息不参与主人绑定。主动中断时由 worker 关闭本轮 HTTP 流；同一房间的新请求会取消旧请求。无房间请求可生成普通答复，房间预热直接应答。使用 `store:false` 可跳过对话落库、长期记忆和人格使用。
+`stream:true` 返回 SSE，`stream:false` 返回普通 Chat Completion。每轮传可信 worker 的 `?room=`，也接受 `X-Personal-Session`。房间只分隔对话和任务，同一服务固定绑定一个主人。私人版的天气、新闻和通用联网查询均不设每日次数上限。OpenAI 请求的 `user` 字段和系统消息不参与主人绑定。主动中断时由 worker 关闭本轮 HTTP 流；同一房间的新请求会取消旧请求。无房间请求可生成普通答复，房间预热直接应答。使用 `store:false` 可跳过对话落库、长期记忆和人格使用。
 
 查找、天气、时间回执以顶层 `tool` 返回。流式响应在 `[DONE]` 前的终止块发送元数据，`choices[0]` 为 `{ "index": 0, "delta": {}, "finish_reason": "stop" }`。
 

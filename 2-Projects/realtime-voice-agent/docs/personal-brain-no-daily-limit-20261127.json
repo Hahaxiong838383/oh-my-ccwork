@@ -1,0 +1,74 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T23:15:19+08:00",
+  "deployments": {
+    "personal-brain": {
+      "source_commit": "141a237563293c1f13adef6aeca5ff394e2e9030",
+      "image": "personal-brain:no-daily-72eecd07eb06",
+      "image_id": "sha256:915dd62d3bc24548d91787e34688dee95f1fa829793777cf85b573d37d6fc343",
+      "file": "/app/server.mjs",
+      "sha256": "72eecd07eb06b6e049bd30afc24f376b906312d13f90d10b28f98d9dab80bdd1",
+      "previous_image": "personal-brain:query-83d850604182"
+    }
+  },
+  "acceptance": {
+    "environment": "飞牛 2 隔离实例，临时 SQLite 库预置当日已完成任务，重启载入后经真实 HTTP 入口查询北京天气。全局测试的其余计数来自其他测试账号。",
+    "isolated_limits": {
+      "old": {
+        "owner": {
+          "before_request": {
+            "all": 50,
+            "owner": 50
+          },
+          "after_request": {
+            "all": 50,
+            "owner": 50
+          },
+          "source_count": 0
+        },
+        "global": {
+          "before_request": {
+            "all": 1000,
+            "owner": 1
+          },
+          "after_request": {
+            "all": 1000,
+            "owner": 1
+          },
+          "source_count": 0
+        }
+      },
+      "new": {
+        "owner": {
+          "before_request": {
+            "all": 50,
+            "owner": 50
+          },
+          "after_request": {
+            "all": 51,
+            "owner": 51
+          },
+          "source_count": 1
+        },
+        "global": {
+          "before_request": {
+            "all": 1000,
+            "owner": 1
+          },
+          "after_request": {
+            "all": 1001,
+            "owner": 2
+          },
+          "source_count": 1
+        }
+      }
+    },
+    "production_http": {
+      "status": 200,
+      "tool": "weather",
+      "date": "2026-11-27T23:10:00+08:00",
+      "publisher": "weathernew.pae.baidu.com"
+    },
+    "config_revision": 29
+  }
+}
