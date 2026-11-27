@@ -21,7 +21,11 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
       const info = {identity:'agent-test',sid:'PA_test',kind:sdk.ParticipantKind.AGENT,state:2,version:1,attributes:{},
         tracks:[{type:0,source:2,sid:'TR_voice',name:'agent-voice',layers:[],codecs:[]}]};
       window.events = [];
-      window.NightView = {render(s){ window.display=s; document.getElementById('status-banner').hidden=!s.status; },level(){}};
+      window.audit = {shows:[], speech:[]};
+      window.NightView = {render(s){
+          window.display=s; audit.shows.push({t:performance.now(),reply:s.reply,phase:s.phase});
+          document.getElementById('status-banner').hidden=!s.status;
+        },level(){},speech(patch){ audit.speech.push({t:performance.now(),patch}); }};
       window.NightHost = {paired:()=>true,event:e=>events.push(e),setCall(){},
         micPermission:id=>queueMicrotask(()=>Voice.onPermission(id,true)),
         ticket:id=>queueMicrotask(()=>Voice.onTicket(id,{url:'wss://pa.hahaxiong.cc:8666',token:'fixture'}))};
@@ -29,6 +33,8 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
         info.attributes = name ? {'lk.agent.name':name} : {};
         room.getOrCreateParticipant(info.identity,{...info,version:++info.version});
       };
+      window.emitTranscript = items => room.emit(sdk.RoomEvent.TranscriptionReceived,
+        items.map(([id,text,final])=>({id,text,final,startTime:0,endTime:0,language:'zh'})), peer);
       window.makeTrack = () => {
         const stream = toneDestination.stream;
         return new sdk.RemoteAudioTrack(stream.getAudioTracks()[0].clone(),'TR_voice',undefined);
@@ -42,8 +48,10 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
             window.toneCtx=new AudioContext();
             await toneCtx.resume();
             window.toneDestination=toneCtx.createMediaStreamDestination();
-            const oscillator=toneCtx.createOscillator();
-            oscillator.connect(toneDestination); oscillator.start();
+            const oscillator=toneCtx.createOscillator(), gain=toneCtx.createGain();
+            gain.gain.value=1;
+            oscillator.connect(gain).connect(toneDestination); oscillator.start();
+            window.remoteGain=gain.gain;
             window.peer=this.getOrCreateParticipant(info.identity,info);
             peer.updateInfo(info);
             window.pub=peer.audioTrackPublications.get('TR_voice');
@@ -52,9 +60,12 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
           this.disconnect=async()=>{};
           this.localParticipant.setMicrophoneEnabled=async()=>{};
           this.localParticipant.publishData=async (data,options)=>{
-            if(options.topic!=='personal.v1.input')return;
-            const {id}=JSON.parse(new TextDecoder().decode(data));
-            queueMicrotask(()=>this.emit(sdk.RoomEvent.DataReceived,new TextEncoder().encode(JSON.stringify({type:'ready',voice:true,id})),peer,0,'personal.v1.output'));
+            const frame=JSON.parse(new TextDecoder().decode(data));
+            if(options.topic==='personal.v1.input'){
+              queueMicrotask(()=>this.emit(sdk.RoomEvent.DataReceived,new TextEncoder().encode(JSON.stringify({type:'ready',voice:true,id:frame.id})),peer,0,'personal.v1.output'));
+            } else if(options.topic==='control' && frame.type==='cancel'){
+              queueMicrotask(()=>this.emit(sdk.RoomEvent.DataReceived,new TextEncoder().encode(JSON.stringify({type:'cancel.ack',src:'worker',seq:frame.seq,trace_id:frame.trace_id})),peer,0,'control'));
+            }
           };
         }
       }};
@@ -100,8 +111,42 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
     await page.evaluate(()=>restorePlay());
     await retry.click();
     await page.waitForFunction(()=>!document.querySelector('audio').paused && ![...document.querySelectorAll('button')].some(b=>b.textContent==='恢复声音' && !b.hidden));
+
+    // The production worker sends interim on the first played sample of each
+    // sentence, final on the last. Lost audio must not suppress text.
+    await page.evaluate(()=>{ audit.shows=[]; audit.speech=[]; window.remoteGain.value=0; });
+    await page.waitForTimeout(700);
+    await page.evaluate(()=>emitTranscript([['SG_a7_0','我先查一下。',false]]));
+    assert.equal(await page.evaluate(()=>display.reply),'我先查一下。');
+    assert.equal(await page.evaluate(()=>audit.speech.filter(x=>x.patch).length),0);
+    await page.evaluate(()=>{window.remoteGain.value=.35;});
+    await page.waitForFunction(()=>audit.speech.some(x=>x.patch?.kind==='explain'));
+    await page.evaluate(()=>emitTranscript([['SG_a7_0','我先查一下。',true],['SG_a7_1','你要现在听吗？',false]]));
+    await page.waitForFunction(()=>audit.speech.some(x=>x.patch?.kind==='question'));
+    assert.equal(await page.evaluate(()=>display.reply),'我先查一下。你要现在听吗？');
+    await page.evaluate(()=>emitTranscript([['SG_a7_1','你要现在听吗？',true]]));
+    assert.deepEqual(await page.evaluate(()=>audit.speech.filter(x=>x.patch).map(x=>x.patch.kind)),['explain','question']);
+    // A packet for a cancelled turn cannot restore its text or expression.
+    await page.waitForTimeout(250);
+    await page.evaluate(()=>Voice.interrupt());
+    await page.waitForFunction(()=>events.includes('cancel_ack'),null,{timeout:4000});
+    const cancelled=await page.evaluate(()=>({reply:display.reply,last:audit.speech.at(-1)?.patch??null}));
+    assert.equal(cancelled.last,null,'interrupt clears the speech cue');
+    await page.evaluate(()=>emitTranscript([['SG_a7_4','打断后的这句也不显示。',true]]));
+    await page.waitForTimeout(900);
+    const interrupted=await page.evaluate(()=>display.reply);
+    assert.ok(!interrupted.includes('打断后的'),'post-interrupt transcript for the cancelled turn is ignored');
+
     await page.evaluate(()=>Voice.stop());
     assert.equal(await page.locator('audio').count(),0);
-    console.log('PASS early subscription, identity gate/revocation, PCM playback, stable element, reconnect recovery, gesture retry, teardown');
+    const cleaned=await page.evaluate(()=>({reply:display.reply,last:audit.speech.at(-1)?.patch??null}));
+    assert.equal(cleaned.reply,''); assert.equal(cleaned.last,null);
+    // A fresh call starts with no reply or expression cue left over.
+    await page.evaluate(()=>Voice.start());
+    await page.waitForFunction(()=>events.filter(e=>e==='call_start').length>=2,null,{timeout:5000});
+    const fresh=await page.evaluate(()=>({reply:display.reply,last:audit.speech.at(-1)?.patch??null}));
+    assert.equal(fresh.reply,''); assert.equal(fresh.last,null);
+    await page.evaluate(()=>Voice.stop());
+    console.log('PASS early subscription, identity gate/revocation, PCM playback, stable element, reconnect recovery, gesture retry, worker-timed captions/semantics, interrupt cleanup, new-call reset, teardown');
   } finally { await browser.close(); }
 })().catch(e=>{console.error(e);process.exitCode=1;});

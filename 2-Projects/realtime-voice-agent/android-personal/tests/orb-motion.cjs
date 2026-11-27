@@ -98,18 +98,61 @@ test('speech articulation is measured and the listening microphone is isolated',
   assert.equal(b.step(dt,{phase:'speaking',active:false,playback:1}).energy,0);
 });
 
-test('reduced motion keeps distinct poses and allows audio luminance without bob, blink or squash', () => {
+test('reduced motion keeps a stable silhouette but still switches speech expressions', () => {
   const m=create();
   const before=advance(m,0.5,{phase:'speaking',active:true,reduced:true});
   const after=advance(m,10,{phase:'speaking',active:true,playback:0.8,reduced:true});
   assert.deepEqual(geometry(before),geometry(after));
   assert.equal(after.breath,0);
   assert.equal(after.accent,0);
-  assert.equal(before.expression,after.expression);
   assert.equal(after.expressionMix,1);
   assert.ok(after.energy>0.79);
+  // Silence before the first syllable settles into a hush face; playback
+  // returns to a speaking group without any bob, blink or squash.
+  assert.notEqual(before.expressionGroup,after.expressionGroup);
+  assert.ok(after.expression>=0&&after.expression<25);
   const read=advance(m,1,{phase:'reading',reduced:true});
   assert.ok(read.gazeY>0.2 && read.energy===0);
+});
+
+test('one continuous utterance crosses several distinguishable expression families', () => {
+  const run = (withCaption) => {
+    const motion=create(), changes=[];
+    let last=null;
+    const pauses=[[2.30,2.58],[4.55,4.98],[6.86,7.14]];
+    const cueAt=[0.55,2.85,5.15,7.25];
+    const kinds=['explain','warm','question','concern'];
+    for(let i=0;i<Math.ceil(9/dt);i++){
+      const t=i*dt;
+      const quiet=t<0.30 || pauses.some(([a,b])=>t>=a&&t<b);
+      const syllable=Math.pow(Math.max(0,Math.sin(2*Math.PI*4.4*t)),1.6);
+      const level=quiet?0:Math.min(1,.16+.66*syllable+(t>3.55&&t<4.05?.16:0));
+      let cue=null;
+      if(withCaption) for(let k=cueAt.length-1;k>=0;k--)
+        if(t>=cueAt[k]){cue={kind:kinds[k],seq:k+1};break;}
+      const f=motion.step(dt,{phase:'speaking',active:true,playback:level,speech:cue});
+      if(last===null||f.expression!==last.expression){
+        if(last!==null) changes.at(-1).end=t;
+        changes.push({expression:f.expression,group:f.expressionGroup,source:f.expressionSource,start:t,end:t});
+        last=f;
+      }
+    }
+    return changes;
+  };
+  const caption=run(true);
+  const audioOnly=run(false);
+  for(const changes of [caption,audioOnly]) {
+    const groups=new Set(changes.map(c=>c.group).filter(Boolean));
+    assert.ok(groups.size>=3,'distinct expression families: '+[...groups].join(','));
+    assert.ok(new Set(changes.map(c=>c.expression)).size>=3);
+    const visible=changes.filter(c=>c.end-c.start>0.001);
+    for(const change of visible.slice(1,-1)) assert.ok(change.end-change.start>=0.45,'held '+change.expression);
+  }
+  // A revealed caption is a local lexical estimate, not a provider label.
+  const captioned=caption.filter(c=>c.source==='caption');
+  assert.ok(captioned.length>=3);
+  assert.ok(captioned.some(c=>c.group==='ask'));
+  assert.ok(captioned.some(c=>c.group==='concern'));
 });
 
 test('the simulation is replayable from a seed and survives time gaps or invalid input', () => {

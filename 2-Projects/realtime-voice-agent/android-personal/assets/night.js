@@ -446,6 +446,9 @@
   global.NightView = {
     render: render,
     level: level,
+    speech: function (patch) {
+      if (orb && orb.setSpeech) orb.setSpeech(patch);
+    },
     micLevel: function (value) {
       if (orb) orb.micTarget = clamp(Number(value) || 0, 0, 1);
     }

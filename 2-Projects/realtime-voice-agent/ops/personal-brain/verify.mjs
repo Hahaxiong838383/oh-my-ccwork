@@ -85,11 +85,28 @@ if (process.env.BRAIN_VERIFY_SKIP_SEARCH !== '1') {
   assert.equal((await chat('继续刚才的搜索结果', 'verify-other-room')).sources, undefined);
   console.log('live search, citations and room-scoped continuation passed', source.url);
   if (process.env.BRAIN_VERIFY_WEATHER === '1') {
+    // Use distinct production-shaped room IDs and independent HTTP requests.
+    const room = 'pv-' + crypto.randomUUID().replaceAll('-', '');
+    const other = 'pv-' + crypto.randomUUID().replaceAll('-', '');
+    const clarification = await chat('今天天气怎么样', room, {body: {store: false}});
+    assert.match(clarification.text, /哪个城市/);
+    assert.deepEqual((await chat('再查查呗', other, {body: {store: false}})).sources, undefined);
+    const follow = await chat('就看看北京的呗', room, {body: {store: false}});
+    assert.equal(follow.tool, 'weather');
+    assert.match(follow.text, /北京/);
+    assert.ok(follow.sources.some(s => /^https:\/\//.test(s.url)));
+    const scoped = await chat('今天股票市场怎么样', room, {body: {store: false}});
+    assert.match(scoped.text, /哪个市场/);
+    const market = await chat('那那A股呢', room, {body: {store: false}});
+    assert.equal(market.tool, 'search');
+    assert.match(market.text, /截至.*上证指数.*创业板指/);
+    assert.equal(market.sources.filter(s => new URL(s.url).hostname === 'gu.qq.com').length, 3);
+
     const weather = await chat('今天北京天气怎么样？', 'verify-weather');
     assert.equal(weather.tool, 'weather');
     assert.match(weather.text, /北京.*摄氏度/);
     assert.ok(weather.sources?.[0]?.date);
-    assert.match(weather.sources[0].url, /^https:\/\/(?:weathernew\.pae\.baidu\.com|www\.moji\.com)\//);
+    assert.match(weather.sources[0].url, /^https:\/\/(?:weathernew\.pae\.baidu\.com|www\.moji\.com|www\.weather\.com\.cn)\//);
     const noCity = await chat('今天出门要带伞吗？', 'verify-weather-no-city');
     assert.match(noCity.text, /哪个城市/);
     assert.equal(noCity.sources.length, 0);

@@ -16,6 +16,53 @@
   }
   const level = v => { model.level = v; if (window.NightView?.level) window.NightView.level(v); else show({level:v}); };
   const valid = s => session === s;
+  // Local lexical estimate for the sentence that is actually being heard.
+  // This is not a provider label and never changes the received transcript.
+  function cueKind(text) {
+    const t = String(text || '').trim();
+    if (!t) return 'hush';
+    if (/[?？]\s*$/.test(t)) return 'question';
+    if (/(吗|呢|是不是|对不对|好不好|多少|几点|什么时候|为什么|怎么|哪里|哪个)\s*[?？]?\s*$/.test(t)) return 'question';
+    if (/(失败|错误|不行|不能|危险|小心|抱歉|遗憾|担心|坏了|注意安全)/.test(t)) return 'concern';
+    if (/(注意|千万|一定|真的|特别|非常|赶紧|马上|重要|太[好棒]|极了)/.test(t)) return 'emphasis';
+    if (/(谢谢|太好|真好|当然|可以|没问题|欢迎|开心|喜欢|棒|好的)/.test(t)) return 'warm';
+    return t.replace(/[。！？!?；;…\s]/g, '').length <= 3 ? 'hush' : 'explain';
+  }
+  function endSpeech(s) {
+    s.speech.pending = null;
+    s.speech.lastId = null;
+    s.speech.lastKind = '';
+    window.NightView?.speech?.(null);
+  }
+  function clearSpeech(s, clearVisible) {
+    endSpeech(s);
+    s.speech.index = -1;
+    s.speechActive = false;
+    if (clearVisible && model.reply) show({reply: ''});
+  }
+  function segmentCue(s, id, text) {
+    if (!text.trim()) {
+      if (s.speech.lastId === id) endSpeech(s);
+      return;
+    }
+    const kind = cueKind(text);
+    if (s.speech.lastId === id && s.speech.lastKind === kind) return;
+    s.speech.lastId = id;
+    s.speech.lastKind = kind;
+    s.speech.pending = {kind, seq: ++s.speech.seq};
+  }
+  function advanceSpeech(s, now, strength, playing) {
+    if (!model.active || !s.connected || s.cancel) return;
+    if (playing && strength > 0.025) {
+      s.speechActive = true;
+      s.lastVoiceAt = now;
+      const cue = s.speech.pending;
+      if (cue) { s.speech.pending = null; window.NightView?.speech?.(cue); }
+    } else if (s.speechActive && now - s.lastVoiceAt > (s.workerDone ? 1200 : 1800)) {
+      s.speechActive = false;
+      refresh(s);
+    }
+  }
   const uid = () => Array.from(crypto.getRandomValues(new Uint8Array(16)), x => x.toString(16).padStart(2,'0')).join('');
   const worker = p => p?.isAgent && p.identity.startsWith('agent-') && p.attributes?.['lk.agent.name'] === 'personal-xiaoke';
   function nativeRequest(s, method) {
@@ -106,7 +153,7 @@
   function detach(s) {
     const output = s.output;
     if (!output) return;
-    s.output = null; s.audible = false;
+    s.output = null; s.audible = false; s.speechActive = false; s.lastVoiceAt = 0;
     cancelAnimationFrame(output.frame);
     output.meter?.close();
     output.audio.onplaying = output.audio.onpause = null;
@@ -128,16 +175,19 @@
     let env = 0, audibleAt = 0;
     function measure() {
       if (!valid(s) || s.output !== output) return;
-      const rms = playbackMeter?.read() || 0;
+      // Prefer the analyser reading the subscribed PCM track. The RTC speaker
+      // level is only a fallback when the real meter cannot be created.
+      const pcm = playbackMeter ? playbackMeter.read() : null;
       const rtcLevel = peer.isSpeaking ? peer.audioLevel || 0 : 0;
-      const strength = rms > .002 ? (rms - .002) * 8 : rtcLevel * 2;
+      const strength = pcm !== null ? (pcm > .002 ? (pcm - .002) * 8 : 0) : rtcLevel * 2;
       const target = audio.paused || audio.muted ? 0 : Math.min(1, strength);
       env+=(target-env)*(target>env?.62:.24);
       level(env<.001?0:env);
       const now=performance.now();
-      if (rms > .005 && !audio.paused && !audio.muted && !s.hadAudio) { mark('rx_audio'); s.hadAudio=true; }
+      if (pcm !== null && pcm > .005 && !audio.paused && !audio.muted && !s.hadAudio) { mark('rx_audio'); s.hadAudio=true; }
       if (target>.025) { audibleAt=now; if(!s.audible){s.audible=true;refresh(s);} }
       else if(s.audible && now-audibleAt>320){s.audible=false;refresh(s);}
+      advanceSpeech(s, now, target, !audio.paused && !audio.muted);
       output.frame=requestAnimationFrame(measure);
     }
     audio.play().catch(() => { if (current() && audio.paused) promptPlayback(s); });
@@ -150,7 +200,7 @@
     else if (s.retryPlayback) {phase='listening';status='播放已暂停';}
     else if (!s.ready) {phase='connecting';status='等待小可接听';}
     else if (s.cancel) {phase='listening';status='正在打断';}
-    else if (s.audible || s.speaking) {phase='speaking';status='小可在说';}
+    else if (s.audible || s.speaking || (s.speechActive && performance.now()-s.lastVoiceAt < 1800)) {phase='speaking';status='小可在说';}
     else if (model.muted) {phase='muted';status='麦克风已静音';}
     else if (s.thinking) {phase='thinking';status='小可正在思考';}
     else {phase='listening';status='小可在听';}
@@ -174,7 +224,7 @@
     syncOutput(s,peers);
     const ready=peers.some(p=>s.peer?.sid===p.sid);
     if (!ready) {
-      if(s.peer){s.parts.clear();s.turn=null;s.segments.clear();s.thinking=false;s.speaking=false;s.audible=false;show({mine:'',reply:''});}
+      if(s.peer){clearSpeech(s,true);s.parts.clear();s.turn=null;s.segments.clear();s.thinking=false;s.speaking=false;s.audible=false;s.speechActive=false;s.lastVoiceAt=0;show({mine:'',reply:''});}
       s.peer=null;s.ready=false;
     }
     for(const p of peers) {
@@ -192,14 +242,17 @@
     if(!valid(s)||!worker(p)||s.room.remoteParticipants.get(p.identity)?.sid!==p.sid) return;
     let f; try{f=JSON.parse(decode.decode(data));}catch{return;}
     if(topic==='personal.v1.output' && f.type==='ready' && f.voice===true && s.hellos.get(p.sid)===f.id){
-      if(!s.ready)mark('connected');s.peer=p;s.ready=true;s.hellos.delete(p.sid);syncOutput(s,workers(s));refresh(s);
+      const previous=s.peer;
+      if(!s.ready)mark('connected');
+      if(previous && previous.sid!==p.sid){clearSpeech(s,true);s.parts.clear();s.turn=null;}
+      s.peer=p;s.ready=true;s.hellos.delete(p.sid);syncOutput(s,workers(s));refresh(s);
     } else if(topic==='control' && f.type==='cancel.ack' && f.src==='worker' && s.cancel && s.cancel.seq===f.seq && s.trace===f.trace_id){
-      mark('cancel_ack');clearTimeout(s.cancel.timer);s.cancel=null;s.thinking=false;s.speaking=false;refresh(s);
+      mark('cancel_ack');clearTimeout(s.cancel.timer);s.cancel=null;s.thinking=false;s.speaking=false;s.speechActive=false;endSpeech(s);refresh(s);
     } else if(topic==='state' && f.k==='speaking' && typeof f.speaking==='boolean'){
       if(!f.speaking && s.bargeCandidate && performance.now()-s.bargeCandidate<3500 && !s.cancel) {
         s.bargeCandidate=0; s.stoppedWhileTalking=performance.now();
       }
-      s.speaking=f.speaking;s.thinking=false;refresh(s);
+      s.speaking=f.speaking;s.workerDone=!f.speaking;s.thinking=false;refresh(s);
     }
   }
   function transcript(s, items, p) {
@@ -224,20 +277,33 @@
       const m=/^SG_a(\d+)_(\d+)$/.exec(it.id);
       if(m) {
         const turn=Number(m[1]),idx=Number(m[2]);
+        if(s.cancelledTurn===turn)continue;
         if(s.turn!==null && turn<s.turn)continue;
-        if(s.turn!==turn){s.turn=turn;s.parts.clear();}
+        if(s.turn!==turn){
+          if(s.turn!==null)clearSpeech(s,true);
+          s.turn=turn;s.parts.clear();s.cancelledTurn=null;s.workerDone=false;
+        }
         const prior=s.parts.get(idx);
         if(prior?.final && !it.final)continue;
         s.parts.set(idx,{text:it.text,final:it.final});
         const ordered=[...s.parts.keys()].sort((a,b)=>a-b);
+        // The worker emits SG_a<turn>_<index> at the played-sample boundary,
+        // then sends final or retracts the same segment. Show its text immediately.
         show({reply:ordered.map(i=>s.parts.get(i).text).join('')});
-      } else show({reply:it.text});
+        if (idx >= s.speech.index) {
+          s.speech.index = idx;
+          segmentCue(s, it.id, it.text);
+        }
+      } else {
+        show({reply:it.text});
+        segmentCue(s, it.id, it.text);
+      }
       s.thinking=false;refresh(s);
     }
   }
   function finish(s,status='通话已结束') {
     if(!valid(s))return;
-    session=null;mark('call_end');
+    clearSpeech(s,true);session=null;mark('call_end');
     clearInterval(s.poll);clearTimeout(s.deadline);clearTimeout(s.cancel?.timer);
     for(const [id,req] of pendingNative)if(req.s===s)settleNative(id,{error:'已结束'});
     detach(s); clearPlaybackPrompt(s); stopMicMeter(s); void s.ctx?.close().catch(()=>{});
@@ -258,7 +324,8 @@
     if(session||!model.paired)return;
     const room=new LivekitClient.Room({stopMicTrackOnMute:true,audioCaptureDefaults:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}});
     mark('call_start');
-    const s=session={room,ctx:new AudioContext(),hellos:new Map(),parts:new Map(),segments:new Set(),turn:null,seq:0,trace:uid()};
+    const s=session={room,ctx:new AudioContext(),hellos:new Map(),parts:new Map(),segments:new Set(),turn:null,seq:0,trace:uid(),
+      speech:{index:-1,seq:0,pending:null,lastId:null,lastKind:''},workerDone:false,speechActive:false,lastVoiceAt:0};
     show({phase:'connecting',status:'正在连接',active:true,muted:false,mine:'',reply:''});
     try{
       await s.ctx.resume(); if(!valid(s))return;
@@ -307,6 +374,9 @@
     const s=session;if(!s?.peer||s.cancel||s.reconnecting)return;
     const seq=++s.seq;
     const frame={type:'cancel',src:'android',lane:'L2',trace_id:s.trace,seq,ts_ms:Date.now(),payload:{reason:'user_barge'}};
+    // The user takes the turn now: stop unspoken captions and the speech
+    // expression immediately, before the worker acknowledgement arrives.
+    s.cancelledTurn=s.turn;endSpeech(s);s.speaking=false;s.workerDone=false;s.speechActive=false;
     s.cancel={seq,timer:setTimeout(()=>{if(valid(s)&&s.cancel?.seq===seq){s.cancel=null;refresh(s);show({status:'打断未获确认，可以继续说话'});}},3500)};
     refresh(s);
     try{await send(s,s.peer,'control',frame);}catch{if(valid(s)&&s.cancel?.seq===seq){clearTimeout(s.cancel.timer);s.cancel=null;refresh(s);show({status:'打断发送失败'});}}

@@ -65,6 +65,26 @@
     ['tap-recoil', 'surprised', 'recoil'], ['tap-lean', 'playful', 'lean'],
     ['tap-nod', 'happy', 'nod'], ['tap-shy', 'shy', 'incline']
   ];
+  // Speech expression groups authored for this app. Each group only borrows a
+  // bundled reference pool for eye contours; the group name, the caption kind
+  // and every switch below are local estimates, never provider labels.
+  const speechGroups = {
+    steady:  {reference: 'dictating', faces: [10, 1, 19]},
+    warm:    {reference: 'happy',     faces: [2, 11, 17, 19]},
+    bright:  {reference: 'excited',   faces: [2, 17, 21, 3, 11]},
+    ask:     {reference: 'curious',   faces: [3, 21, 0, 15]},
+    concern: {reference: 'confused',  faces: [14, 5, 8]},
+    hush:    {reference: 'bored',     faces: [4, 22, 0]},
+    lively:  {reference: 'laughing',  faces: [2, 11, 17]}
+  };
+  // Visual families for the 25 drawn eye pairs: neutral, smile, wide, squint,
+  // sad, asymmetric. The director avoids staying inside one family.
+  const faceFamily = [0,0,1,2,3,5,1,4,0,5,0,1,0,3,4,0,0,1,5,0,0,2,3,4,1];
+  const speechCycle = ['steady', 'warm', 'bright', 'steady', 'ask', 'lively', 'warm'];
+  const captionGroup = {
+    explain: 'steady', warm: 'warm', emphasis: 'bright',
+    question: 'ask', concern: 'concern', hush: 'hush'
+  };
   const aliases = {
     connected: 'listening', ready: 'idle', disconnected: 'idle', ended: 'idle',
     failed: 'error', processing: 'thinking', working: 'thinking',
@@ -155,6 +175,9 @@
     let reference = '', expression = 0, fromExpression = 0, morphAge = 1;
     let expressionAt = Infinity, blinkAt = Infinity, blinkAge = 1, secondBlink = false;
     let energy = 0, previousEnergy = 0, attack = 0, speechPause = 0;
+    let slowEnergy = 0, speechStress = 0, syllableRate = 0, syllableHits = 0, syllableClock = 0, onsetAge = Infinity;
+    let speechSeq = -1, speechCue = '', speechGroup = '', speechHold = 0, speechCycleAt = 0, inHush = false, pendingCue = false;
+    let expressionSource = 'state', expressionEstimated = false;
     let listeningFor=0, pauseFor=0, nodAge=Infinity, nextNod=0;
     let touchAge = Infinity, touchIndex = -1, touchX = 0, touchY = 0;
 
@@ -192,15 +215,98 @@
       touchIndex = (touchIndex+1) % touches.length; touchAge = 0;
       touchX = clamp(finite(x), -1, 1); touchY = clamp(finite(y), -1, 1);
     }
+    function nextCycle() {
+      speechCycleAt = (speechCycleAt + 1) % speechCycle.length;
+      return speechCycle[speechCycleAt];
+    }
+    // Choose a face outside the family already on screen. That is what makes
+    // consecutive beats readable instead of four near-identical round eyes.
+    function chooseSpeech(name) {
+      const group = speechGroups[name] || speechGroups.steady;
+      const family = expression >= 0 ? faceFamily[expression] : -1;
+      const fresh = group.faces.filter(id => faceFamily[id] !== family);
+      const pool = fresh.length ? fresh : group.faces.filter(id => id !== expression);
+      if (!pool.length) return;
+      const id = pool[Math.floor(random() * pool.length)];
+      reference = group.reference;
+      speechGroup = speechGroups[name] ? name : 'steady';
+      setExpression(id);
+      speechHold = 0;
+    }
+    // Audio rhythm leads; a revealed caption only selects the base group. The
+    // local caption kind is a lexical estimate and is reported as such.
+    function directSpeech(dt, speech, reduced) {
+      speechHold += dt;
+      const kind = speech && typeof speech.kind === 'string' ? speech.kind : '';
+      const seq = speech && Number.isFinite(speech.seq) ? speech.seq : -1;
+      if (seq !== speechSeq) {
+        speechSeq = seq;
+        speechCue = captionGroup[kind] ? kind : '';
+        if (speechCue) {
+          speechCycleAt = 0;
+          inHush = false;
+          // A new sentence never flashes a face for less than half a second.
+          if (speechHold >= 0.50) chooseSpeech(captionGroup[speechCue]);
+          else pendingCue = true;
+          return;
+        }
+      }
+      if (energy <= 0.055) {
+        if (speechPause > 0.55 && !inHush && speechHold > (reduced ? 0.42 : 0.30)) {
+          inHush = true; chooseSpeech('hush');
+        }
+        return;
+      }
+      if (inHush) {
+        if (speechPause < 0.04 && speechHold > (reduced ? 0.36 : 0.18) && (!pendingCue || speechHold >= 0.50)) {
+          inHush = false;
+          pendingCue = false;
+          chooseSpeech(speechCue ? captionGroup[speechCue] : nextCycle());
+        }
+        return;
+      }
+      if (pendingCue && speechHold >= 0.50) {
+        pendingCue = false;
+        chooseSpeech(captionGroup[speechCue] || 'steady');
+        return;
+      }
+      // A clear accent beat gets wide eyes, but only after the previous shape
+      // has been readable for a while.
+      if (attack > 0.12 && energy > 0.34 && speechGroup !== 'bright' &&
+          speechHold > (reduced ? 2.2 : 0.62)) {
+        chooseSpeech('bright');
+        return;
+      }
+      const hold = reduced ? 2.3 : clamp(1.85 - syllableRate * 0.35, 1.02, 1.85);
+      if (speechHold < hold) return;
+      if (speechCue) {
+        const base = captionGroup[speechCue];
+        // Long steady or warm sentences alternate with a contrasting group so
+        // one sentence still carries several visible beats.
+        chooseSpeech((base === speechGroup && (base === 'steady' || base === 'warm')) ? nextCycle() : base);
+      } else {
+        chooseSpeech(nextCycle());
+      }
+    }
     function step(seconds, input) {
       input = input || {};
       const dt = clamp(finite(seconds), 0, 0.12);
       const nextPhase = phaseFor(input);
       const reduced = Boolean(input.reduced);
+      const sameSpeech = (phase === 'speaking' || phase === 'streaming') &&
+        (nextPhase === 'speaking' || nextPhase === 'streaming');
       if (phase !== nextPhase) {
-        phase = nextPhase; age = 0; cueAge = 0; cueIndex = 0; speechPause = 0;
-        energy = 0; previousEnergy = 0; attack = 0;
-        listeningFor=0; pauseFor=0; nodAge=Infinity;
+        phase = nextPhase; age = 0; cueAge = 0; cueIndex = 0;
+        // speaking <-> streaming is one reply. Keep the audio envelope and the
+        // expression cycle so short pauses do not restart at the same face.
+        if (!sameSpeech) {
+          speechPause = 0;
+          energy = 0; previousEnergy = 0; attack = 0; slowEnergy = 0; speechStress = 0;
+          syllableRate = 0; syllableHits = 0; syllableClock = 0; onsetAge = Infinity;
+          speechSeq = -1; speechCue = ''; speechGroup = ''; speechHold = 0; speechCycleAt = 0;
+          inHush = false; pendingCue = false; expressionSource = 'state'; expressionEstimated = false;
+          listeningFor=0; pauseFor=0; nodAge=Infinity;
+        }
       }
       now += dt; age += dt; cueAge += dt; touchAge += dt; morphAge += dt; blinkAge += dt;
       const sequence = sequences[phase];
@@ -217,13 +323,42 @@
         : phase === 'listening' && !input.muted ? unit(input.mic) : 0;
       energy = busy ? approach(energy, inputLevel, dt, inputLevel>energy ? 26 : 10) : 0;
       if (energy < 0.0005) energy = 0;
-      attack = Math.max(attack*Math.exp(-dt*6.4), clamp((energy-previousEnergy)*2.2, 0, 0.6));
+      const rise = energy - previousEnergy;
+      attack = Math.max(attack*Math.exp(-dt*6.4), clamp(rise*2.2, 0, 0.6));
+      // Syllable onsets and a slow envelope separate rhythm from loudness.
+      if (energy > 0.08 && rise > 0.018) { onsetAge = 0; syllableHits += 1; }
+      else onsetAge += dt;
+      syllableClock += dt;
+      if (syllableClock >= 0.75) {
+        syllableRate = approach(syllableRate, syllableHits / syllableClock, dt, 0.35);
+        syllableClock = 0; syllableHits = 0;
+      }
+      slowEnergy = approach(slowEnergy, energy, dt, 1.1);
+      speechStress = clamp((energy - slowEnergy) * 2.6, 0, 1);
       previousEnergy = energy;
       speechPause = energy < 0.055 ? speechPause+dt : 0;
       const declared = input.referenceState;
       const face = typeof declared === 'string' && Object.prototype.hasOwnProperty.call(faceTables, declared)
         ? declared : cue[1];
-      selectFace(touching ? touch[1] : face, reduced);
+      if (speaking && !speechGroup) {
+        speechGroup = 'steady';
+        reference = speechGroups.steady.reference;
+        chooseSpeech('steady');
+      }
+      expressionEstimated = false;
+      if (touching) {
+        selectFace(touch[1], reduced);
+        expressionSource = 'touch';
+      } else if (speaking) {
+        // Captions may arrive before their audio. Only the revealed sentence
+        // supplies a cue; the audio rhythm carries everything in between.
+        directSpeech(dt, input.speech, reduced);
+        expressionSource = speechCue ? 'caption' : 'audio';
+        expressionEstimated = true;
+      } else {
+        selectFace(face, reduced);
+        expressionSource = 'state';
+      }
       // The upstream pools omit ring 6. Its small rounded eyes make a gentle
       // second beat after the wide-eyed reaction, before returning to the call.
       if (!reduced && touching && touchIndex === 0 && touchAge >= 0.43) setExpression(6);
@@ -259,7 +394,8 @@
         goal.lift -= goal.breath*swell*0.8;
         gesture(goal, cue[3], cue[4], cueAge/cue[2]);
         if (speaking) {
-          articulation = speechPause > 0.18 ? 'pause' : attack > 0.12 ? 'attack' : energy > 0.52 ? 'stress' : 'flow';
+          articulation = speechPause > 0.18 ? 'pause' : attack > 0.12 ? 'attack'
+            : speechStress > 0.18 ? 'stress' : syllableRate > 0.62 ? 'lively' : 'flow';
           goal.scaleX += .014*energy; goal.scaleY += .014*energy;
           goal.lift -= 0.054*energy + 0.035*attack;
           goal.gazeY += 0.19*energy; goal.roll += 0.075*energy*Math.sin(now*2.25);
@@ -300,9 +436,14 @@
         const speed = key === 'eyeOpenL' || key === 'eyeOpenR' ? 65 : key === 'accent' ? 20 : 11;
         pose[key] = reduced ? goal[key] : approach(pose[key], goal[key], dt, speed);
       }
+      // referenceState names the eye-contour pool only. During speech,
+      // expressionGroup/Source/Estimated describe this app's local estimate.
       return Object.assign({}, pose, {
         phase, clip: touching ? touch[0] : cue[0], referenceState: reference,
         articulation, expression, fromExpression, expressionMix: reduced ? 1 : ease(unit(morphAge/0.22)),
+        expressionGroup: touching ? 'touch' : speaking ? speechGroup : '',
+        expressionSource, expressionEstimated, expressionCue: speaking ? speechCue : '',
+        speechPause, speechStress, syllableRate,
         eyeOpenL: clamp(pose.eyeOpenL,0.02,1), eyeOpenR: clamp(pose.eyeOpenR,0.02,1),
         gazeX: clamp(pose.gazeX,-1,1), gazeY: clamp(pose.gazeY,-1,1), energy
       });

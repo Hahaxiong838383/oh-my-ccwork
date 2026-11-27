@@ -7,6 +7,8 @@ import { bodyLimit } from 'hono/body-limit';
 import { streamSSE } from 'hono/streaming';
 import { z } from 'zod';
 import { isVoiceCompletion, withVoiceProgress } from './voice-progress.js';
+import {forecastFallback} from './weather-fallback.js';
+import {weatherIntent, followupPlace, cnMarket, marketSnapshot} from './public-queries.js';
 import { publicProviderStatus } from './providers.js';
 import { chatDeltas, cpaWebSearch, cpaWebSearchEnabled, searchFetch, type TextTurn } from './upstream.js';
 
@@ -41,7 +43,6 @@ const { answerClock, resolveClock, stripClockTurns } = await import('./p003/tool
 const { SearchExecutor } = await import('./p003/tools/search-executor.js');
 const { SearchTasks, validateQuery } = await import('./p003/tools/search-tasks.js');
 const { FixedWeather } = await import('./p003/tools/fixed-weather.js');
-const { placeWeatherSchema } = await import('./p003/tools/baidu-weather.js');
 const { cctvNews } = await import('./p003/tools/cctv-news.js');
 const { searchDialogueClarification } = await import('./p003/tools/search-dialogue-context.js');
 const { createSearchClaimFilter } = await import('./p003/tools/search-claim-stream.js');
@@ -58,19 +59,6 @@ const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公�
 const persona = '你是个人语音伙伴小可。中文口语自然、温暖、好奇，日常先直接回答，主人要求详细讲时讲完整。';
 const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有相关记忆就直说。' + availableSearch + '，也支持天气与时间。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
 const weather = new FixedWeather();
-function weatherIntent(text: string) {
-  const q = text.replace(/[\s，。！？,.!?]/gu, '');
-  if (!/天气|气温|降雨|下雨|带伞|多少度|空气质量/.test(q) || /为什么|原理|是什么|形成|故事|作文|如果|别查|不要查/.test(q)) {
-    return undefined;
-  }
-  if (/昨天|前天|下周|下个月|第\d|[0-9一二三四五六七八九十]+[月日号]|周[一二三四五六日末]/.test(q)) return { unsupported: true };
-  const day = /后天/.test(q) ? 2 : /明天/.test(q) ? 1 : 0;
-  const metric = /空气质量/.test(q) ? 'aqi' : /现在|目前|实时/.test(q) && day === 0 ? 'current' : 'forecast';
-  const place = q.replace(/今天|明天|后天|现在|目前|实时|的/g, '')
-    .replace(/(?:天气|气温|降雨|空气质量|出门|会不会下雨|会下雨|下雨|要不要带伞|要带伞|带伞|多少度|怎么样|如何|多少|吗|呢)+$/u, '');
-  const result = placeWeatherSchema.safeParse({ place, day_offset: day, metric });
-  return result.success ? { request: result.data } : {};
-}
 // Accept a short, unqualified domestic bulletin. Every word must belong to
 // this request; named sources, topics, dates and quantities stay with normal search.
 function singleDomesticBulletin(query: string): string | undefined {
@@ -99,7 +87,26 @@ const tasks = new SearchTasks({
   dailyDeviceLimit: 50,
   async execute(query, signal, task) {
     const target = weatherIntent(query)?.request;
-    if (target) return weather.run(target, signal, task.createdAt);
+    if (target) {
+      if (target.metric !== 'forecast') return weather.run(target, signal, task.createdAt);
+      const stop = new AbortController();
+      const budget = AbortSignal.any([stop.signal, signal]);
+      // Start the independent forecast immediately on failure, or after a slow primary.
+      let startBackup!: () => void;
+      const backupReady = new Promise<void>(resolve => { startBackup = resolve; });
+      const timer = setTimeout(startBackup, 750);
+      const primary = weather.run(target, budget, task.createdAt).catch(error => { startBackup(); throw error; });
+      try {
+        return await Promise.any([primary, backupReady.then(() => {
+          budget.throwIfAborted();
+          return forecastFallback(target, budget, task.createdAt);
+        })]);
+      } finally { clearTimeout(timer); stop.abort(); startBackup(); }
+    }
+    if (cnMarket(query) === 'cn') {
+      try { return await marketSnapshot(signal); }
+      catch { signal.throwIfAborted(); report('market_snapshot_unavailable'); }
+    }
     const bulletin = singleDomesticBulletin(query);
     if (bulletin) {
       try {
@@ -172,6 +179,13 @@ const resumeSearch = /^(?:继续|接着)(?:播报|说)?(?:刚才的)?(?:搜索|�
 const privateSearch = /(?:长(?:期|远)记忆|个人记忆|私有记忆|私密|聊天记录|对话记录|通讯录|联系人|收藏夹|备忘录|(?:我|你|咱们)(?:以前|之前|上次|刚才|昨天|曾经)?(?:说过|提过|告诉过|记过|记得|记下|存过|聊过|提到|留下|喜欢|不喜欢|偏好|住在)|(?:刚才|上次|之前)(?:那|的|聊|说)|怎么称呼我)/u;
 const active = new Map<string, AbortController>();
 const latestSearch = new Map<string, string>();
+// Keep only a typed weather slot or an explicitly public query for a short voice follow-up.
+const followups = new Map<string, {expires: number, weather?: NonNullable<ReturnType<typeof weatherIntent>>['target'], market?: true, retry?: string}>();
+function remember(room: string, entry: Omit<NonNullable<ReturnType<typeof followups.get>>, 'expires'>) {
+  if (!/^pv-[a-f0-9]{32}$/.test(room)) return;
+  if (followups.size >= 100) followups.delete(followups.keys().next().value!);
+  followups.set(room, {...entry, expires: Date.now() + 90000});
+}
 let extraction = Promise.resolve();
 let extractionPending = 0;
 
@@ -206,7 +220,8 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
   }
   catch { return empty('这条查询不能直接发到网上，可以换一个不含个人信息的公开问题。'); }
   const weatherRequest = weatherIntent(query);
-  if (weatherRequest?.unsupported) return empty('可以查今天、明天或后天的天气。你想查哪一天？');
+  if (weatherRequest?.unsupported) return empty('可以查今天、明天或后天的天气预报，空气质量只支持今天的实况。你想查哪一种？');
+  if (weatherRequest?.ambiguous) return empty('有好几个地方同名，可以加上省或市吗？');
   if (weatherRequest && !weatherRequest.request) return empty('你想查哪个城市的天气？');
   if (!weatherRequest && !singleDomesticBulletin(query) && !cctvNews.supports(query) && !searchKey && !cpaWebSearchEnabled) {
     return empty('目前可查央视国内新闻和航天动态，这个主题暂时没有可用的查询来源。');
@@ -230,11 +245,15 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
         if (latestSearch.size >= 100) latestSearch.delete(latestSearch.keys().next().value!);
         latestSearch.set(room, task.id);
       }
-      if (claimed.result) return claimed.result;
+      if (claimed.result) {
+        report('search_' + (claimed.result.sources.length ? 'cited' : 'no_evidence') + '_ms=' + ((task.readyAt ?? Date.now()) - task.createdAt));
+        return claimed.result;
+      }
     }
     report('search_no_result' + (task.failure ? ':' + task.failure.stage + ':' + task.failure.reason : ''));
     return empty('这次没能查到可核实的来源，可以稍后再试。');
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message === 'daily_limit') return empty('今天的联网查询额度已经用完了，明天可以继续查。');
     if (task) tasks.cancel(taskOwner, task.id);
     signal.throwIfAborted();
     return empty('这次没能查到可核实的来源，可以稍后再试。');
@@ -244,9 +263,12 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
 type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
-  onText: (text: string) => Promise<void>, onSearch?: () => void): Promise<Reply> {
+  onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false): Promise<Reply> {
   const user = messages.at(-1)!.content;
   const history = messages.slice(0, -1);
+  const prior = followups.get(room);
+  followups.delete(room);
+  const context = prior && prior.expires >= Date.now() ? prior : undefined;
   const direct = async (text: string, tool?: string, sources?: SearchResult['sources']): Promise<Reply> => {
     signal.throwIfAborted();
     await onText(text);
@@ -261,16 +283,43 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     return direct(result?.text ?? '这次会话还没有可以接续的搜索结果。', 'search', result?.sources);
   }
   const compact = user.replace(/[，。！？、?！,!.\s]/gu, '');
-  if (capability.test(compact) || toolList.test(compact)) {
+  if (/^(?:那+)?你(?:能|会|可以|支持)(?:查|用)?导航吗?$/u.test(compact)) return direct('我可以查询公开的出行信息，但目前不能打开手机导航或提供实时转向指引。', 'capabilities');
+  if (capability.test(compact) || toolList.test(compact) || /^(?:那+)?你(?:都)?(?:能|会|可以)(?:查询|查|搜)什么(?:呢|啊)?$/u.test(compact)) {
     return direct(`${availableSearch}，也能查天气和时间。你想查什么？`, 'capabilities');
   }
   const allowNetwork = !noWeb.test(user);
   const search = searchPrefix.exec(user);
-  const query = search ? user.slice(search[0].length).trim() : user;
+  let query = search ? user.slice(search[0].length).trim() : user;
+  const retry = /^(?:那|你|帮我|请|就)*(?:再|重新)(?:查查|查一下|搜搜|搜一下|查|搜)(?:看|吧|呗|呢|啊)*$/u.test(compact);
+  if (retry) {
+    if (!context?.retry) return direct('你想再查什么？告诉我主题就行。');
+    query = context.retry;
+  }
+  if (context?.weather && allowNetwork) {
+    const place = followupPlace(query);
+    if (place) {
+      const w = context.weather;
+      query = place + ['今天','明天','后天'][w.day_offset] + ({current:'实时天气',aqi:'空气质量',forecast:'天气'}[w.metric]);
+    }
+  }
+  if (/^(?:还没想到|没想好|没事换一个|换一个|嗯+|哦+|算了|没事)[呀吧呢啊]?$/u.test(compact)) {
+    return direct(/换/u.test(compact) ? '好，换个话题。' : '好。');
+  }
+  const marketReply = context?.market && /^(?:那+|看看|就)?(港股|美股)(?:的|呢|吧|呗)*$/u.exec(compact);
+  if (marketReply) query = marketReply[1] + '市场最新指数行情，请注明行情时间';
+  const market = cnMarket(query);
+  if (allowNetwork && market === 'unspecified') {
+    remember(room, {market: true});
+    return direct('你想了解哪个市场？比如 A 股、港股还是美股。');
+  }
   const weatherRequest = weatherIntent(query);
   const automatic = currentFacts.some((pattern) => pattern.test(query)) && !/(?:故事|作文|虚构|编一个|写一首|翻译|模拟|假设|是什么意思|是什么原理)/u.test(query);
-  if (allowNetwork && (search || weatherRequest || singleDomesticBulletin(query) || cctvNews.supports(query) || automatic)) {
+  if (allowNetwork && (search || retry || marketReply || market || weatherRequest || singleDomesticBulletin(query) || cctvNews.supports(query) || automatic)) {
     const result = await querySearch(query, room, signal, onSearch);
+    if (weatherRequest?.target && !weatherRequest.request) remember(room, {weather: weatherRequest.target});
+    else if (!result.sources.length && !privateSearch.test(query)) {
+      try { remember(room, {retry: validateQuery(query)}); } catch { /* Private or invalid text is never retained for retry. */ }
+    }
     return direct(result.text, weatherRequest ? 'weather' : 'search', result.sources);
   }
   const clarify = searchDialogueClarification(user);
@@ -301,8 +350,9 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   if (allowLookup) {
     try { validateQuery(user); } catch { allowLookup = false; }
   }
+  const quickConversation = voice && !/仔细分析|深入|详细推导|分步推理|深度思考|认真分析|详细分析/u.test(user);
   for await (const delta of chatDeltas(policy ? `${prompt}\n\n${policy}` : prompt,
-    [...stripClockTurns(history), { role: 'user', content: user }], signal, allowLookup)) {
+    [...stripClockTurns(history), { role: 'user', content: user }], signal, allowLookup, quickConversation)) {
     if ('search' in delta) {
       const result = await querySearch(user, room, signal);
       await forward(result.text);
@@ -363,7 +413,7 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   const response = { id: `chatcmpl-${randomUUID()}`, created: Math.floor(Date.now() / 1000), model: 'personal-brain' };
   const finish = () => { if (active.get(room) === controller) active.delete(room); };
   const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void) => {
-    const reply = await answer(room, messages, store, signal, onText, onSearch);
+    const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')));
     signal.throwIfAborted();
     if (store) persist(room, user.content, reply.text, reply.excluded);
     return reply;

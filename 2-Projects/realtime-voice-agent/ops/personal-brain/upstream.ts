@@ -131,9 +131,10 @@ const lookupTool = {
     parameters: { type: 'object', properties: {}, additionalProperties: false },
   },
 };
-export async function* chatDeltas(system: string, messages: TextTurn[], signal: AbortSignal, allowLookup: boolean): AsyncGenerator<ChatDelta> {
+export async function* chatDeltas(system: string, messages: TextTurn[], signal: AbortSignal, allowLookup: boolean, quickConversation = false): AsyncGenerator<ChatDelta> {
   const response = await requestChat({
     stream: true, max_tokens: 2048,
+    ...(quickConversation ? {thinking: {type: 'disabled'}} : {}),
     ...(allowLookup ? { tools: [lookupTool], tool_choice: 'auto' } : {}),
     messages: [{ role: 'system', content: system }, ...messages],
   }, signal);
