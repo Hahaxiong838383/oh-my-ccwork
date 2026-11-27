@@ -48,6 +48,9 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
       const cards = grid.locator('.avatar-card');
       await cards.first().waitFor();
       const count = await cards.count();
+      const labels=await cards.allTextContents();
+      assert.equal(new Set(labels).size,count,family+' duplicate display name');
+      for (const label of labels) assert.ok(/[\u3400-\u9fff]/.test(label) && !/[a-z]/i.test(label),label);
       assert.ok(count >= ({classic:1,open:17,boop:10,robot:4})[family]);
       for (let i=0;i<count;i++) {
         await cards.nth(i).evaluate(b=>b.click());
@@ -60,6 +63,7 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
       })));
       if (family !== 'classic') assert.equal(thumbs.filter(n=>n>0).length,count);
       const options = page.locator('#avatar-expression option');
+      for (const label of await options.allTextContents()) assert.ok(/[\u3400-\u9fff]/.test(label) && !/[a-z]/i.test(label),label);
       const expressions = await options.evaluateAll(items=>items.slice(1).map(i=>i.value));
       assert.ok(expressions.length >= ({classic:39,open:6,boop:12,robot:9})[family]);
       for (const id of expressions) {
@@ -129,6 +133,8 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
     await page.keyboard.press('Escape');
     assert.ok(await page.locator('#color-popover').isHidden());
     assert.equal(await app.getAttribute('data-active'),'true');
+    await page.setViewportSize({width:412,height:850});
+    await require('./color-wheel.cjs')(page);
     assert.deepEqual(errors,[]); assert.deepEqual(requests,[]);
     console.log(JSON.stringify({variantsAndExpressions:counts, offline:true, preservedSelection:true}));
   } finally { await browser.close(); }

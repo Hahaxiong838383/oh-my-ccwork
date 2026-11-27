@@ -72,7 +72,7 @@
 
     <section id="color-popover" class="appearance-sheet" role="dialog" aria-label="外观" hidden>
       <div class="appearance-heading">
-        <div><h2>外观</h2><p id="appearance-name" aria-live="polite"></p></div>
+        <div><h2>外观</h2><button id="wheel-back" type="button" hidden>‹ 选头像</button><p id="appearance-name" aria-live="polite"></p></div>
         <button id="appearance-done" type="button">完成</button>
       </div>
       <div class="appearance-browse"><div id="avatar-families" class="avatar-families" role="group" aria-label="头像系列"></div>
@@ -84,6 +84,10 @@
         <button id="avatar-view" type="button" aria-label="切换立体与平面头像" hidden></button>
         <span id="appearance-credit"></span>
       </div>
+      <div id="color-wheel-panel" hidden>
+        <div id="color-wheel" role="slider" tabindex="0" aria-label="色盘，左右调色相，上下调饱和度" aria-valuemin="0" aria-valuemax="359"><span id="wheel-marker"></span></div>
+        <label class="wheel-light" for="wheel-value">明暗<input id="wheel-value" type="range" min="0" max="100" value="100"></label>
+      </div>
       <div class="appearance-colors">
         <span class="color-label">配色</span>
       <div id="swatch-row" class="swatch-row">
@@ -93,9 +97,7 @@
         <button class="swatch-dot" type="button" data-color="#A855F7" aria-label="暮光紫"></button>
         <button class="swatch-dot" type="button" data-color="#EC4899" aria-label="霓虹粉"></button>
         <button class="swatch-dot" type="button" data-color="#F59E0B" aria-label="琥珀金"></button>
-        <label class="swatch-custom" title="自定义颜色">
-          <input id="color-custom" type="color" value="#4F7DF3" aria-label="自定义颜色">
-        </label>
+        <button id="color-custom" class="swatch-custom" type="button" aria-label="自定义颜色" aria-controls="color-wheel-panel" aria-expanded="false"></button>
       </div>
         <span id="color-hex" class="popover-hex"></span>
       </div>
@@ -188,6 +190,7 @@
   <script src="orb-surface.js"></script>
   <script src="orb-input.js"></script>
   <script src="appearance.js"></script>
+  <script src="color-wheel.js"></script>
   <script src="night.js"></script>
   <script src="session.js"></script>
 </body>

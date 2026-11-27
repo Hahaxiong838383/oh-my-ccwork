@@ -37,9 +37,9 @@
   function readSavedColor() {
     try {
       var stored = global.localStorage && global.localStorage.getItem(STORAGE_KEY);
-      return normalizeHex(stored) || DEFAULT_COLOR;
+      return normalizeHex(stored);
     } catch (_) {
-      return DEFAULT_COLOR;
+      return null;
     }
   }
 
@@ -115,7 +115,6 @@
   var btnPaletteEl = document.getElementById('btn-palette');
   var colorPopoverEl = document.getElementById('color-popover');
   var colorHexEl = document.getElementById('color-hex');
-  var colorCustomEl = document.getElementById('color-custom');
   var swatchEls = Array.prototype.slice.call(document.querySelectorAll('.swatch-dot'));
 
   var currentState = {
@@ -128,27 +127,25 @@
     active: false
   };
 
-  var initialColor = readSavedColor();
-  var currentColor = initialColor;
-  var orb = canvasEl ? new global.NightSphere(canvasEl, initialColor) : null;
-
+  var savedColor = readSavedColor();
+  var committedColor = savedColor || DEFAULT_COLOR;
+  var explicitColor = Boolean(savedColor);
+  var orb = canvasEl ? new global.NightSphere(canvasEl, committedColor) : null;
   var appearance = orb && global.NightAvatars ? global.NightAvatars.attach(orb) : null;
+  var wheel = global.NightColorWheel.attach({
+    preview: hex => paintColor(hex, true, true),
+    commit: hex => selectColor(hex, true, true),
+    cancel: () => { paintColor(committedColor, explicitColor, false); wheel.sync(committedColor); }
+  });
 
-  function applyColor(rawHex, persist, source) {
-    var hex = normalizeHex(rawHex) || DEFAULT_COLOR;
+  function paintColor(hex, explicit, dragging) {
     var rgb = hexToRgb(hex);
-    currentColor = hex;
-
     document.documentElement.style.setProperty('--accent', hex);
     document.documentElement.style.setProperty('--accent-rgb', rgb.r + ', ' + rgb.g + ', ' + rgb.b);
 
     if (colorHexEl) {
       colorHexEl.textContent = hex;
     }
-    if (colorCustomEl && colorCustomEl.value.toUpperCase() !== hex) {
-      colorCustomEl.value = hex;
-    }
-
     for (var i = 0; i < swatchEls.length; i++) {
       var dot = swatchEls[i];
       var dotColor = (dot.getAttribute('data-color') || '').toUpperCase();
@@ -156,18 +153,26 @@
     }
 
     if (orb) {
+      orb.customColor = explicit;
+      orb.previewColor = dragging;
       orb.setColor(hex);
     }
-    if (persist) {
-      saveColor(hex);
-    }
-    if (source === 'local') {
-      callVoice('onAccentPick', hex);
-    }
+  }
+
+  function selectColor(hex, local, fromWheel) {
+    // A remote echo of the initial accent must not replace a skin's own palette.
+    explicitColor = local || explicitColor || hex !== DEFAULT_COLOR;
+    committedColor = hex;
+    if (explicitColor) saveColor(hex);
+    if (!local && wheel.editing()) return;
+    paintColor(hex, explicitColor, false);
+    if (!fromWheel) wheel.sync(hex);
+    if (local) callVoice('onAccentPick', hex);
   }
 
   function setPopoverOpen(open) {
     if (!colorPopoverEl || !btnPaletteEl) return;
+    if (!open) wheel.close();
     if (appearance) appearance.setOpen(open);
     colorPopoverEl.hidden = !open;
     btnPaletteEl.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -361,18 +366,7 @@
   for (var i = 0; i < swatchEls.length; i++) {
     swatchEls[i].addEventListener('click', function () {
       var hex = this.getAttribute('data-color');
-      applyColor(hex, true, 'local');
-    });
-  }
-
-  if (colorCustomEl) {
-    colorCustomEl.addEventListener('input', function () {
-      applyColor(this.value, true, 'local');
-    });
-    colorCustomEl.addEventListener('change', function () {
-      if (normalizeHex(this.value) !== currentColor) {
-        applyColor(this.value, true, 'local');
-      }
+      selectColor(hex, true, false);
     });
   }
 
@@ -463,7 +457,8 @@
   if (orb && global.NightOrbInput) global.NightOrbInput.bind(canvasEl, orb);
 
   // Initialize color, clean initial DOM, and animation loop
-  applyColor(initialColor, false, 'init');
+  paintColor(committedColor, explicitColor, false);
+  wheel.sync(committedColor);
   applyStateToDom({ paired: false, active: false });
   if (orb && !document.hidden) {
     orb.start();
@@ -473,12 +468,12 @@
     render: render,
     level: level,
     accent: function () {
-      return currentColor;
+      return committedColor;
     },
     setAccent: function (rawHex, source) {
       var hex = normalizeHex(rawHex);
       if (!hex) return false;
-      applyColor(hex, true, source === 'local' ? 'local' : 'remote');
+      selectColor(hex, source === 'local', false);
       return true;
     },
     speech: function (patch) {

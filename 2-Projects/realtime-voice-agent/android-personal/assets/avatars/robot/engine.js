@@ -1932,9 +1932,9 @@
         }
         return { dpr, frame: fitFrameFor(shape, spec.antenna, boxSize) };
       }
-      function updatePalette(frameColor) {
-        if (!spec.followThemeColor) return;
-        var nextColor = typeof frameColor === "string" && frameColor.trim() && parseColor(frameColor) ? frameColor.trim() : spec.color;
+      function updatePalette(frameColor, customColor) {
+        var useFrameColor = customColor === true || spec.followThemeColor;
+        var nextColor = useFrameColor && typeof frameColor === "string" && frameColor.trim() && parseColor(frameColor) ? frameColor.trim() : spec.color;
         if (nextColor !== currentColorKey) {
           currentColorKey = nextColor;
           palette = makePalette(nextColor, spec.trimColor, spec.screenColor);
@@ -2140,7 +2140,7 @@
           elapsedSec += dt;
           currentReduced = typeof frame.reduced === "boolean" ? frame.reduced : systemReducedMotion();
           currentMood = analyzeMood(frame.mood);
-          updatePalette(frame.color);
+          updatePalette(frame.color, frame.customColor);
           var targetState = resolveTargetState(frame);
           lastResolvedState = targetState;
           updateAudioEnvelopes(frame, dt > 0 ? dt : 1 / 60);

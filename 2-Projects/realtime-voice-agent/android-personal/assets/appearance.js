@@ -11,9 +11,30 @@
 
   const storageKey = 'xiaoke.night.appearance.v1';
   const families = new Map();
-  const familyNames = {classic:'暗夜球', open:'Open Bot', boop:'BoopFace', robot:'Robot Heads'};
+  const familyNames = {classic:'暗夜球', open:'趣物偶', boop:'碰碰脸', robot:'机器头'};
   const credits = {classic:'', open:'Dominik Scholz', boop:'CX ArtLab', robot:'Fayaz Ahmed'};
-  const boopSeries = {"1": "彩色玻璃", "2": "淡彩玻璃", "3": "软糖", "4": "糖果玻璃", "5": "亚克力", "6": "果冻", "7": "渐变", "8": "磨砂玻璃系列", "9": "磨砂金属", "10": "宝石与陶瓷", "11": "木系列", "12": "球类", "13": "透明与流光", "14": "织物与皮革", "15": "甜点与水果", "16": "自然", "17": "图案与科技"};
+  const boopSeries = {
+    '1':'彩色玻璃', '2':'淡彩玻璃', '3':'软糖', '4':'糖果玻璃', '5':'亚克力', '6':'果冻',
+    '7':'渐变', '8':'磨砂玻璃', '9':'磨砂金属', '10':'宝石与陶瓷', '11':'木质', '12':'球类',
+    '13':'透明与流光', '14':'织物与皮革', '15':'甜点与水果', '16':'自然', '17':'图案与科技'
+  };
+  const openShapes = {
+    controller:'游戏手柄', barbell:'杠铃', mug:'马克杯', lightbulb:'灯泡', chat:'对话气泡',
+    sprout:'嫩芽', 'watering-can':'洒水壶', book:'书本', brain:'大脑', bull:'公牛',
+    bunny:'小兔', camera:'相机', cat:'小猫', cloud:'云朵', egg:'小蛋', ghost:'小幽灵',
+    magnifier:'放大镜', 'paint-brush':'画笔', palette:'调色盘', rocket:'火箭',
+    shield:'盾牌', star:'星星', 'witch-hat':'女巫帽'
+  };
+  const openMaterials = {fluffy:'绒面', glass:'玻璃', flat:'平涂'};
+  const openExpressions = {
+    idle:'待机', happy:'开心', thinking:'思考', working:'专注', waiting:'等待', blocked:'受阻',
+    done:'完成', listening:'聆听', speaking:'说话', muted:'静音', curious:'好奇', shy:'害羞'
+  };
+  const robotVariants = {rectangle:'经典电视', 'tv-tomato':'番茄红电视'};
+  const boopVariants = {
+    'classic-3d':'经典黑·立体', 'classic-2d':'经典黑·平面',
+    'skin-703':'渐变黄', 'skin-704':'渐变柔紫', 'skin-1201':'沟槽足球', 'skin-1411':'深红苏格兰格'
+  };
   const classicLabels = {
     sleeping:'熟睡', waking:'醒来', idle:'自在', listening:'聆听', thinking:'思考',
     searching:'寻找', working:'专注', excited:'兴奋', surprised:'惊喜', suspicious:'怀疑',
@@ -25,8 +46,41 @@
     bouncing:'弹跳', 'powering-down':'休眠'
   };
 
+  function variantLabel(familyId, variant) {
+    if (familyId === 'open') {
+      const parts = String(variant.id || '').split(':');
+      const shape = openShapes[parts[0]];
+      const mat = openMaterials[parts[1] || 'fluffy'];
+      if (shape && mat) return shape + '·' + mat;
+    }
+    if (familyId === 'robot' && Object.hasOwn(robotVariants, variant.id)) {
+      return robotVariants[variant.id];
+    }
+    if (familyId === 'boop') {
+      const name = boopVariants[variant.id] || variant.label.replace(/^\d+\s*·\s*/, '').replace(/^软糖\s*·\s*/, '软糖');
+      const skin = /^skin-(\d+)$/.exec(variant.id);
+      return skin ? name + '（' + skin[1] + '）' : name;
+    }
+    return variant.label || variant.id;
+  }
+
+  function expressionLabel(familyId, exp) {
+    if (familyId === 'open' && Object.hasOwn(openExpressions, exp.id)) {
+      return openExpressions[exp.id];
+    }
+    if (familyId === 'classic' && Object.hasOwn(classicLabels, exp.id)) {
+      return classicLabels[exp.id];
+    }
+    return exp.label || exp.id;
+  }
+
   function register(family) {
-    families.set(family.id, family);
+    const id = family.id;
+    families.set(id, Object.assign({}, family, {
+      title: familyNames[id] || family.title || id,
+      variants: (family.variants || []).map(v => Object.assign({}, v, {label: variantLabel(id, v)})),
+      expressions: (family.expressions || []).map(e => Object.assign({}, e, {label: expressionLabel(id, e)}))
+    }));
   }
   const loading = new Map();
   function loadFamily(id) {
