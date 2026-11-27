@@ -66,7 +66,7 @@ const screen = {width: 412, height: 860};
       await state('ready',{canInstall:true});
       await page.evaluate(()=>dispatchEvent(new Event('night-open-update')));assert.ok(await panel.isHidden());
       await home.tap();assert.ok(await panel.isVisible());assert.ok(await el('ota-install').isDisabled());
-      const rects=await page.evaluate(()=>['service-panel','subtitles','reply-text','panel-active','btn-stop'].map(id=>{const r=document.getElementById(id).getBoundingClientRect();return {id,top:r.top,bottom:r.bottom,w:r.width,h:r.height};}));
+      const rects=await page.evaluate(()=>['service-panel','subtitles','reply-text','panel-active','btn-call'].map(id=>{const r=document.getElementById(id).getBoundingClientRect();return {id,top:r.top,bottom:r.bottom,w:r.width,h:r.height};}));
       for(const r of rects) assert.ok(r.w>0&&r.h>0,r.id);
       assert.ok(rects[0].bottom<=rects[1].top+1,JSON.stringify({viewport,rects}));
       assert.ok(rects[2].bottom<=rects[3].top+1,JSON.stringify({viewport,rects}));

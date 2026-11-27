@@ -103,6 +103,7 @@ function installRoomFixture(pcm) {
     return { gain: gain.gain, track: sink.stream.getAudioTracks()[0] };
   }
   class Room {
+    registerRpcMethod(name,handler) { this.avatarRpc=handler; }
     constructor() {
       this.events = new Map();
       this.ctx = new AudioContext();
@@ -225,7 +226,7 @@ async function measure(assetDir, pcmBase64, wavDuration) {
       const url = new URL(route.request().url());
       const types = { 'index.html': 'text/html', 'night.css': 'text/css', 'night.js': 'text/javascript', 'session.js': 'text/javascript' };
       const name = url.pathname.slice(1) || 'index.html';
-      if (['orb-reference','orb-motion','orb-surface','orb-input'].some(script => name === script+'.js')) types[name]='text/javascript';
+      if (['color-wheel','orb-reference','orb-motion','orb-surface','orb-input'].some(script => name === script+'.js')) types[name]='text/javascript';
       if (url.origin !== origin) return route.abort();
       if (name === 'livekit.js') return route.fulfill({ contentType: 'text/javascript', body: '' });
       if (!Object.hasOwn(types, name)) return route.abort();
@@ -258,11 +259,13 @@ async function measure(assetDir, pcmBase64, wavDuration) {
       await page.waitForTimeout(420);
       return page.locator('#orb-canvas').evaluate(facePixels);
     }
-    await page.click('#btn-start'); await phase('listening');
+    await page.click('#btn-call'); await phase('listening');
     await page.evaluate(() => loadSpeech());
     const quiet = await capture('local', 0), listening = await capture('local', .18);
-    await page.click('#btn-mute'); await phase('muted');
+    await page.click('#btn-mute');
+    await page.waitForFunction(()=>document.querySelector('#btn-mute').getAttribute('aria-pressed')==='true');
     const muted = await capture('local', .18);
+    await page.click('#btn-mute');
     await page.evaluate(() => probe.local.value = 0);
 
     // Replay the worker protocol: each interim arrives as its sentence starts,
@@ -300,7 +303,7 @@ async function measure(assetDir, pcmBase64, wavDuration) {
     const reducedSample = await page.locator('#orb-canvas').evaluate(facePixels);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => probe.remote.value = 0);
-    await page.click('#btn-stop'); await phase('idle');
+    await page.click('#btn-call'); await phase('idle');
     return {
       normal, reduced,
       eyes: { quiet: quiet.islands.length, listening: listening.islands.length, muted: muted.islands.length,

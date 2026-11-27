@@ -52,6 +52,7 @@
       <div id="avatar-wrap" class="avatar-wrap">
         <div id="avatar-engine" aria-hidden="true"></div>
         <canvas id="orb-canvas" role="img" aria-label="小可的语音表情"></canvas>
+        <div id="avatar-tears" aria-hidden="true" hidden></div>
       </div>
 
       <div id="status-banner" class="status-banner" role="status" hidden>
@@ -124,62 +125,20 @@
         </form>
       </section>
 
-      <section id="panel-start" class="dock-shell dock-shell-single" aria-label="开始通话" hidden>
-        <button id="btn-start" class="start-btn" type="button">
-          <span class="start-btn-icon" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="9" y="2" width="6" height="12" rx="3"/>
-              <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
-              <line x1="12" y1="19" x2="12" y2="22"/>
-            </svg>
-          </span>
-          <span class="start-btn-label">开始</span>
+      <section id="panel-active" class="call-controls" aria-label="通话控制" hidden>
+        <button id="btn-mute" class="call-action" type="button" aria-label="静音小可播报" aria-pressed="false" disabled>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="M5.2 9H7.3L10.6 6.1Q12 5 12 6.8V17.2Q12 19 10.6 17.9L7.3 15H5.2Q4 15 4 13.8V10.2Q4 9 5.2 9Z"/>
+            <g class="sound-on"><path d="M15.3 9.4A4.2 4.2 0 0 1 15.3 14.6M17.8 6.9A7.7 7.7 0 0 1 17.8 17.1"/></g>
+            <path class="sound-off" d="M15.4 9.6L20.2 14.4M20.2 9.6L15.4 14.4"/>
+          </svg>
         </button>
-      </section>
-
-      <section id="panel-active" class="dock-shell" aria-label="通话控制" hidden>
-        <div class="dock-grid">
-          <button id="btn-mute" class="ctrl-btn ctrl-mute" type="button" aria-pressed="false">
-            <span class="ctrl-circle" aria-hidden="true">
-              <svg class="icon-mic-on" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="2" width="6" height="12" rx="3"/>
-                <path d="M5 10v2a7 7 0 0 0 14 0v-2"/>
-                <line x1="12" y1="19" x2="12" y2="22"/>
-              </svg>
-              <svg class="icon-mic-off" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="2" y1="2" x2="22" y2="22"/>
-                <path d="M18.89 13.23A7.12 7.12 0 0 0 19 12v-2"/>
-                <path d="M5 10v2a7 7 0 0 0 12 5"/>
-                <path d="M15 9.34V5a3 3 0 0 0-5.68-1.33"/>
-                <path d="M9 9v3a3 3 0 0 0 5.12 2.12"/>
-                <line x1="12" y1="19" x2="12" y2="22"/>
-              </svg>
-            </span>
-            <span id="mute-label" class="ctrl-label">静音</span>
-          </button>
-
-          <button id="btn-interrupt" class="ctrl-btn ctrl-interrupt" type="button">
-            <span class="ctrl-circle" aria-hidden="true">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M18 11V6a2 2 0 0 0-4 0v4"/>
-                <path d="M14 10V4a2 2 0 0 0-4 0v6"/>
-                <path d="M10 10.5V6a2 2 0 0 0-4 0v8"/>
-                <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.9-5.9-2.5L3.3 16a2 2 0 0 1 2.9-2.7L8 15"/>
-              </svg>
-            </span>
-            <span class="ctrl-label">打断</span>
-          </button>
-
-          <button id="btn-stop" class="ctrl-btn ctrl-stop" type="button">
-            <span class="ctrl-circle" aria-hidden="true">
-              <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91"/>
-                <line x1="22" y1="2" x2="2" y2="22"/>
-              </svg>
-            </span>
-            <span class="ctrl-label">挂断</span>
-          </button>
-        </div>
+        <button id="btn-call" class="call-action" type="button" aria-label="开始通话">
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path class="call-start" d="M4.2 6.2Q4.2 4.2 6.2 4.2H7.8Q9.4 4.2 9.7 5.7L10.1 7.6Q10.3 8.8 9.4 9.6L9 10Q10.1 13.9 14 15L14.4 14.6Q15.2 13.7 16.4 13.9L18.3 14.3Q19.8 14.6 19.8 16.2V17.8Q19.8 19.8 17.8 19.8C10.2 19.8 4.2 13.8 4.2 6.2Z"/>
+            <path class="call-end" d="M3.4 11.4C7.6 7.8 16.4 7.8 20.6 11.4Q21.3 12.1 21.1 13.3L20.8 14.5Q20.5 15.6 19.3 15.6L17.2 15.4Q16.1 15.3 15.9 14.2L15.7 13Q12 11.8 8.3 13L8.1 14.2Q7.9 15.3 6.8 15.4L4.7 15.6Q3.5 15.6 3.2 14.5L2.9 13.3Q2.7 12.1 3.4 11.4Z"/>
+          </svg>
+        </button>
       </section>
     </footer>
   </main>

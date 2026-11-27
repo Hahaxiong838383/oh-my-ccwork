@@ -79,7 +79,7 @@
     families.set(id, Object.assign({}, family, {
       title: familyNames[id] || family.title || id,
       variants: (family.variants || []).map(v => Object.assign({}, v, {label: variantLabel(id, v)})),
-      expressions: (family.expressions || []).map(e => Object.assign({}, e, {label: expressionLabel(id, e)}))
+      expressions: (family.expressions || []).map(e => Object.assign({}, e, {label: expressionLabel(id, e)})).concat({id:'cry',label:'哭泣'})
     }));
   }
   const loading = new Map();
@@ -120,6 +120,12 @@
     let boopFlat = false;
     const viewButton = el('avatar-view');
     const fallback = {family:'classic', variant:'night'};
+    const tears = el('avatar-tears');
+    let tearTimer = 0;
+    function clearTears() {
+      clearTimeout(tearTimer);
+      tears.hidden = true;
+    }
 
     function mount(id, variant, save, flat = boopFlat) {
       const family = families.get(id);
@@ -140,6 +146,7 @@
           return;
         }
       }
+      clearTears();
       if (orb.skin) orb.skin.destroy();
       for (const child of Array.from(host.children)) if (child !== slot) child.remove();
       orb.skin = next;
@@ -156,6 +163,48 @@
       if (save) {
         try { global.localStorage.setItem(storageKey, JSON.stringify({family:id, variant, flat})); } catch (_) {}
       }
+    }
+
+    function snapshot() {
+      const family = families.get(familyId);
+      if (!family) return null;
+      const item = family.variants.find(v => v.id === variantId);
+      const current = !tears.hidden ? 'cry' : orb.skin ? orb.skin.currentExpression() : orb.renderedExpression;
+      return {family:familyId, variant:variantId, name:item.label, familyName:family.title,
+        current:family.expressions.some(e => e.id === current) ? current : '',
+        expressions:family.expressions.map(({id,label}) => ({id,label}))};
+    }
+
+    function play(id, voice) {
+      clearTears();
+      let pose = id;
+      if (id === 'cry') {
+        pose = {classic:'sad',open:'shy',boop:'failure',robot:'sleeping'}[familyId];
+        tears.hidden = false;
+        tearTimer = setTimeout(clearTears, 3200);
+      }
+      if (orb.skin) orb.skin.express(pose, voice);
+      else { orb.previewState = pose; orb.previewUntil = performance.now() + (voice ? 3200 : 2500); }
+    }
+
+    async function voiceRequest(request) {
+      if (document.hidden) return {ok:false,avatar:null};
+      let avatar = snapshot();
+      if (request.op === 'inspect') return {ok:Boolean(avatar),avatar};
+      const id = request.expression;
+      if (request.op !== 'express' || !avatar || request.family !== familyId ||
+          request.variant !== variantId || !avatar.expressions.some(e => e.id === id)) return {ok:false,avatar};
+      // Wait for the selected renderer to report a painted pose or an active native action.
+      const skin = orb.skin;
+      play(id, true);
+      const start = performance.now();
+      do {
+        if (document.hidden || skin !== orb.skin || familyId !== request.family || variantId !== request.variant) break;
+        avatar = snapshot();
+        if (avatar.current === id) return {ok:true,avatar};
+        await new Promise(resolve => setTimeout(resolve, 25));
+      } while (performance.now() - start < 420);
+      return {ok:false,avatar:document.hidden ? null : snapshot()};
     }
 
     function showFamily(id, selectedGroup = '') {
@@ -224,8 +273,7 @@
     picker.addEventListener('change', () => {
       const id = picker.value;
       if (id && !orb.active) {
-        if (orb.skin) orb.skin.express(id);
-        else { orb.previewState = id; orb.previewUntil = performance.now() + 2500; }
+        play(id, false);
       }
       picker.selectedIndex = 0;
     });
@@ -242,6 +290,7 @@
     }
 
     return {
+      voiceRequest, clearTears,
       setOpen(open) {
         if (opened === open) return;
         opened = open;
