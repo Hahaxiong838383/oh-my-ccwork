@@ -149,6 +149,7 @@
       this.phase = 'idle';
       this.active = this.muted = false;
       this.playback = this.micTarget = 0;
+      this.speech = null;
       this.spokenFor = this.quietFor = 0;
       this.yaw = this.pitch = 0;
       this.pointer = null;
@@ -170,8 +171,19 @@
       this.phase = phase; this.active = active; this.muted = muted;
       if (!active || muted) this.micTarget = 0;
       if (!active) this.playback = 0;
+      // A cue only belongs to the reply that is being spoken right now.
+      if (!active || (phase !== 'speaking' && phase !== 'streaming')) this.speech = null;
     }
     setLevel(value) { this.playback = clamp(Number(value) || 0, 0, 1); }
+    setSpeech(patch) {
+      if (!patch || patch.clear) { this.speech = null; return; }
+      const seq = Number(patch.seq);
+      this.speech = {
+        kind: typeof patch.kind === 'string' ? patch.kind : '',
+        text: typeof patch.text === 'string' ? patch.text : '',
+        seq: Number.isFinite(seq) ? seq : 0,
+      };
+    }
     resize() {
       const box = this.canvas.getBoundingClientRect();
       if (!box.width || !box.height) return;
@@ -223,12 +235,13 @@
         this.spokenFor += dt; this.quietFor = 0;
       } else {
         this.quietFor += dt;
-        if (this.quietFor > .32) this.spokenFor = 0;
+        if (this.quietFor > .58) this.spokenFor = 0;
       }
       const phase = this.phase === 'speaking' && this.spokenFor > .52 ? 'streaming' : this.phase;
       const pose = this.motion.step(dt, {
         phase: phase, active: this.active, muted: this.muted,
         mic: this.micTarget, playback: this.playback, reduced,
+        speech: this.speech,
       });
       const p = this.pointer;
       const x = p ? p.x : pose.gazeX, y = p ? p.y : pose.gazeY;

@@ -14,6 +14,8 @@ Android 管理权限、通话路由和 AES-GCM 设备凭据。WebView 统一持�
 
 状态与节奏沿用 grokbot-web 的 39 项状态表，25 个表情编号映射到本应用绘制的正视眼形。参考数据和 BSD-3-Clause 许可随 APK 分发。球面眼位、眨眼和惯性参考 Grok Bot 动画解剖。 [grokbot-web](https://github.com/Coiggahou2002/grokbot-web) · [Grok Bot 动画解剖](https://github.com/ArvinYin1/grokbot-animation-anatomy)
 
+说话时，手机读取订阅到的远端音轨。重音、连续音节和停顿驱动眼形、视线和头部。Worker 按已播放的采样位置发送每句字幕，手机从该句文字估计疑问、强调、关切等语气，有声时才把估计用于表情。字幕收到即可阅读。插话、挂断或更换 Worker 时会清除待用的语气。科大讯飞当前个人配置返回 PCM 音频；这些表情是客户端估计。[讯飞超拟人合成响应字段](https://www.xfyun.cn/doc/spark/super%20smart-tts.html)
+
 ## 日志与版本更新
 
 右上角「维护」提供本机诊断、主动回传、版本检查和安装入口。日志只包含受支持的技术事件、匿名事件 ID、时间和应用版本，无对话正文、录音、访问票据或 API key。回传要经过设备认证，服务器确认后移除待传事件。间歇网络下可再次同步。长期凭据保存在 Android Keystore 保护的本机存储。
