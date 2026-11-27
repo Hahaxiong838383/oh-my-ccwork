@@ -274,7 +274,11 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     await onText(text);
     return { text, sources, tool, excluded: true };
   };
-  const clock = resolveClock(user, history.filter((turn) => turn.role === 'user').map((turn) => turn.content));
+  // ASR often joins a spoken interruption and its follow-up without punctuation.
+  const clockQuestion = (text: string) => text.replace(
+    /^\s*(?:小可[\s，,、]*)?(?:先停一下|停一下|先等一下|等一下|打断一下)[\s，,、。！!]*/u, '') || text;
+  const clock = resolveClock(clockQuestion(user), history.filter((turn) => turn.role === 'user')
+    .map((turn) => clockQuestion(turn.content)));
   if (clock) return direct(answerClock(clock), 'clock');
   if (cancelSearch.test(user)) return direct('好，这轮不继续查询。', 'search_cancel');
   if (resumeSearch.test(user)) {
