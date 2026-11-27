@@ -39,6 +39,23 @@ if count != 2:
     raise SystemExit('P003 game extraction context moved')
 text = remove(r'^  // 方舟冒险事件.*\n  if \(Array.isArray\(obj.game_progress\)[\s\S]*?^  }\n', text)
 text = text.replace(', type GameEvent', '').replace('儿童陪伴 AI', '个人语音助手 AI').replace('孩子', '主人')
+# In the private brain, positive affect alone cannot mean approval of an answer.
+# The explicit reply ledger handles storytelling. Keep hook/comfort only for the real
+# preceding assistant message supplied at turn commit, including the room boundary.
+for old, new in [
+    ("import { stylePoolStore, shouldCrystallize } from './style-pool-store.js';", ""),
+    ("opts?: { reason?: string }", "opts?: { reason?: string; previousReplyId?: string }"),
+    ("ts: number; valence?: number; story: boolean; hook: boolean", "ts: number; valence?: number; replyId?: string; hook: boolean"),
+    ("const prev = _prevTurnMap.get(acctId);", "const roomKey = JSON.stringify([acctId, sessionId]);\n        const prev = _prevTurnMap.get(roomKey);"),
+    ("prev && sampleTs - prev.ts", "prev && opts?.previousReplyId && prev.replyId === opts.previousReplyId && sampleTs - prev.ts"),
+    ("assistantHadStory: prev.story, ", ""),
+    ("_prevTurnMap.set(acctId, { ts: sampleTs, valence: turnSignal?.valence, story: feat.story, hook: feat.hook });",
+     "_prevTurnMap.set(roomKey, { ts: sampleTs, valence: turnSignal?.valence, replyId: lastAssistantMsg?.id, hook: feat.hook });"),
+]:
+    if text.count(old) != 1:
+        raise SystemExit('Personal reply attribution hook moved: ' + old)
+    text = text.replace(old, new)
+text = remove(r'^    // M4 风格晶化[\s\S]*?(?=^    // 撤回不喜欢)', text)
 # The extraction schema keeps "child" as an internal enum.
 path.write_text(text)
 
@@ -60,7 +77,28 @@ for old, new in [
     if text.count(old) != 1:
         raise SystemExit('Personal evidence hook moved: ' + old)
     text = text.replace(old, new)
+# Only owner-approved samples qualify for personal prompt examples.
+text, count = re.subn(r'      // M4：[\s\S]*?(?=      // M3：)', '''      if (personaStyleEnabled(acct)) {
+        const h = stylePoolStore.latestConfirmed(acct);
+        if (h) styleShot = `【过去有效的相处方式·参考】当时主人说"${sanitizeField(h.child_said,60)}"，主人喜欢小可这样回应："${sanitizeField(h.xiaoke_did,60)}"`;
+      }
+''', text)
+if count != 1:
+    raise SystemExit('Personal prompt example hook moved')
 path.write_text(text.replace('孩子', '主人'))
+path = target / 'style-pool-store.ts'
+text = path.read_text()
+anchor = '  private listAll(accountId: string): StyleEntry[] {'
+if text.count(anchor) != 1:
+    raise SystemExit('Personal style pool hook moved')
+path.write_text(text.replace(anchor, '''  latestConfirmed(accountId: string) {
+    return this.db.prepare(`SELECT s.child_said,s.xiaoke_did FROM style_pool s JOIN growth_event e ON e.id=s.id AND e.account_id=s.account_id
+      WHERE s.account_id=? AND e.rule='explicit_style_feedback' AND e.reply_msg_id IS NOT NULL AND e.feedback_msg_id IS NOT NULL
+        AND s.created_at > COALESCE((SELECT cut FROM personal_memory_boundary WHERE account_id=s.account_id),0)
+      ORDER BY s.created_at DESC,s.rowid DESC LIMIT 1`).get(accountId) as {child_said:string; xiaoke_did:string}|undefined;
+  }
+
+''' + anchor))
 path = target / 'style-template.ts'
 path.write_text(path.read_text().replace('家长设定', '主人设定').replace('孩子', '主人'))
 

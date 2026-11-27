@@ -36,6 +36,7 @@ Object.assign(process.env, {
   MEMORY_REUNION_RECALL: '0',
 });
 const { conversationStore } = await import('./p003/conversation-store.js');
+const { PersonalStoryFeedback, explicitReplyApproval } = await import('./story-feedback.js');
 const { profileStore } = await import('./p003/profile-store.js');
 const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
@@ -58,6 +59,7 @@ if (!profileStore.getProfile(ownerId)) profileStore.upsertProfile(ownerId, { nic
 
 const memory = new PersonalMemoryActions(dataDir, ownerId);
 const recall = new PersonalRecall(dataDir);
+const storyFeedback = new PersonalStoryFeedback(dataDir);
 const searchKey = process.env.BRAIN_DEEPSEEK_SEARCH_KEY;
 const domains = ['news.cctv.com', 'cctv.com', 'gov.cn', 'news.cn', 'cas.cn', 'nasa.gov', 'chnmuseum.cn', 'dpm.org.cn'];
 const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公开资料和最新消息' : '可以查央视新闻和航天动态';
@@ -193,19 +195,27 @@ let extraction = Promise.resolve();
 let extractionPending = 0;
 
 function persist(session: string, user: string, answer: string, excluded: boolean) {
-  conversationStore.addTurn({
+  const [feedback] = conversationStore.addTurn({
     account_id: owner.accountId, session_id: session, memory_excluded: excluded,
   }, user, answer);
   if (excluded) return;
-  const snapshot = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }))
-    .filter((row) => !row.memory_excluded).reverse()
+  const recent = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }));
+  // Inspect adjacency before removing excluded turns: a tool response breaks the pair.
+  const [, actualFeedback, priorReply, priorRequest] = recent;
+  const adjacent = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && !priorReply.memory_excluded
+    && priorRequest?.role === 'user' && !priorRequest.memory_excluded;
+  if (adjacent) {
+    try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
+    catch { report('story_feedback_failed'); }
+  }
+  const snapshot = recent.filter((row) => !row.memory_excluded).reverse()
     .map((row) => ({ role: row.role, content: row.text, id: row.id }));
   const decision = scheduler.onTurn(owner.accountId, owner.role, user, snapshot.filter((t) => t.role === 'user').length);
   if (!decision.run) return;
   const snapshotRevision = memory.revision;
   extractionPending++;
   extraction = extraction.then(() => snapshotRevision === memory.revision ? extractAndPersist(
-    owner.accountId, snapshot.slice(-decision.windowMessages), session, { reason: decision.reason },
+    owner.accountId, snapshot.slice(-decision.windowMessages), session, { reason: decision.reason, previousReplyId: adjacent ? priorReply.id : undefined },
   ) : undefined).catch(() => report('extract_failed')).finally(() => { extractionPending--; });
 }
 
@@ -273,7 +283,8 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   const prior = followups.get(room);
   followups.delete(room);
   const context = prior && prior.expires >= Date.now() ? prior : undefined;
-  const command = parseMemoryCommand(raw);
+  const approval = explicitReplyApproval(raw);
+  const command = approval ? undefined : parseMemoryCommand(raw);
   const style = !command || command.op === 'clarify' ? resolvePersonalStyle(owner.accountId, raw, store, history, room) : undefined;
   const user = style?.request || raw;
   const limit = briefReplyLimit(owner.accountId, user, store, style);
@@ -300,7 +311,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   if (style?.reply) return direct(style.reply, 'style');
   // Answer questions about personal facts from the owner's evidence, before chat or any public lookup.
   const explicitLookup = searchPrefix.test(user) && !noWeb.test(user);
-  const recalled = explicitLookup ? undefined : recall.answer(owner.accountId, user, store);
+  const recalled = explicitLookup || approval ? undefined : recall.answer(owner.accountId, user, store);
   if (recalled !== undefined) return direct(recalled, 'memory');
 
   // ASR often joins a spoken interruption and its follow-up without punctuation.
