@@ -107,7 +107,7 @@ if (process.env.BRAIN_VERIFY_SKIP_SEARCH !== '1') {
     assert.match(market.text, /截至.*上证指数.*创业板指/);
     assert.equal(market.sources.filter(s => new URL(s.url).hostname === 'gu.qq.com').length, 3);
 
-    const weather = await chat('今天北京天气怎么样？', 'verify-weather');
+    const weather = await chat('你先看看北京的天气怎么样', 'verify-weather');
     assert.equal(weather.tool, 'weather');
     assert.match(weather.text, /北京.*摄氏度/);
     assert.ok(weather.sources?.[0]?.date);
@@ -126,6 +126,13 @@ if (process.env.BRAIN_VERIFY_SINGLE_CCTV === '1') {
   const [article] = bulletin.sources;
   assert.match(article.url, /^https:\/\/news\.cctv\.com\/[0-9/]+\/ARTI.+\.shtml$/);
   assert.ok(article.date && bulletin.text.includes(article.title));
+  const general = await chat('今天国内有什么新闻？', 'verify-domestic-bulletin', {body:{store:false}});
+  assert.equal(general.tool,'search');
+  assert.ok(general.sources?.length >= 1 && general.sources.length <= 2);
+  for (const source of general.sources) {
+    assert.equal(new URL(source.url).hostname,'news.cctv.com');
+    assert.ok(source.date && general.text.includes(source.title));
+  }
   console.log('single current domestic bulletin delivered its verified article', article.url);
 }
 

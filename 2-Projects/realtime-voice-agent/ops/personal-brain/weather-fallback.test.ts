@@ -13,13 +13,55 @@ const p003 = join(here, '../../../P003GameDemo20260513/apps/server/src/tools');
 // of the module under test so `./p003/tools/weather-places.js` resolves while running.
 const stage = mkdtempSync(join(tmpdir(), 'pa-weather-'));
 mkdirSync(join(stage, 'p003/tools'), {recursive: true});
-copyFileSync(join(here, 'weather-fallback.ts'), join(stage, 'weather-fallback.ts'));
+for (const name of ['weather-fallback.ts','public-queries.ts']) copyFileSync(join(here, name), join(stage, name));
 copyFileSync(join(p003, 'weather-places.ts'), join(stage, 'p003/tools/weather-places.ts'));
 copyFileSync(join(p003, 'weather-places.json'), join(stage, 'p003/tools/weather-places.json'));
 writeFileSync(join(stage, 'p003/tools/weather-places.js'), "export * from './weather-places.ts';\n");
 after(() => rmSync(stage, {recursive: true, force: true}));
 
 const {forecastFallback} = await import(pathToFileURL(join(stage, 'weather-fallback.ts')).href);
+
+const {weatherIntent, followupPlace, domesticBulletin} = await import(pathToFileURL(join(stage, 'public-queries.ts')).href);
+test('ordinary spoken news keeps date, requested count and subject', () => {
+  assert.deepEqual(domesticBulletin('今天国内有什么新闻？'), {query:'央视今天国内新闻',count:2});
+  assert.deepEqual(domesticBulletin('今天有什么新闻'), {query:'央视今天国内新闻',count:2});
+  assert.deepEqual(domesticBulletin('现在国内有什么新闻给我讲一条就好'), {query:'央视今天国内新闻',count:1});
+  assert.deepEqual(domesticBulletin('最近国内有哪些新闻？'), {query:'央视最新国内新闻',count:2});
+  for (const q of ['昨天国内有什么新闻','三条国内新闻','我国航天最新新闻','中国股市最新新闻','今天国际新闻',
+    '国内有财经新闻吗','新华社今天有什么新闻','新闻是什么意思','不要查新闻']) {
+    assert.equal(domesticBulletin(q), undefined, q);
+  }
+});
+test('spoken weather requests keep the complete station, day and metric', () => {
+  for (const [text, place, day_offset, metric] of [
+    ['你先看看北京的天气怎么样', '北京', 0, 'forecast'],
+    ['我在北京，明天要不要带伞？', '北京', 1, 'forecast'],
+    ['请你提供一下北京市朝阳区后天的天气预报', '北京市朝阳区', 2, 'forecast'],
+    ['你先看看北京朝阳现在的气温', '北京朝阳', 0, 'current'],
+    ['先查那曲的空气质量', '那曲', 0, 'aqi'],
+    ['小可，请你提供一下北京的天气预报', '北京', 0, 'forecast'],
+    ['你只说说北京的天气吧快点', '北京', 0, 'forecast'],
+    ['呃北京天气你找不着', '北京', 0, 'forecast'],
+    ['明天北京天气，再告诉我需不需要带伞', '北京', 1, 'forecast'],
+    ['查查冷水江今天的天气', '冷水江', 0, 'forecast'],
+    ['请查会同县的天气', '会同县', 0, 'forecast'],
+  ]) assert.deepEqual(weatherIntent(text)?.request, {place, day_offset, metric}, text);
+  assert.equal(followupPlace('就看看北京的呗'), '北京');
+  for (const text of ['就看看北京的Bye','就看看北京的拜']) assert.equal(followupPlace(text), '北京', text);
+  assert.equal(followupPlace('北京以外的拜'), undefined);
+  assert.equal(followupPlace('就看看北京的 bye。'), '北京');
+  assert.equal(followupPlace('上海到北京的Bye'), undefined);
+  assert.equal(followupPlace('北京大学的Bye'), undefined);
+  assert.equal(followupPlace('北京，bye'), undefined);
+  assert.equal(followupPlace('bye'), undefined);
+  assert.equal(followupPlace('我在北京'), '北京');
+  assert.equal(followupPlace('你先看看那曲呢'), '那曲');
+  assert.equal(followupPlace('明天北京'), undefined);
+  assert.equal(weatherIntent('你看看朝阳的天气')?.ambiguous, true);
+  for (const text of ['天气怎么样', '从北京到上海的天气', '查北京大学天气', '不要查北京的天气']) {
+    assert.equal(weatherIntent(text)?.request, undefined, text);
+  }
+});
 
 const TB = 28_800_000;
 const day = (ms) => new Date(ms + TB).toISOString().slice(0, 10);

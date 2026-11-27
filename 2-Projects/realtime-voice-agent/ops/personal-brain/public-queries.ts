@@ -13,6 +13,35 @@ function placeWords(text: string) {
   return compact(text).replace(prefix, '').replace(ending, '');
 }
 
+// Check the full station alias between removals. In particular, a city inside
+// a route or an unknown district is not a match for the whole requested place.
+const spokenLead = ['我想了解','我想知道','我想问问','我现在在','我人在','我在','我说的是','请问','小可','麻烦','帮忙',
+  '能不能','可不可以','请','你','先','再','还是','那','就','帮我','给我','告诉我','提供一下','提供','只说说',
+  '看一看','看一下','看看','看下','查一查','查一下','查查','查下','查询','查','问一下','在','呃','额','啊'];
+const spokenTail = ['可以吗','行不行','好不好','就好','就行','快一点','快点','这边','那边','的','呢','吧','呗','啊','呀','嘛','吗'];
+const weatherWords = ['天气预报','天气情况','空气质量','需不需要带伞','要不要带伞','用不用带伞','会不会下雨',
+  '下不下雨','会下雨','要带伞','带伞','出门','下雨','降雨','气温','温度','多少度','是多少','多少','天气',
+  '今天','明天','后天','现在','目前','实时','怎么样','咋样','如何','的'];
+const weatherLead = [...spokenLead, ...weatherWords];
+const weatherTail = ['再告诉我需不需要带伞','再告诉我要不要带伞','告诉我会不会下雨','告诉我下不下雨',
+  '你找不着','你查不到', ...spokenTail, ...weatherWords];
+
+function spokenPlace(text: string, lead: string[], tail: string[]): string {
+  let rest = compact(text);
+  while (rest) {
+    if (inspectWeatherPlace(rest).candidates.length) break;
+    const end = tail.find(word => rest.endsWith(word));
+    if (end) {
+      rest = rest.slice(0, -end.length);
+      continue;
+    }
+    const start = lead.find(word => rest.startsWith(word));
+    if (!start) break;
+    rest = rest.slice(start.length);
+  }
+  return rest;
+}
+
 export function weatherIntent(text: string) {
   const q = compact(text);
   if (!/天气|气温|降雨|下雨|带伞|多少度|空气质量/u.test(q) ||
@@ -22,8 +51,7 @@ export function weatherIntent(text: string) {
   const metric = /空气质量/u.test(q) ? 'aqi' : /现在|目前|实时/u.test(q) && day_offset === 0 ? 'current' : 'forecast';
   if (metric === 'aqi' && day_offset) return {unsupported: true};
   const target = {day_offset, metric} as Pick<PlaceWeatherRequest, 'day_offset'|'metric'>;
-  const words = placeWords(q).replace(/今天|明天|后天|现在|目前|实时|怎么样|咋样|如何|会不会下雨|会下雨吗|要不要带伞|用不用带伞|要带伞|带伞|下雨|降雨|出门|空气质量|天气预报|天气|气温|多少度|是多少|多少|的/gu, '');
-  const place = placeWords(words);
+  const place = spokenPlace(q, weatherLead, weatherTail);
   const result = inspectWeatherPlace(place);
   if (result.status === 'unique') return {request: {...target, place}, target};
   if (result.status === 'ambiguous') return {target, ambiguous: true};
@@ -32,8 +60,25 @@ export function weatherIntent(text: string) {
 }
 
 export function followupPlace(text: string) {
-  const place = placeWords(text);
+  // Volc ASR can render the sentence-final “的呗” as “的Bye” or “的拜”. This normalization
+  // is limited to a pending weather reply; the remaining place must still match a station.
+  const place = spokenPlace(compact(text).replace(/的(?:bye|拜)$/iu, '的'), spokenLead, spokenTail);
   return inspectWeatherPlace(place).status === 'unique' ? place : undefined;
+}
+
+// A plain news request can start with a short domestic bulletin. Preserve any named
+// topic, source, region, historical date or unsupported count for the regular search.
+export function domesticBulletin(query: string) {
+  const q = query.normalize('NFKC').replace(/[\s,，。!?！？、：:]/gu, '');
+  if (q.length > 60 || !q.includes('新闻')) return;
+  const count = q.match(/(?:[一1两二2])条/gu) ?? [];
+  if (count.length > 1) return;
+  const rest = q.replace(/我想听听|我想听|给我讲讲|有什么|有哪些|有没有|怎么样|今天|今日|现在|目前|最新|最近|近期|国内|我国|中国|一条|1条|两条|二条|2条|新闻|给我|帮我|跟我|可以|请你|只要|就好|就行|即可|简短|简要|说说|讲讲|播报|播一播|听听|看看|说|讲|播|听|来|请|的|点|吗|呢|吧|啊/gu, '');
+  if (rest) return;
+  return {
+    query: /今天|今日|现在|目前/u.test(q) ? '央视今天国内新闻' : '央视最新国内新闻',
+    count: count[0] === '一条' || count[0] === '1条' ? 1 : 2,
+  };
 }
 
 export function cnMarket(text: string): 'cn'|'unspecified'|undefined {

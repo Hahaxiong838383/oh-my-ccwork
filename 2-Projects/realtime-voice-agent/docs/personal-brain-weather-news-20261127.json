@@ -1,0 +1,215 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T22:56:10+08:00",
+  "deployments": {
+    "personal-brain": {
+      "source_commit": "26be4db45c7051780fb261277ef9278996d388f7",
+      "image": "personal-brain:query-83d850604182",
+      "image_id": "sha256:e7c32a54914408a93c48df7a8d2f623cecab9a0659f950777015716e8780ac26",
+      "file": "/app/server.mjs",
+      "sha256": "83d850604182a09f5c91544df3ead496a7578f68c56e86d2d33b938876bc80d5",
+      "files": {
+        "server.mjs": "83d850604182a09f5c91544df3ead496a7578f68c56e86d2d33b938876bc80d5",
+        "verify.mjs": "f01beaf1d2926c0b347272fa5d0b5b8d729dd73a200a9cee7bec1b980002857d",
+        "weather-places.json": "40f4cc66ff051ab205e9299e7b13bf458b62b28b4ce9e6e8e3a7a141b7ded69b"
+      },
+      "previous_image": "personal-brain:query-ac3c1e269470"
+    }
+  },
+  "acceptance": {
+    "client": "V1.0.14 发布 APK 的页面资源，经桌面自动化接入飞牛私人线上语音房间。使用相同问题录音，接收远端音轨。未使用 S24 实物。",
+    "latency_measure": "从输入录音最后一个有声样本开始计时。bodyCaptionMs 是第一段正文字幕。bodyPcmNearCaptionMs 是正文字幕出现后的第一段非静音远端音轨采样，计时不按衔接词起算。两版各取一轮。",
+    "second_rollout": {
+      "image": "personal-brain:query-ac3c1e269470",
+      "source_commit": "756260ff5a6c8ab0abae39556a098db297fbde5e",
+      "weather_asr_followup": "就看看北京的拜",
+      "issue": "相同音频再次被 ASR 转成汉字“拜”，最终版兼容两种真实转写，并用两个日期验证了天气接续。"
+    },
+    "first_rollout": {
+      "image": "personal-brain:query-ff7567514efa",
+      "source_commit": "2df8947dad2beec649082eb73e69c8b7314fc3bb",
+      "weather_asr_followup": "就看看北京的Bye",
+      "issue": "首轮测试的第二房间把句尾“的呗”识别为“的Bye”，该轮未进入天气查询。最终版增加了限于天气接续的兼容处理。"
+    },
+    "cases": {
+      "weather": {
+        "question": "你先看看北京的天气怎么样",
+        "image": "personal-brain:query-83d850604182",
+        "after": {
+          "firstPcmMs": 1565,
+          "bodyCaptionMs": 1353,
+          "bodyPcmNearCaptionMs": 1565
+        },
+        "before": {
+          "firstPcmMs": 1433,
+          "bodyCaptionMs": 1245,
+          "bodyPcmNearCaptionMs": 1433
+        }
+      },
+      "natural": {
+        "question": "我们今天股市的新闻怎么样",
+        "image": "personal-brain:query-83d850604182",
+        "after": {
+          "firstPcmMs": 1377,
+          "bodyCaptionMs": 2717,
+          "bodyPcmNearCaptionMs": 2857
+        },
+        "before": {
+          "firstPcmMs": 1345,
+          "bodyCaptionMs": 2677,
+          "bodyPcmNearCaptionMs": 2865
+        }
+      },
+      "explicit": {
+        "question": "查一下今天的股市新闻",
+        "image": "personal-brain:query-83d850604182",
+        "after": {
+          "firstPcmMs": 1489,
+          "bodyCaptionMs": 2828,
+          "bodyPcmNearCaptionMs": 2989
+        },
+        "before": {
+          "firstPcmMs": 1544,
+          "bodyCaptionMs": 13635,
+          "bodyPcmNearCaptionMs": 13864
+        }
+      },
+      "general": {
+        "question": "今天有什么国内新闻",
+        "image": "personal-brain:query-ff7567514efa",
+        "after": {
+          "firstPcmMs": 1285,
+          "bodyCaptionMs": 2527,
+          "bodyPcmNearCaptionMs": 2765
+        }
+      },
+      "without": {
+        "question": "今天天气怎么样",
+        "image": "personal-brain:query-83d850604182",
+        "after": {
+          "firstPcmMs": 1252,
+          "bodyCaptionMs": 1050,
+          "bodyPcmNearCaptionMs": 1252
+        }
+      },
+      "followup": {
+        "question": "就看看北京的Bye",
+        "image": "personal-brain:query-83d850604182",
+        "after": {
+          "firstPcmMs": 1448,
+          "bodyCaptionMs": 2716,
+          "bodyPcmNearCaptionMs": 2908
+        }
+      }
+    },
+    "first_rollout_sources": [
+      {
+        "server_ms": 359,
+        "sources": [
+          {
+            "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+            "date": "2026-11-27T22:35:00+08:00"
+          }
+        ]
+      },
+      {
+        "server_ms": 543,
+        "sources": [
+          {
+            "url": "https://www.stcn.com/article/detail/4357405.html",
+            "date": "2026-11-27T16:47:00+08:00"
+          }
+        ]
+      },
+      {
+        "server_ms": 520,
+        "sources": [
+          {
+            "url": "https://www.stcn.com/article/detail/4357405.html",
+            "date": "2026-11-27T16:47:00+08:00"
+          }
+        ]
+      },
+      {
+        "server_ms": 495,
+        "sources": [
+          {
+            "url": "https://news.cctv.com/2026/11/27/ARTIhrESNtqzR6tWR3ik5Nqi261127.shtml",
+            "date": "2026-11-27T21:22:14+08:00"
+          },
+          {
+            "url": "https://news.cctv.com/2026/11/27/ARTISGlHG1lAOiMgyKdFsd2p261127.shtml",
+            "date": "2026-11-27T20:50:54+08:00"
+          }
+        ]
+      }
+    ],
+    "final_rollout_sources": [
+      {
+        "server_ms": 375,
+        "sources": [
+          {
+            "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+            "date": "2026-11-27T22:50:00+08:00"
+          }
+        ]
+      },
+      {
+        "server_ms": 85,
+        "sources": [
+          {
+            "url": "https://weathernew.pae.baidu.com/weathernew/pc?query=%E5%8C%97%E4%BA%AC%E5%A4%A9%E6%B0%94&srcid=4982&forecast=long_day_forecast",
+            "date": "2026-11-27T22:50:00+08:00"
+          }
+        ]
+      },
+      {
+        "server_ms": 639,
+        "sources": [
+          {
+            "url": "https://www.stcn.com/article/detail/4357963.html",
+            "date": "2026-11-27T22:53:00+08:00"
+          }
+        ]
+      },
+      {
+        "server_ms": 665,
+        "sources": [
+          {
+            "url": "https://www.stcn.com/article/detail/4357963.html",
+            "date": "2026-11-27T22:53:00+08:00"
+          }
+        ]
+      }
+    ],
+    "isolated_http": {
+      "before_ms": {
+        "ordinary_domestic_news": 10475,
+        "explicit_stock_news": 11070
+      },
+      "after_ms": {
+        "missing-city": 49,
+        "city-followup": 318,
+        "again-missing": 5,
+        "hanzi-followup": 210,
+        "general": 332,
+        "one": 109,
+        "private": 10,
+        "weather-full": 114,
+        "market-news-natural": 518,
+        "market-news-explicit": 214
+      }
+    },
+    "regressions": {
+      "passed": 39,
+      "optional_multi_city_live_skipped": 1
+    },
+    "health": {
+      "ok": true,
+      "build": "query-83d850604182",
+      "revision": 29
+    },
+    "worker_same": true,
+    "mounts_same": true
+  }
+}
