@@ -3,6 +3,7 @@ import {createServer, get as httpsGet} from 'node:https';
 import {Hono} from 'hono';
 import {privateTalk} from './talk-gateway';
 import {activateProfile, createProfile, ProviderError, publicView, readDocument, updateProfile, withProviders} from './providers';
+import {getNightDevices, isSameOriginRequest, NIGHT_BRIDGE_SOCKET, NightBridgeError, sendDeviceCommand, setDeviceColor} from './night-devices';
 import {serve} from '@hono/node-server';
 import {getCookie,setCookie,deleteCookie} from 'hono/cookie';
 import {bodyLimit} from 'hono/body-limit';
@@ -176,6 +177,36 @@ app.put('/api/providers/:id', async c => {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({error:'请求无效'}, 400);
   try { return c.json(await withProviders(file, doc => updateProfile(doc, c.req.param('id'), body as Record<string, unknown>, workerSnapshot().jobs === 0))); }
   catch (error) { return providerFail(c, error); }
+});
+function nightBridgeFail(c: {json: (body: object, status: number) => Response}, error: unknown) {
+  if (error instanceof NightBridgeError) return c.json({error: error.message}, error.status);
+  return c.json({error:'手机桥接服务暂时无法处理'}, 503);
+}
+const checkDeviceOrigin = (c: {req: {url: string; header: (name: string) => string | undefined}}) =>
+  isSameOriginRequest(c.req.url, c.req.header('Origin'), c.req.header('Sec-Fetch-Site'), process.env.TALK_SITE_ORIGIN);
+app.use('/api/devices', async (c, next) => {
+  if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'}, 403);
+  await next();
+});
+app.use('/api/devices/*', async (c, next) => {
+  if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'}, 403);
+  await next();
+});
+app.get('/api/devices', async c => {
+  try { return c.json(await getNightDevices(NIGHT_BRIDGE_SOCKET)); }
+  catch (error) { return nightBridgeFail(c, error); }
+});
+app.post('/api/devices/:id/color', async c => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({error:'请求无效'}, 400);
+  try { return c.json(await setDeviceColor(NIGHT_BRIDGE_SOCKET, c.req.param('id'), (body as Record<string, unknown>).accent)); }
+  catch (error) { return nightBridgeFail(c, error); }
+});
+app.post('/api/devices/:id/command', async c => {
+  const body = await c.req.json().catch(() => null);
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return c.json({error:'请求无效'}, 400);
+  try { return c.json(await sendDeviceCommand(NIGHT_BRIDGE_SOCKET, c.req.param('id'), (body as Record<string, unknown>).action)); }
+  catch (error) { return nightBridgeFail(c, error); }
 });
 app.post('/api/voices/preview',async c=>{
   const data=await c.req.json().catch(()=>({}));

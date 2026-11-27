@@ -10,17 +10,52 @@ main{padding-top:28px;padding-bottom:48px}h1,h2,h3,p{margin:0}h1{font-size:clamp
 .card,.runtime{border:1px solid var(--line);border-radius:17px;background:var(--surface);padding:clamp(16px,2.4vw,28px)}.runtime{margin:20px 0;display:grid;grid-template-columns:1.65fr 1fr 1fr;gap:18px}.runtime>div+div{border-left:1px solid var(--line);padding-left:20px}.runtime h3{margin-bottom:5px}.status{font-size:17px;font-weight:650}.slots{display:inline-flex;gap:4px}.slots i{border:1px solid #6b738b;width:20px;height:11px;background:#fff;border-radius:3px}.slots i.used{background:var(--violet);border-color:var(--violet)}.bad{color:#8b4717}
 .workspace{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(295px,1fr);gap:18px;align-items:start}.editor{padding:0;overflow:hidden}.inside{padding:clamp(17px,2.4vw,28px)}.tabs{display:flex;flex-wrap:wrap;background:#f8f8fd;border-bottom:1px solid var(--line);gap:3px;padding:0 12px}.tabs button{background:none;color:var(--muted);border:0;border-radius:0;padding:14px 12px}.tabs button[aria-pressed=true]{box-shadow:inset 0 -3px var(--violet);color:var(--violet)}.sub{margin:5px 0 17px}.active{background:#e9f4ef;color:#245e4e;padding:12px 14px;border-radius:9px;margin:15px 0}.readout{background:#f3f4fa;padding:12px 14px;border-radius:9px;margin-top:15px}.actions{flex-wrap:wrap;margin-top:14px}.bar .actions{margin:0}button,a.action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid transparent;border-radius:8px;padding:8px 14px;background:var(--violet);color:white;font:inherit;font-weight:650;text-decoration:none;cursor:pointer}button.light,a.action{background:white;border-color:var(--line);color:#403869}button:disabled{opacity:.52;cursor:default}a{color:#443198}:focus-visible{outline:3px solid #117b71;outline-offset:2px}
 label{display:block;font-size:15px;font-weight:600;margin:12px 0 5px}input,select,textarea{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:#fff;border:1px solid #9aa5bc;border-radius:8px}textarea{resize:vertical}audio{display:block;width:100%;margin-top:15px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.diff{white-space:pre-line;color:var(--muted);overflow-wrap:anywhere;margin:8px 0}.meta{margin-top:17px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}#login{max-width:440px;margin:8vh auto}#msg:not(:empty){position:sticky;bottom:10px;z-index:2;background:#fff0d6;color:#583a14;padding:10px 14px;border-radius:9px;border:1px solid #d9bd8d;margin-top:12px}#sources{padding-left:22px;overflow-wrap:anywhere}#reply{white-space:pre-wrap;overflow-wrap:anywhere}#clock{min-height:22px}.subtle{font-size:14px;color:var(--muted)}[hidden]{display:none!important}
-@media(max-width:790px){.workspace{grid-template-columns:1fr}.runtime{gap:9px}.runtime>div+div{padding-left:10px}}@media(max-width:560px){.bar{min-height:60px}.identity{font-size:16px}.bar .actions{gap:6px}.bar button,.bar .action{font-size:14px;padding:7px 9px}.runtime{grid-template-columns:1fr 1fr}.runtime>div:first-child{grid-column:1/-1;border-bottom:1px solid var(--line);padding-bottom:9px}.runtime>div:nth-child(2){padding-left:0;border:0}.tabs button{padding:12px 9px}.tabs{padding:0 4px}.spread{flex-wrap:wrap}.meta{font-size:13px}}
+.dev-note{background:#f5f4fd;border:1px solid #d8d4f4;color:#3d356b;padding:11px 14px;border-radius:10px;font-size:14px;margin:12px 0}.dev-list{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 16px}.dev-item{background:#fff;border:1px solid var(--line);color:var(--ink);text-align:left;padding:10px 13px;border-radius:11px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:170px;max-width:100%;font-weight:500}.dev-item[aria-pressed=true]{border-color:var(--violet);background:var(--pale)}.dev-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700}.dev-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fafbfe;margin-top:14px}.dev-confirm{display:grid;gap:10px;margin-top:14px}.dev-confirm-row{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere}.dev-confirm-row.ok{border-color:#98cfb9;background:#eff9f4}.dev-confirm-row.wait{border-color:#e2bd80;background:#fff8eb}.dev-confirm-row.idle{border-color:var(--line);background:#f7f8fc}.dev-confirm-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;font-size:13px;font-weight:700;padding:2px 9px;border-radius:999px;line-height:1.45}.pill.ok{background:#daf1e7;color:#1b5b4b}.pill.wait{background:#ffe8bf;color:#834314}.pill.idle{background:#e7ebf5;color:#4a556f}.swatch{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid #00000033;flex:0 0 auto}.dev-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.dev-fact{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;overflow-wrap:anywhere}.dev-fact small{display:block;margin-bottom:2px}.dev-val{font-weight:650;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.dev-color-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}#devAccentPicker{width:52px;height:44px;padding:3px;flex:0 0 auto;cursor:pointer}#devAccentHex{width:124px;flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase}.dev-events{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:7px}.dev-events li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:14px;overflow-wrap:anywhere}.dev-ev-kind{font-weight:600;color:var(--ink)}.dev-ev-ts{color:var(--muted);font-size:13px}
+@media(max-width:790px){.workspace{grid-template-columns:1fr}.runtime{gap:9px}.runtime>div+div{padding-left:10px}}@media(max-width:560px){.bar{min-height:60px}.identity{font-size:16px}.bar .actions{gap:6px}.bar button,.bar .action{font-size:14px;padding:7px 9px}.runtime{grid-template-columns:1fr 1fr}.runtime>div:first-child{grid-column:1/-1;border-bottom:1px solid var(--line);padding-bottom:9px}.runtime>div:nth-child(2){padding-left:0;border:0}.tabs button{padding:12px 9px}.tabs{padding:0 4px}.spread{flex-wrap:wrap}.meta{font-size:13px}.dev-facts{grid-template-columns:1fr}.dev-item{width:100%}}
 </style></head><body>
 <header><div class="bar"><div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>小可私人管理</div><div class="actions" id="ownerLinks" hidden><a class="action" href="/talk/">打开对话 ↗</a><button class="light" id="logout">退出</button></div></div></header>
 <main>
 <section id="login" class="card"><h1>管理员登录</h1><form id="signin"><label for="pass">管理员口令</label><input id="pass" type="password" autocomplete="current-password" required><div class="actions"><button>登录工作室</button></div></form></section>
 <div id="panel" hidden>
-<div class="spread"><div><h1>配置工作室</h1><p>管理通话音色、语音供应商、热词和衔接短语。</p></div><button id="refresh" class="light">刷新服务状态</button></div>
+<div class="spread"><div><h1>配置工作室</h1><p>管理通话音色、语音供应商、手机设备、热词和衔接短语。</p></div><button id="refresh" class="light">刷新服务状态</button></div>
 <section class="runtime" aria-label="运行总览" id="services"><div><h3>通话占用</h3><div class="pair"><span class="status" id="worker">读取中</span><span class="slots" id="slots" aria-hidden="true"></span></div><small id="clock"></small></div><div><h3>北京签票</h3><span class="status" id="ticket">读取中</span></div><div><h3>飞牛个人大脑</h3><span class="status" id="brain">读取中</span></div></section>
-<div class="workspace"><section class="card editor"><nav class="tabs" aria-label="配置类别"><button data-view="voice" aria-pressed="true">通话音色</button><button data-view="providers" aria-pressed="false">语音供应商</button><button data-view="hotwords" aria-pressed="false">热词草稿</button><button data-view="filler" aria-pressed="false">衔接短语</button></nav>
+<div class="workspace"><section class="card editor"><nav class="tabs" aria-label="配置类别"><button data-view="voice" aria-pressed="true">通话音色</button><button data-view="providers" aria-pressed="false">语音供应商</button><button data-view="devices" aria-pressed="false">手机设备</button><button data-view="hotwords" aria-pressed="false">热词草稿</button><button data-view="filler" aria-pressed="false">衔接短语</button></nav>
 <div class="inside" id="voice"><h2>通话音色</h2><p class="subtle" id="voiceCloud">正在确认通话音色来源</p><div id="actual" class="active" role="status">正在读取合成服务</div><label for="voiceChoice">备选音色</label><select id="voiceChoice" disabled></select><p class="subtle" id="voiceDesc"></p><audio id="sample" controls hidden></audio><div class="actions"><button id="preview" class="light" disabled>试听样音</button><button id="apply" disabled>应用到通话</button><button class="light" id="reloadVoice">重读音色</button></div><p class="subtle" id="voiceHint"></p></div>
 <div class="inside" id="providers" hidden><h2>语音供应商</h2><p class="sub">未选择时分别沿用个人 CPA、飞牛中文识别和飞牛五音色。密钥只写入，不回显；编辑时留空会保留原密钥。</p><div id="providerLive" class="active" role="status">正在读取供应商</div><div class="grid" id="activePicks"></div><div class="actions" id="providerList"></div><h3 id="providerFormTitle">新增供应商</h3><label for="providerDriver">驱动</label><select id="providerDriver"></select><p class="subtle" id="providerNote"></p><label for="providerName">名称</label><input id="providerName" maxlength="40" autocomplete="off"><div id="providerFields"></div><div class="actions"><button id="saveProvider" type="button">保存供应商</button><button id="reloadProviders" class="light" type="button">重读供应商</button></div><p class="subtle" id="providerHint"></p></div>
+<div class="inside" id="devices" hidden>
+<div class="spread"><h2>手机设备</h2><button id="reloadDevices" class="light" type="button">刷新设备状态</button></div>
+<p class="sub">查看 S24 等私人手机端状态、调整强调色并触发远控指令，重点展示手机是否已确认执行。</p>
+<div class="dev-note">说明：对话模型、语音识别与通话音色已在「通话音色」「语音供应商」页独立配置，无需在手机端重复设置，修改后于下一通通话生效。</div>
+<div id="deviceSummary" class="active" role="status">正在读取手机设备</div>
+<div id="deviceList" class="dev-list" role="group" aria-label="手机设备列表"></div>
+<div id="deviceDetail" hidden>
+<div id="devConfirmBox" class="dev-confirm" aria-live="polite"></div>
+<div id="devFacts" class="dev-facts"></div>
+<div class="dev-box">
+<h3>修改手机强调色</h3>
+<div class="dev-color-row">
+<input id="devAccentPicker" type="color" value="#5245a8" aria-label="选择强调色">
+<input id="devAccentHex" type="text" maxlength="7" placeholder="#RRGGBB" spellcheck="false" autocomplete="off" aria-label="十六进制颜色">
+<button id="devSaveColor" type="button">下发颜色</button>
+<button id="devResetColor" type="button" class="light" hidden>放弃修改</button>
+</div>
+<p class="subtle" id="devColorHint"></p>
+</div>
+<div class="dev-box">
+<h3>远控指令</h3>
+<p class="subtle">下发后请观察上方“手机已确认执行 / 待手机确认”状态与确认时间。</p>
+<div class="actions">
+<button id="devSyncLogs" type="button" class="light">回传日志</button>
+<button id="devCheckUpdate" type="button" class="light">检查更新</button>
+</div>
+<div id="devCommandBox" class="readout"></div>
+</div>
+<div class="dev-box">
+<h3>最后技术事件</h3>
+<ul id="devEvents" class="dev-events"></ul>
+</div>
+</div>
+</div>
 <div class="inside" id="hotwords" hidden><h2>热词草稿</h2><p class="sub">词表保存到后台，通话加载状态待确认。</p><label for="kind">词表</label><select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select><label for="words">每行一个词</label><textarea id="words" rows="5"></textarea><p class="diff" id="diff"></p><div class="actions"><button id="saveWords">保存草稿</button><small id="edited"></small></div></div>
 <div class="inside" id="filler" hidden><h2>衔接短语</h2><p class="sub">设置各风格使用衔接短语的概率。</p><div class="grid" id="probs"></div><div class="actions"><button id="saveProbs">写入后台</button></div><p class="readout">通话端加载版本待确认。</p></div></section>
 <section class="card"><h2>试问个人大脑</h2><p class="sub">验证文字回答、工具和搜索来源。诊断对话不写入长期记忆。</p><form id="diagnose"><label for="question">测试问题</label><input id="question" placeholder="例如，北京现在几点？" maxlength="600" required><div class="actions"><button id="ask" class="light">发送试问</button></div></form><div id="result" class="readout" hidden><p id="reply" role="status"></p><small id="tool"></small><ul id="sources"></ul></div></section></div>
@@ -28,9 +63,13 @@ label{display:block;font-size:15px;font-weight:600;margin:12px 0 5px}input,selec
 <script>
 const el=id=>document.getElementById(id);
 let settings, slots, catalog, providers, editingKind='asr', edits={}, sampleUrl, interval, voiceBusy=false, refreshing=false, providerBusy=false, providerEditing=null;
+let deviceList=null, selectedDevice=null, deviceBusy=false, devicesRefreshing=false, deviceFetchSeq=0, deviceLastRead=0, deviceColorDrafts={};
+const HEX_COLOR=/^#[0-9a-fA-F]{6}$/;
+const PHASE_LABELS={idle:'空闲',ready:'就绪',connecting:'连接中',connected:'已连接',listening:'聆听中',thinking:'思考中',speaking:'播报中',muted:'已静音',reconnecting:'重连中',ended:'已结束',disconnected:'已断开',error:'异常'};
+const ACTION_LABELS={sync_logs:'回传日志',check_update:'检查更新'};
 function showOwner(active){
   el('login').hidden=active;el('panel').hidden=!active;el('ownerLinks').hidden=!active;
-  if(!active){clearInterval(interval);clearSample()}
+  if(!active){clearInterval(interval);clearSample();deviceList=null;selectedDevice=null;deviceColorDrafts={};deviceFetchSeq++}
 }
 function clearSample(){
   const audio=el('sample');audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true;
@@ -180,6 +219,243 @@ el('saveProvider').onclick=handle(()=>providerAction(async()=>{
   providerEditing=null;renderProviders();el('msg').textContent='供应商已保存。密钥不会回显。';
 }));
 el('reloadProviders').onclick=handle(()=>providerAction(readProviders));
+function epochToMs(ts){return ts>1e12?ts:ts*1000}
+function fmtEpoch(ts){return ts&&ts>0?new Date(epochToMs(ts)).toLocaleString('zh-CN',{hour12:false}):'—'}
+function fmtRel(ts){
+  if(!ts||ts<=0)return '';
+  const sec=Math.floor((Date.now()-epochToMs(ts))/1000);
+  if(sec<15)return '刚刚';
+  if(sec<60)return sec+' 秒前';
+  if(sec<3600)return Math.floor(sec/60)+' 分钟前';
+  if(sec<86400)return Math.floor(sec/3600)+' 小时前';
+  return Math.floor(sec/86400)+' 天前';
+}
+function fmtPhase(phase,hasRealtime){
+  if(!phase)return hasRealtime?'未上报':'尚无实时状态';
+  const label=PHASE_LABELS[phase];
+  return label?label+'（'+phase+'）':phase;
+}
+function fmtAction(action){return ACTION_LABELS[action]||action}
+function makePill(text,kind){
+  const span=document.createElement('span');
+  span.className='pill '+kind;
+  span.textContent=text;
+  return span;
+}
+function makeSwatch(color){
+  const span=document.createElement('span');
+  span.className='swatch';
+  if(color&&HEX_COLOR.test(color))span.style.backgroundColor=color;
+  return span;
+}
+function colorSyncInfo(d){
+  const hasRev=d.revision!==null&&d.appliedRevision!==null;
+  if(!d.lastSeen){
+    if(hasRev&&d.appliedRevision<d.revision)return {kind:'wait',badge:'待手机确认',detail:'后台已写入选色修订 #'+d.revision+'，设备尚无实时状态（待安装新版本或联网上报）'};
+    return {kind:'idle',badge:'尚无实时状态',detail:'当前仅来自旧诊断记录或设备尚未上线，尚无手机端实时回执'};
+  }
+  if(hasRev&&d.appliedRevision<d.revision){
+    return {kind:'wait',badge:'待手机确认',detail:'后台目标修订 #'+d.revision+'（'+(d.accent||'—')+'），手机当前已应用 #'+d.appliedRevision+'，等待手机确认执行'};
+  }
+  if(hasRev&&d.revision>0){
+    return {kind:'ok',badge:'手机已确认执行',detail:'手机已应用选色 '+(d.accent||'—')+'（修订 #'+d.appliedRevision+'/'+d.revision+'）'};
+  }
+  if(hasRev){
+    return {kind:'ok',badge:'已同步',detail:'当前选色 '+(d.accent||'未设置')+'（修订 #'+d.appliedRevision+'/'+d.revision+'，尚无新修改）'};
+  }
+  return {kind:'idle',badge:'待上报修订',detail:'当前选色 '+(d.accent||'未上报')};
+}
+function commandSyncInfo(d){
+  const cmd=d.command;
+  if(!cmd)return {kind:'idle',badge:'无待执行指令',detail:'当前没有未确认或最近下发的远控指令'};
+  const title=fmtAction(cmd.action)+(cmd.id?' · #'+cmd.id:'');
+  if(cmd.status==='acked'){
+    return {kind:'ok',badge:'手机已确认执行',detail:title+' · 下发 '+fmtEpoch(cmd.createdAt)+' · 确认 '+fmtEpoch(cmd.ackedAt)};
+  }
+  return {kind:'wait',badge:'待手机确认',detail:title+' · 下发 '+fmtEpoch(cmd.createdAt)+' · 等待手机执行并回传确认'};
+}
+function currentDevice(){return deviceList?.find(d=>d.device===selectedDevice)||null}
+function syncColorInputs(d,force){
+  const hasDraft=Object.hasOwn(deviceColorDrafts,d.device);
+  const focused=document.activeElement===el('devAccentPicker')||document.activeElement===el('devAccentHex');
+  if(force||(!hasDraft&&!focused)){
+    const val=hasDraft?deviceColorDrafts[d.device]:(d.accent||'#5245A8');
+    el('devAccentHex').value=val;
+    if(HEX_COLOR.test(val))el('devAccentPicker').value=val.toLowerCase();
+  }
+  updateDeviceControls(d);
+}
+function updateDeviceControls(d){
+  const target=d||currentDevice();
+  el('reloadDevices').disabled=deviceBusy||devicesRefreshing;
+  if(!target)return;
+  const raw=el('devAccentHex').value.trim();
+  const valid=HEX_COLOR.test(raw);
+  const normalized=valid?raw.toUpperCase():'';
+  const hasDraft=Object.hasOwn(deviceColorDrafts,target.device);
+  const sameServer=valid&&Boolean(target.accent)&&normalized===target.accent.toUpperCase();
+  el('devSaveColor').disabled=deviceBusy||!valid||(sameServer&&!hasDraft);
+  el('devResetColor').hidden=!hasDraft;
+  el('devResetColor').disabled=deviceBusy;
+  el('devSyncLogs').disabled=deviceBusy;
+  el('devCheckUpdate').disabled=deviceBusy;
+  if(!valid)el('devColorHint').textContent='请输入 6 位十六进制颜色，例如 #5245A8。';
+  else if(hasDraft)el('devColorHint').textContent='编辑中（未下发）：定时刷新会保留当前选色，不会覆盖。';
+  else el('devColorHint').textContent=colorSyncInfo(target).detail;
+}
+function addFact(container,label,valueNodeOrText){
+  const card=document.createElement('div');card.className='dev-fact';
+  const title=document.createElement('small');title.textContent=label;
+  const val=document.createElement('div');val.className='dev-val';
+  if(typeof valueNodeOrText==='string')val.textContent=valueNodeOrText;
+  else val.append(...(Array.isArray(valueNodeOrText)?valueNodeOrText:[valueNodeOrText]));
+  card.append(title,val);container.append(card);
+}
+function renderDeviceDetail(d,forceColor){
+  el('deviceDetail').hidden=!d;
+  if(!d)return;
+  const hasRealtime=d.lastSeen>0;
+  const cInfo=colorSyncInfo(d),cmdInfo=commandSyncInfo(d);
+  el('devConfirmBox').replaceChildren();
+  for(const row of [{label:'选色配置执行确认',info:cInfo},{label:'远控指令执行确认',info:cmdInfo}]){
+    const box=document.createElement('div');box.className='dev-confirm-row '+row.info.kind;
+    const top=document.createElement('div');top.className='dev-confirm-top';
+    const name=document.createElement('strong');name.textContent=row.label;
+    top.append(name,makePill(row.info.badge,row.info.kind));
+    const desc=document.createElement('small');desc.textContent=row.info.detail;
+    box.append(top,desc);el('devConfirmBox').append(box);
+  }
+  el('devFacts').replaceChildren();
+  addFact(el('devFacts'),'设备标识',d.device);
+  addFact(el('devFacts'),'App 版本',d.versionCode!==null&&d.versionCode!==''?'versionCode '+d.versionCode:'未知（旧诊断记录）');
+  addFact(el('devFacts'),'最近在线 / 最后上报',hasRealtime?fmtEpoch(d.lastSeen)+'（'+fmtRel(d.lastSeen)+'）':'尚无实时状态（可能未安装新版本）');
+  addFact(el('devFacts'),'最新通话阶段',fmtPhase(d.phase,hasRealtime));
+  addFact(el('devFacts'),'静音状态',d.muted===true?'已静音':d.muted===false?'未静音':hasRealtime?'未上报':'尚无实时状态');
+  const accentNodes=[];
+  if(d.accent)accentNodes.push(makeSwatch(d.accent));
+  const revText=d.revision!==null||d.appliedRevision!==null?' · 修订 '+(d.appliedRevision??'—')+'/'+(d.revision??'—'):'';
+  accentNodes.push(document.createTextNode((d.accent||'未设置')+revText));
+  addFact(el('devFacts'),'当前选色与修订',accentNodes);
+  el('devCommandBox').replaceChildren();
+  if(!d.command){
+    el('devCommandBox').textContent='当前暂无下发指令。点击上方按钮后可跟踪手机确认状态。';
+  }else{
+    const top=document.createElement('div');top.className='dev-confirm-top';
+    const title=document.createElement('strong');title.textContent=fmtAction(d.command.action)+(d.command.id?'（#'+d.command.id+'）':'');
+    top.append(title,makePill(d.command.status==='acked'?'已确认':'未确认',d.command.status==='acked'?'ok':'wait'));
+    const meta=document.createElement('small');
+    meta.textContent='下发时间：'+fmtEpoch(d.command.createdAt)+' · 手机确认：'+(d.command.status==='acked'?fmtEpoch(d.command.ackedAt):'等待手机确认');
+    el('devCommandBox').append(top,meta);
+  }
+  el('devEvents').replaceChildren();
+  const events=[...(d.events||[])].sort((a,b)=>(b.ts||0)-(a.ts||0));
+  if(!events.length){
+    const li=document.createElement('li');li.className='subtle';li.textContent='暂无技术事件记录';el('devEvents').append(li);
+  }else{
+    for(const ev of events){
+      const li=document.createElement('li');
+      const kind=document.createElement('span');kind.className='dev-ev-kind';kind.textContent=ev.kind;
+      const ts=document.createElement('span');ts.className='dev-ev-ts';
+      ts.textContent=ev.ts>0?fmtEpoch(ev.ts)+'（'+fmtRel(ev.ts)+'）':'时间未知';
+      li.append(kind,ts);el('devEvents').append(li);
+    }
+  }
+  syncColorInputs(d,forceColor);
+}
+function renderDevices(forceColor){
+  el('deviceList').replaceChildren();
+  if(!deviceList){el('deviceDetail').hidden=true;updateDeviceControls(null);return}
+  if(!deviceList.length){
+    selectedDevice=null;
+    el('deviceSummary').textContent='暂未发现手机设备 · 最近读取 '+new Date(deviceLastRead||Date.now()).toLocaleTimeString('zh-CN',{hour12:false});
+    el('deviceDetail').hidden=true;updateDeviceControls(null);return;
+  }
+  if(!selectedDevice||!deviceList.some(d=>d.device===selectedDevice)){
+    selectedDevice=deviceList[0].device;
+    forceColor=true;
+  }
+  const pendingCount=deviceList.filter(d=>{
+    const colorPending=d.revision!==null&&d.appliedRevision!==null&&d.appliedRevision<d.revision;
+    const cmdPending=Boolean(d.command&&d.command.status!=='acked');
+    return colorPending||cmdPending;
+  }).length;
+  el('deviceSummary').textContent='已发现 '+deviceList.length+' 台设备'+(pendingCount?' · '+pendingCount+' 台有待手机确认项':' · 已全部同步')+' · 读取 '+new Date(deviceLastRead||Date.now()).toLocaleTimeString('zh-CN',{hour12:false});
+  for(const d of deviceList){
+    const btn=document.createElement('button');btn.type='button';btn.className='dev-item';
+    btn.setAttribute('aria-pressed',String(d.device===selectedDevice));
+    const head=document.createElement('div');head.className='dev-head';
+    if(d.accent)head.append(makeSwatch(d.accent));
+    const title=document.createElement('span');title.textContent=d.device;head.append(title);
+    const hasPending=(d.revision!==null&&d.appliedRevision!==null&&d.appliedRevision<d.revision)||Boolean(d.command&&d.command.status!=='acked');
+    if(!d.lastSeen)head.append(makePill('尚无实时状态','idle'));
+    else if(hasPending)head.append(makePill('待手机确认','wait'));
+    else head.append(makePill('已确认同步','ok'));
+    const sub=document.createElement('small');
+    const ver=d.versionCode!==null&&d.versionCode!==''?'vCode '+d.versionCode:'旧诊断记录';
+    const seen=d.lastSeen>0?'上报 '+fmtRel(d.lastSeen):'尚无实时上报';
+    sub.textContent=ver+' · '+seen;
+    btn.append(head,sub);
+    btn.onclick=()=>{selectedDevice=d.device;renderDevices(true)};
+    el('deviceList').append(btn);
+  }
+  renderDeviceDetail(currentDevice(),forceColor);
+}
+async function readDevices(opts={}){
+  if(devicesRefreshing&&!opts.force)return;
+  const seq=++deviceFetchSeq;
+  devicesRefreshing=true;updateDeviceControls();
+  try{
+    const data=await api('devices');
+    if(seq!==deviceFetchSeq)return;
+    deviceList=Array.isArray(data.devices)?data.devices:[];
+    deviceLastRead=Date.now();
+    renderDevices(Boolean(opts.forceColor));
+  }catch(err){
+    if(seq!==deviceFetchSeq)return;
+    if(err.message==='请登录')throw err;
+    el('deviceSummary').textContent=err.message||'暂时无法读取手机设备';
+    if(!opts.silent)throw err;
+  }finally{if(seq===deviceFetchSeq){devicesRefreshing=false;updateDeviceControls()}}
+}
+async function deviceAction(fn){deviceBusy=true;updateDeviceControls();try{await fn()}finally{deviceBusy=false;updateDeviceControls()}}
+el('devAccentPicker').oninput=()=>{
+  const d=currentDevice();if(!d)return;
+  const val=el('devAccentPicker').value.toUpperCase();
+  el('devAccentHex').value=val;
+  deviceColorDrafts[d.device]=val;
+  updateDeviceControls(d);
+};
+el('devAccentHex').oninput=()=>{
+  const d=currentDevice();if(!d)return;
+  const val=el('devAccentHex').value.trim();
+  deviceColorDrafts[d.device]=val;
+  if(HEX_COLOR.test(val))el('devAccentPicker').value=val.toLowerCase();
+  updateDeviceControls(d);
+};
+el('devResetColor').onclick=()=>{
+  const d=currentDevice();if(!d)return;
+  delete deviceColorDrafts[d.device];
+  syncColorInputs(d,true);
+};
+el('devSaveColor').onclick=handle(()=>deviceAction(async()=>{
+  const d=currentDevice();if(!d)throw Error('请先选择手机设备');
+  const raw=el('devAccentHex').value.trim();
+  if(!HEX_COLOR.test(raw))throw Error('颜色须为 #RRGGBB 格式');
+  const accent=raw.toUpperCase();
+  await api('devices/'+encodeURIComponent(d.device)+'/color','POST',{accent});
+  if((deviceColorDrafts[d.device]||'').trim().toUpperCase()===accent)delete deviceColorDrafts[d.device];
+  await readDevices({force:true,forceColor:true});
+  el('msg').textContent='颜色已下发，请查看手机确认状态';
+}));
+async function triggerDeviceCommand(action,label){
+  const d=currentDevice();if(!d)throw Error('请先选择手机设备');
+  await api('devices/'+encodeURIComponent(d.device)+'/command','POST',{action});
+  await readDevices({force:true});
+  el('msg').textContent='已下发「'+label+'」指令，等待手机确认执行';
+}
+el('devSyncLogs').onclick=handle(()=>deviceAction(()=>triggerDeviceCommand('sync_logs','回传日志')));
+el('devCheckUpdate').onclick=handle(()=>deviceAction(()=>triggerDeviceCommand('check_update','检查更新')));
+el('reloadDevices').onclick=handle(()=>readDevices({force:true}));
 el('apply').onclick=handle(()=>voiceAction(async()=>{
   const id=el('voiceChoice').value;
   try{await api('voices/active','PUT',{id,previous:catalog.active});await readVoices(id);
@@ -187,7 +463,9 @@ el('apply').onclick=handle(()=>voiceAction(async()=>{
   catch(err){await readVoices(id);throw err}
 }));
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{for(const tab of document.querySelectorAll('[data-view]')){
-  const selected=b===tab;el(tab.dataset.view).hidden=!selected;tab.setAttribute('aria-pressed',String(selected))}};
+  const selected=b===tab;el(tab.dataset.view).hidden=!selected;tab.setAttribute('aria-pressed',String(selected))}
+  if(b.dataset.view==='devices'&&!el('panel').hidden)readDevices({silent:true}).catch(()=>{});
+};
 function words(){return el('words').value.split('\n').map(s=>s.trim()).filter(Boolean)}
 function showDiff(){
   const before=settings.drafts[editingKind]?.words||[],after=words();
@@ -223,11 +501,12 @@ async function load(){
   el('probs').replaceChildren();for(const [k,name] of Object.entries({default:'默认',chatty:'健谈',quiet:'安静',funny:'幽默'})){
     const label=document.createElement('label');label.textContent=name+'（%）';const input=document.createElement('input');
     input.type='number';input.min=0;input.max=100;input.step='any';input.id='p-'+k;input.value=+(100*settings.probabilities[k]).toFixed(4);label.append(input);el('probs').append(label)}
-  clearInterval(interval);interval=setInterval(()=>{if(!document.hidden)refresh().catch(()=>{})},5000);await readVoices();
+  clearInterval(interval);interval=setInterval(()=>{if(!document.hidden){refresh().catch(()=>{});readDevices({silent:true}).catch(()=>{})}},5000);await readVoices();
   try{await readProviders()}catch(error){if(error.message==='请登录')throw error;el('msg').textContent=error.message}
+  readDevices({silent:true}).catch(()=>{});
 }
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!el('panel').hidden)refresh().catch(()=>{})});
-el('refresh').onclick=handle(refresh);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!el('panel').hidden){refresh().catch(()=>{});readDevices({silent:true}).catch(()=>{})}});
+el('refresh').onclick=handle(async()=>{await refresh();await readDevices({silent:true}).catch(()=>{})});
 el('signin').onsubmit=handle(async()=>{await api('login','POST',{password:el('pass').value});el('pass').value='';await load()});
 el('logout').onclick=handle(async()=>{await api('logout','POST');location.reload()});
 load().catch(err=>{if(err.message!=='请登录')el('msg').textContent=err.message});

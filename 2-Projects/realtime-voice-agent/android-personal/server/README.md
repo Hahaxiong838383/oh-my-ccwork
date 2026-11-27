@@ -1,9 +1,10 @@
 # 小可夜航 (night) OTA + 设备诊断后端
 
-飞牛2 上的独立 sidecar 服务，给「小可」独立 Android 客户端（night 通道）提供两件事：
+飞牛2 上的独立 sidecar 服务，给「小可」独立 Android 客户端（night 通道）提供以下能力：
 
 1. **真实 OTA**：`latest.json` 与 APK 静态 artifact；
-2. **技术事件上报**：13 类白名单事件，只记技术事实，不存密钥、不存原话。
+2. **技术事件上报**记录通话与更新事件，不含原话。
+3. **手机设备同步**将配色、状态和维护操作接到同一台手机。手机使用配对凭据；后台沿用现有 owner 登录。
 
 对外固定入口（Lucky 8666/TLS，`pa.hahaxiong.cc` 的 `/mobile/night` 子路径）：
 
@@ -12,10 +13,10 @@
 | GET | `/mobile/night/latest.json` | 由磁盘上真实 APK 现算的清单；**没有 APK 就是 404** |
 | GET | `/mobile/night/xiaoke-night-<versionCode>.apk` | 静态 APK，支持 `Range` 续传、`ETag`、`HEAD` |
 | POST | `/mobile/night/diagnostics` | `Bearer <设备凭据>`，body `{schema:1,events:[{id,kind,ts,versionCode}]}` → `{acked:[...]}` |
+| POST | `/mobile/night/sync` | 设备 Bearer；回报前台状态、颜色修订、命令回执，领取该设备的期望配色与维护命令 |
 | GET | `/mobile/night/healthz` | 容器健康检查（不对外宣传） |
 
-范围声明：只服务用户本人飞牛上的这一个私有后端。不改 P003、不改 MyJavis、不改线上 provider、
-不动私有 admin（`personal-voice-admin`）容器，也不动 8666 规则里其他任何域名。
+管理后台与本服务共用挂载目录中的 Unix 套接字。后台经该套接字查询已配对设备、设置颜色、请求回传日志或检查更新。公网 HTTP 监听只服务设备请求。SQLite 以修订号处理离线改色冲突，旧修订设备先接收后台颜色；每台设备可保留一条待确认维护操作。
 
 ---
 

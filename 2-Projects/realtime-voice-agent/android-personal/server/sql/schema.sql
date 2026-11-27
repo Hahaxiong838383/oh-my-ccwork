@@ -31,3 +31,13 @@ CREATE TABLE IF NOT EXISTS ingest (
 
 -- 裁剪：events 按 received_at 保留 NIGHT_RETENTION_DAYS（默认 45 天），
 -- 并保证总行数不超过 NIGHT_MAX_ROWS（默认 500000）；ingest 同步按天裁剪。
+
+-- 配对设备的前台状态、配色修订和最新维护请求。
+CREATE TABLE IF NOT EXISTS mobile_devices (
+ device TEXT PRIMARY KEY, version INTEGER NOT NULL DEFAULT 0, phase TEXT NOT NULL DEFAULT 'idle',
+ muted INTEGER NOT NULL DEFAULT 0, accent TEXT, revision INTEGER NOT NULL DEFAULT 0,
+ applied INTEGER NOT NULL DEFAULT 0, seen INTEGER NOT NULL DEFAULT 0,
+ cmd TEXT NOT NULL DEFAULT '', action TEXT NOT NULL DEFAULT '',
+ created INTEGER NOT NULL DEFAULT 0, acked INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_events_device_time ON events(device,ts DESC);
