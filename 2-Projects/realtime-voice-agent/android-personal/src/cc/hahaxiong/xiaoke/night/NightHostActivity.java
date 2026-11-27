@@ -505,15 +505,24 @@ public final class NightHostActivity extends Activity {
     }
 
 
+    private void handleBack(String reason) {
+        if (web == null) {
+            exitApp(reason);
+            return;
+        }
+        web.evaluateJavascript("Boolean(window.NightCloseAppearance && window.NightCloseAppearance())",
+                handled -> { if (!"true".equals(handled)) exitApp(reason); });
+    }
+
     @Override
     public void onBackPressed() {
-        exitApp("back");
+        handleBack("back");
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            exitApp("back-key");
+            if (event.getRepeatCount() == 0) handleBack("back-key");
             return true;
         }
         return super.onKeyDown(keyCode, event);
@@ -541,7 +550,7 @@ public final class NightHostActivity extends Activity {
             main.postDelayed(new Runnable() {
                 @Override
                 public void run() {
-                    exitApp("intent-back");
+                    handleBack("intent-back");
                 }
             }, 120L);
         }
