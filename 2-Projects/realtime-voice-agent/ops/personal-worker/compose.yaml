@@ -27,6 +27,9 @@ services:
       SPEAKER_ID_ENABLED: "0"
       FILLER_ENABLED: "0"
       TTS_POOL_ENABLED: "0"
+      P003_TTS_CONNECT_RECOVERY_V1: "1"
+      TTS_FIRST_CLAUSE_MIN: "8"
+      TTS_FIRST_CLAUSE_ORDERED_ONLY: "0"
       HOME: /var/cache/personal-voice
     volumes:
       - ./cache:/var/cache/personal-voice
