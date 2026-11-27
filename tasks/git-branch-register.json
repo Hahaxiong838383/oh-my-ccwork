@@ -3,7 +3,8 @@
   "branches": {
     "personal/s24-night-apk": {
       "task": "小可 Night V1.0.6 说话表情、回放脉冲与私人后台设备双向联动",
-      "state": "active"
+      "state": "keep",
+      "until": "已发 V1.0.6；待川哥 S24 Ultra 体验确认后再复核该工作树。"
     },
     "personal/voice-c-deployment-20261125": {
       "task": "小可私人语音方案 C、飞牛五音色、在线供应商管理与真实通话验收",
@@ -281,12 +282,12 @@
     },
     "personal-admin": {
       "scope": "personal-voice",
-      "source_commit": "021d9445ebb7fda17df198d16cce4f860bbc522f",
+      "source_commit": "f51d6989d9e7dd71c2791887ee4d82a625a760ec",
       "source_ref": "refs/heads/main",
       "maintainer_branch": "main",
-      "sha256": "7387e1c5b2dda47b27ad663a36052d663efdd63ac0aae57325e21a3dc9798020",
+      "sha256": "4e48a3069f1527c26c161f5b882cac5641a4743f6189ef48179660fd8615a87e",
       "proof": {
-        "object": "05a430c4f355e1e96a67acb762f567201449ada2:2-Projects/realtime-voice-agent/docs/personal-provider-release-20261125.json",
+        "object": "ce33bae730ed3758689abbe92dfa4571d0d17e41:2-Projects/realtime-voice-agent/docs/personal-s24-device-link-release-20261127.json",
         "keys": [
           "deployments",
           "personal-admin"
@@ -371,12 +372,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "bf6e259b6953b845c9f47646bcd275f225e60cb9",
+      "source_commit": "f51d6989d9e7dd71c2791887ee4d82a625a760ec",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "f4aa79a92b999f08be41a308d3d2e53e0bfb53ff5241d03960183b6b155dec12",
+      "sha256": "611dd57f477fca49215760b058ea1e05117299c1db2606c7f716673190a74ff4",
       "proof": {
-        "object": "04bea679de3598b367b6c8b98600f0c211c2eb81:2-Projects/realtime-voice-agent/docs/personal-s24-query-prosody-release-20261127.json",
+        "object": "ce33bae730ed3758689abbe92dfa4571d0d17e41:2-Projects/realtime-voice-agent/docs/personal-s24-device-link-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"
@@ -386,12 +387,12 @@
     },
     "s24-night-server": {
       "scope": "personal-voice",
-      "source_commit": "74193c85ab268a43f5ff668af122229ee22a2f6b",
+      "source_commit": "47b0ea6099c54a8770c9abbf1ac87fc6c7870d3d",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "720779bb36699cb8ff83719be83220ea29f0c08e5e23003a730e9d6c220d78d7",
+      "sha256": "dc7fe8fcae07a59198e13f3066db4fb9e2890f59d32f0381f26af1aeb18a8f39",
       "proof": {
-        "object": "b34551e7412782e5a37d0ce5475f2679e9a9f77b:2-Projects/realtime-voice-agent/docs/personal-s24-night-release-20261126.json",
+        "object": "ce33bae730ed3758689abbe92dfa4571d0d17e41:2-Projects/realtime-voice-agent/docs/personal-s24-device-link-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-server"
