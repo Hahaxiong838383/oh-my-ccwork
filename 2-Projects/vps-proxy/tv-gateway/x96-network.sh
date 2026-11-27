@@ -59,7 +59,11 @@ ensure_rules() (
     # A router may advertise its link-local IPv6 address as a DNS server.
     ensure_rule ip6tables filter OUTPUT -o eth0 -p "$protocol" \
       --dport 53 -j REJECT --reject-with icmp6-port-unreachable || failed=1
-    # Match the deployed IPv4 DNAT rules exactly to reuse them during rollout.
+    # HA owns the first IPv4 DNS jump after Ethernet is ready. Its monitor
+    # checks/repairs the selected target; never put primary DNAT ahead of it.
+    if iptables -t nat -C OUTPUT -p "$protocol" --dport 53 -j X96_GW_DNS 2>/dev/null; then
+      continue
+    fi
     ensure_rule iptables nat OUTPUT -p "$protocol" --dport 53 \
       -j DNAT --to-destination 192.168.1.19:53 || failed=1
   done
