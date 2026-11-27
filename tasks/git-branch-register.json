@@ -307,12 +307,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "141a237563293c1f13adef6aeca5ff394e2e9030",
-      "source_ref": "refs/tags/release/personal-voice/brain-no-daily-limit-20261127",
+      "source_commit": "b6b018bc5761e0fd34b7f3b9304c50e06c1c5c02",
+      "source_ref": "refs/tags/release/personal-voice/brain-memory-style-20261127",
       "maintainer_branch": "main",
-      "sha256": "72eecd07eb06b6e049bd30afc24f376b906312d13f90d10b28f98d9dab80bdd1",
+      "sha256": "a2a4768e78f9d5f5b11540d54ff20cdd0aca86d6afd57b380b8cfecc9c6951ab",
       "proof": {
-        "object": "91155490783af284237e2ccd8d1458374502e2a7:2-Projects/realtime-voice-agent/docs/personal-brain-no-daily-limit-20261127.json",
+        "object": "e6beb04900b634dd6eaf1fb3e9f341a3bf458cab:2-Projects/realtime-voice-agent/docs/personal-brain-memory-style-20261127.json",
         "keys": [
           "deployments",
           "personal-brain"
