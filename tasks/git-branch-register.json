@@ -150,6 +150,11 @@
       "task": "私人 Worker 按音色缓存衔接音、缩短普通与搜索等待",
       "state": "keep",
       "until": "飞牛预览字幕前一版 Worker 与插话报时前一版 Brain 回滚镜像关联此提交；下一次版本稳定后复核。"
+    },
+    "tv/x96-ipv4-ha": {
+      "task": "X96 电视主备网关、DNS 自动接管和 Armbian 开机审计",
+      "state": "keep",
+      "until": "下次自然冷启动复验后再评估归档。"
     }
   },
   "releases": {
@@ -401,6 +406,36 @@
         "keys": [
           "deployments",
           "s24-night-server"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "x96-ipv4-ha": {
+      "scope": "tv-gateway",
+      "source_commit": "753de33df10d03e285b9f519a51b4e39eb39c348",
+      "source_ref": "refs/heads/tv/x96-ipv4-ha",
+      "maintainer_branch": "tv/x96-ipv4-ha",
+      "sha256": "38a98ecd441f89c476559fff0405d385c67ea8985247f8b4f60416f45e08cfe9",
+      "proof": {
+        "object": "cce8c504ceb4a69417c07f628b65db8060ba041e:2-Projects/vps-proxy/tv-gateway/release-20261127.json",
+        "keys": [
+          "components",
+          "x96-ipv4-ha"
+        ],
+        "digest_key": "sha256"
+      }
+    },
+    "armbian-tv-ha-audit": {
+      "scope": "tv-gateway",
+      "source_commit": "753de33df10d03e285b9f519a51b4e39eb39c348",
+      "source_ref": "refs/heads/tv/x96-ipv4-ha",
+      "maintainer_branch": "tv/x96-ipv4-ha",
+      "sha256": "5171d2d1b483130b575b3626b3198827dba87c1ff186a3362d4b6df237649305",
+      "proof": {
+        "object": "cce8c504ceb4a69417c07f628b65db8060ba041e:2-Projects/vps-proxy/tv-gateway/release-20261127.json",
+        "keys": [
+          "components",
+          "armbian-tv-ha-audit"
         ],
         "digest_key": "sha256"
       }
