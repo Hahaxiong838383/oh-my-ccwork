@@ -1,0 +1,83 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T14:52:50+08:00",
+  "release_tag": "release/personal-voice/v1.0.11",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "42af83a01f9f3a3a2c7fbe08ac30102d290f32ef",
+      "versionCode": 1000011,
+      "versionName": "V1.0.11",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000011.apk",
+      "size": 1039137,
+      "sha256": "a7b2e337810717ba88bffbe1ebcab07883a4e37142888e1a008a0ea086781b25",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "sources": {
+    "open": {
+      "name": "open-bot-avatar",
+      "commit": "e10afe49d46da8ffcc6545f5d6e8ba1de4ea8c5d",
+      "license": "MIT",
+      "repository": "https://github.com/DominikScholz/open-bot-avatar.git"
+    },
+    "boop": {
+      "name": "BoopFace",
+      "commit": "940fdf7dd844c2052b5ae846374e1ce60b0f5c33",
+      "license": "MIT",
+      "repository": "https://github.com/CX-ArtLab/BoopFace"
+    },
+    "robot": {
+      "name": "robot-heads",
+      "commit": "58ebf6439a8125a769f63b22ffd35bc18834b1b5",
+      "license": "MIT",
+      "repository": "https://github.com/fayazara/robot-heads.git"
+    }
+  },
+  "acceptance": {
+    "catalog": {
+      "classic": {
+        "appearance_options": 1,
+        "preview_actions": 39
+      },
+      "open": {
+        "appearance_options": 69,
+        "preview_actions": 12
+      },
+      "boop": {
+        "appearance_options": 190,
+        "preview_actions": 33
+      },
+      "robot": {
+        "appearance_options": 12,
+        "preview_actions": 10
+      }
+    },
+    "apk_validation": {
+      "passed": 69,
+      "failed": 0
+    },
+    "offline_webview_assets": "按 Android 文档 CSP 在 Chromium 中使用正式 APK 解包资源，逐项切换、逐项试演、检查缩略图有效、重开恢复选择。覆盖横屏、窄屏、减少动态、真实渲染器收到的麦克风及回放音量。",
+    "private_room": {
+      "bargeDuringOutput": true,
+      "clockReplyHeard": true,
+      "levels": 133,
+      "events": [
+        "call_start",
+        "mic_on",
+        "connected",
+        "rx_audio",
+        "rx_caption",
+        "mic_off",
+        "tx_caption",
+        "spoken_interrupt",
+        "cancel_ack",
+        "call_end"
+      ],
+      "ended": "通话已结束",
+      "active": 0
+    },
+    "android": "Android 11（系统 WebView 83）从 V1.0.10 覆盖安装，已安装 APK 摘要与公开 OTA 文件一致。重开后恢复编号 102 湖蓝 BoopFace，外观抽屉展开时完整头像位于上方舞台。",
+    "s24_ultra": "本轮未在用户 S24 Ultra 进行实机体验验收。",
+    "layout": "分别检查渲染容器与宿主的宽高、BoopFace 立体层与头像的相对位置。另用旧版 WebView 实际截图核对位置与尺寸；旧版 WebView 需要对宿主和组件内部的绝对定位都展开 CSS inset 简写。"
+  }
+}

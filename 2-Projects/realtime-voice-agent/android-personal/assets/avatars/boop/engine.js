@@ -5367,13 +5367,13 @@
 ${pairStyles}
     :host{display:block;width:${size}px;height:${size}px}
     .stage{position:relative;width:${size}px;height:${size}px}
-    .cut{position:absolute;inset:0}
-    .scene{position:absolute;inset:0;perspective:${D * u}px;perspective-origin:50% 50%}
+    .cut{position:absolute;top:0;right:0;bottom:0;left:0}
+    .scene{position:absolute;top:0;right:0;bottom:0;left:0;perspective:${D * u}px;perspective-origin:50% 50%}
     .probe{position:absolute;width:0;height:0;overflow:hidden}
     /* See-through eyes: the eyes are holes cut through the whole head (below). */
     .stage.through .layer.eyes{opacity:0}
-    .head{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
-    .wall{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+    .head{position:absolute;top:0;right:0;bottom:0;left:0;transform-style:preserve-3d;will-change:transform}
+    .wall{position:absolute;top:0;right:0;bottom:0;left:0;width:100%;height:100%;overflow:visible}
     .layer{position:absolute;left:0;top:0;width:${size}px;height:${size}px;pointer-events:none;will-change:transform;overflow:hidden}
     .layer svg{width:100%;height:100%;overflow:visible}
     /* The copied drawings are frozen: their motion groups must not become GPU
@@ -6293,7 +6293,7 @@ ${pairStyles}
       host.className = "view-3d";
       host.setAttribute("aria-hidden", "true");
       const style = document.createElement("style");
-      style.textContent = ':host{position:relative}.view-3d{position:absolute;inset:0}:host([data-view="3d"]) svg{visibility:hidden}';
+      style.textContent = ':host{position:relative}.view-3d{position:absolute;top:0;right:0;bottom:0;left:0}:host([data-view="3d"]) svg{visibility:hidden}';
       root.append(style, host);
       v = face._view3dState = { host, avatar: null, key: "", building: null, pose: { yaw: 0, pitch: 0 }, t: performance.now() };
       return v;
