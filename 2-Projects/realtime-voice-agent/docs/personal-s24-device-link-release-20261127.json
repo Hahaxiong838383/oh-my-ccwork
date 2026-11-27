@@ -1,0 +1,75 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-27T10:05:56+08:00",
+  "deployments": {
+    "personal-admin": {
+      "source_commit": "f51d6989d9e7dd71c2791887ee4d82a625a760ec",
+      "sha256": "4e48a3069f1527c26c161f5b882cac5641a4743f6189ef48179660fd8615a87e",
+      "image": "personal-voice-admin:sync106-f51d6989d9e7",
+      "nas_image_id": "sha256:1929289710c444447e36449ce701a82d6d8a7844d7621b21342369a64fa326d8",
+      "files": {
+        "/app/server.mjs": "e8f599d1064d6362a1fdd4032d08bcbf5c6e9b28242fa4ff0538f80052bf9e9e",
+        "/app/index.html": "8ffc62644ec117103df15351ed9cfd8f334cc99bb8b918023eaf6df0bbcef413",
+        "/app/design.html": "5c02ba1508ce9da058687da650e718ab2d283aea18baa9083ae825387dfe35b9",
+        "/app/event-property-schema-v1.json": "7050d0be830669b63d444245f26fff2407fc3daf4d4b0866e4b2b309be06b1bc"
+      }
+    },
+    "s24-night-server": {
+      "source_commit": "47b0ea6099c54a8770c9abbf1ac87fc6c7870d3d",
+      "sha256": "dc7fe8fcae07a59198e13f3066db4fb9e2890f59d32f0381f26af1aeb18a8f39",
+      "files": {
+        "app/cli.py": "de70a4b29b7f7bfe4767981dc3d3e1aabe1881adb2f1b55ec61e8bd486a5b038",
+        "app/night_server.py": "14be29b4b9d146c209777327a3215384ac4be4ffe6ef6112d9bf4993936204de",
+        "app/device_link.py": "752fdb953f81a5e0404138eae6adad2cc2a7d3b5b7494e865750d208c91bf701",
+        "app/release_info.py": "d41378e84670b3d93c86fcf79697ad7ea3541363901b91ad7feb169ed0ac7830",
+        "app/schema.sql": "faaf29423d9cc51d73ec16225bef1b393044e008819b47331017c423b85e4de1",
+        "compose.yaml": "30fc665dc9735fcd08a74471eca995f2fc52ff35858e7977ad732e15fdd459f5"
+      }
+    },
+    "s24-night-apk": {
+      "source_commit": "f51d6989d9e7dd71c2791887ee4d82a625a760ec",
+      "sha256": "611dd57f477fca49215760b058ea1e05117299c1db2606c7f716673190a74ff4",
+      "size": 242661,
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000006.apk",
+      "versionCode": 1000006,
+      "versionName": "V1.0.6",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f",
+      "files": {
+        "xiaoke-night-1000006.apk": "611dd57f477fca49215760b058ea1e05117299c1db2606c7f716673190a74ff4"
+      }
+    }
+  },
+  "acceptance": {
+    "voice_room": {
+      "pulse": {
+        "max": 19.966442953020135,
+        "min": 7.9865771812080535,
+        "samples": 49
+      },
+      "bargeDuringOutput": true,
+      "clockReplyHeard": true,
+      "levels": 247,
+      "events": [
+        "call_start",
+        "mic_on",
+        "connected",
+        "mic_off",
+        "rx_audio",
+        "rx_caption",
+        "tx_caption",
+        "spoken_interrupt",
+        "cancel_ack",
+        "call_end"
+      ],
+      "ended": "通话已结束",
+      "active": 0
+    },
+    "device_sync": "Android emulator with temporary paired identity; owner page and production mobile HTTPS; both color directions, check_update and sync_logs acknowledged; ota_check seen in events.",
+    "owner_account": "phone-01 preserved",
+    "provider_selection": [
+      "p003-doubao-asr",
+      "p003-deepseek",
+      "p003-xfyun-tts"
+    ]
+  }
+}
