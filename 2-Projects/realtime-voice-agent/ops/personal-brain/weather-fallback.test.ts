@@ -47,7 +47,8 @@ test('spoken weather requests keep the complete station, day and metric', () => 
     ['请查会同县的天气', '会同县', 0, 'forecast'],
   ]) assert.deepEqual(weatherIntent(text)?.request, {place, day_offset, metric}, text);
   assert.equal(followupPlace('就看看北京的呗'), '北京');
-  assert.equal(followupPlace('就看看北京的Bye'), '北京');
+  for (const text of ['就看看北京的Bye','就看看北京的拜']) assert.equal(followupPlace(text), '北京', text);
+  assert.equal(followupPlace('北京以外的拜'), undefined);
   assert.equal(followupPlace('就看看北京的 bye。'), '北京');
   assert.equal(followupPlace('上海到北京的Bye'), undefined);
   assert.equal(followupPlace('北京大学的Bye'), undefined);

@@ -60,9 +60,9 @@ export function weatherIntent(text: string) {
 }
 
 export function followupPlace(text: string) {
-  // Volc ASR can render the sentence-final “的呗” as “的Bye”. This normalization
+  // Volc ASR can render the sentence-final “的呗” as “的Bye” or “的拜”. This normalization
   // is limited to a pending weather reply; the remaining place must still match a station.
-  const place = spokenPlace(compact(text).replace(/的bye$/iu, '的'), spokenLead, spokenTail);
+  const place = spokenPlace(compact(text).replace(/的(?:bye|拜)$/iu, '的'), spokenLead, spokenTail);
   return inspectWeatherPlace(place).status === 'unique' ? place : undefined;
 }
 
