@@ -7,7 +7,9 @@ description: realtime-voice-agent(自建 LiveKit cascade 中文语音)部署 + �
 
 ## 小可私人版（北京 ECS／飞牛 2）
 
-私人版与 P003 是两个运行环境。先核对域名、容器与发布实物，再选择对应流程。[配置工作室、音色切换、Lucky 公网验收与回退](references/personal-studio-release.md)
+私人版只借鉴公司 P003 的代码和实现逻辑。功能取舍、交互和验收以私人版需求为准。接入优化前，先核对签票、通话控制、工具、记忆、配置和 OTA 均指向个人服务。[私人版产品边界](../../../2-Projects/realtime-voice-agent/README.md#私人小可与公司-p003-的边界)
+
+发布时核对域名、容器和实际下发的 APK。[配置工作室、音色切换、Lucky 公网验收与回退](references/personal-studio-release.md)
 
 S24 暗夜剧场说话时表情单一、补报城市后查询失败、或已听到衔接语却迟迟没有正文时，按个人语音房复测。[表情、查询追问与延时验收](references/personal-studio-release.md#暗夜剧场的表情查询追问与延时)
 
