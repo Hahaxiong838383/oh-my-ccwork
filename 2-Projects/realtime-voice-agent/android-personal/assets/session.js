@@ -205,22 +205,24 @@
     const current = () => valid(s) && s.output === output;
     audio.onplaying = () => { if (current()) { clearPlaybackPrompt(s); refresh(s); } };
     audio.onpause = () => { if (current() && audio.paused) promptPlayback(s); };
-    let env = 0, audibleAt = 0;
+    let env = 0, audibleAt = 0, lastPcmAt = -Infinity;
     function measure() {
       if (!valid(s) || s.output !== output) return;
-      // Prefer the analyser reading the subscribed PCM track. The RTC speaker
-      // level is only a fallback when the real meter cannot be created.
-      const pcm = playbackMeter ? playbackMeter.read() : null;
+      const now = performance.now();
+      const pcm = playbackMeter?.read() || 0;
+      if (pcm > .002) lastPcmAt = now;
+      // Some Android WebViews play the track while the Web Audio tap stays flat.
+      // Preserve short pauses in a working tap before using the remote speaker level.
       const rtcLevel = peer.isSpeaking ? peer.audioLevel || 0 : 0;
-      const strength = pcm !== null ? (pcm > .002 ? (pcm - .002) * 8 : 0) : rtcLevel * 2;
-      const target = audio.paused || audio.muted ? 0 : Math.min(1, strength);
+      const strength = now - lastPcmAt < 180 ? Math.max(0, pcm - .002) * 8 : rtcLevel * 2;
+      const playing = !audio.paused && !audio.muted && audio.readyState >= 2 && !track.isMuted;
+      const target = playing ? Math.min(1, strength) : 0;
       env+=(target-env)*(target>env?.62:.24);
       level(env<.001?0:env);
-      const now=performance.now();
-      if (pcm !== null && pcm > .005 && !audio.paused && !audio.muted && !s.hadAudio) { mark('rx_audio'); s.hadAudio=true; }
+      if (target > .025 && !s.hadAudio) { mark('rx_audio'); s.hadAudio=true; }
       if (target>.025) { audibleAt=now; if(!s.audible){s.audible=true;refresh(s);} }
       else if(s.audible && now-audibleAt>320){s.audible=false;refresh(s);}
-      advanceSpeech(s, now, target, !audio.paused && !audio.muted);
+      advanceSpeech(s, now, target, playing);
       output.frame=requestAnimationFrame(measure);
     }
     audio.play().catch(() => { if (current() && audio.paused) promptPlayback(s); });

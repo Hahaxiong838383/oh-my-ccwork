@@ -25,7 +25,7 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
       window.NightView = {render(s){
           window.display=s; audit.shows.push({t:performance.now(),reply:s.reply,phase:s.phase});
           document.getElementById('status-banner').hidden=!s.status;
-        },level(){},speech(patch){ audit.speech.push({t:performance.now(),patch}); }};
+        },level(v){audit.level=v;},speech(patch){ audit.speech.push({t:performance.now(),patch}); }};
       window.NightHost = {paired:()=>true,event:e=>events.push(e),setCall(){},
         micPermission:id=>queueMicrotask(()=>Voice.onPermission(id,true)),
         ticket:id=>queueMicrotask(()=>Voice.onTicket(id,{url:'wss://pa.hahaxiong.cc:8666',token:'fixture'}))};
@@ -126,6 +126,19 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
     assert.equal(await page.evaluate(()=>display.reply),'我先查一下。你要现在听吗？');
     await page.evaluate(()=>emitTranscript([['SG_a7_1','你要现在听吗？',true]]));
     assert.deepEqual(await page.evaluate(()=>audit.speech.filter(x=>x.patch).map(x=>x.patch.kind)),['explain','question']);
+    // WebView can play the subscribed audio while its Web Audio tap returns zero.
+    await page.evaluate(()=>{
+      AnalyserNode.prototype.getFloatTimeDomainData = data => data.fill(0);
+      peer.isSpeaking = true; peer.audioLevel = .18;
+      emitTranscript([['SG_a7_2','一定要记住。',false]]);
+    });
+    await page.waitForFunction(()=>Math.abs(audit.level-.36)<.02 && audit.speech.at(-1)?.patch?.kind==='emphasis');
+    await page.evaluate(()=>{peer.isSpeaking=false;});
+    await page.waitForFunction(()=>audit.level===0);
+    await page.evaluate(()=>{document.querySelector('audio').muted=true; peer.isSpeaking=true;});
+    await page.waitForTimeout(250);
+    assert.equal(await page.evaluate(()=>audit.level),0,'muted playback must stay still with an active speaker');
+    await page.evaluate(()=>{document.querySelector('audio').muted=false;});
     // A packet for a cancelled turn cannot restore its text or expression.
     await page.waitForTimeout(250);
     await page.evaluate(()=>Voice.interrupt());

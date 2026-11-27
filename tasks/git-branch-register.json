@@ -372,12 +372,12 @@
     },
     "s24-night-apk": {
       "scope": "personal-voice",
-      "source_commit": "f51d6989d9e7dd71c2791887ee4d82a625a760ec",
+      "source_commit": "746e8b535a4076f248bb3580f3088b9ed07afc54",
       "source_ref": "refs/heads/personal/s24-night-apk",
       "maintainer_branch": "personal/s24-night-apk",
-      "sha256": "611dd57f477fca49215760b058ea1e05117299c1db2606c7f716673190a74ff4",
+      "sha256": "4fc5f03b159868879c5cfb3f2a236732fba51b196cdd4fcacb99206684cf37e8",
       "proof": {
-        "object": "ce33bae730ed3758689abbe92dfa4571d0d17e41:2-Projects/realtime-voice-agent/docs/personal-s24-device-link-release-20261127.json",
+        "object": "b44bc0b5626c44a5a6e4bba7ea0de46562a52da5:2-Projects/realtime-voice-agent/docs/personal-s24-playback-release-20261127.json",
         "keys": [
           "deployments",
           "s24-night-apk"
