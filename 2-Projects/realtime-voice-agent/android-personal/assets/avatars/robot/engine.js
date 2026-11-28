@@ -1915,6 +1915,9 @@
       var lastGazeY = 0;
       var gazeActiveUntil = -1;
       var touchGaze = null;
+      var dragX = 0;
+      var dragY = 0;
+      var dragWeight = 0;
       var expressState = null;
       var voiceExpression = false;
       var renderedId = "";
@@ -2008,6 +2011,8 @@
             currentColorKey,
             metrics.frame.box,
             metrics.dpr,
+            dragX,
+            dragY,
             rc.speakAudioActive ? qSpeak : -1,
             rc.listenAudioActive ? qListen : -1,
             Math.round(rc.moodLid * 10)
@@ -2036,8 +2041,10 @@
             extraPitch += listenAmp * 0.03;
           }
           pose = {
-            yaw: sp.yaw,
-            pitch: clamp(sp.pitch + extraPitch, -0.55, 0.45),
+            // Replace the simulated resting direction while held; yaw from hops
+            // and spins stays additive. The same pose projects shell, glass and ears.
+            yaw: sp.yaw - sim.yaw.x * dragWeight + dragX * 0.92,
+            pitch: clamp(sp.pitch + extraPitch, -0.55, 0.45) - sim.pitch.x * dragWeight - dragY * 0.65,
             roll: clamp(sp.roll + extraRoll, -0.45, 0.45),
             x: sp.x,
             lift: sp.lift + extraBob,
@@ -2048,6 +2055,8 @@
           };
         } else {
           pose = restPose(shownState);
+          pose.yaw += dragX * 0.2;
+          pose.pitch -= dragY * 0.14;
         }
         _renderCtx = rc;
         try {
@@ -2083,6 +2092,21 @@
         if (currentPhase === "listening" && rawListen > 0.35 && listenAmp < 0.25 && !currentReduced) {
           sim.pitch && (sim.pitch.v -= 0.45 * rawListen);
         }
+      }
+      function updateDrag(frame, dt) {
+        var held = frame.pointerActive === true;
+        var x = held ? clamp(finiteOr(frame.gazeX, 0), -1, 1) : 0;
+        var y = held ? clamp(finiteOr(frame.gazeY, 0), -1, 1) : 0;
+        if (currentReduced) {
+          dragX = Math.round(x * 4) / 4;
+          dragY = Math.round(y * 4) / 4;
+          dragWeight = held ? 1 : 0;
+          return;
+        }
+        var blend = 1 - Math.exp(-dt * (held ? 15 : 7));
+        dragX += (x - dragX) * blend;
+        dragY += (y - dragY) * blend;
+        dragWeight += ((held ? 1 : 0) - dragWeight) * blend;
       }
       function updateGaze(frame) {
         var hasGaze = frame && (typeof frame.gazeX === "number" || typeof frame.gazeY === "number");
@@ -2148,6 +2172,7 @@
           lastResolvedState = targetState;
           updateAudioEnvelopes(frame, dt > 0 ? dt : 1 / 60);
           sim.setState(targetState);
+          updateDrag(frame, dt);
           if (currentReduced) {
             drawCurrent(false);
             return;

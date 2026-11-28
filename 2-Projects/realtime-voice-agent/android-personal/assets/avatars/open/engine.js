@@ -8352,6 +8352,9 @@
         gazeX: 0,
         gazeY: 0,
         hasGaze: false,
+        dragging: false,
+        dragYaw: 0,
+        dragPitch: 0,
         reduced: void 0,
         // undefined -> 'system', boolean -> explicit
         color: resolved.defaultColor,
@@ -8590,7 +8593,7 @@
         }
       }
       function resolveLookAt(now) {
-        if (now < live.touchUntil) {
+        if (!live.dragging && now < live.touchUntil) {
           return { x: live.touchX, y: live.touchY };
         }
         if (live.hasGaze) {
@@ -8621,7 +8624,8 @@
         const reducedOpt = typeof live.reduced === "boolean" ? live.reduced : "system";
         const stateKey = typeof look.state === "string" ? look.state : look.state.id;
         const lookAtKey = lookAt ? `${lookAt.x.toFixed(3)},${lookAt.y.toFixed(3)}` : "null";
-        const viewKey = `${touchView.yaw.toFixed(4)},${touchView.pitch.toFixed(4)}`;
+        const yaw = live.dragYaw + touchView.yaw, pitch = live.dragPitch + touchView.pitch;
+        const viewKey = `${yaw.toFixed(4)},${pitch.toFixed(4)}`;
         const sig = `${stateKey}|${look.mood}|${live.color}|${live.eyeColor}|${lookAtKey}|${viewKey}|${reducedOpt}`;
         if (!force && sig === lastSig) return;
         lastSig = sig;
@@ -8633,7 +8637,7 @@
           color: live.color,
           eyeColor: live.eyeColor,
           lookAt,
-          view: { yaw: touchView.yaw, pitch: touchView.pitch },
+          view: { yaw, pitch },
           reducedMotion: reducedOpt
         });
       }
@@ -8716,7 +8720,8 @@
           live.tone = parsedTone.tone;
           const gx = typeof frame.gazeX === "number" && Number.isFinite(frame.gazeX) ? clampSigned(frame.gazeX) : 0;
           const gy = typeof frame.gazeY === "number" && Number.isFinite(frame.gazeY) ? clampSigned(frame.gazeY) : 0;
-          if (Math.abs(gx) > 0.015 || Math.abs(gy) > 0.015) {
+          live.dragging = frame.pointerActive === true;
+          if (live.dragging || Math.abs(gx) > 0.015 || Math.abs(gy) > 0.015) {
             live.gazeX = gx;
             live.gazeY = gy;
             live.hasGaze = true;
@@ -8729,6 +8734,10 @@
             live.reduced = frame.reduced;
             if (frame.reduced) stopPokeLoop();
           }
+          const reduced = isReducedNow();
+          const ease = 1 - Math.exp(-dt * (live.dragging ? 12 : 9));
+          live.dragYaw = reduced ? 0 : lerp(live.dragYaw, live.dragging ? gx * 0.5 : 0, ease);
+          live.dragPitch = reduced ? 0 : lerp(live.dragPitch, live.dragging ? -gy * 0.33 : 0, ease);
           const nextColor = typeof frame.color === "string" && frame.color.trim() ? frame.color.trim() : resolved.defaultColor;
           if (nextColor !== live.color) {
             live.color = nextColor;

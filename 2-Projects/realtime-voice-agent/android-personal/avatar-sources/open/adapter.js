@@ -291,6 +291,9 @@ function createOpenBotAvatarEngine(deps) {
       gazeX: 0,
       gazeY: 0,
       hasGaze: false,
+      dragging: false,
+      dragYaw: 0,
+      dragPitch: 0,
       reduced: undefined, // undefined -> 'system', boolean -> explicit
       color: resolved.defaultColor,
       eyeColor: resolveEyeColor(resolved.defaultColor),
@@ -564,7 +567,7 @@ function createOpenBotAvatarEngine(deps) {
     }
 
     function resolveLookAt(now) {
-      if (now < live.touchUntil) {
+      if (!live.dragging && now < live.touchUntil) {
         return { x: live.touchX, y: live.touchY };
       }
       if (live.hasGaze) {
@@ -599,7 +602,8 @@ function createOpenBotAvatarEngine(deps) {
       const reducedOpt = typeof live.reduced === 'boolean' ? live.reduced : 'system';
       const stateKey = typeof look.state === 'string' ? look.state : look.state.id;
       const lookAtKey = lookAt ? `${lookAt.x.toFixed(3)},${lookAt.y.toFixed(3)}` : 'null';
-      const viewKey = `${touchView.yaw.toFixed(4)},${touchView.pitch.toFixed(4)}`;
+      const yaw = live.dragYaw + touchView.yaw, pitch = live.dragPitch + touchView.pitch;
+      const viewKey = `${yaw.toFixed(4)},${pitch.toFixed(4)}`;
       const sig = `${stateKey}|${look.mood}|${live.color}|${live.eyeColor}|${lookAtKey}|${viewKey}|${reducedOpt}`;
 
       if (!force && sig === lastSig) return;
@@ -614,7 +618,7 @@ function createOpenBotAvatarEngine(deps) {
         color: live.color,
         eyeColor: live.eyeColor,
         lookAt,
-        view: { yaw: touchView.yaw, pitch: touchView.pitch },
+        view: { yaw, pitch },
         reducedMotion: reducedOpt,
       });
     }
@@ -718,7 +722,8 @@ function createOpenBotAvatarEngine(deps) {
         // Gaze (-1..1). Near-zero returns null so upstream idle wander smoothly resumes.
         const gx = typeof frame.gazeX === 'number' && Number.isFinite(frame.gazeX) ? clampSigned(frame.gazeX) : 0;
         const gy = typeof frame.gazeY === 'number' && Number.isFinite(frame.gazeY) ? clampSigned(frame.gazeY) : 0;
-        if (Math.abs(gx) > 0.015 || Math.abs(gy) > 0.015) {
+        live.dragging = frame.pointerActive === true;
+        if (live.dragging || Math.abs(gx) > 0.015 || Math.abs(gy) > 0.015) {
           live.gazeX = gx;
           live.gazeY = gy;
           live.hasGaze = true;
@@ -733,6 +738,14 @@ function createOpenBotAvatarEngine(deps) {
           live.reduced = frame.reduced;
           if (frame.reduced) stopPokeLoop();
         }
+
+        // lookAt already turns this volume by 0.32 / 0.18 rad. Add native view
+        // rotation while tracking a finger, letting gaze lead the heavier body.
+        // A positive pitch in this renderer looks up; touch Y increases down.
+        const reduced = isReducedNow();
+        const ease = 1 - Math.exp(-dt * (live.dragging ? 12 : 9));
+        live.dragYaw = reduced ? 0 : lerp(live.dragYaw, live.dragging ? gx * .50 : 0, ease);
+        live.dragPitch = reduced ? 0 : lerp(live.dragPitch, live.dragging ? -gy * .33 : 0, ease);
 
         // Color override
         const nextColor = typeof frame.color === 'string' && frame.color.trim()

@@ -6150,7 +6150,16 @@ ${pairStyles}
             ax = (hm[3] * px - hm[2] * py) / det + 120 - home.x;
             ay = (-hm[1] * px + hm[0] * py) / det + 120 - home.y;
           }
-          const still = Math.max(touch, center), Y = clamp(yaw, -22, 22) * (1 - still), P = clamp(pitch, -15, 15) * (1 - still);
+          const turn = brain == null ? void 0 : brain._nightDragTurn;
+          const hand = tug || (brain == null ? void 0 : brain._gestureFx) || !turn ? 0 : turn.weight;
+          const natural = (1 - Math.max(touch, center)) * (1 - hand);
+          yaw = clamp(yaw, -22, 22) * natural + (hand ? 36 * turn.x : 0);
+          pitch = clamp(pitch, -15, 15) * natural - (hand ? 24 * turn.y : 0);
+          if (hand) {
+            gazeX += 0.65 * turn.x;
+            gazeY += 0.5 * turn.y;
+          }
+          const Y = yaw, P = pitch;
           const mode = squashOn.value;
           if (mode !== "off" && dt > 0) {
             const vY = (Y - sq.Y) / dt, vP = (P - sq.P) / dt, speed = Math.abs(vY) - Math.abs(vP);
@@ -11223,6 +11232,9 @@ ${pairStyles}
       var errorHoldTimer = 0;
       var lastNativePointerAt = -Infinity;
       var gazeActive = false;
+      var turn = { x: 0, y: 0, weight: 0 };
+      var turnTime = performance.now();
+      avatar._nightDragTurn = turn;
       var pokeCount = 0;
       var lastPokeAt = 0;
       var touchCycle = 0;
@@ -11435,7 +11447,21 @@ ${pairStyles}
         currentReduced = reduced;
         avatar.setAttribute("motion", reduced ? "reduce" : "full");
       }
-      function applyGaze(gazeX, gazeY, now, reduced) {
+      function updateHandTurn(frame, now) {
+        var following = frame.pointerActive && !frame.reduced && !avatar._gestureFx;
+        var elapsed = Math.min(80, Math.max(0, now - turnTime));
+        turnTime = now;
+        var blend = frame.reduced ? 1 : 1 - Math.exp(-elapsed / (following ? 70 : 105));
+        turn.x += ((following ? clamp(frame.gazeX, -1, 1) : 0) - turn.x) * blend;
+        turn.y += ((following ? clamp(frame.gazeY, -1, 1) : 0) - turn.y) * blend;
+        turn.weight += ((following ? 1 : 0) - turn.weight) * blend;
+        if (!following && turn.weight < 2e-3) turn.x = turn.y = turn.weight = 0;
+        if (config.view === "2d") {
+          avatar.style.transform = turn.weight ? "perspective(" + lastSize * 3 + "px) rotateY(" + (turn.x * 32).toFixed(2) + "deg) rotateX(" + (-turn.y * 22).toFixed(2) + "deg)" : "";
+        }
+      }
+      function applyGaze(gazeX, gazeY, now, reduced, hand) {
+        var _a, _b;
         if (reduced) {
           if (gazeActive && avatar._pointer) {
             avatar._pointer.active = false;
@@ -11444,8 +11470,7 @@ ${pairStyles}
           }
           return;
         }
-        if (now - lastNativePointerAt < 1200) return;
-        if (avatar._dragJelly && (avatar._dragJelly.active || avatar._dragJelly.returning)) return;
+        if (!hand && (now - lastNativePointerAt < 1200 || ((_a = avatar._dragJelly) == null ? void 0 : _a.active) || ((_b = avatar._dragJelly) == null ? void 0 : _b.returning))) return;
         if (avatar._gestureFx && avatar._gestureFx.held) return;
         var hasGaze = Number.isFinite(gazeX) && Number.isFinite(gazeY);
         if (!hasGaze) return;
@@ -11458,7 +11483,7 @@ ${pairStyles}
             avatar._pointer.x = gx * 48;
             avatar._pointer.y = gy * 34;
             avatar._pointer.active = true;
-            avatar._pointer.influence = clamp(mag, 0.25, 1);
+            avatar._pointer.influence = hand ? 1 : clamp(mag, 0.25, 1);
             avatar._pointer.lastMove = now;
           }
           if (typeof avatar._resumeFrames === "function") avatar._resumeFrames();
@@ -11584,6 +11609,7 @@ ${pairStyles}
         var now = performance.now();
         var frameTime = Number.isFinite(frame.time) ? frame.time : now;
         applyReduced(frame.reduced);
+        updateHandTurn(frame, now);
         applyColor(frame.color, frame.customColor);
         var phase = String(frame.phase || "idle").trim().toLowerCase();
         if (phase !== "idle" && phase !== "connecting" && phase !== "listening" && phase !== "thinking" && phase !== "speaking" && phase !== "muted" && phase !== "error") {
@@ -11592,13 +11618,13 @@ ${pairStyles}
         var urgentVoicePhase = phase === "listening" || phase === "thinking" || phase === "speaking" || phase === "error";
         if (manualExpressUntil > now) {
           if (voiceExpression) {
-            applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+            applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced), frame.pointerActive);
             return;
           }
           if (urgentVoicePhase && phase !== currentPhase) {
             cancelManualExpress();
           } else if (phase === "idle" || phase === "muted" || phase === "connecting") {
-            applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+            applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced), frame.pointerActive);
             return;
           }
         } else if (manualExpressAction) {
@@ -11665,7 +11691,7 @@ ${pairStyles}
         } else {
           currentMood = String(frame.mood || "").trim().toLowerCase();
         }
-        applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+        applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced), frame.pointerActive);
       }
       function currentExpression() {
         var _a, _b, _c;
