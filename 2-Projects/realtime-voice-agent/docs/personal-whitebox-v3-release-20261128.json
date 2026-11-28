@@ -1,0 +1,352 @@
+{
+  "verifiedAt": "2026-11-28T09:07:02+00:00",
+  "endpoint": "https://pa.hahaxiong.cc:8666/workbench",
+  "scope": "personal-voice",
+  "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657",
+  "deployments": {
+    "personal-admin": {
+      "sha256": "530891b50482095a3bc4bf8719cd97fbfe81c3b94a5ce32d825d38f10b327bfb",
+      "files": {
+        "/app/server.mjs": "c2db0361677ff7ed6e3da59d790410125c318da8928845dc0a2c15caf3d09597",
+        "/app/index.html": "c2f08605dad2a821d905be3fa664eed16d89ba11a48f07780bf29bec1b929d4c",
+        "/app/design.html": "5c02ba1508ce9da058687da650e718ab2d283aea18baa9083ae825387dfe35b9",
+        "/app/event-property-schema-v1.json": "7050d0be830669b63d444245f26fff2407fc3daf4d4b0866e4b2b309be06b1bc",
+        "/app/whitebox.html": "ce2069caf20aa324b2059c6d69f1be4098167322cb3978ddf4eb783402a615bf",
+        "/app/whitebox.js": "fadaf4ea17ce11c6c44387609a48569fea4cf39ef24afaccdf95305f09b76b39",
+        "/app/whitebox.css": "bb75d53fb7effb2ff1e124456762f17ce99f2fa3410696f542380174d4046fb6"
+      },
+      "image": "personal-voice-admin:console-530891b50482",
+      "image_id": "sha256:69c8da3ec4ba136fbae783a1d41ba01127e17201950eb40b15909ea471a102c7",
+      "previous_image": "personal-voice-admin:console-a9d556408e40",
+      "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657"
+    },
+    "personal-brain": {
+      "sha256": "427e413a1c2e853ce04ea23aaf301df606ebbf52b1f5e90ba2fceb23cae350b9",
+      "files": {
+        "/app/server.mjs": "427e413a1c2e853ce04ea23aaf301df606ebbf52b1f5e90ba2fceb23cae350b9"
+      },
+      "image": "personal-brain:console-427e413a1c2e",
+      "image_id": "sha256:5bb3e5d96de13cdfc6056cb9b4a234f2da4dc8d4fbb2f8bb4efb94e4643b2f32",
+      "previous_image": "personal-brain:console-30068d058e0c",
+      "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657"
+    },
+    "personal-worker": {
+      "sha256": "5d72a19726c4f6db686c8117fc0cb89235df2b2bea5ab2dccf093297eab9838f",
+      "files": {
+        "/usr/local/bin/voice-rust-worker": "5d72a19726c4f6db686c8117fc0cb89235df2b2bea5ab2dccf093297eab9838f"
+      },
+      "image": "personal-voice-worker:5d72a19726c4",
+      "image_id": "sha256:6af2f850eff6b3873c3a447c32ed32d63ce1be52a2029f4e78fff399aa5e463e",
+      "previous_image": "personal-voice-worker:3bed796eb0b6",
+      "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657"
+    }
+  },
+  "acceptance": {
+    "verifiedAt": "2026-11-28T09:06:22.005913+00:00",
+    "scope": "Private production. Independently signed real LiveKit calls; released Android web assets in Chromium with synthetic Mandarin microphone. No S24 playback receipt.",
+    "signedRooms": 2,
+    "samples": [
+      {
+        "roomFingerprint": "d9ab034845b9",
+        "input": "记住我的海边卡片是蓝色月亮",
+        "userId": "7df9402c-278f-42dd-8386-2c6dbc64ee85",
+        "replyId": "7973eb1f-ece4-4d38-aba9-d3a4efa45755",
+        "route": "memory_action",
+        "turn": 2,
+        "workerMs": {
+          "commit": 629,
+          "asr_final": 613,
+          "speakable": 86,
+          "first_audio": 288
+        },
+        "browserReceivedRemotePcm": true,
+        "bodyPcmAfterSimulatedStopMs": 1284,
+        "phonePlaybackReceipt": null
+      },
+      {
+        "roomFingerprint": "d9ab034845b9",
+        "input": "用一句话讲一个小熊的故事",
+        "userId": "d2aca2ee-3949-45b8-a36a-fcc68824ad2a",
+        "replyId": "8701377c-4647-41b1-bccb-cfca68030934",
+        "route": "model",
+        "turn": 3,
+        "workerMs": {
+          "commit": 939,
+          "asr_final": 895,
+          "speakable": 700,
+          "first_audio": 886
+        },
+        "browserReceivedRemotePcm": true,
+        "bodyPcmAfterSimulatedStopMs": 2174,
+        "phonePlaybackReceipt": null
+      },
+      {
+        "roomFingerprint": "d9ab034845b9",
+        "input": "这种讲法我喜欢",
+        "userId": "72fc8616-76e3-4144-b434-20565a032197",
+        "replyId": "1f6bdfc5-0976-4318-a1f8-bb6095de8aa8",
+        "route": "feedback",
+        "turn": 4,
+        "workerMs": {
+          "commit": 700,
+          "asr_final": 670,
+          "speakable": 76,
+          "first_audio": 289
+        },
+        "browserReceivedRemotePcm": true,
+        "bodyPcmAfterSimulatedStopMs": 1298,
+        "phonePlaybackReceipt": null
+      },
+      {
+        "roomFingerprint": "08c72a6921d0",
+        "input": "你记得我的海边卡片是什么吗",
+        "userId": "1a6e2050-0882-497b-802b-d4ca59f9a582",
+        "replyId": "6d2e1493-8d88-4b01-909c-8c1004052adf",
+        "route": "memory",
+        "turn": 2,
+        "workerMs": {
+          "commit": 730,
+          "asr_final": 725,
+          "speakable": 76,
+          "first_audio": 302
+        },
+        "browserReceivedRemotePcm": true,
+        "bodyPcmAfterSimulatedStopMs": 1311,
+        "phonePlaybackReceipt": null
+      },
+      {
+        "roomFingerprint": "08c72a6921d0",
+        "input": "北京今天会下雨吗",
+        "userId": "3b2248ad-dc77-4f48-bf75-95d923c365c4",
+        "replyId": "305c450a-070a-4caa-81af-b3c605f85416",
+        "route": "weather",
+        "turn": 3,
+        "workerMs": {
+          "commit": 749,
+          "asr_final": 712,
+          "speakable": 338,
+          "first_audio": 346
+        },
+        "browserReceivedRemotePcm": true,
+        "bodyPcmAfterSimulatedStopMs": 2796,
+        "phonePlaybackReceipt": null
+      }
+    ],
+    "memory": {
+      "sourceRoomFingerprint": "d9ab034845b9",
+      "queryRoomFingerprint": "08c72a6921d0",
+      "sourceId": "7df9402c-278f-42dd-8386-2c6dbc64ee85",
+      "replyId": "6d2e1493-8d88-4b01-909c-8c1004052adf",
+      "receiptMode": "direct"
+    },
+    "growth": {
+      "storyReplyId": "8701377c-4647-41b1-bccb-cfca68030934",
+      "feedbackUserId": "72fc8616-76e3-4144-b434-20565a032197",
+      "observedChanges": [
+        {
+          "rule": "explicit_style_feedback",
+          "from": "",
+          "to": "明确喜欢"
+        },
+        {
+          "rule": "explicit_story_feedback",
+          "from": "0.51",
+          "to": "0.53"
+        }
+      ]
+    },
+    "weather": {
+      "toolId": 4,
+      "replyId": "305c450a-070a-4caa-81af-b3c605f85416",
+      "result": "with_sources",
+      "sourceCount": 1,
+      "sourceHosts": [
+        "weathernew.pae.baidu.com"
+      ]
+    },
+    "cleanup": {
+      "memoryRemoved": true,
+      "storyBaselineRestored": true,
+      "retiredWhiteboxReplayRedactsOldFact": true
+    }
+  },
+  "postAdminReleaseCall": {
+    "verifiedAt": "2026-11-28T09:06:22.005903+00:00",
+    "scope": "Final authenticated admin / deep-link release. Separate newly signed third room, weather only, released Android web assets on Chromium, captured real downlink PCM. No S24 device playback.",
+    "roomFingerprint": "2e234b85dd3b",
+    "userId": "fde942f4-e963-43fb-ae07-ba12458db774",
+    "userText": "北京今天会下雨吗",
+    "replyId": "b119888e-a0d2-4931-bf48-d86685c4002c",
+    "replyText": "百度天气预报，北京今天11月28日，白天晴，夜间晴，-1到11摄氏度。预报会变化。",
+    "workerTurn": 2,
+    "workerMs": {
+      "commit": 678,
+      "asr_final": 646,
+      "speakable": 294,
+      "first_audio": 533
+    },
+    "tool": "weather",
+    "receiptId": 5,
+    "outcome": "with_sources",
+    "sourceCount": 1,
+    "sourceHosts": [
+      "weathernew.pae.baidu.com"
+    ],
+    "browserRemotePcmWindows": 335,
+    "remoteAudioVsCaption": 0.761,
+    "bodyPcmAfterSimulatedStopMs": 1539,
+    "hangup": true,
+    "qaGrowthChanges": 0
+  },
+  "browserVerification": {
+    "deepLinkAfterOwnerLogin": true,
+    "toolGraphToExactReceipt": true,
+    "toolSourceLinks": 1,
+    "memoryJumpAcrossCalls": true,
+    "growthJumpToFeedback": true,
+    "phoneReceiptMissing": true,
+    "anonymousStatus": 401,
+    "mobileWidth": 390,
+    "pageErrors": [],
+    "screenshots": [
+      "01-weather-workbench.png",
+      "02-tool-receipt.png",
+      "03-memory-recall.png",
+      "04-memory-origin.png",
+      "05-growth.png",
+      "06-feedback-receipt.png",
+      "07-voice-timing.png",
+      "08-atlas.png",
+      "09-missing-phone.png",
+      "10-mobile-overview.png",
+      "11-mobile-tool-receipt.png",
+      "12-growth-chart.png",
+      "13-turn-matrix.png"
+    ],
+    "clickedMatrixCellToCorrectReply": true,
+    "visibleCells": 18
+  },
+  "legacyEvidence": {
+    "historicalRealReplyPresent": true,
+    "nativeTurn": null,
+    "timing": null,
+    "toolReceipt": null,
+    "privateOriginalExcluded": true
+  },
+  "tests": {
+    "worker": {
+      "passed": 666,
+      "failed": 0,
+      "ignored": 2,
+      "command": "cargo test --release --locked --offline"
+    },
+    "brain": [
+      "verify-whitebox",
+      "verify-owner-console",
+      "verify-memory-workbench",
+      "verify-story-feedback"
+    ],
+    "adminTiming": {
+      "cases": 3,
+      "failed": 0
+    }
+  },
+  "backup": {
+    "databaseCount": 6,
+    "isolatedRestoreVerified": true,
+    "archive": "20261128T085832271226Z.xkdb"
+  },
+  "screenshots": {
+    "01-weather-workbench.png": {
+      "sha256": "b70484ab9a028c0dc9f8173411dea33b8e37c20df6aac9c2d23821f684a17202",
+      "dimensions": [
+        1512,
+        1072
+      ]
+    },
+    "02-tool-receipt.png": {
+      "sha256": "29594a9e76c6757e0bcca7fba53bc8f768c6378514b0c8824cd5e20a8293582f",
+      "dimensions": [
+        436,
+        720
+      ]
+    },
+    "03-memory-recall.png": {
+      "sha256": "e7cd5d0154f757cc90d1c10e35d1232472da151b7485ce0a255b9f29366b735e",
+      "dimensions": [
+        1512,
+        1072
+      ]
+    },
+    "04-memory-origin.png": {
+      "sha256": "182ce8679aff6e0f7671b8b907001b5439fade7d112503f91078df7f591f5523",
+      "dimensions": [
+        1512,
+        1072
+      ]
+    },
+    "05-growth.png": {
+      "sha256": "752f8f4c64fadd70356eb7511dbf76dc0654ef8cbbb2b5ed1ec35a38332c5062",
+      "dimensions": [
+        1512,
+        1072
+      ]
+    },
+    "06-feedback-receipt.png": {
+      "sha256": "8cc57a4517f18152123794fa32272a4c539de7a02474d849917bdc771f49facb",
+      "dimensions": [
+        436,
+        655
+      ]
+    },
+    "07-voice-timing.png": {
+      "sha256": "9384110f1629522eeda5b2abdadd5ad1febb41a0f3f60aa944564b3becedc452",
+      "dimensions": [
+        1408,
+        356
+      ]
+    },
+    "08-atlas.png": {
+      "sha256": "1f7cc74504d973dcaa9a695a9fa44a67a72c0f7236a63664de20e09eff4826a7",
+      "dimensions": [
+        1408,
+        615
+      ]
+    },
+    "09-missing-phone.png": {
+      "sha256": "ff2ad268ff7eddd8d0ab562ca9b06e4215bb4312e4108d1761e66dcb57d1209b",
+      "dimensions": [
+        436,
+        420
+      ]
+    },
+    "10-mobile-overview.png": {
+      "sha256": "d5c4563a731ac9a98b01895fd8bf17721aaf07c9e65d9ce46ebe7c02d61d1a16",
+      "dimensions": [
+        390,
+        844
+      ]
+    },
+    "11-mobile-tool-receipt.png": {
+      "sha256": "b876629c58bdc7df12616f0ee5c0c8131491120e11d5bbb7fea461ef4e2a81ea",
+      "dimensions": [
+        372,
+        460
+      ]
+    },
+    "12-growth-chart.png": {
+      "sha256": "47220b9672716773760e4c441c21a31b3924e2aac77b4fe7102f84b0f1f94607",
+      "dimensions": [
+        1408,
+        356
+      ]
+    },
+    "13-turn-matrix.png": {
+      "sha256": "534a42fc6d092f5d2121aeb4056ff58f21bdf071559761a06bf567c085d48d34",
+      "dimensions": [
+        1408,
+        400
+      ]
+    }
+  }
+}
