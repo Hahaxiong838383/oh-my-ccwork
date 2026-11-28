@@ -17,9 +17,56 @@ async function verify() {
     await page.goto(origin);
     assert.equal((await context.request.get(origin + '/api/voices')).status(), 401);
     assert.equal((await context.request.get(origin + '/api/providers')).status(), 401);
+    assert.equal((await context.request.get(origin + '/api/brain/overview')).status(), 401);
+    assert.equal((await context.request.get(origin + '/api/operations')).status(), 401);
     await page.locator('#pass').fill(fs.readFileSync(0, 'utf8').trim());
     await page.locator('#signin button').click();
     await page.waitForFunction(() => document.querySelector('#voiceChoice').options.length >= 2);
+    const read = async route => {
+      const r = await context.request.get(origin + '/api/' + route);
+      assert.equal(r.status(),200,'无法读取 '+route);
+      return r.json();
+    };
+    const overview = await read('brain/overview');
+    assert.ok(Number.isSafeInteger(overview.memoryCount) && Number.isSafeInteger(overview.growthCount));
+    const operations = await read('operations');
+    assert.ok(operations.sampledAt && operations.ota?.state && operations.brain?.state && operations.backup?.state);
+    const open = async (tab, path) => {
+      const response = page.waitForResponse(r => new URL(r.url()).pathname===path && r.request().method()==='GET');
+      await page.locator('#mobileView').selectOption(tab);
+      const r=await response;
+      assert.equal(r.status(),200,'工作区读取失败 '+tab);
+      return r.json();
+    };
+    for(const [tab,path,root] of [['memories','/api/brain/memories','memoryRows'],['growth','/api/brain/growth','growthRows'],['tools','/api/brain/tools/history','historyRows'],['activity','/api/brain/activity','activityRows']]){
+      const data=await open(tab,path);
+      assert.ok(Number.isSafeInteger(data.total)&&Array.isArray(data.items));
+      await page.waitForFunction(([id,count])=>{
+        const el=document.getElementById(id);
+        return count ? el.querySelectorAll('.record').length===count : /暂无|尚未/.test(el.textContent);
+      },[root,data.items.length]);
+    }
+    const cues=await open('filler','/api/brain/voice-cues');
+    assert.ok(Number.isSafeInteger(cues.revision));
+    await page.waitForFunction(rev=>document.getElementById('cueState').textContent.includes('修订 '+rev),cues.revision);
+    assert.equal(await page.locator('#chatWait').inputValue(),String(cues.chatWaitMs));
+    await open('operations','/api/operations');
+    await page.waitForFunction(()=>document.getElementById('opsTime').textContent.startsWith('采样时间'));
+    const devices=(await read('devices')).devices;
+    assert.ok(Array.isArray(devices));
+    if(devices.length){
+      await page.locator('#mobileView').selectOption('devices');
+      const stats=page.waitForResponse(r=>/^\/api\/devices\/[^/]+\/diagnostics$/.test(new URL(r.url()).pathname));
+      await page.locator('#deviceHistory summary').click();
+      const response=await stats;assert.equal(response.status(),200);
+      const {uploads}=await response.json();
+      for(const k of ['batches','submitted','inserted','repeats'])assert.ok(Number.isSafeInteger(uploads[k])&&uploads[k]>=0,k);
+      assert.equal(uploads.submitted,uploads.inserted+uploads.repeats);
+      await page.waitForFunction(n=>document.querySelector('#diagUploads .fact-line:nth-child(3) span:last-child')?.textContent===String(n),uploads.inserted);
+    }
+    await page.locator('#mobileView').selectOption('diagnostics');
+    assert.ok(await page.getByRole('button',{name:'新试问',exact:true}).isVisible());
+    await page.locator('#mobileView').selectOption('voice');
     const readVoices = async () => {
       const r = await context.request.get(origin + '/api/voices');
       assert.equal(r.status(), 200);
@@ -54,6 +101,8 @@ async function verify() {
     await page.locator('#signin:visible').waitFor();
     assert.equal((await context.request.get(origin + '/api/voices')).status(), 401);
     assert.equal((await context.request.get(origin + '/api/providers')).status(), 401);
+    assert.equal((await context.request.get(origin + '/api/brain/overview')).status(), 401);
+    console.log('PASS 主人登录、私人各区真实载荷、权限、音色试听与退出。');
   } finally { await browser.close(); }
 }
 verify().catch(error => { console.error(error.message); process.exitCode = 1; });

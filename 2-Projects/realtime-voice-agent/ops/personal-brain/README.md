@@ -55,6 +55,12 @@ NAS 配置文件在 `/vol1/1000/docker/personal-voice-runtime/private/brain.env`
 
 `APP_ID`、访问令牌和 API key 放在 `secrets`。资源 ID、模型名、音色名、可选的官方 ASR 地址，以及 `VOLC_ASR_END_WINDOW_MS`、`VOLC_ASR_ENABLE_DDC` 放在 `config`。这些键都使用大写环境变量名。`/health` 只返回修订号、档案 ID、驱动和 DeepSeek 模型名。本服务不拨打 ASR 或 TTS，也不把语音密钥转发到其他地址。
 
+## 私人管理后台
+
+后台从私人 Docker 网络访问 `/internal/console`。大脑和后台各自只读挂载同一份管理凭据，宿主文件默认是运行目录下的 `private/brain-console.key`，按需用 `BRAIN_CONSOLE_KEY_HOST_PATH` 指定。首次部署生成 32 字节安全随机数，以 64 位小写十六进制保存，并允许两个容器的运行用户读取。大脑启动时从 `BRAIN_CONSOLE_KEY_FILE` 读取，文件缺失或格式无效会拒绝管理请求。Worker 继续使用独立通话凭据。
+
+记忆页可核对来源、添加事实、纠正和逐条忘记。缺少证据的旧条目标明待核验。成长页保留原始事件，支持移除明确认可的讲法样例，或撤销仍是当前值的最近一次故事倾向变化。长期风格、时间、天气和联网搜索开关直接进入后续通话。查询任务保留现有账本，另有七天内最多一千条工具回执，只记工具、处理状态、来源数和耗时。在独立数据库用 `node verify-owner-console.mjs <打包后的server.mjs>` 验收，不需要任何线上凭据。
+
 ## 重建和验收
 
 在本目录用 `BRAIN_BUILD=<版本> ./build.sh`，构建从 P003 的锁文件安装临时依赖、做 TypeScript 检查，并打包到固定摘要的 Node 24 基础镜像。将同标签镜像加载到飞牛 2，再在运行目录执行 `BRAIN_BUILD=<版本> docker compose -f compose.brain.yaml up -d --no-build --wait`。重建保留 `brain-data/` 和私密配置，选回已验证标签时要明示所用版本。备份 SQLite 时使用在线备份或停该服务后保存数据库及其 WAL。

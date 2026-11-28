@@ -10,11 +10,13 @@ services:
     env_file: ./private/service.env
     environment:
       TZ: Asia/Shanghai
+      BRAIN_CONSOLE_KEY_FILE: /run/private/brain-console.key
       BRAIN_DATA_DIR: /data
       BRAIN_BUILD: ${BRAIN_BUILD:?}
       PERSONAL_PROVIDERS_FILE: /run/personal-providers/providers.json
     volumes:
       - ./brain-data:/data
+      - ${BRAIN_CONSOLE_KEY_HOST_PATH:-./private/brain-console.key}:/run/private/brain-console.key:ro
       - /vol1/1000/docker/personal-voice-runtime/private/providers:/run/personal-providers:ro
     networks:
       worker:

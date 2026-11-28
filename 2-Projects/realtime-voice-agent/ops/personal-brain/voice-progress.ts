@@ -1,15 +1,21 @@
 type Write = (text: string) => Promise<void>;
 type Mode = 'chat' | 'search';
 
-const phrases: Record<Mode, string[]> = {
+export interface VoiceCues { revision: number; chat: string[]; search: string[]; chatWaitMs: number; searchWaitMs: number }
+export const DEFAULT_VOICE_PROGRESS_WINDOWS = {chatWaitMs: 350, searchWaitMs: 250} as const;
+export const defaultVoiceCues: VoiceCues = {
+  ...DEFAULT_VOICE_PROGRESS_WINDOWS, revision: 0,
   chat: ['让我想一想。', '我想一下啊。', '这个我想想。'],
   search: ['我来查一下。', '让我查一查。', '我看下资料。'],
 };
+let cues = defaultVoiceCues;
+export function applyVoiceCues(settings: VoiceCues) { cues = settings; }
 const next = {chat: 0, search: 0};
 const chatCooldowns = new Map<string, ReturnType<typeof setTimeout>>();
 const maxCooldowns = 128;
 
-function pick(mode: Mode, room: string): string | undefined {
+function pick(mode: Mode, room: string, choices: string[]): string | undefined {
+  if (!choices.length) return;
   if (mode === 'chat') {
     if (chatCooldowns.has(room)) return undefined;
     if (chatCooldowns.size >= maxCooldowns) {
@@ -22,8 +28,7 @@ function pick(mode: Mode, room: string): string | undefined {
     expiry.unref();
     chatCooldowns.set(room, expiry);
   }
-  const choices = phrases[mode];
-  const index = next[mode];
+  const index = next[mode] % choices.length;
   next[mode] = (index + 1) % choices.length;
   return choices[index];
 }
@@ -40,15 +45,14 @@ export function isVoiceCompletion(room: string | undefined, fromHeader: boolean)
   return !fromHeader && /^pv-[a-f0-9]{32}$/.test(room ?? '');
 }
 
-export const DEFAULT_VOICE_PROGRESS_WINDOWS = {chatWaitMs: 350, searchWaitMs: 250} as const;
-
 export async function withVoiceProgress<T>(
   room: string,
   run: (body: Write, searchStarted: () => void, suppressCue: () => void) => Promise<T>,
   write: Write,
   signal: AbortSignal,
-  options: {chatWaitMs: number; searchWaitMs: number} = DEFAULT_VOICE_PROGRESS_WINDOWS,
+  options: {chatWaitMs: number; searchWaitMs: number} = cues,
 ): Promise<T> {
+  const phrases = cues;
   let mode: Mode = 'chat';
   let first = true;
   let buffer = '';
@@ -74,7 +78,7 @@ export async function withVoiceProgress<T>(
   }
   function deadline() {
     if (!first || signal.aborted) return;
-    const phrase = pick(mode, room);
+    const phrase = pick(mode, room, phrases[mode]);
     if (phrase) void send(phrase);
     void flush();
   }

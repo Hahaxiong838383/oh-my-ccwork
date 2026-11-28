@@ -9,6 +9,8 @@ services:
       - /vol1/1000/docker/personal-voice-runtime/cache/state:/run/worker-state:ro
       - /vol1/1000/docker/personal-voice-runtime/private/brain.env:/run/brain-access.env:ro
       - /vol1/1000/docker/personal-voice-runtime/private/providers:/run/personal-providers
+      - /vol1/1000/docker/personal-voice-runtime/private/brain-console.key:/run/brain-console.key:ro
+      - /vol1/1000/docker/personal-night-ota/data:/run/night-diagnostics:ro
       - /vol1/1000/docker/personal-night-ota/bridge:/run/night-bridge:ro
     networks:
       - default

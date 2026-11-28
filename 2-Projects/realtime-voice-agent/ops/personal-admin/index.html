@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN" data-theme="glass">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>小可 · 配置工作室</title>
+<title>小可 · 私人管理后台</title>
 <style>
 :root{color-scheme:light;--ink:#202338;--muted:#536079;--line:#d3daea;--violet:#5245a8;--pale:#edeafd;--good:#1e6453;--surface:#fffffff5}
 *{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 8% 0%,#dedbfa 0,transparent 44%),radial-gradient(ellipse at 97% 4%,#d8eae7 0,transparent 42%),#f0f2f8;color:var(--ink);font:16px/1.55 system-ui,"Noto Sans CJK SC",sans-serif}
@@ -12,16 +12,61 @@ main{padding-top:28px;padding-bottom:48px}h1,h2,h3,p{margin:0}h1{font-size:clamp
 label{display:block;font-size:15px;font-weight:600;margin:12px 0 5px}input,select,textarea{width:100%;padding:10px 12px;font:inherit;color:var(--ink);background:#fff;border:1px solid #9aa5bc;border-radius:8px}textarea{resize:vertical}audio{display:block;width:100%;margin-top:15px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.diff{white-space:pre-line;color:var(--muted);overflow-wrap:anywhere;margin:8px 0}.meta{margin-top:17px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}#login{max-width:440px;margin:8vh auto}#msg:not(:empty){position:sticky;bottom:10px;z-index:2;background:#fff0d6;color:#583a14;padding:10px 14px;border-radius:9px;border:1px solid #d9bd8d;margin-top:12px}#sources{padding-left:22px;overflow-wrap:anywhere}#reply{white-space:pre-wrap;overflow-wrap:anywhere}#clock{min-height:22px}.subtle{font-size:14px;color:var(--muted)}[hidden]{display:none!important}
 .dev-note{background:#f5f4fd;border:1px solid #d8d4f4;color:#3d356b;padding:11px 14px;border-radius:10px;font-size:14px;margin:12px 0}.dev-list{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 16px}.dev-item{background:#fff;border:1px solid var(--line);color:var(--ink);text-align:left;padding:10px 13px;border-radius:11px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:170px;max-width:100%;font-weight:500}.dev-item[aria-pressed=true]{border-color:var(--violet);background:var(--pale)}.dev-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700}.dev-box{border:1px solid var(--line);border-radius:12px;padding:14px;background:#fafbfe;margin-top:14px}.dev-confirm{display:grid;gap:10px;margin-top:14px}.dev-confirm-row{border:1px solid var(--line);border-radius:11px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:5px;overflow-wrap:anywhere}.dev-confirm-row.ok{border-color:#98cfb9;background:#eff9f4}.dev-confirm-row.wait{border-color:#e2bd80;background:#fff8eb}.dev-confirm-row.idle{border-color:var(--line);background:#f7f8fc}.dev-confirm-top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}.pill{display:inline-flex;align-items:center;font-size:13px;font-weight:700;padding:2px 9px;border-radius:999px;line-height:1.45}.pill.ok{background:#daf1e7;color:#1b5b4b}.pill.wait{background:#ffe8bf;color:#834314}.pill.idle{background:#e7ebf5;color:#4a556f}.swatch{display:inline-block;width:14px;height:14px;border-radius:4px;border:1px solid #00000033;flex:0 0 auto}.dev-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}.dev-fact{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;overflow-wrap:anywhere}.dev-fact small{display:block;margin-bottom:2px}.dev-val{font-weight:650;display:flex;align-items:center;gap:7px;flex-wrap:wrap}.dev-color-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:8px}#devAccentPicker{width:52px;height:44px;padding:3px;flex:0 0 auto;cursor:pointer}#devAccentHex{width:124px;flex:0 0 auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;text-transform:uppercase}.dev-events{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:7px}.dev-events li{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding:8px 10px;background:#fff;border:1px solid var(--line);border-radius:8px;font-size:14px;overflow-wrap:anywhere}.dev-ev-kind{font-weight:600;color:var(--ink)}.dev-ev-ts{color:var(--muted);font-size:13px}
 @media(max-width:790px){.workspace{grid-template-columns:1fr}.runtime{gap:9px}.runtime>div+div{padding-left:10px}}@media(max-width:560px){.bar{min-height:60px}.identity{font-size:16px}.bar .actions{gap:6px}.bar button,.bar .action{font-size:14px;padding:7px 9px}.runtime{grid-template-columns:1fr 1fr}.runtime>div:first-child{grid-column:1/-1;border-bottom:1px solid var(--line);padding-bottom:9px}.runtime>div:nth-child(2){padding-left:0;border:0}.tabs button{padding:12px 9px}.tabs{padding:0 4px}.spread{flex-wrap:wrap}.meta{font-size:13px}.dev-facts{grid-template-columns:1fr}.dev-item{width:100%}}
+:root{--ink:#222639;--muted:#536075;--line:#d9dfea;--violet:#5144a4;--surface:#fff}
+body{background:#f2f4f8}header{background:#fff}.bar,main{max-width:1500px;padding-inline:clamp(16px,3.6vw,54px)}main{padding-top:24px}.console-head h1{font-size:clamp(25px,3vw,34px);margin:0}.runtime{margin:17px 0 20px;gap:16px;padding:17px 22px}.runtime h3{font-size:13px;color:var(--muted)}.runtime small{font-size:12px}.workspace{grid-template-columns:205px minmax(0,1fr);gap:18px}.tabs{position:sticky;top:14px;display:grid;grid-template-columns:1fr;gap:2px;align-items:stretch;padding:12px;border:1px solid var(--line);border-radius:14px;background:#fff}.tabs button{justify-content:flex-start;border-radius:7px;padding:8px 11px;min-height:40px;text-align:start;font-size:14px}.tabs button[aria-pressed=true]{box-shadow:none;color:#403582;background:var(--pale);font-weight:700}.tab-group{font-size:12px;color:var(--muted);padding:12px 11px 4px}.tab-group:first-child{padding-top:3px}.mobile-nav{display:none}.workspace>.editor{min-width:0;overflow:visible}.inside{min-width:0}.inside>.spread{gap:10px}.inside>h3,.inside>.records,.inside>.metric-grid,.inside>.fact-list{margin-top:18px}.inside>.fact-list+.fact-list{margin-top:0}.inside h3{font-size:16px}.inside .subtle{margin-top:5px}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}.metric{padding:13px 15px;background:#f7f8fc;border:1px solid #e1e4f0;border-radius:11px;min-width:0;overflow-wrap:anywhere}.metric small{display:block;color:var(--muted);font-size:13px}.metric strong{display:block;font-size:22px;font-variant-numeric:tabular-nums;margin-top:3px}.fact-list{margin-top:5px!important}.fact-line{display:grid;grid-template-columns:minmax(110px,31%) minmax(0,1fr);gap:12px;padding:8px 2px;border-bottom:1px solid #e7eaf1;font-size:14px}.fact-line>span:first-child{color:var(--muted)}.fact-line>span:last-child{overflow-wrap:anywhere;white-space:pre-line}.control-block{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:end;margin:14px 0 20px;padding:14px 16px;background:#f7f8fc;border:1px solid var(--line);border-radius:11px}.control-block>label,.control-block>h3,.control-block>p,.control-block>#toolSwitches{grid-column:1/-1}.control-block label{margin:0}.control-block button{justify-self:start}.choice-line{display:flex;align-items:center;gap:8px;font-weight:500;padding:6px 0}.choice-line input{width:19px;height:19px;accent-color:var(--violet)}.records{display:grid;gap:10px}.record{padding:13px 15px;border:1px solid var(--line);border-radius:10px;min-width:0;overflow-wrap:anywhere}.record h4{font-size:15px;margin:0}.record p{margin:3px 0;white-space:pre-wrap}.record .actions{margin-top:6px}.record button,.pager button{font-size:14px;padding:5px 11px;min-height:36px}.danger-link{color:#973840!important}.empty{font-size:14px;color:var(--muted);padding:8px 0}.pager{display:flex;flex-wrap:wrap;align-items:center;gap:9px;margin-top:12px}.pager span{font-size:14px;color:var(--muted)}.traits{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px;margin:12px 0}.traits progress{width:100%;accent-color:var(--violet)}.trait{padding:9px 12px;background:#f8f8fc;border-radius:9px}.trait strong,.trait small{display:block}.trait small{font-size:12px}.inline-edit{display:grid;gap:6px}.meta{padding-top:4px}
+@media(max-width:850px){.workspace{grid-template-columns:minmax(0,1fr)}.tabs{display:none}.mobile-nav{display:flex;align-items:center;gap:12px;margin:0}.mobile-nav label{flex-shrink:0;margin:0;font-size:14px}.mobile-nav select{max-width:400px}.workspace>.editor{width:100%}}
+@media(max-width:560px){.bar,main{padding-inline:14px}.bar .identity{font-size:15px}.runtime{padding:13px 15px}.runtime>div:first-child{padding-bottom:7px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.control-block{grid-template-columns:1fr}.control-block button{min-height:42px}.workspace{gap:11px}.fact-line{grid-template-columns:minmax(85px,34%) minmax(0,1fr)}.inside>.spread h2{font-size:19px}.inside>.spread button{min-height:36px;font-size:13px}.inside{padding:15px}}
+.table-scroll{overflow:auto}table.activity-grid{width:100%;border-collapse:collapse;text-align:left;font-size:14px}.activity-grid td,.activity-grid th{padding:7px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.activity-grid th{color:var(--muted);font-weight:550}.control-block#transcript{display:block}#transcript>.records{margin-top:10px}.turn-text{white-space:pre-wrap;overflow-wrap:anywhere}.turn-role{font-size:13px;font-weight:650;color:var(--violet)}#cueForm{margin-bottom:24px}
 </style></head><body>
 <header><div class="bar"><div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>小可私人管理</div><div class="actions" id="ownerLinks" hidden><a class="action" href="/talk/">打开对话 ↗</a><button class="light" id="logout">退出</button></div></div></header>
 <main>
 <section id="login" class="card"><h1>管理员登录</h1><form id="signin"><label for="pass">管理员口令</label><input id="pass" type="password" autocomplete="current-password" required><div class="actions"><button>登录工作室</button></div></form></section>
 <div id="panel" hidden>
-<div class="spread"><div><h1>配置工作室</h1><p>管理通话音色、语音供应商、手机设备、热词和衔接短语。</p></div><button id="refresh" class="light">刷新服务状态</button></div>
+<div class="spread console-head"><h1>私人语音工作台</h1><button id="refresh" class="light">刷新服务状态</button></div>
 <section class="runtime" aria-label="运行总览" id="services"><div><h3>通话占用</h3><div class="pair"><span class="status" id="worker">读取中</span><span class="slots" id="slots" aria-hidden="true"></span></div><small id="clock"></small></div><div><h3>北京签票</h3><span class="status" id="ticket">读取中</span></div><div><h3>飞牛个人大脑</h3><span class="status" id="brain">读取中</span></div></section>
-<div class="workspace"><section class="card editor"><nav class="tabs" aria-label="配置类别"><button data-view="voice" aria-pressed="true">通话音色</button><button data-view="providers" aria-pressed="false">语音供应商</button><button data-view="devices" aria-pressed="false">手机设备</button><button data-view="hotwords" aria-pressed="false">热词草稿</button><button data-view="filler" aria-pressed="false">衔接短语</button></nav>
-<div class="inside" id="voice"><h2>通话音色</h2><p class="subtle" id="voiceCloud">正在确认通话音色来源</p><div id="actual" class="active" role="status">正在读取合成服务</div><label for="voiceChoice">备选音色</label><select id="voiceChoice" disabled></select><p class="subtle" id="voiceDesc"></p><audio id="sample" controls hidden></audio><div class="actions"><button id="preview" class="light" disabled>试听样音</button><button id="apply" disabled>应用到通话</button><button class="light" id="reloadVoice">重读音色</button></div><p class="subtle" id="voiceHint"></p></div>
-<div class="inside" id="providers" hidden><h2>语音供应商</h2><p class="sub">未选择时分别沿用个人 CPA、飞牛中文识别和飞牛五音色。密钥只写入，不回显；编辑时留空会保留原密钥。</p><div id="providerLive" class="active" role="status">正在读取供应商</div><div class="grid" id="activePicks"></div><div class="actions" id="providerList"></div><h3 id="providerFormTitle">新增供应商</h3><label for="providerDriver">驱动</label><select id="providerDriver"></select><p class="subtle" id="providerNote"></p><label for="providerName">名称</label><input id="providerName" maxlength="40" autocomplete="off"><div id="providerFields"></div><div class="actions"><button id="saveProvider" type="button">保存供应商</button><button id="reloadProviders" class="light" type="button">重读供应商</button></div><p class="subtle" id="providerHint"></p></div>
+<div class="workspace"><nav class="tabs" aria-label="工作区"><span class="tab-group">工作台</span><button type="button" data-view="overview" aria-pressed="true" aria-controls="overview">运行总览</button><button type="button" data-view="devices" aria-pressed="false" aria-controls="devices">手机设备</button><button type="button" data-view="operations" aria-pressed="false" aria-controls="operations">服务、版本与备份</button><span class="tab-group">个人大脑</span><button type="button" data-view="memories" aria-pressed="false" aria-controls="memories">长期记忆</button><button type="button" data-view="growth" aria-pressed="false" aria-controls="growth">人格与风格</button><button type="button" data-view="activity" aria-pressed="false" aria-controls="activity">通话与记忆提取</button><button type="button" data-view="tools" aria-pressed="false" aria-controls="tools">工具与查询</button><button type="button" data-view="diagnostics" aria-pressed="false" aria-controls="diagnostics">试问诊断</button><span class="tab-group">语音配置</span><button type="button" data-view="providers" aria-pressed="false" aria-controls="providers">语音供应商</button><button type="button" data-view="voice" aria-pressed="false" aria-controls="voice">通话音色</button><button type="button" data-view="hotwords" aria-pressed="false" aria-controls="hotwords">热词草稿</button><button type="button" data-view="filler" aria-pressed="false" aria-controls="filler">通话衔接语</button></nav><div class="mobile-nav"><label for="mobileView">工作区</label><select id="mobileView"><optgroup label="工作台"><option value="overview">运行总览</option><option value="devices">手机设备</option><option value="operations">服务、版本与备份</option></optgroup><optgroup label="个人大脑"><option value="memories">长期记忆</option><option value="growth">人格与风格</option><option value="activity">通话与记忆提取</option><option value="tools">工具与查询</option><option value="diagnostics">试问诊断</option></optgroup><optgroup label="语音配置"><option value="providers">语音供应商</option><option value="voice">通话音色</option><option value="hotwords">热词草稿</option><option value="filler">通话衔接语</option></optgroup></select></div><section class="card editor"><section class="inside" id="overview">
+  <div class="spread"><h2>运行总览</h2><button class="light" data-reload>刷新总览</button></div>
+  <div id="overviewSummary" class="metric-grid"></div>
+  <h3>当前通话配置</h3><div id="overviewProviders" class="fact-list"></div>
+  <h3>手机同步</h3><div id="overviewDevices" class="fact-list"></div>
+  <h3>私人语音链路</h3><div id="overviewRuntime" class="fact-list"></div>
+</section>
+<section class="inside" id="memories" hidden>
+  <div class="spread"><h2>长期记忆</h2><button class="light" data-reload>刷新记忆</button></div>
+  <form id="newMemory" class="control-block"><label for="memoryText">让小可记住</label><input id="memoryText" placeholder="例如，记住，我喜欢喝茶" maxlength="180" required><button type="submit">记住这条</button></form>
+  <div id="memoryRows" class="records" aria-live="polite"></div><div id="memoryPager" class="pager"></div>
+</section>
+<section class="inside" id="growth" hidden>
+  <div class="spread"><h2>人格成长与说话风格</h2><button class="light" data-reload>刷新成长记录</button></div>
+  <form id="styleForm" class="control-block"><label for="styleChoice">长期说话风格</label><select id="styleChoice" disabled></select><button type="submit" id="saveStyle" disabled>保存长期风格</button><p class="subtle">“只这一次”的语音指令只影响当次回答。</p></form>
+  <h3>关系状态</h3><div id="relationFacts" class="fact-list"></div>
+  <h3>人格特质</h3><div id="traitList" class="traits"></div>
+  <h3>成长依据</h3><div id="growthRows" class="records"></div><div id="growthPager" class="pager"></div>
+</section>
+<section class="inside" id="tools" hidden>
+  <div class="spread"><h2>工具与查询</h2><button class="light" data-reload>刷新工具状态</button></div>
+  <form id="toolForm" class="control-block"><h3>可调用的工具</h3><div id="toolSwitches"></div><button type="submit" id="saveTools" disabled>应用工具设置</button></form>
+  <h3>搜索任务记录</h3><div id="queryStats" class="metric-grid"></div>
+  <div id="searchRows" class="records"></div><div id="searchPager" class="pager"></div><h3>工具调用记录</h3><p class="subtle">最近七天的已提交语音答复，最多保留 1000 条。无来源也可能是澄清问题。</p><div id="historyRows" class="records"></div><div id="historyPager" class="pager"></div>
+</section>
+<section class="inside" id="operations" hidden>
+  <div class="spread"><h2>服务、版本与备份</h2><button class="light" data-reload>刷新采样</button></div>
+  <p class="subtle" id="opsTime" role="status"></p>
+  <h3>个人大脑</h3><p class="subtle">以下为大脑读取的供应商配置；具体通话的采集和合成由 Worker 执行。</p><div id="opsBrain" class="fact-list"></div>
+  <h3>本地语音服务</h3><div id="opsSpeech" class="fact-list"></div>
+  <h3>手机更新通道</h3><div id="opsOta" class="fact-list"></div>
+  <h3>备份验证</h3><div id="opsBackup" class="fact-list"></div>
+</section>
+<section class="inside" id="activity" hidden>
+  <div class="spread"><h2>通话与记忆提取</h2><button class="light" data-reload>刷新活动</button></div>
+  <div id="extractionFacts" class="fact-list"></div>
+  <h3>近七天活动</h3><div id="activityDays" class="table-scroll"></div>
+  <h3>通话记录</h3><div id="activityRows" class="records"></div><div id="activityPager" class="pager"></div>
+  <section id="transcript" class="control-block" hidden><div class="spread"><h3>通话文字记录</h3><button type="button" class="light" id="hideTranscript">收起原文</button></div><div id="turnRows" class="records"></div><div id="turnPager" class="pager"></div></section>
+</section>
+
+<div class="inside" id="voice" hidden><h2>通话音色</h2><p class="subtle" id="voiceCloud">正在确认通话音色来源</p><div id="actual" class="active" role="status">正在读取合成服务</div><label for="voiceChoice">备选音色</label><select id="voiceChoice" disabled></select><p class="subtle" id="voiceDesc"></p><audio id="sample" controls hidden></audio><div class="actions"><button id="preview" class="light" disabled>试听样音</button><button id="apply" disabled>应用到通话</button><button class="light" id="reloadVoice">重读音色</button></div><p class="subtle" id="voiceHint"></p></div>
+<div class="inside" id="providers" hidden><h2>语音供应商</h2><p class="sub">未选择时分别沿用个人 CPA、飞牛中文识别和飞牛五音色。密钥只写入，不回显；编辑时留空会保留原密钥。</p><div id="providerLive" class="active" role="status">正在读取供应商</div><p id="providerRevision" class="subtle" role="status">正在读取配置修订</p><div class="grid" id="activePicks"></div><div class="actions" id="providerList"></div><h3 id="providerFormTitle">新增供应商</h3><label for="providerDriver">驱动</label><select id="providerDriver"></select><p class="subtle" id="providerNote"></p><label for="providerName">名称</label><input id="providerName" maxlength="40" autocomplete="off"><div id="providerFields"></div><div class="actions"><button id="saveProvider" type="button">保存供应商</button><button id="reloadProviders" class="light" type="button">重读供应商</button></div><p class="subtle" id="providerHint"></p></div>
 <div class="inside" id="devices" hidden>
 <div class="spread"><h2>手机设备</h2><button id="reloadDevices" class="light" type="button">刷新设备状态</button></div>
 <p class="sub">查看 S24 等私人手机端状态、调整强调色并触发远控指令，重点展示手机是否已确认执行。</p>
@@ -51,14 +96,20 @@ label{display:block;font-size:15px;font-weight:600;margin:12px 0 5px}input,selec
 <div id="devCommandBox" class="readout"></div>
 </div>
 <div class="dev-box">
-<h3>最后技术事件</h3>
+<details id="deviceHistory"><summary>设备诊断统计</summary><label for="diagDays">统计周期</label><select id="diagDays"><option value="1">最近 1 天</option><option value="7" selected>最近 7 天</option><option value="30">最近 30 天</option></select><div class="actions"><button type="button" class="light" id="reloadDeviceHistory">刷新诊断</button></div><p id="diagHeadline" class="subtle" role="status"></p><h3>日志回传</h3><p class="muted">按批次首次接收时间归入所选周期，含该批次后续重投。</p><div id="diagUploads" class="fact-list"></div><h3>事件分类</h3><div id="diagCounts" class="fact-list"></div><h3>最近事件明细（最多 60 条）</h3><ul id="diagEvents" class="dev-events"></ul></details></div><div class="dev-box"><h3>最后技术事件</h3>
 <ul id="devEvents" class="dev-events"></ul>
 </div>
 </div>
 </div>
-<div class="inside" id="hotwords" hidden><h2>热词草稿</h2><p class="sub">词表保存到后台，通话加载状态待确认。</p><label for="kind">词表</label><select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select><label for="words">每行一个词</label><textarea id="words" rows="5"></textarea><p class="diff" id="diff"></p><div class="actions"><button id="saveWords">保存草稿</button><small id="edited"></small></div></div>
-<div class="inside" id="filler" hidden><h2>衔接短语</h2><p class="sub">设置各风格使用衔接短语的概率。</p><div class="grid" id="probs"></div><div class="actions"><button id="saveProbs">写入后台</button></div><p class="readout">通话端加载版本待确认。</p></div></section>
-<section class="card"><h2>试问个人大脑</h2><p class="sub">验证文字回答、工具和搜索来源。诊断对话不写入长期记忆。</p><form id="diagnose"><label for="question">测试问题</label><input id="question" placeholder="例如，北京现在几点？" maxlength="600" required><div class="actions"><button id="ask" class="light">发送试问</button></div></form><div id="result" class="readout" hidden><p id="reply" role="status"></p><small id="tool"></small><ul id="sources"></ul></div></section></div>
+<div class="inside" id="hotwords" hidden><h2>热词草稿</h2><p class="sub">词表作为草稿保存在后台，私人通话目前尚未接入这些草稿。</p><label for="kind">词表</label><select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select><label for="words">每行一个词</label><textarea id="words" rows="5"></textarea><p class="diff" id="diff"></p><div class="actions"><button id="saveWords">保存草稿</button><small id="edited"></small></div></div>
+<div class="inside" id="filler" hidden><h2>通话衔接语</h2><p class="sub">个人大脑按下次对话轮次读取。每行一句，清空一类可停用该类。</p>
+<form id="cueForm"><div class="grid"><div><label for="chatCues">日常对话短语</label><textarea id="chatCues" rows="4" disabled></textarea><label for="chatWait">日常等待（毫秒）</label><input id="chatWait" type="number" min="100" max="3000" step="1" required disabled></div>
+<div><label for="searchCues">联网查询短语</label><textarea id="searchCues" rows="4" disabled></textarea><label for="searchWait">查询等待（毫秒）</label><input id="searchWait" type="number" min="100" max="3000" step="1" required disabled></div></div>
+<div class="actions"><button id="saveCues" type="submit" disabled>应用到对话</button><button type="button" class="light" data-reload>重读衔接语</button></div><p id="cueState" class="subtle" role="status"></p></form>
+<h3>按风格设置的概率草稿</h3><p class="sub">单独保存在后台；当前私人通话尚未加载此组概率。</p><div class="grid" id="probs"></div><div class="actions"><button id="saveProbs">写入后台</button></div><p class="readout">保存草稿后可重新读取。</p></div>
+<section class="inside" id="diagnostics" hidden><h2>试问个人大脑</h2><p class="sub">可接着上一句追问，验证回答、工具和搜索来源。约 30 分钟无操作后上下文过期。试问与手机通话独立，不写入个人记忆。</p>
+<div class="records" id="testTurns" aria-label="本页试问记录"></div>
+<form id="diagnose"><label for="question">测试问题</label><input id="question" placeholder="例如，北京现在几点？" maxlength="600" required><div class="actions"><button id="ask">发送试问</button><button id="resetTest" type="button" class="light">新试问</button></div></form><p id="testStatus" class="subtle" role="status"></p></section></section></div>
 <div class="meta"><small id="build"></small><a href="/api/design" target="_blank" rel="noopener">查看设计预览</a></div></div><p id="msg" role="status"></p></main>
 <script>
 const el=id=>document.getElementById(id);
@@ -69,7 +120,9 @@ const PHASE_LABELS={idle:'空闲',ready:'就绪',connecting:'连接中',connecte
 const ACTION_LABELS={sync_logs:'回传日志',check_update:'检查更新'};
 function showOwner(active){
   el('login').hidden=active;el('panel').hidden=!active;el('ownerLinks').hidden=!active;
-  if(!active){clearInterval(interval);clearSample();deviceList=null;selectedDevice=null;deviceColorDrafts={};deviceFetchSeq++}
+  if(!active){++viewSequence;++testSequence;setTestBusy(false);closeTranscript();savedBrain=null;latestOps=null;cueRevision=null;
+    for(const id of ["memoryRows","growthRows","searchRows","activityRows","overviewSummary","overviewDevices","overviewProviders","relationFacts","traitList","testTurns","testStatus"])el(id).replaceChildren();el("memoryText").value="";el("question").value="";
+    clearInterval(interval);clearSample();deviceList=null;selectedDevice=null;deviceColorDrafts={};deviceFetchSeq++}
 }
 function clearSample(){
   const audio=el('sample');audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true;
@@ -181,7 +234,7 @@ function renderProviders(){
     button.onclick=handle(()=>providerAction(async()=>{
       const id=select.value||null;
       providers=await api('providers/active/'+kind,'PUT',{revision:providers.revision,id});
-      renderProviders();el('msg').textContent=id?'已切换，之后的新通话使用所选供应商':'已切回内置：'+providers.fallback[kind];
+      renderProviders();await loadCurrentView();el('msg').textContent=id?'已切换，之后的新通话使用所选供应商':'已切回内置：'+providers.fallback[kind];
     }));
     label.append(select);wrap.append(label,button);el('activePicks').append(wrap);
   }
@@ -202,13 +255,14 @@ function renderProviders(){
     const mark=profile.config.VOLC_TTS_SPEAKER||profile.config.XFYUN_TTS_VCN||profile.config.DEEPSEEK_MODEL||'';
     return (providers.fields[profile.driver]?.label||profile.driver)+'「'+profile.name+'」'+(mark?' '+mark:'');
   });
-  el('providerLive').textContent='当前通话：'+parts.join(' · ');
-  renderProviderForm(!providerEditing);cloudVoice();providerControls();
+  el('providerLive').textContent='后台已选择　'+parts.join(' · ');
+  showProviderRevision();
+  renderProviderForm(!providerEditing);cloudVoice();providerControls();observedSections();
 }
 async function providerAction(fn){providerBusy=true;providerControls();try{await fn()}finally{providerBusy=false;providerControls()}}
 async function readProviders(){
   try{providers=await api('providers');providerEditing=null;renderProviders()}
-  catch(error){providers=null;el('providerLive').textContent=error.message;el('voiceCloud').textContent='供应商状态暂时无法读取';throw error}
+  catch(error){providers=null;showProviderRevision();el('providerLive').textContent=error.message;el('voiceCloud').textContent='供应商状态暂时无法读取';throw error}
 }
 el('saveProvider').onclick=handle(()=>providerAction(async()=>{
   const spec=providers.fields[el('providerDriver').value],config={},secrets={};
@@ -216,9 +270,9 @@ el('saveProvider').onclick=handle(()=>providerAction(async()=>{
   for(const field of spec.secrets){const value=el('s-'+field.key).value;if(value)secrets[field.key]=value}
   const body={revision:providers.revision,kind:spec.kind,driver:el('providerDriver').value,name:el('providerName').value,config,secrets};
   providers=await api(providerEditing?'providers/'+encodeURIComponent(providerEditing):'providers',providerEditing?'PUT':'POST',body);
-  providerEditing=null;renderProviders();el('msg').textContent='供应商已保存。密钥不会回显。';
+  providerEditing=null;renderProviders();await loadCurrentView();el('msg').textContent='供应商已保存。密钥不会回显。';
 }));
-el('reloadProviders').onclick=handle(()=>providerAction(readProviders));
+el('reloadProviders').onclick=handle(()=>providerAction(async()=>{await readProviders();await loadCurrentView();}));
 function epochToMs(ts){return ts>1e12?ts:ts*1000}
 function fmtEpoch(ts){return ts&&ts>0?new Date(epochToMs(ts)).toLocaleString('zh-CN',{hour12:false}):'—'}
 function fmtRel(ts){
@@ -329,6 +383,7 @@ function renderDeviceDetail(d,forceColor){
   addFact(el('devFacts'),'设备标识',d.device);
   addFact(el('devFacts'),'App 版本',d.versionCode!==null&&d.versionCode!==''?'versionCode '+d.versionCode:'未知（旧诊断记录）');
   addFact(el('devFacts'),'最近在线 / 最后上报',hasRealtime?fmtEpoch(d.lastSeen)+'（'+fmtRel(d.lastSeen)+'）':'尚无实时状态（可能未安装新版本）');
+  if(releaseComparison(d))addFact(el('devFacts'),'发布通道版本',releaseComparison(d));
   addFact(el('devFacts'),'最新通话阶段',fmtPhase(d.phase,hasRealtime));
   addFact(el('devFacts'),'静音状态',d.muted===true?'已静音':d.muted===false?'未静音':hasRealtime?'未上报':'尚无实时状态');
   const accentNodes=[];
@@ -360,6 +415,7 @@ function renderDeviceDetail(d,forceColor){
       li.append(kind,ts);el('devEvents').append(li);
     }
   }
+  if(currentView==="devices"&&el("deviceHistory").open&&diagnosticsDevice!==d.device)readDeviceDiagnostics();
   syncColorInputs(d,forceColor);
 }
 function renderDevices(forceColor){
@@ -409,7 +465,7 @@ async function readDevices(opts={}){
     if(seq!==deviceFetchSeq)return;
     deviceList=Array.isArray(data.devices)?data.devices:[];
     deviceLastRead=Date.now();
-    renderDevices(Boolean(opts.forceColor));
+    renderDevices(Boolean(opts.forceColor));observedSections();
   }catch(err){
     if(seq!==deviceFetchSeq)return;
     if(err.message==='请登录')throw err;
@@ -462,10 +518,6 @@ el('apply').onclick=handle(()=>voiceAction(async()=>{
     if(catalog?.active!==id)throw Error('未取得当前音色，请重读');el('msg').textContent='合成服务已确认使用所选音色'}
   catch(err){await readVoices(id);throw err}
 }));
-for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{for(const tab of document.querySelectorAll('[data-view]')){
-  const selected=b===tab;el(tab.dataset.view).hidden=!selected;tab.setAttribute('aria-pressed',String(selected))}
-  if(b.dataset.view==='devices'&&!el('panel').hidden)readDevices({silent:true}).catch(()=>{});
-};
 function words(){return el('words').value.split('\n').map(s=>s.trim()).filter(Boolean)}
 function showDiff(){
   const before=settings.drafts[editingKind]?.words||[],after=words();
@@ -482,22 +534,52 @@ el('saveWords').onclick=handle(async()=>{
   const kind=editingKind,raw=el('words').value;
   const saved=await api('drafts/'+kind,'PUT',{words:words(),previous:settings.drafts[kind]?.id??null});
   settings.drafts[kind]=saved;if(edits[kind]===raw)delete edits[kind];if(editingKind===kind)showDraft();
-  el('msg').textContent='词表已写入后台，通话加载待确认';
+  el('msg').textContent='热词草稿已保存';
 });
 el('saveProbs').onclick=handle(async()=>{
   const probabilities={};for(const k of Object.keys(settings.probabilities)){const v=el('p-'+k).valueAsNumber;
     if(!Number.isFinite(v)||v<0||v>100)throw Error('请填写 0 到 100 的数字');probabilities[k]=v/100}
-  await api('probabilities','PUT',{probabilities});el('msg').textContent='概率已写入后台，通话加载待确认';
+  await api('probabilities','PUT',{probabilities});el('msg').textContent='衔接短语概率草稿已保存';
 });
+let testSequence=0;
+function setTestBusy(busy){
+  for(const id of ['ask','resetTest','question'])el(id).disabled=busy;
+}
 el('diagnose').onsubmit=handle(async()=>{
-  el('ask').disabled=true;el('result').hidden=false;el('tool').textContent='';el('sources').replaceChildren();el('reply').textContent='正在试问…';
-  try{const r=await api('diagnostics/chat','POST',{question:el('question').value});el('reply').textContent=r.text;
-    if(r.tool)el('tool').textContent='调用工具　'+r.tool;
-    for(const src of r.sources){const li=document.createElement('li'),a=document.createElement('a');a.href=src.url;a.target='_blank';a.rel='noopener noreferrer';a.textContent=src.title;li.append(a);el('sources').append(li)}
-  }catch(err){el('reply').textContent=err.message}finally{el('ask').disabled=false}
+  const question=el('question').value.trim();
+  if(!question||el('ask').disabled)return;
+  const seq=++testSequence;setTestBusy(true);el('testStatus').textContent='小可正在回答…';
+  try{
+    const r=await api('diagnostics/chat','POST',{question});
+    if(seq!==testSequence)return;
+    const turn=node('article',null,'record');
+    turn.append(node('h4',question),node('p',r.text));
+    if(r.tool)turn.append(node('small','调用工具　'+labelFor(toolActivityNames,r.tool)));
+    if(Array.isArray(r.sources)&&r.sources.length){
+      const links=node('ul');
+      for(const src of r.sources){
+        if(!/^https?:\/\//i.test(src.url))continue;
+        const li=node('li'),link=node('a',src.title||src.url);link.href=src.url;link.target='_blank';link.rel='noopener noreferrer';li.append(link);links.append(li);
+      }
+      turn.append(links);
+    }
+    const turns=el('testTurns');turns.append(turn);if(turns.children.length>20)turns.firstElementChild.remove();
+    el('question').value='';el('testStatus').textContent='已回复，可以继续追问。';
+  }catch(err){if(seq===testSequence)el('testStatus').textContent=err.message;}
+  finally{if(seq===testSequence)setTestBusy(false);}
+});
+el('resetTest').onclick=handle(async()=>{
+  if(el('resetTest').disabled)return;
+  const seq=++testSequence;setTestBusy(true);
+  try{
+    await api('diagnostics/reset','POST',{});
+    if(seq!==testSequence)return;
+    el('testTurns').replaceChildren();el('question').value='';el('testStatus').textContent='新试问已开始。';
+  }catch(err){if(seq===testSequence)el('testStatus').textContent=err.message;}
+  finally{if(seq===testSequence)setTestBusy(false);}
 });
 async function load(){
-  settings=await api('settings');showOwner(true);status(settings);showDraft();
+  settings=await api('settings');showOwner(true);status(settings);showDraft();openView('overview');
   el('probs').replaceChildren();for(const [k,name] of Object.entries({default:'默认',chatty:'健谈',quiet:'安静',funny:'幽默'})){
     const label=document.createElement('label');label.textContent=name+'（%）';const input=document.createElement('input');
     input.type='number';input.min=0;input.max=100;input.step='any';input.id='p-'+k;input.value=+(100*settings.probabilities[k]).toFixed(4);label.append(input);el('probs').append(label)}
@@ -506,8 +588,351 @@ async function load(){
   readDevices({silent:true}).catch(()=>{});
 }
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!el('panel').hidden){refresh().catch(()=>{});readDevices({silent:true}).catch(()=>{})}});
-el('refresh').onclick=handle(async()=>{await refresh();await readDevices({silent:true}).catch(()=>{})});
+el('refresh').onclick=handle(async()=>{await Promise.all([refresh(),readDevices({silent:true})]);if(currentView==='overview'||currentView==='operations')await loadCurrentView();});
 el('signin').onsubmit=handle(async()=>{await api('login','POST',{password:el('pass').value});el('pass').value='';await load()});
 el('logout').onclick=handle(async()=>{await api('logout','POST');location.reload()});
+const styles={default:'默认',quiet:'安静',chatty:'健谈',funny:'幽默'};
+const toolNames={search:'联网搜索',weather:'天气查询',clock:'日期与时间'};
+const moduleNames={relation:'关系状态',style:'说话风格',trait:'人格特质',insight:'洞察',narrative:'叙事',concern:'关怀',profile:'个人画像',filler:'衔接语',local_audio:'本地音频'};
+const stateNames={answered:'有来源的回答',no_evidence:'缺少证据',failed:'失败',cancelled:'已取消',expired:'已过期',pending:'待执行',queued:'排队中',running:'执行中',succeeded:'已完成',completed:'已完成',error:'执行错误',verified:'已验证',ready:'已读取',unavailable:'暂时无法读取',unreported:'尚无回执',online:'在线',ok:'在线'};
+let currentView='overview', viewSequence=0, savedBrain=null, latestOps=null;
+const pageSize=20, offsets={memories:0,growth:0,search:0,history:0};
+const listIds={memories:['memoryRows','memoryPager'],growth:['growthRows','growthPager'],search:['searchRows','searchPager'],history:['historyRows','historyPager']};
+const hasValue=v=>v!==null&&v!==undefined&&v!=='';
+function labelFor(labels,v){return hasValue(v)?(Object.hasOwn(labels,v)?labels[v]:String(v)):'未上报'}
+function displayValue(v){
+  if (!hasValue(v))return '未上报';
+  if (typeof v==='boolean')return v?'是':'否';
+  if (typeof v==='object')return JSON.stringify(v);
+  return String(v);
+}
+function dateLabel(value){
+  if(!hasValue(value))return '未上报';
+  const d=new Date(typeof value==='number'?epochToMs(value):value);
+  return Number.isFinite(d.getTime())?d.toLocaleString('zh-CN',{hour12:false}):'未上报';
+}
+function node(tag,text,klass){
+  const n=document.createElement(tag);
+  if(hasValue(text))n.textContent=String(text);
+  if(klass)n.className=klass;
+  return n;
+}
+function empty(id,text){el(id).replaceChildren(node('p',text,'empty'))}
+function facts(id,rows){
+  el(id).replaceChildren(...rows.map(([key,value])=>{
+    const line=node('div',null,'fact-line');line.append(node('span',key),node('span',displayValue(value)));return line;
+  }));
+}
+function metrics(id,rows){
+  el(id).replaceChildren(...rows.map(([key,value])=>{
+    const cell=node('div',null,'metric');cell.append(node('small',key),node('strong',displayValue(value)));return cell;
+  }));
+}
+function actionButton(text,fn,danger=false){
+  const b=node('button',text,danger?'light danger-link':'light');b.type='button';
+  b.onclick=handle(async()=>{b.disabled=true;try{await fn()}finally{b.disabled=false}});
+  return b;
+}
+function observedSections(){
+  if(currentView!=='overview')return;
+  if(providers) {
+    const rows=['llm','asr','tts'].map((k,i)=>{
+      const id=providers.active[k],value=id?providers.profiles.find(row=>row.id===id)?.name:providers.fallback[k];
+      return [['对话模型','语音识别','语音合成'][i],value||'未能匹配当前选项'];
+    });
+    facts('overviewProviders',rows);
+  }else empty('overviewProviders','暂未读取到供应商选择。');
+  if(!deviceList)empty('overviewDevices', '设备状态暂未取得。');
+  else if(!deviceList.length)empty('overviewDevices','暂无已上报的手机。');
+  else facts('overviewDevices',deviceList.map(d=>[d.device,[fmtPhase(d.phase,Boolean(d.lastSeen)),d.lastSeen?'上报于 '+fmtEpoch(d.lastSeen):'暂无实时上报',releaseComparison(d)].filter(Boolean).join(' · ')]));
+}
+function releaseComparison(d){
+  if(!latestOps?.ota||latestOps.ota.state!=='ready'||!Number.isSafeInteger(latestOps.ota.versionCode)||!d.versionCode)return '';
+  const code=Number(d.versionCode);if(!Number.isSafeInteger(code))return '';
+  return code===latestOps.ota.versionCode?'与发布版本一致':code<latestOps.ota.versionCode?'有新版 '+latestOps.ota.versionName:'设备版本高于发布通道';
+}
+function overviewBrain(s){
+  metrics('overviewSummary',[['长期记忆条目',s.memoryCount],['成长事件',s.growthCount],['长期风格',labelFor(styles,s.style)],['搜索任务',s.searchStats?.total]]);
+}
+function showProviderRevision(){
+  const saved=providers?.revision,live=latestOps?.brain?.revision;
+  const received=latestOps?.brain?.state==='ready'&&Number.isSafeInteger(live);
+  const same=Number.isSafeInteger(saved)&&received&&saved===live;
+  const info=Number.isSafeInteger(saved)?'后台修订 '+saved:'后台修订未读取';
+  const checked=received?'大脑读取 '+live:'大脑读取修订未知';
+  const note=same?'大脑已读到该修订':received&&Number.isSafeInteger(saved)?'读取修订有差异，请重读核对':'尚未确认同步';
+  el('providerRevision').textContent=info+' · '+checked+' · '+note+(latestOps?.sampledAt?'（采样 '+dateLabel(latestOps.sampledAt)+'）':'');
+}
+function renderOperations(s){
+  latestOps=s;showProviderRevision();
+  const brain=s.brain||{},speech=s.speech||{},ota=s.ota||{},backup=s.backup||{};
+  if(currentView==='overview'){
+    facts('overviewRuntime',[['本地语音',labelFor(stateNames,speech.state)],['最新 Android 版',ota.state==='ready'?ota.versionName:labelFor(stateNames,ota.state)],['最近备份校验',backup.state==='verified'?dateLabel(backup.verifiedAt):labelFor(stateNames,backup.state)]]);
+    observedSections();return;
+  }
+  if(currentView!=='operations')return;
+  el('opsTime').textContent='采样时间　'+dateLabel(s.sampledAt);
+  facts('opsBrain',[['读取状态',labelFor(stateNames,brain.state)],['构建版本',brain.build],['供应商配置状态',brain.providerState],['读取的配置修订',brain.revision],['对话模型',brain.llmModel],['模型驱动 / 配置', [brain.activeLlm,brain.llmProfile].filter(hasValue).join(' / ')],['识别驱动 / 配置',[brain.activeAsr,brain.asrProfile].filter(hasValue).join(' / ')],['合成驱动 / 配置',[brain.activeTts,brain.ttsProfile].filter(hasValue).join(' / ')]]);
+  facts('opsSpeech',[['读取状态',labelFor(stateNames,speech.state)],['识别模型',speech.asrModel],['合成模型',speech.ttsModel],['本地音色',speech.voice],['输出采样率',Number.isFinite(speech.outputRate)?speech.outputRate+' Hz':null],['原生采样率',Number.isFinite(speech.nativeRate)?speech.nativeRate+' Hz':null]]);
+  facts('opsOta',[['更新清单',labelFor(stateNames,ota.state)],['发布版本',ota.versionName],['版本号',ota.versionCode],['发布时间',dateLabel(ota.publishedAt)],['安装包大小',Number.isFinite(ota.size)?ota.size.toLocaleString()+' 字节':null],['SHA-256',ota.sha256],['版本说明',ota.notes]]);
+  if(ota.state==='ready'&&typeof ota.url==='string'){
+    const u=new URL(ota.url,location.origin);
+    if(u.protocol==='https:'&&u.origin==='https://pa.hahaxiong.cc:8666'&&/^\/mobile\/night\/xiaoke-night-[0-9]+\.apk$/.test(u.pathname)){
+      const a=node('a','下载此版本 APK','action');a.href=u.href;el('opsOta').append(a);
+    }
+  }
+  facts('opsBackup',[['最近成功备份',labelFor(stateNames,backup.state)],['备份采集时间',dateLabel(backup.capturedAt)],['恢复核验时间',dateLabel(backup.verifiedAt)],['已校验数据库',backup.databaseCount],['归档大小',Number.isFinite(backup.archiveBytes)?backup.archiveBytes.toLocaleString()+' 字节':null]]);
+}
+function applyBrainControls(s){
+  savedBrain=s;
+  if(currentView==='overview'){overviewBrain(s);return;}
+  if(currentView==='growth'){
+    const combo=el('styleChoice');combo.replaceChildren(...Object.entries(styles).map(([id,name])=>new Option(name,id)));
+    combo.value=s.style;combo.disabled=!combo.value;el('saveStyle').disabled=true;
+    const rel=s.relationship;
+    if(rel)facts('relationFacts',[['关系阶段',rel.tier],['相识天数',rel.daysKnown],['互动会话数',rel.sessionCount],['重逢感（0–1）',Number.isFinite(rel.miss)?Number(rel.miss.toFixed(2)):null],['相处气氛（0–1）',Number.isFinite(rel.mood)?Number(rel.mood.toFixed(2)):'暂无足够样本']]);
+    else empty('relationFacts','还没有足够的互动记录。');
+    el('traitList').replaceChildren();
+    for(const tr of s.traits||[]){
+      const item=node('div',null,'trait');item.append(node('strong',tr.label||tr.key));
+      if(Number.isFinite(tr.value)&&tr.value>=0&&tr.value<=1){
+        const bar=document.createElement('progress');bar.max=1;bar.value=tr.value;bar.setAttribute('aria-label',tr.label||tr.key);item.append(bar);
+      }
+      item.append(node('small','当前 '+displayValue(tr.value)+' · 基线 '+displayValue(tr.baseline)));el('traitList').append(item);
+    }
+    if(!el('traitList').children.length)empty('traitList','尚无特质采样。');
+  }
+  if(currentView==='tools'){
+    const toggles=el('toolSwitches');toggles.replaceChildren();el('saveTools').disabled=true;
+    for(const [key,title] of Object.entries(toolNames)){
+      const label=node('label',null,'choice-line'), input=document.createElement('input');
+      input.type='checkbox';input.dataset.tool=key;input.checked=s.tools?.[key]===true;input.disabled=typeof s.tools?.[key]!=='boolean';
+      input.onchange=()=>{el('saveTools').disabled=![...toggles.querySelectorAll('input')].some(n=>!n.disabled&&n.checked!==s.tools[n.dataset.tool]);};
+      label.append(input,document.createTextNode(title));toggles.append(label);
+    }
+    const st=s.searchStats||{};metrics('queryStats',[['现存任务',st.total],['有依据的回答',st.answered],['缺少依据',st.noEvidence],['失败',st.failed]]);
+  }
+}
+const kinds={name:'称呼',fact:'事实',preference:'偏好',interest:'兴趣',like:'喜好',dislike:'不喜欢',profile:'画像',nickname:'称呼',memory:'记忆'};
+function memoryRow(item){
+  const row=node('article',null,'record');
+  row.append(node('h4',item.topic||labelFor(kinds,item.kind)),node('p',item.value));
+  row.append(node('small',[labelFor(kinds,item.kind),'来源 '+displayValue(item.source),dateLabel(item.updatedAt)].join(' · ')));
+  const actions=node('div',null,'actions');row.append(actions);
+  if(item.editable)actions.append(actionButton('纠正',async()=>{
+    const form=node('form',null,'inline-edit'),field=node(item.kind==='preference'?'select':'input');
+    if(item.kind==='preference')for(const v of ['喜欢','不喜欢'])field.add(new Option(v,v));
+    else field.maxLength=50;
+    field.value=item.value;field.required=true;field.setAttribute('aria-label','纠正后的内容');
+    const save=node('button','保存纠正');save.type='submit';
+    const cancel=actionButton('取消',async()=>{form.remove();actions.hidden=false;});
+    form.append(field,save,cancel);actions.hidden=true;row.append(form);field.focus();
+    form.onsubmit=handle(async()=>{
+      save.disabled=true;try{await api('brain/memories/'+encodeURIComponent(item.id),'PUT',{value:field.value.trim(),expected:item.value});el('msg').textContent='已保存纠正';await loadCurrentView();}
+      finally{save.disabled=false;}
+    });
+  }));
+  if(item.manageable)actions.append(actionButton('忘记',async()=>{
+    if(!window.confirm('让小可忘记「'+(item.topic||item.value)+'」这条记忆？'))return;
+    await api('brain/memories/'+encodeURIComponent(item.id),'DELETE',{expected:item.value});el('msg').textContent='已忘记这条记忆';await loadCurrentView();
+  },true));
+  return row;
+}
+function growthRow(item){
+  const row=node('article',null,'record');
+  row.append(node('h4',[labelFor(moduleNames,item.module),item.dimension].filter(hasValue).join(' · ')),node('p',item.reason||'未记录归因'));
+  const lines=[];
+  if(hasValue(item.from)||hasValue(item.to))lines.push(displayValue(item.from)+' → '+displayValue(item.to));
+  if(hasValue(item.rule))lines.push('规则 '+displayValue(item.rule));
+  if(hasValue(item.source))lines.push('来源 '+displayValue(item.source));
+  lines.push(dateLabel(item.at));row.append(node('small',lines.join(' · ')));
+  if(item.revertible){
+    const actions=node('div',null,'actions');actions.append(actionButton('撤回这次学习',async()=>{
+      if(!window.confirm('撤回这条反馈对后续回答的影响？'))return;
+      await api('brain/growth/'+encodeURIComponent(item.id)+'/revoke','POST',{});el('msg').textContent='已撤回这次学习';await loadCurrentView();
+    },true));row.append(actions);
+  }else if(item.revokeReason)row.append(node('p',item.revokeReason,'subtle'));
+  return row;
+}
+function searchRow(item){
+  const row=node('article',null,'record');row.append(node('h4',labelFor(stateNames,item.outcome||item.status)));
+  const values=[dateLabel(item.at),'任务 #'+displayValue(item.id),'来源 '+displayValue(item.sourceCount)];
+  if(Number.isFinite(item.durationMs))values.push('耗时 '+(item.durationMs/1000).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 秒');
+  if(item.status&&item.outcome)values.push('执行状态 '+labelFor(stateNames,item.status));
+  if(item.failure)values.push('原因 '+item.failure);
+  row.append(node('small',values.join(' · ')));return row;
+}
+async function readList(type,sequence){
+  const [listId,pagerId]=listIds[type],start=offsets[type];el(pagerId).replaceChildren();
+  const render={memories:memoryRow,growth:growthRow,search:searchRow,history:toolHistoryRow}[type];
+  empty(listId,'读取中…');
+  try{
+    const data=await api('brain/'+(type==='history'?'tools/history':type)+'?offset='+start+'&limit='+pageSize);
+    if(sequence!==viewSequence||el('panel').hidden)return;
+    if(!Array.isArray(data.items)||!Number.isSafeInteger(data.total))throw Error('列表返回不完整，请刷新。');
+    if(!data.items.length&&data.total>0&&start>=data.total){offsets[type]=Math.floor((data.total-1)/pageSize)*pageSize;return readList(type,sequence);}
+    el(listId).replaceChildren(...data.items.map(render));
+    if(!data.items.length){empty(listId,{memories:'暂无长期记忆。',growth:'暂无成长记录。',search:'暂无搜索任务记录。',history:'本版尚未收到已提交的工具答复。'}[type]);return;}
+    const change=delta=>{offsets[type]=Math.max(0,start+delta);return readList(type,sequence)};
+    const prev=actionButton('上一页',()=>change(-pageSize)),next=actionButton('下一页',()=>change(pageSize));prev.disabled=start===0;next.disabled=start+data.items.length>=data.total;
+    el(pagerId).append(node('span','第 '+(start+1)+'–'+(start+data.items.length)+' 条，共 '+data.total+' 条'),prev,next);
+  }catch(error){if(sequence===viewSequence)empty(listId,error.message);}
+}
+async function loadCurrentView(){
+  if(el('panel').hidden)return;
+  const sequence=++viewSequence,view=currentView, jobs=[];
+  function request(path,success,failure){return api(path).then(value=>{if(sequence===viewSequence&&!el('panel').hidden)success(value);},error=>{if(sequence===viewSequence)failure(error.message);});}
+  if(['growth','tools','overview'].includes(view)){
+    savedBrain=null;el('saveStyle').disabled=true;el('styleChoice').disabled=true;el('saveTools').disabled=true;
+    jobs.push(request('brain/overview',applyBrainControls,message=>{
+      if(view==='overview')empty('overviewSummary',message);
+      if(view==='growth'){empty('traitList',message);empty('relationFacts',message);}
+      if(view==='tools'){empty('toolSwitches',message);empty('queryStats',message);}
+    }));
+  }
+  if(['operations','overview','providers'].includes(view)){
+    jobs.push(request('operations',renderOperations,message=>{latestOps=null;showProviderRevision();for(const id of view==='overview'?['overviewRuntime']:view==='operations'?['opsBrain','opsSpeech','opsOta','opsBackup']:[])empty(id,message);if(view==='operations')el('opsTime').textContent='';}));
+  }
+  if(view==='overview')observedSections();
+  const type={growth:'growth',memories:'memories',tools:'search'}[view];
+  if(type)jobs.push(readList(type,sequence));
+  if(view==='tools')jobs.push(readList('history',sequence));
+  if(view==='activity')jobs.push(readActivity(sequence));
+  if(view==='filler')jobs.push(readCues(sequence));
+  await Promise.all(jobs);
+}
+function openView(name){
+  const buttons=[...document.querySelectorAll('[data-view]')];
+  if(!buttons.some(b=>b.dataset.view===name))return;
+  if(currentView==='activity'&&name!=='activity')closeTranscript();
+  if(currentView==='devices'&&name!=='devices'){el('deviceHistory').open=false;diagnosticsDevice=null;++diagnosticsSeq;}
+  currentView=name;
+  buttons.forEach(b=>{const selected=b.dataset.view===name;el(b.dataset.view).hidden=!selected;b.setAttribute('aria-pressed',String(selected));});
+  el('mobileView').value=name;el('msg').textContent='';
+  if(name==='devices')readDevices({silent:true}).catch(()=>{});
+  loadCurrentView().catch(error=>{el('msg').textContent=error.message;});
+}
+el('styleChoice').onchange=()=>{el('saveStyle').disabled=!savedBrain||el('styleChoice').value===savedBrain.style;};
+el('styleForm').onsubmit=handle(async()=>{
+  if(!savedBrain||el('saveStyle').disabled)return;
+  el('saveStyle').disabled=true;
+  try{await api('brain/style','PUT',{style:el('styleChoice').value,previous:savedBrain.style});el('msg').textContent='已保存长期说话风格';await loadCurrentView();}
+  finally{el('styleChoice').onchange();}
+});
+el('toolForm').onsubmit=handle(async()=>{
+  if(!savedBrain||el('saveTools').disabled)return;
+  const toggles=[...el('toolSwitches').querySelectorAll('input')];if(toggles.length!==3||toggles.some(n=>n.disabled))throw Error('工具状态不完整，请先刷新');
+  el('saveTools').disabled=true;
+  try{await api('brain/tools','PUT',{...Object.fromEntries(toggles.map(n=>[n.dataset.tool,n.checked])),previous:savedBrain.tools});el('msg').textContent='工具设置已保存';await loadCurrentView();}
+  catch(error){el('saveTools').disabled=false;throw error;}
+});
+el('newMemory').onsubmit=handle(async()=>{
+  const input=el('memoryText'),submit=el('newMemory').querySelector('button');submit.disabled=true;
+  try{await api('brain/memories','POST',{text:input.value.trim()});input.value='';offsets.memories=0;el('msg').textContent='已写入长期记忆';await loadCurrentView();}
+  finally{submit.disabled=false;}
+});
+el('mobileView').onchange=()=>openView(el('mobileView').value);
+for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>openView(b.dataset.view);
+for(const b of document.querySelectorAll('[data-reload]'))b.onclick=handle(async()=>{b.disabled=true;try{await loadCurrentView();}finally{b.disabled=false;}});
+let cueRevision=null,transcriptSeq=0;
+const cueFields=['chatCues','searchCues','chatWait','searchWait'];
+function setCueAccess(on){for(const id of [...cueFields,'saveCues'])el(id).disabled=!on;}
+async function readCues(seq){
+  cueRevision=null;setCueAccess(false);
+  try{
+    const value=await api('brain/voice-cues');
+    if(seq!==viewSequence||el('panel').hidden)return;
+    if(!Array.isArray(value.chat)||!Array.isArray(value.search)||!Number.isSafeInteger(value.revision))throw Error('衔接语配置不完整');
+    cueRevision=value.revision;el('chatCues').value=value.chat.join('\n');el('searchCues').value=value.search.join('\n');
+    el('chatWait').value=value.chatWaitMs;el('searchWait').value=value.searchWaitMs;
+    el('cueState').textContent='大脑配置修订 '+cueRevision+' · 每类最多 12 句，每句 6 至 40 字（含句末标点）。';setCueAccess(true);
+  }catch(error){if(seq===viewSequence)el('cueState').textContent=error.message;}
+}
+el('cueForm').onsubmit=handle(async()=>{
+  if(cueRevision===null)return;
+  const split=id=>el(id).value.split('\n').map(s=>s.trim()).filter(Boolean);
+  const body={revision:cueRevision,chat:split('chatCues'),search:split('searchCues'),chatWaitMs:el('chatWait').valueAsNumber,searchWaitMs:el('searchWait').valueAsNumber};
+  setCueAccess(false);try{await api('brain/voice-cues','PUT',body);el('msg').textContent='已应用通话衔接语';await readCues(viewSequence);}
+  catch(error){setCueAccess(true);throw error;}
+});
+function closeTranscript(){++transcriptSeq;el('transcript').hidden=true;el('turnRows').replaceChildren();el('turnPager').replaceChildren();}
+el('hideTranscript').onclick=closeTranscript;
+async function readTranscript(session,start=0){
+  const seq=++transcriptSeq;
+  const box=el('transcript');box.hidden=false;el('turnPager').replaceChildren();empty('turnRows','读取文字记录…');
+  try{
+    const data=await api('brain/conversations/'+encodeURIComponent(session)+'?offset='+start+'&limit=30');
+    if(seq!==transcriptSeq||currentView!=='activity'||el('panel').hidden)return;
+    if(!Array.isArray(data.items)||!Number.isSafeInteger(data.total))throw Error('本次通话返回不完整');
+    el('turnRows').replaceChildren(...data.items.map(m=>{
+      const article=node('article',null,'record'),who={user:'我',assistant:'小可'};
+      article.append(node('span',labelFor(who,m.role)+' · '+dateLabel(m.at),'turn-role'),node('p',m.text,'turn-text'));return article;
+    }));
+    if(!data.items.length)empty('turnRows','没有可展示的通话文字。');
+    if(data.total>30){
+      const prev=actionButton('较前一页',()=>readTranscript(session,start-30)),next=actionButton('较后一页',()=>readTranscript(session,start+30));
+      prev.disabled=start===0;next.disabled=start+data.items.length>=data.total;
+      el('turnPager').append(node('span','共 '+data.total+' 条'),prev,next);
+    }
+    if(start===0)box.scrollIntoView({block:'nearest'});
+  }catch(error){if(seq===transcriptSeq)empty('turnRows',error.message);}
+}
+async function readActivity(seq,start=0){
+  closeTranscript();el('activityPager').replaceChildren();empty('activityRows','读取通话记录…');
+  try{
+    const data=await api('brain/activity?offset='+start+'&limit='+pageSize);
+    if(seq!==viewSequence||el('panel').hidden)return;
+    if(!Array.isArray(data.items)||!Array.isArray(data.days)||!Number.isSafeInteger(data.total))throw Error('活动列表返回不完整');
+    const ex=data.extraction||{};facts('extractionFacts',[['记忆提取记录',ex.available?'已接入':'暂无记录'],['最后提取时间',dateLabel(ex.lastAt)],['最后提取状态',labelFor({ok:'成功',failed:'失败'},ex.lastStatus)]]);
+    const table=node('table',null,'activity-grid'),head=table.createTHead().insertRow();
+    for(const key of ['日期','对话轮次','成长事件','记忆提取'])head.append(node('th',key));
+    const body=table.createTBody();
+    for(const d of data.days){const row=body.insertRow();for(const v of [d.date,d.turns,d.growth,d.extractions])row.append(node('td',displayValue(v)));}
+    el('activityDays').replaceChildren(table);
+    el('activityRows').replaceChildren(...data.items.map(item=>{
+      const article=node('article',null,'record');article.append(node('h4',dateLabel(item.firstAt)+' · '+displayValue(item.messages)+' 条消息'),node('small','最后一条　'+dateLabel(item.lastAt)));
+      const actions=node('div',null,'actions');actions.append(actionButton('查看本通原文',()=>readTranscript(item.session)));article.append(actions);return article;
+    }));
+    if(!data.items.length)empty('activityRows','暂无已保存的通话。');
+    if(data.total>pageSize){
+      const prev=actionButton('上一页',()=>readActivity(++viewSequence,start-pageSize)),next=actionButton('下一页',()=>readActivity(++viewSequence,start+pageSize));
+      prev.disabled=start===0;next.disabled=start+data.items.length>=data.total;el('activityPager').append(node('span','共 '+data.total+' 通'),prev,next);
+    }
+  }catch(error){if(seq===viewSequence){for(const id of ['extractionFacts','activityDays','activityRows'])empty(id,error.message);}}
+}
+
+let diagnosticsSeq=0,diagnosticsDevice=null;
+const technicalLabels={call_start:'开始通话',connected:'连接成功',mic_on:'开启麦克风',mic_off:'关闭麦克风',rx_audio:'收到音频',rx_caption:'收到字幕',tx_caption:'发送字幕',spoken_interrupt:'语音打断',cancel_ack:'收到打断回执',transport_error:'传输错误',call_end:'结束通话',paired:'设备配对',ota_check:'检查更新'};
+async function readDeviceDiagnostics(){
+  const target=selectedDevice,days=el('diagDays').value,seq=++diagnosticsSeq;
+  if(!target||!el('deviceHistory').open||currentView!=='devices')return;
+  diagnosticsDevice=target; el('diagHeadline').textContent='正在读取…';el('diagCounts').replaceChildren();el('diagUploads').replaceChildren();el('diagEvents').replaceChildren();
+  try{
+    const r=await api('devices/'+encodeURIComponent(target)+'/diagnostics?days='+days);
+    if(seq!==diagnosticsSeq||target!==selectedDevice||currentView!=='devices'||el('panel').hidden)return;
+    if(r.state!=='ready'||!Number.isSafeInteger(r.total)||!Array.isArray(r.recent)||!Array.isArray(r.counts))throw Error('设备诊断结果不完整');
+    el('diagHeadline').textContent='共 '+r.total+' 个事件 · '+dateLabel(r.from)+' 至 '+dateLabel(r.through)+'（按服务器接收时间）';
+    const u=r.uploads;
+    if(u&&['batches','submitted','inserted','repeats'].every(k=>Number.isSafeInteger(u[k])&&u[k]>=0)){
+      facts('diagUploads',[['投递批次（含重投）',u.batches],['提交事件',u.submitted],['新增入库',u.inserted],['重复事件',u.repeats],['最近新批次',u.lastAt?dateLabel(u.lastAt):'本周期无新批次']]);
+    }else{empty('diagUploads','当前采样未返回回传统计');}
+    facts('diagCounts',r.counts.map(v=>[labelFor(technicalLabels,v.kind),v.count]));
+    const items=r.recent.map(v=>{const li=node('li');li.append(node('span',labelFor(technicalLabels,v.kind),'dev-ev-kind'),node('span',dateLabel(v.at)+' · 接收 '+dateLabel(v.receivedAt)+' · 版本 '+displayValue(v.versionCode),'dev-ev-ts'));return li;});
+    el('diagEvents').replaceChildren(...items);
+  }catch(error){if(seq===diagnosticsSeq)el('diagHeadline').textContent=error.message;}
+}
+el('deviceHistory').ontoggle=()=>{if(el('deviceHistory').open)readDeviceDiagnostics();else{diagnosticsSeq++;diagnosticsDevice=null;}};
+el('diagDays').onchange=readDeviceDiagnostics;
+el('reloadDeviceHistory').onclick=handle(readDeviceDiagnostics);
+const toolActivityNames={...toolNames,search_cancel:'取消搜索',memory:'记忆召回',memory_action:'更新记忆',style:'调整风格',capabilities:'能力说明'};
+const toolOutcomes={with_sources:'有来源',without_sources:'未附来源',handled:'已处理'};
+function toolHistoryRow(item){
+  const row=node('article',null,'record');
+  row.append(node('h4',labelFor(toolActivityNames,item.tool)+' · '+labelFor(toolOutcomes,item.outcome)));
+  const vals=[dateLabel(item.at),'来源 '+displayValue(item.sourceCount)];
+  if(Number.isFinite(item.turnMs))vals.push('本轮耗时 '+(item.turnMs/1000).toLocaleString('zh-CN',{maximumFractionDigits:2})+' 秒');
+  row.append(node('small',vals.join(' · ')));return row;
+}
+
 load().catch(err=>{if(err.message!=='请登录')el('msg').textContent=err.message});
 </script></body></html>
