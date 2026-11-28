@@ -334,21 +334,21 @@
     return true;
   };
   document.getElementById('appearance-done')?.addEventListener('click', closeAppearance);
-  document.getElementById('pair-key')?.addEventListener('focus', closeAppearance);
+  document.getElementById('pair-key')?.addEventListener('focus', () => setPopoverOpen(false));
   global.NightCloseAppearance = closeAppearance;
   // Wire UI Events
   if (btnPaletteEl) {
     btnPaletteEl.addEventListener('click', function (e) {
       e.stopPropagation();
-      setPopoverOpen(colorPopoverEl ? colorPopoverEl.hidden : false);
+      const open = colorPopoverEl && colorPopoverEl.hidden;
+      const service = document.getElementById('service-panel');
+      // The maintenance close button also bubbles to our outside-click handler.
+      if (open && service && !service.hidden) document.getElementById('service-close').click();
+      setPopoverOpen(open);
     });
   }
 
   if (colorPopoverEl) {
-    btnPaletteEl.addEventListener('click', function () {
-      const service = document.getElementById('service-panel');
-      if (!colorPopoverEl.hidden && service && !service.hidden) document.getElementById('service-close').click();
-    });
     colorPopoverEl.addEventListener('click', function (e) {
       e.stopPropagation();
     });

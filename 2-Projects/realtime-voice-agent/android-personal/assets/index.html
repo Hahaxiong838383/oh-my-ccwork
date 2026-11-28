@@ -30,7 +30,7 @@
           <span>重配</span>
         </button>
 
-        <button id="btn-palette" class="top-pill" type="button" aria-expanded="false" aria-controls="color-popover">
+        <button id="btn-palette" class="top-pill" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="color-popover">
           <span class="color-chip" aria-hidden="true"></span>
           <span>外观</span>
         </button>
@@ -47,31 +47,7 @@
       <h2>通话诊断</h2><p id="diag-summary"></p><button id="diag-send" type="button">同步诊断记录</button>
       <small>仅回传通话事件、时间和版本。录音、字幕和设备密钥不随日志上传。</small>
     </section>
-    <section class="stage" aria-live="polite">
-      <div class="gaze-surface" aria-hidden="true"></div>
-      <div id="avatar-wrap" class="avatar-wrap">
-        <div id="avatar-engine" aria-hidden="true"></div>
-        <canvas id="orb-canvas" role="img" aria-label="小可的语音表情"></canvas>
-        <div id="avatar-tears" aria-hidden="true" hidden></div>
-      </div>
-
-      <div id="status-banner" class="status-banner" role="status" hidden>
-        <span id="status-text" class="status-text"></span>
-      </div>
-
-      <div id="subtitles" class="subtitles">
-        <p id="mine-wrap" class="sub-mine" hidden>
-          <span class="sub-tag">主人</span>
-          <span id="mine-text" class="sub-mine-text"></span>
-        </p>
-        <p id="reply-wrap" class="sub-reply" hidden>
-          <span id="reply-text" class="sub-reply-text"></span>
-          <span id="reply-cursor" class="live-cursor" aria-hidden="true" hidden></span>
-        </p>
-      </div>
-    </section>
-
-    <section id="color-popover" class="appearance-sheet" role="dialog" aria-label="外观" hidden>
+    <section id="color-popover" class="appearance-sheet" role="dialog" aria-labelledby="btn-palette" hidden>
       <div class="appearance-heading">
         <div><h2>外观</h2><button id="wheel-back" type="button" hidden>‹ 选头像</button><p id="appearance-name" aria-live="polite"></p></div>
         <button id="appearance-done" type="button">完成</button>
@@ -103,6 +79,30 @@
         <span id="color-hex" class="popover-hex"></span>
       </div>
     </section>
+    <section class="stage" aria-live="polite">
+      <div class="gaze-surface" aria-hidden="true"></div>
+      <div id="avatar-wrap" class="avatar-wrap">
+        <div id="avatar-engine" aria-hidden="true"></div>
+        <canvas id="orb-canvas" role="img" aria-label="小可的语音表情"></canvas>
+        <div id="avatar-tears" aria-hidden="true" hidden></div>
+      </div>
+
+      <div id="status-banner" class="status-banner" role="status" hidden>
+        <span id="status-text" class="status-text"></span>
+      </div>
+
+      <div id="subtitles" class="subtitles">
+        <p id="mine-wrap" class="sub-mine" hidden>
+          <span class="sub-tag">主人</span>
+          <span id="mine-text" class="sub-mine-text"></span>
+        </p>
+        <p id="reply-wrap" class="sub-reply" hidden>
+          <span id="reply-text" class="sub-reply-text"></span>
+          <span id="reply-cursor" class="live-cursor" aria-hidden="true" hidden></span>
+        </p>
+      </div>
+    </section>
+
     <footer class="bottom-bar">
       <section id="panel-pair" class="pair-card" aria-label="设备配对">
         <form id="pair-form" class="pair-form" novalidate>
@@ -147,6 +147,7 @@
   <script src="orb-reference.js"></script>
   <script src="orb-motion.js"></script>
   <script src="orb-surface.js"></script>
+  <script src="touch-sound.js"></script>
   <script src="orb-input.js"></script>
   <script src="appearance.js"></script>
   <script src="color-wheel.js"></script>

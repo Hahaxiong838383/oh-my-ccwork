@@ -40,7 +40,11 @@
     lastSync.accent = accent;
     host.syncState(phase, muted, accent, Boolean(localAccentPick));
   }
-  const show = patch => { Object.assign(model, patch); window.NightView?.render({...model}); pushSyncState(false); };
+  const show = patch => {
+    Object.assign(model, patch);
+    if (model.muted || (model.active && model.phase !== 'listening')) window.NightTouchSound?.stop();
+    window.NightView?.render({...model}); pushSyncState(false);
+  };
   const mark = name => host?.event?.(name);
   function countOnce(s, bucket, id, kind) {
     const last = s[bucket];
@@ -156,6 +160,7 @@
       }
       const energy = input.meter ? input.meter.read() : local.audioLevel || 0;
       const listening = track?.enabled && !pub.isMuted;
+      input.voiceActive = Boolean(listening && energy > .025);
       window.NightView?.micLevel?.(listening ? Math.min(1, Math.max(0, (energy - .007) * 10)) : 0);
       input.frame = requestAnimationFrame(measure);
     }
@@ -347,6 +352,7 @@
   }
   function finish(s,status='通话已结束') {
     if(!valid(s))return;
+    window.NightTouchSound?.stop();
     clearSpeech(s,true);session=null;mark('call_end');
     clearInterval(s.poll);clearTimeout(s.deadline);clearTimeout(s.cancel?.timer);
     for(const [id,req] of pendingNative)if(req.s===s)settleNative(id,{error:'已结束'});
@@ -451,6 +457,11 @@
   }
   window.Voice={
     start,stop:()=>{if(session)finish(session);},mute,interrupt,
+    pet(family) {
+      const s = session;
+      if (model.muted || (s && (!s.ready || model.phase !== 'listening' || s.retryPlayback || s.cancel || s.micMeter?.voiceActive))) return;
+      void window.NightTouchSound?.play(family,s?.ctx);
+    },
     pair(key){
       if(session)return;
       const ok=!!host?.pair(String(key).trim());

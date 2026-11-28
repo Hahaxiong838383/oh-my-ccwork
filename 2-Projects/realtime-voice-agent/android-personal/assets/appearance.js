@@ -230,7 +230,7 @@
       for (const variant of family.variants) {
         if (selectedGroup && groupName(id, variant) !== selectedGroup) continue;
         const button = document.createElement('button');
-        button.type = 'button'; button.className = 'avatar-card'; button.dataset.variant = variant.id;
+        button.type = 'button'; button.tabIndex = -1; button.className = 'avatar-card'; button.dataset.variant = variant.id;
         button.setAttribute('aria-pressed', String(id === familyId && variant.id === variantId));
         if (variant.thumb) {
           const img = document.createElement('img');
@@ -260,8 +260,29 @@
         });
         grid.append(button);
       }
+      const entry = grid.querySelector('[aria-pressed=true]') || grid.firstElementChild;
+      if (entry) entry.tabIndex = 0;
       grid.scrollTop = 0; grid.scrollLeft = 0;
     }
+
+    // Tab enters the gallery once. Arrow keys browse without changing the live
+    // avatar; Enter or Space keeps the same activation path as a tap.
+    grid.addEventListener('focusin', event => {
+      const previous = grid.querySelector('[tabindex="0"]');
+      if (previous) previous.tabIndex = -1;
+      event.target.tabIndex = 0;
+    });
+    grid.addEventListener('keydown', event => {
+      const cards = grid.children;
+      const index = Array.prototype.indexOf.call(cards, event.target);
+      if (index < 0) return;
+      const columns = getComputedStyle(grid).gridTemplateColumns.split(' ').length;
+      const positions = {ArrowLeft:index-1, ArrowRight:index+1, ArrowUp:index-columns,
+        ArrowDown:index+columns, Home:0, End:cards.length-1};
+      if (!(event.key in positions)) return;
+      event.preventDefault();
+      cards[Math.max(0, Math.min(positions[event.key], cards.length-1))].focus();
+    });
 
     for (const id of Object.keys(familyNames)) {
       const button = document.createElement('button');
@@ -299,7 +320,8 @@
           showFamily(familyId);
           requestAnimationFrame(() => {
             if (!opened) return;
-            grid.querySelector('[aria-pressed=true]')?.scrollIntoView({block:'nearest', inline:'nearest'});
+            const selected = grid.querySelector('[aria-pressed=true]');
+            if (selected) grid.scrollTop = selected.offsetTop - (grid.clientHeight - selected.offsetHeight) / 2;
             el('appearance-done').focus({preventScroll:true});
           });
         }

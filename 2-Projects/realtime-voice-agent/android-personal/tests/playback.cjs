@@ -16,11 +16,18 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
     await page.route('http://localhost:13972/', route => route.fulfill({body:html,contentType:'text/html'}));
     await page.goto('http://localhost:13972/');
     await page.addScriptTag({path:sdkPath});
+    await page.addScriptTag({path:path.join(assets,'touch-sound.js')});
     await page.evaluate(() => {
       const sdk = window.LivekitClient;
       const info = {identity:'agent-test',sid:'PA_test',kind:sdk.ParticipantKind.AGENT,state:2,version:1,attributes:{},
         tracks:[{type:0,source:2,sid:'TR_voice',name:'agent-voice',layers:[],codecs:[]}]};
       window.events = [];
+      window.petClips = [];
+      const startClip = AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start = function (...args) {
+        petClips.push(this.context);
+        return startClip.apply(this,args);
+      };
       window.audit = {shows:[], speech:[]};
       window.NightView = {render(s){
           window.display=s; audit.shows.push({t:performance.now(),reply:s.reply,phase:s.phase});
@@ -115,6 +122,10 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
     // The control packet and the final transcript travel on separate channels.
     await page.evaluate(()=>{remoteGain.value=0;});
     await page.waitForFunction(()=>display.phase==='listening');
+    await page.evaluate(()=>Voice.pet('classic'));
+    await page.waitForFunction(()=>petClips.length===1);
+    await page.waitForTimeout(380);
+    assert.equal(await page.evaluate(()=>petClips[0].state),'running','touch must reuse the live room context');
     const stopStates=await page.evaluate(()=>{
       const E=LivekitClient.RoomEvent, results=[];
       const final=(id,text)=>room.emit(E.TranscriptionReceived,[{id,text,final:true}],room.localParticipant);
@@ -148,9 +159,12 @@ const sdkPath = process.env.LIVEKIT_UMD || path.resolve(__dirname, '../../web/pe
       emitTranscript([['SG_a7_2','一定要记住。',false]]);
     });
     await page.waitForFunction(()=>Math.abs(audit.level-.36)<.02 && audit.speech.at(-1)?.patch?.kind==='emphasis');
+    await page.evaluate(()=>Voice.pet('classic'));
+    assert.equal(await page.evaluate(()=>petClips.length),1,'speaker output takes priority over touch');
     await page.evaluate(()=>{peer.isSpeaking=false;});
     await page.waitForFunction(()=>audit.level===0);
-    await page.evaluate(()=>{ Voice.mute(); peer.isSpeaking=true; });
+    await page.evaluate(()=>{ Voice.mute(); peer.isSpeaking=true; Voice.pet('robot'); });
+    assert.equal(await page.evaluate(()=>petClips.length),1,'muting suppresses touch sounds too');
     await page.waitForTimeout(250);
     assert.deepEqual(await page.evaluate(()=>[display.muted,document.querySelector('audio').volume,
       audit.level,micChanges]),[true,0,0,[true]],'muting the reply must leave the microphone open');
