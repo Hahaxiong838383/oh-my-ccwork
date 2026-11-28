@@ -3,14 +3,14 @@
 #
 #   bash scripts/verify.sh [apk 路径]
 #
-# 默认校验 build/xiaoke-night-host-V1.0.14.apk。
+# 默认校验 build/xiaoke-night-host-V1.0.15.apk。
 # 任一条断言不成立即非零退出。
 set -uo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$PROJECT_DIR"
 
-APK="${1:-$PROJECT_DIR/build/xiaoke-night-host-V1.0.14.apk}"
+APK="${1:-$PROJECT_DIR/build/xiaoke-night-host-V1.0.15.apk}"
 TOOLCHAIN="${NIGHT_ANDROID_TOOLCHAIN:-$HOME/.local/share/codeg-android-toolchain}"
 SDK="${NIGHT_ANDROID_SDK:-$TOOLCHAIN/android-sdk}"
 BT="${SDK}/build-tools/${NIGHT_BUILD_TOOLS:-35.0.0}"
@@ -18,8 +18,8 @@ JAVA_HOME="${NIGHT_JAVA_HOME:-$TOOLCHAIN/jdk-21}"
 export JAVA_HOME PATH="$JAVA_HOME/bin:$PATH"
 
 EXPECT_PKG="cc.hahaxiong.xiaoke.night"
-EXPECT_VERSION_NAME="V1.0.14"
-EXPECT_VERSION_CODE="1000014"
+EXPECT_VERSION_NAME="V1.0.15"
+EXPECT_VERSION_CODE="1000015"
 EXPECT_MIN_SDK="26"
 EXPECT_TARGET_SDK="34"
 EXPECT_ORIGIN="https://pa.hahaxiong.cc:8666/night-app/index.html"
@@ -125,7 +125,7 @@ fi
 
 printf '\n— 内容\n'
 unzip -q -o "$APK" -d "$WORK/apk" || { no "APK 解压失败"; }
-for f in classes.dex assets/index.html assets/appearance.js assets/avatars/open/engine.js assets/avatars/boop/engine.js assets/avatars/robot/engine.js assets/session.js assets/orb-reference.js assets/orb-input.js assets/orb-surface.js assets/orb-motion.js assets/GrokBot-LICENSE.txt assets/livekit.js resources.arsc AndroidManifest.xml; do
+for f in classes.dex assets/index.html assets/appearance.js assets/avatars/open/engine.js assets/avatars/boop/engine.js assets/avatars/robot/engine.js assets/session.js assets/orb-reference.js assets/orb-input.js assets/touch-sound.js assets/orb-surface.js assets/orb-motion.js assets/GrokBot-LICENSE.txt assets/livekit.js resources.arsc AndroidManifest.xml; do
   if [ -f "$WORK/apk/$f" ]; then ok "包含 $f"; else no "缺少 $f"; fi
 done
 if [ -f "$WORK/apk/assets/livekit.js" ]; then

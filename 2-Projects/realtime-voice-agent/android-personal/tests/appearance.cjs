@@ -40,7 +40,11 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
     await page.goto(base + 'index.html');
     const app = page.locator('#app'), grid = page.locator('#avatar-grid');
     assert.equal(await app.getAttribute('data-avatar'),'classic');
+    await page.locator('#btn-service').click();
+    assert.ok(await page.locator('#service-panel').isVisible());
     await page.locator('#btn-palette').click();
+    assert.ok(await page.locator('#service-panel').isHidden());
+    assert.ok(await page.locator('#color-popover').isVisible());
     assert.equal(await page.locator('#avatar-families button').count(),4);
     const counts = {};
     for (const family of ['classic','open','boop','robot']) {
@@ -123,6 +127,18 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
           return r.width>0 && r.height>0 && e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));
         },id,{timeout:3000});
       }
+      const bounds = await page.locator('#color-popover').boundingBox();
+      const anchor = await page.locator('#btn-palette').boundingBox();
+      const below = bounds.y - anchor.y - anchor.height;
+      assert.ok(below >= 0 && below <= 16, 'appearance opens directly below its trigger');
+      assert.ok(anchor.x + anchor.width / 2 >= bounds.x && anchor.x + anchor.width / 2 <= bounds.x + bounds.width);
+      const first = await grid.locator('button').first().boundingBox();
+      const fourth = await grid.locator('button').nth(3).boundingBox();
+      assert.ok(fourth.y > first.y + first.height, 'three-column thumbnail grid during calls');
+      if (dims.height >= 800) {
+        const gallery = await grid.boundingBox();
+        assert.ok(gallery.height >= (fourth.y - first.y) * 3, 'three full rows on a phone');
+      }
       const controls = page.locator('#panel-active');
       assert.equal(await controls.locator('button:visible').count(),2);
       assert.equal((await controls.innerText()).trim(),'');
@@ -137,6 +153,13 @@ const policy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-
       await page.locator('#avatar-grid button').last().scrollIntoViewIfNeeded();
       assert.ok(await page.locator('#appearance-expression').isHidden());
     }
+    await grid.locator('button').first().focus();
+    await page.keyboard.press('ArrowDown');
+    assert.ok(await grid.locator('button').nth(3).evaluate(b => b === document.activeElement));
+    await page.keyboard.press('End');
+    assert.ok(await grid.locator('button').last().evaluate(b => b === document.activeElement));
+    await page.keyboard.press('Tab');
+    assert.ok(await grid.evaluate(g => !g.contains(document.activeElement)));
     await page.emulateMedia({reducedMotion:'reduce'});
     await page.locator('[data-family=boop]').click();
     await grid.locator('button').first().click();
