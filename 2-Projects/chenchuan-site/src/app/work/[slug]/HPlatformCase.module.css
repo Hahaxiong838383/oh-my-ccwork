@@ -40,3 +40,19 @@
   .pair .figure a { aspect-ratio: auto; }
   .pair .figure img { height: auto; }
 }
+.contents { display: flex; flex-wrap: wrap; gap: .45rem 1.4rem; padding: 1rem .2rem; border-bottom: 1px solid var(--line); }
+.contents a { color: var(--teal); font-size: .88rem; text-decoration: underline; text-underline-offset: .25em; }
+.story section[id] { scroll-margin-top: 6rem; }
+.stack { display: grid; gap: 1rem; min-width: 0; }
+.story .subhead { margin-top: 2.1rem; font-size: clamp(1.25rem, 2vw, 1.6rem); }
+.pair h3:first-child { margin: 0 0 .8rem; }
+.note .kicker { margin: 0 0 .5rem; }
+.delivery { display: grid; grid-template-columns: repeat(4, 1fr); gap: .6rem 1rem; list-style: none; margin: 1rem 0; padding: 0; }
+.delivery li { position: relative; padding: .8rem .75rem; border-top: 2px solid #70a196; background: #fff; }
+.delivery li:not(:last-child)::after { content: '→'; position: absolute; right: -.93rem; top: .85rem; color: var(--teal); }
+.delivery span { display: block; margin-top: .3rem; font-size: .88rem; line-height: 1.65; color: var(--ink-muted); }
+.routing > .figure { max-width: 58rem; margin: 1.8rem auto; }
+@media (max-width: 760px) {
+  .delivery { grid-template-columns: 1fr; gap: .8rem; }
+  .delivery li:not(:last-child)::after { content: '↓'; left: .75rem; right: auto; top: auto; bottom: -.94rem; }
+}
