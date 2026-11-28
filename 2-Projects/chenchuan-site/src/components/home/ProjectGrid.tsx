@@ -35,6 +35,13 @@ export function ProjectGrid({ projects }: Props) {
                     <p className="text-sm leading-relaxed text-text-secondary">孩子在读写台上和小可聊天，也照料自己的成长世界。过几周再开口，小可还记得上次聊过什么吗？</p>
                     <span className="mt-4 inline-block text-sm font-medium text-accent">看产品界面和内测实录 →</span>
                   </div>
+                ) : project.slug === 'h-platform-ai-assistant' ? (
+                  <div className="p-6">
+                    <h3 className="mb-2 text-lg font-semibold text-text-primary">{project.title}</h3>
+                    <p className="text-sm leading-relaxed text-text-secondary">{project.description}</p>
+                    <img src="/h-platform-case/card.webp" width={500} height={146} loading="lazy" decoding="async" alt="H 平台技能列表局部，个人和部门的方法并排显示" className="my-4 w-full rounded-md border border-border" />
+                    <span className="text-sm font-medium text-accent">看助手界面与跨部门交接 →</span>
+                  </div>
                 ) : (
                 <div className="p-6">
                   <div className="mb-3 flex items-center gap-2">

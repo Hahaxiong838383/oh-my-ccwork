@@ -5,6 +5,7 @@ import { SectionWrapper } from '@/components/layout/SectionWrapper'
 import { BlurFade } from '@/components/ui/BlurFade'
 import { Tag } from '@/components/shared/Tag'
 import { getProjects, getProjectBySlug } from '@/lib/data'
+import { HPlatformCase } from './HPlatformCase'
 import { XiaokeGallery } from './XiaokeGallery'
 import { projects as localProjects } from '@/data/projects'
 
@@ -53,7 +54,7 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   return (
     <div className="pt-24">
-      <SectionWrapper>
+      <SectionWrapper className={slug === 'h-platform-ai-assistant' ? 'pt-4 md:pt-8' : undefined}>
         <BlurFade>
           <Link
             href="/work"
@@ -63,7 +64,7 @@ export default async function ProjectDetailPage({ params }: Props) {
           </Link>
         </BlurFade>
 
-        {slug === 'ai-hardware-voice-prototype' ? <XiaokeGallery /> : (
+        {slug === 'ai-hardware-voice-prototype' ? <XiaokeGallery /> : slug === 'h-platform-ai-assistant' ? <HPlatformCase /> : (
           <>
             <BlurFade delay={0.1}>
               <div className="mb-3 flex items-center gap-3">
