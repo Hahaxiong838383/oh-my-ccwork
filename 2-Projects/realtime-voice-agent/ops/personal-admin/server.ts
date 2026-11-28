@@ -1,7 +1,9 @@
 import {readFileSync} from 'node:fs';
 import {createServer, get as httpsGet} from 'node:https';
 import {Hono} from 'hono';
+import {getOperations, getDeviceDiagnostics} from './operations';
 import {privateTalk} from './talk-gateway';
+import {DiagnosticSessions,DiagnosticError} from './diagnostics';
 import {activateProfile, createProfile, ProviderError, publicView, readDocument, updateProfile, withProviders} from './providers';
 import {getNightDevices, isSameOriginRequest, NIGHT_BRIDGE_SOCKET, NightBridgeError, sendDeviceCommand, setDeviceColor} from './night-devices';
 import {serve} from '@hono/node-server';
@@ -51,7 +53,7 @@ app.get('/api/design',c=>{
   c.header('Content-Security-Policy',"sandbox allow-scripts; default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; frame-ancestors 'none'; form-action 'none'; base-uri 'none'");
   return c.html(readFileSync('/app/design.html','utf8'));
 });
-app.post('/api/logout',c=>{sessions.delete(getCookie(c,'voice_owner')!);deleteCookie(c,'voice_owner',{path:'/'});return c.json({ok:true});});
+app.post('/api/logout',c=>{const token=getCookie(c,'voice_owner')!;sessions.delete(token);diagnostics.reset(token);deleteCookie(c,'voice_owner',{path:'/'});return c.json({ok:true});});
 interface WorkerSnapshot { status: string; jobs: number | null; capacity: number | null; at: string | null }
 function workerSnapshot(): WorkerSnapshot {
   const unknown = (status: string): WorkerSnapshot => ({status,jobs:null,capacity:null,at:null});
@@ -184,6 +186,37 @@ function nightBridgeFail(c: {json: (body: object, status: number) => Response}, 
 }
 const checkDeviceOrigin = (c: {req: {url: string; header: (name: string) => string | undefined}}) =>
   isSameOriginRequest(c.req.url, c.req.header('Origin'), c.req.header('Sec-Fetch-Site'), process.env.TALK_SITE_ORIGIN);
+// Only the owner console session is allowed to exercise these private brain routes.
+const consoleRoutes: Record<string,RegExp> = {
+  GET: /^(?:overview|activity|memories|growth|search|tools\/history|voice-cues|conversations\/[A-Za-z0-9_-]{1,128})$/,
+  POST: /^(?:memories|growth\/[A-Za-z0-9_-]{1,128}\/revoke)$/,
+  PUT: /^(?:tools|style|voice-cues|memories\/[A-Za-z0-9:._-]{1,180})$/,
+  DELETE: /^memories\/[A-Za-z0-9:._-]{1,180}$/,
+};
+app.get('/api/operations', async c => c.json(await getOperations()));
+app.all('/api/brain/*', async c => {
+  if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'},403);
+  const route = c.req.path.slice('/api/brain/'.length);
+  if (!consoleRoutes[c.req.method]?.test(route)) return c.json({error:'未提供此操作'},404);
+  if (!process.env.BRAIN_HEALTH_URL) return c.json({error:'私人语音大脑尚未接入'},503);
+  try {
+    const key = readFileSync('/run/brain-console.key','utf8').trim();
+    if (!/^[a-f0-9]{64}$/.test(key)) throw Error();
+    const target = new URL('/internal/console/'+route, process.env.BRAIN_HEALTH_URL);
+    for (const [k,v] of new URL(c.req.url).searchParams) {
+      if (!['offset','limit'].includes(k)) return c.json({error:'分页参数无效'},400);
+      target.searchParams.set(k,v);
+    }
+    const response = await fetch(target,{
+      method:c.req.method, redirect:'error', signal:AbortSignal.timeout(8000),
+      headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},
+      body:c.req.method==='GET' ? undefined : await c.req.text(),
+    });
+    if (response.status===401 || response.status===403 || response.status>=500) throw Error();
+    if (!response.headers.get('content-type')?.includes('application/json')) throw Error();
+    return new Response(response.body,{status:response.status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
+  } catch { return c.json({error:'私人语音大脑管理接口暂不可用'},503); }
+});
 app.use('/api/devices', async (c, next) => {
   if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'}, 403);
   await next();
@@ -195,6 +228,10 @@ app.use('/api/devices/*', async (c, next) => {
 app.get('/api/devices', async c => {
   try { return c.json(await getNightDevices(NIGHT_BRIDGE_SOCKET)); }
   catch (error) { return nightBridgeFail(c, error); }
+});
+app.get('/api/devices/:id/diagnostics', async c => {
+  try { return c.json(await getDeviceDiagnostics(c.req.param('id'),c.req.query('days'))); }
+  catch (e) { return nightBridgeFail(c,e); }
 });
 app.post('/api/devices/:id/color', async c => {
   const body = await c.req.json().catch(() => null);
@@ -218,34 +255,23 @@ app.post('/api/voices/preview',async c=>{
     return new Response(res.body,{headers:{'Content-Type':'audio/wav','Cache-Control':'no-store'}});
   } catch {return c.json({error:'试听暂时无法生成'},503);}
 });
-let testingBrain = false;
-app.post('/api/diagnostics/chat', async c => {
-  if (!process.env.BRAIN_HEALTH_URL) return c.json({error:'个人大脑尚未接入'},503);
-  const input = await c.req.json().catch(() => ({}));
-  if (typeof input.question !== 'string' || !input.question.trim() || input.question.length > 600) {
-    return c.json({error:'请输入 1 至 600 字的试问'},400);
-  }
-  if (testingBrain) return c.json({error:'已有试问运行中'},429);
-  testingBrain = true;
+const diagnostics=new DiagnosticSessions(()=>{
+  if (!process.env.BRAIN_HEALTH_URL) throw new DiagnosticError(503,'个人大脑尚未接入');
   try {
-    const key = readFileSync('/run/brain-access.env','utf8').match(/^LLM_API_KEY=([a-f0-9]{64})$/m)?.[1];
-    if (!key) return c.json({error:'大脑诊断授权未配置'},503);
-    const response = await fetch(new URL('/v1/chat/completions',process.env.BRAIN_HEALTH_URL),{
-      method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+key,
-        'X-Personal-Session':'admin-diagnostic-'+crypto.randomUUID()},
-      body:JSON.stringify({model:'personal-brain',stream:false,store:false,messages:[{role:'user',content:input.question.trim()}]}),
-      signal:AbortSignal.timeout(45000)
-    });
-    if (!response.ok) return c.json({error:'大脑暂时无法完成试问'},502);
-    const result = await response.json();
-    const text = result.choices?.[0]?.message?.content;
-    if (typeof text!=='string' || !text.trim()) return c.json({error:'大脑没有返回正文'},502);
-    const sources = (Array.isArray(result.sources)?result.sources:[]).slice(0,10)
-      .filter((s: {url?:string})=>typeof s.url==='string' && /^https?:\/\//.test(s.url))
-      .map((s: {title?:string;url:string})=>({title:s.title||s.url,url:s.url}));
-    return c.json({text,tool:typeof result.tool==='string'?result.tool:null,sources});
-  } catch { return c.json({error:'大脑连接失败或试问超时'},502); }
-  finally { testingBrain = false; }
+    const key=readFileSync('/run/brain-access.env','utf8').match(/^LLM_API_KEY=([a-f0-9]{64})$/m)?.[1];
+    if (key) return {key,url:new URL('/v1/chat/completions',process.env.BRAIN_HEALTH_URL)};
+  } catch {}
+  throw new DiagnosticError(503,'大脑诊断授权未配置');
+});
+setInterval(()=>diagnostics.expire(),60_000).unref();
+app.post('/api/diagnostics/reset',c=>{
+  diagnostics.reset(getCookie(c,'voice_owner')!);
+  return c.json({ok:true});
+});
+app.post('/api/diagnostics/chat',async c=>{
+  const body=await c.req.json().catch(()=>null);
+  try { return c.json(await diagnostics.ask(getCookie(c,'voice_owner')!,body?.question,c.req.raw.signal)); }
+  catch (e) {return e instanceof DiagnosticError ? c.json({error:e.message},e.status) : c.json({error:'试问失败'},502);}
 });
 app.put('/api/drafts/:kind',async c=>{
   const kind=HOTWORD_KINDS.find(k=>k===c.req.param('kind'));

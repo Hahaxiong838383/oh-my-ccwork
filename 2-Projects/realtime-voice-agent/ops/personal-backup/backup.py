@@ -5,6 +5,8 @@ import contextlib
 import json
 import os
 import secrets
+import shlex
+import sys
 import sqlite3
 import subprocess
 import tarfile
@@ -16,6 +18,7 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 
 MAGIC = b'XKDB1'
 ITEM = '小可个人语音数据库备份密钥'
+NAS_SSH = ['ssh', '-oBatchMode=yes', '-oConnectTimeout=8', 'hahaxiong83@192.168.1.115']
 DIR = Path('/data/home-studio/archives/realtime-voice-agent')
 FILES = {'admin/config.db','admin/devices.db','admin/profile.db','brain/conversations.sqlite','brain/profile.sqlite','brain/search.sqlite'}
 
@@ -81,7 +84,7 @@ def take(key):
         try:
             stage.write(MAGIC+nonce)
             with (Path(__file__).parent/'snapshot.py').open('rb') as script, subprocess.Popen(
-                ['ssh','-oBatchMode=yes','-oConnectTimeout=8','hahaxiong83@192.168.1.115','python3 -B -'],
+                [*NAS_SSH, 'python3 -B -'],
                 stdin=script,stdout=subprocess.PIPE) as proc:
                 for chunk in iter(lambda:proc.stdout.read(65536),b''):
                     stage.write(cipher.update(chunk))
@@ -94,6 +97,17 @@ def take(key):
     return final
 
 
+def publish_receipt(archive):
+    captured = datetime.strptime(archive.stem, '%Y%m%dT%H%M%S%fZ').replace(tzinfo=timezone.utc)
+    receipt = {'schema': 1, 'scope': 'personal-voice',
+               'capturedAt': captured.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+               'verifiedAt': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+               'databaseCount': len(FILES), 'archiveBytes': archive.stat().st_size}
+    command = shlex.join(['python3', '-B', '-', json.dumps(receipt, separators=(',', ':'))])
+    with Path(__file__).with_name('receipt.py').open('rb') as script:
+        subprocess.run([*NAS_SSH, command], stdin=script, timeout=30, check=True)
+
+
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('--verify',type=Path)
@@ -103,4 +117,10 @@ if __name__=='__main__':
     if args.verify:
         verify(args.verify,key);print('已解密恢复并核验 6 个数据库')
     else:
-        print(take(key))
+        archive = take(key)
+        print(archive, flush=True)
+        try:
+            publish_receipt(archive)
+        except (OSError, subprocess.SubprocessError) as error:
+            print('备份已落盘并通过恢复核验，管理后台回执投递失败：' + type(error).__name__, file=sys.stderr)
+            sys.exit(2)

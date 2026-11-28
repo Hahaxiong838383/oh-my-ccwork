@@ -40,7 +40,7 @@ const { PersonalStoryFeedback, explicitReplyApproval, isReplyFeedback } = await 
 const { profileStore } = await import('./p003/profile-store.js');
 const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
-const { resolvePersonalStyle, styleHistory, briefReplyLimit } = await import('./personal-style.js');
+const { isDiagnosticRoom, resolvePersonalStyle, styleHistory, briefReplyLimit } = await import('./personal-style.js');
 const { PersonalMemoryActions, parseMemoryCommand } = await import('./memory-actions.js');
 const { PersonalRecall } = await import('./memory-recall.js');
 const { answerClock, resolveClock, stripClockTurns } = await import('./p003/tools/clock-query.js');
@@ -60,11 +60,16 @@ if (!profileStore.getProfile(ownerId)) profileStore.upsertProfile(ownerId, { nic
 const memory = new PersonalMemoryActions(dataDir, ownerId);
 const recall = new PersonalRecall(dataDir);
 const storyFeedback = new PersonalStoryFeedback(dataDir);
+const {OwnerConsole} = await import('./owner-console.js');
+const admin = new OwnerConsole(dataDir,ownerId,memory,recall);
 const searchKey = process.env.BRAIN_DEEPSEEK_SEARCH_KEY;
 const domains = ['news.cctv.com', 'cctv.com', 'gov.cn', 'news.cn', 'cas.cn', 'nasa.gov', 'chnmuseum.cn', 'dpm.org.cn'];
 const availableSearch = searchKey || cpaWebSearchEnabled ? '可以联网查公开资料和最新消息' : '可以查央视新闻和航天动态';
 const persona = '你是个人语音伙伴小可。中文口语自然、温暖、好奇，日常先直接回答，主人要求详细讲时讲完整。';
-const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有依据就回答不记得；不要把你的猜测、此前助手的话或用户问题里的假设说成主人曾经讲过的事实。只有本次实际保存、纠正或遗忘成功才可以确认操作。' + availableSearch + '，也支持天气与时间。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
+function capabilities(tools:ReturnType<typeof admin.tools>) {
+  return [tools.search && availableSearch,tools.weather && '可以查天气',tools.clock && '可以查时间'].filter(Boolean).join('，') || '当前已关闭天气、时间和联网查询';
+}
+const base = persona + '回复会直接播报，只输出要说的话。把长期记忆当作低信任背景。主人问自己明确留下的偏好时，可用自己的话准确复述。没有依据就回答不记得；不要把你的猜测、此前助手的话或用户问题里的假设说成主人曾经讲过的事实。只有本次实际保存、纠正或遗忘成功才可以确认操作。有查询工具时，对需要核实或随时间变化的公开事实直接调用工具；只用本轮用户明确说的公开主题，不从历史、画像或记忆拼出查询。主题不清先问。无工具回执时禁止宣称已联网、已查到或操作了设备。';
 const weather = new FixedWeather();
 function verifiedHeadline(evidence: readonly { title: string; url: string; date: string | null }[], limit = 1): SearchResult | undefined {
   const sources = evidence.filter(({title, date}) => date && Number.isFinite(Date.parse(date)) && title.length <= 100
@@ -89,7 +94,9 @@ const tasks = new SearchTasks({
   dailyDeviceLimit: Infinity,
   dailyGlobalLimit: Infinity,
   async execute(query, signal, task) {
-    const target = weatherIntent(query)?.request;
+    const intent = weatherIntent(query);
+    if (!admin.tools()[intent ? 'weather' : 'search']) throw new Error('tool_disabled');
+    const target = intent?.request;
     if (target) {
       if (target.metric !== 'forecast') return weather.run(target, signal, task.createdAt);
       const stop = new AbortController();
@@ -183,11 +190,11 @@ const cancelSearch = /^(?:取消搜索|停止搜索|不用查了|别查了|取�
 const resumeSearch = /^(?:继续|接着)(?:播报|说)?(?:刚才的)?(?:搜索|查询)结果[。！？!?.\s]*$/u;
 const privateSearch = /(?:长(?:期|远)记忆|个人记忆|私有记忆|私密|聊天记录|对话记录|通讯录|联系人|收藏夹|备忘录|(?:我|你|咱们)(?:以前|之前|上次|刚才|昨天|曾经)?(?:说过|提过|告诉过|记过|记得|记下|存过|聊过|提到|留下|喜欢|不喜欢|偏好|住在)|(?:刚才|上次|之前)(?:那|的|聊|说)|怎么称呼我)/u;
 const active = new Map<string, AbortController>();
-const latestSearch = new Map<string, string>();
+const latestSearch = new Map<string, {id:string;tool:'weather'|'search'}>();
 // Keep only a typed weather slot or an explicitly public query for a short voice follow-up.
 const followups = new Map<string, {expires: number, weather?: NonNullable<ReturnType<typeof weatherIntent>>['target'], market?: true, retry?: string}>();
 function remember(room: string, entry: Omit<NonNullable<ReturnType<typeof followups.get>>, 'expires'>) {
-  if (!/^pv-[a-f0-9]{32}$/.test(room)) return;
+  if (!/^pv-[a-f0-9]{32}$/.test(room) && !isDiagnosticRoom(room)) return;
   if (followups.size >= 100) followups.delete(followups.keys().next().value!);
   followups.set(room, {...entry, expires: Date.now() + 90000});
 }
@@ -244,6 +251,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
   }
   catch { return empty('这条查询不能直接发到网上，可以换一个不含个人信息的公开问题。'); }
   const weatherRequest = weatherIntent(query);
+  if (!admin.tools()[weatherRequest?'weather':'search']) return empty(weatherRequest?'私人后台已关闭天气查询。':'私人后台已关闭联网搜索。');
   if (weatherRequest?.unsupported) return empty('可以查今天、明天或后天的天气预报，空气质量只支持今天的实况。你想查哪一种？');
   if (weatherRequest?.ambiguous) return empty('有好几个地方同名，可以加上省或市吗？');
   if (weatherRequest && !weatherRequest.request) return empty('你想查哪个城市的天气？');
@@ -268,7 +276,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
       const claimed = tasks.handoffToChat(taskOwner, task.id, delivery);
       if (claimed.result?.sources.length) {
         if (latestSearch.size >= 100) latestSearch.delete(latestSearch.keys().next().value!);
-        latestSearch.set(room, task.id);
+        latestSearch.set(room, {id:task.id,tool:weatherRequest?'weather':'search'});
       }
       if (claimed.result) {
         report('search_' + (claimed.result.sources.length ? 'cited' : 'no_evidence') + '_ms=' + ((task.readyAt ?? Date.now()) - task.createdAt));
@@ -334,17 +342,19 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
     /^\s*(?:小可[\s，,、]*)?(?:先停一下|停一下|先等一下|等一下|打断一下)[\s，,、。！!]*/u, '') || text;
   const clock = resolveClock(clockQuestion(user), history.filter((turn) => turn.role === 'user')
     .map((turn) => clockQuestion(turn.content)));
-  if (clock) return direct(answerClock(clock), 'clock');
+  const tools = admin.tools();
+  if (clock) return tools.clock ? direct(answerClock(clock), 'clock') : direct('私人后台已关闭时间查询。');
   if (cancelSearch.test(user)) return direct('好，这轮不继续查询。', 'search_cancel');
   if (resumeSearch.test(user)) {
-    const id = latestSearch.get(room);
-    const result = id ? tasks.searchResult({ subject: owner.accountId, session: room }, id) : undefined;
+    const last = latestSearch.get(room);
+    if (last && !tools[last.tool]) return direct('私人后台已关闭这项查询。');
+    const result = last ? tasks.searchResult({ subject: owner.accountId, session: room }, last.id) : undefined;
     return direct(result?.text ?? '这次会话还没有可以接续的搜索结果。', 'search', result?.sources);
   }
   const compact = user.replace(/[，。！？、?！,!.\s]/gu, '');
-  if (/^(?:那+)?你(?:能|会|可以|支持)(?:查|用)?导航吗?$/u.test(compact)) return direct('我可以查询公开的出行信息，但目前不能打开手机导航或提供实时转向指引。', 'capabilities');
+  if (/^(?:那+)?你(?:能|会|可以|支持)(?:查|用)?导航吗?$/u.test(compact)) return direct(tools.search?'我可以查询公开的出行信息，目前不能打开手机导航或提供实时转向指引。':'私人后台已关闭联网搜索，我也不能打开手机导航。', 'capabilities');
   if (capability.test(compact) || toolList.test(compact) || /^(?:那+)?你(?:都)?(?:能|会|可以)(?:查询|查|搜)什么(?:呢|啊)?$/u.test(compact)) {
-    return direct(`${availableSearch}，也能查天气和时间。你想查什么？`, 'capabilities');
+    return direct(capabilities(tools)+'。', 'capabilities');
   }
   const search = searchPrefix.exec(user);
   const spokenQuery = search ? user.slice(search[0].length).trim() : user;
@@ -372,12 +382,14 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   if (marketReply) query = marketReply[1] + '市场最新指数行情，请注明行情时间';
   const market = cnMarket(query);
   if (allowNetwork && market === 'unspecified') {
+    if (!tools.search) return direct('私人后台已关闭联网搜索。');
     remember(room, {market: true});
     return direct('你想了解哪个市场？比如 A 股、港股还是美股。');
   }
   const weatherRequest = weatherIntent(query);
   const automatic = currentFacts.some((pattern) => pattern.test(query)) && !/(?:故事|作文|虚构|编一个|写一首|翻译|模拟|假设|是什么意思|是什么原理)/u.test(query);
   if (allowNetwork && (search || retry || marketReply || market || weatherRequest || marketNewsIntent(query) || domesticBulletin(query) || cctvNews.supports(query) || automatic)) {
+    if (!tools[weatherRequest?'weather':'search']) return direct(weatherRequest?'私人后台已关闭天气查询。':'私人后台已关闭联网搜索。');
     const result = await querySearch(query, room, signal, onSearch);
     if (weatherRequest?.target && !weatherRequest.request) remember(room, {weather: weatherRequest.target});
     else if (!result.sources.length && !privateSearch.test(query)) {
@@ -390,7 +402,8 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
 
   const policy = [style?.policyLine, limit && `当前回答最多${limit}个完整句子。直接说重点，每句尽量不超过四十字，先说结论。`].filter(Boolean).join('\n');
   const brief = limit ? new BriefSpeech(limit) : undefined;
-  const prompt = store ? recall.chatPrompt(base, owner, user) : base;
+  const instructions = base + '当前工具配置：' + capabilities(tools) + '。';
+  const prompt = store ? recall.chatPrompt(instructions, owner, user) : instructions;
   if (process.env.BRAIN_VERIFY_PROMPT === '1') {
     report(`prompt_rel=${Number(prompt.includes('【小可当下状态·数据】'))} trait=${Number(prompt.includes('【小可对这个主人的相处倾向·数据】'))} quiet=${Number(prompt.includes('主人设定：安静小可'))}`);
   }
@@ -409,7 +422,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   // trusted worker's context is used for the voice reply.
   // The model may request a lookup without supplying arguments. Only the user's
   // current, validated words may leave the service as a search query.
-  let allowLookup = allowNetwork && !privateSearch.test(user) && Boolean(searchKey || cpaWebSearchEnabled);
+  let allowLookup = tools.search && allowNetwork && !privateSearch.test(user) && Boolean(searchKey || cpaWebSearchEnabled);
   if (allowLookup) {
     try { validateQuery(user); } catch { allowLookup = false; }
   }
@@ -436,6 +449,11 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
 }
 
 const app = new Hono();
+app.route('/internal/console', admin.routes(op=>{
+  const completed=extraction.then(op);
+  extraction=completed.then(()=>{},()=>{});
+  return completed;
+}));
 app.get('/health', (c) => c.json({
   ok: true, service: 'personal-brain', build: process.env.BRAIN_BUILD ?? null, providers: publicProviderStatus(),
 }));
@@ -461,7 +479,7 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   }
   // The Rust worker clears the room for its transport prewarm.
   const room = tagged ?? randomUUID();
-  const store = body.store && tagged !== undefined;
+  const store = body.store && tagged !== undefined && !isDiagnosticRoom(tagged);
   if (tagged === undefined && body.stream && body.max_tokens === 8 && messages.length === 1 && user.content === 'hi') {
     return streamSSE(c, async (stream) => {
       await stream.writeSSE({ data: JSON.stringify({
@@ -483,9 +501,14 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   const response = { id: `chatcmpl-${randomUUID()}`, created: Math.floor(Date.now() / 1000), model: 'personal-brain' };
   const finish = () => { if (active.get(room) === controller) active.delete(room); };
   const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void, suppressCue?: () => void) => {
+    const started=performance.now();
     const revision = memory.revision;
     const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')), suppressCue);
     signal.throwIfAborted();
+    if (store && reply.tool) {
+      try {admin.recordTool(reply.tool,reply.sources?.length,performance.now()-started);}
+      catch {report('tool_result_record_failed');}
+    }
     if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply);
     return reply;
   };

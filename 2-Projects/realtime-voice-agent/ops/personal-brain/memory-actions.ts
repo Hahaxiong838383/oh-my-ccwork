@@ -4,7 +4,7 @@ import {DatabaseSync} from 'node:sqlite';
 import {isCrisisContent} from './p003/memory-safety-filter.js';
 
 type Fact = {kind:'name'|'preference'|'fact'; topic:string; value:string; quote:string};
-type Target = {topic:string; kind?:Fact['kind']};
+type Target = {topic:string; kind?:Fact['kind']; itemId?:string};
 export type MemoryCommand = {op:'set'; facts:Fact[]} | {op:'forget'; target:Target} | {op:'clarify'; text:string};
 type Chat = {role:'user'|'assistant'; content:string};
 const clarify = (text:string): MemoryCommand => ({op:'clarify', text});
@@ -151,11 +151,27 @@ export class PersonalMemoryActions {
   close():void { this.db.close(); }
 
   private remove(target:Target):boolean {
+    if (target.itemId) {
+      const row=this.db.prepare('SELECT content,source_msg_id,type FROM memory_item WHERE id=? AND account_id=?').get(target.itemId,this.owner);
+      if (!row) return false;
+      this.db.prepare('DELETE FROM memory_item WHERE id=? AND account_id=?').run(target.itemId,this.owner);
+      const content=String(row.content);
+      if (row.type==='preference' && row.source_msg_id) {
+        const profile=this.db.prepare('SELECT interests FROM family_member WHERE account_id=?').get(this.owner);
+        const interests=JSON.parse(String(profile?.interests??'[]')) as Interest[];
+        const keep=interests.filter(i=>i.source_msg_id!==row.source_msg_id || ![i.value,'喜欢'+i.value,'喜欢吃'+i.value].includes(content));
+        if (keep.length!==interests.length) this.db.prepare('UPDATE family_member SET interests=?,updated_at=? WHERE account_id=?')
+          .run(JSON.stringify(keep),Date.now(),this.owner);
+      }
+      if (content.length>1) this.db.prepare("UPDATE relation_state SET self_narrative='' WHERE account_id=? AND instr(self_narrative,?)").run(this.owner,content);
+      return true;
+    }
     const {topic,kind}=target;
     const p=this.db.prepare(`SELECT nickname,preferred_address,interests,recent_emotion,personality_notes,
       birthday,gender,age_years FROM family_member WHERE account_id=?`).get(this.owner) as unknown as Profile;
     const known=this.db.prepare('SELECT kind,topic,value FROM personal_memory_fact WHERE account_id=?').all(this.owner) as
       {kind:Fact['kind'];topic:string;value:string}[];
+    const canonicalText=new Set<string>();
     const terms=new Set<string>([topic]);
     const shortValues=new Set<string>();
     // A one-character name, gender or value may occur in many unrelated memories.
@@ -165,6 +181,7 @@ export class PersonalMemoryActions {
     for (const row of known) {
       if ((kind && row.kind!==kind) || !(row.topic===topic || (!kind && (row.value===topic || (topic.length>1 && row.value.includes(topic)))) || (kind==='name' && row.kind==='name'))) continue;
       this.db.prepare('DELETE FROM personal_memory_fact WHERE account_id=? AND kind=? AND topic=?').run(this.owner,row.kind,row.topic);
+      canonicalText.add(factText({...row,quote:''}));
       if (row.kind!=='preference') addValue(row.value);
       changed=true;
     }
@@ -197,8 +214,12 @@ export class PersonalMemoryActions {
       this.db.prepare('UPDATE family_member SET '+f+'=?,updated_at=? WHERE account_id=?').run(v,Date.now(),this.owner);
     const memory=this.db.prepare('SELECT id,content,subject,type FROM memory_item WHERE account_id=?').all(this.owner) as {id:string;content:string;subject:string;type:string}[];
     for (const m of memory) {
-      if (kind==='preference' && m.type!=='preference' && !/(?:喜欢|忌口|过敏|不爱吃|不吃|爱吃)/u.test(m.content)) continue;
-      if (kind==='fact' ? !m.content.includes(topic) : !mentions(m.content) && !mentions(m.subject)) continue;
+      if (kind==='preference') {
+        const value=m.content.replace(/^(?:最)?(?:不喜欢吃|喜欢吃|不喜欢|喜欢|不爱吃|不吃|爱吃|讨厌|忌口)/u,'');
+        if (value!==topic || (value===m.content && m.type!=='preference')) continue;
+      } else if (kind==='fact') {
+        if (!canonicalText.has(m.content) && m.content!==topic) continue;
+      } else if (!mentions(m.content) && !mentions(m.subject)) continue;
       this.db.prepare('DELETE FROM memory_item WHERE id=? AND account_id=?').run(m.id,this.owner); changed=true;
     }
     // These two prompt sections can quote the old fact even after the corresponding memory was revoked.

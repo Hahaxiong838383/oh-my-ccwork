@@ -107,8 +107,10 @@ function policy(key: Style, temporary: boolean): string {
   return `本轮表达要求（${scope}）优先于以往的表达模板和话语量倾向。${rule}直接回答本轮的具体问题。`;
 }
 
+export const isDiagnosticRoom = (room:string) => /^admin-diagnostic-[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(room);
+
 export function resolvePersonalStyle(account: string, user: string, store: boolean, history: readonly Turn[], room?: string): Resolution | undefined {
-  const id = room && store ? account + '/' + room : undefined;
+  const id = room && (store || isDiagnosticRoom(room)) ? account + '/' + room : undefined;
   const slot = id ? rooms.get(id) : undefined;
   const instruction = parse(user);
   if (!instruction) {

@@ -3,9 +3,9 @@ import { join } from 'node:path';
 import { assembleSystemPrompt } from './p003/prompt-orchestrator.js';
 import { checkRenameCandidate } from './p003/rename-gate.js';
 
-type Evidence = {kind: string; topic: string; value: string; quote: string; id?: string};
+type Evidence = {kind: string; topic: string; value: string; quote: string; id?: string; updatedAt?: number};
 type Saved = {kind: string; topic: string; value: string; source_quote: string; original: string};
-type Item = {id: string; role: string; type: string; content: string; original: string; source_quote: string};
+type Item = {id: string; updatedAt: number; role: string; type: string; content: string; original: string; source_quote: string};
 const unknown = '我不记得这件事，没有能核实的记录。';
 const nickname = /(?:怎么|如何)(?:叫|称呼|喊)我|(?:叫|称呼|喊)我(?:什么|啥)|我(?:的)?(?:名字|称呼|姓名|昵称|外号)|我叫(?:什么|啥)|我是谁|怎么叫我/u;
 const dislike = /不喜欢|不爱(?:吃|喝)?|讨厌|忌口|不吃|不喝|避开|过敏/u;
@@ -64,8 +64,8 @@ export class PersonalRecall {
   }
   close(): void { this.db.close(); }
 
-  private evidence(owner: string): Evidence[] {
-    const explicit = this.db.prepare(`SELECT f.kind,f.topic,f.value,f.source_quote,c.text AS original
+  evidence(owner: string): Evidence[] {
+    const explicit = this.db.prepare(`SELECT f.kind,f.topic,f.value,f.source_quote,f.updated_at AS updatedAt,c.text AS original
       FROM personal_memory_fact f JOIN conv.conversation c ON c.id=f.source_msg_id AND c.account_id=f.account_id
       WHERE f.account_id=? AND c.role='user' ORDER BY f.updated_at DESC`).all(owner) as Saved[];
     const result: Evidence[] = explicit.filter(f => cleanEvidence(f.topic) && cleanEvidence(f.value)
@@ -79,7 +79,7 @@ export class PersonalRecall {
         checkRenameCandidate(name,part,[{role:'user',content:text}],'').ok));
       if (supported) result.push({kind:'name',topic:'称呼',value:name,quote:name});
     }
-    const rows = this.db.prepare(`SELECT m.id,m.type,m.content,m.source_quote,c.role,c.text AS original FROM memory_item m
+    const rows = this.db.prepare(`SELECT m.id,m.type,m.content,m.source_quote,m.created_at AS updatedAt,c.role,c.text AS original FROM memory_item m
       JOIN conv.conversation c ON c.id=m.source_msg_id AND c.account_id=m.account_id
       WHERE m.account_id=? AND m.status='active' AND (c.role='user' OR (m.type='promise' AND m.subject='xiaoke' AND c.role='assistant')) AND c.memory_excluded=0 ORDER BY m.created_at DESC`).all(owner) as Item[];
     for (const row of rows) {
@@ -90,7 +90,7 @@ export class PersonalRecall {
           normalize(x).includes(normalize(row.content)) && (!row.source_quote || row.original.includes(row.source_quote)));
         if (quote) item = {kind:row.role==='assistant'?'assistant-promise':row.type,topic:row.content,value:row.content,quote};
       }
-      if (item && !result.some(e=>e.topic===item!.topic)) result.push({...item,id:row.id});
+      if (item && !result.some(e=>e.topic===item!.topic)) result.push({...item,id:row.id,updatedAt:row.updatedAt});
     }
     if (profile?.interests) {
       const source = this.db.prepare("SELECT text FROM conv.conversation WHERE id=? AND account_id=? AND role='user' AND memory_excluded=0");

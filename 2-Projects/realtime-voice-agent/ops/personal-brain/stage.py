@@ -139,6 +139,12 @@ old = "if (!/^BJP003\\d{14}$/.test(owner.subject) || !owner.session.startsWith(`
 if text.count(old) != 1:
     raise SystemExit('P003 search owner gate moved')
 text = text.replace(old, "if (!/^[a-z0-9_-]{1,64}$/.test(owner.subject) || !/^[A-Za-z0-9_-]{1,128}$/.test(owner.session))")
+# The shared ledger expires result bodies after five minutes. Keep just the source count
+# for the remainder of its 24-hour retention so the console does not mistake expiry for zero.
+anchor = "current.outcome = result.sources.length || result.clock ? 'answered' : 'no_evidence';"
+if text.count(anchor) != 1:
+    raise SystemExit('Personal search outcome hook moved')
+text = text.replace(anchor, anchor + "\n      Object.assign(current,{sourceCount:result.sources.length});")
 position = text.index('  receipt(owner:')
 path.write_text(text[:position] + """  handoffToChat(owner: SearchOwner, id: string, delivery: string): SearchTask {
     const task = this.claim(owner, id, delivery);
