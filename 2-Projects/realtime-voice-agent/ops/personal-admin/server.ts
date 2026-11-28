@@ -1,3 +1,6 @@
+import {recentTurnTimings} from './turn-timing.ts';
+import {wordPublications} from './word-publications.ts';
+import {privateWordsJs} from './private-words-ui.ts';
 import {readFileSync} from 'node:fs';
 import {createServer, get as httpsGet} from 'node:https';
 import {Hono} from 'hono';
@@ -34,6 +37,7 @@ app.use('*',async(c,next)=>{
 });
 app.use('/api/*',bodyLimit({maxSize:16384}));
 app.get('/',c=>c.html(page));
+app.get('/assets/private-words.js',c=>c.body(privateWordsJs,200,{'Content-Type':'text/javascript; charset=utf-8'}));
 app.get('/health',c=>c.json({service:'personal-voice-admin',ok:true}));
 app.post('/api/login',async c=>{
   const body=await c.req.json().catch(()=>({}));
@@ -188,11 +192,14 @@ const checkDeviceOrigin = (c: {req: {url: string; header: (name: string) => stri
   isSameOriginRequest(c.req.url, c.req.header('Origin'), c.req.header('Sec-Fetch-Site'), process.env.TALK_SITE_ORIGIN);
 // Only the owner console session is allowed to exercise these private brain routes.
 const consoleRoutes: Record<string,RegExp> = {
-  GET: /^(?:overview|activity|memories|growth|search|tools\/history|voice-cues|conversations\/[A-Za-z0-9_-]{1,128})$/,
-  POST: /^(?:memories|growth\/[A-Za-z0-9_-]{1,128}\/revoke)$/,
+  GET: /^(?:overview|activity|memories|memories\/[a-f0-9]{64}|turns\/[A-Za-z0-9_-]{1,128}\/memories|extractions|growth\/snapshots|growth|search|tools\/history|voice-cues|conversations\/[A-Za-z0-9_-]{1,128})$/,
+  POST: /^(?:memory-preview|memories|memories\/[a-f0-9]{64}\/review|growth\/[A-Za-z0-9_-]{1,128}\/revoke)$/,
   PUT: /^(?:tools|style|voice-cues|memories\/[A-Za-z0-9:._-]{1,180})$/,
   DELETE: /^memories\/[A-Za-z0-9:._-]{1,180}$/,
 };
+app.use('/api/word-publications',async(c,next)=>{if(!checkDeviceOrigin(c))return c.json({error:'请求来源无效'},403);await next();});
+app.route('/api/word-publications',wordPublications());
+app.get('/api/turn-timing',c=>{try{return c.json(recentTurnTimings());} catch{return c.json({error:'无法读取语音时间采样'},503);}});
 app.get('/api/operations', async c => c.json(await getOperations()));
 app.all('/api/brain/*', async c => {
   if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'},403);
@@ -204,7 +211,7 @@ app.all('/api/brain/*', async c => {
     if (!/^[a-f0-9]{64}$/.test(key)) throw Error();
     const target = new URL('/internal/console/'+route, process.env.BRAIN_HEALTH_URL);
     for (const [k,v] of new URL(c.req.url).searchParams) {
-      if (!['offset','limit'].includes(k)) return c.json({error:'分页参数无效'},400);
+      if (!['offset','limit'].includes(k) && !(route==='memories' && ['q','state','kind'].includes(k)) && !(route.startsWith('conversations/') && k==='anchor')) return c.json({error:'分页参数无效'},400);
       target.searchParams.set(k,v);
     }
     const response = await fetch(target,{

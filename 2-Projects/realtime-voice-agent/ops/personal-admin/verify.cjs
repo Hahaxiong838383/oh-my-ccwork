@@ -45,7 +45,45 @@ async function verify() {
         const el=document.getElementById(id);
         return count ? el.querySelectorAll('.record').length===count : /暂无|尚未/.test(el.textContent);
       },[root,data.items.length]);
+      if(tab==='memories'){
+        for(const key of ['verified','pending','conflict','inactive']){
+          const metric=data.counts[key==='conflict'?'conflicts':key];
+          assert.ok(Number.isSafeInteger(metric)&&metric>=0);
+          assert.equal(await page.locator('#memCounters [data-state="'+key+'"] strong').textContent(),String(metric));
+        }
+        if(data.items.length){
+          const row=data.items[0],route='/api/brain/memories/'+encodeURIComponent(row.id);
+          const response=page.waitForResponse(r=>new URL(r.url()).pathname===route);
+          await page.locator('#memoryRows [data-memory]').first().click();
+          const detail=await (await response).json();
+          assert.equal(detail.item.id,row.id);assert.ok(Array.isArray(detail.uses));
+          await page.waitForFunction(value=>document.querySelector('#memDetail').textContent.includes(value),detail.item.value);
+          assert.equal(await page.locator('#memDetail').isVisible(),true);
+          assert.equal(await page.locator('#memoryRows').isVisible(),false);
+          await page.locator('#memoryBack').click();assert.equal(await page.locator('#memoryRows').isVisible(),true);
+        }
+        const ex=page.waitForResponse(r=>new URL(r.url()).pathname==='/api/brain/extractions');
+        await page.locator('#extractTab').click();
+        const records=await(await ex).json();
+        assert.equal(records.total,records.summary.runs);assert.equal(typeof records.service.configured,'boolean');
+        await page.waitForFunction(n=>document.querySelector('#extractStats strong')?.textContent===String(n),records.total);
+        assert.equal(await page.locator('#extractRows .record').count(),records.items.length);
+      }
+      if(tab==='growth'){
+        const snapshots=await read('brain/growth/snapshots');
+        if(snapshots.items.length){
+          await page.locator('#snapshotCompare tbody tr').first().waitFor();
+          assert.equal(await page.locator('#snapshotCompare tbody tr').count(),snapshots.dimensions.length+4);
+        }else await page.getByText('尚无每日快照。',{exact:true}).waitFor();
+      }
+      if(tab==='tools'){
+        const samples=await read('turn-timing');assert.ok(Array.isArray(samples.items));
+        await page.waitForFunction(()=>document.querySelector('#turnTiming tbody tr')||document.querySelector('#turnTiming').textContent.includes('尚无可回看'));
+      }
     }
+    const wordState=await open('hotwords','/api/word-publications');
+    assert.ok(Number.isSafeInteger(wordState.current.revision));
+    await page.waitForFunction(n=>document.getElementById('privateWordsPanel').textContent.includes('版本 '+n),wordState.current.revision);
     const cues=await open('filler','/api/brain/voice-cues');
     assert.ok(Number.isSafeInteger(cues.revision));
     await page.waitForFunction(rev=>document.getElementById('cueState').textContent.includes('修订 '+rev),cues.revision);

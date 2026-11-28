@@ -52,9 +52,9 @@ try {
     assert.equal(r.status,status,path+' '+JSON.stringify(json));
     return json;
   };
-  const say=async (q,room='pv-'+'1'.repeat(32),store=true)=>{
+  const say=async (q,room='pv-'+'1'.repeat(32),store=true,history=[])=>{
     const r=await request(base+'/v1/chat/completions?room='+room,{method:'POST',headers:{authorization:'Bearer '+worker,'content-type':'application/json'},
-      body:JSON.stringify({store,messages:[{role:'user',content:q}]})});
+      body:JSON.stringify({store,messages:[...history,{role:'user',content:q}]})});
     const v=await r.json();assert.equal(r.status,200);return v.choices[0].message.content;
   };
   await call('/overview','GET',undefined,worker,401);
@@ -63,6 +63,21 @@ try {
   const initial=await call('/overview');assert.equal(initial.memoryCount,0);assert.equal(initial.traits.length,5);
   await call('/memories','POST',{text:'记住，我的暗号是青松'});
   assert.match(await say('我的暗号是什么？'),/青松/);
+  // Compare the actual outgoing chat prompt to the receipt persisted for that exact reply.
+  const ledger=new DatabaseSync(join(dir,'profile.sqlite'),{readOnly:true});
+  try {
+    ledger.prepare('ATTACH DATABASE ? AS c').run(join(dir,'conversations.sqlite'));
+    const receipt=room=>ledger.prepare(`SELECT t.mode,t.memory_ids FROM personal_turn_recall t JOIN c.conversation m
+      ON m.id=t.reply_msg_id AND m.account_id=t.account_id WHERE m.session_id=? AND m.role='assistant' ORDER BY m.rowid DESC LIMIT 1`).get(room);
+    const room='pv-'+'b'.repeat(32);
+    await say('给我讲个海浪的故事',room);assert(!prompts.at(-1).includes('青松'));
+    assert.deepEqual({...receipt(room)},{mode:'model',memory_ids:'[]'});
+    await say('把暗号编进一个小故事',room);assert(prompts.at(-1).includes('青松'));
+    const fact=(await call('/memories')).items.find(x=>x.topic==='暗号');
+    assert.deepEqual(JSON.parse(receipt(room).memory_ids),[fact.id]);
+    await say('我的暗号是什么？',room);
+    assert.deepEqual({...receipt(room)},{mode:'direct',memory_ids:'[]'});
+  } finally {ledger.close();}
   let row=(await call('/memories')).items[0];assert.equal(row.topic,'暗号');assert.equal(row.value,'青松');assert.match(row.source,/青松/);
   await call('/memories/'+row.id,'PUT',{expected:'错误的',value:'白帆'},ownerKey,409);
   await call('/memories/'+row.id,'PUT',{expected:'青松',value:'白帆'});
@@ -179,6 +194,24 @@ try {
   await call('/growth/'+trait.id+'/revoke','POST',{});
   assert.equal((await call('/overview')).traits.find(t=>t.key==='storytelling').value,Number(trait.from));
   assert((await call('/growth')).items.filter(e=>e.id===example.id||e.id===trait.id).every(e=>!e.revertible));
+  // The approved reply paraphrases the topic and never repeats the underlying fact or its value.
+  // Retraction still invalidates this example via the actual model receipt.
+  await say('请记住，我的书签是月牙，我的杯子是石榴。',room);
+  const question='和我聊聊书签吧';
+  const priorReply=await say(question,room);
+  await say('那它呢，用它编一个故事。',room,true,[{role:'user',content:question},{role:'assistant',content:priorReply}]);
+  assert.match(prompts.at(-1),/月牙/);
+  await say('这种讲法我喜欢。',room);
+  await say('聊聊房子',room);
+  assert.match(prompts.at(-1),/过去有效的相处方式/);
+  const cup=(await call('/memories')).items.find(m=>m.topic==='杯子');
+  await call('/memories/'+cup.id,'DELETE',{expected:'石榴'});
+  await say('换一通继续聊房子','new-room');
+  assert.match(prompts.at(-1),/过去有效的相处方式/);
+  const bookmark=(await call('/memories')).items.find(m=>m.topic==='书签');
+  await call('/memories/'+bookmark.id,'DELETE',{expected:'月牙'});
+  await say('继续聊聊房子',room);
+  assert.doesNotMatch(prompts.at(-1),/过去有效的相处方式|月牙/);
   console.log('通过独立管理鉴权、证据、单条纠正/忘记、持久风格、工具开关、成长回滚和脱敏查询验收。');
 } finally {
   Server.prototype.listen=listen;globalThis.fetch=request;profile?.close();search?.close();

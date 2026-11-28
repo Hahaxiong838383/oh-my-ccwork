@@ -800,10 +800,16 @@ pub async fn prebuild(room_name: String) -> Result<Prebuilt> {
 pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebuilt> {
     let started_at = Instant::now();
     let speech = crate::personal_providers::prepare(&room_name, &metadata)?;
-    let stt_cfg = match &speech {
+    let words = speech.as_ref().and_then(|_| std::env::var_os("PERSONAL_PROVIDERS_FILE")).map(|file| {
+        crate::personal_words::WordSnapshot::read(&std::path::Path::new(&file).with_file_name("interaction.json"))
+    });
+    let mut stt_cfg = match &speech {
         Some(plan) => plan.stt.clone(),
         None => stt_cfg_for_room(&room_name),
     };
+    if let Some(Ok(snapshot)) = &words {
+        stt_cfg.hotwords.extend(snapshot.recognition());
+    }
     let tts_cfg = match &speech {
         Some(plan) => plan.tts.clone(),
         None => TtsCfg::from_env()?,
@@ -837,6 +843,7 @@ pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebui
         anyhow::ensure!(crate::personal::brain_route(&llm_cfg), "personal_llm_route_rejected");
         cfg.exit_hotwords = crate::personal::stop_words();
         cfg.hotwords = cfg.exit_hotwords.clone();
+        if let Some(Ok(snapshot)) = &words { snapshot.apply_controls(&mut cfg); }
         cfg.exit_tail_match = false;
     }
     // 本地音频回声对撞库(2026-09-01):异步拉该设备文案,拉不到=空库 fail-open。
@@ -908,6 +915,12 @@ pub async fn prebuild_with(room_name: String, metadata: String) -> Result<Prebui
         has_speaker = speaker.is_some(),
         "pipeline prebuilt"
     );
+    if let (Some(plan), Some(result)) = (&speech, &words) {
+        if crate::personal_words::receipt(&room_name, result.as_ref().ok().map(|s| s.revision),
+            matches!(plan.stt.personal_route, crate::stt_volc::PersonalAsrRoute::Online)).is_err() {
+            tracing::warn!("personal word revision receipt unavailable");
+        }
+    }
     Ok(Prebuilt { cfg, tts_cfg, llm, echo_local_texts, speaker, vad, bank, personal_voice_key, stt, stt_cfg, started_at })
 }
 
@@ -2987,6 +3000,7 @@ impl Orchestrator {
         }
         if turn.seg_stage == 1 && played > turn.filler_samples {
             turn.seg_stage = 2;
+            crate::personal_timing::record(&room,turn.id,"post_filler_audio",turn.started.elapsed().as_millis() as u64);
             if self.search_turn {
                 if let Some(search) = &self.search { search.log_audio_started(&room, turn.id); }
             }
@@ -3854,12 +3868,17 @@ impl Orchestrator {
                     if shortest { b.pick_shortest(&user_text, &room, next_turn) } else { b.pick(&user_text, boost, &room, next_turn) }
                 })
             };
+            let previous_turn = self.next_turn_id;
             self.start_turn(TurnKind::Reply {
                 user_text,
                 pending_amend: amend,
                 filler,
                 spec,
             });
+            if self.next_turn_id != previous_turn {
+                crate::personal_timing::record(&room,self.next_turn_id,"commit",commit.eou_delay.as_millis() as u64);
+                crate::personal_timing::record(&room,self.next_turn_id,"asr_final",commit.stt_delay.as_millis() as u64);
+            }
         }
     }
 
@@ -3922,12 +3941,16 @@ impl Orchestrator {
         // 若 turn 未开播就被打断会永转(dev198 内存排查时发现的隐性泄漏)。
         let watch_ctl = ctl.clone();
         let watch_tx = self.turn_ev_tx.clone();
+        let timing_room = self.personal_device.as_ref().map(|_| self.room_name.clone());
         let watcher = tokio::spawn(async move {
             loop {
                 if watch_ctl.aborted() {
                     return;
                 }
                 if watch_ctl.audio_started() {
+                    if let Some(room) = &timing_room {
+                        crate::personal_timing::record(room, id, "first_audio", turn_started.elapsed().as_millis() as u64);
+                    }
                     let _ = watch_tx.send(TurnEvent::AudioStarted(id)).await;
                     return;
                 }
@@ -4160,6 +4183,7 @@ impl Orchestrator {
                                 continue;
                             }
                             let is_first = std::mem::replace(&mut first_sentence, false);
+                            if is_first { crate::personal_timing::record(&room_name,id,"speakable",turn_started.elapsed().as_millis() as u64); }
                             let filler_voice = if is_first && crate::filler::personal_cache::is_phrase(&sentence) {
                                 personal_voice_key.as_ref().and_then(|slot| slot.lock().ok().and_then(|g| g.clone()))
                             } else {

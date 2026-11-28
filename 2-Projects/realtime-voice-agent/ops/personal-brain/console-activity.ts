@@ -72,9 +72,18 @@ export function createConsoleActivity(dataDir: string, owner: string, redact: (t
     if (!/^[A-Za-z0-9_-]{1,128}$/.test(id) || !paging) return c.json({error:'会话或分页参数无效'},400);
     const total = Number(chats.prepare('SELECT count(*) n FROM conversation WHERE account_id=? AND session_id=?').get(owner,id)!.n);
     if (!total) return c.json({error:'未找到该通话记录'},404);
+    const anchor=c.req.query('anchor');let offset=paging.offset;
+    if(anchor!==undefined) {
+      if (!/^[A-Za-z0-9_-]{1,128}$/.test(anchor)) return c.json({error:'消息标识无效'},400);
+      const message=chats.prepare('SELECT ts,rowid AS seq FROM conversation WHERE account_id=? AND session_id=? AND id=?').get(owner,id,anchor);
+      if(!message) return c.json({error:'当前通话中没有这条消息'},404);
+      const preceding=chats.prepare('SELECT count(*) n FROM conversation WHERE account_id=? AND session_id=? AND (ts<? OR (ts=? AND rowid<?))')
+        .get(owner,id,message.ts,message.ts,message.seq)!;
+      offset=Math.floor(Number(preceding.n)/paging.limit)*paging.limit;
+    }
     const items = chats.prepare(`SELECT id,role,text,ts AS at FROM conversation WHERE account_id=? AND session_id=?
-        ORDER BY ts,rowid LIMIT ? OFFSET ?`).all(owner,id,paging.limit,paging.offset);
-    return c.json({total,items:items.map(item=>({...item,text:redact(String(item.text))}))});
+        ORDER BY ts,rowid LIMIT ? OFFSET ?`).all(owner,id,paging.limit,offset);
+    return c.json({total,offset,items:items.map(item=>({...item,text:redact(String(item.text))}))});
   });
   return app;
 }
