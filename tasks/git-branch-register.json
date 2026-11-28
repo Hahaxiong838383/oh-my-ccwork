@@ -155,6 +155,11 @@
       "task": "X96 电视主备网关、DNS 自动接管和 Armbian 开机审计",
       "state": "keep",
       "until": "自然冷启动已通过。此分支仍是盒端和 Armbian 两个在用组件的源码引用，待两项发布登记迁移后再评估归档。"
+    },
+    "personal/admin-console-20261128": {
+      "task": "私人小可维护后台与语音大脑联动，已完成本次上线和浏览器验收",
+      "state": "keep",
+      "until": "主人体验本版后台后复核；发布物由不可变标签保全。"
     }
   },
   "releases": {
@@ -292,12 +297,12 @@
     },
     "personal-admin": {
       "scope": "personal-voice",
-      "source_commit": "f51d6989d9e7dd71c2791887ee4d82a625a760ec",
-      "source_ref": "refs/heads/main",
+      "source_commit": "1994565053a639025cd3cfaf722fedecaa18eb01",
+      "source_ref": "refs/tags/release/personal-voice/admin-console-20261128",
       "maintainer_branch": "main",
-      "sha256": "4e48a3069f1527c26c161f5b882cac5641a4743f6189ef48179660fd8615a87e",
+      "sha256": "743886f85221b871099396ab8f01a94780ec1fb0dd614ddbb7c1343e4ef5faf3",
       "proof": {
-        "object": "ce33bae730ed3758689abbe92dfa4571d0d17e41:2-Projects/realtime-voice-agent/docs/personal-s24-device-link-release-20261127.json",
+        "object": "b7e3a35829694356d822dc8ede3f79c7aefe9535:2-Projects/realtime-voice-agent/docs/personal-admin-console-release-20261128.json",
         "keys": [
           "deployments",
           "personal-admin"
@@ -307,12 +312,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "0290903abc01998fc7c6529aef87b200332b4626",
-      "source_ref": "refs/tags/release/personal-voice/brain-growth-feedback-20261128",
+      "source_commit": "1994565053a639025cd3cfaf722fedecaa18eb01",
+      "source_ref": "refs/tags/release/personal-voice/admin-console-20261128",
       "maintainer_branch": "main",
-      "sha256": "5b928a606e81888e6bf55ec39f7822f2165926d17036393694f811c14ba52b4a",
+      "sha256": "d1fbf3da8bab4c6bd048d31f8437a8773f8d7d5e3c7a91fe02f5073010936484",
       "proof": {
-        "object": "bd364ec3a6918f990ae46aeae53b3ddad7505fa2:2-Projects/realtime-voice-agent/docs/personal-brain-growth-feedback-20261128.json",
+        "object": "b7e3a35829694356d822dc8ede3f79c7aefe9535:2-Projects/realtime-voice-agent/docs/personal-admin-console-release-20261128.json",
         "keys": [
           "deployments",
           "personal-brain"
