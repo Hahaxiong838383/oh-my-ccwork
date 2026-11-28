@@ -156,6 +156,10 @@
       "state": "keep",
       "until": "自然冷启动已通过。此分支仍是盒端和 Armbian 两个在用组件的源码引用，待两项发布登记迁移后再评估归档。"
     },
+    "personal/whitebox-v3-20261128": {
+      "task": "私人小可 V3 图形化工作台，按真实通话联查回复、记忆、成长、工具与语音阶段回执",
+      "state": "active"
+    },
     "personal/admin-console-20261128": {
       "task": "维护私人小可的记忆工作室、语音配置与运行回执",
       "state": "keep",

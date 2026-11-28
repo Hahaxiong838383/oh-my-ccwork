@@ -11,6 +11,16 @@ import sys
 OPS = Path(__file__).resolve().parent.parent
 NAS = 'hahaxiong83@192.168.1.115'
 WEB_FILES = ('index.html', 'voice.js', 'style.css', 'livekit.js', 'LIVEKIT-LICENSE')
+WHITEBOX_FILES = ('/app/whitebox.html', '/app/whitebox.js', '/app/whitebox.css')
+# Pre-V3 admin images have a four-file manifest. A V3 server or any V3 asset
+# requires all three new files; a partial deployment must fail the sample.
+WHITEBOX_PROBE = """server=$1
+shift
+for path do
+    if [ -e "$path" ]; then exec sha256sum "$@"; fi
+done
+if grep -Fq '/app/whitebox.html' "$server"; then exec sha256sum "$@"; fi
+"""
 NAS_COMPONENTS = {
     'personal-admin': ('personal-voice-admin-admin-1', ['/app/server.mjs', '/app/index.html', '/app/design.html', '/app/event-property-schema-v1.json']),
     'personal-brain': ('personal-brain-brain-1', ['/app/server.mjs']),
@@ -54,9 +64,13 @@ def observe():
     secret = subprocess.check_output(['vw','get','password','飞牛nas登录信息'],stderr=subprocess.DEVNULL).rstrip() + b'\n'
     commands = ['set -eu']
     for component,(container,files) in NAS_COMPONENTS.items():
+        sample = ['sha256sum', *files]
+        if component == 'personal-admin':
+            probe = shlex.join(sample) + '\n' + WHITEBOX_PROBE
+            sample = ['sh', '-ec', probe, 'whitebox', '/app/server.mjs', *WHITEBOX_FILES]
         commands += ['echo '+component,
             'docker inspect -f '+shlex.quote('{{.State.Running}} {{.Image}}')+' '+container,
-            shlex.join(['docker','exec',container,'sha256sum',*files])]
+            shlex.join(['docker', 'exec', container, *sample]), 'echo END:'+component]
     model_probe = """from pathlib import Path
 import hashlib,json
 root=Path('/models')
@@ -77,9 +91,13 @@ print(json.dumps({'sha256':h.hexdigest(),'count':len(files)}))
         running,image = stdout[at+1].split()
         if running != 'true': raise RuntimeError('Not running: '+key)
         images[key] = image
-        details[key] = parse_sums('\n'.join(stdout[at+2:at+2+len(files)]))
-        if set(details[key]) != set(files): raise RuntimeError('Incomplete evidence: '+key)
-        at += 2+len(files)
+        end = stdout.index('END:'+key, at+2)
+        details[key] = parse_sums('\n'.join(stdout[at+2:end]))
+        expected = set(files)
+        if key == 'personal-admin' and expected != set(details[key]):
+            expected.update(WHITEBOX_FILES)
+        if set(details[key]) != expected: raise RuntimeError('Incomplete evidence: '+key)
+        at = end+1
     if len(stdout) != at+1: raise ValueError('Unexpected output after file sampling')
     models = json.loads(stdout[at])
     details['personal-speech-models'] = {'/models (sorted regular-file manifest)':models['sha256']}

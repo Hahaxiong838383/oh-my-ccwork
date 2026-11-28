@@ -23,7 +23,7 @@ await esbuild.build({
 });
 JS
 cp "$server/src/analytics/event-property-schema-v1.json" "$stage/"
-cp "$here/index.html" "$here/Dockerfile" "$stage"
+cp "$here/index.html" "$here/whitebox.html" "$here/whitebox.js" "$here/whitebox.css" "$here/Dockerfile" "$stage"
 python3 - "$here/../../docs/personal-voice-design" "$stage/design.html" <<'PYTHON'
 from pathlib import Path
 import sys

@@ -4,8 +4,9 @@ const stages=['commit','asr_final','speakable','first_audio','post_filler_audio'
 type Stage=typeof stages[number];
 type Sample={at:number,room:string,turn:number}&Record<Stage,number|null>;
 
-export function recentTurnTimings(dir='/run/worker-state') {
+export function recentTurnTimings(dir='/run/worker-state', room?:string) {
   const byTurn=new Map<string,Sample>();
+  const ambiguous=new Set<string>();
   for (const file of ['turn-timing.previous','turn-timing.jsonl']) {
     let raw:string;
     try {raw=readFileSync(join(dir,file),'utf8');} catch(e){if((e as NodeJS.ErrnoException).code==='ENOENT') continue;throw e;}
@@ -13,12 +14,15 @@ export function recentTurnTimings(dir='/run/worker-state') {
       let v;try{v=JSON.parse(line);}catch{continue;}
       if(!v||!Number.isSafeInteger(v.at)||v.at<Date.now()-7*86400000||!Number.isSafeInteger(v.turn)||v.turn<1
         ||typeof v.room!=='string'||!/^pv-[a-f0-9]{32}$/.test(v.room)||!stages.includes(v.stage)||!Number.isSafeInteger(v.ms)||v.ms<0)continue;
+      if (room!==undefined && room!==v.room) continue;
       const key=v.room+'/'+v.turn;
       const row=byTurn.get(key)??{at:0,room:v.room,turn:v.turn,commit:null,asr_final:null,speakable:null,first_audio:null,post_filler_audio:null};
+      if (room!==undefined && row[v.stage as Stage]!==null && row[v.stage as Stage]!==v.ms) ambiguous.add(key);
       row.at=Math.max(row.at,v.at);
       row[v.stage as Stage]=v.ms;
       byTurn.set(key,row);
     }
   }
-  return {items:[...byTurn.values()].filter(row=>row.commit!==null).sort((a,b)=>b.at-a.at).slice(0,40)};
+  const items=[...byTurn.values()].filter(row=>row.commit!==null && !ambiguous.has(row.room+'/'+row.turn)).sort((a,b)=>b.at-a.at);
+  return {items:room===undefined ? items.slice(0,40) : items};
 }

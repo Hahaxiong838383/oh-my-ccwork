@@ -3,7 +3,7 @@ import {wordPublications} from './word-publications.ts';
 import {privateWordsJs} from './private-words-ui.ts';
 import {readFileSync} from 'node:fs';
 import {createServer, get as httpsGet} from 'node:https';
-import {Hono} from 'hono';
+import {Hono, type Context} from 'hono';
 import {getOperations, getDeviceDiagnostics} from './operations';
 import {privateTalk} from './talk-gateway';
 import {DiagnosticSessions,DiagnosticError} from './diagnostics';
@@ -37,6 +37,20 @@ app.use('*',async(c,next)=>{
 });
 app.use('/api/*',bodyLimit({maxSize:16384}));
 app.get('/',c=>c.html(page));
+function ownerSignedIn(c:Context) {
+  return (sessions.get(getCookie(c,'voice_owner') || '') || 0) > Date.now();
+}
+app.get('/workbench',c=>{
+  if (ownerSignedIn(c)) return c.html(readFileSync('/app/whitebox.html','utf8'));
+  const next = new URLSearchParams({next:'workbench'});
+  for (const key of ['room','reply','module']) {
+    const value = c.req.query(key);
+    if (value && /^[A-Za-z0-9_-]{1,128}$/.test(value)) next.set(key,value);
+  }
+  return c.redirect('/?'+next.toString());
+});
+app.get('/workbench.js',c=>c.body(readFileSync('/app/whitebox.js','utf8'),200,{'Content-Type':'text/javascript; charset=utf-8'}));
+app.get('/workbench.css',c=>c.body(readFileSync('/app/whitebox.css','utf8'),200,{'Content-Type':'text/css; charset=utf-8'}));
 app.get('/assets/private-words.js',c=>c.body(privateWordsJs,200,{'Content-Type':'text/javascript; charset=utf-8'}));
 app.get('/health',c=>c.json({service:'personal-voice-admin',ok:true}));
 app.post('/api/login',async c=>{
@@ -50,7 +64,7 @@ app.post('/api/login',async c=>{
   return c.json({ok:true});
 });
 app.use('/api/*',async(c,next)=>{
-  if ((sessions.get(getCookie(c,'voice_owner')||'')||0)<=Date.now()) return c.json({error:'请登录'},401);
+  if (!ownerSignedIn(c)) return c.json({error:'请登录'},401);
   await next();
 });
 app.get('/api/design',c=>{
@@ -192,7 +206,7 @@ const checkDeviceOrigin = (c: {req: {url: string; header: (name: string) => stri
   isSameOriginRequest(c.req.url, c.req.header('Origin'), c.req.header('Sec-Fetch-Site'), process.env.TALK_SITE_ORIGIN);
 // Only the owner console session is allowed to exercise these private brain routes.
 const consoleRoutes: Record<string,RegExp> = {
-  GET: /^(?:overview|activity|memories|memories\/[a-f0-9]{64}|turns\/[A-Za-z0-9_-]{1,128}\/memories|extractions|growth\/snapshots|growth|search|tools\/history|voice-cues|conversations\/[A-Za-z0-9_-]{1,128})$/,
+  GET: /^(?:whitebox\/[A-Za-z0-9_-]{1,128}|overview|activity|memories|memories\/[a-f0-9]{64}|turns\/[A-Za-z0-9_-]{1,128}\/memories|extractions|growth\/snapshots|growth|search|tools\/history|voice-cues|conversations\/[A-Za-z0-9_-]{1,128})$/,
   POST: /^(?:memory-preview|memories|memories\/[a-f0-9]{64}\/review|growth\/[A-Za-z0-9_-]{1,128}\/revoke)$/,
   PUT: /^(?:tools|style|voice-cues|memories\/[A-Za-z0-9:._-]{1,180})$/,
   DELETE: /^memories\/[A-Za-z0-9:._-]{1,180}$/,
@@ -201,9 +215,12 @@ app.use('/api/word-publications',async(c,next)=>{if(!checkDeviceOrigin(c))return
 app.route('/api/word-publications',wordPublications());
 app.get('/api/turn-timing',c=>{try{return c.json(recentTurnTimings());} catch{return c.json({error:'无法读取语音时间采样'},503);}});
 app.get('/api/operations', async c => c.json(await getOperations()));
-app.all('/api/brain/*', async c => {
+app.get('/api/whitebox/rooms', c => proxyBrain(c,'activity'));
+app.get('/api/whitebox/rooms/:id', c => proxyBrain(c,'whitebox/'+c.req.param('id'), true));
+app.all('/api/brain/*', c => proxyBrain(c,c.req.path.slice('/api/brain/'.length)));
+
+async function proxyBrain(c:Context, route:string, includeTimings = false) {
   if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'},403);
-  const route = c.req.path.slice('/api/brain/'.length);
   if (!consoleRoutes[c.req.method]?.test(route)) return c.json({error:'未提供此操作'},404);
   if (!process.env.BRAIN_HEALTH_URL) return c.json({error:'私人语音大脑尚未接入'},503);
   try {
@@ -221,9 +238,18 @@ app.all('/api/brain/*', async c => {
     });
     if (response.status===401 || response.status===403 || response.status>=500) throw Error();
     if (!response.headers.get('content-type')?.includes('application/json')) throw Error();
+    if (includeTimings && response.ok) {
+      const data = await response.json();
+      if (data.room!==c.req.param('id') || !Array.isArray(data.turns)) throw Error('unexpected room data');
+      let timings:ReturnType<typeof recentTurnTimings>['items'] = [];
+      try { timings=recentTurnTimings('/run/worker-state',data.room).items; } catch { /* Older deployments may have no timing mount. */ }
+      const byTurn=new Map(timings.map(row=>[row.turn,row]));
+      for (const turn of data.turns) turn.timing=byTurn.get(turn.voiceTurn) ?? null;
+      return c.json(data);
+    }
     return new Response(response.body,{status:response.status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
   } catch { return c.json({error:'私人语音大脑管理接口暂不可用'},503); }
-});
+}
 app.use('/api/devices', async (c, next) => {
   if (!checkDeviceOrigin(c)) return c.json({error:'请求来源无效'}, 403);
   await next();

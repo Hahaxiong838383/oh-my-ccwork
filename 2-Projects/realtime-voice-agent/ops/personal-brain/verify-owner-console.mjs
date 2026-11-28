@@ -76,7 +76,7 @@ try {
     const fact=(await call('/memories')).items.find(x=>x.topic==='暗号');
     assert.deepEqual(JSON.parse(receipt(room).memory_ids),[fact.id]);
     await say('我的暗号是什么？',room);
-    assert.deepEqual({...receipt(room)},{mode:'direct',memory_ids:'[]'});
+    assert.deepEqual({...receipt(room)},{mode:'direct',memory_ids:JSON.stringify([fact.id])});
   } finally {ledger.close();}
   let row=(await call('/memories')).items[0];assert.equal(row.topic,'暗号');assert.equal(row.value,'青松');assert.match(row.source,/青松/);
   await call('/memories/'+row.id,'PUT',{expected:'错误的',value:'白帆'},ownerKey,409);

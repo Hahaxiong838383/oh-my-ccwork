@@ -347,19 +347,19 @@ pub async fn stream_chat_with_context(
     tx: mpsc::Sender<String>,
     search_context: Option<Value>,
 ) -> Result<ChatOutcome> {
-    stream_chat_inner(client, cfg, messages, tx, search_context, None).await
+    stream_chat_inner(client, cfg, messages, tx, search_context, None, None).await
 }
 
 pub async fn stream_personal_text(
     client: &reqwest::Client, cfg: &LlmConfig, messages: Vec<Value>,
     tx: mpsc::Sender<String>, store: bool,
 ) -> Result<ChatOutcome> {
-    stream_chat_inner(client, cfg, messages, tx, None, Some(store)).await
+    stream_chat_inner(client, cfg, messages, tx, None, Some(store), None).await
 }
 
 async fn stream_chat_inner(
     client: &reqwest::Client, cfg: &LlmConfig, messages: Vec<Value>,
-    tx: mpsc::Sender<String>, search_context: Option<Value>, store: Option<bool>,
+    tx: mpsc::Sender<String>, search_context: Option<Value>, store: Option<bool>, voice_turn: Option<u64>,
 ) -> Result<ChatOutcome> {
     if !crate::personal::llm_request_allowed(cfg) {
         anyhow::bail!("personal_llm_route_rejected");
@@ -378,9 +378,11 @@ async fn stream_chat_inner(
     }
     let url = cfg.chat_url();
     let t0 = std::time::Instant::now();
-    let resp = client
-        .post(&url)
-        .bearer_auth(&cfg.api_key)
+    let mut request = client.post(&url).bearer_auth(&cfg.api_key);
+    if let Some(turn) = voice_turn.filter(|_| crate::personal::voice_brain(cfg)) {
+        request = request.header("x-personal-turn", turn.to_string());
+    }
+    let resp = request
         .json(&body)
         .send()
         .await
@@ -687,16 +689,26 @@ impl Llm {
     /// 投机 miss 时常规轮的 race 自然兜底,不为预生成双倍烧钱。
     pub async fn chat(&mut self, user_text: &str, tx: mpsc::Sender<String>) -> Result<ChatOutcome> {self.chat_with_context(user_text,tx,None).await}
     pub async fn chat_with_context(&mut self,user_text:&str,tx:mpsc::Sender<String>,search_context:Option<Value>)->Result<ChatOutcome> {
+        self.chat_for_turn(user_text, tx, search_context, None).await
+    }
+    pub async fn chat_for_turn(&mut self, user_text: &str, tx: mpsc::Sender<String>, search_context: Option<Value>, voice_turn: Option<u64>) -> Result<ChatOutcome> {
         let messages = self.build_messages(user_text);
         self.push_user(user_text);
-        let outcome = stream_chat_race(
-            (&self.client, &self.cfg),
-            self.fb.as_ref().map(|(c, f)| (c, f)),
-            messages,
-            tx,
-            search_context,
-        )
-        .await?;
+        let outcome = if voice_turn.is_some() && self.fb.is_none() && crate::personal::voice_brain(&self.cfg) {
+            tokio::select! {
+                biased;
+                _ = tx.closed() => anyhow::bail!("llm cancelled"),
+                result = stream_chat_inner(&self.client, &self.cfg, messages, tx.clone(), search_context, None, voice_turn) => result,
+            }
+        } else {
+            stream_chat_race(
+                (&self.client, &self.cfg),
+                self.fb.as_ref().map(|(c, f)| (c, f)),
+                messages,
+                tx,
+                search_context,
+            ).await
+        }?;
         self.settle(&outcome);
         Ok(outcome)
     }

@@ -203,15 +203,17 @@ function remember(room: string, entry: Omit<NonNullable<ReturnType<typeof follow
 let extraction = Promise.resolve();
 let extractionPending = 0;
 
-function persist(session: string, user: string, reply: Reply) {
+function persist(session: string, user: string, reply: Reply, voiceTurn:number|null) {
   const {text: answer, excluded} = reply;
   const replyFeedback = isReplyFeedback(user);
   const [feedback,assistant] = conversationStore.addTurn({
     account_id: owner.accountId, session_id: session, memory_excluded: excluded || replyFeedback,
   }, user, answer, !!reply.feedbackEligible && !replyFeedback);
-  try { memory.recordRecall(assistant.id,reply.selection); }
+  try { memory.recordTrace(session,feedback.id,assistant.id,reply.route??reply.tool??'direct',voiceTurn,reply.style??null); }
+  catch { report('turn_trace_failed'); }
+  try { memory.recordRecall(assistant.id,reply.selection,reply.tool==='memory'); }
   catch { report('recall_receipt_failed'); }
-  if (excluded) return;
+  if (excluded) return assistant.id;
   const recentTurns=conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 });
   const recent = memory.filterSnapshot(recentTurns);
   // Inspect adjacency before removing excluded turns: a tool response breaks the pair.
@@ -223,7 +225,7 @@ function persist(session: string, user: string, reply: Reply) {
       try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
       catch { report('story_feedback_failed'); }
     }
-    return;
+    return assistant.id;
   }
   const adjacent = paired && !priorReply.memory_excluded && !priorRequest.memory_excluded;
   // Older binaries persisted pure feedback without an exclusion flag. Keep those
@@ -234,12 +236,13 @@ function persist(session: string, user: string, reply: Reply) {
   }).reverse()
     .map((row) => ({ role: row.role, content: row.text, id: row.id }));
   const decision = scheduler.onTurn(owner.accountId, owner.role, user, snapshot.filter((t) => t.role === 'user').length);
-  if (!decision.run) return;
+  if (!decision.run) return assistant.id;
   const snapshotRevision = memory.revision;
   extractionPending++;
   extraction = extraction.then(() => snapshotRevision === memory.revision ? extractAndPersist(
     owner.accountId, snapshot.slice(-decision.windowMessages), session, { reason: decision.reason, previousReplyId: adjacent ? priorReply.id : undefined },
   ) : undefined).catch(() => report('extract_failed')).finally(() => { extractionPending--; });
+  return assistant.id;
 }
 
 function report(event: string) {
@@ -298,16 +301,16 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
   }
 }
 
-type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean; feedbackEligible?: boolean; selection?:{memoryIds:string[];sourceIds:string[]} };
+type Reply = { text: string; route?:string; style?:string; committedReplyId?:string|null; sources?: SearchResult['sources']; tool?: string; excluded: boolean; feedbackEligible?: boolean; selection?:{memoryIds:string[];sourceIds:string[]} };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
-  onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void): Promise<Reply> {
+  onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void, voiceTurn:number|null=null): Promise<Reply> {
   const raw = messages.at(-1)!.content;
   if (explicitReplyApproval(raw)) {
     signal.throwIfAborted();
     const text = '谢谢，我很高兴你喜欢。';
     await onText(text);
-    return {text, excluded:false};
+    return {text, excluded:false,route:'feedback'};
   }
   const history = store ? memory.replyHistory(room, messages.slice(0, -1)) : messages.slice(0, -1);
   const prior = followups.get(room);
@@ -318,30 +321,35 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   const user = style?.request || raw;
   const limit = briefReplyLimit(owner.accountId, user, store, style);
   if (limit) suppressCue?.();
+  const styleNames={default:'默认',quiet:'简短',chatty:'健谈',funny:'幽默'};
+  const appliedStyle=style?.key && (style.policyLine || style.reply) ?
+    (style.temporary?'仅本轮':'长期')+' · '+styleNames[style.key] : undefined;
   const direct = async (text: string, tool?: string, sources?: SearchResult['sources']): Promise<Reply> => {
     signal.throwIfAborted();
     if (limit) text = briefToolSpeech(text, tool, limit);
     await onText(text);
-    return { text, sources, tool, excluded: true };
+    return { text, sources, tool, excluded: true,style:appliedStyle };
   };
   if (command && !(command.op === 'clarify' && style && !style.consume)) {
     if (!store) return direct('这次是临时对话，不能修改长期记忆。','memory_action');
     if (command.op === 'clarify') return direct(command.text, 'memory');
     const completed = extraction.then(() => {
       signal.throwIfAborted();
-      return memory.apply(command,room,raw);
+      return memory.applyWithReceipt(command,room,raw,undefined,voiceTurn);
     });
     extraction = completed.then(() => {}, () => {});
-    let receipt: string;
+    let receipt: ReturnType<typeof memory.applyWithReceipt>;
     try { receipt = await completed; }
     catch { signal.throwIfAborted(); report('memory_action_failed'); return direct('这次没有成功修改记忆。','memory'); }
-    return direct(receipt, 'memory_action');
+    return {...await direct(receipt.text, 'memory_action'),committedReplyId:receipt.replyId};
   }
   if (style?.reply) return direct(style.reply, 'style');
   // Answer questions about personal facts from the owner's evidence, before chat or any public lookup.
   const explicitLookup = searchPrefix.test(user) && !noWeb.test(user);
-  const recalled = explicitLookup ? undefined : recall.answer(owner.accountId, user, store);
-  if (recalled !== undefined) return direct(recalled, 'memory');
+  const used=new Map<string,ReturnType<typeof recall.evidence>[number]>();
+  const recalled = explicitLookup ? undefined : recall.answer(owner.accountId, user, store,used);
+  if (recalled !== undefined) return {...await direct(recalled,'memory'),selection:{
+    memoryIds:[...used.keys()],sourceIds:[...used.values()].map(e=>e.sourceMsgId??'')}};
 
   // ASR often joins a spoken interruption and its follow-up without punctuation.
   const clockQuestion = (text: string) => text.replace(
@@ -441,7 +449,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
       const result = await querySearch(user, room, signal);
       const remaining = limit && brief ? Math.max(1, limit - brief.count) as 1|2 : undefined;
       await forward(remaining ? briefToolSpeech(result.text, 'search', remaining) : result.text);
-      return { text, sources: result.sources, tool: 'search', excluded: true, selection };
+      return { text, sources: result.sources, tool: 'search', excluded: true, selection,style:appliedStyle };
     }
     const cleaned = claimFilter.feed(parens.feed(exits.feed(delta.text).text));
     await forward(brief ? brief.feed(cleaned) : cleaned);
@@ -453,7 +461,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   if (!text.trim()) throw new Error('chat_empty');
   style?.consume?.();
-  return { text, excluded: Boolean(style && !style.consume), feedbackEligible:true, selection };
+  return { text, excluded: Boolean(style && !style.consume), feedbackEligible:true, selection,route:'model',style:appliedStyle };
 }
 
 const app = new Hono();
@@ -488,6 +496,9 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   // The Rust worker clears the room for its transport prewarm.
   const room = tagged ?? randomUUID();
   const store = body.store && tagged !== undefined && !isDiagnosticRoom(tagged);
+  const turnValue=c.req.header('x-personal-turn');
+  const voiceTurn=store && isVoiceCompletion(tagged,!!c.req.header('x-personal-session')) && turnValue && /^[1-9][0-9]{0,9}$/.test(turnValue) ?
+    Number(turnValue) : null;
   if (tagged === undefined && body.stream && body.max_tokens === 8 && messages.length === 1 && user.content === 'hi') {
     return streamSSE(c, async (stream) => {
       await stream.writeSSE({ data: JSON.stringify({
@@ -511,13 +522,14 @@ app.post('/v1/chat/completions', bodyLimit({ maxSize: 65_536 }), async (c) => {
   const run = async (onText: (text: string) => Promise<void>, onSearch?: () => void, suppressCue?: () => void) => {
     const started=performance.now();
     const revision = memory.revision;
-    const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')), suppressCue);
+    const reply = await answer(room, messages, store, signal, onText, onSearch, isVoiceCompletion(tagged, !!c.req.header('x-personal-session')), suppressCue,voiceTurn);
     signal.throwIfAborted();
+    const replyId=store && reply.tool!=='memory_action' && memory.revision===revision ?
+      persist(room,user.content,reply,voiceTurn) : reply.committedReplyId;
     if (store && reply.tool) {
-      try {admin.recordTool(reply.tool,reply.sources?.length,performance.now()-started);}
+      try {admin.recordTool(reply.tool,reply.sources,performance.now()-started,room,replyId??null);}
       catch {report('tool_result_record_failed');}
     }
-    if (store && reply.tool !== 'memory_action' && memory.revision === revision) persist(room, user.content, reply);
     return reply;
   };
   const details = (reply: Reply) => ({
