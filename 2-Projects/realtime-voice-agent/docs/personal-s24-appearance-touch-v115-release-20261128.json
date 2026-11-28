@@ -1,0 +1,241 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-28T09:48:11+08:00",
+  "release_tag": "release/personal-voice/v1.0.15",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "6c5f7149cc471137c47aa553bedf8c7c6f644b14",
+      "versionCode": 1000015,
+      "versionName": "V1.0.15",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000015.apk",
+      "size": 1088682,
+      "sha256": "facf306ba2f72ec6e2d5744491b1b44ada2f63ffda6fea706c1ef2b083ed8275",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "passed": true,
+    "apkSha256": "facf306ba2f72ec6e2d5744491b1b44ada2f63ffda6fea706c1ef2b083ed8275",
+    "previousVersionCode": 1000014,
+    "packageChecksPassed": 75,
+    "realPhoneTested": false,
+    "android": {
+      "passed": true,
+      "apkSha256": "facf306ba2f72ec6e2d5744491b1b44ada2f63ffda6fea706c1ef2b083ed8275",
+      "environment": "Android 11 专用离线模拟器，正式签名 APK 内置 WebView。截图为 720×1560、280dpi。",
+      "upgrade": "包管理器从 1000014 原位覆盖至 1000015，已安装的 base.apk 哈希和公网 OTA 安装包相同。原测试配对与蓝色绒面马克杯头像保留。",
+      "panel": "另用离线配对资料打开机器头系列，四行共 12 款可见，经典电视已选中，舞台与底部通话控件可见。",
+      "panelVerticalPx": [
+        147,
+        1132
+      ],
+      "callControlVerticalPx": [
+        1426,
+        1526
+      ],
+      "deviceScreenshotSha256": "6bbf32623b89c6adeeee0ffe94b24d15bb515e1bc3ac20b19d31a609438f468e",
+      "productTestDataOnly": true,
+      "mediaProjection48kHz": {
+        "quiet": {
+          "label": "quiet",
+          "peak": 0,
+          "rms": 0.0,
+          "durationActiveMs": 0,
+          "frequencies": []
+        },
+        "positive": {
+          "label": "positive",
+          "peak": 8000,
+          "rms": 2449.31,
+          "durationActiveMs": 380,
+          "frequencies": [
+            660.5,
+            634.2,
+            686.8,
+            713.2
+          ]
+        },
+        "head-robot": {
+          "label": "head-robot",
+          "peak": 2018,
+          "rms": 148.99,
+          "durationActiveMs": 65,
+          "frequencies": [
+            569.2,
+            1692.3,
+            538.5,
+            600.0
+          ]
+        }
+      }
+    },
+    "packWebViewRegression": {
+      "families": {
+        "classic": [
+          1,
+          40
+        ],
+        "open": [
+          69,
+          13
+        ],
+        "boop": [
+          190,
+          34
+        ],
+        "robot": [
+          12,
+          11
+        ]
+      },
+      "layoutCssPixels": {
+        "s24-call": {
+          "baselinePanelHeight": 184,
+          "finalPanelHeight": 457.5,
+          "triggerToPanelGap": 9
+        },
+        "s24-idle": {
+          "baselinePanelHeight": 459,
+          "finalPanelHeight": 548.2,
+          "triggerToPanelGap": 9
+        }
+      },
+      "seriesOrder": [
+        "暗夜球",
+        "趣物偶绒面",
+        "趣物偶玻璃",
+        "趣物偶平涂",
+        "机器头",
+        "碰碰脸立体",
+        "碰碰脸平面"
+      ],
+      "touchDurationMsAndRms": [
+        [
+          270,
+          0.0308
+        ],
+        [
+          218,
+          0.0244
+        ],
+        [
+          218,
+          0.0244
+        ],
+        [
+          218,
+          0.0244
+        ],
+        [
+          192,
+          0.0209
+        ],
+        [
+          205,
+          0.035
+        ],
+        [
+          205,
+          0.035
+        ]
+      ],
+      "touchNegative": "背景、轮廓外、滑动和快速重复触摸无额外音效。静音和回复播放抑制，通话中复用已有音频上下文，麦克风持续工作。",
+      "other": [
+        "维护与外观双向切换",
+        "按键与旧触屏输入",
+        "实际播放、字幕与打断",
+        "说话表情与脉冲",
+        "OTA 更新和安装状态"
+      ],
+      "renderThreadAndMixOutput": {
+        "idle": [
+          {
+            "type": "classic",
+            "active": "false",
+            "rate": 44100,
+            "length": 8832,
+            "peak": 3615
+          },
+          {
+            "type": "open",
+            "active": "false",
+            "rate": 44100,
+            "length": 25088,
+            "peak": 2251
+          },
+          {
+            "type": "boop",
+            "active": "false",
+            "rate": 44100,
+            "length": 28672,
+            "peak": 2829
+          },
+          {
+            "type": "robot",
+            "active": "false",
+            "rate": 44100,
+            "length": 24064,
+            "peak": 1866
+          }
+        ],
+        "complete": [
+          {
+            "type": "classic",
+            "active": "false",
+            "rate": 44100,
+            "length": 8832,
+            "peak": 3615
+          },
+          {
+            "type": "open",
+            "active": "false",
+            "rate": 44100,
+            "length": 25088,
+            "peak": 2251
+          },
+          {
+            "type": "boop",
+            "active": "false",
+            "rate": 44100,
+            "length": 28672,
+            "peak": 2829
+          },
+          {
+            "type": "robot",
+            "active": "false",
+            "rate": 44100,
+            "length": 28672,
+            "peak": 1866
+          },
+          {
+            "type": "robot",
+            "active": "true",
+            "rate": 44100,
+            "length": 28672,
+            "peak": 1027
+          }
+        ],
+        "blankAndDragSilent": true,
+        "mutedPetSilent": true,
+        "maintenanceToAppearance": true,
+        "colorPreview": [
+          "#4F7DF3",
+          "#E3F36F",
+          "#7489F3"
+        ],
+        "remoteAudio": {
+          "before": 0.7072898675791924,
+          "muted": 0,
+          "after": 0.7072898581755811,
+          "tail": {
+            "microphone": [
+              true
+            ],
+            "volume": 1,
+            "tone": 0.3536468593889541
+          }
+        }
+      }
+    }
+  }
+}
