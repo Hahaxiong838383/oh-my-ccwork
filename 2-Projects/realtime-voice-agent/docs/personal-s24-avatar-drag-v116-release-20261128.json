@@ -1,0 +1,262 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-28T12:23:06+08:00",
+  "release_tag": "release/personal-voice/v1.0.16",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "e88a959a8b09f2b25fd5a4fc5fc7d8b3d99648d3",
+      "versionCode": 1000016,
+      "versionName": "V1.0.16",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000016.apk",
+      "size": 1088682,
+      "sha256": "893788b2cdead2769826a0815cd5ed5211a5e5d77e5261b21924f916f160dd01",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "passed": true,
+    "apkSha256": "893788b2cdead2769826a0815cd5ed5211a5e5d77e5261b21924f916f160dd01",
+    "previousApkSha256": "facf306ba2f72ec6e2d5744491b1b44ada2f63ffda6fea706c1ef2b083ed8275",
+    "signedPackageChecksPassed": 75,
+    "realPhoneTested": false,
+    "android": {
+      "passed": true,
+      "apkSha256": "893788b2cdead2769826a0815cd5ed5211a5e5d77e5261b21924f916f160dd01",
+      "installedBaseApkSha256": "893788b2cdead2769826a0815cd5ed5211a5e5d77e5261b21924f916f160dd01",
+      "environment": "Android 11 540×1170/210dpi，离线专用模拟器，release WebView，原生 input motionevent 与 Android 原始帧屏幕读回。",
+      "upgradeFrom": 1000015,
+      "upgradeTo": 1000016,
+      "preservedSelection": "机器头 / 经典电视；V115 图库选中标志与 V116 主画面升级成功后的真实机壳均已核实。",
+      "touch": "按住中心 (270,502)，依次移到左 (135,502)、右 (405,502)、上 (270,397)、下 (270,607)，各持住约 1.5 秒取系统截图，再松手 1.35 秒。",
+      "actualScreenLEDs": {
+        "left": {
+          "LEDx": 232.55,
+          "LEDy": 534.49,
+          "coloredHx": 269.5,
+          "pixels": 509
+        },
+        "right": {
+          "LEDx": 315.49,
+          "LEDy": 504.36,
+          "coloredHx": 269.5,
+          "pixels": 341
+        },
+        "up": {
+          "LEDx": 267.09,
+          "LEDy": 515.18,
+          "coloredHx": 269.0,
+          "pixels": 582
+        },
+        "down": {
+          "LEDx": 269.1,
+          "LEDy": 556.95,
+          "coloredHx": 269.5,
+          "pixels": 584
+        },
+        "release": {
+          "LEDx": 258.17,
+          "LEDy": 542.95,
+          "coloredHx": 269.5,
+          "pixels": 614
+        }
+      },
+      "horizontalSpanPx": 82.94,
+      "verticalSpanPx": 41.77,
+      "screenshots": {
+        "android-selected115.png": "16e11a4c1ee899a746c7ed06f06b09f6039aeb709a5791135222aa67db451d0e",
+        "android-upgraded116.png": "0aa20f4e5a70982fc04c236055a3302379d0595f12354aa2457ff77327a0bc40",
+        "android-left.png": "83c74d85d236ae705ff334df5a9848b2e7ac971fdc0573353a50dd8df3e13fb2",
+        "android-right.png": "a5736be036cfb5149b0ddadede8ef9795f7732325ee78dd90b75472e528f0f3c",
+        "android-up.png": "32b28c3e006fd27d996725106c57c9a79e198161434c81943796b3b60a774766",
+        "android-down.png": "11538adb25745ac0924af19072d291a024408dee97f5eec6b15563d2d0b4c51a",
+        "android-release.png": "d509feaf66824a2bda62f58b356dbee8d8a28ac3cf552bf4369dc2c923c9fd86"
+      }
+    },
+    "touchRegression": {
+      "method": "同一 412×850 触屏手势，跟踪可见脸部像素和原生投影。趣物偶平涂的旧版在水平行程断言处失败，新版四个用例通过。",
+      "openLookTravel": {
+        "controller": {
+          "base": {
+            "horizontalTurnDeg": 33.7,
+            "verticalTurnDeg": 15.1,
+            "eyesTravelXPctCanvas": 10.3,
+            "eyesTravelYPctCanvas": 5.0
+          },
+          "new": {
+            "horizontalTurnDeg": 86.2,
+            "verticalTurnDeg": 46.6,
+            "eyesTravelXPctCanvas": 20.4,
+            "eyesTravelYPctCanvas": 11.2
+          }
+        },
+        "controller:glass": {
+          "base": {
+            "horizontalTurnDeg": 30.5,
+            "verticalTurnDeg": 14.7,
+            "eyesTravelXPctCanvas": 10.5,
+            "eyesTravelYPctCanvas": 5.2
+          },
+          "new": {
+            "horizontalTurnDeg": 80.6,
+            "verticalTurnDeg": 42.0,
+            "eyesTravelXPctCanvas": 21.4,
+            "eyesTravelYPctCanvas": 10.8
+          }
+        },
+        "controller:flat": {
+          "base": {
+            "horizontalTurnDeg": 32.2,
+            "verticalTurnDeg": 15.1,
+            "eyesTravelXPctCanvas": 11.2,
+            "eyesTravelYPctCanvas": 5.5
+          },
+          "new": {
+            "horizontalTurnDeg": 83.8,
+            "verticalTurnDeg": 44.4,
+            "eyesTravelXPctCanvas": 22.5,
+            "eyesTravelYPctCanvas": 12.4
+          }
+        },
+        "reduced": "Body remained at rest (-.3, +.2 radians), eyes followed the finger.",
+        "gesture": "412×850, real Chrome touch events, left/right endpoints x=20/392, up/down 155px from avatar center. Read back native canvas pose and visible eye pixels at those positions. Linux browser with WebGL2 software rendering, not a device latency measurement."
+      },
+      "boop": {
+        "method": "412×850 CSS px，CDP Input.dispatchTouchEvent，手势从头部或舞台空白持续按住，左右各 0.34 画布宽，上下各 0.272 画布宽；每次停留 570ms，读取原生投影和眼组/实际外壳的屏幕几何。另做 102 天线和减少动态。",
+        "passed": true,
+        "cases": [
+          {
+            "variant": "classic-3d",
+            "mode": "head",
+            "before": {
+              "horizontalEyesRelativeShellCssPx": 24.7,
+              "verticalEyesRelativeShellCssPx": 20.9
+            },
+            "after": {
+              "horizontalEyesRelativeShellCssPx": 86.8,
+              "verticalEyesRelativeShellCssPx": 43.4
+            }
+          },
+          {
+            "variant": "classic-2d",
+            "mode": "head",
+            "before": {
+              "horizontalEyesRelativeShellCssPx": 28.0,
+              "verticalEyesRelativeShellCssPx": 18.3
+            },
+            "after": {
+              "horizontalEyesRelativeShellCssPx": 51.2,
+              "verticalEyesRelativeShellCssPx": 22.6
+            }
+          },
+          {
+            "variant": "classic-3d",
+            "mode": "blank",
+            "before": {
+              "horizontalEyesRelativeShellCssPx": 34.0,
+              "verticalEyesRelativeShellCssPx": 12.4
+            },
+            "after": {
+              "horizontalEyesRelativeShellCssPx": 89.0,
+              "verticalEyesRelativeShellCssPx": 47.1
+            }
+          },
+          {
+            "variant": "classic-2d",
+            "mode": "blank",
+            "before": {
+              "horizontalEyesRelativeShellCssPx": 28.1,
+              "verticalEyesRelativeShellCssPx": 9.1
+            },
+            "after": {
+              "horizontalEyesRelativeShellCssPx": 51.2,
+              "verticalEyesRelativeShellCssPx": 24.7
+            }
+          },
+          {
+            "variant": "skin-102",
+            "mode": "antenna"
+          },
+          {
+            "variant": "classic-3d",
+            "mode": "reduce"
+          },
+          {
+            "variant": "skin-102",
+            "mode": "head",
+            "before": {
+              "horizontalEyesRelativeShellCssPx": 27.9,
+              "verticalEyesRelativeShellCssPx": 21.2
+            },
+            "after": {
+              "horizontalEyesRelativeShellCssPx": 86.3,
+              "verticalEyesRelativeShellCssPx": 43.4
+            }
+          },
+          {
+            "variant": "skin-102",
+            "mode": "flat",
+            "before": {
+              "horizontalEyesRelativeShellCssPx": 29.5,
+              "verticalEyesRelativeShellCssPx": 21.1
+            },
+            "after": {
+              "horizontalEyesRelativeShellCssPx": 54.2,
+              "verticalEyesRelativeShellCssPx": 29.1
+            }
+          }
+        ]
+      },
+      "robotLEDPanelCssPx": {
+        "v115": {
+          "idle": {
+            "spanX": 32.21,
+            "spanY": 14.64
+          },
+          "thinking": {
+            "spanX": 0.43,
+            "spanY": 18.67
+          },
+          "speaking": {
+            "spanX": 32.48,
+            "spanY": 15.69
+          },
+          "reduced": {
+            "spanX": 0,
+            "spanY": 0
+          }
+        },
+        "v116": {
+          "idle": {
+            "spanX": 47.15,
+            "spanY": 27.15
+          },
+          "thinking": {
+            "spanX": 45.83,
+            "spanY": 30.28
+          },
+          "speaking": {
+            "spanX": 47.15,
+            "spanY": 26.57
+          },
+          "reduced": {
+            "spanX": 12.4,
+            "spanY": 5.9
+          }
+        }
+      }
+    },
+    "packagedRegression": [
+      "avatar-drag",
+      "appearance",
+      "orb-input",
+      "touch-sound",
+      "avatar",
+      "orb-pulse",
+      "orb-motion",
+      "playback",
+      "ota-ui",
+      "verify"
+    ],
+    "classicRenderingByteIdentical": true
+  }
+}

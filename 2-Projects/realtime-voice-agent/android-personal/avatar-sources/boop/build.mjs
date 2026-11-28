@@ -88,6 +88,21 @@ function transformModule(id, src) {
 
   let code = src.replace(/\r\n/g, '\n');
 
+  if (id === 'src/boopface-3d-layers.js') {
+    // The native jelly drag deliberately returns the head to neutral. Keep its
+    // stretch, expression and antenna layers while feeding the personal app's
+    // explicit drag angle into the existing side-wall and eye projector.
+    const native = 'const still = Math.max(touch, center), Y = clamp(yaw, -22, 22) * (1 - still), P = clamp(pitch, -15, 15) * (1 - still);';
+    if (!code.includes(native)) throw new Error('BoopFace head projection changed');
+    code = code.replace(native, `const turn = brain?._nightDragTurn;
+      const hand = tug || brain?._gestureFx || !turn ? 0 : turn.weight;
+      const natural = (1 - Math.max(touch, center)) * (1 - hand);
+      yaw = clamp(yaw, -22, 22) * natural + (hand ? 36 * turn.x : 0);
+      pitch = clamp(pitch, -15, 15) * natural - (hand ? 24 * turn.y : 0);
+      if (hand) { gazeX += .65 * turn.x; gazeY += .5 * turn.y; }
+      const Y = yaw, P = pitch;`);
+  }
+
   // 1. Replace dynamic import('...') -> __import('resolved')
   code = code.replace(/\bimport\(\s*['"]([^'"]+)['"]\s*\)/g, (_, spec) => {
     const target = resolveModuleId(id, spec);

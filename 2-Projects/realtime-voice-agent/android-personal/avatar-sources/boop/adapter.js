@@ -463,6 +463,11 @@
     var errorHoldTimer = 0;
     var lastNativePointerAt = -Infinity;
     var gazeActive = false;
+    // Blend the hand's turn with the current action. Keep the native antenna
+    // and squeeze animations in full control of their own geometry.
+    var turn = { x: 0, y: 0, weight: 0 };
+    var turnTime = performance.now();
+    avatar._nightDragTurn = turn;
     var pokeCount = 0;
     var lastPokeAt = 0;
     var touchCycle = 0;
@@ -693,7 +698,25 @@
       avatar.setAttribute('motion', reduced ? 'reduce' : 'full');
     }
 
-    function applyGaze(gazeX, gazeY, now, reduced) {
+    function updateHandTurn(frame, now) {
+      var following = frame.pointerActive && !frame.reduced && !avatar._gestureFx;
+      var elapsed = Math.min(80, Math.max(0, now - turnTime));
+      turnTime = now;
+      var blend = frame.reduced ? 1 : 1 - Math.exp(-elapsed / (following ? 70 : 105));
+      turn.x += ((following ? clamp(frame.gazeX, -1, 1) : 0) - turn.x) * blend;
+      turn.y += ((following ? clamp(frame.gazeY, -1, 1) : 0) - turn.y) * blend;
+      turn.weight += ((following ? 1 : 0) - turn.weight) * blend;
+      if (!following && turn.weight < .002) turn.x = turn.y = turn.weight = 0;
+      if (config.view === '2d') {
+        // Tip the flat drawing in perspective; its native eye and jelly layers
+        // retain their own independent parallax and shape animation.
+        avatar.style.transform = turn.weight
+          ? 'perspective(' + (lastSize * 3) + 'px) rotateY(' + (turn.x * 32).toFixed(2) +
+            'deg) rotateX(' + (-turn.y * 22).toFixed(2) + 'deg)' : '';
+      }
+    }
+
+    function applyGaze(gazeX, gazeY, now, reduced, hand) {
       if (reduced) {
         if (gazeActive && avatar._pointer) {
           avatar._pointer.active = false;
@@ -703,8 +726,7 @@
         return;
       }
       // Yield to direct user pointer drag/petting for 1.2s so tactile gestures never fight gaze.
-      if (now - lastNativePointerAt < 1200) return;
-      if (avatar._dragJelly && (avatar._dragJelly.active || avatar._dragJelly.returning)) return;
+      if (!hand && (now - lastNativePointerAt < 1200 || avatar._dragJelly?.active || avatar._dragJelly?.returning)) return;
       if (avatar._gestureFx && avatar._gestureFx.held) return;
 
       var hasGaze = Number.isFinite(gazeX) && Number.isFinite(gazeY);
@@ -720,7 +742,7 @@
           avatar._pointer.x = gx * 48;
           avatar._pointer.y = gy * 34;
           avatar._pointer.active = true;
-          avatar._pointer.influence = clamp(mag, 0.25, 1);
+          avatar._pointer.influence = hand ? 1 : clamp(mag, 0.25, 1);
           avatar._pointer.lastMove = now;
         }
         if (typeof avatar._resumeFrames === 'function') avatar._resumeFrames();
@@ -848,6 +870,7 @@
       var frameTime = Number.isFinite(frame.time) ? frame.time : now;
 
       applyReduced(frame.reduced);
+      updateHandTurn(frame, now);
       applyColor(frame.color, frame.customColor);
 
       var phase = String(frame.phase || 'idle').trim().toLowerCase();
@@ -873,13 +896,13 @@
       // Urgent conversation phases preempt manual expression previews.
       if (manualExpressUntil > now) {
         if (voiceExpression) {
-          applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+          applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced), frame.pointerActive);
           return;
         }
         if (urgentVoicePhase && phase !== currentPhase) {
           cancelManualExpress();
         } else if (phase === 'idle' || phase === 'muted' || phase === 'connecting') {
-          applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+          applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced), frame.pointerActive);
           return;
         }
       } else if (manualExpressAction) {
@@ -955,7 +978,7 @@
       }
 
       // Gaze tracking (drives eyes, 2D head-follow, 3D head yaw/pitch, and skin lighting)
-      applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced));
+      applyGaze(frame.gazeX, frame.gazeY, now, Boolean(frame.reduced), frame.pointerActive);
     }
 
     function currentExpression() {
