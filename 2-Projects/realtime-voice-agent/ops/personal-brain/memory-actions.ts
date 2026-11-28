@@ -6,6 +6,7 @@ import {isCrisisContent} from './p003/memory-safety-filter.js';
 type Fact = {kind:'name'|'preference'|'fact'; topic:string; value:string; quote:string};
 type Target = {topic:string; kind?:Fact['kind']; itemId?:string};
 export type MemoryCommand = {op:'set'; facts:Fact[]} | {op:'forget'; target:Target} | {op:'clarify'; text:string};
+type RecallVersion = {version:string; rawId?:string; sourceId?:string; kind:string; topic:string};
 type Chat = {role:'user'|'assistant'; content:string};
 const clarify = (text:string): MemoryCommand => ({op:'clarify', text});
 const clean = (s:string) => s.trim().replace(/[。．.!！]+$/u,'').trim();
@@ -121,7 +122,7 @@ const factText = (f:Fact) => f.kind==='name'?'称呼你为'+f.value:f.kind==='pr
 export class PersonalMemoryActions {
   private db:DatabaseSync;
   private readonly owner:string;
-  constructor(dataDir:string,owner:string) {
+  constructor(dataDir:string,owner:string,private readonly recallVersions?:()=>RecallVersion[]) {
     this.owner=owner;
     this.db=new DatabaseSync(join(dataDir,'profile.sqlite'));
     this.db.prepare('ATTACH DATABASE ? AS dialogs').run(join(dataDir,'conversations.sqlite'));
@@ -130,32 +131,79 @@ export class PersonalMemoryActions {
         source_quote TEXT NOT NULL,source_msg_id TEXT NOT NULL,updated_at INTEGER NOT NULL,
         PRIMARY KEY(account_id,kind,topic));
       CREATE TABLE IF NOT EXISTS personal_memory_boundary(account_id TEXT PRIMARY KEY, cut INTEGER NOT NULL);`);
+    // Before granular invalidation was introduced, a single cut suppressed all earlier context.
+    // Capture the old boundary once: pre-upgrade erasures have no source-level audit trail.
+    this.db.exec(`CREATE TABLE IF NOT EXISTS personal_legacy_boundary(account_id TEXT PRIMARY KEY, cut INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS personal_history_mask(account_id TEXT NOT NULL, msg_id TEXT NOT NULL,PRIMARY KEY(account_id,msg_id));
+      CREATE TABLE IF NOT EXISTS personal_turn_recall(account_id TEXT NOT NULL, reply_msg_id TEXT NOT NULL,
+        mode TEXT NOT NULL CHECK(mode IN ('model','direct')),memory_ids TEXT NOT NULL, source_ids TEXT NOT NULL,
+        PRIMARY KEY(account_id,reply_msg_id));`);
+    this.db.prepare('INSERT OR IGNORE INTO personal_legacy_boundary VALUES(?,?)').run(owner,this.revision);
+  }
+
+  recordRecall(replyId:string, selection?:{memoryIds:string[];sourceIds:string[]}) {
+    this.db.prepare('INSERT INTO personal_turn_recall(account_id,reply_msg_id,mode,memory_ids,source_ids) VALUES(?,?,?,?,?)')
+      .run(this.owner,replyId,selection?'model':'direct',JSON.stringify(selection?.memoryIds??[]),JSON.stringify(selection?.sourceIds??[]));
   }
 
   get revision():number {
     return Number(this.db.prepare('SELECT cut FROM personal_memory_boundary WHERE account_id=?').get(this.owner)?.cut??0);
   }
-  filterSnapshot<T extends {ts:number}>(rows:T[]):T[] {
-    const cut=this.revision;
-    return cut?rows.filter(row=>row.ts>cut):rows;
+  filterSnapshot<T extends {ts:number;id?:string}>(rows:T[]):T[] {
+    const legacy=this.db.prepare('SELECT cut FROM personal_legacy_boundary WHERE account_id=?').get(this.owner)!;
+    const hidden=this.db.prepare('SELECT 1 FROM personal_history_mask WHERE account_id=? AND msg_id=?');
+    return rows.filter(row=>row.id ? row.ts>Number(legacy.cut) && !hidden.get(this.owner,row.id) : row.ts>this.revision);
   }
   replyHistory(room:string,workerHistory:Chat[]):Chat[] {
-    const cut=this.revision;
-    if (!cut || !workerHistory.length) return workerHistory;
-    // Worker history has neither timestamps nor IDs. Only replay completed turns from after
-    // the last change, respecting the existing caller's requested context window.
-    return (this.db.prepare(`SELECT role,text AS content FROM dialogs.conversation
-      WHERE account_id=? AND session_id=? AND ts>?
-      ORDER BY ts DESC,rowid DESC LIMIT ?`).all(this.owner,room,cut,workerHistory.length) as unknown as Chat[]).reverse();
+    if (!this.revision || !workerHistory.length) return workerHistory;
+    // Resolve the worker's unversioned text against authoritative, still-eligible turns in this room.
+    return this.db.prepare(`SELECT c.role,c.text AS content FROM dialogs.conversation c
+      WHERE c.account_id=? AND c.session_id=? AND c.ts>(SELECT cut FROM personal_legacy_boundary WHERE account_id=c.account_id)
+        AND NOT EXISTS(SELECT 1 FROM personal_history_mask h WHERE h.account_id=c.account_id AND h.msg_id=c.id)
+      ORDER BY c.ts DESC,c.rowid DESC LIMIT ?`).all(this.owner,room,workerHistory.length).reverse() as unknown as Chat[];
+  }
+  private maskHistory(sourceIds:Set<string>,mentions:(text:string)=>boolean,versions:Map<string,Set<string>>) {
+    // Keep raw transcripts viewable. Exclude the whole old exchange when a source, literal or
+    // previously transmitted fact identifies it. This also catches paraphrased model replies.
+    const turns=this.db.prepare(`SELECT c.id,c.session_id,c.role,c.text,t.source_ids,t.memory_ids
+      FROM dialogs.conversation c LEFT JOIN personal_turn_recall t ON t.account_id=c.account_id AND t.reply_msg_id=c.id
+      WHERE c.account_id=? ORDER BY c.session_id,c.rowid`).all(this.owner);
+    const hide=this.db.prepare('INSERT OR IGNORE INTO personal_history_mask VALUES(?,?)');
+    for (const [index,turn] of turns.entries()) {
+      const used=turn.memory_ids?JSON.parse(String(turn.memory_ids)) as string[]:[];
+      const sources=turn.source_ids?JSON.parse(String(turn.source_ids)) as string[]:[];
+      const linked=sources.some((id,i)=>sourceIds.has(id) && (!versions.has(id) || versions.get(id)!.has(used[i])));
+      if (!sourceIds.has(String(turn.id)) && !mentions(String(turn.text)) && !linked) continue;
+      hide.run(this.owner,turn.id);
+      const paired=turns[index+(turn.role==='user'?1:-1)];
+      if (paired && paired.role!==turn.role && paired.session_id===turn.session_id) hide.run(this.owner,paired.id);
+    }
   }
   close():void { this.db.close(); }
 
   private remove(target:Target):boolean {
+    const catalog=this.recallVersions?.()??[];
+    const versions=new Map<string,Set<string>>();
+    const sourceIds=new Set<string>();
+    // One voice message can establish several independent facts. Match its exact
+    // fact version for model receipts; keep the message ID for transcript masking.
+    const track=(id:string,match:(e:RecallVersion)=>boolean)=>{
+      if (!id) return;
+      sourceIds.add(id);
+      const candidates=catalog.filter(e=>e.sourceId===id);
+      if (candidates.length) {
+        const selected=versions.get(id)??new Set<string>();
+        for (const e of candidates) if (match(e)) selected.add(e.version);
+        versions.set(id,selected);
+      }
+    };
     if (target.itemId) {
       const row=this.db.prepare('SELECT content,source_msg_id,type FROM memory_item WHERE id=? AND account_id=?').get(target.itemId,this.owner);
       if (!row) return false;
       this.db.prepare('DELETE FROM memory_item WHERE id=? AND account_id=?').run(target.itemId,this.owner);
       const content=String(row.content);
+      track(String(row.source_msg_id??''),e=>e.rawId===target.itemId);
+      this.maskHistory(sourceIds,text=>content.length>1 && text.includes(content),versions);
       if (row.type==='preference' && row.source_msg_id) {
         const profile=this.db.prepare('SELECT interests FROM family_member WHERE account_id=?').get(this.owner);
         const interests=JSON.parse(String(profile?.interests??'[]')) as Interest[];
@@ -169,8 +217,8 @@ export class PersonalMemoryActions {
     const {topic,kind}=target;
     const p=this.db.prepare(`SELECT nickname,preferred_address,interests,recent_emotion,personality_notes,
       birthday,gender,age_years FROM family_member WHERE account_id=?`).get(this.owner) as unknown as Profile;
-    const known=this.db.prepare('SELECT kind,topic,value FROM personal_memory_fact WHERE account_id=?').all(this.owner) as
-      {kind:Fact['kind'];topic:string;value:string}[];
+    const known=this.db.prepare('SELECT kind,topic,value,source_msg_id FROM personal_memory_fact WHERE account_id=?').all(this.owner) as
+      {kind:Fact['kind'];topic:string;value:string;source_msg_id:string}[];
     const canonicalText=new Set<string>();
     const terms=new Set<string>([topic]);
     const shortValues=new Set<string>();
@@ -181,6 +229,7 @@ export class PersonalMemoryActions {
     for (const row of known) {
       if ((kind && row.kind!==kind) || !(row.topic===topic || (!kind && (row.value===topic || (topic.length>1 && row.value.includes(topic)))) || (kind==='name' && row.kind==='name'))) continue;
       this.db.prepare('DELETE FROM personal_memory_fact WHERE account_id=? AND kind=? AND topic=?').run(this.owner,row.kind,row.topic);
+      track(row.source_msg_id,e=>e.kind===row.kind && e.topic===row.topic);
       canonicalText.add(factText({...row,quote:''}));
       if (row.kind!=='preference') addValue(row.value);
       changed=true;
@@ -209,10 +258,13 @@ export class PersonalMemoryActions {
     }
     const interests=JSON.parse(p.interests) as Interest[];
     const keep=interests.filter(i=>kind==='fact' || (kind==='preference' ? i.value!==topic : !mentions(i.value)));
-    if (keep.length!==interests.length) { fields.set('interests',JSON.stringify(keep)); changed=true; }
+    if (keep.length!==interests.length) {
+      for (const item of interests) if (!keep.includes(item) && typeof item.source_msg_id==='string') track(item.source_msg_id,e=>e.kind==='preference' && e.topic===item.value);
+      fields.set('interests',JSON.stringify(keep)); changed=true;
+    }
     for (const [f,v] of fields)
       this.db.prepare('UPDATE family_member SET '+f+'=?,updated_at=? WHERE account_id=?').run(v,Date.now(),this.owner);
-    const memory=this.db.prepare('SELECT id,content,subject,type FROM memory_item WHERE account_id=?').all(this.owner) as {id:string;content:string;subject:string;type:string}[];
+    const memory=this.db.prepare('SELECT id,content,subject,type,source_msg_id FROM memory_item WHERE account_id=?').all(this.owner) as {id:string;content:string;subject:string;type:string;source_msg_id:string}[];
     for (const m of memory) {
       if (kind==='preference') {
         const value=m.content.replace(/^(?:最)?(?:不喜欢吃|喜欢吃|不喜欢|喜欢|不爱吃|不吃|爱吃|讨厌|忌口)/u,'');
@@ -220,6 +272,7 @@ export class PersonalMemoryActions {
       } else if (kind==='fact') {
         if (!canonicalText.has(m.content) && m.content!==topic) continue;
       } else if (!mentions(m.content) && !mentions(m.subject)) continue;
+      if (m.source_msg_id) track(m.source_msg_id,e=>e.rawId===m.id);
       this.db.prepare('DELETE FROM memory_item WHERE id=? AND account_id=?').run(m.id,this.owner); changed=true;
     }
     // These two prompt sections can quote the old fact even after the corresponding memory was revoked.
@@ -228,16 +281,25 @@ export class PersonalMemoryActions {
       const narrative=this.db.prepare("UPDATE relation_state SET self_narrative='' WHERE account_id=? AND instr(self_narrative,?)").run(this.owner,t);
       if (shots.changes || narrative.changes) changed=true;
     }
+    if (changed) {
+      const phrases=[...canonicalText,...[...shortValues].flatMap(value=>['喜欢','不吃','叫我','称呼你为'].map(prefix=>prefix+value))];
+      this.maskHistory(sourceIds,text=>mentions(text) || text.split(/[，,。？?！!、]/u).some(part=>phrases.some(phrase=>part.endsWith(phrase))),versions);
+    }
     return changed;
   }
 
-  apply(command:MemoryCommand,room:string,userText:string):string {
+  apply(command:MemoryCommand,room:string,userText:string,reviewItemId?:string):string {
     if (command.op==='clarify') return command.text;
     const id=randomUUID();
     this.db.exec('BEGIN IMMEDIATE');
     try {
       const cut=Math.max(Date.now(),this.revision+1);
       let answer:string;
+      if (reviewItemId) {
+        const retired=this.db.prepare("UPDATE memory_item SET status='retracted' WHERE id=? AND account_id=? AND status='active'")
+          .run(reviewItemId,this.owner);
+        if (!retired.changes) throw new Error('review_item_changed');
+      }
       if (command.op==='forget') {
         answer=this.remove(command.target)?'已经从长期记忆中移除了。':'没有找到这项已保存的记忆。';
       } else {
@@ -266,7 +328,11 @@ export class PersonalMemoryActions {
       const add=this.db.prepare(`INSERT INTO dialogs.conversation(id,account_id,session_id,role,text,ts,tokens,memory_excluded)
         VALUES(?,?,?,?,?,?,0,1)`);
       add.run(id,this.owner,room,'user',userText,cut);
-      add.run(randomUUID(),this.owner,room,'assistant',answer,cut);
+      const replyId=randomUUID();
+      add.run(replyId,this.owner,room,'assistant',answer,cut);
+      this.recordRecall(replyId);
+      const hide=this.db.prepare('INSERT OR IGNORE INTO personal_history_mask VALUES(?,?)');
+      hide.run(this.owner,id);hide.run(this.owner,replyId);
       this.db.exec('COMMIT');return answer;
     } catch (e) {
       this.db.exec('ROLLBACK');throw e;

@@ -36,6 +36,8 @@ mod llm;
 mod ordered_pcm;
 mod pipeline;
 mod personal;
+mod personal_words;
+mod personal_timing;
 mod personal_avatar;
 mod personal_providers;
 mod playout;

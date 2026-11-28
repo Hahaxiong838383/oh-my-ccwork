@@ -42,7 +42,7 @@ const { extractAndPersist } = await import('./p003/memory-extractor.js');
 const scheduler = await import('./p003/extract-scheduler.js');
 const { isDiagnosticRoom, resolvePersonalStyle, styleHistory, briefReplyLimit } = await import('./personal-style.js');
 const { PersonalMemoryActions, parseMemoryCommand } = await import('./memory-actions.js');
-const { PersonalRecall } = await import('./memory-recall.js');
+const { PersonalRecall,evidenceId } = await import('./memory-recall.js');
 const { answerClock, resolveClock, stripClockTurns } = await import('./p003/tools/clock-query.js');
 const { SearchExecutor } = await import('./p003/tools/search-executor.js');
 const { SearchTasks, validateQuery } = await import('./p003/tools/search-tasks.js');
@@ -57,8 +57,10 @@ import type { SearchOwner, SearchResult } from './p003/tools/search-tasks.js';
 const owner = { accountId: ownerId, role: 'device' };
 if (!profileStore.getProfile(ownerId)) profileStore.upsertProfile(ownerId, { nickname: '', birthday: '', gender: '' });
 
-const memory = new PersonalMemoryActions(dataDir, ownerId);
 const recall = new PersonalRecall(dataDir);
+const memory = new PersonalMemoryActions(dataDir, ownerId, ()=>recall.evidence(ownerId).map(e=>({
+  version:evidenceId(e),rawId:e.id,sourceId:e.sourceMsgId,kind:e.kind,topic:e.topic,
+})));
 const storyFeedback = new PersonalStoryFeedback(dataDir);
 const {OwnerConsole} = await import('./owner-console.js');
 const admin = new OwnerConsole(dataDir,ownerId,memory,recall);
@@ -204,14 +206,18 @@ let extractionPending = 0;
 function persist(session: string, user: string, reply: Reply) {
   const {text: answer, excluded} = reply;
   const replyFeedback = isReplyFeedback(user);
-  const [feedback] = conversationStore.addTurn({
+  const [feedback,assistant] = conversationStore.addTurn({
     account_id: owner.accountId, session_id: session, memory_excluded: excluded || replyFeedback,
   }, user, answer, !!reply.feedbackEligible && !replyFeedback);
+  try { memory.recordRecall(assistant.id,reply.selection); }
+  catch { report('recall_receipt_failed'); }
   if (excluded) return;
-  const recent = memory.filterSnapshot(conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 }));
+  const recentTurns=conversationStore.list({ accountId: owner.accountId, sessionId: session, limit: 12 });
+  const recent = memory.filterSnapshot(recentTurns);
   // Inspect adjacency before removing excluded turns: a tool response breaks the pair.
   const [, actualFeedback, priorReply, priorRequest] = recent;
-  const paired = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && priorRequest?.role === 'user';
+  const paired = actualFeedback?.id === feedback.id && priorReply?.role === 'assistant' && priorRequest?.role === 'user'
+    && recentTurns[2]?.id===priorReply.id && recentTurns[3]?.id===priorRequest.id;
   if (replyFeedback) {
     if (paired) {
       try { storyFeedback.record(owner.accountId,priorRequest,priorReply,feedback); }
@@ -292,7 +298,7 @@ async function querySearch(query: string, room: string, signal: AbortSignal, onS
   }
 }
 
-type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean; feedbackEligible?: boolean };
+type Reply = { text: string; sources?: SearchResult['sources']; tool?: string; excluded: boolean; feedbackEligible?: boolean; selection?:{memoryIds:string[];sourceIds:string[]} };
 
 async function answer(room: string, messages: TextTurn[], store: boolean, signal: AbortSignal,
   onText: (text: string) => Promise<void>, onSearch?: () => void, voice = false, suppressCue?: () => void): Promise<Reply> {
@@ -403,7 +409,9 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   const policy = [style?.policyLine, limit && `当前回答最多${limit}个完整句子。直接说重点，每句尽量不超过四十字，先说结论。`].filter(Boolean).join('\n');
   const brief = limit ? new BriefSpeech(limit) : undefined;
   const instructions = base + '当前工具配置：' + capabilities(tools) + '。';
-  const prompt = store ? recall.chatPrompt(instructions, owner, user) : instructions;
+  const previousUser=history.findLast(turn=>turn.role==='user')?.content??'';
+  const selection=store ? recall.chatPrompt(instructions,owner,user,previousUser) : undefined;
+  const prompt=selection?.prompt??instructions;
   if (process.env.BRAIN_VERIFY_PROMPT === '1') {
     report(`prompt_rel=${Number(prompt.includes('【小可当下状态·数据】'))} trait=${Number(prompt.includes('【小可对这个主人的相处倾向·数据】'))} quiet=${Number(prompt.includes('主人设定：安静小可'))}`);
   }
@@ -433,7 +441,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
       const result = await querySearch(user, room, signal);
       const remaining = limit && brief ? Math.max(1, limit - brief.count) as 1|2 : undefined;
       await forward(remaining ? briefToolSpeech(result.text, 'search', remaining) : result.text);
-      return { text, sources: result.sources, tool: 'search', excluded: true };
+      return { text, sources: result.sources, tool: 'search', excluded: true, selection };
     }
     const cleaned = claimFilter.feed(parens.feed(exits.feed(delta.text).text));
     await forward(brief ? brief.feed(cleaned) : cleaned);
@@ -445,7 +453,7 @@ async function answer(room: string, messages: TextTurn[], store: boolean, signal
   }
   if (!text.trim()) throw new Error('chat_empty');
   style?.consume?.();
-  return { text, excluded: Boolean(style && !style.consume), feedbackEligible:true };
+  return { text, excluded: Boolean(style && !style.consume), feedbackEligible:true, selection };
 }
 
 const app = new Hono();
@@ -453,7 +461,7 @@ app.route('/internal/console', admin.routes(op=>{
   const completed=extraction.then(op);
   extraction=completed.then(()=>{},()=>{});
   return completed;
-}));
+},()=>extractionPending));
 app.get('/health', (c) => c.json({
   ok: true, service: 'personal-brain', build: process.env.BRAIN_BUILD ?? null, providers: publicProviderStatus(),
 }));

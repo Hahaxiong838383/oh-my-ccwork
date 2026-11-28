@@ -94,7 +94,9 @@ if text.count(anchor) != 1:
 path.write_text(text.replace(anchor, '''  latestConfirmed(accountId: string) {
     return this.db.prepare(`SELECT s.child_said,s.xiaoke_did FROM style_pool s JOIN growth_event e ON e.id=s.id AND e.account_id=s.account_id
       WHERE s.account_id=? AND e.rule='explicit_style_feedback' AND e.reply_msg_id IS NOT NULL AND e.feedback_msg_id IS NOT NULL
-        AND s.created_at > COALESCE((SELECT cut FROM personal_memory_boundary WHERE account_id=s.account_id),0)
+        AND s.created_at > COALESCE((SELECT cut FROM personal_legacy_boundary WHERE account_id=s.account_id),0)
+        AND NOT EXISTS(SELECT 1 FROM personal_history_mask m WHERE m.account_id=s.account_id
+          AND m.msg_id IN (e.reply_msg_id,e.feedback_msg_id))
       ORDER BY s.created_at DESC,s.rowid DESC LIMIT 1`).get(accountId) as {child_said:string; xiaoke_did:string}|undefined;
   }
 

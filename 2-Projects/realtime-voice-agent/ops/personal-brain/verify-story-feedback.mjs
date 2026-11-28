@@ -119,9 +119,6 @@ try {
   // Equal text across two independent rooms is two approvals; repeated delivery with no new story is one.
   await Promise.all([say(rooms[0],request),say(rooms[1],request)]);
   db.prepare('UPDATE dialogs.conversation SET ts=ts-700000 WHERE session_id=?').run(rooms[1]);
-  // The memory correction above intentionally raised a global privacy boundary; age the
-  // synthetic boundary together with the conversation to simulate a genuinely long call.
-  db.prepare('UPDATE personal_memory_boundary SET cut=cut-800000 WHERE account_id=?').run(owner);
   await Promise.all([say(rooms[0],rated),say(rooms[1],rated)]);
   assert.deepEqual(counts(),[2,2]);
   await say(rooms[1],rated);
@@ -155,7 +152,7 @@ try {
   await say(rooms[12],'忘记我的暗号。');
   assert.equal(db.prepare('SELECT count(*) AS n FROM personal_memory_fact WHERE account_id=?').get(owner).n,0);
   await say(rooms[12],'随便聊几句吧。');
-  assert(!prompts.at(-1).includes(explanation) && !prompts.at(-1).includes('【过去有效的相处方式·参考】'));
+  assert(prompts.at(-1).includes(explanation) && prompts.at(-1).includes('【过去有效的相处方式·参考】'), 'forgetting an unrelated fact must preserve the approved example');
   // A one-off style modifier excludes this turn from generic extraction but the
   // actual spoken reply can still be rated. Tool and style receipts are barriers.
   const styledRoom = rooms[2];

@@ -127,3 +127,39 @@ test('short personal values never wipe unrelated facts, and a forgotten native b
     assert.deepEqual(a.replyHistory('room',[{role:'user',content:'我生日是12月1日'}]),[]);
   } finally {close();}
 });
+
+test('forgetting removes the affected exchange and paraphrases from replay while retaining other turns; reopen keeps the masks',()=>{
+  const {a,db,conv,dir,apply,close}=fixture();
+  try {
+    apply('请记住，我的暗号是星灯');
+    const source=db.prepare('SELECT source_msg_id FROM personal_memory_fact').get()!;
+    const add=conv.prepare('INSERT INTO conversation(id,account_id,session_id,role,text,ts,memory_excluded) VALUES(?,?,?,?,?,?,0)');
+    let at=a.revision+1;
+    for(const [id,role,text] of [['q1','user','聊聊森林'],['a1','assistant','叶子绿了'],
+      ['q2','user','来个提示'],['a2','assistant','他说的是两种发光的东西。']]) add.run(id,'owner','room',role,text,at++);
+    a.recordRecall('a2',{memoryIds:['v1'],sourceIds:[String(source.source_msg_id)]});
+    apply('忘掉我的暗号');
+    const reopened=new PersonalMemoryActions(dir,'owner');
+    try {
+      const stale=Array.from({length:8},()=>({role:'assistant',content:'星灯'}));
+      assert.deepEqual(reopened.replyHistory('room',stale).map(x=>x.content),['聊聊森林','叶子绿了']);
+      assert.deepEqual(reopened.filterSnapshot([{id:'q1',ts:at},{id:'q2',ts:at}]).map(x=>x.id),['q1']);
+      assert.equal(db.prepare('SELECT count(*) n FROM personal_history_mask WHERE msg_id IN (?,?)').get('q2','a2')!.n,2);
+    } finally {reopened.close();}
+  } finally {close();}
+});
+
+test('migration preserves the old suppression boundary exactly once while new unrelated changes keep eligible history',()=>{
+  const {db,conv,dir,close}=fixture();
+  try {
+    db.exec("DELETE FROM personal_legacy_boundary WHERE account_id='owner'; INSERT INTO personal_memory_boundary VALUES ('owner',100)");
+    conv.exec("INSERT INTO conversation VALUES ('old','owner','room','user','旧窗口',99,0,0),('new','owner','room','user','公园散步',101,0,0)");
+    const reopened=new PersonalMemoryActions(dir,'owner');
+    try {
+      reopened.apply(parseMemoryCommand('请记住，我的书签是蓝色'),'room','请记住，我的书签是蓝色');
+      assert.deepEqual(reopened.filterSnapshot([{id:'old',ts:99},{id:'new',ts:101}]).map(x=>x.id),['new']);
+      assert.deepEqual(reopened.replyHistory('room',[{role:'user',content:'旧窗口'}]).map(x=>x.content),['公园散步']);
+      assert.equal(db.prepare("SELECT cut FROM personal_legacy_boundary WHERE account_id='owner'").get()?.cut,100);
+    } finally {reopened.close();}
+  } finally {close();}
+});

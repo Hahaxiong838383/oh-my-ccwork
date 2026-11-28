@@ -17,6 +17,17 @@ body{background:#f2f4f8}header{background:#fff}.bar,main{max-width:1500px;paddin
 @media(max-width:850px){.workspace{grid-template-columns:minmax(0,1fr)}.tabs{display:none}.mobile-nav{display:flex;align-items:center;gap:12px;margin:0}.mobile-nav label{flex-shrink:0;margin:0;font-size:14px}.mobile-nav select{max-width:400px}.workspace>.editor{width:100%}}
 @media(max-width:560px){.bar,main{padding-inline:14px}.bar .identity{font-size:15px}.runtime{padding:13px 15px}.runtime>div:first-child{padding-bottom:7px}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.control-block{grid-template-columns:1fr}.control-block button{min-height:42px}.workspace{gap:11px}.fact-line{grid-template-columns:minmax(85px,34%) minmax(0,1fr)}.inside>.spread h2{font-size:19px}.inside>.spread button{min-height:36px;font-size:13px}.inside{padding:15px}}
 .table-scroll{overflow:auto}table.activity-grid{width:100%;border-collapse:collapse;text-align:left;font-size:14px}.activity-grid td,.activity-grid th{padding:7px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}.activity-grid th{color:var(--muted);font-weight:550}.control-block#transcript{display:block}#transcript>.records{margin-top:10px}.turn-text{white-space:pre-wrap;overflow-wrap:anywhere}.turn-role{font-size:13px;font-weight:650;color:var(--violet)}#cueForm{margin-bottom:24px}
+/* Owner workspace */
+:root{--ink:#1c2930;--muted:#53666c;--line:#d9e3df;--violet:#12624e;--pale:#e2f2eb;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+body{background:#eef2ef;font-family:"Inter","Noto Sans CJK SC",system-ui,sans-serif}header{border-bottom-color:#d6e0da}.bar{min-height:60px}.mark{border-radius:10px;background:#173e35}.mark i{background:#baf4cb}.runtime{background:#f9fbf9;box-shadow:none}.status:not(.bad)::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:#518173;margin-right:8px}.status.bad::before{content:"";background:#aa6d35;display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:8px}
+.tabs{background:#19332d;border-color:#19332d;padding:14px 10px;box-shadow:none}.tabs button{color:#dae5df;padding:9px 14px;font-weight:500}.tabs button:hover{background:#244139}.tabs button[aria-pressed=true]{background:#b9e6c9;color:#163e30}.tabs .tab-group{color:#a6bcae;padding-left:14px;font-size:12px}.tabs button[aria-pressed=true]::after{content:"";width:6px;height:6px;background:#287253;border-radius:50%;margin-left:auto}
+button.light,a.action{color:#294c42}.workspace{grid-template-columns:188px minmax(0,1fr)}.workspace>.editor{box-shadow:0 2px 8px #233c2906}.inside h2{font-size:clamp(21px,2vw,28px);letter-spacing:-.025em}.console-head h1{font-size:clamp(23px,2.6vw,32px)}
+.mem-title,.mem-filters,.mem-toolbar,.mem-tabs,.mem-meta,.mem-head,.mem-chart-key{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.mem-title,.mem-toolbar,.mem-head{justify-content:space-between}.mem-title button,.mem-tabs button,.mem-state,.mem-label{font-size:14px}.mem-title p{font-size:14px}.mem-title .actions{margin-top:0}.mem-tabs{gap:20px;border-bottom:1px solid var(--line);margin-top:15px}.mem-tabs button{border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--muted);padding:10px 2px;font-weight:600}.mem-tabs button[aria-pressed=true]{border-color:var(--violet);color:var(--violet)}
+.mem-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin:18px 0}.mem-counts button{position:relative;display:flex;align-items:flex-start;flex-direction:column;gap:6px;text-align:left;overflow:hidden;min-width:0;background:#f8faf8;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:12px 14px}.mem-counts button:hover{border-color:#81a99b}.mem-counts button[aria-pressed=true]{background:#e9f5ee;border-color:#6da48e}.mem-counts strong,.mem-stat strong{font:600 26px/1.1 var(--mono);font-variant-numeric:tabular-nums}.mem-counts small{font-size:13px;color:var(--muted);font-weight:600}.mem-counts button::after{content:"";position:absolute;right:12px;top:15px;width:7px;height:7px;background:#538d74;border-radius:50%}.mem-counts [data-state=pending]::after{background:#bb8737}.mem-counts [data-state=conflict]::after{background:#b56545}.mem-status[data-state=conflict]{color:#98512d}.mem-counts [data-state=inactive]::after{background:#98a3a0}
+.mem-toolbar{margin-bottom:12px}.mem-filters{flex-wrap:nowrap;width:min(100%,540px)}.mem-filters input,.mem-filters select{min-width:0;border-color:#b7c7bf}.mem-filters select{width:124px;flex:0 0 108px;max-width:40%}.mem-work{display:grid;grid-template-columns:minmax(225px,.85fr) minmax(270px,1.25fr);border:1px solid var(--line);border-radius:12px;overflow:hidden;min-height:330px}.mem-list{min-width:0;background:#fbfcfa;border-right:1px solid var(--line)}.mem-list .empty,.mem-list> .pager{margin:12px}.mem-list .pager:empty{display:none}.mem-work .mem-results{display:grid;align-content:start}.mem-choice{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;min-width:0;align-items:center;justify-content:stretch;text-align:left;padding:12px 15px;border:0;border-bottom:1px solid #e1e8e2;border-radius:0;background:transparent;color:var(--ink)}.mem-choice[aria-pressed=true]{background:#eaf3ed;box-shadow:inset 3px 0 #327d5d}.mem-choice:hover{background:#eff5f0}.mem-choice strong,.mem-choice small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mem-choice strong{font-size:15px;font-weight:650}.mem-choice small{grid-row:2;grid-column:1/-1;font-size:13px;font-weight:400}.mem-label{display:inline-flex;align-items:center;font-size:12px;line-height:1.6;padding:1px 7px;border-radius:5px;background:#edf0e9;color:#50635b;justify-self:start}.mem-detail{min-width:0;padding:17px 19px;align-self:start;overflow-wrap:anywhere}.mem-detail h3{font-size:22px;margin:4px 0}.mem-detail h4,.mem-chart h4{font-size:14px;margin:16px 0 5px}.mem-detail blockquote,.mem-quote{margin:8px 0;padding:9px 13px;border-inline-start:3px solid #a9bfaa;background:#f3f6f2;color:#42564b;white-space:pre-wrap}.mem-detail .actions{margin-top:12px}.mem-detail .inline-edit{margin-top:10px}.mem-status{font-size:13px;color:#386343}.mem-status[data-state=pending]{color:#805f23}.mem-status[data-state=inactive]{color:#63716c}.mem-meta{font-size:13px;color:var(--muted)}.mem-detail .actions button,.mem-head button,.mem-trace button{font-size:14px;min-height:36px}.mem-link{background:transparent;padding:3px 1px;min-height:34px;border:0;color:#11624d;text-decoration:underline;text-underline-offset:3px;font-size:14px}.mem-back{display:none!important}.mem-form{background:#f4f7f2;border:1px solid var(--line);border-radius:10px;padding:15px;margin:12px 0}.mem-form form{margin-top:10px}.mem-form input,.mem-form select{max-width:100%}.mem-form .actions{margin-top:10px}.mem-chart{margin:14px 0;border:1px solid var(--line);border-radius:12px;padding:15px}.mem-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-bottom:1px solid var(--line);padding-bottom:14px;gap:12px}.mem-stat small,.mem-stat strong{display:block}.mem-stat small{margin-bottom:4px}.mem-bars{display:flex;align-items:flex-end;gap:4px;height:70px;margin-top:10px}.mem-bar{flex:1;min-width:0;position:relative;display:flex;flex-direction:column-reverse;gap:2px;min-height:4px;background:#dce9de;border-radius:3px 3px 0 0;overflow:hidden}.mem-bar.added{background:#477e60}.mem-bar.failed{background:#c58b49}.mem-chart-key{font-size:12px;color:var(--muted)}.mem-chart-key span:before{content:"";display:inline-block;width:8px;height:8px;background:#dce9de;margin-right:5px}.mem-chart-key span:nth-child(2):before{background:#477e60}.mem-chart-key span:nth-child(3):before{background:#c58b49}.mem-scroll-table{overflow:auto;max-width:100%}.mem-splitform{display:grid;grid-template-columns:1fr 1fr;gap:12px}.mem-splitform label{min-width:0}.mem-trace{border-top:1px solid var(--line);margin-top:8px;padding-top:6px}.mem-trace p{font-size:14px}.mem-detail .empty{padding:4px 0}.mem-detail>small,.mem-detail>.mem-link{display:block;width:fit-content}.mem-detail>.mem-link{margin-block:3px}.mem-help{color:var(--muted);font-size:13px;margin:6px 0}.mem-highlight{outline:2px solid #6ba784}.mem-selected{color:#167055}
+@media(max-width:850px){.workspace{grid-template-columns:minmax(0,1fr)}.bar{min-height:52px}.runtime{margin:10px 0}.mem-work{grid-template-columns:minmax(210px,.85fr) minmax(255px,1.2fr)}}
+@media(max-width:680px){.mem-work{display:block;min-height:0}.mem-choice{min-height:60px}.mem-list{border-right:none}.mem-detail{padding:13px 12px}.mem-work:not(.has-detail) .mem-detail,.mem-work.has-detail .mem-list{display:none}.mem-back:not([hidden]){display:inline-flex!important}.mem-counts{gap:6px;margin:10px 0}.mem-counts button{padding:9px 8px}.mem-counts button::after{top:12px;right:8px;width:5px;height:5px}.mem-counts strong{font-size:21px}.mem-title{align-items:flex-start}.mem-title .actions{gap:5px}.mem-title button{font-size:13px;padding:6px 10px;min-height:36px}.mem-stats{grid-template-columns:1fr 1fr}.mem-splitform{grid-template-columns:1fr;gap:0}.mem-form{padding:10px}.mem-filters{width:100%}.mem-detail h3{font-size:20px}.mem-tabs{margin-top:8px}.mem-detail button{min-height:42px}.mem-detail .mem-back{margin-bottom:8px}}
+#msg:not(:empty){position:fixed;right:clamp(14px,3.6vw,54px);bottom:15px;max-width:min(530px,calc(100vw - 28px));margin:0;padding:9px 15px;background:#183c32;color:#fff;border-radius:8px;box-shadow:0 3px 12px #142c261f;z-index:5;pointer-events:none}.mem-chart .mem-help{margin-block:9px 14px}
 </style></head><body>
 <header><div class="bar"><div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>小可私人管理</div><div class="actions" id="ownerLinks" hidden><a class="action" href="/talk/">打开对话 ↗</a><button class="light" id="logout">退出</button></div></div></header>
 <main>
@@ -24,7 +35,7 @@ body{background:#f2f4f8}header{background:#fff}.bar,main{max-width:1500px;paddin
 <div id="panel" hidden>
 <div class="spread console-head"><h1>私人语音工作台</h1><button id="refresh" class="light">刷新服务状态</button></div>
 <section class="runtime" aria-label="运行总览" id="services"><div><h3>通话占用</h3><div class="pair"><span class="status" id="worker">读取中</span><span class="slots" id="slots" aria-hidden="true"></span></div><small id="clock"></small></div><div><h3>北京签票</h3><span class="status" id="ticket">读取中</span></div><div><h3>飞牛个人大脑</h3><span class="status" id="brain">读取中</span></div></section>
-<div class="workspace"><nav class="tabs" aria-label="工作区"><span class="tab-group">工作台</span><button type="button" data-view="overview" aria-pressed="true" aria-controls="overview">运行总览</button><button type="button" data-view="devices" aria-pressed="false" aria-controls="devices">手机设备</button><button type="button" data-view="operations" aria-pressed="false" aria-controls="operations">服务、版本与备份</button><span class="tab-group">个人大脑</span><button type="button" data-view="memories" aria-pressed="false" aria-controls="memories">长期记忆</button><button type="button" data-view="growth" aria-pressed="false" aria-controls="growth">人格与风格</button><button type="button" data-view="activity" aria-pressed="false" aria-controls="activity">通话与记忆提取</button><button type="button" data-view="tools" aria-pressed="false" aria-controls="tools">工具与查询</button><button type="button" data-view="diagnostics" aria-pressed="false" aria-controls="diagnostics">试问诊断</button><span class="tab-group">语音配置</span><button type="button" data-view="providers" aria-pressed="false" aria-controls="providers">语音供应商</button><button type="button" data-view="voice" aria-pressed="false" aria-controls="voice">通话音色</button><button type="button" data-view="hotwords" aria-pressed="false" aria-controls="hotwords">热词草稿</button><button type="button" data-view="filler" aria-pressed="false" aria-controls="filler">通话衔接语</button></nav><div class="mobile-nav"><label for="mobileView">工作区</label><select id="mobileView"><optgroup label="工作台"><option value="overview">运行总览</option><option value="devices">手机设备</option><option value="operations">服务、版本与备份</option></optgroup><optgroup label="个人大脑"><option value="memories">长期记忆</option><option value="growth">人格与风格</option><option value="activity">通话与记忆提取</option><option value="tools">工具与查询</option><option value="diagnostics">试问诊断</option></optgroup><optgroup label="语音配置"><option value="providers">语音供应商</option><option value="voice">通话音色</option><option value="hotwords">热词草稿</option><option value="filler">通话衔接语</option></optgroup></select></div><section class="card editor"><section class="inside" id="overview">
+<div class="workspace"><nav class="tabs" aria-label="工作区"><span class="tab-group">工作台</span><button type="button" data-view="overview" aria-pressed="true" aria-controls="overview">运行总览</button><button type="button" data-view="devices" aria-pressed="false" aria-controls="devices">手机设备</button><button type="button" data-view="operations" aria-pressed="false" aria-controls="operations">服务、版本与备份</button><span class="tab-group">个人大脑</span><button type="button" data-view="memories" aria-pressed="false" aria-controls="memories">记忆工作室</button><button type="button" data-view="growth" aria-pressed="false" aria-controls="growth">人格与风格</button><button type="button" data-view="activity" aria-pressed="false" aria-controls="activity">通话与记忆提取</button><button type="button" data-view="tools" aria-pressed="false" aria-controls="tools">工具与查询</button><button type="button" data-view="diagnostics" aria-pressed="false" aria-controls="diagnostics">试问诊断</button><span class="tab-group">语音配置</span><button type="button" data-view="providers" aria-pressed="false" aria-controls="providers">语音供应商</button><button type="button" data-view="voice" aria-pressed="false" aria-controls="voice">通话音色</button><button type="button" data-view="hotwords" aria-pressed="false" aria-controls="hotwords">热词管理</button><button type="button" data-view="filler" aria-pressed="false" aria-controls="filler">通话衔接语</button></nav><div class="mobile-nav"><label for="mobileView">工作区</label><select id="mobileView"><optgroup label="工作台"><option value="overview">运行总览</option><option value="devices">手机设备</option><option value="operations">服务、版本与备份</option></optgroup><optgroup label="个人大脑"><option value="memories">记忆工作室</option><option value="growth">人格与风格</option><option value="activity">通话与记忆提取</option><option value="tools">工具与查询</option><option value="diagnostics">试问诊断</option></optgroup><optgroup label="语音配置"><option value="providers">语音供应商</option><option value="voice">通话音色</option><option value="hotwords">热词管理</option><option value="filler">通话衔接语</option></optgroup></select></div><section class="card editor"><section class="inside" id="overview">
   <div class="spread"><h2>运行总览</h2><button class="light" data-reload>刷新总览</button></div>
   <div id="overviewSummary" class="metric-grid"></div>
   <h3>当前通话配置</h3><div id="overviewProviders" class="fact-list"></div>
@@ -32,20 +43,27 @@ body{background:#f2f4f8}header{background:#fff}.bar,main{max-width:1500px;paddin
   <h3>私人语音链路</h3><div id="overviewRuntime" class="fact-list"></div>
 </section>
 <section class="inside" id="memories" hidden>
-  <div class="spread"><h2>长期记忆</h2><button class="light" data-reload>刷新记忆</button></div>
-  <form id="newMemory" class="control-block"><label for="memoryText">让小可记住</label><input id="memoryText" placeholder="例如，记住，我喜欢喝茶" maxlength="180" required><button type="submit">记住这条</button></form>
-  <div id="memoryRows" class="records" aria-live="polite"></div><div id="memoryPager" class="pager"></div>
+  <div class="mem-title"><h2>记忆工作室</h2><div class="actions"><button class="light" data-reload>刷新</button><button id="startMemory" aria-expanded="false" aria-controls="newMemoryBox">新增记忆</button></div></div>
+  <div id="newMemoryBox" class="mem-form" hidden><label for="memoryMode">录入方式</label><select id="memoryMode"><option value="text">用一句话记住</option><option value="fact">个人事实</option><option value="preference">个人偏好</option><option value="name">称呼</option></select><form id="newMemory"><div id="sentenceFields"><label for="memoryText">主人原话</label><input id="memoryText" placeholder="例如，记住，我喜欢喝茶" maxlength="180" required></div><div id="structuredFields" hidden></div><div class="actions"><button type="submit">记住这条</button><button type="button" id="cancelAddMemory" class="light">取消</button></div></form></div>
+  <div class="mem-tabs" role="group" aria-label="记忆视图"><button type="button" id="memoryTab" aria-pressed="true">记忆库</button><button type="button" id="extractTab" aria-pressed="false">提取分析</button><button type="button" id="previewTab" aria-pressed="false">选取预览</button></div>
+  <section id="memoryLibrary"><div id="memCounters" class="mem-counts"></div>
+    <div class="mem-toolbar"><div class="mem-filters"><input type="search" id="memorySearch" aria-label="搜索记忆" placeholder="搜索主题、内容或原话" maxlength="80"><select id="memoryKind" aria-label="筛选记忆类别"><option value="">全部类别</option></select></div></div>
+    <div id="memWork" class="mem-work"><div class="mem-list"><div id="memoryRows" class="mem-results" aria-live="polite"></div><div id="memoryPager" class="pager"></div></div><aside class="mem-detail" aria-label="记忆详情"><button type="button" id="memoryBack" class="light mem-back">返回列表</button><div id="memDetail" aria-live="polite"></div></aside></div>
+  </section>
+  <section id="memoryPreview" hidden><form class="mem-form" id="probeMemory"><label for="previewQuestion">模拟主人说一句话</label><input id="previewQuestion" maxlength="300" required placeholder="例如，周末想喝点什么？"><div class="actions"><button type="submit">预览选取结果</button></div><p class="mem-help">使用当前记忆在本地模拟选取，不计入真实通话回执。</p></form><div id="previewResults" class="records" aria-live="polite"></div></section>
+  <section id="memoryExtractions" hidden><div class="mem-chart"><div class="mem-head"><h3>抽取流水</h3><small>当前留存记录汇总</small></div><div id="extractService" class="mem-help"></div><div id="extractStats" class="mem-stats"></div><div id="extractChart"></div></div><div id="extractRows" class="records"></div><div id="extractPager" class="pager"></div></section>
 </section>
 <section class="inside" id="growth" hidden>
   <div class="spread"><h2>人格成长与说话风格</h2><button class="light" data-reload>刷新成长记录</button></div>
   <form id="styleForm" class="control-block"><label for="styleChoice">长期说话风格</label><select id="styleChoice" disabled></select><button type="submit" id="saveStyle" disabled>保存长期风格</button><p class="subtle">“只这一次”的语音指令只影响当次回答。</p></form>
   <h3>关系状态</h3><div id="relationFacts" class="fact-list"></div>
   <h3>人格特质</h3><div id="traitList" class="traits"></div>
-  <h3>成长依据</h3><div id="growthRows" class="records"></div><div id="growthPager" class="pager"></div>
+  <h3>每日特质对照</h3><div id="snapshotCompare"></div><h3>成长依据</h3><div id="growthRows" class="records"></div><div id="growthPager" class="pager"></div>
 </section>
 <section class="inside" id="tools" hidden>
   <div class="spread"><h2>工具与查询</h2><button class="light" data-reload>刷新工具状态</button></div>
   <form id="toolForm" class="control-block"><h3>可调用的工具</h3><div id="toolSwitches"></div><button type="submit" id="saveTools" disabled>应用工具设置</button></form>
+  <h3>最近通话时序</h3><p class="mem-help">判停和识别定稿从用户停说起算。其余时间从 Worker 开始答复起算，各阶段可能重叠。首音记录 Worker 发出音频的时刻。</p><div id="turnTiming" class="table-scroll" aria-live="polite"></div>
   <h3>搜索任务记录</h3><div id="queryStats" class="metric-grid"></div>
   <div id="searchRows" class="records"></div><div id="searchPager" class="pager"></div><h3>工具调用记录</h3><p class="subtle">最近七天的已提交语音答复，最多保留 1000 条。无来源也可能是澄清问题。</p><div id="historyRows" class="records"></div><div id="historyPager" class="pager"></div>
 </section>
@@ -101,7 +119,7 @@ body{background:#f2f4f8}header{background:#fff}.bar,main{max-width:1500px;paddin
 </div>
 </div>
 </div>
-<div class="inside" id="hotwords" hidden><h2>热词草稿</h2><p class="sub">词表作为草稿保存在后台，私人通话目前尚未接入这些草稿。</p><label for="kind">词表</label><select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select><label for="words">每行一个词</label><textarea id="words" rows="5"></textarea><p class="diff" id="diff"></p><div class="actions"><button id="saveWords">保存草稿</button><small id="edited"></small></div></div>
+<div class="inside" id="hotwords" hidden><h2>热词管理</h2><div id="privateWordsPanel"></div><p class="sub">编辑词表后可查看私人通话支持的发布范围。私人语音保留内置打断指令。</p><label for="kind">词表</label><select id="kind"><option value="asr">语音识别</option><option value="interrupt">打断</option><option value="exit">退出</option><option value="device_asr">设备指令</option><option value="backchannel">播放中附和</option></select><label for="words">每行一个词</label><textarea id="words" rows="5"></textarea><p class="diff" id="diff"></p><div class="actions"><button id="saveWords">保存草稿</button><small id="edited"></small></div></div>
 <div class="inside" id="filler" hidden><h2>通话衔接语</h2><p class="sub">个人大脑按下次对话轮次读取。每行一句，清空一类可停用该类。</p>
 <form id="cueForm"><div class="grid"><div><label for="chatCues">日常对话短语</label><textarea id="chatCues" rows="4" disabled></textarea><label for="chatWait">日常等待（毫秒）</label><input id="chatWait" type="number" min="100" max="3000" step="1" required disabled></div>
 <div><label for="searchCues">联网查询短语</label><textarea id="searchCues" rows="4" disabled></textarea><label for="searchWait">查询等待（毫秒）</label><input id="searchWait" type="number" min="100" max="3000" step="1" required disabled></div></div>
@@ -120,8 +138,8 @@ const PHASE_LABELS={idle:'空闲',ready:'就绪',connecting:'连接中',connecte
 const ACTION_LABELS={sync_logs:'回传日志',check_update:'检查更新'};
 function showOwner(active){
   el('login').hidden=active;el('panel').hidden=!active;el('ownerLinks').hidden=!active;
-  if(!active){++viewSequence;++testSequence;setTestBusy(false);closeTranscript();savedBrain=null;latestOps=null;cueRevision=null;
-    for(const id of ["memoryRows","growthRows","searchRows","activityRows","overviewSummary","overviewDevices","overviewProviders","relationFacts","traitList","testTurns","testStatus"])el(id).replaceChildren();el("memoryText").value="";el("question").value="";
+  if(!active){++viewSequence;++testSequence;setTestBusy(false);closeTranscript();resetMemoryView();memoryMode('library');savedBrain=null;latestOps=null;cueRevision=null;
+    for(const id of ["turnTiming","privateWordsPanel","memoryRows","growthRows","searchRows","activityRows","overviewSummary","overviewDevices","overviewProviders","relationFacts","traitList","testTurns","testStatus"])el(id).replaceChildren();el("memoryText").value="";el("question").value="";
     clearInterval(interval);clearSample();deviceList=null;selectedDevice=null;deviceColorDrafts={};deviceFetchSeq++}
 }
 function clearSample(){
@@ -534,7 +552,7 @@ el('saveWords').onclick=handle(async()=>{
   const kind=editingKind,raw=el('words').value;
   const saved=await api('drafts/'+kind,'PUT',{words:words(),previous:settings.drafts[kind]?.id??null});
   settings.drafts[kind]=saved;if(edits[kind]===raw)delete edits[kind];if(editingKind===kind)showDraft();
-  el('msg').textContent='热词草稿已保存';
+  el('msg').textContent='热词草稿已保存';window.refreshPrivateWords?.();
 });
 el('saveProbs').onclick=handle(async()=>{
   const probabilities={};for(const k of Object.keys(settings.probabilities)){const v=el('p-'+k).valueAsNumber;
@@ -713,30 +731,279 @@ function applyBrainControls(s){
     const st=s.searchStats||{};metrics('queryStats',[['现存任务',st.total],['有依据的回答',st.answered],['缺少依据',st.noEvidence],['失败',st.failed]]);
   }
 }
-const kinds={name:'称呼',fact:'事实',preference:'偏好',interest:'兴趣',like:'喜好',dislike:'不喜欢',profile:'画像',nickname:'称呼',memory:'记忆'};
-function memoryRow(item){
-  const row=node('article',null,'record');
-  row.append(node('h4',item.topic||labelFor(kinds,item.kind)),node('p',item.value));
-  row.append(node('small',[labelFor(kinds,item.kind),'来源 '+displayValue(item.source),dateLabel(item.updatedAt)].join(' · ')));
-  const actions=node('div',null,'actions');row.append(actions);
-  if(item.editable)actions.append(actionButton('纠正',async()=>{
-    const form=node('form',null,'inline-edit'),field=node(item.kind==='preference'?'select':'input');
-    if(item.kind==='preference')for(const v of ['喜欢','不喜欢'])field.add(new Option(v,v));
-    else field.maxLength=50;
-    field.value=item.value;field.required=true;field.setAttribute('aria-label','纠正后的内容');
-    const save=node('button','保存纠正');save.type='submit';
-    const cancel=actionButton('取消',async()=>{form.remove();actions.hidden=false;});
-    form.append(field,save,cancel);actions.hidden=true;row.append(form);field.focus();
-    form.onsubmit=handle(async()=>{
-      save.disabled=true;try{await api('brain/memories/'+encodeURIComponent(item.id),'PUT',{value:field.value.trim(),expected:item.value});el('msg').textContent='已保存纠正';await loadCurrentView();}
-      finally{save.disabled=false;}
-    });
+const kinds={name:'称呼',fact:'事实',preference:'偏好',interest:'兴趣',like:'喜好',dislike:'不喜欢',profile:'画像',nickname:'称呼',memory:'记忆',promise:'约定','assistant-promise':'小可的约定',event:'事件',emotion:'情绪',relation:'关系',concern:'关心事项',rule:'长期规则'};
+const states={verified:'已确认',pending:'待核验',conflict:'疑似冲突',inactive:'已失效'};
+let memorySection='library', memoryState='verified', memoryPick=null, memoryJump=null, turnJump=null, detailSequence=0, extractStart=0, searchTimer;
+const libraryActive=seq=>seq===viewSequence&&currentView==='memories'&&!el('panel').hidden;
+function resetMemoryView(){
+  memoryPick=memoryJump=turnJump=null;memoryState='verified';offsets.memories=extractStart=0;++detailSequence;clearTimeout(searchTimer);
+  for(const id of ['memDetail','memCounters','extractService','extractRows','extractStats','extractChart','snapshotCompare','structuredFields','previewResults'])el(id).replaceChildren();
+  el('memoryMode').value='text';el('memoryMode').onchange();el('previewQuestion').value='';el('memorySearch').value='';el('memoryKind').replaceChildren(new Option('全部类别',''));
+  el('newMemoryBox').hidden=true;el('startMemory').setAttribute('aria-expanded','false');el('memWork').classList.remove('has-detail');
+}
+function memoryMode(to) {
+  memorySection=to;
+  const library=to==='library';
+  el('memoryTab').setAttribute('aria-pressed',String(library));el('extractTab').setAttribute('aria-pressed',String(to==='extract'));el('previewTab').setAttribute('aria-pressed',String(to==='preview'));
+  el('memoryLibrary').hidden=!library;el('memoryExtractions').hidden=to!=='extract';el('memoryPreview').hidden=to!=='preview';
+}
+function setPager(id,offset,total,count,step,go){
+  const box=el(id);box.replaceChildren();if(total<=step)return;
+  const prev=actionButton('上一页',()=>go(Math.max(0,offset-step))), next=actionButton('下一页',()=>go(offset+step));
+  prev.disabled=offset===0;next.disabled=offset+count>=total;
+  box.append(node('span',String(offset+1)+'–'+(offset+count)+' / '+total),prev,next);
+}
+function linkButton(label,fn){
+  const b=actionButton(label,fn);b.className='mem-link';return b;
+}
+function setPick(id,open){
+  memoryPick=id;el('memWork').classList.toggle('has-detail',Boolean(open));
+  for(const b of el('memoryRows').querySelectorAll('[data-memory]'))b.setAttribute('aria-pressed',String(b.dataset.memory===id));
+}
+function filtersChanged(){
+  memoryJump=null;setPick(null,false);offsets.memories=0;++detailSequence;
+  return loadCurrentView();
+}
+function showCounts(data){
+  el('memCounters').replaceChildren(...Object.entries(states).map(([key,name])=>{
+    const b=node('button');b.type='button';b.dataset.state=key;b.setAttribute('aria-pressed',String(memoryState===key));
+    const count=data?.[key==='conflict'?'conflicts':key];b.append(node('small',name),node('strong',Number.isSafeInteger(count)?count:'—'));
+    b.onclick=()=>{memoryState=key;filtersChanged();};return b;
   }));
-  if(item.manageable)actions.append(actionButton('忘记',async()=>{
-    if(!window.confirm('让小可忘记「'+(item.topic||item.value)+'」这条记忆？'))return;
-    await api('brain/memories/'+encodeURIComponent(item.id),'DELETE',{expected:item.value});el('msg').textContent='已忘记这条记忆';await loadCurrentView();
-  },true));
-  return row;
+}
+function memoryChoice(item){
+  const row=node('button',null,'mem-choice record');row.type='button';row.dataset.memory=item.id;
+  row.append(node('strong',item.proposed?.topic||item.topic||labelFor(kinds,item.kind)),node('span',labelFor(kinds,item.kind),'mem-label'),node('small',item.value));
+  row.setAttribute('aria-pressed',String(memoryPick===item.id));row.onclick=()=>{setPick(item.id,true);readMemoryDetail(item.id,viewSequence);};return row;
+}
+async function readMemoryList(seq){
+  const q=el('memorySearch').value.trim(),kind=el('memoryKind').value,start=offsets.memories;
+  const query=new URLSearchParams({state:memoryState,offset:String(start),limit:String(pageSize)});
+  if(q)query.set('q',q);if(kind)query.set('kind',kind);
+  el('memoryPager').replaceChildren();empty('memoryRows','读取记忆…');empty('memDetail','读入详情…');
+  try {
+    const data=await api('brain/memories?'+query);
+    if(!libraryActive(seq))return;
+    if(!Array.isArray(data.items)||!Number.isSafeInteger(data.total)||!data.counts||!Array.isArray(data.kinds))throw Error('记忆列表返回不完整');
+    if(!data.items.length&&start>=data.total&&start>0){offsets.memories=Math.max(0,Math.floor((data.total-1)/pageSize)*pageSize);return readMemoryList(seq);}
+    showCounts(data.counts);el('memoryKind').replaceChildren(new Option('全部类别',''),...[...new Set([...data.kinds,...(kind?[kind]:[])])].map(k=>new Option(labelFor(kinds,k),k)));el('memoryKind').value=kind;
+    el('memoryRows').replaceChildren(...data.items.map(memoryChoice));
+    const direct=memoryJump;memoryJump=null;
+    const picked=direct||data.items.find(i=>i.id===memoryPick)?.id||data.items[0]?.id;
+    if(!data.items.length)empty('memoryRows',q||kind?'没有匹配的条目。':'暂无'+states[memoryState]+'的记忆。');
+    setPager('memoryPager',start,data.total,data.items.length,pageSize,off=>{offsets.memories=off;setPick(null,false);return loadCurrentView();});
+    setPick(picked,!!picked&&(!!direct||el('memWork').classList.contains('has-detail')));
+    if(picked)await readMemoryDetail(picked,seq);else empty('memDetail','选择一条记忆查看原话、使用记录和操作。');
+  }catch(e){if(libraryActive(seq)){showCounts(null);empty('memoryRows',e.message);empty('memDetail','暂时无法加载详情。');}}
+}
+function fieldPair(form,labelText,field){
+  const label=node('label',labelText);label.append(field);form.append(label);field.setAttribute('aria-label',labelText);field.required=true;return field;
+}
+function structuredFields(container,kind,item={}){
+  container.replaceChildren();let topic=null;
+  if(kind!=='name'){
+    topic=fieldPair(container,'主题',node('input'));topic.maxLength=50;topic.value=item.topic||'';topic.placeholder=kind==='preference'?'例如，红茶':'例如，书签';
+  }
+  const value=fieldPair(container,kind==='name'?'希望怎么称呼你':'内容',node(kind==='preference'?'select':'input'));
+  if(kind==='preference')for(const x of ['喜欢','不喜欢'])value.add(new Option(x,x));else value.maxLength=50;
+  if(item.value&&(kind!=='preference'||['喜欢','不喜欢'].includes(item.value)))value.value=item.value;
+  return ()=>({kind,topic:kind==='name'?'称呼':topic.value.trim(),value:value.value.trim()});
+}
+function memoryForm(parent,item,approve){
+  const form=node('form',null,'mem-form');const fields=node('div',null,'mem-splitform');
+  let read;
+  if(approve){
+    const kind=fieldPair(form,'确认类型',node('select'));
+    const candidate=item.proposed||item;
+    for(const k of ['fact','preference','name'])kind.add(new Option(kinds[k],k));if(['fact','preference','name'].includes(candidate.kind))kind.value=candidate.kind;
+    if(item.conflict)kind.disabled=true;
+    const refresh=()=>{read=structuredFields(fields,kind.value,{...candidate,topic:candidate.topic==='待核验条目'?'':candidate.topic});if(item.conflict)fields.querySelector('input').readOnly=true;};kind.onchange=refresh;refresh();
+  }else{
+    const input=fieldPair(fields,'纠正后的内容',node(item.kind==='preference'?'select':'input'));
+    if(item.kind==='preference')for(const x of ['喜欢','不喜欢'])input.add(new Option(x,x));else input.maxLength=50;
+    input.value=item.value;read=()=>({value:input.value.trim()});
+  }
+  const actions=node('div',null,'actions'),save=node('button',approve?'保存并确认':'保存纠正');save.type='submit';
+  const editStatus=node('p',null,'mem-status');editStatus.setAttribute('role','status');
+  actions.append(save,actionButton('取消',async()=>{form.remove();parent.hidden=false;}));form.append(fields,actions,editStatus);
+  parent.hidden=true;parent.after(form);form.querySelector('input,select')?.focus();
+  form.onsubmit=handle(async()=>{
+    save.disabled=true;
+    try{
+      const route='brain/memories/'+encodeURIComponent(item.id);
+      await api(route+(approve?'/review':''),approve?'POST':'PUT',{expected:item.value,...(approve?{action:'approve',expectedPeer:item.conflict?.id??null}:{}),...read()});
+      el('msg').textContent=approve?'已确认并重新读取记忆。':'已保存纠正。';memoryState='verified';setPick(null,false);await loadCurrentView();
+    }catch(e){
+      editStatus.replaceChildren(node('span',e.message+'　'),linkButton('重新读取此条',()=>readMemoryDetail(item.id,viewSequence)));throw e;
+    }finally{save.disabled=false;}
+  });
+}
+function toTurn(session,id){
+  if(!session||!id)return;
+  turnJump={session,id};openView('activity');
+}
+async function readMemoryDetail(id,seq){
+  const n=++detailSequence;
+  try{
+    const data=await api('brain/memories/'+encodeURIComponent(id));
+    if(n!==detailSequence||!libraryActive(seq)||memorySection!=='library')return;
+    const item=data.item;if(!item)throw Error('缺少条目详情');
+    const panel=el('memDetail'),meta=node('div',null,'mem-meta'),badge=node('strong',labelFor(states,item.state),'mem-status');
+    badge.dataset.state=item.state;meta.append(badge,node('span',labelFor(kinds,item.kind),'mem-label'));
+    panel.replaceChildren(meta,node('h3',item.topic||labelFor(kinds,item.kind)),node('p',item.value),node('small','更新于 '+dateLabel(item.updatedAt)));
+    if(item.conflict){
+      const pair=node('div',null,'mem-form');pair.append(node('strong','同一主题出现不同偏好'),node('p','当前已确认　'+item.conflict.topic+' · '+item.conflict.value),node('p','本次待核验　'+(item.proposed?.value||item.value)),linkButton('查看原有条目',()=>toMemory(item.conflict.id)));panel.append(pair);
+    }
+    const actions=node('div',null,'actions');panel.append(actions);
+    if(item.editable)actions.append(actionButton('纠正',async()=>memoryForm(actions,item,false)));
+    if(item.canApprove)actions.append(actionButton(item.conflict?'采用或改写新值':'确认或改写',async()=>memoryForm(actions,item,true)));
+    async function change(op,label){
+      if(!window.confirm(label+'「'+(item.topic||item.value)+'」？'))return;
+      const route='brain/memories/'+encodeURIComponent(id);
+      await api(route+(op==='forget'?'':'/review'),op==='forget'?'DELETE':'POST',{expected:item.value,...(op==='forget'?{}:{action:op,expectedPeer:item.conflict?.id??null})});
+      el('msg').textContent='已'+label+'，已重新读取记忆。';setPick(null,false);await loadCurrentView();
+    }
+    if(item.canResolve)actions.append(actionButton('标记已兑现',()=>change('resolve','标记已兑现')));
+    if(item.state==='pending'&&item.manageable)actions.append(actionButton(item.conflict?'保留原值':'忽略该条',()=>change('ignore',item.conflict?'保留原值':'忽略'),true));
+    else if(item.manageable&&item.state!=='inactive')actions.append(actionButton('忘记',()=>change('forget','忘记'),true));
+    panel.append(node('h4','来源依据'));
+    if(data.sourceTurn){
+      panel.append(node('blockquote',data.sourceTurn.text),linkButton('查看来源通话',()=>toTurn(data.sourceTurn.session,data.sourceTurn.id)));
+    }else panel.append(node('blockquote',item.source||'历史记录未保留原话关联。'));
+    panel.append(node('h4','实际带入的回复'));
+    if(item.usageCount)panel.append(node('small','共 '+item.usageCount+' 次 · 最近 '+dateLabel(item.lastUsedAt)));
+    if(!Array.isArray(data.uses)||!data.uses.length)panel.append(node('p','暂无本版可回看的带入记录。','mem-help'));
+    else for(const use of data.uses)panel.append(linkButton(dateLabel(use.at)+' · 查看该轮',()=>toTurn(use.session,use.id)));
+    if(data.usageSince)panel.append(node('p','记录起于 '+dateLabel(data.usageSince),'mem-help'));
+  }catch(e){if(n===detailSequence&&libraryActive(seq))empty('memDetail',e.message);}
+}
+function toMemory(id){
+  memoryMode('library');memoryState='verified';memoryJump=id;offsets.memories=0;el('memorySearch').value='';el('memoryKind').value='';openView('memories');
+}
+function newBox(on){
+  el('newMemoryBox').hidden=!on;el('startMemory').setAttribute('aria-expanded',String(on));
+  if(on)el('memoryMode').focus();
+}
+let inputMemory=null;
+el('memoryMode').onchange=()=>{
+  const kind=el('memoryMode').value,free=kind==='text';
+  el('sentenceFields').hidden=!free;el('memoryText').required=free;el('structuredFields').hidden=free;el('structuredFields').replaceChildren();
+  inputMemory=free?null:structuredFields(el('structuredFields'),kind);
+};
+el('startMemory').onclick=()=>newBox(el('newMemoryBox').hidden);
+el('cancelAddMemory').onclick=()=>newBox(false);
+el('newMemory').onsubmit=handle(async()=>{
+  const submit=el('newMemory').querySelector('[type=submit]'),text=el('memoryText');submit.disabled=true;
+  try{
+    await api('brain/memories','POST',inputMemory?inputMemory():{text:text.value.trim()});
+    el('memoryMode').value='text';el('memoryMode').onchange();text.value='';newBox(false);memoryMode('library');
+    el('memorySearch').value='';el('memoryKind').value='';memoryState='verified';el('msg').textContent='已写入长期记忆。';await filtersChanged();
+  }finally{submit.disabled=false;}
+});
+el('memoryBack').onclick=()=>{el('memWork').classList.remove('has-detail');el('memoryRows').querySelector('[aria-pressed=true]')?.focus();};
+el('memorySearch').oninput=()=>{++viewSequence;clearTimeout(searchTimer);searchTimer=setTimeout(()=>{if(currentView==='memories')filtersChanged();},180);};
+el('memoryKind').onchange=filtersChanged;
+el('memoryTab').onclick=()=>{memoryMode('library');loadCurrentView();};
+el('extractTab').onclick=()=>{memoryMode('extract');loadCurrentView();};
+el('previewTab').onclick=()=>{memoryMode('preview');loadCurrentView();};
+el('probeMemory').onsubmit=handle(async()=>{
+  const seq=viewSequence,b=el('probeMemory').querySelector('button');b.disabled=true;
+  try{
+    const data=await api('brain/memory-preview','POST',{text:el('previewQuestion').value.trim()});
+    if(!libraryActive(seq)||memorySection!=='preview')return;
+    if(!Array.isArray(data.items)||data.state!=='preview')throw Error('预览结果不完整');
+    el('previewResults').replaceChildren(...data.items.map(x=>{
+      const entry=node('article',null,'record');entry.append(node('h4',x.topic),node('p',x.value),node('small',x.reason));if(x.id)entry.append(linkButton('查看条目',()=>toMemory(x.id)));return entry;
+    }));
+    if(!data.items.length)empty('previewResults','没有匹配的长期记忆。');
+  }catch(e){if(libraryActive(seq))empty('previewResults',e.message);}finally{b.disabled=false;}
+});
+async function readExtractions(seq){
+  const start=extractStart;
+  el('extractRows').replaceChildren();el('extractService').replaceChildren();el('extractPager').replaceChildren();el('extractChart').replaceChildren();empty('extractStats','读取抽取流水…');
+  try{
+    const data=await api('brain/extractions?offset='+start+'&limit=12');
+    if(!libraryActive(seq)||memorySection!=='extract')return;
+    if(!data.summary||!Array.isArray(data.items))throw Error('抽取流水不完整。');
+    const s=data.summary,svc=data.service,service=el('extractService');
+    if(svc){
+      const provider=labelFor({deepseek:'DeepSeek',personal:'私人模型配置'},svc.provider);
+      service.append(node('p',provider+' · '+(svc.configured?'已配置':'缺少模型配置')+' · 排队 '+(Number.isSafeInteger(svc.pending)?svc.pending+' 轮':'未上报')));
+      if(svc.lastAt)service.append(node('p','最后运行 '+dateLabel(svc.lastAt)+' · '+(svc.lastOk?'成功':'失败')));
+      if(svc.lastFailure)service.append(node('p','最近失败　'+dateLabel(svc.lastFailure.at)+' · '+svc.lastFailure.reason));
+    }else empty('extractService','抽取服务状态未上报。');
+    el('extractStats').replaceChildren(...[['抽取轮次',s.runs],['失败轮次',s.failed],['候选条目',s.candidates],['新增条目',s.added]].map(([key,value])=>{
+      const stat=node('div',null,'mem-stat');stat.append(node('small',key),node('strong',Number.isSafeInteger(value)?value:'—'));return stat;
+    }));
+    const chart=el('extractChart');
+    if(data.items.length){
+      const bars=node('div',null,'mem-bars');bars.setAttribute('aria-hidden','true');
+      const ceiling=Math.max(1,...data.items.map(r=>r.candidates||0));
+      for(const r of [...data.items].reverse()){
+        const b=node('span',null,'mem-bar '+(!r.ok?'failed':r.added?'added':''));b.style.height=(8+90*(r.candidates||0)/ceiling)+'%';bars.append(b);
+      }
+      const key=node('div',null,'mem-chart-key');key.append(node('span','未新增'),node('span','有新增'),node('span','失败'));
+      chart.append(node('h4','本页各轮候选数 · 从早到晚'),bars,key,node('p','未新增可能来自去重或归并。每轮有记录的原因列在下方。','mem-help'));
+    }
+    el('extractRows').replaceChildren(...data.items.map(r=>{
+      const box=node('article',null,'record'),head=node('div',null,'mem-head');
+      head.append(node('strong',!r.ok?'抽取失败':r.added?'记忆已写入':'本轮未新增'),node('small',dateLabel(r.at)));
+      box.append(head,node('p','候选 '+displayValue(r.candidates)+' · 新增 '+displayValue(r.added)+' · 耗时 '+(Number.isFinite(r.llmMs)?r.llmMs+' ms':'未记录')));
+      if(r.note)box.append(node('p',r.note));
+      if(r.rejected&&(!Array.isArray(r.rejected)||r.rejected.length))box.append(node('small','原因　'+(Array.isArray(r.rejected)?r.rejected.join('、'):displayValue(r.rejected))));
+      if(r.sourceTurn)box.append(node('div',r.sourceTurn.text,'mem-quote'),linkButton('查看该轮原话',()=>toTurn(r.sourceTurn.session,r.sourceTurn.id)));
+      return box;
+    }));
+    if(!data.items.length)empty('extractRows','暂无抽取流水。');
+    setPager('extractPager',start,data.total,data.items.length,12,off=>{extractStart=off;return loadCurrentView();});
+  }catch(e){if(libraryActive(seq))empty('extractStats',e.message);}
+}
+async function readSnapshots(seq){
+  const box=el('snapshotCompare');empty('snapshotCompare','读取已保存的日期…');
+  try{
+    const data=await api('brain/growth/snapshots');if(seq!==viewSequence||currentView!=='growth')return;
+    if(!Array.isArray(data.items)||!Array.isArray(data.dimensions))throw Error('快照数据不完整。');
+    if(!data.items.length){empty('snapshotCompare','尚无每日快照。');return;}
+    const rows=[...data.items].sort((a,b)=>a.day.localeCompare(b.day));
+    const fields=node('div',null,'mem-splitform'),table=node('div',null,'mem-scroll-table');
+    function choose(caption,index){const select=fieldPair(fields,caption,node('select'));for(const r of rows)select.add(new Option(r.day,r.day));select.value=rows[index].day;return select;}
+    const from=choose('对照日',Math.max(0,rows.length-2)), to=choose('查看日',rows.length-1);
+    function draw(){
+      const a=rows.find(r=>r.day===from.value),b=rows.find(r=>r.day===to.value);
+      const grid=node('table',null,'activity-grid');const head=grid.createTHead().insertRow();
+      for(const label of ['维度',a.day,b.day,'变化'])head.append(node('th',label));
+      const body=grid.createTBody();
+      for(const dim of data.dimensions){
+        const av=a.traits?.[dim.key],bv=b.traits?.[dim.key];
+        const diff=a.day!==b.day&&Number.isFinite(av)&&Number.isFinite(bv)?Number((bv-av).toFixed(3)):null;
+        const tr=body.insertRow();for(const x of [dim.label,av??'—',bv??'—',diff===null?'—':(diff>0?'+':'')+diff])tr.append(node('td',x));
+      }
+      for(const [key,name] of [['tier','关系阶段'],['sessionCount','累计通话'],['daysKnown','相识天数'],['mood','相处气氛']]){
+        const av=a.relation?.[key],bv=b.relation?.[key],change=typeof av==='number'&&typeof bv==='number'&&a.day!==b.day?Number((bv-av).toFixed(3)):null;
+        const row=body.insertRow();for(const value of [name,av??'无采样',bv??'无采样',change===null?'—':(change>0?'+':'')+change])row.append(node('td',value));
+      }
+      table.replaceChildren(grid);
+    }
+    from.onchange=to.onchange=draw;box.replaceChildren(fields,table);
+    if(rows.length===1)box.append(node('p','目前只有一个日期的快照。','mem-help'));draw();
+  }catch(e){if(seq===viewSequence)empty('snapshotCompare',e.message);}
+}
+async function replyTrace(item,parent,seq){
+  const box=node('section',null,'mem-trace');parent.append(box);
+  const trigger=linkButton('查看本轮带入的记忆',async()=>{
+    if(box.dataset.loaded){details.hidden=!details.hidden;trigger.setAttribute('aria-expanded',String(!details.hidden));return;}
+    try{
+      const result=await api('brain/turns/'+encodeURIComponent(item.id)+'/memories');
+      if(transcriptSeq!==seq||!parent.isConnected)return;
+      if(!Array.isArray(result.items)||!['unknown','direct','model'].includes(result.state))throw Error('此轮回执不完整。');
+      details.replaceChildren();
+      if(result.state==='unknown')details.append(node('p','历史回复缺少选取回执，无法核实。'));
+      else if(!result.items.length)details.append(node('p',result.state==='direct'?'本轮直接答复，没有带入长期记忆。':'已核实，本轮未带入长期记忆。'));
+      else for(const entry of result.items){const row=node('p');row.append(node('strong',entry.topic||'记忆条目'),node('span','　'+(entry.value||'')));if(entry.reason)row.append(node('small',' · '+entry.reason));if(entry.id)row.append(linkButton('查看条目',()=>toMemory(entry.id)));details.append(row);}
+      box.dataset.loaded='1';details.hidden=false;trigger.setAttribute('aria-expanded','true');
+    }catch(e){details.hidden=false;details.textContent=e.message;}
+  });
+  const details=node('div');details.hidden=true;trigger.setAttribute('aria-expanded','false');box.append(trigger,details);
 }
 function growthRow(item){
   const row=node('article',null,'record');
@@ -764,7 +1031,7 @@ function searchRow(item){
 }
 async function readList(type,sequence){
   const [listId,pagerId]=listIds[type],start=offsets[type];el(pagerId).replaceChildren();
-  const render={memories:memoryRow,growth:growthRow,search:searchRow,history:toolHistoryRow}[type];
+  const render={growth:growthRow,search:searchRow,history:toolHistoryRow}[type];
   empty(listId,'读取中…');
   try{
     const data=await api('brain/'+(type==='history'?'tools/history':type)+'?offset='+start+'&limit='+pageSize);
@@ -777,6 +1044,18 @@ async function readList(type,sequence){
     const prev=actionButton('上一页',()=>change(-pageSize)),next=actionButton('下一页',()=>change(pageSize));prev.disabled=start===0;next.disabled=start+data.items.length>=data.total;
     el(pagerId).append(node('span','第 '+(start+1)+'–'+(start+data.items.length)+' 条，共 '+data.total+' 条'),prev,next);
   }catch(error){if(sequence===viewSequence)empty(listId,error.message);}
+}
+function renderTiming(data){
+  if(!Array.isArray(data.items)){empty('turnTiming','时序采样不完整。');return;}
+  if(!data.items.length){empty('turnTiming','尚无可回看的通话时序。');return;}
+  const table=node('table',null,'activity-grid');const heading=table.createTHead().insertRow();
+  for(const col of ['房间 / 轮次','时间','判停','识别定稿','可合成文本','首音发出','衔接语后首音'])heading.append(node('th',col));
+  const body=table.createTBody();
+  for(const r of data.items){
+    const row=body.insertRow();row.append(node('td',r.room+' / '+r.turn),node('td',dateLabel(r.at)));
+    for(const key of ['commit','asr_final','speakable','first_audio','post_filler_audio'])row.append(node('td',Number.isFinite(r[key])?r[key]+' ms':'—'));
+  }
+  el('turnTiming').replaceChildren(table);
 }
 async function loadCurrentView(){
   if(el('panel').hidden)return;
@@ -794,9 +1073,15 @@ async function loadCurrentView(){
     jobs.push(request('operations',renderOperations,message=>{latestOps=null;showProviderRevision();for(const id of view==='overview'?['overviewRuntime']:view==='operations'?['opsBrain','opsSpeech','opsOta','opsBackup']:[])empty(id,message);if(view==='operations')el('opsTime').textContent='';}));
   }
   if(view==='overview')observedSections();
-  const type={growth:'growth',memories:'memories',tools:'search'}[view];
+  const type={growth:'growth',tools:'search'}[view];
+  if(view==='memories'&&memorySection==='library')jobs.push(readMemoryList(sequence));
+  if(view==='memories'&&memorySection==='extract')jobs.push(readExtractions(sequence));
+  if(view==='growth')jobs.push(readSnapshots(sequence));
   if(type)jobs.push(readList(type,sequence));
-  if(view==='tools')jobs.push(readList('history',sequence));
+  if(view==='tools'){
+    jobs.push(readList('history',sequence));
+    jobs.push(request('turn-timing',renderTiming,message=>empty('turnTiming',message)));
+  }
   if(view==='activity')jobs.push(readActivity(sequence));
   if(view==='filler')jobs.push(readCues(sequence));
   await Promise.all(jobs);
@@ -809,6 +1094,7 @@ function openView(name){
   currentView=name;
   buttons.forEach(b=>{const selected=b.dataset.view===name;el(b.dataset.view).hidden=!selected;b.setAttribute('aria-pressed',String(selected));});
   el('mobileView').value=name;el('msg').textContent='';
+  if(name==='hotwords')window.refreshPrivateWords?.();
   if(name==='devices')readDevices({silent:true}).catch(()=>{});
   loadCurrentView().catch(error=>{el('msg').textContent=error.message;});
 }
@@ -825,11 +1111,6 @@ el('toolForm').onsubmit=handle(async()=>{
   el('saveTools').disabled=true;
   try{await api('brain/tools','PUT',{...Object.fromEntries(toggles.map(n=>[n.dataset.tool,n.checked])),previous:savedBrain.tools});el('msg').textContent='工具设置已保存';await loadCurrentView();}
   catch(error){el('saveTools').disabled=false;throw error;}
-});
-el('newMemory').onsubmit=handle(async()=>{
-  const input=el('memoryText'),submit=el('newMemory').querySelector('button');submit.disabled=true;
-  try{await api('brain/memories','POST',{text:input.value.trim()});input.value='';offsets.memories=0;el('msg').textContent='已写入长期记忆';await loadCurrentView();}
-  finally{submit.disabled=false;}
 });
 el('mobileView').onchange=()=>openView(el('mobileView').value);
 for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>openView(b.dataset.view);
@@ -857,24 +1138,26 @@ el('cueForm').onsubmit=handle(async()=>{
 });
 function closeTranscript(){++transcriptSeq;el('transcript').hidden=true;el('turnRows').replaceChildren();el('turnPager').replaceChildren();}
 el('hideTranscript').onclick=closeTranscript;
-async function readTranscript(session,start=0){
+async function readTranscript(session,start=0,anchor=null){
   const seq=++transcriptSeq;
   const box=el('transcript');box.hidden=false;el('turnPager').replaceChildren();empty('turnRows','读取文字记录…');
   try{
-    const data=await api('brain/conversations/'+encodeURIComponent(session)+'?offset='+start+'&limit=30');
+    const data=await api('brain/conversations/'+encodeURIComponent(session)+'?offset='+start+'&limit=30'+(anchor?'&anchor='+encodeURIComponent(anchor):''));
     if(seq!==transcriptSeq||currentView!=='activity'||el('panel').hidden)return;
     if(!Array.isArray(data.items)||!Number.isSafeInteger(data.total))throw Error('本次通话返回不完整');
     el('turnRows').replaceChildren(...data.items.map(m=>{
       const article=node('article',null,'record'),who={user:'我',assistant:'小可'};
-      article.append(node('span',labelFor(who,m.role)+' · '+dateLabel(m.at),'turn-role'),node('p',m.text,'turn-text'));return article;
+      article.append(node('span',labelFor(who,m.role)+' · '+dateLabel(m.at),'turn-role'),node('p',m.text,'turn-text'));
+      if(m.role==='assistant')replyTrace(m,article,seq);if(m.id===anchor)article.classList.add('mem-highlight');return article;
     }));
     if(!data.items.length)empty('turnRows','没有可展示的通话文字。');
+    start=data.offset??start;
     if(data.total>30){
       const prev=actionButton('较前一页',()=>readTranscript(session,start-30)),next=actionButton('较后一页',()=>readTranscript(session,start+30));
       prev.disabled=start===0;next.disabled=start+data.items.length>=data.total;
       el('turnPager').append(node('span','共 '+data.total+' 条'),prev,next);
     }
-    if(start===0)box.scrollIntoView({block:'nearest'});
+    if(anchor){(box.querySelector('.mem-highlight')||box).scrollIntoView({block:'center'});}else if(start===0)box.scrollIntoView({block:'nearest'});
   }catch(error){if(seq===transcriptSeq)empty('turnRows',error.message);}
 }
 async function readActivity(seq,start=0){
@@ -893,6 +1176,7 @@ async function readActivity(seq,start=0){
       const article=node('article',null,'record');article.append(node('h4',dateLabel(item.firstAt)+' · '+displayValue(item.messages)+' 条消息'),node('small','最后一条　'+dateLabel(item.lastAt)));
       const actions=node('div',null,'actions');actions.append(actionButton('查看本通原文',()=>readTranscript(item.session)));article.append(actions);return article;
     }));
+    if(turnJump){const target=turnJump;turnJump=null;await readTranscript(target.session,0,target.id);}
     if(!data.items.length)empty('activityRows','暂无已保存的通话。');
     if(data.total>pageSize){
       const prev=actionButton('上一页',()=>readActivity(++viewSequence,start-pageSize)),next=actionButton('下一页',()=>readActivity(++viewSequence,start+pageSize));
@@ -935,4 +1219,4 @@ function toolHistoryRow(item){
 }
 
 load().catch(err=>{if(err.message!=='请登录')el('msg').textContent=err.message});
-</script></body></html>
+</script><script src="/assets/private-words.js" defer></script></body></html>

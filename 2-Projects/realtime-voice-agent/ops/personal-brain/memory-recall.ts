@@ -1,11 +1,15 @@
+import { createHash } from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { join } from 'node:path';
 import { assembleSystemPrompt } from './p003/prompt-orchestrator.js';
 import { checkRenameCandidate } from './p003/rename-gate.js';
 
-type Evidence = {kind: string; topic: string; value: string; quote: string; id?: string; updatedAt?: number};
-type Saved = {kind: string; topic: string; value: string; source_quote: string; original: string};
-type Item = {id: string; updatedAt: number; role: string; type: string; content: string; original: string; source_quote: string};
+type Evidence = {kind: string; topic: string; value: string; quote: string; id?: string; updatedAt?: number; sourceMsgId?:string};
+export function evidenceId(e:Evidence):string {
+  return createHash('sha256').update(JSON.stringify([e.kind,e.topic,e.quote,e.updatedAt??null,e.id??null])).digest('hex');
+}
+type Saved = {kind: string; topic: string; value: string; source_quote: string; original: string; sourceMsgId:string};
+type Item = {id: string; sourceMsgId:string; updatedAt: number; role: string; type: string; content: string; original: string; source_quote: string};
 const unknown = '我不记得这件事，没有能核实的记录。';
 const nickname = /(?:怎么|如何)(?:叫|称呼|喊)我|(?:叫|称呼|喊)我(?:什么|啥)|我(?:的)?(?:名字|称呼|姓名|昵称|外号)|我叫(?:什么|啥)|我是谁|怎么叫我/u;
 const dislike = /不喜欢|不爱(?:吃|喝)?|讨厌|忌口|不吃|不喝|避开|过敏/u;
@@ -65,7 +69,7 @@ export class PersonalRecall {
   close(): void { this.db.close(); }
 
   evidence(owner: string): Evidence[] {
-    const explicit = this.db.prepare(`SELECT f.kind,f.topic,f.value,f.source_quote,f.updated_at AS updatedAt,c.text AS original
+    const explicit = this.db.prepare(`SELECT c.id AS sourceMsgId,f.kind,f.topic,f.value,f.source_quote,f.updated_at AS updatedAt,c.text AS original
       FROM personal_memory_fact f JOIN conv.conversation c ON c.id=f.source_msg_id AND c.account_id=f.account_id
       WHERE f.account_id=? AND c.role='user' ORDER BY f.updated_at DESC`).all(owner) as Saved[];
     const result: Evidence[] = explicit.filter(f => cleanEvidence(f.topic) && cleanEvidence(f.value)
@@ -73,13 +77,13 @@ export class PersonalRecall {
     const profile = this.db.prepare('SELECT nickname,interests FROM family_member WHERE account_id=?').get(owner) as {nickname:string;interests:string}|undefined;
     if (profile?.nickname && !result.some(e=>e.kind==='name')) {
       const name = profile.nickname;
-      const turns = this.db.prepare(`SELECT text FROM conv.conversation WHERE account_id=? AND role='user'
-        AND memory_excluded=0 AND instr(text,?)>0 ORDER BY ts DESC`).all(owner,name) as {text:string}[];
-      const supported = turns.some(({text}) => clauses(text).some(part=>affirmative(part) &&
+      const turns = this.db.prepare(`SELECT id,text FROM conv.conversation WHERE account_id=? AND role='user'
+        AND memory_excluded=0 AND instr(text,?)>0 ORDER BY ts DESC`).all(owner,name) as {id:string;text:string}[];
+      const supported = turns.find(({text}) => clauses(text).some(part=>affirmative(part) &&
         checkRenameCandidate(name,part,[{role:'user',content:text}],'').ok));
-      if (supported) result.push({kind:'name',topic:'称呼',value:name,quote:name});
+      if (supported) result.push({kind:'name',topic:'称呼',value:name,quote:name,sourceMsgId:supported.id});
     }
-    const rows = this.db.prepare(`SELECT m.id,m.type,m.content,m.source_quote,m.created_at AS updatedAt,c.role,c.text AS original FROM memory_item m
+    const rows = this.db.prepare(`SELECT c.id AS sourceMsgId,m.id,m.type,m.content,m.source_quote,m.created_at AS updatedAt,c.role,c.text AS original FROM memory_item m
       JOIN conv.conversation c ON c.id=m.source_msg_id AND c.account_id=m.account_id
       WHERE m.account_id=? AND m.status='active' AND (c.role='user' OR (m.type='promise' AND m.subject='xiaoke' AND c.role='assistant')) AND c.memory_excluded=0 ORDER BY m.created_at DESC`).all(owner) as Item[];
     for (const row of rows) {
@@ -90,7 +94,7 @@ export class PersonalRecall {
           normalize(x).includes(normalize(row.content)) && (!row.source_quote || row.original.includes(row.source_quote)));
         if (quote) item = {kind:row.role==='assistant'?'assistant-promise':row.type,topic:row.content,value:row.content,quote};
       }
-      if (item && !result.some(e=>e.topic===item!.topic)) result.push({...item,id:row.id,updatedAt:row.updatedAt});
+      if (item && !result.some(e=>e.topic===item!.topic)) result.push({...item,id:row.id,updatedAt:row.updatedAt,sourceMsgId:row.sourceMsgId});
     }
     if (profile?.interests) {
       const source = this.db.prepare("SELECT text FROM conv.conversation WHERE id=? AND account_id=? AND role='user' AND memory_excluded=0");
@@ -98,19 +102,35 @@ export class PersonalRecall {
         if (i.state==='retracted' || !i.source_msg_id || !i.evidence || !cleanEvidence(i.value) || result.some(e=>e.topic===i.value)) continue;
         const original = source.get(i.source_msg_id,owner)?.text;
         if (typeof original==='string' && original.includes(i.evidence) && fold(i.evidence).includes('喜欢'+fold(i.value))
-          && !fold(i.evidence).includes('不喜欢') && affirmative(i.evidence)) result.push({kind:'preference',topic:i.value,value:'喜欢',quote:i.evidence});
+          && !fold(i.evidence).includes('不喜欢') && affirmative(i.evidence)) result.push({kind:'preference',topic:i.value,value:'喜欢',quote:i.evidence,sourceMsgId:i.source_msg_id});
       }
     }
     return result;
   }
 
-  chatPrompt(base: string, owner: {accountId:string;role:string}, text: string): string {
+  chatPrompt(base:string,owner:{accountId:string;role:string},text:string,previousUser='',preview=false) {
+    // Ellipsis can inherit the preceding subject inside a room. A new request starts a new selection.
+    const reference = /^(?:那[它他她这]|[它他她]呢|这个呢|那个呢|继续刚才|接着刚才|再说说这个)/u.test(text.trim()) ? previousUser : '';
     const facts = this.evidence(owner.accountId);
-    const selected = [...facts.filter(f=>positiveHit(text,f)), ...facts.filter(f=>!positiveHit(text,f))].slice(0,8);
-    const lines = selected.map(f => f.kind==='assistant-promise' ? '小可当时的承诺 ' + JSON.stringify(f.quote)
-      : '主人已核实的信息 ' + JSON.stringify({主题:f.topic,内容:f.value}));
-    return assembleSystemPrompt(base, null, owner, null, null, null, null, null,
-      {personalMemory:{lines,ids:selected.flatMap(f=>f.id?[f.id]:[])}});
+    const selected = [
+      ...facts.filter(f=>positiveHit(text,f)),
+      ...facts.filter(f=>!positiveHit(text,f) && reference && positiveHit(reference,f)),
+    ];
+    const lines:string[]=[];
+    const included:{e:Evidence;line:string}[]=[];
+    let chars=0;
+    for (const e of selected) {
+      const line=e.kind==='assistant-promise' ? '小可当时的承诺 '+JSON.stringify(e.quote)
+        : '主人已核实的信息 '+JSON.stringify({主题:e.topic,内容:e.value});
+      if (chars+line.length>300 || lines.includes(line)) continue;
+      included.push({e,line});lines.push(line);chars+=line.length;
+      if (included.length===2) break;
+    }
+    const prompt=assembleSystemPrompt(base,null,owner,null,null,null,null,null,
+      {skipInjectReceipt:preview,personalMemory:{lines,ids:included.flatMap(({e})=>e.id?[e.id]:[])}});
+    // The assembler may fall back to the base prompt, e.g. when the profile store is unavailable.
+    const actual=included.filter(({line})=>prompt.includes(line)).map(({e})=>e);
+    return {prompt,memoryIds:actual.map(evidenceId),sourceIds:actual.flatMap(e=>e.sourceMsgId?[e.sourceMsgId]:[])};
   }
 
   answer(owner: string, text: string, store: boolean): string | undefined {
