@@ -86,3 +86,41 @@ test('私人词表的发布、陈旧草稿、回滚及 worker 回读，延时轮
     {at:at-30,room:first,turn:1,commit:45,asr_final:65,speakable:100,first_audio:120,post_filler_audio:null}
   ]);
 });
+
+test('白盒只按房间和轮号读取：跨文件冲突留空，相同采样重投保持，其他房间同号互不影响', t => {
+  const dir=mkdtempSync(join(tmpdir(),'private-timing-identity-'));
+  t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const room='pv-'+'a'.repeat(32), other='pv-'+'b'.repeat(32), now=Date.now()-1000;
+  const line=(room:string,turn:number,stage:string,ms:number,at:number)=>JSON.stringify({room,turn,stage,ms,at});
+  assert.deepEqual(recentTurnTimings(dir,room).items,[]);
+  writeFileSync(join(dir,'turn-timing.previous'),[
+    line(room,2,'commit',7,now),line(room,2,'first_audio',130,now+1),
+    line(room,3,'commit',3,now+2),line(room,3,'asr_final',45,now+3),
+    line(other,2,'commit',40,now+4)
+  ].join('\n'));
+  writeFileSync(join(dir,'turn-timing.jsonl'),[
+    line(room,2,'first_audio',260,now+5),line(room,2,'first_audio',130,now+6),
+    line(room,3,'asr_final',45,now+7),line(other,2,'first_audio',0,now+8),
+    line(room,4,'first_audio',19,now+9),line(room,5,'commit',9,now-8*86400000)
+  ].join('\n'));
+  assert.deepEqual(recentTurnTimings(dir,room).items,[
+    {room,turn:3,at:now+7,commit:3,asr_final:45,speakable:null,first_audio:null,post_filler_audio:null}
+  ]);
+  assert.deepEqual(recentTurnTimings(dir,other).items,[
+    {room:other,turn:2,at:now+8,commit:40,asr_final:null,speakable:null,first_audio:0,post_filler_audio:null}
+  ]);
+  assert.deepEqual(recentTurnTimings(dir,'pv-'+'c'.repeat(32)).items,[]);
+});
+
+test('白盒按房读取全部仍在保留期的轮次，公共时序列表保持最新40条', t => {
+  const dir=mkdtempSync(join(tmpdir(),'private-timing-window-'));
+  t.after(()=>rmSync(dir,{recursive:true,force:true}));
+  const room='pv-'+'a'.repeat(32), newer='pv-'+'b'.repeat(32), now=Date.now()-1000;
+  const lines=(room:string,base:number)=>Array.from({length:45},(_,i)=>JSON.stringify({room,turn:i+1,stage:'commit',ms:i,at:base+i}));
+  writeFileSync(join(dir,'turn-timing.previous'),lines(room,now).join('\n'));
+  writeFileSync(join(dir,'turn-timing.jsonl'),lines(newer,now+100).join('\n'));
+  assert.deepEqual(recentTurnTimings(dir).items.map(i=>[i.room,i.turn]),
+    Array.from({length:40},(_,i)=>[newer,45-i]));
+  assert.deepEqual(recentTurnTimings(dir,room).items.map(i=>[i.room,i.turn,i.commit]),
+    Array.from({length:45},(_,i)=>[room,45-i,44-i]));
+});

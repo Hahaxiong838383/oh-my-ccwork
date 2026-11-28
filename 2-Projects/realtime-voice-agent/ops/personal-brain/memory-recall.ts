@@ -133,37 +133,38 @@ export class PersonalRecall {
     return {prompt,memoryIds:actual.map(evidenceId),sourceIds:actual.flatMap(e=>e.sourceMsgId?[e.sourceMsgId]:[])};
   }
 
-  answer(owner: string, text: string, store: boolean): string | undefined {
+  answer(owner:string,text:string,store:boolean,used?:Map<string,Evidence>):string|undefined {
     if (!asksForMemory(text)) return;
     if (!store) return '这次是临时对话，我没有读取你的长期记忆。';
     const facts = this.evidence(owner);
     const questions = text.split(/[，,。？！?!；;]|(?:以及|还有)(?=我)/u)
       .map(s=>s.trim()).filter(s=>s && asksForMemory(s + '？') &&
         (nickname.test(s) || /什么|啥|哪|多少|是谁|怎么叫|怎么称呼|几岁|几号|避开/u.test(s)));
-    if (questions.length > 1) return [...new Set(questions.map(q=>this.answerFrom(facts,q)))].join('');
-    return this.answerFrom(facts,text);
+    if (questions.length > 1) return [...new Set(questions.map(q=>this.answerFrom(facts,q,used)))].join('');
+    return this.answerFrom(facts,text,used);
   }
 
-  private answerFrom(facts: Evidence[], text: string): string {
+  private answerFrom(facts: Evidence[], text: string, used?:Map<string,Evidence>): string {
+    const use=(item:Evidence)=>{used?.set(evidenceId(item),item);return item;};
     const parts: string[] = [];
     const name = nickname.test(text);
     if (name) {
       const found = facts.find(e=>e.kind==='name');
-      parts.push(found ? say(found) : '我不记得你希望我怎么称呼你。');
+      parts.push(found ? say(use(found)) : '我不记得你希望我怎么称呼你。');
     }
     const hits = facts.filter(e=>positiveHit(text,e));
-    if (hits.length) return parts.concat(hits.slice(0,3).map(say)).join('');
+    if (hits.length) return parts.concat(hits.slice(0,3).map(use).map(say)).join('');
     // Only enumerate when the user asks for a list. A named topic with no evidence
     // must not be answered with unrelated preferences from this owner's profile.
     const wantsList = /(?:不爱|不喜欢|讨厌|避免|避开|忌口|不吃|不喝)(?:吃|喝|的|哪两种|哪些|什么|哪种|啥|哪几种|有什么)*(?:食材|食物|菜|东西|口味)?(?:[？?。！!]|呢|吗|$)|吃饭会避开什么/u.test(text);
     if (wantsList && (dislike.test(text) || dietary.test(text))) {
       const disliked = facts.filter(e=>e.kind==='preference' && e.value==='不喜欢');
-      parts.push(disliked.length ? '你说过不喜欢' + disliked.slice(0,4).map(e=>e.topic).join('、') + '。' : '我不记得你明确说过的忌口。');
+      parts.push(disliked.length ? '你说过不喜欢' + disliked.slice(0,4).map(use).map(e=>e.topic).join('、') + '。' : '我不记得你明确说过的忌口。');
     } else if (!name && /(?:我(?:现在|目前|如今|都|最)?喜欢(?:吃|喝)?什么|我的(?:兴趣|爱好)(?:是|有)?什么)[？?。！!呢吗]*$/u.test(text)) {
       const liked=facts.filter(e=>e.kind==='preference' && e.value==='喜欢');
-      if (liked.length) parts.push('你说过喜欢' + liked.slice(0,4).map(e=>e.topic).join('、') + '。');
+      if (liked.length) parts.push('你说过喜欢' + liked.slice(0,4).map(use).map(e=>e.topic).join('、') + '。');
     } else if (!name && genericOverview.test(text)) {
-      parts.push(...facts.slice(0,3).map(say));
+      parts.push(...facts.slice(0,3).map(use).map(say));
     }
     if (!parts.length) {
       const label = /(?:我的|我当时说的)([\p{L}]{1,12}?)(?:到底)?(?:是什么|是啥|是什么颜色|是哪|叫什么|是谁|是多少)/u.exec(text)?.[1];

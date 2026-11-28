@@ -28,16 +28,16 @@ button.light,a.action{color:#294c42}.workspace{grid-template-columns:188px minma
 @media(max-width:850px){.workspace{grid-template-columns:minmax(0,1fr)}.bar{min-height:52px}.runtime{margin:10px 0}.mem-work{grid-template-columns:minmax(210px,.85fr) minmax(255px,1.2fr)}}
 @media(max-width:680px){.mem-work{display:block;min-height:0}.mem-choice{min-height:60px}.mem-list{border-right:none}.mem-detail{padding:13px 12px}.mem-work:not(.has-detail) .mem-detail,.mem-work.has-detail .mem-list{display:none}.mem-back:not([hidden]){display:inline-flex!important}.mem-counts{gap:6px;margin:10px 0}.mem-counts button{padding:9px 8px}.mem-counts button::after{top:12px;right:8px;width:5px;height:5px}.mem-counts strong{font-size:21px}.mem-title{align-items:flex-start}.mem-title .actions{gap:5px}.mem-title button{font-size:13px;padding:6px 10px;min-height:36px}.mem-stats{grid-template-columns:1fr 1fr}.mem-splitform{grid-template-columns:1fr;gap:0}.mem-form{padding:10px}.mem-filters{width:100%}.mem-detail h3{font-size:20px}.mem-tabs{margin-top:8px}.mem-detail button{min-height:42px}.mem-detail .mem-back{margin-bottom:8px}}
 #msg:not(:empty){position:fixed;right:clamp(14px,3.6vw,54px);bottom:15px;max-width:min(530px,calc(100vw - 28px));margin:0;padding:9px 15px;background:#183c32;color:#fff;border-radius:8px;box-shadow:0 3px 12px #142c261f;z-index:5;pointer-events:none}.mem-chart .mem-help{margin-block:9px 14px}
-</style></head><body>
+.open-brain-map{font:inherit;color:inherit;text-decoration:underline;text-underline-offset:3px}.tabs .open-brain-map{padding:.6rem .8rem;display:block;text-decoration:none;font-weight:650}.open-brain-map:hover,.open-brain-map:focus-visible{text-decoration:underline}</style></head><body>
 <header><div class="bar"><div class="identity"><span class="mark" aria-hidden="true"><i></i><i></i><i></i></span>小可私人管理</div><div class="actions" id="ownerLinks" hidden><a class="action" href="/talk/">打开对话 ↗</a><button class="light" id="logout">退出</button></div></div></header>
 <main>
 <section id="login" class="card"><h1>管理员登录</h1><form id="signin"><label for="pass">管理员口令</label><input id="pass" type="password" autocomplete="current-password" required><div class="actions"><button>登录工作室</button></div></form></section>
 <div id="panel" hidden>
 <div class="spread console-head"><h1>私人语音工作台</h1><button id="refresh" class="light">刷新服务状态</button></div>
 <section class="runtime" aria-label="运行总览" id="services"><div><h3>通话占用</h3><div class="pair"><span class="status" id="worker">读取中</span><span class="slots" id="slots" aria-hidden="true"></span></div><small id="clock"></small></div><div><h3>北京签票</h3><span class="status" id="ticket">读取中</span></div><div><h3>飞牛个人大脑</h3><span class="status" id="brain">读取中</span></div></section>
-<div class="workspace"><nav class="tabs" aria-label="工作区"><span class="tab-group">工作台</span><button type="button" data-view="overview" aria-pressed="true" aria-controls="overview">运行总览</button><button type="button" data-view="devices" aria-pressed="false" aria-controls="devices">手机设备</button><button type="button" data-view="operations" aria-pressed="false" aria-controls="operations">服务、版本与备份</button><span class="tab-group">个人大脑</span><button type="button" data-view="memories" aria-pressed="false" aria-controls="memories">记忆工作室</button><button type="button" data-view="growth" aria-pressed="false" aria-controls="growth">人格与风格</button><button type="button" data-view="activity" aria-pressed="false" aria-controls="activity">通话与记忆提取</button><button type="button" data-view="tools" aria-pressed="false" aria-controls="tools">工具与查询</button><button type="button" data-view="diagnostics" aria-pressed="false" aria-controls="diagnostics">试问诊断</button><span class="tab-group">语音配置</span><button type="button" data-view="providers" aria-pressed="false" aria-controls="providers">语音供应商</button><button type="button" data-view="voice" aria-pressed="false" aria-controls="voice">通话音色</button><button type="button" data-view="hotwords" aria-pressed="false" aria-controls="hotwords">热词管理</button><button type="button" data-view="filler" aria-pressed="false" aria-controls="filler">通话衔接语</button></nav><div class="mobile-nav"><label for="mobileView">工作区</label><select id="mobileView"><optgroup label="工作台"><option value="overview">运行总览</option><option value="devices">手机设备</option><option value="operations">服务、版本与备份</option></optgroup><optgroup label="个人大脑"><option value="memories">记忆工作室</option><option value="growth">人格与风格</option><option value="activity">通话与记忆提取</option><option value="tools">工具与查询</option><option value="diagnostics">试问诊断</option></optgroup><optgroup label="语音配置"><option value="providers">语音供应商</option><option value="voice">通话音色</option><option value="hotwords">热词管理</option><option value="filler">通话衔接语</option></optgroup></select></div><section class="card editor"><section class="inside" id="overview">
+<div class="workspace"><nav class="tabs" aria-label="工作区"><span class="tab-group">工作台</span><button type="button" data-view="overview" aria-pressed="true" aria-controls="overview">运行总览</button><button type="button" data-view="devices" aria-pressed="false" aria-controls="devices">手机设备</button><button type="button" data-view="operations" aria-pressed="false" aria-controls="operations">服务、版本与备份</button><span class="tab-group">个人大脑</span><a class="open-brain-map" href="/workbench">大脑运行工作台</a><button type="button" data-view="memories" aria-pressed="false" aria-controls="memories">记忆工作室</button><button type="button" data-view="growth" aria-pressed="false" aria-controls="growth">人格与风格</button><button type="button" data-view="activity" aria-pressed="false" aria-controls="activity">通话与记忆提取</button><button type="button" data-view="tools" aria-pressed="false" aria-controls="tools">工具与查询</button><button type="button" data-view="diagnostics" aria-pressed="false" aria-controls="diagnostics">试问诊断</button><span class="tab-group">语音配置</span><button type="button" data-view="providers" aria-pressed="false" aria-controls="providers">语音供应商</button><button type="button" data-view="voice" aria-pressed="false" aria-controls="voice">通话音色</button><button type="button" data-view="hotwords" aria-pressed="false" aria-controls="hotwords">热词管理</button><button type="button" data-view="filler" aria-pressed="false" aria-controls="filler">通话衔接语</button></nav><div class="mobile-nav"><label for="mobileView">工作区</label><select id="mobileView"><optgroup label="工作台"><option value="overview">运行总览</option><option value="devices">手机设备</option><option value="operations">服务、版本与备份</option></optgroup><optgroup label="个人大脑"><option value="whitebox">大脑运行工作台</option><option value="memories">记忆工作室</option><option value="growth">人格与风格</option><option value="activity">通话与记忆提取</option><option value="tools">工具与查询</option><option value="diagnostics">试问诊断</option></optgroup><optgroup label="语音配置"><option value="providers">语音供应商</option><option value="voice">通话音色</option><option value="hotwords">热词管理</option><option value="filler">通话衔接语</option></optgroup></select></div><section class="card editor"><section class="inside" id="overview">
   <div class="spread"><h2>运行总览</h2><button class="light" data-reload>刷新总览</button></div>
-  <div id="overviewSummary" class="metric-grid"></div>
+  <div id="overviewSummary" class="metric-grid"></div><p><a class="open-brain-map" href="/workbench">查看大脑运行图与本轮证据 →</a></p>
   <h3>当前通话配置</h3><div id="overviewProviders" class="fact-list"></div>
   <h3>手机同步</h3><div id="overviewDevices" class="fact-list"></div>
   <h3>私人语音链路</h3><div id="overviewRuntime" class="fact-list"></div>
@@ -597,7 +597,17 @@ el('resetTest').onclick=handle(async()=>{
   finally{if(seq===testSequence)setTestBusy(false);}
 });
 async function load(){
-  settings=await api('settings');showOwner(true);status(settings);showDraft();openView('overview');
+  settings=await api('settings');
+  const params=new URLSearchParams(location.search);
+  if(params.get('next')==='workbench'){
+    const next=new URL('/workbench',location.origin);
+    for(const key of ['room','reply','module']){
+      const value=params.get(key);
+      if(value && /^[A-Za-z0-9_-]{1,128}$/.test(value))next.searchParams.set(key,value);
+    }
+    location.replace(next.href);return;
+  }
+  showOwner(true);status(settings);showDraft();openView('overview');
   el('probs').replaceChildren();for(const [k,name] of Object.entries({default:'默认',chatty:'健谈',quiet:'安静',funny:'幽默'})){
     const label=document.createElement('label');label.textContent=name+'（%）';const input=document.createElement('input');
     input.type='number';input.min=0;input.max=100;input.step='any';input.id='p-'+k;input.value=+(100*settings.probabilities[k]).toFixed(4);label.append(input);el('probs').append(label)}
@@ -1087,6 +1097,7 @@ async function loadCurrentView(){
   await Promise.all(jobs);
 }
 function openView(name){
+  if(name==='whitebox'){location.assign('/workbench');return;}
   const buttons=[...document.querySelectorAll('[data-view]')];
   if(!buttons.some(b=>b.dataset.view===name))return;
   if(currentView==='activity'&&name!=='activity')closeTranscript();

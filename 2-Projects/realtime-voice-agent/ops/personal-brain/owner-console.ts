@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {Hono} from 'hono';
+import {readWhitebox,publicSources} from './whitebox.js';
 import {createConsoleActivity} from './console-activity.js';
 import {bodyLimit} from 'hono/body-limit';
 import {z} from 'zod';
@@ -56,6 +57,15 @@ export class OwnerConsole {
       CREATE TABLE IF NOT EXISTS personal_tool_result(id INTEGER PRIMARY KEY,account_id TEXT NOT NULL,at INTEGER NOT NULL,
       tool TEXT NOT NULL,outcome TEXT NOT NULL,source_count INTEGER,turn_ms INTEGER NOT NULL);
       CREATE INDEX IF NOT EXISTS personal_tool_at ON personal_tool_result(account_id,at DESC,id DESC)`);
+    this.searchlog.exec('BEGIN IMMEDIATE');
+    try {
+      const columns=new Set(this.searchlog.prepare("PRAGMA table_info(personal_tool_result)").all().map(c=>c.name));
+      for(const column of ['session_id','reply_id','sources_json']) {
+        if(!columns.has(column)) this.searchlog.exec('ALTER TABLE personal_tool_result ADD COLUMN '+column+' TEXT');
+      }
+      this.searchlog.exec('CREATE INDEX IF NOT EXISTS personal_tool_by_reply ON personal_tool_result(account_id,session_id,reply_id) WHERE reply_id IS NOT NULL');
+      this.searchlog.exec('COMMIT');
+    } catch (err) {this.searchlog.exec('ROLLBACK');throw err;}
     this.db.exec(`CREATE TABLE IF NOT EXISTS personal_tool_settings(account_id TEXT PRIMARY KEY, search INTEGER NOT NULL, weather INTEGER NOT NULL, clock INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS personal_growth_revoke(account_id TEXT NOT NULL,event_id TEXT NOT NULL,ts INTEGER NOT NULL, PRIMARY KEY(account_id,event_id))`);
     if (!this.db.prepare("SELECT 1 FROM pragma_table_info('trait_snapshot') WHERE name='personal_relation'").get()) {
@@ -221,13 +231,13 @@ export class OwnerConsole {
     if (table==='personal_tool_result') return Number(this.searchlog.prepare('SELECT COUNT(*) AS n FROM personal_tool_result WHERE account_id=? AND at>=?').get(this.owner,Date.now()-7*86_400_000)?.n ?? 0);
     return Number(this.db.prepare('SELECT COUNT(*) AS n FROM growth_event WHERE account_id=?').get(this.owner)?.n ?? 0);
   }
-  recordTool(tool:string,sources:number|undefined,turnMs:number) {
+  recordTool(tool:string,sources:readonly {title:string;url:string}[]|undefined,turnMs:number,room:string,replyId:string|null) {
     if (!['clock','weather','search','search_cancel','memory','memory_action','style','capabilities'].includes(tool)) return;
     const now=Date.now();
     this.searchlog.exec('BEGIN IMMEDIATE');
     try {
-      this.searchlog.prepare('INSERT INTO personal_tool_result(account_id,at,tool,outcome,source_count,turn_ms) VALUES(?,?,?,?,?,?)')
-        .run(this.owner,now,tool,sources===undefined?'handled':sources?'with_sources':'without_sources',sources??null,Math.round(turnMs));
+      this.searchlog.prepare('INSERT INTO personal_tool_result(account_id,at,tool,outcome,source_count,turn_ms,session_id,reply_id,sources_json) VALUES(?,?,?,?,?,?,?,?,?)')
+        .run(this.owner,now,tool,sources===undefined?'handled':sources.length?'with_sources':'without_sources',sources?.length??null,Math.round(turnMs),room,replyId,JSON.stringify(publicSources(sources,safe)));
       this.searchlog.prepare('DELETE FROM personal_tool_result WHERE account_id=? AND (at<? OR id <= COALESCE((SELECT id FROM personal_tool_result WHERE account_id=? ORDER BY id DESC LIMIT 1 OFFSET 1000),-1))')
         .run(this.owner,now-7*86_400_000,this.owner);
       this.searchlog.exec('COMMIT');
@@ -273,6 +283,15 @@ export class OwnerConsole {
       const count=this.usage().get(item.id)??{usageCount:0,lastUsedAt:null};
       const since=this.db.prepare('SELECT min(c.ts) AS at '+receiptJoin).get(this.owner);
       return c.json({item:{...this.publicMemory(item),...count},sourceTurn:this.sourceTurn(item.sourceId),uses,usageSince:since?.at??null});
+    });
+    routes.get('/whitebox/:room',c=>{
+      const {offset,limit}=validate(page,c.req.query());
+      const room=validate(z.string().regex(/^[A-Za-z0-9_-]{1,128}$/),c.req.param('room'));
+      // Only current, grounded facts are exposed from immutable usage identifiers.
+      const facts=this.recall.evidence(this.owner).map(e=>({id:evidenceId(e),topic:safe(e.topic),value:safe(e.value),sourceId:e.sourceMsgId}));
+      const result=readWhitebox(this.db,this.searchlog,this.owner,room,offset,limit,facts,safe);
+      if(!result) throw missing();
+      return c.json(result);
     });
     routes.get('/turns/:id/memories',c=>{
       const turn=this.db.prepare("SELECT c.ts AS at,r.mode,r.memory_ids FROM transcripts.conversation c LEFT JOIN personal_turn_recall r ON c.account_id=r.account_id AND c.id=r.reply_msg_id WHERE c.account_id=? AND c.role='assistant' AND c.id=?").get(this.owner,c.req.param('id'));

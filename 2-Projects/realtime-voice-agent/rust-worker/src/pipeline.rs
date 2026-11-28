@@ -4116,6 +4116,7 @@ impl Orchestrator {
                             let llm2 = llm.clone();
                             let ut = user_text.clone();
                             let llm_ctl = ctl_tts.clone();
+                            let voice_turn = personal_device.as_ref().map(|_| id);
                             let h = tokio::spawn(async move {
                                 let mut g = llm2.lock().await;
                                 if llm_ctl.aborted() { return Err(anyhow::anyhow!("turn_aborted_before_llm")); }
@@ -4128,7 +4129,7 @@ impl Orchestrator {
                                 } else if let Some(spoken) = pending_amend {
                                     g.set_last_assistant(&spoken);
                                 }
-                                g.chat_with_context(&ut, delta_tx,search_context).await
+                                g.chat_for_turn(&ut, delta_tx, search_context, voice_turn).await
                             });
                             (delta_rx, h, false)
                         }

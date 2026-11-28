@@ -139,11 +139,29 @@ export class PersonalMemoryActions {
         mode TEXT NOT NULL CHECK(mode IN ('model','direct')),memory_ids TEXT NOT NULL, source_ids TEXT NOT NULL,
         PRIMARY KEY(account_id,reply_msg_id));`);
     this.db.prepare('INSERT OR IGNORE INTO personal_legacy_boundary VALUES(?,?)').run(owner,this.revision);
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const hadRetirementLedger=this.db.prepare("SELECT 1 FROM sqlite_master WHERE name='personal_whitebox_retired'").get();
+      this.db.exec(`CREATE TABLE IF NOT EXISTS personal_turn_trace(
+        account_id TEXT NOT NULL,session_id TEXT NOT NULL,reply_id TEXT NOT NULL,user_id TEXT NOT NULL,
+        voice_turn INTEGER,route TEXT NOT NULL,style TEXT,PRIMARY KEY(account_id,reply_id));
+        CREATE INDEX IF NOT EXISTS personal_trace_voice_turn ON personal_turn_trace(account_id,session_id,voice_turn)
+          WHERE voice_turn IS NOT NULL;
+        CREATE TABLE IF NOT EXISTS personal_whitebox_retired(account_id TEXT NOT NULL,msg_id TEXT NOT NULL,PRIMARY KEY(account_id,msg_id))`);
+      // Pre-upgrade masks did not distinguish a newly written fact from an erased source.
+      if (!hadRetirementLedger) this.db.exec('INSERT OR IGNORE INTO personal_whitebox_retired SELECT account_id,msg_id FROM personal_history_mask');
+      this.db.exec('COMMIT');
+    } catch (err) {this.db.exec('ROLLBACK');throw err;}
   }
 
-  recordRecall(replyId:string, selection?:{memoryIds:string[];sourceIds:string[]}) {
+  recordTrace(room:string,userId:string,replyId:string,route:string,voiceTurn:number|null,style:string|null) {
+    this.db.prepare('INSERT INTO personal_turn_trace(account_id,session_id,user_id,reply_id,route,voice_turn,style) VALUES(?,?,?,?,?,?,?)')
+      .run(this.owner,room,userId,replyId,route,voiceTurn,style);
+  }
+
+  recordRecall(replyId:string, selection?:{memoryIds:string[];sourceIds:string[]},direct=false) {
     this.db.prepare('INSERT INTO personal_turn_recall(account_id,reply_msg_id,mode,memory_ids,source_ids) VALUES(?,?,?,?,?)')
-      .run(this.owner,replyId,selection?'model':'direct',JSON.stringify(selection?.memoryIds??[]),JSON.stringify(selection?.sourceIds??[]));
+      .run(this.owner,replyId,selection && !direct?'model':'direct',JSON.stringify(selection?.memoryIds??[]),JSON.stringify(selection?.sourceIds??[]));
   }
 
   get revision():number {
@@ -168,15 +186,17 @@ export class PersonalMemoryActions {
     const turns=this.db.prepare(`SELECT c.id,c.session_id,c.role,c.text,t.source_ids,t.memory_ids
       FROM dialogs.conversation c LEFT JOIN personal_turn_recall t ON t.account_id=c.account_id AND t.reply_msg_id=c.id
       WHERE c.account_id=? ORDER BY c.session_id,c.rowid`).all(this.owner);
-    const hide=this.db.prepare('INSERT OR IGNORE INTO personal_history_mask VALUES(?,?)');
+    const contextMask=this.db.prepare('INSERT OR IGNORE INTO personal_history_mask VALUES(?,?)');
+    const evidenceMask=this.db.prepare('INSERT OR IGNORE INTO personal_whitebox_retired VALUES(?,?)');
+    const hide=(id:typeof turns[number]['id'])=>{contextMask.run(this.owner,id);evidenceMask.run(this.owner,id);};
     for (const [index,turn] of turns.entries()) {
       const used=turn.memory_ids?JSON.parse(String(turn.memory_ids)) as string[]:[];
       const sources=turn.source_ids?JSON.parse(String(turn.source_ids)) as string[]:[];
       const linked=sources.some((id,i)=>sourceIds.has(id) && (!versions.has(id) || versions.get(id)!.has(used[i])));
       if (!sourceIds.has(String(turn.id)) && !mentions(String(turn.text)) && !linked) continue;
-      hide.run(this.owner,turn.id);
+      hide(turn.id);
       const paired=turns[index+(turn.role==='user'?1:-1)];
-      if (paired && paired.role!==turn.role && paired.session_id===turn.session_id) hide.run(this.owner,paired.id);
+      if (paired && paired.role!==turn.role && paired.session_id===turn.session_id) hide(paired.id);
     }
   }
   close():void { this.db.close(); }
@@ -289,7 +309,11 @@ export class PersonalMemoryActions {
   }
 
   apply(command:MemoryCommand,room:string,userText:string,reviewItemId?:string):string {
-    if (command.op==='clarify') return command.text;
+    return this.applyWithReceipt(command,room,userText,reviewItemId).text;
+  }
+
+  applyWithReceipt(command:MemoryCommand,room:string,userText:string,reviewItemId?:string,voiceTurn:number|null=null) {
+    if (command.op==='clarify') return {text:command.text,replyId:null};
     const id=randomUUID();
     this.db.exec('BEGIN IMMEDIATE');
     try {
@@ -333,7 +357,12 @@ export class PersonalMemoryActions {
       this.recordRecall(replyId);
       const hide=this.db.prepare('INSERT OR IGNORE INTO personal_history_mask VALUES(?,?)');
       hide.run(this.owner,id);hide.run(this.owner,replyId);
-      this.db.exec('COMMIT');return answer;
+      this.recordTrace(room,id,replyId,'memory_action',voiceTurn,null);
+      if (command.op==='forget') {
+        const retired=this.db.prepare('INSERT OR IGNORE INTO personal_whitebox_retired VALUES(?,?)');
+        retired.run(this.owner,id);retired.run(this.owner,replyId);
+      }
+      this.db.exec('COMMIT');return {text:answer,replyId};
     } catch (e) {
       this.db.exec('ROLLBACK');throw e;
     }

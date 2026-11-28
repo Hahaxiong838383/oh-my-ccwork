@@ -156,6 +156,11 @@
       "state": "keep",
       "until": "自然冷启动已通过。此分支仍是盒端和 Armbian 两个在用组件的源码引用，待两项发布登记迁移后再评估归档。"
     },
+    "personal/whitebox-v3-20261128": {
+      "task": "私人小可 V3 图形化工作台，按真实通话联查回复、记忆、成长、工具与语音阶段回执",
+      "state": "keep",
+      "until": "V3 首次上线后的用户体验反馈完成后，核对截图、发布标签及工作树再归档。"
+    },
     "personal/admin-console-20261128": {
       "task": "维护私人小可的记忆工作室、语音配置与运行回执",
       "state": "keep",
@@ -297,12 +302,12 @@
     },
     "personal-admin": {
       "scope": "personal-voice",
-      "source_commit": "3b75537b3f0e638ef2da346a6dba805418865482",
-      "source_ref": "refs/tags/release/personal-voice/memory-studio-20261128",
+      "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657",
+      "source_ref": "refs/tags/release/personal-voice/whitebox-v3-20261128",
       "maintainer_branch": "main",
-      "sha256": "a9d556408e40796eb0ae596b65c2717c930010a229b9023701e42599ea05724e",
+      "sha256": "530891b50482095a3bc4bf8719cd97fbfe81c3b94a5ce32d825d38f10b327bfb",
       "proof": {
-        "object": "3a6ad0df12e25fdab5712207ed9cbb5eb5163af3:2-Projects/realtime-voice-agent/docs/personal-memory-studio-release-20261128.json",
+        "object": "553db6efc33b1ce453421c03a85b095f4a3d86b6:2-Projects/realtime-voice-agent/docs/personal-whitebox-v3-release-20261128.json",
         "keys": [
           "deployments",
           "personal-admin"
@@ -312,12 +317,12 @@
     },
     "personal-brain": {
       "scope": "personal-voice",
-      "source_commit": "3b75537b3f0e638ef2da346a6dba805418865482",
-      "source_ref": "refs/tags/release/personal-voice/memory-studio-20261128",
+      "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657",
+      "source_ref": "refs/tags/release/personal-voice/whitebox-v3-20261128",
       "maintainer_branch": "main",
-      "sha256": "30068d058e0c7ef67dd5c2a6dd4caf71fced388a942b7a08331ec1909552ee4d",
+      "sha256": "427e413a1c2e853ce04ea23aaf301df606ebbf52b1f5e90ba2fceb23cae350b9",
       "proof": {
-        "object": "3a6ad0df12e25fdab5712207ed9cbb5eb5163af3:2-Projects/realtime-voice-agent/docs/personal-memory-studio-release-20261128.json",
+        "object": "553db6efc33b1ce453421c03a85b095f4a3d86b6:2-Projects/realtime-voice-agent/docs/personal-whitebox-v3-release-20261128.json",
         "keys": [
           "deployments",
           "personal-brain"
@@ -327,12 +332,12 @@
     },
     "personal-worker": {
       "scope": "personal-voice",
-      "source_commit": "3b75537b3f0e638ef2da346a6dba805418865482",
-      "source_ref": "refs/tags/release/personal-voice/memory-studio-20261128",
+      "source_commit": "5f2f9935f2b8365cc3b36cdc6834786526edf657",
+      "source_ref": "refs/tags/release/personal-voice/whitebox-v3-20261128",
       "maintainer_branch": "main",
-      "sha256": "3bed796eb0b6ccb9ee5ebe321c825800e0d0420f7e2b6d0ad045f004fd70fb8f",
+      "sha256": "5d72a19726c4f6db686c8117fc0cb89235df2b2bea5ab2dccf093297eab9838f",
       "proof": {
-        "object": "3a6ad0df12e25fdab5712207ed9cbb5eb5163af3:2-Projects/realtime-voice-agent/docs/personal-memory-studio-release-20261128.json",
+        "object": "553db6efc33b1ce453421c03a85b095f4a3d86b6:2-Projects/realtime-voice-agent/docs/personal-whitebox-v3-release-20261128.json",
         "keys": [
           "deployments",
           "personal-worker"
