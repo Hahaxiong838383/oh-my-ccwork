@@ -69,7 +69,7 @@ public final class NightOta {
     public static void enter(Activity a) {
         NightOta ota = get(a);
         OtaJobService.ensureSchedule(a);
-        ota.fetch(false, true, null, null);
+        if (!ota.welcomeOnOpen()) ota.fetch(false, true, null, null);
     }
     public static void check(Activity a) { get(a).fetch(true, false, null, null); }
     public static void install(Activity a) { get(a).installOnGesture(a); }
@@ -79,6 +79,27 @@ public final class NightOta {
                 ? " " + snapshot.optInt("percent", 0) + "%" : "");
     }
     public static JSONObject snapshot(Context c) { return get(c).json(); }
+
+    private synchronized boolean welcomeOnOpen() {
+        if (target > installed || fetching || installFlow()
+                || prefs.getLong("updatedBuild", 0) != installed
+                || prefs.getLong("seenBuild", 0) == installed) return false;
+        if (!"success".equals(state)) {
+            target = installed;
+            targetName = installedName;
+            show("success", "已更新至 " + installedName);
+        }
+        return true;
+    }
+
+    synchronized JSONObject pageSnapshot(NightHostActivity activity) {
+        if (state.equals("success") && resumed.get() == activity
+                && prefs.getLong("updatedBuild", 0) == installed
+                && prefs.getLong("seenBuild", 0) != installed) {
+            prefs.edit().putLong("seenBuild", installed).apply();
+        }
+        return json();
+    }
 
     private boolean inCall() {
         NightHostActivity a = resumed.get();
@@ -112,8 +133,11 @@ public final class NightOta {
                 .putLong("bytes", downloaded).putLong("total", total).putLong("updatedAt", updatedAt)
                 .putInt("session", session);
         // Switching the unknown-source toggle may kill this process immediately.
+        if (next.equals("success")) edit.putLong("updatedBuild", target);
         if (installFlow() || next.equals("success") || next.equals("cancelled")) edit.commit();
         else edit.apply();
+        NightHostActivity activity = resumed.get();
+        if (activity != null) activity.notifyUpdateChanged();
         try { OtaNotifications.update(app, json()); }
         catch (RuntimeException ignored) { /* The durable state remains available in the app. */ }
     }
@@ -154,9 +178,15 @@ public final class NightOta {
                 downloaded = total;
                 if (state.equals("wait_permission")) return;
                 if (state.equals("pending_confirmation") && hasSession()) return;
-                if (state.equals("installing") && hasSession()) {
+                if ((state.equals("preparing_install") || state.equals("installing")) && hasSession()) {
                     PackageInstaller.SessionInfo info = app.getPackageManager().getPackageInstaller().getSessionInfo(session);
-                    if (info != null && info.isSealed()) return;
+                    if (info != null && info.isSealed()) {
+                        if (state.equals("preparing_install")) {
+                            // The process that handed off the APK may have lost its confirmation intent.
+                            show("ready", "安装包已保留，可重新打开系统安装窗口");
+                        }
+                        return;
+                    }
                 }
                 if (state.equals("cancelled") || state.equals("error")) return;
                 abandonTrackedSession();
@@ -178,7 +208,8 @@ public final class NightOta {
         synchronized (ota) {
             // This private system broadcast only fires on replacement, including updates
             // started by older releases that delete their verified state before our launch.
-            if (ota.target <= ota.installed && !ota.state.equals("success")) {
+            if (ota.target <= ota.installed && (ota.prefs.getLong("updatedBuild", 0) != ota.installed
+                    || !ota.state.equals("success"))) {
                 ota.target = ota.installed; ota.targetName = ota.installedName;
                 ota.installed();
             }
@@ -189,6 +220,7 @@ public final class NightOta {
         NightOta ota = get(activity);
         ota.resumed = new WeakReference<>(activity);
         ota.resumeInstall(activity);
+        activity.notifyUpdateChanged();
     }
     static void paused(NightHostActivity activity) {
         NightOta ota = get(activity);
@@ -256,7 +288,7 @@ public final class NightOta {
     }
     synchronized void submitting(int id) throws IOException {
         if (id != session || resumed.get() == null || inCall()) throw new IOException("install paused");
-        show("installing", "安装任务已提交，等待系统响应");
+        show("preparing_install", "已提交安装包，等待系统确认窗口");
     }
     synchronized void installCallback(int id, int result, Intent confirm) {
         if (id < 0 || id != session) return;

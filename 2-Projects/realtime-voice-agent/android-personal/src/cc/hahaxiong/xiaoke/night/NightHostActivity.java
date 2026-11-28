@@ -139,9 +139,6 @@ public final class NightHostActivity extends Activity {
             public void triggerCheckUpdate() {
                 NightDiagnostics.event(NightHostActivity.this, "ota_check");
                 NightOta.check(NightHostActivity.this);
-                if (bridge != null) {
-                    bridge.notifyOtaChange();
-                }
             }
         });
         web.addJavascriptInterface(bridge, "NightHost");
@@ -293,6 +290,10 @@ public final class NightHostActivity extends Activity {
             return false;
         }
         return trustedPage;
+    }
+
+    void notifyUpdateChanged() {
+        if (bridge != null) bridge.notifyOtaChange();
     }
 
     void applyCallState(boolean active) {

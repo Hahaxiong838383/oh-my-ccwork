@@ -58,7 +58,7 @@ public final class NightBridge {
         if (host.pageTrusted()) NightDiagnostics.flush(host);
     }
     @JavascriptInterface public String updateSnapshot() {
-        return host.pageTrusted() ? NightOta.snapshot(host).toString() : "{}";
+        return host.pageTrusted() ? NightOta.get(host).pageSnapshot(host).toString() : "{}";
     }
     @JavascriptInterface public String updateStatus() {
         return host.pageTrusted() ? NightOta.status(host) : "";
