@@ -1,0 +1,61 @@
+{
+  "scope": "personal-voice",
+  "sampled_at": "2026-11-28T13:06:05+08:00",
+  "release_tag": "release/personal-voice/v1.0.17",
+  "deployments": {
+    "s24-night-apk": {
+      "source_commit": "f8ec2480cf93386ea23d0214f24bdbdb0bc5e0ea",
+      "versionCode": 1000017,
+      "versionName": "V1.0.17",
+      "url": "https://pa.hahaxiong.cc:8666/mobile/night/xiaoke-night-1000017.apk",
+      "size": 1092778,
+      "sha256": "6429aba7e42eb8a6ef72206035114a19a6e4f26042a56885f2a6099dba619614",
+      "signer_sha256": "a3bbed9e5634c6d5bed307873f801590d02750aa60275de56f35610e668dea6f"
+    }
+  },
+  "acceptance": {
+    "passed": true,
+    "apkSha256": "6429aba7e42eb8a6ef72206035114a19a6e4f26042a56885f2a6099dba619614",
+    "artifactBytes": 1092778,
+    "releaseChecks": 75,
+    "design": "Google Antigravity。参照 Android 灵活更新和 Material 进度提示。",
+    "references": [
+      "https://developer.android.com/guide/playcore/in-app-updates",
+      "https://m3.material.io/components/progress-indicators/overview"
+    ],
+    "publicUpgrade": {
+      "environment": "Android 11 / API 30 可联网模拟器",
+      "from": 1000016,
+      "to": 1000017,
+      "verifiedDownload": {
+        "target": "1000017",
+        "bytes": "1092778",
+        "sha256": "6429aba7e42eb8a6ef72206035114a19a6e4f26042a56885f2a6099dba619614",
+        "state": "ready"
+      },
+      "installedApkSha256": "6429aba7e42eb8a6ef72206035114a19a6e4f26042a56885f2a6099dba619614",
+      "checks": [
+        "公网正式通道自动下载并校验",
+        "Android PackageInstaller 确认并替换旧包",
+        "实际点击完成通知回到首页，屏幕显示 V1.0.17 成功卡片"
+      ]
+    },
+    "newInstallUx": {
+      "environment": "另一台离线 Android 11 模拟器",
+      "input": "V1.0.17 的代码、资源及清单与正式包逐项相同，使用临时测试签名。测试目标只调整版本清单，并预置已下载 APK；安装时仍经过原生身份、摘要及签名复核。",
+      "checks": [
+        "直接点首页安装",
+        "在系统取消、缓存保留",
+        "从首页重试并确认",
+        "系统替换、完成通知及重新打开",
+        "关闭通知并模拟后台检查完成，仍可从桌面启动看到首次升级提示"
+      ]
+    },
+    "uiRegression": [
+      "签名 APK 资源上执行 Playwright，校验下载字节和不确定进度、按钮立即响应、重复信号与防连点、三种屏幕尺寸、通话、切外观、成功确认和减少动态效果",
+      "原有头像外观与通话播放回归通过"
+    ],
+    "scope": "仅私人版 Android APK。实体三星 S24 Ultra 和 One UI 安装器本轮未测试。",
+    "firstHop": "从 V1.0.16 安装本版时安装前仍由旧界面负责。V1.0.17 启动即显示完成提示，从本版发起后续升级才显示新的安装前反馈。"
+  }
+}
