@@ -492,13 +492,28 @@
     const get = id => document.getElementById(id);
     const app = get('app'), panel = get('service-panel'), home = get('ota-home'), maintenance = get('btn-service');
     const install = get('ota-install'), check = get('ota-check');
+    const card = get('ota-card'), cardPrimary = get('ota-card-primary'), cardSecondary = get('ota-card-secondary');
+    const cardSteps = get('ota-card-steps');
+    const ACK_KEY = 'xiaoke.night.ota.ack.v1';
     const phases = {
       idle: '等待检查更新', checking: '正在检查更新', current: '已是最新版本', available: '发现新版本',
       downloading: '正在下载', verifying: '正在校验安装包', ready: '新版已就绪', wait_permission: '等待安装授权',
       preparing_install: '正在准备安装', pending_confirmation: '等待系统确认', installing: '系统正在安装',
       success: '升级成功', cancelled: '已取消安装', error: '更新未完成'
     };
-    let snapshot, timer, opener;
+    const DISMISSABLE = new Set(['available', 'ready', 'success', 'cancelled', 'error']);
+    const QUIET = new Set(['idle', 'current', 'checking']);
+    const IN_FLIGHT_BUSY = new Set(['checking', 'verifying', 'preparing_install', 'pending_confirmation', 'installing']);
+    const RETURN_GUIDE = '确认安装后，小可会短暂退出。完成后点桌面「小可 · 暗夜剧场」或通知栏「小可更新完成」回来。';
+    let snapshot, timer, opener, pending = null, dismissed = '';
+    let primaryAction = '', secondaryAction = '';
+
+    function readAck() {
+      try { return window.localStorage?.getItem(ACK_KEY) || ''; } catch { return ''; }
+    }
+    function writeAck(value) {
+      try { window.localStorage?.setItem(ACK_KEY, value); } catch { /* Ignore restricted storage. */ }
+    }
     function snapshotFromHost() {
       if (!host?.updateSnapshot) return null;
       try {
@@ -507,7 +522,7 @@
       } catch { return null; }
     }
     function setText(element, value) {
-      if (element.textContent !== value) element.textContent = value;
+      if (element && element.textContent !== value) element.textContent = value;
     }
     function bytes(n) {
       if (n < 1024) return n + ' B';
@@ -516,63 +531,287 @@
     }
     const inCall = () => Boolean(session) || app.dataset.active === 'true';
     const hasAmount = value => Number.isSafeInteger(value) && value >= 0;
+    function successKey(s) {
+      return String(s.installedVersionCode || 0) + ':' + String(s.installedVersionName || '');
+    }
+    function dismissKey(s) {
+      return [s.state, s.versionCode || 0, s.installedVersionCode || 0, s.updatedAt || 0].join(':');
+    }
+    function clearPending() {
+      if (!pending) return;
+      clearTimeout(pending.timer);
+      pending = null;
+    }
+    function startPending(kind, mode, s) {
+      clearPending();
+      pending = {
+        kind, mode,
+        fromState: s?.state || '',
+        fromUpdatedAt: s?.updatedAt || 0,
+        timer: setTimeout(() => { pending = null; refresh(); }, 4500)
+      };
+    }
+    function setBar(bar, determinatePercent) {
+      if (!bar) return;
+      if (determinatePercent === null) bar.removeAttribute('value');
+      else bar.value = determinatePercent;
+    }
+    function renderSteps(stepMap) {
+      if (!cardSteps) return;
+      cardSteps.hidden = !stepMap;
+      if (!stepMap) return;
+      for (const item of cardSteps.children) {
+        const key = item.getAttribute('data-step');
+        const status = stepMap[key] || 'pending';
+        item.dataset.status = status;
+        if (status === 'active') item.setAttribute('aria-current', 'step');
+        else item.removeAttribute('aria-current');
+      }
+    }
+    function installNote(kind, call, canInstall, installPending) {
+      const systemInstall = ['ready', 'wait_permission', 'preparing_install', 'pending_confirmation', 'installing'].includes(kind);
+      if (call) {
+        return canInstall || systemInstall || ['available', 'downloading', 'verifying', 'cancelled'].includes(kind)
+          ? {tone: 'info', text: '通话中不会自动安装，挂断后可继续。'} : null;
+      }
+      if (!installPending && !systemInstall && !(canInstall && ['cancelled', 'error'].includes(kind))) return null;
+      return {tone: ['wait_permission', 'pending_confirmation', 'cancelled'].includes(kind) ? 'warn' : 'info', text: RETURN_GUIDE};
+    }
+    function activityHint(kind, pendingState) {
+      if (pendingState?.kind === 'install') {
+        return pendingState.mode === 'permission' ? '正在打开系统授权设置，请稍候…' : '正在提交给系统安装器，请稍候，无需重复点击…';
+      }
+      if (pendingState?.kind === 'check') return '正在连接更新服务，请稍候…';
+      if (kind === 'checking') return '正在检查服务器上的最新版本…';
+      if (kind === 'verifying') return '正在核对文件完整性与官方签名…';
+      if (kind === 'preparing_install') return '正在复核安装包并写入系统安装器…';
+      if (kind === 'pending_confirmation') return '等待你在系统安装弹窗中确认…';
+      if (kind === 'installing') return '系统正在替换安装包，请稍候…';
+      return '';
+    }
     function draw() {
       snapshot = snapshotFromHost();
       if (!panel.hidden) setText(get('diag-summary'), host?.diagnostics?.() || '暂无诊断记录');
       home.hidden = !snapshot;
       if (!snapshot) {
-        get('ota-transfer').hidden = true; install.hidden = true;
+        clearPending();
+        if (card) card.hidden = true;
+        app.classList.remove('ota-card-visible');
+        get('ota-transfer').hidden = true;
+        get('ota-activity').hidden = true;
+        get('ota-panel-spinner').hidden = true;
+        get('ota-install-note').hidden = true;
+        install.hidden = true;
         setText(get('ota-phase'), ''); setText(get('ota-version'), '');
         setText(get('ota-status'), host?.updateStatus?.() || '更新状态暂不可用');
         check.disabled = !host?.checkUpdate;
         return;
       }
-      const s = snapshot, kind = s.state, transferring = kind === 'downloading';
+      const s = snapshot, kind = s.state, call = inCall();
+      if (pending && (call || s.state !== pending.fromState || (s.updatedAt || 0) !== pending.fromUpdatedAt)) {
+        clearPending();
+      }
+      const installPending = pending?.kind === 'install' && !call;
+      const checkPending = pending?.kind === 'check' && !call;
+      const transferring = kind === 'downloading';
       const written = hasAmount(s.downloadedBytes) ? s.downloadedBytes : null;
       const total = hasAmount(s.totalBytes) && s.totalBytes > 0 ? s.totalBytes : null;
-      const percent = written !== null && total !== null ? Math.min(100, Math.floor(written * 100 / total))
+      // Only downloading may compute or display a percentage; install/verify stages never invent one.
+      const percent = !transferring ? null
+        : written !== null && total !== null ? Math.min(100, Math.floor(written * 100 / total))
         : Number.isInteger(s.percent) && s.percent >= 0 && s.percent <= 100 ? s.percent : null;
-      const label = phases[kind];
+      const label = installPending ? (pending.mode === 'permission' ? '正在打开授权' : '正在准备安装') : phases[kind];
       const homeLabel = transferring && percent !== null ? '正在下载 ' + percent + '%'
         : transferring && written !== null ? '已下载 ' + bytes(written) : label;
+      const busyVisual = transferring || IN_FLIGHT_BUSY.has(kind) || installPending || checkPending;
+
       setText(get('ota-home-text'), homeLabel);
       home.setAttribute('aria-label', '应用更新，' + homeLabel);
-      home.dataset.tone = ['error', 'cancelled'].includes(kind) ? 'error'
-        : ['available', 'ready', 'wait_permission', 'success'].includes(kind) ? 'action'
+      home.dataset.busy = String(busyVisual);
+      home.dataset.tone = installPending || checkPending ? 'active'
+        : ['error', 'cancelled'].includes(kind) ? 'error'
+        : ['wait_permission', 'pending_confirmation'].includes(kind) ? 'warn'
+        : ['available', 'ready', 'success'].includes(kind) ? 'action'
         : ['idle', 'current'].includes(kind) ? 'quiet' : 'active';
       get('ota-home-progress').hidden = !transferring;
       get('ota-transfer').hidden = !transferring;
       if (transferring) {
-        for (const id of ['ota-home-progress', 'ota-progress']) {
-          const bar = get(id);
-          if (percent === null) bar.removeAttribute('value'); else bar.value = percent;
-        }
+        setBar(get('ota-home-progress'), percent);
+        setBar(get('ota-progress'), percent);
         const amount = written !== null ? bytes(written) + (total ? ' / ' + bytes(total) : '') : '';
         setText(get('ota-bytes'), [percent === null ? '' : percent + '%', amount].filter(Boolean).join(' · '));
       }
+
+      const panelBusy = !transferring && (IN_FLIGHT_BUSY.has(kind) || installPending || checkPending);
+      get('ota-panel-spinner').hidden = !busyVisual;
+      get('ota-activity').hidden = !panelBusy;
+      if (panelBusy) {
+        setBar(get('ota-activity-progress'), null);
+        setText(get('ota-activity-text'), activityHint(kind, pending));
+      }
+
       setText(get('ota-phase'), label);
-      const call = inCall();
-      const detail = call && ['ready', 'wait_permission'].includes(kind) ? '通话结束后可继续安装。' : String(s.message || '');
+      const detail = call && ['ready', 'wait_permission'].includes(kind) ? '通话结束后可继续安装。'
+        : installPending ? activityHint(kind, pending)
+        : String(s.message || '');
       setText(get('ota-status'), detail === label ? '' : detail);
       const installed = s.installedVersionName || (s.installedVersionCode > 0 ? String(s.installedVersionCode) : '');
       const target = s.versionName || (s.versionCode > 0 ? String(s.versionCode) : '');
       const versions = [];
       if (installed) versions.push('当前 ' + installed);
       if (target && s.versionCode > s.installedVersionCode) versions.push('新版 ' + target);
-      setText(get('ota-version'), versions.join('  →  '));
+      const versionLine = versions.join('  →  ');
+      setText(get('ota-version'), versionLine);
+
+      const note = installNote(kind, call, Boolean(s.canInstall), installPending);
+      const panelNote = get('ota-install-note');
+      panelNote.hidden = !note;
+      if (note) {
+        panelNote.dataset.tone = note.tone;
+        setText(panelNote, note.text);
+      }
+
       const waiting = kind === 'wait_permission', retryInstall = ['cancelled', 'error'].includes(kind);
-      install.hidden = !s.canInstall && !(call && ['ready','wait_permission'].includes(kind));
-      install.disabled = call || !s.canInstall;
-      setText(install, waiting ? '继续授权安装' : retryInstall ? '重试安装' : '安装新版');
-      check.disabled = !host?.checkUpdate || !!s.busy || (kind === 'error' && !s.canRetry) || ['pending_confirmation','installing','preparing_install'].includes(kind);
-      setText(check, kind === 'available' ? '立即下载' : kind === 'error' && s.canRetry ? '重试更新' : '检查更新');
+      install.hidden = !installPending && !s.canInstall && !(call && ['ready', 'wait_permission'].includes(kind));
+      install.disabled = call || installPending || !s.canInstall;
+      setText(install, installPending ? (pending.mode === 'permission' ? '正在打开授权…' : '正在准备安装…')
+        : waiting ? '继续授权安装' : retryInstall ? '重试安装' : '安装新版');
+      check.disabled = !host?.checkUpdate || !!s.busy || installPending || checkPending
+        || (kind === 'error' && !s.canRetry)
+        || ['pending_confirmation', 'installing', 'preparing_install'].includes(kind);
+      setText(check, checkPending ? '正在连接…' : kind === 'available' ? '立即下载' : kind === 'error' && s.canRetry ? '重试更新' : '检查更新');
+
+      // Home screen prominent Material-style update card (never steals calls, appearance picker, or service panel).
+      const cardAllowed = Boolean(card) && !call && panel.hidden && !app.classList.contains('appearance-open')
+        && (!QUIET.has(kind) || installPending)
+        && !(DISMISSABLE.has(kind) && !installPending && dismissed === dismissKey(s))
+        && !(kind === 'success' && readAck() === successKey(s));
+
+      if (card) {
+        card.hidden = !cardAllowed;
+        app.classList.toggle('ota-card-visible', cardAllowed);
+        if (cardAllowed) {
+          let tone = 'active', title = label, body = String(s.message || '');
+          let showProgress = false, progressValue = null, meta = '';
+          let steps = null;
+          let pText = '', pDisabled = false, sText = '';
+          primaryAction = ''; secondaryAction = '';
+
+          if (installPending) {
+            tone = 'active';
+            title = pending.mode === 'permission' ? '正在打开安装授权' : '正在启动安装';
+            body = pending.mode === 'permission' ? '正在跳转系统设置，请稍候。' : '正在复核安装包并交由系统处理，请稍候，无需重复点击。';
+            showProgress = true; progressValue = null; meta = '正在等待系统响应';
+            steps = { download: 'done', verify: 'done', confirm: 'active', install: 'pending' };
+            pText = pending.mode === 'permission' ? '正在打开授权…' : '正在准备安装…';
+            pDisabled = true;
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'available') {
+            tone = 'action'; title = '发现新版本';
+            body = String(s.message || '新版本已发布，可先下载安装包，下载期间不影响使用。');
+            pText = checkPending ? '正在连接…' : '立即下载';
+            pDisabled = check.disabled;
+            primaryAction = 'check';
+            sText = '稍后'; secondaryAction = 'dismiss';
+            if (checkPending) { showProgress = true; progressValue = null; meta = '正在连接更新服务'; }
+          } else if (kind === 'downloading') {
+            tone = 'active'; title = '正在下载更新';
+            body = '下载完成后会请你确认安装，通话中不会自动中断。';
+            showProgress = true; progressValue = percent;
+            const amount = written !== null ? bytes(written) + (total ? ' / ' + bytes(total) : '') : '';
+            meta = [percent === null ? '' : percent + '%', amount].filter(Boolean).join(' · ') || '正在获取安装包';
+            steps = { download: 'active', verify: 'pending', confirm: 'pending', install: 'pending' };
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'verifying') {
+            tone = 'active'; title = '正在校验安装包';
+            body = String(s.message || '正在核对文件完整性与版本签名，请稍候。');
+            showProgress = true; progressValue = null; meta = '正在核对签名与完整性';
+            steps = { download: 'done', verify: 'active', confirm: 'pending', install: 'pending' };
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'ready') {
+            tone = 'action'; title = '新版本已就绪';
+            body = '';
+            steps = { download: 'done', verify: 'done', confirm: 'pending', install: 'pending' };
+            if (s.canInstall) { pText = '安装新版'; primaryAction = 'install'; }
+            sText = '稍后'; secondaryAction = 'dismiss';
+          } else if (kind === 'wait_permission') {
+            tone = 'warn'; title = '等待安装授权';
+            body = String(s.message || '请允许「小可 · 暗夜剧场」安装未知应用，返回后将继续安装。');
+            steps = { download: 'done', verify: 'done', confirm: 'active', install: 'pending' };
+            if (s.canInstall) { pText = '继续授权安装'; primaryAction = 'install'; }
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'preparing_install') {
+            tone = 'active'; title = '正在准备安装';
+            body = String(s.message || '正在复核安装包并写入系统安装器，请稍候，无需重复点击。');
+            showProgress = true; progressValue = null; meta = '正在向系统安装器提交安装包';
+            steps = { download: 'done', verify: 'done', confirm: 'active', install: 'pending' };
+            pText = '准备中…'; pDisabled = true;
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'pending_confirmation') {
+            tone = 'warn'; title = '等待系统确认';
+            body = String(s.message || '请在系统弹出的安装窗口中点击「更新」或「安装」。');
+            showProgress = true; progressValue = null; meta = '等待你在系统安装弹窗确认';
+            steps = { download: 'done', verify: 'done', confirm: 'active', install: 'pending' };
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'installing') {
+            tone = 'active'; title = '系统正在安装';
+            body = String(s.message || '系统正在替换新版应用，这可能需要几秒钟。');
+            showProgress = true; progressValue = null; meta = '系统正在完成安装';
+            steps = { download: 'done', verify: 'done', confirm: 'done', install: 'active' };
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'success') {
+            tone = 'success'; title = '升级成功';
+            body = '小可已更新至 ' + (installed || '最新版本') + '。';
+            pText = '知道了'; primaryAction = 'ack';
+            sText = '查看详情'; secondaryAction = 'panel';
+          } else if (kind === 'cancelled') {
+            tone = 'warn'; title = '已取消安装';
+            body = String(s.message || '安装包已保留在本地，无需重新下载，随时可再次安装。');
+            if (s.canInstall) { pText = '重试安装'; primaryAction = 'install'; }
+            sText = '收起'; secondaryAction = 'dismiss';
+          } else if (kind === 'error') {
+            tone = 'error'; title = '更新未完成';
+            body = String(s.message || '更新过程遇到问题，可稍后重试。');
+            if (s.canInstall) { pText = '重试安装'; primaryAction = 'install'; }
+            else if (s.canRetry && host?.checkUpdate) { pText = checkPending ? '正在连接…' : '重试更新'; pDisabled = check.disabled; primaryAction = 'check'; }
+            sText = '收起'; secondaryAction = 'dismiss';
+            if (checkPending) { showProgress = true; progressValue = null; meta = '正在重新检查更新'; }
+          }
+
+          card.dataset.tone = tone;
+          card.dataset.state = installPending ? 'preparing_install' : kind;
+          card.setAttribute('aria-busy', String(busyVisual));
+          setText(get('ota-card-version'), versionLine);
+          get('ota-card-spinner').hidden = !busyVisual;
+          setText(get('ota-card-title'), title);
+          setText(get('ota-card-body'), body === title ? '' : body);
+
+          get('ota-card-progress-wrap').hidden = !showProgress;
+          if (showProgress) {
+            setBar(get('ota-card-progress'), progressValue);
+            setText(get('ota-card-meta'), meta);
+          }
+          renderSteps(steps);
+
+          const cardNote = get('ota-card-note');
+          cardNote.hidden = !note;
+          if (note) setText(cardNote, note.text);
+
+          cardPrimary.hidden = !pText;
+          cardPrimary.disabled = pDisabled;
+          if (pText) setText(cardPrimary, pText);
+          cardSecondary.hidden = !sText;
+          if (sText) setText(cardSecondary, sText);
+          get('ota-card-actions').hidden = !pText && !sText;
+        }
+      }
     }
     function refresh() {
       clearTimeout(timer);
       if (document.hidden) return;
       draw();
-      const fast = ['checking', 'downloading', 'verifying', 'preparing_install', 'pending_confirmation', 'installing'].includes(snapshot?.state);
-      timer = setTimeout(refresh, fast ? 350 : panel.hidden ? 2500 : 1100);
+      const fast = Boolean(pending) || ['checking', 'downloading', 'verifying', 'preparing_install', 'pending_confirmation', 'installing'].includes(snapshot?.state);
+      timer = setTimeout(refresh, pending ? 200 : fast ? 350 : panel.hidden ? 2500 : 1100);
     }
     function openPanel(open, trigger) {
       if (open && panel.hidden) opener = trigger || maintenance;
@@ -580,6 +819,24 @@
       app.classList.toggle('service-open', open);
       for (const button of [home, maintenance]) button.setAttribute('aria-expanded', String(open));
       refresh();
+    }
+    function triggerCheck() {
+      if (check.disabled || !host?.checkUpdate) return;
+      const current = snapshotFromHost();
+      startPending('check', current?.state === 'available' ? 'download' : 'check', current);
+      host.checkUpdate();
+      refresh();
+    }
+    function triggerInstall() {
+      const current = snapshotFromHost();
+      if (inCall() || !current?.canInstall || pending?.kind === 'install') {
+        refresh();
+        return;
+      }
+      const mode = current.state === 'wait_permission' || current.installPermission === false ? 'permission' : 'install';
+      startPending('install', mode, current);
+      refresh();
+      host?.installUpdate?.();
     }
     home.onclick = () => openPanel(true, home);
     maintenance.onclick = () => openPanel(panel.hidden, maintenance);
@@ -589,22 +846,45 @@
     get('service-close').onclick = close;
     document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
     get('diag-send').onclick = () => { host?.syncDiagnostics?.(); refresh(); };
-    check.onclick = () => { if (!check.disabled) { host?.checkUpdate?.(); refresh(); } };
-    install.onclick = () => {
-      const current = snapshotFromHost();
-      if (!inCall() && current?.canInstall) host?.installUpdate?.();
-      refresh();
-    };
+    check.onclick = triggerCheck;
+    install.onclick = triggerInstall;
+    if (cardPrimary) {
+      cardPrimary.onclick = () => {
+        if (primaryAction === 'install') triggerInstall();
+        else if (primaryAction === 'check') triggerCheck();
+        else if (primaryAction === 'ack' && snapshot) {
+          dismissed = dismissKey(snapshot);
+          writeAck(successKey(snapshot));
+          draw();
+          home.focus({ preventScroll: true });
+        }
+      };
+    }
+    if (cardSecondary) {
+      cardSecondary.onclick = () => {
+        if (secondaryAction === 'dismiss' && snapshot) {
+          dismissed = dismissKey(snapshot);
+          draw();
+          home.focus({ preventScroll: true });
+        } else if (secondaryAction === 'panel') {
+          openPanel(true, home);
+        }
+      };
+    }
     window.addEventListener('night-open-update', () => { if (!inCall()) openPanel(true); else refresh(); });
     window.addEventListener('night-ota-change', refresh);
-    document.addEventListener('visibilitychange', refresh);
-    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) clearPending(); refresh(); });
+    window.addEventListener('pageshow', () => { clearPending(); refresh(); });
     window.addEventListener('pagehide', () => clearTimeout(timer));
-    let lastCall = inCall();
+    let lastCall = inCall(), lastAppearance = app.classList.contains('appearance-open');
     new MutationObserver(() => {
-      const next = inCall();
-      if (next !== lastCall) { lastCall = next; refresh(); }
-    }).observe(app, {attributes: true, attributeFilter: ['data-active']});
+      const nextCall = inCall(), nextAppearance = app.classList.contains('appearance-open');
+      if (nextCall !== lastCall || nextAppearance !== lastAppearance) {
+        lastCall = nextCall; lastAppearance = nextAppearance;
+        if (nextCall) clearPending();
+        refresh();
+      }
+    }).observe(app, { attributes: true, attributeFilter: ['data-active', 'class'] });
     refresh();
   }
   setupService();

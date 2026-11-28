@@ -54,10 +54,11 @@ final class OtaNotifications {
             channel.setShowBadge(false);
             manager.createNotificationChannel(channel);
         }
-        Intent open = new Intent(app, NightHostActivity.class).setAction(OPEN)
+        boolean completed = "success".equals(state);
+        Intent open = new Intent(app, NightHostActivity.class).setAction(completed ? Intent.ACTION_MAIN : OPEN)
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent intent = PendingIntent.getActivity(app, RESULT, open, PendingIntent.FLAG_IMMUTABLE);
-        String line = snapshot.optString("message");
+        String line = snapshot.optString("message") + (completed ? "，点此打开小可。" : "");
         Notification.Builder note = new Notification.Builder(app, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setContentTitle(title).setContentText(line)

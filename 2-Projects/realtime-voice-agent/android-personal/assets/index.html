@@ -14,7 +14,10 @@
       <div class="top-left">
         <span id="live-dot" class="live-dot" aria-hidden="true"></span>
         <button id="ota-home" class="ota-home" type="button" aria-controls="service-panel" aria-expanded="false" hidden>
-          <span id="ota-home-text"></span>
+          <span class="ota-home-row">
+            <span class="ota-home-indicator" aria-hidden="true"></span>
+            <span id="ota-home-text"></span>
+          </span>
           <progress id="ota-home-progress" max="100" aria-label="更新包下载进度" hidden></progress>
         </button>
       </div>
@@ -37,12 +40,46 @@
       </div>
     </header>
 
+    <section id="ota-card" class="ota-card" role="region" aria-labelledby="ota-card-title" hidden>
+      <div class="ota-card-head">
+        <span class="ota-context">应用更新</span>
+        <span id="ota-card-version" class="ota-card-version"></span>
+      </div>
+      <div class="ota-card-main">
+        <span id="ota-card-spinner" class="ota-spinner" aria-hidden="true" hidden></span>
+        <div class="ota-card-copy">
+          <h2 id="ota-card-title" class="ota-card-title" role="status" aria-live="polite"></h2>
+          <p id="ota-card-body" class="ota-card-body"></p>
+        </div>
+      </div>
+      <div id="ota-card-progress-wrap" class="ota-progress-wrap" hidden>
+        <progress id="ota-card-progress" class="ota-bar" max="100" aria-label="应用更新进度"></progress>
+        <span id="ota-card-meta" class="ota-meta"></span>
+      </div>
+      <ol id="ota-card-steps" class="ota-steps" aria-label="更新步骤" hidden>
+        <li data-step="download">下载</li>
+        <li data-step="verify">校验</li>
+        <li data-step="confirm">确认</li>
+        <li data-step="install">安装</li>
+      </ol>
+      <p id="ota-card-note" class="ota-note" hidden></p>
+      <div id="ota-card-actions" class="ota-card-actions" hidden>
+        <button id="ota-card-primary" class="ota-btn ota-btn-primary" type="button" hidden></button>
+        <button id="ota-card-secondary" class="ota-btn ota-btn-ghost" type="button" hidden></button>
+      </div>
+    </section>
+
     <section id="service-panel" class="service-panel" aria-label="诊断与更新" hidden>
       <div class="service-heading"><strong>诊断与更新</strong><button id="service-close" type="button">关闭</button></div>
       <h2>应用更新</h2>
-      <p id="ota-phase" class="ota-phase" role="status" aria-live="polite"></p>
-      <div id="ota-transfer" hidden><progress id="ota-progress" max="100" aria-label="下载进度"></progress><span id="ota-bytes"></span></div>
+      <div class="ota-panel-head">
+        <span id="ota-panel-spinner" class="ota-spinner" aria-hidden="true" hidden></span>
+        <p id="ota-phase" class="ota-phase" role="status" aria-live="polite"></p>
+      </div>
+      <div id="ota-transfer" hidden><progress id="ota-progress" class="ota-bar" max="100" aria-label="下载进度"></progress><span id="ota-bytes"></span></div>
+      <div id="ota-activity" class="ota-activity" hidden><progress id="ota-activity-progress" class="ota-bar" aria-label="更新处理进度"></progress><span id="ota-activity-text"></span></div>
       <p id="ota-status"></p><p id="ota-version"></p>
+      <p id="ota-install-note" class="ota-note" hidden></p>
       <div class="ota-actions"><button id="ota-install" type="button" hidden>安装新版</button><button id="ota-check" type="button">检查更新</button></div>
       <h2>通话诊断</h2><p id="diag-summary"></p><button id="diag-send" type="button">同步诊断记录</button>
       <small>仅回传通话事件、时间和版本。录音、字幕和设备密钥不随日志上传。</small>
