@@ -1,7 +1,7 @@
 # gesture interface（手势交互）
 
 > 状态：active（2026-07-10 重启：打包 macOS App + 真机跑通 v3.0 全链路）
-> 最后活跃日期：2026-07-10
+> 最后活跃日期：2026-11-28
 > 一句话目标：用普通 USB 摄像头，通过「注视预选 + 捏住拖拽」实现自然的手势交互 Demo。
 
 ## 下一步
@@ -37,6 +37,7 @@
 | 候选选择 | `gesture_drag_demo/attention_selector.py` | 注视候选卡片评分与锁定 |
 | 校准 | `gesture_drag_demo/calibration.py` | 启动时注视校准流程 |
 | UI 绘制 | `gesture_drag_demo/ui.py` | 桌面/卡片/气泡绘制、拖拽、调试可视化 |
+| 跨项目整合方案 | `../../3-Thinking/13-Dragonwing视线注意力源码分析与多模态项目整合方案.md` | 对标 Dragonwing IQ-9075 级联管线，联动 cc-AirPlayer / cc-eye / cc-monitor 的五层升级蓝图 |
 
 ## 外部信息
 | 类型 | 值 |
@@ -70,3 +71,4 @@
 - 2026-08-30：v3.8.1（锚点=commit fbaf62c63）三修：①垂直门控改布局几何推导（桌面顶线 ±0.10，set_layout）②ptgaze CPU→MPS（全链 55→17.5ms 实测）③face_debug 默认关+气泡 dwell 时间制（帧率波动不改手感，眨眼时段不计入）；6 套测试全绿（+2 测）。川哥验收：**气泡全部正常✅**；帧率仍 15 ⚠️（MPS 已生效但节拍锁定未解——瓶颈不在推理侧，候选：Hands 推理/imshow 渲染/摄像头曝光帧率，下轮用分段计时定位）（cc）。
 - 2026-08-30：v3.9 标定点外扩+增量标定（川哥拍板，锚点=commit 90c1f0657 v3.8.1）：①9 点外扩 10-90%/12-88%（外推区变插值区，GAZE_PT_DEG_SCALE 15→25 防边缘削顶）②校准档持久化 calib_store.py（元数据毒药防御：backend/scale/点表布局任一变更自动弃档）③启动 3 点快验微调（残差≤0.28 合并重拟合，超限自动转全量——环境剧变检测器）④隐式样本跨会话（7 天保鲜回灌）⑤失配哨兵（连续 5 拒→橙字提示按 C）⑥按 C=一键重置+重标+覆盖落盘，删 JSON=逃生门 ⑦主界面常驻按键说明；7 套测试全绿（+test_calib_store 7 测）；待打包部署+真机验收（cc）。
 - 2026-08-31：帧率排查收官（分段计时 --profile 实锤）：处理 46.6ms 超 33.3ms 帧间隔→节拍锁定 15fps（相机自报 30 正常，非低光问题）；三元凶 gaze 20.1/imshow 13.5/hands 11.2ms。v3.9.2 隔帧推理（GAZE_INFER_EVERY=2，推理帧 miss 清缓存防陈旧）：gaze 段 20.1→11.5ms 精确命中均摊预测，帧率 14.6→19.0（+30%）；处理 37.9ms 仍未过线，30fps 还差 ~5ms=方案2（Hands lite）的量，川哥拍板本版固化（cc）。
+- 2026-11-28：对标 Hackster `dragonwing-gaze-attention`（IQ-9075 NPU 三模型级联）与本仓 `cc-AirPlayer` / `cc-eye` / `cc-monitor` 源码完成深度横向诊断，定位双重人脸检测与单线程同步硬锁瓶颈，制定五层跨模态整合路线（`newest-wins` 异步提速、`attention_gate` 视线锥+头姿 OR 互补与双向非对称迟滞、`Gaze-to-Arm` 防误触、菜单栏状态联动及 RK3588 级联验收护栏），沉淀至 `3-Thinking/13-Dragonwing视线注意力源码分析与多模态项目整合方案.md`（gemini）。
